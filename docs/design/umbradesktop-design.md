@@ -300,3 +300,32 @@ Interactive mockups produced during brainstorming are archived under
 [`docs/design/mockups/`](./mockups). They were built as fragments for a visual brainstorming
 companion, so they render best inside that tool; the blueprint (`blueprint.html`) is the
 end-to-end overview.
+
+---
+
+## 13. Packaging, branding & distribution
+
+UmbraDesktop is a **personal community package** — *not* a Proud Nerds package. The Proud
+Nerds dotnet template was used only as a convenient starting point; all Proud Nerds-specific
+artifacts must be removed before release.
+
+**Remove — safe, no code impact:**
+
+- **Azure DevOps pipelines** — `Solution files/Pipelines/**` and `.azuredevops/` → replaced
+  by **GitHub Actions**.
+- **Branding** — `.csproj` `Authors` / `Company` / `PackageTags`; the npm `@proud-nerds/*`
+  scope in `package.json`; the Test Instance dev admin (`net-team@proudnerds.com` in
+  `appsettings.Development.json`); the stale Proud Nerds example paths in `.gitignore`.
+
+**Remove — with care (coupled dependency):**
+
+- `ProudNerds.Umbraco.Core.Package` (`.csproj` + `src/Directory.Packages.props`) and the
+  private **Proud Nerds NuGet feed** (`nuget.config` source + `ProudNerds.*` mapping). The
+  C# does **not** import Proud Nerds types, but the `.csproj` `UpdateUmbracoPackageJsonVersion`
+  target uses a `JsonPathUpdateValue` MSBuild task that is **likely provided by this package**
+  — removal must replace that task (or drop the target and sync the `umbraco-package.json`
+  version another way). The package and the feed are removed together.
+
+**Distribution:** source on the author's **GitHub**, CI via **GitHub Actions**, published to
+**nuget.org**. The backoffice assets ship *inside* the NuGet package (built to
+`wwwroot/App_Plugins/...`), so consumers need no separate npm install.
