@@ -14,7 +14,7 @@ namespace Umbraco.Community.UmbraDesktop.Api.Handlers;
 /// 
 /// **MAIN REASON FOR THIS HANDLER:**
 /// Without this handler, the default OpenAPI behavior would generate verbose operation IDs that include 
-/// the full namespace and controller name (e.g., "ProudNerdsUmbracoPackageRclItemsControllerGetItems").
+/// the full namespace and controller name (e.g., "UmbraDesktopItemsControllerGetItems").
 /// This handler ensures clean, simple operation names using only the action method name (e.g., "GetItems").
 /// 
 /// This is crucial for:

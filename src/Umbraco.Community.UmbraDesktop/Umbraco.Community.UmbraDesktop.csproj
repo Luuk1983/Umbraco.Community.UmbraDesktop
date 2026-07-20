@@ -11,11 +11,11 @@
 	  <PackageId>Umbraco.Community.UmbraDesktop</PackageId>
 	  <Title>Umbraco.Community.UmbraDesktop</Title>
 	  <Description>An OS-style windowed desktop for the Umbraco backoffice</Description>
-	  <PackageTags>proudnerds package umbraco</PackageTags>
+	  <PackageTags>umbraco package backoffice desktop windows</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop</RootNamespace>
 	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-	  <Authors>Proud Nerds .NET team</Authors>
-	  <Company>Proud Nerds</Company>
+	  <Authors>Luuk Peters</Authors>
+	  <Company>Luuk Peters</Company>
 	  <RepositoryUrl></RepositoryUrl>
 	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
 	  <PackageIcon>Package-image_128_128.png</PackageIcon>
@@ -71,7 +71,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="ProudNerds.Umbraco.Core.Package" />
 	  <PackageReference Include="Umbraco.Cms.Api.Common" />
 	  <PackageReference Include="Umbraco.Cms.Core" />
 	  <PackageReference Include="Umbraco.JsonSchema.Extensions" />

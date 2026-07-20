@@ -362,7 +362,5 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # Umbraco files
-/src/Examples/ProudNerds.Umbraco.Core.Example.Headless/umbraco/models
-/src/Examples/ProudNerds.Umbraco.Core.Example.Headless/FilterTest/HomeTitleFilter.cs
 **/wwwroot/App_Plugins/
 
