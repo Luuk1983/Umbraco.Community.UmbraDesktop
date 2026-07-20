@@ -29,22 +29,20 @@ it('nextWindowRect cascades by window count and uses the given size', () => {
   const r0 = nextWindowRect(0, { w: 800, h: 600 });
   const r1 = nextWindowRect(1, { w: 800, h: 600 });
   expect(r0).to.deep.equal({ x: 40, y: 40, w: 800, h: 600 });
-  expect(r1.x).to.be.greaterThan(r0.x);
-  expect(r1.y).to.be.greaterThan(r0.y);
-  expect(r1.w).to.equal(800);
+  expect(r1).to.deep.equal({ x: 68, y: 68, w: 800, h: 600 });
 });
 
 it('nextWindowRect wraps the cascade after 6 windows', () => {
   expect(nextWindowRect(6, { w: 800, h: 600 })).to.deep.equal(nextWindowRect(0, { w: 800, h: 600 }));
 });
 
-it('focusWindow activates only the target and bumps it to the front', () => {
-  const result = focusWindow([win('a', 1, { active: true }), win('b', 2)], 'b');
+it('focusWindow activates only the target and bumps it above the previous top', () => {
+  const result = focusWindow([win('a', 1, { active: true }), win('b', 5)], 'a');
   const a = result.find((w) => w.id === 'a')!;
   const b = result.find((w) => w.id === 'b')!;
-  expect(b.active).to.be.true;
-  expect(a.active).to.be.false;
-  expect(b.z).to.be.greaterThan(a.z);
+  expect(a.active).to.be.true;
+  expect(b.active).to.be.false;
+  expect(a.z).to.be.greaterThan(5);
 });
 
 it('focusWindow un-minimizes the target', () => {
