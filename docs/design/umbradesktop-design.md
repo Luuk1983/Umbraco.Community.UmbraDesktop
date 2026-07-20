@@ -175,6 +175,12 @@ Plasma) — which overlap heavily with Windows — not on macOS. Concretely:
 
 ## 6. The app model
 
+> **Revised for implementation (2026-07-20).** §6.1's `desktopApp` manifest extension type is
+> **superseded** by a curated, maintainer-certified catalogue; §6.2/§6.3 and §7 are refined
+> (two confidence tiers, section-only fallback). See
+> [`2026-07-20-phase-2-app-model-design.md`](./2026-07-20-phase-2-app-model-design.md). The
+> sections below are retained as original context.
+
 ### 6.1 `desktopApp` — a manifest extension type
 
 Apps are a first-class **manifest extension type** any package can register. UmbraDesktop's
