@@ -21,6 +21,12 @@
 				"culture": "nl"
 			},
 			"js": "/App_Plugins/Umbraco.Community.UmbraDesktop/localization/nl.js"
+		},
+		{
+			"type": "bundle",
+			"alias": "Umbraco.Community.UmbraDesktop.Bundle",
+			"name": "UmbraDesktop Bundle",
+			"js": "/App_Plugins/Umbraco.Community.UmbraDesktop/umbradesktop.js"
 		}
 	]
 }
