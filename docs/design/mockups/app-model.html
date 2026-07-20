@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UmbraDesktop mockup — app-model</title>
+<link rel="stylesheet" href="style.css">
+<script>function toggleSelect(el){var c=el.parentElement;if(!c.hasAttribute("data-multiselect")){Array.prototype.forEach.call(c.children,function(x){if(x!==el)x.classList.remove("selected");});}el.classList.toggle("selected");}</script>
+</head>
+<body>
+<div id="claude-content">
+<style>
+  .dm-screen { position:relative; border:1px solid rgba(128,128,128,.4); border-radius:8px; height:340px; overflow:hidden;
+    background:linear-gradient(135deg, rgba(90,110,160,.22), rgba(120,90,150,.18)); }
+  .dm-win { position:absolute; border:1px solid rgba(128,128,128,.55); border-radius:6px; background:var(--uui-color-surface, rgba(30,30,35,.92)); box-shadow:0 8px 22px rgba(0,0,0,.32); overflow:hidden; }
+  .dm-tb { height:20px; background:rgba(128,128,128,.30); display:flex; align-items:center; justify-content:space-between; padding:0 6px; font-size:9px; }
+  .dm-tbtn { display:flex; gap:4px; }
+  .dm-tbtn span { width:8px; height:8px; border-radius:50%; background:rgba(128,128,128,.6); display:inline-block; }
+  .dm-wb { padding:6px; font-size:8px; opacity:.8; display:flex; gap:6px; height:calc(100% - 20px); box-sizing:border-box; }
+  .dm-tree { width:34%; border-right:1px solid rgba(128,128,128,.3); padding-right:5px; line-height:1.6; }
+  .dm-main { flex:1; }
+  .dm-taskbar { position:absolute; left:0; right:0; bottom:0; height:26px; background:rgba(20,20,25,.72); backdrop-filter:blur(4px); display:flex; align-items:center; gap:5px; padding:0 8px; }
+  .dm-start { width:16px; height:16px; border-radius:4px; background:rgba(120,150,220,.9); }
+  .dm-chip { font-size:8px; padding:2px 8px; border-radius:3px; background:rgba(128,128,128,.35); }
+  .dm-clock { margin-left:auto; font-size:8px; opacity:.75; }
+  .dm-menu { position:absolute; left:8px; bottom:30px; width:250px; background:rgba(24,24,30,.96); border:1px solid rgba(128,128,128,.4); border-radius:8px; padding:8px; box-shadow:0 10px 30px rgba(0,0,0,.4); }
+  .dm-grp { font-size:8px; text-transform:uppercase; letter-spacing:.05em; opacity:.55; margin:6px 2px 4px; }
+  .dm-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+  .dm-tile { display:flex; flex-direction:column; align-items:center; gap:3px; padding:5px 2px; border-radius:5px; background:rgba(128,128,128,.10); }
+  .dm-ic { width:18px; height:18px; border-radius:4px; background:rgba(128,150,200,.5); }
+  .dm-ic.cust { background:rgba(210,150,90,.6); }
+  .dm-tl { font-size:7px; opacity:.85; text-align:center; line-height:1.1; }
+</style>
+
+<h2>The app model — what shows up in the app drawer, and who defines it?</h2>
+<p class="subtitle">This is the keystone. It decides how reusable the package is and how your own tools plug in. Mockup first, then the choice.</p>
+
+<div class="dm-screen">
+  <!-- windows -->
+  <div class="dm-win" style="left:22px; top:16px; width:210px; height:150px;">
+    <div class="dm-tb"><span>▤ Content</span><span class="dm-tbtn"><span></span><span></span><span></span></span></div>
+    <div class="dm-wb"><div class="dm-tree">▸ Home<br>&nbsp;&nbsp;▸ Products<br>&nbsp;&nbsp;▸ News<br>▸ Campaigns</div><div class="dm-main">Workspace →<br>full section, tree included</div></div>
+  </div>
+  <div class="dm-win" style="left:250px; top:60px; width:190px; height:150px;">
+    <div class="dm-tb"><span>◔ Access viewer</span><span class="dm-tbtn"><span></span><span></span><span></span></span></div>
+    <div class="dm-wb"><div class="dm-main">Single tool — no tree.<br><br>Just the workspace/dashboard the URL points at.</div></div>
+  </div>
+
+  <!-- start menu -->
+  <div class="dm-menu">
+    <div class="dm-grp">From your Umbraco · automatic</div>
+    <div class="dm-grid">
+      <div class="dm-tile"><div class="dm-ic"></div><div class="dm-tl">Content</div></div>
+      <div class="dm-tile"><div class="dm-ic"></div><div class="dm-tl">Media</div></div>
+      <div class="dm-tile"><div class="dm-ic"></div><div class="dm-tl">Members</div></div>
+      <div class="dm-tile"><div class="dm-ic"></div><div class="dm-tl">Settings</div></div>
+    </div>
+    <div class="dm-grp">Registered by packages</div>
+    <div class="dm-grid">
+      <div class="dm-tile"><div class="dm-ic cust"></div><div class="dm-tl">Permissions</div></div>
+      <div class="dm-tile"><div class="dm-ic cust"></div><div class="dm-tl">Access viewer</div></div>
+      <div class="dm-tile"><div class="dm-ic cust"></div><div class="dm-tl">+ your app</div></div>
+    </div>
+  </div>
+
+  <!-- taskbar -->
+  <div class="dm-taskbar">
+    <div class="dm-start"></div>
+    <div class="dm-chip">Content</div>
+    <div class="dm-chip">Access viewer</div>
+    <div class="dm-clock">14:32</div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:14px">Each app = <strong>a backoffice URL + a "chrome profile"</strong> (full-section-with-tree · workspace-only · raw). That single idea covers both of your cases: Content brings its tree; your tools open bare. Apps also reuse Umbraco's <strong>condition system</strong>, so they hide when the user lacks permission — for free.</p>
+
+<h3 style="margin-top:16px">So — how are apps defined?</h3>
+<div class="options">
+  <div class="option" data-choice="extension" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>A manifest extension type — <span class="label">recommended</span></h3>
+      <p>A new <code>desktopApp</code> extension any package registers via manifest. Your permissions editor & access viewer self-register. Third parties extend the desktop with one manifest. <strong>Plus</strong> auto-derive apps from existing <code>section</code> manifests, so Content/Media/etc. appear with zero config. Most Umbraco-idiomatic; maximises reuse.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="curated" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>A curated fixed list</h3>
+      <p>The package ships a hardcoded set of apps + a config file where you list your custom ones (title, URL, icon). Simpler to build, but not extensible by others and nothing appears automatically.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:14px">I lean hard toward <strong>A</strong> — it's the difference between "a desktop for my two tools" and "a desktop platform any package can drop apps onto," for barely more effort. But tell me if that's over-engineering for what you want right now.</p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UmbraDesktop mockup — fullscreen-drawer</title>
+<link rel="stylesheet" href="style.css">
+<script>function toggleSelect(el){var c=el.parentElement;if(!c.hasAttribute("data-multiselect")){Array.prototype.forEach.call(c.children,function(x){if(x!==el)x.classList.remove("selected");});}el.classList.toggle("selected");}</script>
+</head>
+<body>
+<div id="claude-content">
+<style>
+  .dm-launch { border:1px solid rgba(128,128,128,.4); border-radius:10px; overflow:hidden; background:linear-gradient(160deg, rgba(40,44,60,.6), rgba(55,45,65,.5)); }
+  .dm-lhead { display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid rgba(128,128,128,.25); }
+  .dm-search { flex:1; height:26px; border-radius:6px; background:rgba(255,255,255,.08); border:1px solid rgba(128,128,128,.3); display:flex; align-items:center; padding:0 10px; font-size:11px; opacity:.7; }
+  .dm-close { width:22px; height:22px; border-radius:50%; background:rgba(128,128,128,.25); display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .dm-body { padding:14px; max-height:400px; overflow:auto; }
+  .dm-cat { margin-bottom:16px; }
+  .dm-cathead { display:flex; align-items:center; gap:6px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; opacity:.65; margin-bottom:8px; }
+  .dm-chev { font-size:9px; opacity:.6; }
+  .dm-sub { font-size:9px; opacity:.5; margin:8px 0 6px 6px; padding-left:6px; border-left:2px solid rgba(128,128,128,.3); }
+  .dm-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:9px; }
+  .dm-tile { position:relative; display:flex; flex-direction:column; align-items:center; gap:5px; padding:9px 4px; border-radius:8px; background:rgba(255,255,255,.05); border:1px solid rgba(128,128,128,.15); }
+  .dm-tile.pin { background:rgba(120,150,220,.12); border-color:rgba(120,150,220,.3); }
+  .dm-ic { width:26px; height:26px; border-radius:6px; background:rgba(128,150,200,.5); }
+  .dm-ic.cust { background:rgba(210,150,90,.6); }
+  .dm-ic.exp { background:rgba(150,150,150,.4); }
+  .dm-tl { font-size:8px; opacity:.85; text-align:center; line-height:1.1; }
+  .dm-badge { position:absolute; top:4px; right:4px; font-size:8px; width:13px; height:13px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .b-ok { background:rgba(90,180,120,.9); color:#08210f; }
+  .b-auto { background:rgba(120,150,220,.85); color:#06122b; }
+  .b-exp { background:rgba(225,180,70,.9); color:#2b2100; }
+</style>
+
+<h2>Fullscreen app drawer · categorised per section</h2>
+<p class="subtitle">Launchpad-style. Search up top, a pinned row, then one collapsible category per section — with menu structure preserved as sub-groups.</p>
+
+<div class="dm-launch">
+  <div class="dm-lhead">
+    <div class="dm-search">🔎 Search apps…</div>
+    <div class="dm-close">✕</div>
+  </div>
+  <div class="dm-body">
+
+    <div class="dm-cat">
+      <div class="dm-cathead"><span class="dm-chev">▾</span> ★ Pinned · your apps</div>
+      <div class="dm-grid">
+        <div class="dm-tile pin"><span class="dm-badge b-ok">✓</span><div class="dm-ic cust"></div><div class="dm-tl">Permissions</div></div>
+        <div class="dm-tile pin"><span class="dm-badge b-ok">✓</span><div class="dm-ic cust"></div><div class="dm-tl">Access viewer</div></div>
+        <div class="dm-tile pin"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Content</div></div>
+        <div class="dm-tile pin"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Media</div></div>
+      </div>
+    </div>
+
+    <div class="dm-cat">
+      <div class="dm-cathead"><span class="dm-chev">▾</span> Content &amp; Media</div>
+      <div class="dm-grid">
+        <div class="dm-tile"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Content</div></div>
+        <div class="dm-tile"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Media</div></div>
+        <div class="dm-tile"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Members</div></div>
+      </div>
+    </div>
+
+    <div class="dm-cat">
+      <div class="dm-cathead"><span class="dm-chev">▾</span> Settings <span style="opacity:.5">· 1 category → many apps (menu items)</span></div>
+      <div class="dm-sub">Templating</div>
+      <div class="dm-grid">
+        <div class="dm-tile"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Templates</div></div>
+        <div class="dm-tile"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Partial Views</div></div>
+        <div class="dm-tile"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Stylesheets</div></div>
+      </div>
+      <div class="dm-sub">Data</div>
+      <div class="dm-grid">
+        <div class="dm-tile"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Data Types</div></div>
+        <div class="dm-tile"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Document Types</div></div>
+        <div class="dm-tile"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Languages</div></div>
+      </div>
+      <div class="dm-sub">Advanced</div>
+      <div class="dm-grid">
+        <div class="dm-tile"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Log Viewer</div></div>
+        <div class="dm-tile"><span class="dm-badge b-auto">~</span><div class="dm-ic"></div><div class="dm-tl">Examine</div></div>
+      </div>
+    </div>
+
+    <div class="dm-cat">
+      <div class="dm-cathead"><span class="dm-chev">▸</span> Community · unvouched ⚠ <span style="opacity:.5">(collapsed)</span></div>
+    </div>
+
+  </div>
+</div>
+
+<h3 style="margin-top:18px">How much organisation do we build for v1?</h3>
+<div class="options">
+  <div class="option" data-choice="auto" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Auto + search</h3>
+      <p>Collapsible categories per section, menu items as sub-groups, fuzzy search. No user customisation yet.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="pinned" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Auto + search + Pinned <span class="label">recommended</span></h3>
+      <p>Everything in A, plus a per-user <strong>Pinned/Favourites</strong> area you curate. Custom named groups arrive as a fast-follow.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="custom" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Full custom home screen</h3>
+      <p>A + B + user-creatable <strong>custom sections</strong> and drag-to-arrange from day one. Most flexible, most build.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:14px">You hinted at custom sections + multilevel, so the ceiling is clearly <strong>C</strong> — but I'd ship <strong>B</strong> first (pinning covers 90% of "I just want my 5 tools handy") and treat custom groups as the next increment. Push back if you want C from the start.</p>
+
+</div>
+</body>
+</html>

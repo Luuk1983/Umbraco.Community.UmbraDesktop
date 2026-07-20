@@ -1,0 +1,24 @@
+<Solution>
+  <Folder Name="/Solution files/">
+    <File Path=".gitignore" />
+    <File Path="readme.md" />
+  </Folder>
+  <Folder Name="/Solution files/.github/">
+    <File Path=".github/copilot-instructions.md" />
+  </Folder>
+  <Folder Name="/Solution files/Pipelines/">
+    <File Path="Solution files/Pipelines/package-pipeline-ci.yml" />
+    <File Path="Solution files/Pipelines/package-pipeline-pr.yml" />
+  </Folder>
+  <Folder Name="/Solution files/Pipelines/base/">
+    <File Path="Solution files/Pipelines/base/pipeline-base.yml" />
+  </Folder>
+  <Folder Name="/Solution files/Pipelines/scripts/">
+    <File Path="Solution files/Pipelines/scripts/auto-pull-request.ps1" />
+  </Folder>
+  <Folder Name="/Solution files/Pipelines/variables/">
+    <File Path="Solution files/Pipelines/variables/variables.yml" />
+  </Folder>
+  <Project Path="src/Umbraco.Community.UmbraDesktop.TestInstance/Umbraco.Community.UmbraDesktop.TestInstance.csproj" Id="c63e1796-4f4f-45d3-8ce8-53595441aec1" />
+  <Project Path="src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj" />
+</Solution>

@@ -1,0 +1,26 @@
+{
+	"$schema": "../../umbraco-package-schema.json",
+	"id": "Umbraco.Community.UmbraDesktop",
+	"name": "UmbraDesktop",
+	"version": "GetsGenerated",
+	"extensions": [
+		{
+			"type": "localization",
+			"alias": "Umbraco.Community.UmbraDesktop.Localize.En",
+			"name": "English",
+			"meta": {
+				"culture": "en"
+			},
+			"js": "/App_Plugins/Umbraco.Community.UmbraDesktop/localization/en.js"
+		},
+		{
+			"type": "localization",
+			"alias": "Umbraco.Community.UmbraDesktop.Localize.Nl",
+			"name": "Dutch",
+			"meta": {
+				"culture": "nl"
+			},
+			"js": "/App_Plugins/Umbraco.Community.UmbraDesktop/localization/nl.js"
+		}
+	]
+}

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UmbraDesktop mockup — metaphor</title>
+<link rel="stylesheet" href="style.css">
+<script>function toggleSelect(el){var c=el.parentElement;if(!c.hasAttribute("data-multiselect")){Array.prototype.forEach.call(c.children,function(x){if(x!==el)x.classList.remove("selected");});}el.classList.toggle("selected");}</script>
+</head>
+<body>
+<div id="claude-content">
+<style>
+  .dm-frame { border:1px solid rgba(128,128,128,.4); border-radius:6px; overflow:hidden; background:rgba(128,128,128,.06); height:170px; display:flex; flex-direction:column; }
+  .dm-topbar { height:16px; background:rgba(128,128,128,.28); display:flex; align-items:center; gap:4px; padding:0 6px; }
+  .dm-dot { width:6px; height:6px; border-radius:50%; background:rgba(128,128,128,.6); }
+  .dm-body { flex:1; position:relative; padding:6px; }
+  .dm-pane { border:1px solid rgba(128,128,128,.45); border-radius:4px; background:rgba(128,128,128,.10); }
+  .dm-panehead { font-size:8px; opacity:.7; padding:2px 4px; border-bottom:1px solid rgba(128,128,128,.3); }
+  .dm-win { position:absolute; border:1px solid rgba(128,128,128,.55); border-radius:4px; background:rgba(140,140,150,.16); box-shadow:0 4px 10px rgba(0,0,0,.18); }
+  .dm-wintitle { font-size:8px; height:12px; background:rgba(128,128,128,.35); border-radius:3px 3px 0 0; padding:1px 4px; }
+  .dm-taskbar { height:14px; background:rgba(128,128,128,.32); display:flex; align-items:center; gap:4px; padding:0 5px; }
+  .dm-start { width:10px; height:10px; border-radius:2px; background:rgba(120,150,220,.8); }
+  .dm-chip { font-size:7px; padding:1px 5px; border-radius:2px; background:rgba(128,128,128,.4); }
+  .dm-tile { border:1px solid rgba(128,128,128,.45); border-radius:3px; background:rgba(128,128,128,.10); font-size:8px; opacity:.75; display:flex; align-items:center; justify-content:center; }
+</style>
+
+<h2>Where on this spectrum is the "desktop mode" you're picturing?</h2>
+<p class="subtitle">Same underlying idea (open Umbraco things side-by-side), three very different amounts of UI machinery. Click the one closest to your mental image — or tell me it's a blend.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="dm-frame">
+        <div class="dm-topbar"><div class="dm-dot"></div><span style="font-size:8px;opacity:.7">Umbraco · split view</span></div>
+        <div class="dm-body" style="display:flex; gap:6px;">
+          <div class="dm-pane" style="flex:1;"><div class="dm-panehead">Permissions editor</div></div>
+          <div class="dm-pane" style="flex:1;"><div class="dm-panehead">Access viewer</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Companion Panes</h3>
+      <p>The normal backoffice, plus the ability to split the main area into 2–3 tiled panes. Each pane hosts a section or a single tool. Like VS Code split editors. No floating, no overlap. <strong>Smallest build, ships fastest.</strong></p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="dm-frame">
+        <div class="dm-topbar"><div class="dm-dot"></div><span style="font-size:8px;opacity:.7">Desktop</span></div>
+        <div class="dm-body">
+          <div class="dm-win" style="left:8px; top:8px; width:52%; height:78px;"><div class="dm-wintitle">Content</div></div>
+          <div class="dm-win" style="left:38%; top:34px; width:54%; height:74px;"><div class="dm-wintitle">Access viewer</div></div>
+        </div>
+        <div class="dm-taskbar"><div class="dm-start"></div><span class="dm-chip">Content</span><span class="dm-chip">Access</span></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Windowed Desktop</h3>
+      <p>A dedicated desktop surface with a start menu / app drawer, a taskbar, and real floating, draggable, overlapping windows. Each window is an "app" (a section with its tree, or one workspace). Save & restore layouts. <strong>The full "cool" vision.</strong></p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="dm-frame">
+        <div class="dm-topbar"><div class="dm-dot"></div><span style="font-size:8px;opacity:.7">Tiled workspace</span></div>
+        <div class="dm-body" style="display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:6px;">
+          <div class="dm-tile">Content tree</div>
+          <div class="dm-tile">Permissions</div>
+          <div class="dm-tile">Access viewer</div>
+          <div class="dm-tile">Dashboard</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Tiling Grid Manager</h3>
+      <p>Windows never overlap — they snap into a grid you arrange (like i3 / macOS tiling). Keyboard-driven, dense, great for a fixed "cockpit" of tools you always want visible together. <strong>Power-user flavour.</strong></p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:20px">My instinct: <strong>B is the dream</strong>, but A is the honest MVP and its engine (multiple isolated router outlets hosting sections/workspaces) is exactly what B needs too — so A→B is a natural build order, not a fork. C is really a layout policy you could add on top of B later. Curious which one you're actually excited about.</p>
+
+</div>
+</body>
+</html>

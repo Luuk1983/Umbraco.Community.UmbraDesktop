@@ -1,0 +1,18 @@
+<Project>
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+		<CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
+	</PropertyGroup>
+	<ItemGroup>
+		<!-- Extension package dependencies -->
+		<PackageVersion Include="Umbraco.Cms.Api.Common" Version="17.*" />
+		<PackageVersion Include="Umbraco.Cms.Core" Version="17.*" />
+		<PackageVersion Include="ProudNerds.Umbraco.Core.Package" Version="17.*" />
+		<PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
+
+		<!-- Test instance dependencies -->
+		<PackageVersion Include="Umbraco.Cms" Version="17.*" />
+		<PackageVersion Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" />
+		<PackageVersion Include="uSync" Version="17.*" />
+	</ItemGroup>
+</Project>

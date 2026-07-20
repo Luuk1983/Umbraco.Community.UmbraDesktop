@@ -1,0 +1,79 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+	  <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+	  <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+	  <ContentTargetFolders>.</ContentTargetFolders>
+	  <Product>Umbraco.Community.UmbraDesktop</Product>
+	  <PackageId>Umbraco.Community.UmbraDesktop</PackageId>
+	  <Title>Umbraco.Community.UmbraDesktop</Title>
+	  <Description>An OS-style windowed desktop for the Umbraco backoffice</Description>
+	  <PackageTags>proudnerds package umbraco</PackageTags>
+	  <RootNamespace>Umbraco.Community.UmbraDesktop</RootNamespace>
+	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	  <Authors>Proud Nerds .NET team</Authors>
+	  <Company>Proud Nerds</Company>
+	  <RepositoryUrl></RepositoryUrl>
+	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
+	  <PackageIcon>Package-image_128_128.png</PackageIcon>
+	  <VersionPrefix>1.0.0</VersionPrefix>
+	  <PackageReadmeFile>readme.md</PackageReadmeFile>
+	  <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
+  </PropertyGroup>
+
+	<!-- Updates the version in the umbraco-package.json file to the same version as the NuGet package -->
+	<Target Name="UpdateUmbracoPackageJsonVersion" AfterTargets="Build">
+		<PropertyGroup>
+			<UmbracoPackageJsonPath>$(ProjectDir)wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\umbraco-package.json</UmbracoPackageJsonPath>
+		</PropertyGroup>
+		<Message Text="Checking for umbraco-package.json at: $(UmbracoPackageJsonPath)" Importance="High" />
+		<JsonPathUpdateValue JsonFile="$(UmbracoPackageJsonPath)" Path="$.version" Value="&quot;$(VersionPrefix)&quot;" Condition="Exists('$(UmbracoPackageJsonPath)')" />
+		<Message Text="✅ Updated umbraco-package.json version to $(VersionPrefix)." Importance="High" Condition="Exists('$(UmbracoPackageJsonPath)')" />
+		<Message Text="⚠️ Skipped updating umbraco-package.json version - file not found at $(UmbracoPackageJsonPath)." Importance="High" Condition="!Exists('$(UmbracoPackageJsonPath)')" />
+	</Target>	
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+	  <WarningsNotAsErrors>NU5104</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+	  <WarningsNotAsErrors>NU5104</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="App_Plugins\**" />
+    <Compile Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
+    <Content Remove="App_Plugins\**" />
+    <Content Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
+    <EmbeddedResource Remove="App_Plugins\**" />
+    <EmbeddedResource Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
+    <None Remove="App_Plugins\**" />
+    <None Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Package-image_128_128.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+	<ItemGroup>
+		<None Include="readme.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="ProudNerds.Umbraco.Core.Package" />
+	  <PackageReference Include="Umbraco.Cms.Api.Common" />
+	  <PackageReference Include="Umbraco.Cms.Core" />
+	  <PackageReference Include="Umbraco.JsonSchema.Extensions" />
+	</ItemGroup>
+</Project>

@@ -1,0 +1,21 @@
+# Pipeline version: 1.2.0
+
+name: $(Date:yyyyMMdd)$(Rev:r)
+
+trigger: none
+
+pr:
+  autoCancel: true 
+  branches:
+    include:
+    - feature/*
+    - release/*
+    - hotfix/*
+
+extends:
+  template: base/pipeline-base.yml
+  parameters:
+
+    # Determines of the pipeline should deploy the package(s) to the NuGet feed of ProudNerds
+    publishToProudNerdsNuGetFeed: false
+    

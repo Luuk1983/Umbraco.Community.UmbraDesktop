@@ -1,0 +1,8 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<!-- Import the default Razor Class Library .props file -->
+	<Import Project="../buildMultiTargeting/Umbraco.Community.UmbraDesktop.props" Condition="Exists('../buildMultiTargeting/Umbraco.Community.UmbraDesktop.props')" />
+
+	<ItemGroup>
+		<UmbracoJsonSchemaFiles Include="$(MSBuildThisFileDirectory)..\appsettings-schema.Umbraco.Community.UmbraDesktop.json" Weight="-80" />
+	</ItemGroup>
+</Project>

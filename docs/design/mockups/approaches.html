@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UmbraDesktop mockup — approaches</title>
+<link rel="stylesheet" href="style.css">
+<script>function toggleSelect(el){var c=el.parentElement;if(!c.hasAttribute("data-multiselect")){Array.prototype.forEach.call(c.children,function(x){if(x!==el)x.classList.remove("selected");});}el.classList.toggle("selected");}</script>
+</head>
+<body>
+<div id="claude-content">
+<style>
+  .dm-diag { display:flex; gap:6px; align-items:stretch; justify-content:center; height:120px; padding:8px; }
+  .dm-box { border:1px solid rgba(128,128,128,.5); border-radius:5px; background:rgba(128,128,128,.08); display:flex; flex-direction:column; }
+  .dm-lbl { font-size:8px; opacity:.7; padding:2px 5px; border-bottom:1px solid rgba(128,128,128,.3); white-space:nowrap; }
+  .dm-inner { flex:1; margin:5px; border:1px dashed rgba(128,128,128,.5); border-radius:4px; font-size:7px; opacity:.7; display:flex; align-items:center; justify-content:center; text-align:center; padding:2px; }
+  .dm-app { border:1.5px solid rgba(120,150,220,.7); background:rgba(120,150,220,.08); }
+  .dm-iframe { border:1.5px solid rgba(210,150,90,.7); background:rgba(210,150,90,.08); }
+  .dm-tag { display:inline-block; font-size:10px; padding:1px 7px; border-radius:10px; margin:2px 3px 0 0; border:1px solid rgba(128,128,128,.4); }
+  .dm-yes { background:rgba(90,180,120,.16); border-color:rgba(90,180,120,.5); }
+  .dm-no  { background:rgba(210,110,110,.14); border-color:rgba(210,110,110,.5); }
+  .dm-mid { background:rgba(210,180,90,.16); border-color:rgba(210,180,90,.5); }
+</style>
+
+<h2>Three ways to build B — how do you want to solve the routing piece?</h2>
+<p class="subtitle">All three deliver floating windows. They differ in how a window navigates internally, how heavy they are, and — crucially for you — whether they stay a pure installable package or want a small contribution to Umbraco core.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="inprocess" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="dm-diag">
+        <div class="dm-box dm-app" style="flex:1;">
+          <div class="dm-lbl">One backoffice app</div>
+          <div style="display:flex; gap:5px; flex:1; padding:5px;">
+            <div class="dm-box" style="flex:1;"><div class="dm-lbl">Window</div><div class="dm-inner">isolated context</div></div>
+            <div class="dm-box" style="flex:1;"><div class="dm-lbl">Window</div><div class="dm-inner">isolated context</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>1 · In-process windows</h3>
+      <p>Each window is a normal DOM subtree that mounts an Umbraco element inside a draggable frame. Context API isolates them automatically (the modal precedent). Seamless: shared state, trivial cross-window drag/drop.</p>
+      <p style="margin-top:6px">
+        <span class="dm-tag dm-yes">Single tools: works today</span>
+        <span class="dm-tag dm-mid">Trees/internal nav: needs a small virtual-router capability (~4 engine files)</span>
+        <span class="dm-tag dm-mid">Pure package? mostly — nav-heavy windows want a core PR</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="iframe" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="dm-diag">
+        <div class="dm-box dm-iframe" style="flex:1;">
+          <div class="dm-lbl">iframe · own URL</div>
+          <div class="dm-inner">full backoffice<br>(Content + tree)</div>
+        </div>
+        <div class="dm-box dm-iframe" style="flex:1;">
+          <div class="dm-lbl">iframe · own URL</div>
+          <div class="dm-inner">full backoffice<br>(Access viewer)</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>2 · Iframe windows</h3>
+      <p>Each window is an <code>&lt;iframe&gt;</code> running the real backoffice at a deep-link URL. Every iframe owns its own <code>location</code>/history/router — so full independent navigation comes for free, with zero engine changes.</p>
+      <p style="margin-top:6px">
+        <span class="dm-tag dm-yes">Internal nav everywhere: free</span>
+        <span class="dm-tag dm-yes">Pure package? 100% — no core changes</span>
+        <span class="dm-tag dm-no">Heavy: each window re-boots the shell</span>
+        <span class="dm-tag dm-no">Cross-window sharing/drag: postMessage only</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="dm-diag">
+        <div class="dm-box dm-app" style="flex:1;">
+          <div class="dm-lbl">One backoffice app</div>
+          <div style="display:flex; gap:5px; flex:1; padding:5px;">
+            <div class="dm-box" style="flex:1;"><div class="dm-lbl">In-proc</div><div class="dm-inner">your tools</div></div>
+            <div class="dm-box dm-iframe" style="flex:1;"><div class="dm-lbl">iframe</div><div class="dm-inner">Content + tree</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>3 · Hybrid &nbsp;<span class="label">recommended</span></h3>
+      <p>In-process windows for single-element tools — <strong>your permissions editor + access viewer ship basically now, zero engine changes</strong> — and reach for an iframe only for the rare "full section with its tree" window. Best of both, and defers the hard call.</p>
+      <p style="margin-top:6px">
+        <span class="dm-tag dm-yes">Your real use case: immediate</span>
+        <span class="dm-tag dm-yes">Pure package for the 90% you care about</span>
+        <span class="dm-tag dm-mid">Upgrade path to the full dream stays open</span>
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:18px">My recommendation: <strong>Hybrid</strong>. Start fully in-process (your two tools basically work today), and only later decide whether "content-library-in-a-window" is worth an iframe or a small virtual-router contribution to core. You never block yourself, and the first demo is close.</p>
+
+</div>
+</body>
+</html>

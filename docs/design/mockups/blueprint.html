@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UmbraDesktop mockup — blueprint</title>
+<link rel="stylesheet" href="style.css">
+<script>function toggleSelect(el){var c=el.parentElement;if(!c.hasAttribute("data-multiselect")){Array.prototype.forEach.call(c.children,function(x){if(x!==el)x.classList.remove("selected");});}el.classList.toggle("selected");}</script>
+</head>
+<body>
+<div id="claude-content">
+<style>
+  .bp-wrap { border:1px solid rgba(128,128,128,.4); border-radius:10px; padding:14px; background:rgba(128,128,128,.04); }
+  .bp-row { display:flex; gap:10px; margin-bottom:10px; }
+  .bp-box { border:1px solid rgba(128,128,128,.4); border-radius:7px; padding:8px 10px; background:rgba(128,128,128,.07); }
+  .bp-title { font-size:10px; text-transform:uppercase; letter-spacing:.05em; opacity:.6; margin-bottom:5px; }
+  .bp-app { border-color:rgba(120,150,220,.55); background:rgba(120,150,220,.08); }
+  .bp-iframe { border-color:rgba(210,150,90,.55); background:rgba(210,150,90,.08); }
+  .bp-server { border-color:rgba(90,180,120,.55); background:rgba(90,180,120,.08); }
+  .bp-sm { font-size:10px; opacity:.85; line-height:1.5; }
+  .bp-tag { display:inline-block; font-size:9px; padding:1px 6px; border-radius:10px; border:1px solid rgba(128,128,128,.4); margin:2px 2px 0 0; }
+  .bp-arrow { text-align:center; opacity:.5; font-size:14px; margin:2px 0; }
+</style>
+
+<h2>Blueprint · Umbraco Desktop Mode</h2>
+<p class="subtitle">Installable package · Umbraco v17 · no core changes. Eyeball it against the summary in the terminal.</p>
+
+<div class="bp-wrap">
+  <div class="bp-box bp-app" style="margin-bottom:10px;">
+    <div class="bp-title">"Desktop" section — fullscreen when active (hides <code>umb-backoffice-header</code>, reversible)</div>
+    <div class="bp-sm">Taskbar: ⊞ start → <strong>fullscreen app drawer</strong> (auto + fuzzy search) · running-window chips · clock · ↩ return to classic</div>
+  </div>
+
+  <div class="bp-row">
+    <div class="bp-box bp-iframe" style="flex:1;">
+      <div class="bp-title">Window = &lt;iframe&gt;</div>
+      <div class="bp-sm"><strong>Content</strong> → deep-link <code>/section/content</code><br>chrome profile: <em>full-section</em> (tree kept)<br>own router · own state · own auth</div>
+    </div>
+    <div class="bp-box bp-iframe" style="flex:1;">
+      <div class="bp-title">Window = &lt;iframe&gt;</div>
+      <div class="bp-sm"><strong>Access viewer</strong> → deep-link<br>chrome profile: <em>bare</em><br>drag · resize · min/max · z-order</div>
+    </div>
+  </div>
+  <div class="bp-sm" style="text-align:center; opacity:.7; margin-bottom:8px;">↑ desktop injects CSS into each same-origin iframe · confidence tier picks how much chrome to strip</div>
+
+  <div class="bp-arrow">▲ &nbsp; server events / SignalR &nbsp; ▲</div>
+  <div class="bp-box bp-server">
+    <div class="bp-title">Umbraco server</div>
+    <div class="bp-sm">Save in one window → notifications fire → <strong>every iframe refreshes itself</strong> via its own observers. No cross-window code.</div>
+  </div>
+
+  <div class="bp-row" style="margin-top:12px;">
+    <div class="bp-box" style="flex:1;">
+      <div class="bp-title">App model</div>
+      <div class="bp-sm"><code>desktopApp</code> manifest (self-register) <strong>+</strong> auto-derive:<br>tree section → 1 app (keep tree) · menu item → 1 app each · dashboard → 1 app · <em>workspace views / actions → never</em></div>
+    </div>
+    <div class="bp-box" style="flex:1;">
+      <div class="bp-title">Confidence</div>
+      <div class="bp-sm">
+        <span class="bp-tag">✓ verified — strip aggressively</span>
+        <span class="bp-tag">~ auto — likely fine</span>
+        <span class="bp-tag">⚠ experimental — keep more chrome</span>
+        <br>reuses Umbraco <strong>conditions</strong> → hides on missing permission
+      </div>
+    </div>
+  </div>
+
+  <div class="bp-box" style="margin-top:10px;">
+    <div class="bp-title">Persistence</div>
+    <div class="bp-sm">Per-browser <strong>localStorage</strong> — windows + positions survive F5 · "close all / reset desktop" to start fresh</div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:12px"><strong>Roadmap (not v1):</strong> pinned/custom drawer groups · tiling &amp; snap · "open any path" launcher · server-roaming layouts · cross-window drag/drop.</p>
+
+</div>
+</body>
+</html>
