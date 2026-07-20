@@ -3,7 +3,7 @@ import { UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import './window.element.js';
 import './taskbar.element.js';
-import { css, customElement, html, state } from '@umbraco-cms/backoffice/external/lit';
+import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
 const OUTER_CHROME_STYLE_ID = 'umbradesktop-outer-chrome';
@@ -54,7 +54,9 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     return html`
       <div class="desktop">
         <div class="surface" style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
-          ${this._windows.map(
+          ${repeat(
+            this._windows,
+            (w) => w.id,
             (w) => html`<umbradesktop-window .window=${w}></umbradesktop-window>`,
           )}
         </div>

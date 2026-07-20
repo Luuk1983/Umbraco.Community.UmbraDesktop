@@ -1,6 +1,5 @@
 import type { UmbraDesktopWindow } from '../types';
 import { injectChromeStyles } from '../chrome-injector';
-import { UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { css, customElement, html, property, state } from '@umbraco-cms/backoffice/external/lit';
@@ -36,11 +35,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
 
   #onTitlePointerDown = (e: PointerEvent) => {
     if (!this.window || this.window.state === 'maximized') return;
-    this.#manager?.focus(this.window.id);
     this._dragging = true;
     this.#startPointer = { x: e.clientX, y: e.clientY };
     this.#startRect = { x: this.window.rect.x, y: this.window.rect.y };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   #onTitlePointerMove = (e: PointerEvent) => {
@@ -52,7 +50,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
 
   #onTitlePointerUp = (e: PointerEvent) => {
     this._dragging = false;
-    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
   };
 
   #onFocus = () => {
@@ -64,7 +62,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (!w) return null;
     const maximized = w.state === 'maximized';
     const style = maximized
-      ? `left:0; top:0; width:100%; height:calc(100% - ${UMBRADESKTOP_TASKBAR_HEIGHT}px); z-index:${w.z};`
+      ? `left:0; top:0; width:100%; height:100%; z-index:${w.z};`
       : `left:${w.rect.x}px; top:${w.rect.y}px; width:${w.rect.w}px; height:${w.rect.h}px; z-index:${w.z};`;
     return html`
       <div
@@ -78,7 +76,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
           @pointermove=${this.#onTitlePointerMove}
           @pointerup=${this.#onTitlePointerUp}>
           <span class="title"><umb-icon name=${w.app.icon}></umb-icon> ${w.app.name}</span>
-          <span class="controls">
+          <span class="controls" @pointerdown=${(e: PointerEvent) => e.stopPropagation()}>
             <uui-button
               compact
               label="Minimize"

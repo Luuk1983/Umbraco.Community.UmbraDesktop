@@ -3,7 +3,7 @@ import { UMBRADESKTOP_APPS } from '../apps';
 import { UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
-import { css, customElement, html, state } from '@umbraco-cms/backoffice/external/lit';
+import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
 /** The bottom panel: Umbraco-logo start button, running-window buttons, clock. */
@@ -53,7 +53,9 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           <umb-icon name="icon-umbraco"></umb-icon>
         </button>
         <div class="running">
-          ${this._windows.map(
+          ${repeat(
+            this._windows,
+            (w) => w.id,
             (w) => html`
               <button
                 class="task ${w.active ? 'active' : ''}"
