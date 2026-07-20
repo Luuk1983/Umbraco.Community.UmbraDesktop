@@ -22,9 +22,10 @@ inferable. Plus one safe automatic section fallback. Rationale:
 
 - **Package authors won't self-register.** A PR adding one file to UmbraDesktop is a far lower
   bar than "learn our manifest API", and the maintainer can *certify* the result works.
-- **URLs are inferred, not hand-typed.** Section and dashboard deep-links are reliably built
-  from the registry (§5.1), so a catalogue entry is usually just "point at this alias, show it
-  here" — not a hand-maintained URL.
+- **URLs are inferred, not hand-typed.** Section, dashboard, *and* default menu-item
+  workspace-tool (Log Viewer, Webhooks, Relations) deep-links are all reliably built from the
+  registry (§5.1), so a catalogue entry is usually just `ref: '<alias>'` plus where to show it —
+  not a hand-maintained URL.
 - **"Certified" is a fact, not a claim.** It means "we opened it and it works well framed",
   stronger than "the author added a manifest".
 - **Far less code and maintenance** than a manifest type + condition evaluation + fragile
@@ -61,30 +62,34 @@ Confidence is a data attribute in Phase 2; its **badge UI** arrives with the Pha
 
 ### 3.1 The two axes
 - **Gate** — decides whether the app is shown at all: its backing section must be
-  **installed *and* permitted for the current user** (§6). For a section/dashboard entry the
-  gate section is known from the reference; for an explicit-URL entry it is stated.
+  **installed *and* permitted for the current user** (§6). For a `section`/`dashboard` ref the
+  gate section is known from the reference; for a menu-item ref or a `url:` entry it is stated
+  via `section:`.
 - **Display (`categoryAlias`)** — the free-form header where the maintainer wants it shown,
   fully decoupled from Umbraco's section/menu structure. A Log Viewer that lives in Settings
   can appear under a "Security" header.
 
-### 3.2 A catalogue entry references an alias (URL inferred)
-Each entry links to *what it opens* in exactly one of three ways:
+### 3.2 A catalogue entry references an alias; the URL is inferred
+The common case: an entry names a registered extension by alias and the URL is **inferred from
+that extension's manifest** (§5.1) — the author types no URL.
 
-- **`section: <sectionAlias>`** — a whole-section app. URL inferred: `/umbraco/section/{pathname}`.
-  This entry *is* that section's root app (there is at most one per section).
-- **`dashboard: <dashboardAlias>`** — a dashboard app. URL inferred from the dashboard's
-  `meta.pathname` + its owning section.
-- **`url: <string>` (+ `section: <sectionAlias>` for the gate)** — an explicit, hand-verified
-  URL, used only for surfaces that aren't inferable (single-view/tree tools; §5.1).
+- **`ref: <alias>`** — a registered `section`, `dashboard`, or default-kind `menuItem`. The
+  adapter looks up the manifest and builds the URL by its type/kind (§5.1). A `ref` to a
+  section is that section's root app (at most one per section).
+- **`url: <string>`** — an explicit, hand-verified URL: the escape hatch for surfaces that
+  aren't inferable by rule (tree roots, `kind:'link'`/bespoke menu items).
+- **`section: <sectionAlias>`** — names the permission gate and, for a menu-item `ref` or a
+  `url:` entry, the section whose shell/pathname to use. Derived automatically for `section`/
+  `dashboard` refs.
 
 Plus presentation + placement (all optional except placement):
 ```
 UmbraDesktopCatalogueEntry {
   alias                       // our stable app id
-  section | dashboard | url   // the link (exactly one form, per above)
-  section?                    // also the permission gate for url-form entries
+  ref? | url?                 // what it opens (ref = infer from manifest; url = explicit)
+  section?                    // gate + section prefix (auto for section/dashboard refs)
   name?; icon?                // override; default inherited from the referenced extension
-  chromeProfile?              // default by link kind (section→full-section, etc.)
+  chromeProfile?              // default by kind (section/menuItem→full-section, dashboard→bare)
   defaultSize?; allowMultiple?; weight?
   categoryAlias; groupAlias?  // DISPLAY placement
 }
@@ -123,7 +128,7 @@ backoffice/src/desktop/catalogue/
   index.ts            // collate all fragments
   categories.ts       // curated headers + collapsible groups (Security, Scaffolding, …)
   content.ts          // Content / Media / Members section entries
-  settings.ts         // Settings section entry + a dashboard entry + one explicit-URL tool
+  settings.ts         // Settings section ref + a dashboard ref + a menu-item tool ref (Log Viewer)
   …                   // room for one file per package/plugin later (e.g. uSync.ts)
 ```
 A package/plugin gets a self-contained file that can declare its own header *and* entries; an
@@ -133,34 +138,39 @@ external contributor PRs one file + one import line. Small diffs, low-friction c
 
 ## 5. Derivation & grouping — the pure, tested core
 
-### 5.1 URL inference (which surfaces, how reliable)
-Confirmed against the v17 backoffice source:
+### 5.1 URL inference — what's inferable, verified against the v17 source
+`ref` resolves by the referenced manifest's type/kind (rules confirmed against the backoffice's
+own routing/menu code):
 
-| Surface | Inferable? | Rule |
+| Referenced manifest | Inferable? | Rule (engine-confirmed) |
 |---|---|---|
-| **Section** | ✅ reliable | `/umbraco/section/{section.meta.pathname}` (`UMB_SECTION_PATH_PATTERN`) |
-| **Dashboard** (pathname set) | ✅ reliable | `/umbraco/section/{sectionPathname}/dashboard/{dashboard.meta.pathname}`; section resolved from the dashboard's `Umb.Condition.SectionAlias` |
-| Tree tool w/ `{entityType}-root` workspace | ⚠️ convention | e.g. `/umbraco/section/settings/workspace/data-type-root` — not guaranteed (Templates has none) |
-| Single-view workspace tool (Log Viewer) | ⚠️ partial | `/umbraco/section/{section}/workspace/{meta.entityType}` — section prefix is cosmetic |
-| Individual entity node | ❌ never | needs a runtime GUID — correctly not an app |
+| `section` | ✅ | `/umbraco/section/{meta.pathname}` (`UMB_SECTION_PATH_PATTERN`) |
+| `dashboard` (pathname set) | ✅ | `/umbraco/section/{sectionPathname}/dashboard/{meta.pathname}`; section from its `Umb.Condition.SectionAlias` |
+| `menuItem`, **default kind**, has `meta.entityType` (Log Viewer, Webhooks, Relations) | ✅ | `/umbraco/section/{sectionPathname}/workspace/{meta.entityType}` — the exact rule the backoffice itself uses (`menu-item-default.element.ts` `#constructHref`) |
+| `menuItem`, `kind:'tree'` | ❌ by rule | tree only expands; a landing URL exists only if a `{entityType}-root` workspace is separately registered (convention) |
+| `menuItem`, `kind:'link'` | literal | URL is the manifest's `meta.href` (may be external) — use a `url:` entry |
+| `menuItem`, `kind:'action'` | ❌ | runs a modal/action; not a navigable route — not an app |
+| individual entity node | ❌ | needs a runtime GUID — correctly not an app |
 
-The ✅ rows are inferred automatically from the referenced manifest. The ⚠️ rows are handled by
-an **explicit `url:` entry** whose value the maintainer verifies against a running backoffice —
-that verification *is* the certification. URL strings are composed by simple, tested string
-building from primitives (pathname etc.) the adapter extracts from manifests, keeping the pure
+The ❌/literal rows are handled by an explicit `url:` entry the maintainer verifies against a
+running backoffice — that verification *is* the certification — or simply left out.
+**Menu-item workspace tools render inside the section shell (sidebar included)**, so their
+default chrome is `full-section`; stripping to just the tool is `workspace-only`/`bare`, subject
+to the R6 injector limit. URL strings are composed by simple, tested string building from
+primitives (pathname, entityType…) the adapter extracts from manifests, keeping the pure
 functions free of backoffice imports (matching Phase 1's test approach).
 
 ### 5.2 `deriveApps(catalogue, resolvedContext) → UmbraDesktopApp[]`
-`resolvedContext` = the permitted sections (`{alias, label, pathname}[]`) + any resolved
-dashboard/tool primitives the adapter looked up (§6), all as plain data.
-1. **Certified section entries:** for each `section:` entry whose section is permitted, emit a
-   certified `full-section` app (inferred URL), with overrides + placement.
-2. **Certified dashboard / url entries:** emit certified apps (inferred or explicit URL),
-   gated by their section being permitted, placed as specified. (Skipped + logged if the
-   referenced extension isn't registered / section not permitted.)
-3. **Section fallback:** for each permitted section with **no** `section:` entry, synthesize an
-   uncertified `full-section` app in the "More" header.
-4. Return the flat, tagged app list.
+`resolvedContext` = the permitted sections (`{alias, label, pathname}[]`) + the primitives the
+adapter looked up for each `ref` (§6), all as plain data.
+1. **Certified `ref` / `url` entries:** for each entry whose gate section is permitted and whose
+   referenced extension is registered (or which carries an explicit `url:`), emit a certified
+   app with the inferred/explicit URL, applying overrides + placement. A `ref` to a section is
+   that section's root app. (Skipped + logged if the ref isn't registered, isn't inferable and
+   has no `url:`, or its section isn't permitted.)
+2. **Section fallback:** for each permitted section with **no** section-`ref` entry, synthesize
+   an uncertified `full-section` app in the "More" header.
+3. Return the flat, tagged app list.
 
 ### 5.3 `groupApps(apps, categories, groups) → display tree`
 Builds `header → (loose apps + collapsible groups → apps)`, sorts by `weight`, drops empties,
@@ -181,9 +191,10 @@ current user's `allowedSections`. We consume it directly — a forbidden section
 app. (Underlying source: `UMB_CURRENT_USER_CONTEXT.allowedSections`, section aliases.)
 
 **Resolution is a thin impure adapter** — the only impure part. It: reads
-`allowedSections`; for each catalogue `dashboard:`/`url:` entry looks up the referenced manifest
-(`umbExtensionsRegistry`) to extract pathname/section primitives; then feeds plain data into
-the pure `deriveApps`. An `UmbraDesktopAppCatalogueContext` (provided by the desktop element,
+`allowedSections`; for each catalogue `ref` entry looks up the referenced manifest
+(`umbExtensionsRegistry`) to read its type/kind and extract pathname/entityType/section
+primitives (§5.1); then feeds plain data into the pure `deriveApps`. An
+`UmbraDesktopAppCatalogueContext` (provided by the desktop element,
 beside the window manager) runs adapter → `deriveApps` → `groupApps` and exposes observable
 `apps` / display tree.
 
@@ -217,9 +228,11 @@ Phase 1's window/taskbar chrome, drag/resize, and section registration are other
 ## 8. Testing strategy
 - **Unit (TDD, web-test-runner):**
   - URL inference — section + dashboard URL composition from primitives.
-  - `deriveApps` — gate filtering by permitted sections; certified tagging for
-    section/dashboard/url entries; section fallback for uncatalogued sections; **no** fallback
-    when a `section:` entry exists; confidence assignment; fallback lands in "More".
+  - `ref` inference dispatch — section / dashboard / default-menuItem manifests → correct URL;
+    non-inferable kinds → require `url:` (skipped + logged otherwise).
+  - `deriveApps` — gate filtering by permitted sections; certified tagging for `ref` + `url`
+    entries; section fallback for uncatalogued sections; **no** fallback when a section-`ref`
+    entry exists; confidence assignment; fallback lands in "More".
   - `groupApps` — header→group→apps tree; weight sorting; empty dropping; "More" last.
   - `window-model` — `allowMultiple:false` focuses existing; `true` opens anew.
 - **Manual (Test Instance):** each certified core app opens to the right place with the right
@@ -231,7 +244,7 @@ Phase 1's window/taskbar chrome, drag/resize, and section registration are other
 ## 9. Risks
 | # | Item | Mitigation |
 |---|------|-----------|
-| R4′ | Non-inferable tools (tree tools w/o root workspace, single-view workspaces) | Handled by explicit `url:` entries, hand-verified (= certification). Start the catalogue with ✅-inferable surfaces + a couple of verified tools; grow deliberately. |
+| R4′ | Non-inferable surfaces (`kind:'tree'` roots w/o a root workspace, `kind:'link'`, `kind:'action'`, bespoke menu items) | Handled by explicit `url:` entries, hand-verified (= certification), or left out. Sections, dashboards, and **default menu-item workspace tools** (Log Viewer, Webhooks, Relations) are inferred — no hand URL. |
 | R6 | Chrome injector only strips sidebars sharing the header's shadow root (Phase 1 note) | `workspace-only`/`bare` may not fully strip deep sidebars. Own task to extend the injector; **escape hatch**: ship affected entries as `full-section` and defer aggressive stripping. |
 
 (Old R7 — permission resolution — is **resolved**: `UMB_BACKOFFICE_CONTEXT.allowedSections`, §6.)
