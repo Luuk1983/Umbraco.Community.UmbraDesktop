@@ -17,43 +17,28 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   @state()
   private _windows: UmbraDesktopWindow[] = [];
 
-  /** When true the outer backoffice header is hidden (fullscreen desktop). */
-  @state()
-  private _fullscreen = true;
-
   constructor() {
     super();
     this.observe(this.#manager.windows, (list) => (this._windows = list));
-    // The taskbar's menu button asks (via a composed, bubbling event) to reveal
-    // the Umbraco header so the user can switch sections without being trapped.
-    this.addEventListener('umbradesktop-toggle-menu', this.#toggleFullscreen);
   }
 
   override connectedCallback() {
     super.connectedCallback();
-    this.#applyOuterChrome();
+    // Hide the outer backoffice header for a fullscreen desktop. Leaving the
+    // section (via the taskbar's Exit) unmounts this element and restores it.
+    this.#setOuterChrome(true);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    // Always restore the header when leaving the section.
     this.#setOuterChrome(false);
-  }
-
-  #toggleFullscreen = () => {
-    this._fullscreen = !this._fullscreen;
-    this.#applyOuterChrome();
-  };
-
-  #applyOuterChrome() {
-    this.#setOuterChrome(this._fullscreen);
   }
 
   /**
    * Show or hide the outer backoffice header. The shell lives in shadow DOM, so
    * the style is injected into the shadow root that owns the header — a
    * document-level stylesheet cannot reach it.
-   * @param hide Whether to hide the outer chrome.
+   * @param hide Whether to hide the outer chrome (fullscreen when true).
    */
   #setOuterChrome(hide: boolean) {
     const root = findChromeRoot(this.ownerDocument);

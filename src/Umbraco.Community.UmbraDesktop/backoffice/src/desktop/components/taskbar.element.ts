@@ -5,8 +5,9 @@ import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-t
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
 
-/** The bottom panel: Umbraco-logo start button, running-window buttons, clock. */
+/** The bottom panel: Umbraco-logo start button, running-window buttons, clock, exit. */
 @customElement('umbradesktop-taskbar')
 export class UmbraDesktopTaskbarElement extends UmbLitElement {
   @state()
@@ -46,12 +47,23 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     this.#manager?.open(UMBRADESKTOP_APPS[0]);
   }
 
-  /** Ask the desktop to reveal/hide the Umbraco header so sections stay reachable. */
-  #onToggleMenu() {
-    this.dispatchEvent(
-      new CustomEvent('umbradesktop-toggle-menu', { bubbles: true, composed: true }),
-    );
-  }
+  /** Confirm, then leave the Desktop section for the classic backoffice. */
+  #onExit = async () => {
+    try {
+      await umbConfirmModal(this, {
+        headline: 'Exit desktop mode',
+        content: 'Return to the classic Umbraco backoffice? Your open windows will be closed.',
+        confirmLabel: 'Exit',
+        cancelLabel: 'Stay',
+        color: 'danger',
+      });
+    } catch {
+      return; // cancelled
+    }
+    // Navigating to another section unmounts the desktop, which restores the header.
+    const path = window.location.pathname.replace(/\/section\/.*$/, '/section/content');
+    window.history.pushState(null, '', path);
+  };
 
   override render() {
     return html`
@@ -73,9 +85,14 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
             `,
           )}
         </div>
-        <button class="menu" title="Show/hide the Umbraco menu" @click=${this.#onToggleMenu}>
-          &#9776;
-        </button>
+        <uui-button
+          class="exit"
+          compact
+          look="secondary"
+          label="Exit desktop mode"
+          @click=${this.#onExit}>
+          Exit
+        </uui-button>
         <div class="clock">${this._clock}</div>
       </div>
     `;
@@ -128,18 +145,6 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       }
       .task.active {
         border-color: var(--uui-color-selected);
-      }
-      .menu {
-        border: none;
-        background: transparent;
-        color: inherit;
-        cursor: pointer;
-        font-size: 16px;
-        padding: 0 var(--uui-size-space-2);
-        border-radius: var(--uui-border-radius, 3px);
-      }
-      .menu:hover {
-        background: var(--uui-color-surface);
       }
       .clock {
         font-size: var(--uui-type-small-size);

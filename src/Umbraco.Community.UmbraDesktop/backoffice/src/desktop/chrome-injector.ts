@@ -60,10 +60,13 @@ export function findChromeRoot(from: Document | ShadowRoot): ShadowRoot | null {
  * poll briefly until it appears. No-op if the iframe document is unreachable.
  * @param iframe The window's iframe.
  * @param profile The chrome profile to apply.
+ * @param onApplied Called once, when the stylesheet is first applied (lets the
+ *   window reveal its content only after the header has been stripped).
  */
 export function injectChromeStyles(
   iframe: HTMLIFrameElement,
   profile: UmbraDesktopChromeProfile,
+  onApplied?: () => void,
 ): void {
   const doc = iframe.contentDocument;
   const win = iframe.contentWindow;
@@ -82,12 +85,20 @@ export function injectChromeStyles(
     return true;
   };
 
-  if (apply()) return;
+  if (apply()) {
+    onApplied?.();
+    return;
+  }
 
   // Shell not up yet — poll until it mounts (max ~10s). A MutationObserver on
   // the light DOM would not see the shell appear inside shadow roots.
   let tries = 0;
   const timer = win.setInterval(() => {
-    if (apply() || (tries += 1) > 100) win.clearInterval(timer);
+    if (apply()) {
+      onApplied?.();
+      win.clearInterval(timer);
+    } else if ((tries += 1) > 100) {
+      win.clearInterval(timer);
+    }
   }, 100);
 }

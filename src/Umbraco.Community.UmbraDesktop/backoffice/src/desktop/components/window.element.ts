@@ -17,6 +17,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   @state()
   private _dragging = false;
 
+  @state()
+  private _loading = true;
+
   #manager?: UmbraDesktopWindowManagerContext;
   #startPointer = { x: 0, y: 0 };
   #startRect = { x: 0, y: 0 };
@@ -30,7 +33,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
 
   #onIframeLoad(e: Event) {
     const iframe = e.target as HTMLIFrameElement;
-    if (this.window) injectChromeStyles(iframe, this.window.app.chromeProfile);
+    if (!this.window) return;
+    // Keep the loader up until the header is actually stripped, so the booting
+    // backoffice (with its own header) never flashes into view.
+    injectChromeStyles(iframe, this.window.app.chromeProfile, () => (this._loading = false));
+    // Safety net: reveal anyway if the shell never reports ready.
+    window.setTimeout(() => (this._loading = false), 12000);
   }
 
   #onTitlePointerDown = (e: PointerEvent) => {
@@ -93,7 +101,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
               @click=${() => this.#manager?.close(w.id)}>&#x2715;</uui-button>
           </span>
         </div>
-        <iframe class="body" src=${w.app.url} @load=${this.#onIframeLoad}></iframe>
+        <div class="bodywrap">
+          <iframe class="body" src=${w.app.url} @load=${this.#onIframeLoad}></iframe>
+          ${this._loading ? html`<div class="loading"><uui-loader></uui-loader></div>` : ''}
+        </div>
       </div>
     `;
   }
@@ -138,11 +149,24 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         display: inline-flex;
         gap: var(--uui-size-space-1);
       }
+      .bodywrap {
+        position: relative;
+        flex: 1;
+        display: flex;
+      }
       .body {
         flex: 1;
         border: none;
         width: 100%;
         background: var(--uui-color-background);
+      }
+      .loading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--uui-color-surface);
       }
       [hidden] {
         display: none !important;
