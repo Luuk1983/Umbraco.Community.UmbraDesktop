@@ -46,6 +46,13 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     this.#manager?.open(UMBRADESKTOP_APPS[0]);
   }
 
+  /** Ask the desktop to reveal/hide the Umbraco header so sections stay reachable. */
+  #onToggleMenu() {
+    this.dispatchEvent(
+      new CustomEvent('umbradesktop-toggle-menu', { bubbles: true, composed: true }),
+    );
+  }
+
   override render() {
     return html`
       <div class="bar" style="height:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
@@ -66,6 +73,9 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
             `,
           )}
         </div>
+        <button class="menu" title="Show/hide the Umbraco menu" @click=${this.#onToggleMenu}>
+          &#9776;
+        </button>
         <div class="clock">${this._clock}</div>
       </div>
     `;
@@ -118,6 +128,18 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       }
       .task.active {
         border-color: var(--uui-color-selected);
+      }
+      .menu {
+        border: none;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 0 var(--uui-size-space-2);
+        border-radius: var(--uui-border-radius, 3px);
+      }
+      .menu:hover {
+        background: var(--uui-color-surface);
       }
       .clock {
         font-size: var(--uui-type-small-size);

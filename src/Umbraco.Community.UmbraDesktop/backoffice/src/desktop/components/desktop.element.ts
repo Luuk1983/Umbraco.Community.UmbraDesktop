@@ -1,5 +1,6 @@
 import type { UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
+import { findChromeRoot } from '../chrome-injector';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import './window.element.js';
 import './taskbar.element.js';
@@ -16,37 +17,60 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   @state()
   private _windows: UmbraDesktopWindow[] = [];
 
+  /** When true the outer backoffice header is hidden (fullscreen desktop). */
+  @state()
+  private _fullscreen = true;
+
   constructor() {
     super();
     this.observe(this.#manager.windows, (list) => (this._windows = list));
+    // The taskbar's menu button asks (via a composed, bubbling event) to reveal
+    // the Umbraco header so the user can switch sections without being trapped.
+    this.addEventListener('umbradesktop-toggle-menu', this.#toggleFullscreen);
   }
 
   override connectedCallback() {
     super.connectedCallback();
-    this.#hideOuterChrome(true);
+    this.#applyOuterChrome();
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    this.#hideOuterChrome(false);
+    // Always restore the header when leaving the section.
+    this.#setOuterChrome(false);
   }
 
-  /** Toggle a document-level style that hides the backoffice header for fullscreen. */
-  #hideOuterChrome(hide: boolean) {
-    const doc = this.ownerDocument;
-    let style = doc.getElementById(OUTER_CHROME_STYLE_ID) as HTMLStyleElement | null;
+  #toggleFullscreen = () => {
+    this._fullscreen = !this._fullscreen;
+    this.#applyOuterChrome();
+  };
+
+  #applyOuterChrome() {
+    this.#setOuterChrome(this._fullscreen);
+  }
+
+  /**
+   * Show or hide the outer backoffice header. The shell lives in shadow DOM, so
+   * the style is injected into the shadow root that owns the header — a
+   * document-level stylesheet cannot reach it.
+   * @param hide Whether to hide the outer chrome.
+   */
+  #setOuterChrome(hide: boolean) {
+    const root = findChromeRoot(this.ownerDocument);
+    if (!root) return;
+    const existing = root.getElementById(OUTER_CHROME_STYLE_ID);
     if (hide) {
-      if (!style) {
-        style = doc.createElement('style');
+      if (!existing) {
+        const style = this.ownerDocument.createElement('style');
         style.id = OUTER_CHROME_STYLE_ID;
         style.textContent = `
           umb-backoffice-header { display: none !important; }
           umb-backoffice-main { height: 100% !important; }
         `;
-        doc.head.appendChild(style);
+        root.appendChild(style);
       }
     } else {
-      style?.remove();
+      existing?.remove();
     }
   }
 
