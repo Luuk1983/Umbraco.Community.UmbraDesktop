@@ -2,16 +2,12 @@
 	<PropertyGroup>
 		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
 		<CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
-		<!-- Allows a PackageVersion below to override a vulnerable transitive dependency (Microsoft.OpenApi) -->
-		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
 	</PropertyGroup>
 	<ItemGroup>
 		<!-- Extension package dependencies -->
 		<PackageVersion Include="Umbraco.Cms.Api.Common" Version="17.*" />
 		<PackageVersion Include="Umbraco.Cms.Core" Version="17.*" />
 		<PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
-		<!-- Transitive pin: resolves NU1903 for Microsoft.OpenApi 2.4.1 (GHSA-v5pm-xwqc-g5wc), pulled in by Umbraco.Cms.Api.Common -->
-		<PackageVersion Include="Microsoft.OpenApi" Version="2.7.6" />
 
 		<!-- Test instance dependencies -->
 		<PackageVersion Include="Umbraco.Cms" Version="17.*" />

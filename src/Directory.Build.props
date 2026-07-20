@@ -1,5 +1,8 @@
 <Project>
 	<PropertyGroup>
 		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+		<!-- This is a package/plugin: it does not resolve the final dependency graph, so audit
+		     only our own direct dependencies. Transitive versions are the consuming app's call. -->
+		<NuGetAuditMode>direct</NuGetAuditMode>
 	</PropertyGroup>
 </Project>
