@@ -230,9 +230,11 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         align-items: center;
         gap: var(--uui-size-space-2);
         padding: 0 var(--uui-size-space-2);
-        /* Match the native backoffice header, relocated to the bottom. */
+        /* Match the native backoffice header, relocated to the bottom. A faint light hairline
+           on top gives a crisp panel edge against the darker wallpaper. */
         background: var(--uui-color-header-background);
         color: var(--uui-color-header-contrast);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
         box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.25);
       }
       /* The start button carries the Umbraco mark, full bar height so its hover fills the

@@ -98,12 +98,12 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
            distinctly darker than the taskbar (and the light windows pop). Solid colour first
            as a fallback for browsers without color-mix; the gradient adds a soft top-left
            highlight for depth. (A selection of background images is planned later.) */
-        background-color: #151e3d;
-        background-color: color-mix(in srgb, var(--uui-color-header-background, #1b264f) 75%, black);
+        background-color: #0e1329;
+        background-color: color-mix(in srgb, var(--uui-color-header-background, #1b264f) 58%, black);
         background-image: radial-gradient(
-          130% 130% at 25% 10%,
-          color-mix(in srgb, var(--uui-color-header-background, #1b264f) 96%, white),
-          color-mix(in srgb, var(--uui-color-header-background, #1b264f) 68%, black) 65%
+          130% 130% at 25% 8%,
+          var(--uui-color-header-background, #1b264f),
+          color-mix(in srgb, var(--uui-color-header-background, #1b264f) 50%, black) 70%
         );
       }
       /* A faint Umbraco mark watermarking the desktop. It lives behind the (transparent)
