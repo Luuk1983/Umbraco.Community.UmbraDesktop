@@ -101,3 +101,11 @@ it('omits fallback apps for excluded sections', () => {
   // non-excluded permitted sections still get their fallback
   expect(apps.some((a) => a.url === '/umbraco/section/content')).to.be.true;
 });
+
+it('carries an entry minSize through to the derived app', () => {
+  const apps = deriveApps(
+    [resolved({ entry: entry({ alias: 'c', minSize: { w: 900, h: 540 } }) })],
+    SECTIONS,
+  );
+  expect(apps.find((a) => a.alias === 'c')!.minSize).to.deep.equal({ w: 900, h: 540 });
+});

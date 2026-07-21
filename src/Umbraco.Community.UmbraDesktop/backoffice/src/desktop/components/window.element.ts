@@ -95,7 +95,13 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (!this.#resizing || !this.window) return;
     const dx = e.clientX - this.#resizeStartPointer.x;
     const dy = e.clientY - this.#resizeStartPointer.y;
-    const rect = resizeRect(this.#resizeStartRect, this.#resizeEdges, dx, dy, UMBRADESKTOP_WINDOW_MIN_SIZE);
+    const rect = resizeRect(
+      this.#resizeStartRect,
+      this.#resizeEdges,
+      dx,
+      dy,
+      this.window.app.minSize ?? UMBRADESKTOP_WINDOW_MIN_SIZE,
+    );
     this.#manager?.resize(this.window.id, rect);
   };
 
@@ -111,10 +117,11 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   override render() {
     const w = this.window;
     if (!w) return null;
+    const min = w.app.minSize ?? UMBRADESKTOP_WINDOW_MIN_SIZE;
     const maximized = w.state === 'maximized';
     const style = maximized
       ? `left:0; top:0; width:100%; height:100%; z-index:${w.z};`
-      : `left:${w.rect.x}px; top:${w.rect.y}px; width:${w.rect.w}px; height:${w.rect.h}px; z-index:${w.z};`;
+      : `left:${w.rect.x}px; top:${w.rect.y}px; width:${w.rect.w}px; height:${w.rect.h}px; z-index:${w.z}; min-width:${min.w}px; min-height:${min.h}px;`;
     return html`
       <div
         class="frame ${w.active ? 'active' : ''}"

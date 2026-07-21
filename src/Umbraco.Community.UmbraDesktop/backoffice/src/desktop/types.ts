@@ -18,6 +18,8 @@ export interface UmbraDesktopApp {
   chromeProfile: UmbraDesktopChromeProfile;
   /** Default window size in px. */
   defaultSize?: { w: number; h: number };
+  /** Minimum window size in px (resize floor); falls back to the global minimum when unset. */
+  minSize?: { w: number; h: number };
   /** Whether more than one instance may open (default: allowed). */
   allowMultiple?: boolean;
   /** Sort weight within its group/header (ascending). */
@@ -107,6 +109,8 @@ export interface UmbraDesktopCatalogueEntry {
   chromeProfile?: UmbraDesktopChromeProfile;
   /** Default window size in px. */
   defaultSize?: { w: number; h: number };
+  /** Minimum window size in px (resize floor); falls back to the global minimum when unset. */
+  minSize?: { w: number; h: number };
   /** Whether more than one instance may open. */
   allowMultiple?: boolean;
   /** Sort weight within its group/header (ascending). */

@@ -41,6 +41,7 @@ export function deriveApps(
       url: r.url,
       chromeProfile: e.chromeProfile ?? 'full-section',
       defaultSize: e.defaultSize,
+      minSize: e.minSize,
       allowMultiple: e.allowMultiple,
       weight: e.weight,
       categoryAlias: e.categoryAlias,
