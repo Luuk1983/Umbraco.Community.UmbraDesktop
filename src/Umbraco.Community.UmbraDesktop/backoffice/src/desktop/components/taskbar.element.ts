@@ -287,7 +287,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         color: var(--uui-color-header-contrast);
         cursor: pointer;
         font-family: inherit;
-        font-size: var(--uui-type-small-size);
+        font-size: calc(var(--uui-type-small-size) + 1px);
         box-shadow: inset 0 -3px 0 transparent;
         transition:
           box-shadow 120ms,
@@ -302,6 +302,9 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        /* Lato sits high in its line box; nudge the label down ~1px so it optically
+           centers against the icon and the start button. */
+        transform: translateY(1px);
       }
       .task:hover {
         color: var(--uui-color-header-contrast-emphasis);
