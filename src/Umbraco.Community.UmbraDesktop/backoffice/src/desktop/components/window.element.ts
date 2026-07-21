@@ -164,7 +164,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
           @pointermove=${this.#onTitlePointerMove}
           @pointerup=${this.#onTitlePointerUp}
           @dblclick=${this.#onTitleDblClick}>
-          <span class="title"><umb-icon name=${w.app.icon}></umb-icon> ${this.localize.string(w.app.name)}</span>
+          <span class="title">
+            <umb-icon name=${w.app.icon}></umb-icon>
+            <span class="title-text">${this.localize.string(w.app.name)}</span>
+          </span>
           <span
             class="controls"
             @pointerdown=${(e: PointerEvent) => e.stopPropagation()}
@@ -257,6 +260,11 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
       }
       .title umb-icon {
         font-size: 18px;
+      }
+      .title-text {
+        /* Lato sits high in its line box; nudge the title down ~1px so it optically
+           centers against the icon, matching the taskbar. */
+        transform: translateY(1px);
       }
       .controls {
         display: inline-flex;
