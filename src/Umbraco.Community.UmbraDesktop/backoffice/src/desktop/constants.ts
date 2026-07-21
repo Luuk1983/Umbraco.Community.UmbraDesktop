@@ -16,5 +16,8 @@ export const UMBRADESKTOP_UNCERTIFIED_CATEGORY_LABEL = 'More';
 /** Sort weight that keeps the uncertified category last (ascending sort, large value). */
 export const UMBRADESKTOP_UNCERTIFIED_CATEGORY_WEIGHT = 9999;
 
-/** Minimum window size in px (used by resize clamping and the frame's CSS min-size). */
+/**
+ * Minimum window size in px, used by resize clamping. Kept in sync with the window
+ * frame's CSS `min-width`/`min-height` (which are declared as literals in window.element).
+ */
 export const UMBRADESKTOP_WINDOW_MIN_SIZE = { w: 320, h: 200 };

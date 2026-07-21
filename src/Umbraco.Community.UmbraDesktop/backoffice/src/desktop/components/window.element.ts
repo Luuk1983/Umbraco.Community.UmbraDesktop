@@ -203,6 +203,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
       .controls {
         display: inline-flex;
         gap: var(--uui-size-space-1);
+        /* Sit above the resize handles so the top/corner handles never steal clicks
+           from the minimize/maximize/close buttons. */
+        position: relative;
+        z-index: 5;
       }
       .bodywrap {
         position: relative;

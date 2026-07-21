@@ -117,6 +117,16 @@ it('resizeRect clamps the left edge so the origin never overshoots the minimum w
   expect(resizeRect(START, { left: true }, 200, 0, MIN)).to.deep.equal({ x: 180, y: 100, w: 320, h: 300 });
 });
 
+it('resizeRect clamps height to the minimum from the bottom edge', () => {
+  expect(resizeRect(START, { bottom: true }, 0, -200, MIN)).to.deep.equal({ x: 100, y: 100, w: 400, h: 200 });
+});
+
+it('resizeRect clamps the top edge so the origin never overshoots the minimum height', () => {
+  // Shrinking from the top by 200 would drop below min (300-200=100 < 200) → height pins to 200,
+  // so y only advances by (300-200)=100.
+  expect(resizeRect(START, { top: true }, 0, 200, MIN)).to.deep.equal({ x: 100, y: 200, w: 400, h: 200 });
+});
+
 it('setWindowRect replaces only the target window rectangle', () => {
   const next = setWindowRect([win('a', 1), win('b', 2)], 'a', { x: 5, y: 6, w: 700, h: 500 });
   expect(next.find((w) => w.id === 'a')!.rect).to.deep.equal({ x: 5, y: 6, w: 700, h: 500 });
