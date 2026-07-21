@@ -236,7 +236,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         align-items: center;
         justify-content: space-between;
         gap: var(--uui-size-space-2);
-        padding: var(--uui-size-space-2) var(--uui-size-space-3);
+        /* No vertical or right padding: the controls run full height and flush to the
+           top-right edge, so the corner buttons are easy targets (Fitts's law). */
+        padding: 0 0 0 var(--uui-size-space-3);
+        min-height: 40px;
         background: var(--uui-color-surface);
         border-bottom: 1px solid var(--uui-color-border);
         cursor: move;
@@ -250,11 +253,14 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         align-items: center;
         gap: var(--uui-size-space-2);
         font-weight: 700;
-        font-size: var(--uui-type-small-size);
+        font-size: calc(var(--uui-type-small-size) + 2px);
+      }
+      .title umb-icon {
+        font-size: 18px;
       }
       .controls {
         display: inline-flex;
-        gap: var(--uui-size-space-1);
+        align-self: stretch;
         /* Sit above the resize handles so the top/corner handles never steal clicks
            from the minimize/maximize/close buttons. */
         position: relative;
@@ -264,18 +270,18 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 30px;
-        height: 26px;
+        width: 46px;
+        height: 100%;
         padding: 0;
         border: none;
-        border-radius: var(--uui-border-radius, 3px);
+        border-radius: 0;
         background: transparent;
         color: var(--uui-color-text);
         cursor: pointer;
       }
       .ctrl .glyph {
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         stroke: currentColor;
         stroke-width: 1.2;
         fill: none;
