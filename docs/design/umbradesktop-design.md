@@ -171,6 +171,45 @@ Plasma) — which overlap heavily with Windows — not on macOS. Concretely:
 - a **full-screen app grid/launcher** (GNOME Activities / KDE Kickoff style);
 - **no** macOS dock, **no** global/top menu bar, **no** traffic-light buttons.
 
+**Window-manager idiom reference.** When in doubt, model on **KDE Plasma** first — a bottom panel
+carrying launcher + task list + tray/clock is the closest fit to what we're building — with
+**Windows** as the secondary reference. Explicitly *not* GNOME's control-minimalism (it hides
+minimise/maximise), and *not* Windows 11's centre-aligned taskbar (that drifts toward the dock feel
+above). Interactions that are **deferred** as features rather than polish: edge/corner snap-tiling,
+a full-screen window overview (GNOME Activities / KDE Present Windows), and global keyboard
+shortcuts (the browser intercepts most of these inside the app iframes).
+
+#### Concrete decisions (2026-07-21 look-and-feel pass)
+
+The custom chrome was aligned to the backoffice's own visual language:
+
+- **Taskbar = the header, relocated.** The panel uses the header tokens
+  (`--uui-color-header-background` / `--uui-color-header-contrast`) with a faint light hairline on
+  its top edge, so it reads as the native top nav moved to the bottom. The start button is a
+  full-height button carrying the Umbraco mark (`icon-umbraco`).
+- **Running apps reuse the tab language.** Taskbar buttons are icon + label; the active window
+  carries the coral `--uui-color-current` underline — **coral is the desktop's single "current /
+  active" signal**. A minimised window is not visually distinguished from any other inactive one
+  (as on Windows/KDE).
+- **Window chrome.** Controls are crisp inline-SVG glyphs (minimise / maximise / restore / close)
+  in full-height buttons flush to the top-right corner; close gets the Windows/KDE red-fill hover;
+  the maximise control swaps to a restore glyph when maximised. Titlebars stay **light** (they sit
+  over light workspace content); focus is shown by **dimming inactive windows** (muted titlebar +
+  flatter shadow) while the active window stays crisp with a deeper shadow — never a tinted titlebar.
+- **Window interactions.** Double-click the titlebar to maximise/restore; click an active window's
+  taskbar button to minimise it. (Drag/resize remain hand-rolled — see the window-interaction notes.)
+- **Wallpaper.** Derived from the header token but pulled darker so the taskbar stands out,
+  theme-following, with a faint Umbraco watermark behind the window surface. A selection of
+  background images is planned; the current gradient is interim.
+- **Launcher (interim).** A bottom-left panel with sidebar-style menu-item rows. The **full-screen
+  launchpad** (above; §7 / Phase 3) remains the intended end state — the panel is a stopgap.
+- **Text alignment.** Lato sits high in its line box; custom-chrome labels are nudged ~1px down so
+  they optically centre against their icons.
+
+> **Deferred to a dedicated discussion:** a header-app tray on the taskbar's right (search / help /
+> user) bundled with the desktop's session/identity story — logout, showing the user's name, and
+> what "edit profile" means in a windowed desktop. Kept out of this pass on purpose.
+
 ---
 
 ## 6. The app model
