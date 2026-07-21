@@ -7,6 +7,7 @@ import type {
   UmbraDesktopSectionInfo,
 } from './types';
 import { catalogue } from './catalogue/index.js';
+import { UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS } from './constants.js';
 import { inferUrl } from './url-inference.js';
 import { deriveApps } from './derive-apps.js';
 import { groupApps } from './group-apps.js';
@@ -57,6 +58,7 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
    */
   constructor(host: UmbControllerHost) {
     super(host, UMBRADESKTOP_APP_CATALOGUE_CONTEXT);
+    this.#validateCatalogue();
     this.consumeContext(UMB_CURRENT_USER_CONTEXT, (currentUser) => {
       if (!currentUser) return;
       this.observe(currentUser.allowedSections, (allowed) => {
@@ -64,6 +66,29 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
         this.#recompute();
       });
     });
+  }
+
+  /**
+   * Dev diagnostic: warn about catalogue entries whose display placement references
+   * a category or group that isn't defined, so a contributor's typo doesn't make an
+   * app silently vanish from (or misplace it in) the launcher.
+   */
+  #validateCatalogue(): void {
+    const knownCategories = new Set(catalogue.categories.map((c) => c.alias));
+    knownCategories.add(UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS);
+    const knownGroups = new Set(catalogue.groups.map((g) => g.alias));
+    for (const entry of catalogue.entries) {
+      if (!knownCategories.has(entry.categoryAlias)) {
+        console.warn(
+          `[UmbraDesktop] Catalogue entry "${entry.alias}" has unknown categoryAlias "${entry.categoryAlias}"; it will not appear in the launcher.`,
+        );
+      }
+      if (entry.groupAlias && !knownGroups.has(entry.groupAlias)) {
+        console.warn(
+          `[UmbraDesktop] Catalogue entry "${entry.alias}" references unknown groupAlias "${entry.groupAlias}"; it will render loose in its category.`,
+        );
+      }
+    }
   }
 
   /** Registered sections filtered to the ones the user may access. */
@@ -98,6 +123,11 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   #resolveEntry(entry: UmbraDesktopCatalogueEntry): UmbraDesktopResolvedEntry {
     // Explicit-URL entry: the gate is the stated section.
     if (entry.url) {
+      if (!entry.section) {
+        console.warn(
+          `[UmbraDesktop] Catalogue entry "${entry.alias}" has a "url" but no "section" gate, so it will never appear. Add "section".`,
+        );
+      }
       return { entry, url: entry.url, gateSectionAlias: entry.section ?? null, isSectionRoot: false };
     }
     if (!entry.ref) {

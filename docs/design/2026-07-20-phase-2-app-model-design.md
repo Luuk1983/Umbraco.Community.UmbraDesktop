@@ -127,12 +127,18 @@ A `catalogue/` directory, **one fragment file per area or package**, each export
 backoffice/src/desktop/catalogue/
   index.ts            // collate all fragments
   categories.ts       // curated headers + collapsible groups (Security, Scaffolding, …)
-  content.ts          // Content / Media / Members section entries
-  settings.ts         // Settings section ref + a dashboard ref + a menu-item tool ref (Log Viewer)
+  content.ts          // Content + Media section refs
+  settings.ts         // Settings section ref + Log Viewer menu-item ref
   …                   // room for one file per package/plugin later (e.g. uSync.ts)
 ```
 A package/plugin gets a self-contained file that can declare its own header *and* entries; an
 external contributor PRs one file + one import line. Small diffs, low-friction contribution.
+
+> **Shipped scope (Phase 2 initial catalogue):** section + menu-item refs — Content, Media,
+> Settings, and the Log Viewer workspace tool. Dashboard-`ref` support is fully implemented and
+> unit-tested (§5.1) but ships no example entry yet (added when a dashboard alias is verified
+> live). Members and any other permitted sections surface automatically via the uncertified
+> fallback under "More".
 
 ---
 
