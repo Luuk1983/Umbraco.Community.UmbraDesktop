@@ -1,49 +1,60 @@
 import type { UmbraDesktopChromeProfile } from './types';
 
-const STYLE_ID = 'umbradesktop-injected-chrome';
+/** Style-element id for the injected header-stripping rules. */
+const HEADER_STYLE_ID = 'umbradesktop-injected-chrome';
+/** Style-element id for the injected sidebar-stripping rules. */
+const SIDEBAR_STYLE_ID = 'umbradesktop-injected-sidebar';
 
 /**
- * Build the CSS injected into a window's iframe to strip backoffice chrome.
- * Targets stable custom-element tags rather than classes (design doc §4.1).
- * @param profile How much shell to keep.
+ * CSS injected into the shell's header shadow root: hide the top backoffice header and
+ * let the main area take the full height. Applied for every chrome profile.
  * @returns A CSS string.
  */
-export function buildChromeCss(profile: UmbraDesktopChromeProfile): string {
-  // Always: hide the top header and let the main area take the full height
-  // (the shell normally reserves 60px for the header).
-  const base = `
+export function buildHeaderCss(): string {
+  return `
     umb-backoffice-header { display: none !important; }
     umb-backoffice-main { height: 100% !important; }
-  `;
-  if (profile === 'full-section') {
-    return base;
-  }
-  // workspace-only / bare: also drop the section's sidebar (tree/menu).
-  // NOTE: the sidebar lives in a deeper shadow root than the header, so this
-  // rule only reaches sidebars that share the header's root. Deeper sidebar
-  // stripping is future work — Phase 1 ships full-section only.
-  return `${base}
-    umb-section-sidebar { display: none !important; }
   `;
 }
 
 /**
- * Find the shadow root that directly owns `<umb-backoffice-header>`. The
- * backoffice shell renders inside shadow DOM, so a document-level stylesheet
- * cannot reach the header — the style must go into the shadow root that
- * contains it. Breadth-first walk across nested shadow roots.
- *
- * Uses a duck-typed `.host` check rather than `instanceof ShadowRoot` so it
- * works across realms (an iframe's shadow roots are not instances of the parent
- * window's `ShadowRoot`).
- * @param from The document or shadow root to search from.
- * @returns The owning shadow root, or null if the shell is not present yet.
+ * CSS injected into the section's shadow root to strip the section sidebar (menu/tree) and
+ * let the workspace fill the full width — used by the workspace-only / bare profiles. The
+ * split panel reserves the sidebar's grid column via an inline style we cannot override, so
+ * instead of relying on the sidebar collapsing we lift `umb-section-main` out of the grid to
+ * cover the whole section body, above the split-panel divider (z-index 999999). See design §4.1.
+ * @returns A CSS string.
  */
-export function findChromeRoot(from: Document | ShadowRoot): ShadowRoot | null {
+export function buildSidebarCss(): string {
+  return `
+    umb-section-sidebar { display: none !important; }
+    umb-section-main {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 1000000 !important;
+    }
+  `;
+}
+
+/**
+ * Breadth-first walk across nested shadow roots, returning the first shadow root whose own
+ * tree contains `selector`. Uses a duck-typed `.host` check rather than `instanceof ShadowRoot`
+ * so it works across realms (an iframe's shadow roots are not instances of the parent window's
+ * `ShadowRoot`).
+ * @param from The document or shadow root to search from.
+ * @param selector A CSS selector for an element the returned root directly contains.
+ * @returns The owning shadow root, or null if not present yet.
+ */
+export function findShadowRootWith(
+  from: Document | ShadowRoot,
+  selector: string,
+): ShadowRoot | null {
   const queue: Array<Document | ShadowRoot> = [from];
   while (queue.length) {
     const node = queue.shift()!;
-    if ((node as ShadowRoot).host && node.querySelector('umb-backoffice-header')) {
+    if ((node as ShadowRoot).host && node.querySelector(selector)) {
       return node as ShadowRoot;
     }
     node.querySelectorAll('*').forEach((el) => {
@@ -55,13 +66,40 @@ export function findChromeRoot(from: Document | ShadowRoot): ShadowRoot | null {
 }
 
 /**
- * Inject (or refresh) the chrome-stripping stylesheet into a same-origin iframe.
- * The backoffice boots asynchronously, so if the shell is not mounted yet we
- * poll briefly until it appears. No-op if the iframe document is unreachable.
+ * Find the shadow root that directly owns `<umb-backoffice-header>`.
+ * @param from The document or shadow root to search from.
+ * @returns The owning shadow root, or null if the shell is not present yet.
+ */
+export function findChromeRoot(from: Document | ShadowRoot): ShadowRoot | null {
+  return findShadowRootWith(from, 'umb-backoffice-header');
+}
+
+/**
+ * Inject (or refresh) a keyed `<style>` into a shadow root.
+ * @param root The shadow root to inject into.
+ * @param doc The owning document (for creating the element).
+ * @param id The style element's id.
+ * @param css The CSS to set.
+ */
+function injectStyle(root: ShadowRoot, doc: Document, id: string, css: string): void {
+  let style = root.getElementById(id) as HTMLStyleElement | null;
+  if (!style) {
+    style = doc.createElement('style');
+    style.id = id;
+    root.appendChild(style);
+  }
+  style.textContent = css;
+}
+
+/**
+ * Inject the chrome-stripping stylesheets into a same-origin iframe: always hide the top
+ * header; for non-`full-section` profiles also strip the section sidebar and expand the main
+ * area. The backoffice boots asynchronously and the header/section shells mount independently,
+ * so we poll until each target root appears. No-op if the iframe document is unreachable.
  * @param iframe The window's iframe.
  * @param profile The chrome profile to apply.
- * @param onApplied Called once, when the stylesheet is first applied (lets the
- *   window reveal its content only after the header has been stripped).
+ * @param onApplied Called once, when the header has been stripped (lets the window reveal its
+ *   content only after the booting backoffice's own header is gone).
  */
 export function injectChromeStyles(
   iframe: HTMLIFrameElement,
@@ -72,33 +110,37 @@ export function injectChromeStyles(
   const win = iframe.contentWindow;
   if (!doc || !win) return;
 
-  const apply = (): boolean => {
-    const root = findChromeRoot(doc);
-    if (!root) return false;
-    let style = root.getElementById(STYLE_ID) as HTMLStyleElement | null;
-    if (!style) {
-      style = doc.createElement('style');
-      style.id = STYLE_ID;
-      root.appendChild(style);
+  const stripSidebar = profile !== 'full-section';
+  let headerApplied = false;
+  let sidebarApplied = false;
+
+  const tick = (): boolean => {
+    if (!headerApplied) {
+      const headerRoot = findChromeRoot(doc);
+      if (headerRoot) {
+        injectStyle(headerRoot, doc, HEADER_STYLE_ID, buildHeaderCss());
+        headerApplied = true;
+        onApplied?.();
+      }
     }
-    style.textContent = buildChromeCss(profile);
-    return true;
+    if (stripSidebar && !sidebarApplied) {
+      // The sidebar + main live in umb-section-default's (deeper) shadow root; target it via
+      // umb-section-main, which is always present once the section shell has mounted.
+      const sectionRoot = findShadowRootWith(doc, 'umb-section-main');
+      if (sectionRoot) {
+        injectStyle(sectionRoot, doc, SIDEBAR_STYLE_ID, buildSidebarCss());
+        sidebarApplied = true;
+      }
+    }
+    return headerApplied && (!stripSidebar || sidebarApplied);
   };
 
-  if (apply()) {
-    onApplied?.();
-    return;
-  }
+  if (tick()) return;
 
-  // Shell not up yet — poll until it mounts (max ~10s). A MutationObserver on
-  // the light DOM would not see the shell appear inside shadow roots.
+  // Shell not fully up yet — poll until it mounts (max ~10s). A MutationObserver on the light
+  // DOM would not see the shell appear inside shadow roots.
   let tries = 0;
   const timer = win.setInterval(() => {
-    if (apply()) {
-      onApplied?.();
-      win.clearInterval(timer);
-    } else if ((tries += 1) > 100) {
-      win.clearInterval(timer);
-    }
+    if (tick() || (tries += 1) > 100) win.clearInterval(timer);
   }, 100);
 }

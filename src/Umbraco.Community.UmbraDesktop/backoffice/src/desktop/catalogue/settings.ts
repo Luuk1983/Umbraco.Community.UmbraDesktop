@@ -21,7 +21,7 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     section: 'Umb.Section.Settings',
     name: 'Log Viewer',
     icon: 'icon-box-alt',
-    chromeProfile: 'full-section',
+    chromeProfile: 'workspace-only',
     defaultSize: { w: 900, h: 640 },
     categoryAlias: 'settings',
     groupAlias: 'diagnostics',
