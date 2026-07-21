@@ -94,3 +94,10 @@ it('falls back to inherited name/icon when the entry omits them', () => {
   expect(app.name).to.equal('Inherited');
   expect(app.icon).to.equal('icon-doc');
 });
+
+it('omits fallback apps for excluded sections', () => {
+  const apps = deriveApps([], SECTIONS, ['Umb.Section.Settings']);
+  expect(apps.some((a) => a.url === '/umbraco/section/settings')).to.be.false;
+  // non-excluded permitted sections still get their fallback
+  expect(apps.some((a) => a.url === '/umbraco/section/content')).to.be.true;
+});

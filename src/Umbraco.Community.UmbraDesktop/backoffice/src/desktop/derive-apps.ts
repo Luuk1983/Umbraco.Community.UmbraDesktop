@@ -16,13 +16,16 @@ const DEFAULT_ICON = 'icon-application';
  * represented by a section-root entry. Pure — see design §5.2.
  * @param resolved Catalogue entries the adapter has resolved to URL + gate + presentation.
  * @param permittedSections Sections the current user may access.
+ * @param excludedSections Section aliases that must never produce an automatic fallback app.
  * @returns The flat list of launchable apps, each tagged with confidence + placement.
  */
 export function deriveApps(
   resolved: ReadonlyArray<UmbraDesktopResolvedEntry>,
   permittedSections: ReadonlyArray<UmbraDesktopSectionInfo>,
+  excludedSections: ReadonlyArray<string> = [],
 ): UmbraDesktopApp[] {
   const permitted = new Set(permittedSections.map((s) => s.alias));
+  const excluded = new Set(excludedSections);
   const apps: UmbraDesktopApp[] = [];
   const coveredSections = new Set<string>();
 
@@ -50,6 +53,7 @@ export function deriveApps(
   // Uncertified section fallback.
   for (const s of permittedSections) {
     if (coveredSections.has(s.alias)) continue;
+    if (excluded.has(s.alias)) continue;
     const url = inferUrl({ type: 'section', pathname: s.pathname });
     if (!url) continue;
     apps.push({

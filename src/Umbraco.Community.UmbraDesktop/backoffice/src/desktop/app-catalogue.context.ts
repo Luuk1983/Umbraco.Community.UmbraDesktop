@@ -114,7 +114,7 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   /** Re-resolve the catalogue and publish the derived + grouped apps. */
   #recompute(): void {
     const resolved = catalogue.entries.map((e) => this.#resolveEntry(e));
-    const apps = deriveApps(resolved, this.#sections);
+    const apps = deriveApps(resolved, this.#sections, catalogue.excludedSections);
     this.#apps.setValue(apps);
     this.#tree.setValue(groupApps(apps, catalogue.categories, catalogue.groups));
   }

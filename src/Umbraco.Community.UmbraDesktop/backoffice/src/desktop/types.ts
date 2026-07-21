@@ -125,6 +125,8 @@ export interface UmbraDesktopCatalogue {
   groups: UmbraDesktopGroup[];
   /** App entries. */
   entries: UmbraDesktopCatalogueEntry[];
+  /** Section aliases the fallback must never surface (see catalogue/exclusions.ts). */
+  excludedSections: string[];
 }
 
 /** Primitives extracted from a referenced manifest, fed to `inferUrl`. */
