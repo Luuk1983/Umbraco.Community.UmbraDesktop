@@ -49,6 +49,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     if (this.#timer) window.clearInterval(this.#timer);
+    this.#setLauncherOpen(false);
   }
 
   #tick() {
@@ -56,13 +57,54 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   }
 
   #toggleLauncher() {
-    this._launcherOpen = !this._launcherOpen;
+    this.#setLauncherOpen(!this._launcherOpen);
   }
 
   #launch(app: UmbraDesktopApp) {
     this.#manager?.open(app);
-    this._launcherOpen = false;
+    this.#setLauncherOpen(false);
   }
+
+  /**
+   * Open or close the launcher, wiring up the dismiss listeners to match. While open we listen
+   * for a pointer down outside the launcher/start button, a window blur (a click landing inside
+   * an iframe window steals focus without bubbling a pointer event to us), and the Escape key —
+   * any of which closes the launcher. Listeners are removed as soon as it closes.
+   * @param open Whether the launcher should be open.
+   */
+  #setLauncherOpen(open: boolean) {
+    if (open === this._launcherOpen) return;
+    this._launcherOpen = open;
+    if (open) {
+      // Capture phase so we see the pointer down before anything inside can stop it.
+      document.addEventListener('pointerdown', this.#onOutsidePointerDown, true);
+      document.addEventListener('keydown', this.#onLauncherKeydown);
+      window.addEventListener('blur', this.#onWindowBlur);
+    } else {
+      document.removeEventListener('pointerdown', this.#onOutsidePointerDown, true);
+      document.removeEventListener('keydown', this.#onLauncherKeydown);
+      window.removeEventListener('blur', this.#onWindowBlur);
+    }
+  }
+
+  /** Close the launcher when a pointer goes down outside both the launcher panel and start button. */
+  #onOutsidePointerDown = (e: PointerEvent) => {
+    const path = e.composedPath();
+    const launcher = this.shadowRoot?.querySelector('.launcher');
+    const start = this.shadowRoot?.querySelector('.start');
+    if ((launcher && path.includes(launcher)) || (start && path.includes(start))) return;
+    this.#setLauncherOpen(false);
+  };
+
+  /** Close the launcher on Escape. */
+  #onLauncherKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') this.#setLauncherOpen(false);
+  };
+
+  /** Close the launcher when focus leaves the window (e.g. a click landing inside an iframe). */
+  #onWindowBlur = () => {
+    this.#setLauncherOpen(false);
+  };
 
   /** Confirm, then leave the Desktop section for the classic backoffice. */
   #onExit = async () => {
