@@ -110,9 +110,15 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     }
     const described = this.#describe(manifest, entry);
     const url = described.ref ? inferUrl(described.ref) : null;
-    if (!url) {
+    // A null URL is expected when the entry is gated out (its owning section isn't
+    // permitted for this user); only warn when the entry IS relevant but still
+    // failed to resolve — a genuine misconfiguration (e.g. an unsupported ref kind).
+    const gatePermitted =
+      !described.gateSectionAlias ||
+      this.#sections.some((s) => s.alias === described.gateSectionAlias);
+    if (!url && gatePermitted) {
       console.warn(
-        `[UmbraDesktop] Catalogue entry "${entry.alias}" (ref "${entry.ref}", type "${manifest.type}") could not be resolved to a URL.`,
+        `[UmbraDesktop] Catalogue entry "${entry.alias}" (ref "${entry.ref}", type "${manifest.type}") is permitted but could not be resolved to a URL — it may need an explicit "url".`,
       );
     }
     return {
