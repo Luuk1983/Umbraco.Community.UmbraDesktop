@@ -100,12 +100,18 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           (c) => html`
             <div class="launch-category">
               <div class="launch-header">${this.localize.string(c.category.label)}</div>
-              <div class="launch-apps">${c.apps.map((a) => this.#renderApp(a))}</div>
-              ${c.groups.map(
+              <div class="launch-apps">
+                ${repeat(c.apps, (a) => a.alias, (a) => this.#renderApp(a))}
+              </div>
+              ${repeat(
+                c.groups,
+                (g) => g.group.alias,
                 (g) => html`
                   <div class="launch-group">
                     <div class="launch-group-label">${this.localize.string(g.group.label)}</div>
-                    <div class="launch-apps">${g.apps.map((a) => this.#renderApp(a))}</div>
+                    <div class="launch-apps">
+                      ${repeat(g.apps, (a) => a.alias, (a) => this.#renderApp(a))}
+                    </div>
                   </div>
                 `,
               )}
