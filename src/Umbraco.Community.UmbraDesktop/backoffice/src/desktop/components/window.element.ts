@@ -114,6 +114,36 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (this.window) this.#manager?.focus(this.window.id);
   };
 
+  /** Double-clicking the titlebar toggles maximize/restore, as on Windows/GNOME/KDE. */
+  #onTitleDblClick = () => {
+    if (!this.window) return;
+    const maximized = this.window.state === 'maximized';
+    this.#manager?.setState(this.window.id, maximized ? 'normal' : 'maximized');
+  };
+
+  /**
+   * A crisp, font-independent window-control glyph drawn as inline SVG. Stroke and fill are set
+   * in CSS via `currentColor`, so the mark follows the button's text colour (and turns white on
+   * the close button's danger hover).
+   * @param kind Which control the glyph represents.
+   * @returns The SVG template for that control.
+   */
+  #controlGlyph(kind: 'minimize' | 'maximize' | 'restore' | 'close') {
+    const glyphs = {
+      minimize: html`<svg class="glyph" viewBox="0 0 12 12"><line x1="2.5" y1="6.5" x2="9.5" y2="6.5"></line></svg>`,
+      maximize: html`<svg class="glyph" viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"></rect></svg>`,
+      restore: html`<svg class="glyph" viewBox="0 0 12 12">
+        <rect x="2.5" y="3.5" width="6" height="6"></rect>
+        <path d="M4.5 3.5 V2 H9.5 V7 H8"></path>
+      </svg>`,
+      close: html`<svg class="glyph" viewBox="0 0 12 12">
+        <line x1="3" y1="3" x2="9" y2="9"></line>
+        <line x1="9" y1="3" x2="3" y2="9"></line>
+      </svg>`,
+    };
+    return glyphs[kind];
+  }
+
   override render() {
     const w = this.window;
     if (!w) return null;
@@ -132,23 +162,34 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
           class="titlebar"
           @pointerdown=${this.#onTitlePointerDown}
           @pointermove=${this.#onTitlePointerMove}
-          @pointerup=${this.#onTitlePointerUp}>
+          @pointerup=${this.#onTitlePointerUp}
+          @dblclick=${this.#onTitleDblClick}>
           <span class="title"><umb-icon name=${w.app.icon}></umb-icon> ${this.localize.string(w.app.name)}</span>
-          <span class="controls" @pointerdown=${(e: PointerEvent) => e.stopPropagation()}>
-            <uui-button
-              compact
-              label="Minimize"
-              @click=${() => this.#manager?.setState(w.id, 'minimized')}>&#x2013;</uui-button>
-            <uui-button
-              compact
-              label="Maximize"
+          <span
+            class="controls"
+            @pointerdown=${(e: PointerEvent) => e.stopPropagation()}
+            @dblclick=${(e: MouseEvent) => e.stopPropagation()}>
+            <button
+              class="ctrl"
+              title="Minimize"
+              aria-label="Minimize"
+              @click=${() => this.#manager?.setState(w.id, 'minimized')}>
+              ${this.#controlGlyph('minimize')}
+            </button>
+            <button
+              class="ctrl"
+              title=${maximized ? 'Restore' : 'Maximize'}
+              aria-label=${maximized ? 'Restore' : 'Maximize'}
               @click=${() => this.#manager?.setState(w.id, maximized ? 'normal' : 'maximized')}>
-              &#x25A1;</uui-button>
-            <uui-button
-              compact
-              color="danger"
-              label="Close"
-              @click=${() => this.#manager?.close(w.id)}>&#x2715;</uui-button>
+              ${this.#controlGlyph(maximized ? 'restore' : 'maximize')}
+            </button>
+            <button
+              class="ctrl close"
+              title="Close"
+              aria-label="Close"
+              @click=${() => this.#manager?.close(w.id)}>
+              ${this.#controlGlyph('close')}
+            </button>
           </span>
         </div>
         <div class="bodywrap">
@@ -185,8 +226,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         min-width: 320px;
         min-height: 200px;
       }
+      /* The active window is signalled by a slightly grey titlebar + a stronger shadow;
+         inactive windows keep a plain white titlebar. */
       .frame.active {
-        border-color: var(--uui-color-selected);
         box-shadow: var(--uui-shadow-depth-5);
       }
       .titlebar {
@@ -194,11 +236,14 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         align-items: center;
         justify-content: space-between;
         gap: var(--uui-size-space-2);
-        padding: var(--uui-size-space-1) var(--uui-size-space-3);
-        background: var(--uui-color-surface-alt);
+        padding: var(--uui-size-space-2) var(--uui-size-space-3);
+        background: var(--uui-color-surface);
         border-bottom: 1px solid var(--uui-color-border);
         cursor: move;
         user-select: none;
+      }
+      .frame.active .titlebar {
+        background: var(--uui-color-surface-alt);
       }
       .title {
         display: inline-flex;
@@ -214,6 +259,35 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
            from the minimize/maximize/close buttons. */
         position: relative;
         z-index: 5;
+      }
+      .ctrl {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 26px;
+        padding: 0;
+        border: none;
+        border-radius: var(--uui-border-radius, 3px);
+        background: transparent;
+        color: var(--uui-color-text);
+        cursor: pointer;
+      }
+      .ctrl .glyph {
+        width: 12px;
+        height: 12px;
+        stroke: currentColor;
+        stroke-width: 1.2;
+        fill: none;
+        stroke-linecap: square;
+      }
+      .ctrl:hover {
+        background: rgba(0, 0, 0, 0.07);
+      }
+      /* Windows/KDE close affordance: red fill + white mark on hover. */
+      .ctrl.close:hover {
+        background: var(--uui-color-danger, #d42054);
+        color: #fff;
       }
       .bodywrap {
         position: relative;
