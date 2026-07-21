@@ -2,6 +2,7 @@ import type { UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
 import { findChromeRoot } from '../chrome-injector';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
+import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
 import './window.element.js';
 import './taskbar.element.js';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
@@ -19,6 +20,9 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   constructor() {
     super();
+    // Instantiating (without keeping a reference) is enough to provide the
+    // catalogue context to the desktop subtree; nothing here consumes it directly.
+    new UmbraDesktopAppCatalogueContext(this);
     this.observe(this.#manager.windows, (list) => (this._windows = list));
   }
 

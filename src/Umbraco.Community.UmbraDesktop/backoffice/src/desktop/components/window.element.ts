@@ -83,7 +83,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
           @pointerdown=${this.#onTitlePointerDown}
           @pointermove=${this.#onTitlePointerMove}
           @pointerup=${this.#onTitlePointerUp}>
-          <span class="title"><umb-icon name=${w.app.icon}></umb-icon> ${w.app.name}</span>
+          <span class="title"><umb-icon name=${w.app.icon}></umb-icon> ${this.localize.string(w.app.name)}</span>
           <span class="controls" @pointerdown=${(e: PointerEvent) => e.stopPropagation()}>
             <uui-button
               compact
