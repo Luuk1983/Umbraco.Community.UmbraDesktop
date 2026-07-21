@@ -66,6 +66,9 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   override render() {
     return html`
       <div class="desktop">
+        <div class="wallpaper-brand" aria-hidden="true" style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
+          <umb-icon name="icon-umbraco"></umb-icon>
+        </div>
         <div class="surface" style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
           ${repeat(
             this._windows,
@@ -91,9 +94,28 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         width: 100%;
         display: flex;
         flex-direction: column;
-        background:
-          radial-gradient(circle at 30% 20%, rgba(28, 35, 58, 0.9), rgba(20, 22, 34, 0.95)),
-          var(--uui-color-background);
+        /* Wallpaper derived from the header token, so it matches the (always-dark) header /
+           taskbar and follows the active theme. Solid colour first as a fallback for browsers
+           without color-mix; the gradient just adds a soft top-left highlight for depth. */
+        background-color: var(--uui-color-header-background, #1b264f);
+        background-image: radial-gradient(
+          130% 130% at 22% 12%,
+          color-mix(in srgb, var(--uui-color-header-background, #1b264f) 82%, white),
+          var(--uui-color-header-background, #1b264f) 55%
+        );
+      }
+      /* A faint Umbraco mark watermarking the desktop. It lives behind the (transparent)
+         window surface, so open windows always sit on top of it. */
+      .wallpaper-brand {
+        position: absolute;
+        right: -4%;
+        pointer-events: none;
+        color: var(--uui-color-header-contrast, #ffffff);
+        opacity: 0.06;
+      }
+      .wallpaper-brand umb-icon {
+        display: block;
+        font-size: 55vh;
       }
       .surface {
         position: absolute;
