@@ -201,21 +201,21 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           @click=${this.#toggleLauncher}>
           <umb-icon name="icon-umbraco"></umb-icon>
         </uui-button>
-        <uui-tab-group class="running">
+        <div class="running">
           ${repeat(
             this._windows,
             (w) => w.id,
             (w) => html`
-              <uui-tab
-                class="task ${w.state === 'minimized' ? 'minimized' : ''}"
-                label=${this.localize.string(w.app.name)}
-                ?active=${w.active}
+              <button
+                class="task ${w.active ? 'active' : ''}"
+                title=${this.localize.string(w.app.name)}
                 @click=${() => this.#onTaskClick(w)}>
-                <umb-icon slot="icon" name=${w.app.icon}></umb-icon>
-              </uui-tab>
+                <umb-icon name=${w.app.icon}></umb-icon>
+                <span class="task-label">${this.localize.string(w.app.name)}</span>
+              </button>
             `,
           )}
-        </uui-tab-group>
+        </div>
         <div class="clock">${this._clock}</div>
       </div>
     `;
@@ -237,13 +237,11 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         color: var(--uui-color-header-contrast);
         box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.25);
       }
-      /* The start button reuses the header-logo recipe: a primary uui-button with a
-         transparent background carrying the Umbraco mark. */
+      /* The start button reuses the header-logo recipe: a transparent primary uui-button
+         carrying the Umbraco mark, centered and high-contrast on the dark bar. */
       .start {
         --uui-button-background-color: transparent;
         --uui-button-background-color-hover: rgba(255, 255, 255, 0.12);
-        --uui-button-padding-top-factor: 1;
-        --uui-button-padding-bottom-factor: 0.5;
         color: var(--uui-color-header-contrast);
         flex-shrink: 0;
       }
@@ -251,28 +249,58 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         --uui-button-background-color: rgba(255, 255, 255, 0.16);
       }
       .start umb-icon {
-        font-size: 22px;
+        display: block;
+        font-size: 26px;
+        color: var(--uui-color-header-contrast);
       }
-      /* Running windows are tabs, exactly like the native section nav — the active
-         window gets the coral "current" underline for free. */
+      /* Running windows: compact horizontal taskbar buttons that keep the native tab
+         language — icon + label, with the active window carrying the coral "current"
+         underline (an inset box-shadow, so it never shifts layout). Minimized windows look
+         like any other inactive window, as on Windows/KDE. */
       .running {
+        display: flex;
+        align-items: stretch;
+        gap: var(--uui-size-space-1);
         flex: 1;
-        height: 100%;
+        min-width: 0;
         overflow: hidden;
-        --uui-tab-text: var(--uui-color-header-contrast);
-        --uui-tab-text-hover: var(--uui-color-header-contrast-emphasis);
-        --uui-tab-text-active: var(--uui-color-header-contrast-emphasis);
-        --uui-tab-group-dropdown-background: var(
-          --uui-color-header-surface,
-          var(--uui-color-header-background)
-        );
+        margin-left: var(--uui-size-space-1);
       }
       .task {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--uui-size-space-2);
+        max-width: 200px;
+        min-width: 0;
+        padding: 0 var(--uui-size-space-3);
+        border: none;
+        background: transparent;
+        color: var(--uui-color-header-contrast);
+        cursor: pointer;
+        font-family: inherit;
         font-size: var(--uui-type-small-size);
+        box-shadow: inset 0 -3px 0 transparent;
+        transition:
+          box-shadow 120ms,
+          color 120ms,
+          background-color 120ms;
       }
-      /* Minimized windows read as running-but-hidden: dimmed, no active underline. */
-      .task.minimized {
-        opacity: 0.55;
+      .task umb-icon {
+        flex-shrink: 0;
+        font-size: 18px;
+      }
+      .task-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .task:hover {
+        color: var(--uui-color-header-contrast-emphasis);
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .task.active {
+        color: var(--uui-color-header-contrast-emphasis);
+        box-shadow: inset 0 -3px 0 var(--uui-color-current, #f5c1bc);
       }
       .clock {
         flex-shrink: 0;

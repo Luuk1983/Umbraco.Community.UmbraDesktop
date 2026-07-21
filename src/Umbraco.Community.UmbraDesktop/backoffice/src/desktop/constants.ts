@@ -5,7 +5,7 @@ export const UMBRADESKTOP_SECTION_ALIAS = 'Umbraco.Community.UmbraDesktop.Sectio
 export const UMBRADESKTOP_SECTION_PATHNAME = 'umbradesktop';
 
 /** Height of the taskbar/panel in pixels. */
-export const UMBRADESKTOP_TASKBAR_HEIGHT = 44;
+export const UMBRADESKTOP_TASKBAR_HEIGHT = 50;
 
 /** Reserved category alias that collects uncertified section-fallback apps. */
 export const UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS = 'umbradesktop-more';
