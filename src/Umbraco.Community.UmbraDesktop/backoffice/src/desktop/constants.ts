@@ -6,3 +6,12 @@ export const UMBRADESKTOP_SECTION_PATHNAME = 'umbradesktop';
 
 /** Height of the taskbar/panel in pixels. */
 export const UMBRADESKTOP_TASKBAR_HEIGHT = 44;
+
+/** Reserved category alias that collects uncertified section-fallback apps. */
+export const UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS = 'umbradesktop-more';
+
+/** Display label of the reserved uncertified category. */
+export const UMBRADESKTOP_UNCERTIFIED_CATEGORY_LABEL = 'More';
+
+/** Sort weight that keeps the uncertified category last (ascending sort, large value). */
+export const UMBRADESKTOP_UNCERTIFIED_CATEGORY_WEIGHT = 9999;

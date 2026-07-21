@@ -4,7 +4,7 @@
  */
 export type UmbraDesktopChromeProfile = 'full-section' | 'workspace-only' | 'bare';
 
-/** A launchable app: a backoffice deep-link plus how to frame it. */
+/** A launchable app: a backoffice deep-link plus how to frame and present it. */
 export interface UmbraDesktopApp {
   /** Stable identifier for the app. */
   alias: string;
@@ -18,6 +18,16 @@ export interface UmbraDesktopApp {
   chromeProfile: UmbraDesktopChromeProfile;
   /** Default window size in px. */
   defaultSize?: { w: number; h: number };
+  /** Whether more than one instance may open (default: allowed). */
+  allowMultiple?: boolean;
+  /** Sort weight within its group/header (ascending). */
+  weight?: number;
+  /** Display header alias (always set by derivation; optional for back-compat). */
+  categoryAlias?: string;
+  /** Optional collapsible sub-group alias. */
+  groupAlias?: string;
+  /** Confidence tier (always set by derivation; optional for back-compat). */
+  confidence?: UmbraDesktopConfidence;
 }
 
 /** A position/size rectangle in desktop pixels. */
@@ -45,4 +55,132 @@ export interface UmbraDesktopWindow {
   active: boolean;
   /** Window state. */
   state: UmbraDesktopWindowState;
+}
+
+/** Whether an app was maintainer-certified or auto-derived as an untested fallback. */
+export type UmbraDesktopConfidence = 'certified' | 'uncertified';
+
+/** A launcher header. Free-form, decoupled from Umbraco's section structure. */
+export interface UmbraDesktopCategory {
+  /** Stable id, referenced by entries and groups. */
+  alias: string;
+  /** Display label of the header. */
+  label: string;
+  /** Sort weight (ascending; lower shows first). */
+  weight?: number;
+  /** Optional Umbraco icon alias for the header. */
+  icon?: string;
+}
+
+/** A collapsible sub-group under a category. */
+export interface UmbraDesktopGroup {
+  /** Stable id, referenced by entries. */
+  alias: string;
+  /** Display label of the group. */
+  label: string;
+  /** The category this group belongs to. */
+  categoryAlias: string;
+  /** Sort weight within the category (ascending). */
+  weight?: number;
+  /** Whether the group renders collapsed initially (consumed by the Phase 3 drawer). */
+  collapsedByDefault?: boolean;
+}
+
+/**
+ * One curated catalogue entry. Links to a destination via `ref` (URL inferred from
+ * the registry) or `url` (explicit escape hatch), plus display placement.
+ */
+export interface UmbraDesktopCatalogueEntry {
+  /** Stable app id. */
+  alias: string;
+  /** Alias of a registered `section`/`dashboard`/`menuItem`; URL inferred from it. */
+  ref?: string;
+  /** Explicit hand-verified URL (for surfaces `ref` can't infer). */
+  url?: string;
+  /** Permission gate + section prefix; required for a menu-item `ref` or a `url` entry. */
+  section?: string;
+  /** Override window title (defaults to the referenced extension's label). */
+  name?: string;
+  /** Override icon (defaults to the referenced extension's icon). */
+  icon?: string;
+  /** Chrome profile (defaults to `full-section`). */
+  chromeProfile?: UmbraDesktopChromeProfile;
+  /** Default window size in px. */
+  defaultSize?: { w: number; h: number };
+  /** Whether more than one instance may open. */
+  allowMultiple?: boolean;
+  /** Sort weight within its group/header (ascending). */
+  weight?: number;
+  /** Display header. */
+  categoryAlias: string;
+  /** Optional collapsible sub-group. */
+  groupAlias?: string;
+}
+
+/** The collated curated catalogue (categories + groups + entries). */
+export interface UmbraDesktopCatalogue {
+  /** Curated headers. */
+  categories: UmbraDesktopCategory[];
+  /** Curated collapsible sub-groups. */
+  groups: UmbraDesktopGroup[];
+  /** App entries. */
+  entries: UmbraDesktopCatalogueEntry[];
+}
+
+/** Primitives extracted from a referenced manifest, fed to `inferUrl`. */
+export interface UmbraDesktopRefDescriptor {
+  /** Which registry surface the reference points at. */
+  type: 'section' | 'dashboard' | 'menuItem';
+  /** Menu-item kind, if any ('tree' | 'link' | 'action'); undefined/'default' = navigable. */
+  kind?: string;
+  /** The section's own pathname, or a dashboard's own pathname. */
+  pathname?: string;
+  /** The owning-section pathname (for dashboard / menu-item refs). */
+  sectionPathname?: string;
+  /** The workspace entity type (for menu-item refs). */
+  entityType?: string;
+}
+
+/** A catalogue entry after the adapter resolved its URL + gate + inherited presentation. */
+export interface UmbraDesktopResolvedEntry {
+  /** The original entry. */
+  entry: UmbraDesktopCatalogueEntry;
+  /** Resolved absolute URL (inferred or explicit), or null when unresolvable. */
+  url: string | null;
+  /** The section alias that must be permitted for this entry to show. */
+  gateSectionAlias: string | null;
+  /** True when this entry represents a whole section (suppresses its fallback). */
+  isSectionRoot: boolean;
+  /** Name inherited from the referenced manifest, if any. */
+  inheritedName?: string;
+  /** Icon inherited from the referenced manifest, if any. */
+  inheritedIcon?: string;
+}
+
+/** A section the current user may access, with the primitives needed to build URLs. */
+export interface UmbraDesktopSectionInfo {
+  /** Section alias, e.g. "Umb.Section.Content". */
+  alias: string;
+  /** Display label. */
+  label: string;
+  /** URL pathname, e.g. "content". */
+  pathname: string;
+}
+
+/** A group with its resolved apps, for the launcher display tree. */
+export interface UmbraDesktopLauncherGroup {
+  /** The group. */
+  group: UmbraDesktopGroup;
+  /** Apps in this group, sorted. */
+  apps: UmbraDesktopApp[];
+}
+
+/** A category with its loose apps + groups, for the launcher display tree. */
+export interface UmbraDesktopLauncherCategory {
+  /** The category header. */
+  category: UmbraDesktopCategory;
+  /** Apps directly under the header (no group), sorted. */
+  apps: UmbraDesktopApp[];
+  /** Collapsible groups under the header, sorted. */
+  groups: UmbraDesktopLauncherGroup[];
 }
