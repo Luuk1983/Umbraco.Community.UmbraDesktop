@@ -94,30 +94,42 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     if (!this._launcherOpen) return '';
     return html`
       <div class="launcher" style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
-        ${repeat(
-          this._tree,
-          (c) => c.category.alias,
-          (c) => html`
-            <div class="launch-category">
-              <div class="launch-header">${this.localize.string(c.category.label)}</div>
-              <div class="launch-apps">
-                ${repeat(c.apps, (a) => a.alias, (a) => this.#renderApp(a))}
-              </div>
-              ${repeat(
-                c.groups,
-                (g) => g.group.alias,
-                (g) => html`
-                  <div class="launch-group">
-                    <div class="launch-group-label">${this.localize.string(g.group.label)}</div>
-                    <div class="launch-apps">
-                      ${repeat(g.apps, (a) => a.alias, (a) => this.#renderApp(a))}
+        <div class="launcher-body">
+          ${repeat(
+            this._tree,
+            (c) => c.category.alias,
+            (c) => html`
+              <div class="launch-category">
+                <div class="launch-header">${this.localize.string(c.category.label)}</div>
+                <div class="launch-apps">
+                  ${repeat(c.apps, (a) => a.alias, (a) => this.#renderApp(a))}
+                </div>
+                ${repeat(
+                  c.groups,
+                  (g) => g.group.alias,
+                  (g) => html`
+                    <div class="launch-group">
+                      <div class="launch-group-label">${this.localize.string(g.group.label)}</div>
+                      <div class="launch-apps">
+                        ${repeat(g.apps, (a) => a.alias, (a) => this.#renderApp(a))}
+                      </div>
                     </div>
-                  </div>
-                `,
-              )}
-            </div>
-          `,
-        )}
+                  `,
+                )}
+              </div>
+            `,
+          )}
+        </div>
+        <div class="launcher-footer">
+          <uui-button
+            class="launcher-exit"
+            look="secondary"
+            color="danger"
+            label="Exit desktop mode"
+            @click=${this.#onExit}>
+            Exit desktop
+          </uui-button>
+        </div>
       </div>
     `;
   }
@@ -146,14 +158,6 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
             `,
           )}
         </div>
-        <uui-button
-          class="exit"
-          compact
-          look="secondary"
-          label="Exit desktop mode"
-          @click=${this.#onExit}>
-          Exit
-        </uui-button>
         <div class="clock">${this._clock}</div>
       </div>
     `;
@@ -220,17 +224,31 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       .launcher {
         position: absolute;
         left: var(--uui-size-space-3);
-        width: 320px;
-        max-height: 60vh;
+        width: 480px;
+        height: 70vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--uui-color-surface);
+        border: 1px solid var(--uui-color-border);
+        border-radius: var(--uui-border-radius, 3px);
+        box-shadow: var(--uui-shadow-depth-4);
+        overflow: hidden;
+      }
+      .launcher-body {
+        flex: 1;
         overflow: auto;
         display: flex;
         flex-direction: column;
         gap: var(--uui-size-space-3);
         padding: var(--uui-size-space-4);
-        background: var(--uui-color-surface);
-        border: 1px solid var(--uui-color-border);
-        border-radius: var(--uui-border-radius, 3px);
-        box-shadow: var(--uui-shadow-depth-4);
+      }
+      .launcher-footer {
+        flex-shrink: 0;
+        padding: var(--uui-size-space-3) var(--uui-size-space-4);
+        border-top: 1px solid var(--uui-color-border);
+      }
+      .launcher-exit {
+        width: 100%;
       }
       .launch-header {
         font-weight: 700;
