@@ -94,14 +94,16 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         width: 100%;
         display: flex;
         flex-direction: column;
-        /* Wallpaper derived from the header token, so it matches the (always-dark) header /
-           taskbar and follows the active theme. Solid colour first as a fallback for browsers
-           without color-mix; the gradient just adds a soft top-left highlight for depth. */
-        background-color: var(--uui-color-header-background, #1b264f);
+        /* Wallpaper derived from the header token but pulled darker, so the desktop reads
+           distinctly darker than the taskbar (and the light windows pop). Solid colour first
+           as a fallback for browsers without color-mix; the gradient adds a soft top-left
+           highlight for depth. (A selection of background images is planned later.) */
+        background-color: #151e3d;
+        background-color: color-mix(in srgb, var(--uui-color-header-background, #1b264f) 75%, black);
         background-image: radial-gradient(
-          130% 130% at 22% 12%,
-          color-mix(in srgb, var(--uui-color-header-background, #1b264f) 82%, white),
-          var(--uui-color-header-background, #1b264f) 55%
+          130% 130% at 25% 10%,
+          color-mix(in srgb, var(--uui-color-header-background, #1b264f) 96%, white),
+          color-mix(in srgb, var(--uui-color-header-background, #1b264f) 68%, black) 65%
         );
       }
       /* A faint Umbraco mark watermarking the desktop. It lives behind the (transparent)
