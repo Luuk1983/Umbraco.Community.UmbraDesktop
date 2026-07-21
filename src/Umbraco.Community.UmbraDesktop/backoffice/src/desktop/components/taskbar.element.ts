@@ -192,15 +192,13 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     return html`
       ${this.#renderLauncher()}
       <div class="bar" style="height:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
-        <uui-button
+        <button
           class="start ${this._launcherOpen ? 'active' : ''}"
-          look="primary"
-          compact
           title="Open apps"
-          label="Open apps"
+          aria-label="Open apps"
           @click=${this.#toggleLauncher}>
           <umb-icon name="icon-umbraco"></umb-icon>
-        </uui-button>
+        </button>
         <div class="running">
           ${repeat(
             this._windows,
@@ -237,29 +235,39 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         color: var(--uui-color-header-contrast);
         box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.25);
       }
-      /* The start button reuses the header-logo recipe: a transparent primary uui-button
-         carrying the Umbraco mark, centered and high-contrast on the dark bar. */
+      /* The start button carries the Umbraco mark, full bar height so its hover fills the
+         whole bar, centered and high-contrast on the dark background. */
       .start {
-        --uui-button-background-color: transparent;
-        --uui-button-background-color-hover: rgba(255, 255, 255, 0.12);
-        color: var(--uui-color-header-contrast);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
         flex-shrink: 0;
-      }
-      .start.active {
-        --uui-button-background-color: rgba(255, 255, 255, 0.16);
+        padding: 0 var(--uui-size-space-4);
+        border: none;
+        background: transparent;
+        color: var(--uui-color-header-contrast);
+        cursor: pointer;
       }
       .start umb-icon {
         display: block;
         font-size: 26px;
-        color: var(--uui-color-header-contrast);
+      }
+      .start:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .start.active {
+        background: rgba(255, 255, 255, 0.16);
       }
       /* Running windows: compact horizontal taskbar buttons that keep the native tab
          language — icon + label, with the active window carrying the coral "current"
-         underline (an inset box-shadow, so it never shifts layout). Minimized windows look
-         like any other inactive window, as on Windows/KDE. */
+         underline (an inset box-shadow, so it never shifts layout). Buttons fill the full
+         bar height so the underline sits on the bottom edge and hover covers top-to-bottom.
+         Minimized windows look like any other inactive window, as on Windows/KDE. */
       .running {
         display: flex;
         align-items: stretch;
+        height: 100%;
         gap: var(--uui-size-space-1);
         flex: 1;
         min-width: 0;
@@ -269,6 +277,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       .task {
         display: inline-flex;
         align-items: center;
+        height: 100%;
         gap: var(--uui-size-space-2);
         max-width: 200px;
         min-width: 0;
