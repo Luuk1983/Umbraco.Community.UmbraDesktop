@@ -139,7 +139,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     return html`
       <button class="launch-item" @click=${() => this.#launch(app)}>
         <umb-icon name=${app.icon}></umb-icon>
-        <span>${this.localize.string(app.name)}</span>
+        <span class="launch-item-label">${this.localize.string(app.name)}</span>
       </button>
     `;
   }
@@ -375,22 +375,39 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       .launch-apps {
         display: flex;
         flex-direction: column;
+        gap: 1px;
       }
+      /* Rows modelled on Umbraco's sidebar menu items: full-width, icon + label, a
+         full-row hover, comfortable height. */
       .launch-item {
-        display: inline-flex;
+        display: flex;
         align-items: center;
-        gap: var(--uui-size-space-2);
-        padding: var(--uui-size-space-2) var(--uui-size-space-2);
+        gap: var(--uui-size-space-3);
+        width: 100%;
+        padding: var(--uui-size-space-2) var(--uui-size-space-3);
         border: none;
         border-radius: var(--uui-border-radius, 3px);
         background: transparent;
-        color: inherit;
+        color: var(--uui-color-text);
         cursor: pointer;
-        font-size: var(--uui-type-small-size);
+        font-family: inherit;
+        font-size: calc(var(--uui-type-small-size) + 1px);
         text-align: left;
+      }
+      .launch-item umb-icon {
+        flex-shrink: 0;
+        font-size: 18px;
+      }
+      .launch-item-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        /* Match the taskbar/window Lato correction. */
+        transform: translateY(1px);
       }
       .launch-item:hover {
         background: var(--uui-color-surface-alt);
+        color: var(--uui-color-interactive-emphasis, var(--uui-color-interactive));
       }
     `,
   ];
