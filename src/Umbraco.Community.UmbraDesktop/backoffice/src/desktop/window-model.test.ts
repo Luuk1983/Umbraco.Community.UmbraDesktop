@@ -6,6 +6,7 @@ import {
   removeWindow,
   moveWindow,
   setWindowState,
+  findAppWindow,
 } from './window-model';
 import type { UmbraDesktopApp, UmbraDesktopWindow } from './types';
 
@@ -65,4 +66,14 @@ it('setWindowState toggles maximize/minimize/normal on the target only', () => {
   const result = setWindowState([win('a', 1), win('b', 2)], 'a', 'maximized');
   expect(result.find((w) => w.id === 'a')!.state).to.equal('maximized');
   expect(result.find((w) => w.id === 'b')!.state).to.equal('normal');
+});
+
+it('findAppWindow returns the window hosting the given app alias', () => {
+  const windows = [win('w1', 1), win('w2', 2, { app: { ...app, alias: 'other' } })];
+  expect(findAppWindow(windows, 'a')!.id).to.equal('w1');
+  expect(findAppWindow(windows, 'other')!.id).to.equal('w2');
+});
+
+it('findAppWindow returns undefined when no window hosts the alias', () => {
+  expect(findAppWindow([win('w1', 1)], 'missing')).to.equal(undefined);
 });

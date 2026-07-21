@@ -54,3 +54,17 @@ export function setWindowState(
 ): UmbraDesktopWindow[] {
   return windows.map((w) => (w.id === id ? { ...w, state } : w));
 }
+
+/**
+ * The first open window hosting the given app alias, if any. Used to enforce
+ * `allowMultiple: false` by focusing an existing instance instead of duplicating.
+ * @param windows The current window list.
+ * @param appAlias The app alias to look for.
+ * @returns The matching window, or undefined.
+ */
+export function findAppWindow(
+  windows: ReadonlyArray<UmbraDesktopWindow>,
+  appAlias: string,
+): UmbraDesktopWindow | undefined {
+  return windows.find((w) => w.app.alias === appAlias);
+}

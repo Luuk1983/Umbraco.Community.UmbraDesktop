@@ -6,6 +6,7 @@ import {
   nextZIndex,
   removeWindow,
   setWindowState,
+  findAppWindow,
 } from './window-model';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-token';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
@@ -28,9 +29,20 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     super(host, UMBRADESKTOP_WINDOW_MANAGER_CONTEXT);
   }
 
-  /** Open a new window for the given app and focus it. */
+  /**
+   * Open a new window for the given app and focus it. If the app forbids multiple
+   * instances and one is already open, focus that instead of opening another.
+   * @param app The app to open.
+   */
   public open(app: UmbraDesktopApp): void {
     const current = this.#windows.getValue();
+    if (app.allowMultiple === false) {
+      const existing = findAppWindow(current, app.alias);
+      if (existing) {
+        this.focus(existing.id);
+        return;
+      }
+    }
     const rect = nextWindowRect(current.length, app.defaultSize ?? DEFAULT_SIZE);
     const win: UmbraDesktopWindow = {
       id: crypto.randomUUID(),
