@@ -1,4 +1,4 @@
-import type { UmbraDesktopApp, UmbraDesktopWindow, UmbraDesktopWindowState } from './types';
+import type { UmbraDesktopApp, UmbraDesktopWindow, UmbraDesktopWindowState, Rect } from './types';
 import {
   focusWindow,
   moveWindow,
@@ -7,6 +7,7 @@ import {
   removeWindow,
   setWindowState,
   findAppWindow,
+  setWindowRect,
 } from './window-model';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-token';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
@@ -68,6 +69,15 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   /** Move a window to an absolute desktop position. */
   public move(id: string, x: number, y: number): void {
     this.#windows.setValue(moveWindow(this.#windows.getValue(), id, x, y));
+  }
+
+  /**
+   * Resize a window to an absolute rectangle (already clamped by the caller).
+   * @param id The window to resize.
+   * @param rect The new rectangle.
+   */
+  public resize(id: string, rect: Rect): void {
+    this.#windows.setValue(setWindowRect(this.#windows.getValue(), id, rect));
   }
 
   /** Set a window's state (normal / minimized / maximized). */

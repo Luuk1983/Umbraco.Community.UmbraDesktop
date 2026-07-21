@@ -7,6 +7,8 @@ import {
   moveWindow,
   setWindowState,
   findAppWindow,
+  resizeRect,
+  setWindowRect,
 } from './window-model';
 import type { UmbraDesktopApp, UmbraDesktopWindow } from './types';
 
@@ -76,4 +78,47 @@ it('findAppWindow returns the window hosting the given app alias', () => {
 
 it('findAppWindow returns undefined when no window hosts the alias', () => {
   expect(findAppWindow([win('w1', 1)], 'missing')).to.equal(undefined);
+});
+
+const START: import('./types').Rect = { x: 100, y: 100, w: 400, h: 300 };
+const MIN = { w: 320, h: 200 };
+
+it('resizeRect grows width from the right edge', () => {
+  expect(resizeRect(START, { right: true }, 50, 0, MIN)).to.deep.equal({ x: 100, y: 100, w: 450, h: 300 });
+});
+
+it('resizeRect grows height from the bottom edge', () => {
+  expect(resizeRect(START, { bottom: true }, 0, 40, MIN)).to.deep.equal({ x: 100, y: 100, w: 400, h: 340 });
+});
+
+it('resizeRect moves the origin when dragging the left edge', () => {
+  expect(resizeRect(START, { left: true }, 30, 0, MIN)).to.deep.equal({ x: 130, y: 100, w: 370, h: 300 });
+});
+
+it('resizeRect moves the origin when dragging the top edge', () => {
+  expect(resizeRect(START, { top: true }, 0, 20, MIN)).to.deep.equal({ x: 100, y: 120, w: 400, h: 280 });
+});
+
+it('resizeRect handles the south-east corner (both size axes)', () => {
+  expect(resizeRect(START, { bottom: true, right: true }, 50, 40, MIN)).to.deep.equal({ x: 100, y: 100, w: 450, h: 340 });
+});
+
+it('resizeRect handles the north-west corner (both origin axes)', () => {
+  expect(resizeRect(START, { top: true, left: true }, 30, 20, MIN)).to.deep.equal({ x: 130, y: 120, w: 370, h: 280 });
+});
+
+it('resizeRect clamps width to the minimum from the right edge', () => {
+  expect(resizeRect(START, { right: true }, -200, 0, MIN)).to.deep.equal({ x: 100, y: 100, w: 320, h: 300 });
+});
+
+it('resizeRect clamps the left edge so the origin never overshoots the minimum width', () => {
+  // Shrinking from the left by 200 would drop below min (400-200=200 < 320) → width pins to 320,
+  // so x only advances by (400-320)=80.
+  expect(resizeRect(START, { left: true }, 200, 0, MIN)).to.deep.equal({ x: 180, y: 100, w: 320, h: 300 });
+});
+
+it('setWindowRect replaces only the target window rectangle', () => {
+  const next = setWindowRect([win('a', 1), win('b', 2)], 'a', { x: 5, y: 6, w: 700, h: 500 });
+  expect(next.find((w) => w.id === 'a')!.rect).to.deep.equal({ x: 5, y: 6, w: 700, h: 500 });
+  expect(next.find((w) => w.id === 'b')!.rect).to.deep.equal({ x: 0, y: 0, w: 100, h: 100 });
 });

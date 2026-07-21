@@ -68,3 +68,62 @@ export function findAppWindow(
 ): UmbraDesktopWindow | undefined {
   return windows.find((w) => w.app.alias === appAlias);
 }
+
+/** Which edges of a window a resize drag is pulling. */
+export interface UmbraDesktopResizeEdges {
+  /** Dragging the left edge (moves the origin). */
+  left?: boolean;
+  /** Dragging the right edge (grows width only). */
+  right?: boolean;
+  /** Dragging the top edge (moves the origin). */
+  top?: boolean;
+  /** Dragging the bottom edge (grows height only). */
+  bottom?: boolean;
+}
+
+/**
+ * Compute a new rectangle when the given edges of `start` are dragged by (dx, dy),
+ * clamped so width/height never drop below `min`. Right/bottom edges change size only;
+ * left/top edges move the origin (and pin it so the minimum size is never violated). Pure.
+ * @param start The rectangle at the moment the resize began.
+ * @param edges Which edges are being dragged.
+ * @param dx Horizontal pointer delta from the resize start.
+ * @param dy Vertical pointer delta from the resize start.
+ * @param min Minimum width/height.
+ * @returns The new rectangle.
+ */
+export function resizeRect(
+  start: Rect,
+  edges: UmbraDesktopResizeEdges,
+  dx: number,
+  dy: number,
+  min: { w: number; h: number },
+): Rect {
+  let { x, y, w, h } = start;
+  if (edges.right) w = Math.max(min.w, start.w + dx);
+  if (edges.bottom) h = Math.max(min.h, start.h + dy);
+  if (edges.left) {
+    w = Math.max(min.w, start.w - dx);
+    x = start.x + (start.w - w);
+  }
+  if (edges.top) {
+    h = Math.max(min.h, start.h - dy);
+    y = start.y + (start.h - h);
+  }
+  return { x, y, w, h };
+}
+
+/**
+ * Return a new list with `id`'s rectangle replaced.
+ * @param windows The current window list.
+ * @param id The window to update.
+ * @param rect The new rectangle.
+ * @returns A new list.
+ */
+export function setWindowRect(
+  windows: ReadonlyArray<UmbraDesktopWindow>,
+  id: string,
+  rect: Rect,
+): UmbraDesktopWindow[] {
+  return windows.map((w) => (w.id === id ? { ...w, rect } : w));
+}
