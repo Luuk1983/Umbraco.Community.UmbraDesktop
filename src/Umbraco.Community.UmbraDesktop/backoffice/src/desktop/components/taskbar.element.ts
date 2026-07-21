@@ -297,6 +297,9 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       .task umb-icon {
         flex-shrink: 0;
         font-size: 18px;
+        /* Umbraco icon glyphs carry transparent padding inside their box, making the space
+           before the icon read wider than the space after the label; pull it back to balance. */
+        margin-left: -2px;
       }
       .task-label {
         overflow: hidden;
