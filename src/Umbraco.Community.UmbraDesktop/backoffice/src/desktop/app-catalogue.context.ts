@@ -16,9 +16,23 @@ import { UmbArrayState } from '@umbraco-cms/backoffice/observable-api';
 import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
+import { UMB_SECTION_ALIAS_CONDITION_ALIAS } from '@umbraco-cms/backoffice/section';
 
-/** Condition alias that scopes a dashboard (and similar) to a section. */
-const SECTION_ALIAS_CONDITION = 'Umb.Condition.SectionAlias';
+/** The subset of a referenced manifest this adapter reads. */
+interface ReferencedManifest {
+  /** The manifest's extension type (section / dashboard / menuItem / …). */
+  type: string;
+  /** The manifest alias. */
+  alias: string;
+  /** Menu-item kind, if any. */
+  kind?: string;
+  /** Manifest display name (fallback for the app title). */
+  name?: string;
+  /** Dynamic conditions (used to find a dashboard's owning section). */
+  conditions?: Array<{ alias: string; match?: string }>;
+  /** The manifest meta fields this adapter reads. */
+  meta?: { label?: string; pathname?: string; entityType?: string; icon?: string };
+}
 
 /**
  * Resolves the curated catalogue against the current install: reads the user's
@@ -55,7 +69,9 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   /** Registered sections filtered to the ones the user may access. */
   #resolveSections(allowedAliases: ReadonlyArray<string>): UmbraDesktopSectionInfo[] {
     const allowed = new Set(allowedAliases);
-    // Snapshot of registered sections (kind-merged); sections exist by desktop-mount time.
+    // Snapshot of registered sections (kind-merged). Sections are registered at boot, well before
+    // the desktop mounts, so a snapshot is sufficient; a section registered AFTER mount is only
+    // picked up when allowedSections next emits (accepted limitation — see design §6).
     const sections = umbExtensionsRegistry.getByType('section') as Array<{
       alias: string;
       name?: string;
@@ -87,32 +103,37 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     if (!entry.ref) {
       return { entry, url: null, gateSectionAlias: entry.section ?? null, isSectionRoot: false };
     }
-    const manifest = umbExtensionsRegistry.getByAlias(entry.ref) as
-      | { type: string; alias: string; kind?: string; name?: string; conditions?: Array<{ alias: string; match?: string }>; meta?: Record<string, unknown> }
-      | undefined;
+    const manifest = umbExtensionsRegistry.getByAlias(entry.ref) as ReferencedManifest | undefined;
     if (!manifest) {
+      console.warn(`[UmbraDesktop] Catalogue entry "${entry.alias}" references unknown extension "${entry.ref}".`);
       return { entry, url: null, gateSectionAlias: entry.section ?? null, isSectionRoot: false };
     }
     const described = this.#describe(manifest, entry);
+    const url = described.ref ? inferUrl(described.ref) : null;
+    if (!url) {
+      console.warn(
+        `[UmbraDesktop] Catalogue entry "${entry.alias}" (ref "${entry.ref}", type "${manifest.type}") could not be resolved to a URL.`,
+      );
+    }
     return {
       entry,
-      url: described.ref ? inferUrl(described.ref) : null,
+      url,
       gateSectionAlias: described.gateSectionAlias,
       isSectionRoot: described.isSectionRoot,
-      inheritedName: (manifest.meta?.label as string | undefined) ?? manifest.name,
-      inheritedIcon: manifest.meta?.icon as string | undefined,
+      inheritedName: manifest.meta?.label ?? manifest.name,
+      inheritedIcon: manifest.meta?.icon,
     };
   }
 
   /** Build a RefDescriptor + gate/root flags from a referenced manifest. */
   #describe(
-    manifest: { type: string; alias: string; kind?: string; conditions?: Array<{ alias: string; match?: string }>; meta?: Record<string, unknown> },
+    manifest: ReferencedManifest,
     entry: UmbraDesktopCatalogueEntry,
   ): { ref: UmbraDesktopRefDescriptor | null; gateSectionAlias: string | null; isSectionRoot: boolean } {
     switch (manifest.type) {
       case 'section':
         return {
-          ref: { type: 'section', pathname: manifest.meta?.pathname as string | undefined },
+          ref: { type: 'section', pathname: manifest.meta?.pathname },
           gateSectionAlias: manifest.alias,
           isSectionRoot: true,
         };
@@ -121,7 +142,7 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
         return {
           ref: {
             type: 'dashboard',
-            pathname: manifest.meta?.pathname as string | undefined,
+            pathname: manifest.meta?.pathname,
             sectionPathname: this.#pathnameOf(sectionAlias),
           },
           gateSectionAlias: sectionAlias,
@@ -133,7 +154,7 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
           ref: {
             type: 'menuItem',
             kind: manifest.kind,
-            entityType: manifest.meta?.entityType as string | undefined,
+            entityType: manifest.meta?.entityType,
             sectionPathname: this.#pathnameOf(entry.section ?? null),
           },
           gateSectionAlias: entry.section ?? null,
@@ -151,8 +172,8 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   }
 
   /** The section a dashboard is scoped to, read from its section-alias condition. */
-  #dashboardSectionAlias(manifest: { conditions?: Array<{ alias: string; match?: string }> }): string | null {
-    const condition = (manifest.conditions ?? []).find((c) => c.alias === SECTION_ALIAS_CONDITION);
+  #dashboardSectionAlias(manifest: Pick<ReferencedManifest, 'conditions'>): string | null {
+    const condition = (manifest.conditions ?? []).find((c) => c.alias === UMB_SECTION_ALIAS_CONDITION_ALIAS);
     return condition?.match ?? null;
   }
 }
