@@ -1,9 +1,24 @@
-import type { UmbraDesktopWindow } from '../types';
+import type { Rect, UmbraDesktopWindow } from '../types';
+import type { UmbraDesktopResizeEdges } from '../window-model';
+import { resizeRect } from '../window-model';
 import { injectChromeStyles } from '../chrome-injector';
+import { UMBRADESKTOP_WINDOW_MIN_SIZE } from '../constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { css, customElement, html, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+
+/** The eight resize handles: direction (for the cursor class) + which edges each pulls. */
+const RESIZE_HANDLES: ReadonlyArray<{ dir: string; edges: UmbraDesktopResizeEdges }> = [
+  { dir: 'n', edges: { top: true } },
+  { dir: 's', edges: { bottom: true } },
+  { dir: 'e', edges: { right: true } },
+  { dir: 'w', edges: { left: true } },
+  { dir: 'ne', edges: { top: true, right: true } },
+  { dir: 'nw', edges: { top: true, left: true } },
+  { dir: 'se', edges: { bottom: true, right: true } },
+  { dir: 'sw', edges: { bottom: true, left: true } },
+];
 
 /**
  * A single draggable desktop window hosting a backoffice iframe. Presentational
@@ -23,6 +38,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   #manager?: UmbraDesktopWindowManagerContext;
   #startPointer = { x: 0, y: 0 };
   #startRect = { x: 0, y: 0 };
+  #resizing = false;
+  #resizeEdges: UmbraDesktopResizeEdges = {};
+  #resizeStartPointer = { x: 0, y: 0 };
+  #resizeStartRect: Rect = { x: 0, y: 0, w: 0, h: 0 };
 
   constructor() {
     super();
@@ -58,6 +77,30 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
 
   #onTitlePointerUp = (e: PointerEvent) => {
     this._dragging = false;
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+  };
+
+  #onResizeDown = (e: PointerEvent, edges: UmbraDesktopResizeEdges) => {
+    if (!this.window || this.window.state !== 'normal') return;
+    e.stopPropagation();
+    this.#manager?.focus(this.window.id);
+    this.#resizing = true;
+    this.#resizeEdges = edges;
+    this.#resizeStartPointer = { x: e.clientX, y: e.clientY };
+    this.#resizeStartRect = { ...this.window.rect };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  #onResizeMove = (e: PointerEvent) => {
+    if (!this.#resizing || !this.window) return;
+    const dx = e.clientX - this.#resizeStartPointer.x;
+    const dy = e.clientY - this.#resizeStartPointer.y;
+    const rect = resizeRect(this.#resizeStartRect, this.#resizeEdges, dx, dy, UMBRADESKTOP_WINDOW_MIN_SIZE);
+    this.#manager?.resize(this.window.id, rect);
+  };
+
+  #onResizeUp = (e: PointerEvent) => {
+    this.#resizing = false;
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
   };
 
@@ -103,8 +146,20 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         </div>
         <div class="bodywrap">
           <iframe class="body" src=${w.app.url} @load=${this.#onIframeLoad}></iframe>
+          ${!w.active
+            ? html`<div class="focus-catcher" @pointerdown=${this.#onFocus}></div>`
+            : ''}
           ${this._loading ? html`<div class="loading"><uui-loader></uui-loader></div>` : ''}
         </div>
+        ${w.state === 'normal'
+          ? RESIZE_HANDLES.map(
+              (rh) => html`<div
+                class="rh rh-${rh.dir}"
+                @pointerdown=${(e: PointerEvent) => this.#onResizeDown(e, rh.edges)}
+                @pointermove=${this.#onResizeMove}
+                @pointerup=${this.#onResizeUp}></div>`,
+            )
+          : ''}
       </div>
     `;
   }
@@ -170,6 +225,76 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
       }
       [hidden] {
         display: none !important;
+      }
+      .focus-catcher {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+      }
+      .rh {
+        position: absolute;
+        z-index: 3;
+        touch-action: none;
+      }
+      .rh-n {
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        cursor: ns-resize;
+      }
+      .rh-s {
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        cursor: ns-resize;
+      }
+      .rh-e {
+        top: 0;
+        bottom: 0;
+        right: 0;
+        width: 6px;
+        cursor: ew-resize;
+      }
+      .rh-w {
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 6px;
+        cursor: ew-resize;
+      }
+      .rh-ne {
+        top: 0;
+        right: 0;
+        width: 12px;
+        height: 12px;
+        z-index: 4;
+        cursor: nesw-resize;
+      }
+      .rh-nw {
+        top: 0;
+        left: 0;
+        width: 12px;
+        height: 12px;
+        z-index: 4;
+        cursor: nwse-resize;
+      }
+      .rh-se {
+        bottom: 0;
+        right: 0;
+        width: 12px;
+        height: 12px;
+        z-index: 4;
+        cursor: nwse-resize;
+      }
+      .rh-sw {
+        bottom: 0;
+        left: 0;
+        width: 12px;
+        height: 12px;
+        z-index: 4;
+        cursor: nesw-resize;
       }
     `,
   ];
