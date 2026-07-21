@@ -1,5 +1,6 @@
 import type { UmbraDesktopApp, UmbraDesktopLauncherCategory, UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
+import { taskActivation } from '../window-model';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token';
@@ -63,6 +64,17 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   #launch(app: UmbraDesktopApp) {
     this.#manager?.open(app);
     this.#setLauncherOpen(false);
+  }
+
+  /**
+   * Handle a click on a running-window taskbar button: minimize it if it is already the active
+   * window, otherwise bring it to the front (restoring it if minimized). See `taskActivation`.
+   * @param w The window whose taskbar button was clicked.
+   */
+  #onTaskClick(w: UmbraDesktopWindow) {
+    if (!this.#manager) return;
+    if (taskActivation(w) === 'minimize') this.#manager.setState(w.id, 'minimized');
+    else this.#manager.focus(w.id);
   }
 
   /**
@@ -180,26 +192,30 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     return html`
       ${this.#renderLauncher()}
       <div class="bar" style="height:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
-        <button
+        <uui-button
           class="start ${this._launcherOpen ? 'active' : ''}"
+          look="primary"
+          compact
           title="Open apps"
+          label="Open apps"
           @click=${this.#toggleLauncher}>
           <umb-icon name="icon-umbraco"></umb-icon>
-        </button>
-        <div class="running">
+        </uui-button>
+        <uui-tab-group class="running">
           ${repeat(
             this._windows,
             (w) => w.id,
             (w) => html`
-              <button
-                class="task ${w.active ? 'active' : ''}"
-                @click=${() => this.#manager?.focus(w.id)}>
-                <umb-icon name=${w.app.icon}></umb-icon>
-                <span>${this.localize.string(w.app.name)}</span>
-              </button>
+              <uui-tab
+                class="task ${w.state === 'minimized' ? 'minimized' : ''}"
+                label=${this.localize.string(w.app.name)}
+                ?active=${w.active}
+                @click=${() => this.#onTaskClick(w)}>
+                <umb-icon slot="icon" name=${w.app.icon}></umb-icon>
+              </uui-tab>
             `,
           )}
-        </div>
+        </uui-tab-group>
         <div class="clock">${this._clock}</div>
       </div>
     `;
@@ -215,51 +231,54 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         display: flex;
         align-items: center;
         gap: var(--uui-size-space-2);
-        padding: 0 var(--uui-size-space-3);
-        background: var(--uui-color-header-surface, var(--uui-color-surface-alt));
-        border-top: 1px solid var(--uui-color-border);
+        padding: 0 var(--uui-size-space-2);
+        /* Match the native backoffice header, relocated to the bottom. */
+        background: var(--uui-color-header-background);
+        color: var(--uui-color-header-contrast);
+        box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.25);
       }
+      /* The start button reuses the header-logo recipe: a primary uui-button with a
+         transparent background carrying the Umbraco mark. */
       .start {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 34px;
-        height: 34px;
-        border: none;
-        border-radius: var(--uui-border-radius, 3px);
-        background: transparent;
-        color: inherit;
-        cursor: pointer;
-        font-size: 20px;
+        --uui-button-background-color: transparent;
+        --uui-button-background-color-hover: rgba(255, 255, 255, 0.12);
+        --uui-button-padding-top-factor: 1;
+        --uui-button-padding-bottom-factor: 0.5;
+        color: var(--uui-color-header-contrast);
+        flex-shrink: 0;
       }
-      .start:hover,
       .start.active {
-        background: var(--uui-color-surface);
+        --uui-button-background-color: rgba(255, 255, 255, 0.16);
       }
+      .start umb-icon {
+        font-size: 22px;
+      }
+      /* Running windows are tabs, exactly like the native section nav — the active
+         window gets the coral "current" underline for free. */
       .running {
-        display: flex;
-        gap: var(--uui-size-space-1);
         flex: 1;
+        height: 100%;
         overflow: hidden;
+        --uui-tab-text: var(--uui-color-header-contrast);
+        --uui-tab-text-hover: var(--uui-color-header-contrast-emphasis);
+        --uui-tab-text-active: var(--uui-color-header-contrast-emphasis);
+        --uui-tab-group-dropdown-background: var(
+          --uui-color-header-surface,
+          var(--uui-color-header-background)
+        );
       }
       .task {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--uui-size-space-2);
-        max-width: 180px;
-        padding: var(--uui-size-space-1) var(--uui-size-space-3);
-        border: 1px solid transparent;
-        border-radius: var(--uui-border-radius, 3px);
-        background: var(--uui-color-surface);
-        cursor: pointer;
         font-size: var(--uui-type-small-size);
-        white-space: nowrap;
       }
-      .task.active {
-        border-color: var(--uui-color-selected);
+      /* Minimized windows read as running-but-hidden: dimmed, no active underline. */
+      .task.minimized {
+        opacity: 0.55;
       }
       .clock {
+        flex-shrink: 0;
+        padding-right: var(--uui-size-space-2);
         font-size: var(--uui-type-small-size);
+        color: var(--uui-color-header-contrast);
         opacity: 0.85;
         font-variant-numeric: tabular-nums;
       }

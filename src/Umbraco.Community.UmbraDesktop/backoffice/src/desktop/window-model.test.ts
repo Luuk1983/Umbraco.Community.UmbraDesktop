@@ -9,6 +9,7 @@ import {
   findAppWindow,
   resizeRect,
   setWindowRect,
+  taskActivation,
 } from './window-model';
 import type { UmbraDesktopApp, UmbraDesktopWindow } from './types';
 
@@ -131,4 +132,20 @@ it('setWindowRect replaces only the target window rectangle', () => {
   const next = setWindowRect([win('a', 1), win('b', 2)], 'a', { x: 5, y: 6, w: 700, h: 500 });
   expect(next.find((w) => w.id === 'a')!.rect).to.deep.equal({ x: 5, y: 6, w: 700, h: 500 });
   expect(next.find((w) => w.id === 'b')!.rect).to.deep.equal({ x: 0, y: 0, w: 100, h: 100 });
+});
+
+it('taskActivation minimizes the active window when clicked in the taskbar', () => {
+  expect(taskActivation({ active: true, state: 'normal' })).to.equal('minimize');
+});
+
+it('taskActivation minimizes an active maximized window (Windows/KDE tasklist behaviour)', () => {
+  expect(taskActivation({ active: true, state: 'maximized' })).to.equal('minimize');
+});
+
+it('taskActivation focuses an inactive window when clicked in the taskbar', () => {
+  expect(taskActivation({ active: false, state: 'normal' })).to.equal('focus');
+});
+
+it('taskActivation focuses (restores) a minimized window', () => {
+  expect(taskActivation({ active: false, state: 'minimized' })).to.equal('focus');
 });

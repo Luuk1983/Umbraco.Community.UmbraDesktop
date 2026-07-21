@@ -69,6 +69,17 @@ export function findAppWindow(
   return windows.find((w) => w.app.alias === appAlias);
 }
 
+/**
+ * Decide what clicking a window's taskbar button should do, mirroring Windows/KDE tasklist
+ * behaviour: clicking the already-focused window minimizes it (a toggle), while clicking any
+ * other — inactive or minimized — brings it to the front (`focusWindow` restores minimized ones).
+ * @param w The window whose taskbar button was clicked (only its focus + state matter).
+ * @returns `'minimize'` to hide the active window, or `'focus'` to surface it.
+ */
+export function taskActivation(w: Pick<UmbraDesktopWindow, 'active' | 'state'>): 'minimize' | 'focus' {
+  return w.active && w.state !== 'minimized' ? 'minimize' : 'focus';
+}
+
 /** Which edges of a window a resize drag is pulling. */
 export interface UmbraDesktopResizeEdges {
   /** Dragging the left edge (moves the origin). */
