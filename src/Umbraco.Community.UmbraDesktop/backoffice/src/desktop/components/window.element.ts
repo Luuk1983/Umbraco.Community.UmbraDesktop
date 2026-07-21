@@ -229,8 +229,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         min-width: 320px;
         min-height: 200px;
       }
-      /* The active window is signalled by a slightly grey titlebar + a stronger shadow;
-         inactive windows keep a plain white titlebar. */
+      /* Focus is shown the way Windows/GNOME/KDE all show it: the active window is the
+         crisp, elevated one (full-strength titlebar + deeper shadow) and inactive windows
+         recede (muted titlebar, flatter shadow) — no header tint. */
       .frame.active {
         box-shadow: var(--uui-shadow-depth-5);
       }
@@ -248,8 +249,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         cursor: move;
         user-select: none;
       }
-      .frame.active .titlebar {
-        background: var(--uui-color-surface-alt);
+      .frame:not(.active) .title,
+      .frame:not(.active) .controls {
+        opacity: 0.5;
       }
       .title {
         display: inline-flex;
