@@ -1,25 +1,22 @@
-import type { UmbraDesktopApp, UmbraDesktopLauncherCategory, UmbraDesktopWindow } from '../types';
+import type { UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
 import { taskActivation } from '../window-model';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
-import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
 
 /**
- * The bottom panel: Umbraco-logo start button (opens a placeholder app launcher),
- * running-window buttons, clock, exit. The launcher is a Phase-2 placeholder for the
- * Phase-3 fullscreen drawer — it lists the grouped catalogue tree.
+ * The bottom panel: Umbraco-logo start button (opens the app launcher), running-window
+ * buttons, clock, exit. The launcher panel itself (search/favourites/recent/grouped
+ * tiles) is `<umbradesktop-launcher>`, mounted in Phase C — this element only owns the
+ * start button, the panel's open/close + dismissal wiring, and the footer.
  */
 @customElement('umbradesktop-taskbar')
 export class UmbraDesktopTaskbarElement extends UmbLitElement {
   @state()
   private _windows: UmbraDesktopWindow[] = [];
-
-  @state()
-  private _tree: UmbraDesktopLauncherCategory[] = [];
 
   @state()
   private _launcherOpen = false;
@@ -35,9 +32,6 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
       if (ctx) this.observe(ctx.windows, (list) => (this._windows = list));
-    });
-    this.consumeContext(UMBRADESKTOP_APP_CATALOGUE_CONTEXT, (ctx) => {
-      if (ctx) this.observe(ctx.tree, (tree) => (this._tree = tree));
     });
   }
 
@@ -59,11 +53,6 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
 
   #toggleLauncher() {
     this.#setLauncherOpen(!this._launcherOpen);
-  }
-
-  #launch(app: UmbraDesktopApp) {
-    this.#manager?.open(app);
-    this.#setLauncherOpen(false);
   }
 
   /**
@@ -135,44 +124,12 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     window.history.pushState(null, '', path);
   };
 
-  #renderApp(app: UmbraDesktopApp) {
-    return html`
-      <button class="launch-item" @click=${() => this.#launch(app)}>
-        <umb-icon name=${app.icon}></umb-icon>
-        <span class="launch-item-label">${this.localize.string(app.name)}</span>
-      </button>
-    `;
-  }
-
   #renderLauncher() {
     if (!this._launcherOpen) return '';
     return html`
       <div class="launcher" style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
         <div class="launcher-body">
-          ${repeat(
-            this._tree,
-            (c) => c.category.alias,
-            (c) => html`
-              <div class="launch-category">
-                <div class="launch-header">${this.localize.string(c.category.label)}</div>
-                <div class="launch-apps">
-                  ${repeat(c.apps, (a) => a.alias, (a) => this.#renderApp(a))}
-                </div>
-                ${repeat(
-                  c.groups,
-                  (g) => g.group.alias,
-                  (g) => html`
-                    <div class="launch-group">
-                      <div class="launch-group-label">${this.localize.string(g.group.label)}</div>
-                      <div class="launch-apps">
-                        ${repeat(g.apps, (a) => a.alias, (a) => this.#renderApp(a))}
-                      </div>
-                    </div>
-                  `,
-                )}
-              </div>
-            `,
-          )}
+          <!-- launcher body: replaced by <umbradesktop-launcher> in Phase C -->
         </div>
         <div class="launcher-footer">
           <uui-button
@@ -355,59 +312,6 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       }
       .launcher-exit {
         width: 100%;
-      }
-      .launch-header {
-        font-weight: 700;
-        font-size: var(--uui-type-small-size);
-        text-transform: uppercase;
-        opacity: 0.7;
-        margin-bottom: var(--uui-size-space-2);
-      }
-      .launch-group {
-        margin-top: var(--uui-size-space-2);
-        padding-left: var(--uui-size-space-3);
-      }
-      .launch-group-label {
-        font-size: var(--uui-type-small-size);
-        opacity: 0.6;
-        margin-bottom: var(--uui-size-space-1);
-      }
-      .launch-apps {
-        display: flex;
-        flex-direction: column;
-        gap: 1px;
-      }
-      /* Rows modelled on Umbraco's sidebar menu items: full-width, icon + label, a
-         full-row hover, comfortable height. */
-      .launch-item {
-        display: flex;
-        align-items: center;
-        gap: var(--uui-size-space-3);
-        width: 100%;
-        padding: var(--uui-size-space-2) var(--uui-size-space-3);
-        border: none;
-        border-radius: var(--uui-border-radius, 3px);
-        background: transparent;
-        color: var(--uui-color-text);
-        cursor: pointer;
-        font-family: inherit;
-        font-size: calc(var(--uui-type-small-size) + 1px);
-        text-align: left;
-      }
-      .launch-item umb-icon {
-        flex-shrink: 0;
-        font-size: 18px;
-      }
-      .launch-item-label {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        /* Match the taskbar/window Lato correction. */
-        transform: translateY(1px);
-      }
-      .launch-item:hover {
-        background: var(--uui-color-surface-alt);
-        color: var(--uui-color-interactive-emphasis, var(--uui-color-interactive));
       }
     `,
   ];
