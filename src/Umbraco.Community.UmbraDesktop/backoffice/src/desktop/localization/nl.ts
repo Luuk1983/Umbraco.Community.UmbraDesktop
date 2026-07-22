@@ -12,6 +12,8 @@ export default {
     search: 'Zoek apps, tools en content…',
     favourites: 'Favorieten',
     recent: 'Recent',
+    pin: 'Vastmaken aan favorieten',
+    unpin: 'Verwijderen uit favorieten',
     desktopSettings: 'Bureaublad-instellingen',
     logout: 'Uitloggen',
     exitDesktop: 'Bureaublad verlaten',

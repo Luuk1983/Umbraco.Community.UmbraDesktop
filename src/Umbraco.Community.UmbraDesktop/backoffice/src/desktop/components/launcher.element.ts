@@ -11,20 +11,17 @@ import type { UmbCurrentUserModel } from '@umbraco-cms/backoffice/current-user';
 import { UMB_AUTH_CONTEXT } from '@umbraco-cms/backoffice/auth';
 
 /**
- * Dummy favourites until persistence (Plan 2). Aliases reference real derived apps;
- * any alias with no matching app (e.g. not curated, or gated out for this user) is
- * silently skipped.
+ * Seed favourites until real persistence (Plan 2). Aliases reference real derived apps; any
+ * alias with no matching app (not curated, or gated out for this user) is silently skipped.
+ * Pinning/unpinning is live but in-session only — it resets on reload until Plan 2 persists it.
  */
-const DUMMY_FAVOURITE_ALIASES = ['content', 'media', 'log-viewer'];
-
-/** How many apps the dummy "Recent" zone shows, until real recency tracking exists (Plan 2). */
-const DUMMY_RECENT_COUNT = 4;
+const SEED_FAVOURITE_ALIASES = ['content', 'media', 'log-viewer'];
 
 /**
- * The start-menu-style launcher panel: search, dummy Favourites/Recent, the curated
- * app groups as icon-tiles, and a footer (user, desktop settings, log out, exit).
- * Mounted by `<umbradesktop-taskbar>`, which owns the panel's open/close state and
- * outside-click/Escape dismissal.
+ * The start-menu-style launcher panel: search, a full-width Favourites hero, the curated app
+ * groups as cards of icon-tiles, and a footer (user, desktop settings, log out, exit). Each tile
+ * carries a pin control to add/remove it from Favourites. Mounted by `<umbradesktop-taskbar>`,
+ * which owns the panel's open/close state and outside-click/Escape dismissal.
  */
 @customElement('umbradesktop-launcher')
 export class UmbraDesktopLauncherElement extends UmbLitElement {
@@ -33,6 +30,9 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
 
   @state()
   private _apps: UmbraDesktopApp[] = [];
+
+  @state()
+  private _pinned: string[] = [...SEED_FAVOURITE_ALIASES];
 
   @state()
   private _currentUser?: UmbCurrentUserModel;
@@ -55,22 +55,25 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     });
   }
 
-  /** Dummy favourites: the curated aliases resolved against the flat app list, missing ones dropped. */
+  /** The pinned apps, in pin order, resolved against the flat app list (missing ones dropped). */
   get #favourites(): UmbraDesktopApp[] {
-    return DUMMY_FAVOURITE_ALIASES.map((alias) => this._apps.find((a) => a.alias === alias)).filter(
-      (a): a is UmbraDesktopApp => !!a,
-    );
-  }
-
-  /** Dummy recent: just the first few apps in the flat list, until real recency tracking exists. */
-  get #recent(): UmbraDesktopApp[] {
-    return this._apps.slice(0, DUMMY_RECENT_COUNT);
+    return this._pinned
+      .map((alias) => this._apps.find((a) => a.alias === alias))
+      .filter((a): a is UmbraDesktopApp => !!a);
   }
 
   /** Launch an app and let the taskbar know so it can close the launcher. */
   #open(app: UmbraDesktopApp) {
     this.#manager?.open(app);
     this.dispatchEvent(new CustomEvent('launched'));
+  }
+
+  /** Toggle an app's Favourites membership (in-session only until Plan 2 persistence). */
+  #togglePin(e: Event, app: UmbraDesktopApp) {
+    e.stopPropagation();
+    this._pinned = this._pinned.includes(app.alias)
+      ? this._pinned.filter((a) => a !== app.alias)
+      : [...this._pinned, app.alias];
   }
 
   /** Open the native backoffice search modal. */
@@ -95,36 +98,39 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   }
 
   #tile(app: UmbraDesktopApp) {
+    const pinned = this._pinned.includes(app.alias);
+    const pinLabel = this.localize.term(pinned ? 'umbraDesktop_unpin' : 'umbraDesktop_pin');
     return html`
-      <button class="tile" title=${this.localize.string(app.name)} @click=${() => this.#open(app)}>
-        <umb-icon name=${app.icon}></umb-icon>
-        <span class="tlb">${this.localize.string(app.name)}</span>
-      </button>
-    `;
-  }
-
-  /** A labelled zone of app tiles (Recent or a curated group); omitted entirely when empty. */
-  #zone(label: string, apps: ReadonlyArray<UmbraDesktopApp>) {
-    if (apps.length === 0) return '';
-    return html`
-      <div class="zone">
-        <div class="zl">${label}</div>
-        <div class="grid">${repeat(apps, (a) => a.alias, (a) => this.#tile(a))}</div>
+      <div class="tile">
+        <button class="launch" title=${this.localize.string(app.name)} @click=${() => this.#open(app)}>
+          <umb-icon name=${app.icon}></umb-icon>
+          <span class="tlb">${this.localize.string(app.name)}</span>
+        </button>
+        <button
+          class="pin ${pinned ? 'on' : ''}"
+          title=${pinLabel}
+          aria-label=${pinLabel}
+          aria-pressed=${pinned ? 'true' : 'false'}
+          @click=${(e: Event) => this.#togglePin(e, app)}>
+          <umb-icon name="icon-pushpin"></umb-icon>
+        </button>
       </div>
     `;
   }
 
-  /**
-   * Favourites render as the prominent, full-width first band — visually distinct from the
-   * columned groups below, so pinned apps read as the primary surface.
-   */
+  /** A grid of app tiles. */
+  #grid(apps: ReadonlyArray<UmbraDesktopApp>) {
+    return html`<div class="grid">${repeat(apps, (a) => a.alias, (a) => this.#tile(a))}</div>`;
+  }
+
+  /** Favourites render as the prominent, full-width hero card above the columned group cards. */
   #renderFavourites() {
     const favs = this.#favourites;
     if (favs.length === 0) return '';
     return html`
-      <div class="zone fav">
-        <div class="zl">${this.localize.term('umbraDesktop_favourites')}</div>
-        <div class="grid">${repeat(favs, (a) => a.alias, (a) => this.#tile(a))}</div>
+      <div class="card fav">
+        <div class="ch">${this.localize.term('umbraDesktop_favourites')}</div>
+        ${this.#grid(favs)}
       </div>
     `;
   }
@@ -172,12 +178,16 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       </button>
       <div class="body">
         ${this.#renderFavourites()}
-        <div class="columns">
-          ${this.#zone(this.localize.term('umbraDesktop_recent'), this.#recent)}
+        <div class="cards">
           ${repeat(
             this._groups,
             (g) => g.group.alias,
-            (g) => this.#zone(this.localize.string(g.group.label), g.apps),
+            (g) => html`
+              <div class="card">
+                <div class="ch">${this.localize.string(g.group.label)}</div>
+                ${this.#grid(g.apps)}
+              </div>
+            `,
           )}
         </div>
       </div>
@@ -190,12 +200,13 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       :host {
         display: flex;
         flex-direction: column;
-        /* Roomy: use the space we have. Groups flow into as many columns as fit, so the
-           panel only needs to scroll on genuinely small screens. */
-        width: min(940px, 92vw);
+        /* Roomy: cards flow into as many columns as fit, so the panel only scrolls on
+           genuinely small screens. */
+        width: min(960px, 92vw);
         max-height: calc(100vh - 66px);
         overflow: hidden;
-        background: var(--uui-color-surface);
+        /* Light-grey canvas so the white group cards read as distinct "boxes". */
+        background: var(--uui-color-surface-alt, var(--uui-color-background));
         border: 1px solid var(--uui-color-border);
         border-radius: var(--uui-border-radius, 3px);
         box-shadow: var(--uui-shadow-depth-4);
@@ -209,7 +220,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         padding: var(--uui-size-space-3) var(--uui-size-space-4);
         border: 1px solid var(--uui-color-border);
         border-radius: var(--uui-border-radius, 3px);
-        background: var(--uui-color-surface-alt, var(--uui-color-background));
+        background: var(--uui-color-surface);
         color: var(--uui-color-text);
         font-family: inherit;
         font-size: var(--uui-type-small-size);
@@ -229,53 +240,56 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         overflow: auto;
         display: flex;
         flex-direction: column;
-        gap: var(--uui-size-space-4);
+        gap: var(--uui-size-space-5);
         padding: var(--uui-size-space-4);
       }
-      /* The groups (Recent + curated) flow into as many columns as the width allows. */
-      .columns {
+      /* Group cards flow into as many columns as the width allows; each card is wide enough
+         (min 260px) to hold 2-3 tiles per row. */
+      .cards {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: var(--uui-size-space-4) var(--uui-size-space-5);
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: var(--uui-size-space-5);
         align-items: start;
       }
-      .zone {
-        display: flex;
-        flex-direction: column;
-        gap: var(--uui-size-space-2);
+      .card {
+        background: var(--uui-color-surface);
+        border: 1px solid var(--uui-color-border);
+        border-radius: 6px;
+        padding: var(--uui-size-space-4);
       }
-      /* Favourites: the full-width, more prominent hero band, divided from the columns below. */
-      .zone.fav {
-        padding-bottom: var(--uui-size-space-4);
-        border-bottom: 1px solid var(--uui-color-border);
+      .card.fav {
+        /* Full-width hero, whatever the column layout below does. */
+        grid-column: 1 / -1;
       }
-      .zl {
+      .ch {
         font-size: var(--uui-type-small-size);
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: var(--uui-color-text-alt, var(--uui-color-text));
         opacity: 0.6;
+        margin: 0 0 var(--uui-size-space-3);
       }
-      .fav .zl {
+      .fav .ch {
         text-transform: none;
         letter-spacing: 0;
         font-size: calc(var(--uui-type-small-size) + 2px);
         opacity: 1;
       }
-      .fav .grid {
-        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-      }
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
         gap: var(--uui-size-space-2);
       }
       .tile {
+        position: relative;
+      }
+      .launch {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: var(--uui-size-space-2);
+        width: 100%;
         padding: var(--uui-size-space-3) var(--uui-size-space-2);
         border: none;
         border-radius: var(--uui-border-radius, 3px);
@@ -285,10 +299,10 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         font-family: inherit;
         text-align: center;
       }
-      .tile:hover {
+      .tile:hover .launch {
         background: var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05));
       }
-      .tile umb-icon {
+      .launch umb-icon {
         font-size: 26px;
       }
       .tlb {
@@ -299,9 +313,41 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         max-width: 100%;
         font-size: calc(var(--uui-type-small-size) + 1px);
         line-height: 1.2;
-        /* Lato sits high in its line box; nudge the label down ~1px so it optically
-           centers, matching the taskbar/window title treatment. */
+        /* Lato sits high in its line box; nudge the label down ~1px so it optically centers. */
         transform: translateY(1px);
+      }
+      /* Pin: coral + always visible when pinned; muted + hover-revealed otherwise. */
+      .pin {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: none;
+        border-radius: var(--uui-border-radius, 3px);
+        background: transparent;
+        color: var(--uui-color-text-alt, var(--uui-color-text));
+        opacity: 0;
+        cursor: pointer;
+      }
+      .pin umb-icon {
+        font-size: 13px;
+      }
+      .tile:hover .pin,
+      .pin:focus-visible {
+        opacity: 0.55;
+      }
+      .pin:hover {
+        opacity: 0.9;
+        background: var(--uui-color-surface, rgba(0, 0, 0, 0.05));
+      }
+      .pin.on {
+        opacity: 1;
+        color: var(--uui-color-current, #f5c1bc);
       }
       .footer {
         flex-shrink: 0;
@@ -310,6 +356,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         justify-content: space-between;
         gap: var(--uui-size-space-3);
         padding: var(--uui-size-space-3) var(--uui-size-space-4);
+        background: var(--uui-color-surface);
         border-top: 1px solid var(--uui-color-border);
       }
       .user {

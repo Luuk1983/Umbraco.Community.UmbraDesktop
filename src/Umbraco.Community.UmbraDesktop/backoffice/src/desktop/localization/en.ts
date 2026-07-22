@@ -15,6 +15,8 @@ export default {
     search: 'Search apps, tools and content…',
     favourites: 'Favourites',
     recent: 'Recent',
+    pin: 'Pin to favourites',
+    unpin: 'Remove from favourites',
     desktopSettings: 'Desktop settings',
     logout: 'Log out',
     exitDesktop: 'Exit desktop',
