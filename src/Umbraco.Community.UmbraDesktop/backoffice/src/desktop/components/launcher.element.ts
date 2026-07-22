@@ -103,13 +103,28 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     `;
   }
 
-  /** A labelled zone of app tiles (Favourites, Recent, or a curated group); omitted entirely when empty. */
+  /** A labelled zone of app tiles (Recent or a curated group); omitted entirely when empty. */
   #zone(label: string, apps: ReadonlyArray<UmbraDesktopApp>) {
     if (apps.length === 0) return '';
     return html`
       <div class="zone">
         <div class="zl">${label}</div>
         <div class="grid">${repeat(apps, (a) => a.alias, (a) => this.#tile(a))}</div>
+      </div>
+    `;
+  }
+
+  /**
+   * Favourites render as the prominent, full-width first band — visually distinct from the
+   * columned groups below, so pinned apps read as the primary surface.
+   */
+  #renderFavourites() {
+    const favs = this.#favourites;
+    if (favs.length === 0) return '';
+    return html`
+      <div class="zone fav">
+        <div class="zl">${this.localize.term('umbraDesktop_favourites')}</div>
+        <div class="grid">${repeat(favs, (a) => a.alias, (a) => this.#tile(a))}</div>
       </div>
     `;
   }
@@ -156,13 +171,15 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         <span>${this.localize.term('umbraDesktop_search')}</span>
       </button>
       <div class="body">
-        ${this.#zone(this.localize.term('umbraDesktop_favourites'), this.#favourites)}
-        ${this.#zone(this.localize.term('umbraDesktop_recent'), this.#recent)}
-        ${repeat(
-          this._groups,
-          (g) => g.group.alias,
-          (g) => this.#zone(this.localize.string(g.group.label), g.apps),
-        )}
+        ${this.#renderFavourites()}
+        <div class="columns">
+          ${this.#zone(this.localize.term('umbraDesktop_recent'), this.#recent)}
+          ${repeat(
+            this._groups,
+            (g) => g.group.alias,
+            (g) => this.#zone(this.localize.string(g.group.label), g.apps),
+          )}
+        </div>
       </div>
       ${this.#renderFooter()}
     `;
@@ -173,8 +190,10 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       :host {
         display: flex;
         flex-direction: column;
-        width: 360px;
-        max-height: 80vh;
+        /* Roomy: use the space we have. Groups flow into as many columns as fit, so the
+           panel only needs to scroll on genuinely small screens. */
+        width: min(940px, 92vw);
+        max-height: calc(100vh - 66px);
         overflow: hidden;
         background: var(--uui-color-surface);
         border: 1px solid var(--uui-color-border);
@@ -213,16 +232,39 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         gap: var(--uui-size-space-4);
         padding: var(--uui-size-space-4);
       }
+      /* The groups (Recent + curated) flow into as many columns as the width allows. */
+      .columns {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: var(--uui-size-space-4) var(--uui-size-space-5);
+        align-items: start;
+      }
       .zone {
         display: flex;
         flex-direction: column;
         gap: var(--uui-size-space-2);
       }
+      /* Favourites: the full-width, more prominent hero band, divided from the columns below. */
+      .zone.fav {
+        padding-bottom: var(--uui-size-space-4);
+        border-bottom: 1px solid var(--uui-color-border);
+      }
       .zl {
         font-size: var(--uui-type-small-size);
         font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
         color: var(--uui-color-text-alt, var(--uui-color-text));
-        opacity: 0.7;
+        opacity: 0.6;
+      }
+      .fav .zl {
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: calc(var(--uui-type-small-size) + 2px);
+        opacity: 1;
+      }
+      .fav .grid {
+        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
       }
       .grid {
         display: grid;
