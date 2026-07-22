@@ -22,12 +22,12 @@ export interface UmbraDesktopApp {
   minSize?: { w: number; h: number };
   /** Whether more than one instance may open (default: allowed). */
   allowMultiple?: boolean;
-  /** Sort weight within its group/header (ascending). */
+  /** Sort weight within its group (ascending). */
   weight?: number;
-  /** Display header alias (always set by derivation; optional for back-compat). */
-  categoryAlias?: string;
-  /** Optional collapsible sub-group alias. */
-  groupAlias?: string;
+  /** Curatorial group alias; undefined → the reserved "More" group. */
+  group?: string;
+  /** Source section alias — permission gate + default-group hint. */
+  sourceSection?: string;
   /** Confidence tier (always set by derivation; optional for back-compat). */
   confidence?: UmbraDesktopConfidence;
 }
@@ -62,30 +62,16 @@ export interface UmbraDesktopWindow {
 /** Whether an app was maintainer-certified or auto-derived as an untested fallback. */
 export type UmbraDesktopConfidence = 'certified' | 'uncertified';
 
-/** A launcher header. Free-form, decoupled from Umbraco's section structure. */
-export interface UmbraDesktopCategory {
-  /** Stable id, referenced by entries and groups. */
+/** A single curatorial group in the launcher. Flat — groups never nest. */
+export interface UmbraDesktopGroup {
+  /** Stable id, referenced by an app's `group`. */
   alias: string;
-  /** Display label of the header. */
+  /** Display label — a localization token, e.g. '#umbraDesktop_groupDiagnostics'. */
   label: string;
   /** Sort weight (ascending; lower shows first). */
   weight?: number;
-  /** Optional Umbraco icon alias for the header. */
-  icon?: string;
-}
-
-/** A collapsible sub-group under a category. */
-export interface UmbraDesktopGroup {
-  /** Stable id, referenced by entries. */
-  alias: string;
-  /** Display label of the group. */
-  label: string;
-  /** The category this group belongs to. */
-  categoryAlias: string;
-  /** Sort weight within the category (ascending). */
-  weight?: number;
-  /** Whether the group renders collapsed initially (consumed by the Phase 3 drawer). */
-  collapsedByDefault?: boolean;
+  /** True for the reserved auto-generated "More" group. */
+  auto?: boolean;
 }
 
 /**
@@ -113,19 +99,15 @@ export interface UmbraDesktopCatalogueEntry {
   minSize?: { w: number; h: number };
   /** Whether more than one instance may open. */
   allowMultiple?: boolean;
-  /** Sort weight within its group/header (ascending). */
+  /** Sort weight within its group (ascending). */
   weight?: number;
-  /** Display header. */
-  categoryAlias: string;
-  /** Optional collapsible sub-group. */
-  groupAlias?: string;
+  /** Curatorial group alias (see catalogue/groups.ts). */
+  group?: string;
 }
 
-/** The collated curated catalogue (categories + groups + entries). */
+/** The collated curated catalogue (groups + entries). */
 export interface UmbraDesktopCatalogue {
-  /** Curated headers. */
-  categories: UmbraDesktopCategory[];
-  /** Curated collapsible sub-groups. */
+  /** Curated flat groups. */
   groups: UmbraDesktopGroup[];
   /** App entries. */
   entries: UmbraDesktopCatalogueEntry[];
@@ -173,20 +155,10 @@ export interface UmbraDesktopSectionInfo {
   pathname: string;
 }
 
-/** A group with its resolved apps, for the launcher display tree. */
+/** A group with its resolved apps, for the launcher display. */
 export interface UmbraDesktopLauncherGroup {
   /** The group. */
   group: UmbraDesktopGroup;
   /** Apps in this group, sorted. */
   apps: UmbraDesktopApp[];
-}
-
-/** A category with its loose apps + groups, for the launcher display tree. */
-export interface UmbraDesktopLauncherCategory {
-  /** The category header. */
-  category: UmbraDesktopCategory;
-  /** Apps directly under the header (no group), sorted. */
-  apps: UmbraDesktopApp[];
-  /** Collapsible groups under the header, sorted. */
-  groups: UmbraDesktopLauncherGroup[];
 }

@@ -1,80 +1,48 @@
-import type {
-  UmbraDesktopApp,
-  UmbraDesktopCategory,
-  UmbraDesktopGroup,
-  UmbraDesktopLauncherCategory,
-} from './types';
+import type { UmbraDesktopApp, UmbraDesktopGroup, UmbraDesktopLauncherGroup } from './types';
 import {
-  UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS,
-  UMBRADESKTOP_UNCERTIFIED_CATEGORY_LABEL,
-  UMBRADESKTOP_UNCERTIFIED_CATEGORY_WEIGHT,
+  UMBRADESKTOP_MORE_GROUP_ALIAS,
+  UMBRADESKTOP_MORE_GROUP_LABEL,
+  UMBRADESKTOP_MORE_GROUP_WEIGHT,
 } from './constants';
 
-/** Compare by weight ascending, then label alphabetically. */
-function byWeightThenLabel(aw: number, al: string, bw: number, bl: string): number {
-  return aw - bw || al.localeCompare(bl);
+/** Compare by weight ascending, then a stable string tiebreak (labels/names are loc tokens). */
+function byWeightThenKey(aw: number, ak: string, bw: number, bk: string): number {
+  return aw - bw || ak.localeCompare(bk);
 }
 
 /**
- * Group derived apps into the launcher's display tree: header → optional collapsible
- * group → apps, sorted by weight then label, empties dropped, the reserved "More"
- * header always last. Pure — see design §5.3.
+ * Group the flat app list into the launcher's display groups: one flat level, sorted by
+ * group weight, empties dropped, the reserved auto "More" group always last. Apps whose
+ * `group` is unset or unknown fall into "More". Pure.
  * @param apps The flat, tagged app list from `deriveApps`.
- * @param categories Curated headers.
- * @param groups Curated collapsible sub-groups.
- * @returns The launcher display tree.
+ * @param groups Curated flat groups.
+ * @returns The launcher display groups.
  */
 export function groupApps(
   apps: ReadonlyArray<UmbraDesktopApp>,
-  categories: ReadonlyArray<UmbraDesktopCategory>,
   groups: ReadonlyArray<UmbraDesktopGroup>,
-): UmbraDesktopLauncherCategory[] {
-  // Ensure the reserved "More" category always exists as a home for fallback apps.
-  const allCategories: UmbraDesktopCategory[] = [
-    ...categories,
-    {
-      alias: UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS,
-      label: UMBRADESKTOP_UNCERTIFIED_CATEGORY_LABEL,
-      weight: UMBRADESKTOP_UNCERTIFIED_CATEGORY_WEIGHT,
-    },
-  ];
+): UmbraDesktopLauncherGroup[] {
+  const moreGroup: UmbraDesktopGroup = {
+    alias: UMBRADESKTOP_MORE_GROUP_ALIAS,
+    label: UMBRADESKTOP_MORE_GROUP_LABEL,
+    weight: UMBRADESKTOP_MORE_GROUP_WEIGHT,
+    auto: true,
+  };
+  const allGroups = [...groups, moreGroup];
+  const known = new Set(groups.map((g) => g.alias));
+  const groupOf = (a: UmbraDesktopApp) =>
+    a.group && known.has(a.group) ? a.group : UMBRADESKTOP_MORE_GROUP_ALIAS;
 
-  const result: UmbraDesktopLauncherCategory[] = [];
-
-  for (const category of allCategories) {
-    const inCategory = apps.filter(
-      (a) => (a.categoryAlias ?? UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS) === category.alias,
+  return allGroups
+    .map((group) => ({
+      group,
+      apps: apps
+        .filter((a) => groupOf(a) === group.alias)
+        .slice()
+        .sort((a, b) => byWeightThenKey(a.weight ?? 0, a.name, b.weight ?? 0, b.name)),
+    }))
+    .filter((lg) => lg.apps.length > 0)
+    .sort((a, b) =>
+      byWeightThenKey(a.group.weight ?? 0, a.group.label, b.group.weight ?? 0, b.group.label),
     );
-    if (inCategory.length === 0) continue;
-
-    const categoryGroups = groups
-      .filter((g) => g.categoryAlias === category.alias)
-      .slice()
-      .sort((a, b) => byWeightThenLabel(a.weight ?? 0, a.label, b.weight ?? 0, b.label));
-
-    const launcherGroups = categoryGroups
-      .map((group) => ({
-        group,
-        apps: inCategory
-          .filter((a) => a.groupAlias === group.alias)
-          .sort((a, b) => byWeightThenLabel(a.weight ?? 0, a.name, b.weight ?? 0, b.name)),
-      }))
-      .filter((lg) => lg.apps.length > 0);
-
-    const groupedAliases = new Set(categoryGroups.map((g) => g.alias));
-    const looseApps = inCategory
-      .filter((a) => !a.groupAlias || !groupedAliases.has(a.groupAlias))
-      .sort((a, b) => byWeightThenLabel(a.weight ?? 0, a.name, b.weight ?? 0, b.name));
-
-    result.push({ category, apps: looseApps, groups: launcherGroups });
-  }
-
-  return result.sort((a, b) =>
-    byWeightThenLabel(
-      a.category.weight ?? 0,
-      a.category.label,
-      b.category.weight ?? 0,
-      b.category.label,
-    ),
-  );
 }

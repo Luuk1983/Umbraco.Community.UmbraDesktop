@@ -7,14 +7,14 @@ export const UMBRADESKTOP_SECTION_PATHNAME = 'umbradesktop';
 /** Height of the taskbar/panel in pixels. */
 export const UMBRADESKTOP_TASKBAR_HEIGHT = 50;
 
-/** Reserved category alias that collects uncertified section-fallback apps. */
-export const UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS = 'umbradesktop-more';
+/** Reserved group alias that collects uncurated / fallback apps. */
+export const UMBRADESKTOP_MORE_GROUP_ALIAS = 'umbradesktop-more';
 
-/** Display label of the reserved uncertified category. */
-export const UMBRADESKTOP_UNCERTIFIED_CATEGORY_LABEL = 'More';
+/** Localization token for the reserved "More" group label. */
+export const UMBRADESKTOP_MORE_GROUP_LABEL = '#umbraDesktop_groupMore';
 
-/** Sort weight that keeps the uncertified category last (ascending sort, large value). */
-export const UMBRADESKTOP_UNCERTIFIED_CATEGORY_WEIGHT = 9999;
+/** Sort weight that keeps the "More" group last (ascending sort, large value). */
+export const UMBRADESKTOP_MORE_GROUP_WEIGHT = 9999;
 
 /**
  * Minimum window size in px, used by resize clamping. Kept in sync with the window
