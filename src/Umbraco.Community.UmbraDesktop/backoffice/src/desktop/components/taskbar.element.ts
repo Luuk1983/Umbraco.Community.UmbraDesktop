@@ -3,6 +3,7 @@ import { UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
 import { taskActivation } from '../window-model';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
+import './launcher.element.js';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
@@ -10,8 +11,8 @@ import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
 /**
  * The bottom panel: Umbraco-logo start button (opens the app launcher), running-window
  * buttons, clock, exit. The launcher panel itself (search/favourites/recent/grouped
- * tiles) is `<umbradesktop-launcher>`, mounted in Phase C — this element only owns the
- * start button, the panel's open/close + dismissal wiring, and the footer.
+ * tiles/footer) is `<umbradesktop-launcher>`, mounted here — this element only owns the
+ * start button and the panel's open/close + dismissal wiring.
  */
 @customElement('umbradesktop-taskbar')
 export class UmbraDesktopTaskbarElement extends UmbLitElement {
@@ -127,21 +128,11 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   #renderLauncher() {
     if (!this._launcherOpen) return '';
     return html`
-      <div class="launcher" style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
-        <div class="launcher-body">
-          <!-- launcher body: replaced by <umbradesktop-launcher> in Phase C -->
-        </div>
-        <div class="launcher-footer">
-          <uui-button
-            class="launcher-exit"
-            look="secondary"
-            color="danger"
-            label="Exit desktop mode"
-            @click=${this.#onExit}>
-            Exit desktop
-          </uui-button>
-        </div>
-      </div>
+      <umbradesktop-launcher
+        class="launcher"
+        style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px"
+        @launched=${() => this.#setLauncherOpen(false)}
+        @exit=${this.#onExit}></umbradesktop-launcher>
     `;
   }
 
@@ -284,34 +275,11 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         opacity: 0.85;
         font-variant-numeric: tabular-nums;
       }
+      /* Positioning only — the panel's own surface (background/border/shadow/size) is
+         owned by <umbradesktop-launcher> itself. */
       .launcher {
         position: absolute;
         left: var(--uui-size-space-3);
-        width: 480px;
-        height: 70vh;
-        display: flex;
-        flex-direction: column;
-        background: var(--uui-color-surface);
-        border: 1px solid var(--uui-color-border);
-        border-radius: var(--uui-border-radius, 3px);
-        box-shadow: var(--uui-shadow-depth-4);
-        overflow: hidden;
-      }
-      .launcher-body {
-        flex: 1;
-        overflow: auto;
-        display: flex;
-        flex-direction: column;
-        gap: var(--uui-size-space-3);
-        padding: var(--uui-size-space-4);
-      }
-      .launcher-footer {
-        flex-shrink: 0;
-        padding: var(--uui-size-space-3) var(--uui-size-space-4);
-        border-top: 1px solid var(--uui-color-border);
-      }
-      .launcher-exit {
-        width: 100%;
       }
     `,
   ];
