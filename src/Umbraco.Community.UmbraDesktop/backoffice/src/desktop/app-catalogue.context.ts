@@ -1,13 +1,12 @@
 import type {
   UmbraDesktopApp,
   UmbraDesktopCatalogueEntry,
-  UmbraDesktopLauncherCategory,
+  UmbraDesktopLauncherGroup,
   UmbraDesktopRefDescriptor,
   UmbraDesktopResolvedEntry,
   UmbraDesktopSectionInfo,
 } from './types';
 import { catalogue } from './catalogue/index.js';
-import { UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS } from './constants.js';
 import { inferUrl } from './url-inference.js';
 import { deriveApps } from './derive-apps.js';
 import { groupApps } from './group-apps.js';
@@ -46,9 +45,9 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   /** Flat list of launchable apps for the current user. */
   public readonly apps = this.#apps.asObservable();
 
-  #tree = new UmbArrayState<UmbraDesktopLauncherCategory>([], (c) => c.category.alias);
-  /** Grouped display tree for the launcher. */
-  public readonly tree = this.#tree.asObservable();
+  #groups = new UmbArrayState<UmbraDesktopLauncherGroup>([], (g) => g.group.alias);
+  /** Grouped display list for the launcher. */
+  public readonly groups = this.#groups.asObservable();
 
   /** Sections the current user may access, resolved to {alias, label, pathname}. */
   #sections: UmbraDesktopSectionInfo[] = [];
@@ -70,22 +69,15 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
 
   /**
    * Dev diagnostic: warn about catalogue entries whose display placement references
-   * a category or group that isn't defined, so a contributor's typo doesn't make an
-   * app silently vanish from (or misplace it in) the launcher.
+   * a group that isn't defined, so a contributor's typo doesn't make an app silently
+   * misplace in the launcher (it still shows — falling into "More" — just not where intended).
    */
   #validateCatalogue(): void {
-    const knownCategories = new Set(catalogue.categories.map((c) => c.alias));
-    knownCategories.add(UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS);
-    const knownGroups = new Set(catalogue.groups.map((g) => g.alias));
+    const known = new Set(catalogue.groups.map((g) => g.alias));
     for (const entry of catalogue.entries) {
-      if (!knownCategories.has(entry.categoryAlias)) {
+      if (entry.group && !known.has(entry.group)) {
         console.warn(
-          `[UmbraDesktop] Catalogue entry "${entry.alias}" has unknown categoryAlias "${entry.categoryAlias}"; it will not appear in the launcher.`,
-        );
-      }
-      if (entry.groupAlias && !knownGroups.has(entry.groupAlias)) {
-        console.warn(
-          `[UmbraDesktop] Catalogue entry "${entry.alias}" references unknown groupAlias "${entry.groupAlias}"; it will render loose in its category.`,
+          `[UmbraDesktop] Catalogue entry "${entry.alias}" references unknown group "${entry.group}"; it will fall into "More".`,
         );
       }
     }
@@ -116,7 +108,7 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     const resolved = catalogue.entries.map((e) => this.#resolveEntry(e));
     const apps = deriveApps(resolved, this.#sections, catalogue.excludedSections);
     this.#apps.setValue(apps);
-    this.#tree.setValue(groupApps(apps, catalogue.categories, catalogue.groups));
+    this.#groups.setValue(groupApps(apps, catalogue.groups));
   }
 
   /** Resolve one catalogue entry to a concrete URL + gate + inherited presentation. */
