@@ -4,10 +4,10 @@ import type {
   UmbraDesktopSectionInfo,
 } from './types';
 import { inferUrl } from './url-inference';
-import { UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS } from './constants';
+import { UMBRADESKTOP_MORE_GROUP_ALIAS } from './constants';
 
 /** Fallback icon when neither the entry nor its referenced manifest provides one. */
-const DEFAULT_ICON = 'icon-application';
+const DEFAULT_ICON = 'icon-box';
 
 /**
  * Turn resolved catalogue entries + the current user's permitted sections into the
@@ -44,8 +44,8 @@ export function deriveApps(
       minSize: e.minSize,
       allowMultiple: e.allowMultiple,
       weight: e.weight,
-      categoryAlias: e.categoryAlias,
-      groupAlias: e.groupAlias,
+      group: e.group,
+      sourceSection: r.gateSectionAlias ?? undefined,
       confidence: 'certified',
     });
     if (r.isSectionRoot) coveredSections.add(r.gateSectionAlias);
@@ -63,7 +63,8 @@ export function deriveApps(
       icon: DEFAULT_ICON,
       url,
       chromeProfile: 'full-section',
-      categoryAlias: UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS,
+      group: UMBRADESKTOP_MORE_GROUP_ALIAS,
+      sourceSection: s.alias,
       confidence: 'uncertified',
     });
   }

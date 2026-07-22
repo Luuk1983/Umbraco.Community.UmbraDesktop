@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { deriveApps } from './derive-apps';
-import { UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS } from './constants';
+import { UMBRADESKTOP_MORE_GROUP_ALIAS } from './constants';
 import type {
   UmbraDesktopCatalogueEntry,
   UmbraDesktopResolvedEntry,
@@ -13,7 +13,7 @@ const SECTIONS: UmbraDesktopSectionInfo[] = [
 ];
 
 function entry(over: Partial<UmbraDesktopCatalogueEntry> = {}): UmbraDesktopCatalogueEntry {
-  return { alias: 'e', categoryAlias: 'cat', ...over };
+  return { alias: 'e', group: 'grp', ...over };
 }
 
 function resolved(over: Partial<UmbraDesktopResolvedEntry> = {}): UmbraDesktopResolvedEntry {
@@ -22,13 +22,14 @@ function resolved(over: Partial<UmbraDesktopResolvedEntry> = {}): UmbraDesktopRe
 
 it('emits a certified app for a permitted, resolved entry', () => {
   const apps = deriveApps(
-    [resolved({ entry: entry({ alias: 'content', categoryAlias: 'content' }), url: '/umbraco/section/content', gateSectionAlias: 'Umb.Section.Content', isSectionRoot: true })],
+    [resolved({ entry: entry({ alias: 'content', group: 'editing' }), url: '/umbraco/section/content', gateSectionAlias: 'Umb.Section.Content', isSectionRoot: true })],
     SECTIONS,
   );
   const app = apps.find((a) => a.alias === 'content')!;
   expect(app.confidence).to.equal('certified');
   expect(app.url).to.equal('/umbraco/section/content');
-  expect(app.categoryAlias).to.equal('content');
+  expect(app.group).to.equal('editing');
+  expect(app.sourceSection).to.equal('Umb.Section.Content');
 });
 
 it('skips an entry whose gate section is not permitted', () => {
@@ -51,7 +52,10 @@ it('adds an uncertified fallback for a permitted section with no section-root en
     '/umbraco/section/content',
     '/umbraco/section/settings',
   ]);
-  expect(fallback.every((a) => a.categoryAlias === UMBRADESKTOP_UNCERTIFIED_CATEGORY_ALIAS)).to.be.true;
+  expect(fallback.every((a) => a.group === UMBRADESKTOP_MORE_GROUP_ALIAS)).to.be.true;
+  expect(fallback.every((a) => a.icon === 'icon-box')).to.be.true;
+  const settingsFallback = fallback.find((a) => a.url === '/umbraco/section/settings')!;
+  expect(settingsFallback.sourceSection).to.equal('Umb.Section.Settings');
 });
 
 it('does NOT add a fallback for a section already covered by a section-root entry', () => {
