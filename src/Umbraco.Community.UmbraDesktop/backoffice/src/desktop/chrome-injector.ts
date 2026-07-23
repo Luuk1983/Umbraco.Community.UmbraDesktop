@@ -81,7 +81,7 @@ export function findChromeRoot(from: Document | ShadowRoot): ShadowRoot | null {
  * @param id The style element's id.
  * @param css The CSS to set.
  */
-function injectStyle(root: ShadowRoot, doc: Document, id: string, css: string): void {
+export function injectStyle(root: ShadowRoot, doc: Document, id: string, css: string): void {
   let style = root.getElementById(id) as HTMLStyleElement | null;
   if (!style) {
     style = doc.createElement('style');

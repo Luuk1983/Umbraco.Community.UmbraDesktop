@@ -1,5 +1,7 @@
 import { UMB_AUTH_CONTEXT } from '@umbraco-cms/backoffice/auth';
 import { client } from '../api/client.gen';
+import { UMBRADESKTOP_SECTION_ALIAS } from '../desktop/constants';
+import { hideSectionTab } from '../headerapps/section-tab-hide';
 
 import type {
     UmbEntryPointOnInit,
@@ -8,6 +10,10 @@ import type {
 
 // load up the manifests here
 export const onInit: UmbEntryPointOnInit = (_host, _extensionRegistry) => {
+    // The desktop is entered via the top-right header-app launcher, so hide its now-redundant
+    // section tab from the classic nav. No-op for users without desktop access (tab never shows).
+    hideSectionTab(UMBRADESKTOP_SECTION_ALIAS);
+
     // Will use only to add in Open API config with generated TS OpenAPI HTTPS Client
     // Do the OAuth token handshake stuff
     _host.consumeContext(UMB_AUTH_CONTEXT, async (authContext) => {

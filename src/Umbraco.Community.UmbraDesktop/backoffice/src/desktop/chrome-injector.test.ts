@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { buildHeaderCss, buildSidebarCss } from './chrome-injector';
+import { buildHeaderCss, buildSidebarCss, findShadowRootWith } from './chrome-injector';
 
 it('header CSS hides the backoffice header and fills the main height', () => {
   const css = buildHeaderCss();
@@ -19,4 +19,24 @@ it('sidebar CSS lifts the section main area to fill the section body', () => {
   expect(css).to.contain('umb-section-main');
   expect(css).to.contain('position: absolute');
   expect(css).to.contain('inset: 0');
+});
+
+it('findShadowRootWith locates the nested shadow root that owns a matching element', () => {
+  // Build document > [host] #shadow > inner > #shadow > span[data-mark]
+  const host = document.createElement('div');
+  const outer = host.attachShadow({ mode: 'open' });
+  const inner = document.createElement('div');
+  outer.appendChild(inner);
+  const innerRoot = inner.attachShadow({ mode: 'open' });
+  const marker = document.createElement('span');
+  marker.setAttribute('data-mark', 'section-link:Test.Section');
+  innerRoot.appendChild(marker);
+  document.body.appendChild(host);
+
+  try {
+    const found = findShadowRootWith(document, 'span[data-mark="section-link:Test.Section"]');
+    expect(found).to.equal(innerRoot);
+  } finally {
+    host.remove();
+  }
 });
