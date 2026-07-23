@@ -357,34 +357,32 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
          so nothing shows until hover. */
       .pin {
         position: absolute;
-        top: -6px;
-        right: -6px;
+        top: 3px;
+        right: 3px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         width: 22px;
         height: 22px;
         padding: 0;
-        border: 1px solid var(--uui-color-border);
-        border-radius: 50%;
-        background: var(--uui-color-surface);
+        border: none;
+        border-radius: var(--uui-border-radius, 3px);
+        background: transparent;
         color: var(--uui-color-text);
-        box-shadow: var(--uui-shadow-depth-1);
         opacity: 0;
         cursor: pointer;
         transition: opacity 90ms ease;
       }
       .pin .pin-ico {
-        width: 14px;
-        height: 14px;
+        width: 15px;
+        height: 15px;
       }
       .tile:hover .pin,
       .pin:focus-visible {
         opacity: 1;
       }
       .pin:hover {
-        border-color: var(--uui-color-border-emphasis, var(--uui-color-border));
-        background: var(--uui-color-surface-alt, var(--uui-color-surface));
+        background: var(--uui-color-surface-alt, rgba(0, 0, 0, 0.06));
       }
       .footer {
         flex-shrink: 0;
