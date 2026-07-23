@@ -6,6 +6,7 @@ export default {
     appMediaLibrary: 'Media library',
     appDocumentTypes: 'Document Types',
     appDataTypes: 'Data Types',
+    appTemplates: 'Templates',
     appUsers: 'Users',
     appMembers: 'Members',
     appLogViewer: 'Log Viewer',
@@ -19,6 +20,7 @@ export default {
     // group labels
     groupEditing: 'Editing',
     groupStructure: 'Structure',
+    groupTemplating: 'Templating',
     groupUsersMembers: 'Users & Members',
     groupDiagnostics: 'Diagnostics',
     groupSystem: 'System',
