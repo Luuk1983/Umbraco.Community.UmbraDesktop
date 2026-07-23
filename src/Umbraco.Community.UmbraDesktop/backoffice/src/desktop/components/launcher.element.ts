@@ -105,10 +105,12 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
    * @returns The pin SVG template.
    */
   #pinGlyph(pinned: boolean) {
+    const body =
+      'M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z';
     return pinned
       ? html`<svg class="pin-ico" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M9 3h6l-1 7 3 3H7l3-3z" fill="currentColor" stroke="none"></path>
-          <path d="M12 13v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+          <path d=${body} fill="currentColor" stroke="none"></path>
+          <path d="M12 17v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
         </svg>`
       : html`<svg
           class="pin-ico"
@@ -116,11 +118,11 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
           aria-hidden="true"
           fill="none"
           stroke="currentColor"
-          stroke-width="1.8"
+          stroke-width="1.7"
           stroke-linecap="round"
           stroke-linejoin="round">
-          <path d="M9 3h6l-1 7 3 3H7l3-3z"></path>
-          <path d="M12 13v8"></path>
+          <path d=${body}></path>
+          <path d="M12 17v5"></path>
         </svg>`;
   }
 
@@ -357,32 +359,34 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
          so nothing shows until hover. */
       .pin {
         position: absolute;
-        top: 3px;
-        right: 3px;
+        top: -4px;
+        right: -4px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 22px;
-        height: 22px;
+        width: 28px;
+        height: 28px;
         padding: 0;
-        border: none;
-        border-radius: var(--uui-border-radius, 3px);
-        background: transparent;
+        border: 1px solid var(--uui-color-border);
+        border-radius: 50%;
+        background: var(--uui-color-surface);
         color: var(--uui-color-text);
+        box-shadow: var(--uui-shadow-depth-1);
         opacity: 0;
         cursor: pointer;
         transition: opacity 90ms ease;
       }
       .pin .pin-ico {
-        width: 15px;
-        height: 15px;
+        width: 16px;
+        height: 16px;
       }
       .tile:hover .pin,
       .pin:focus-visible {
         opacity: 1;
       }
       .pin:hover {
-        background: var(--uui-color-surface-alt, rgba(0, 0, 0, 0.06));
+        border-color: var(--uui-color-border-emphasis, var(--uui-color-border));
+        background: var(--uui-color-surface-alt, var(--uui-color-surface));
       }
       .footer {
         flex-shrink: 0;
