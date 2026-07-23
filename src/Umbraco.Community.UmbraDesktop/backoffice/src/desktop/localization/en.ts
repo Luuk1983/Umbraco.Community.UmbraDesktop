@@ -19,8 +19,7 @@ export default {
     appWebhooks: 'Webhooks',
     // group labels
     groupEditing: 'Editing',
-    groupStructure: 'Structure',
-    groupTemplating: 'Templating',
+    groupDevelopment: 'Development',
     groupUsersMembers: 'Users & Members',
     groupDiagnostics: 'Diagnostics',
     groupSystem: 'System',

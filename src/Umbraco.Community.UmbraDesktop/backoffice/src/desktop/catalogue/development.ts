@@ -1,7 +1,7 @@
 import type { UmbraDesktopCatalogueEntry } from '../types';
 
 /**
- * Structure-area shortcuts — the content-modelling trees a developer jumps to constantly.
+ * Development shortcuts — the modelling/templating trees a developer jumps to constantly.
  *
  * These are tree-based tools: the tree IS the tool, so we do NOT strip the section chrome
  * (unlike a self-contained view such as Log Viewer). They open `full-section` — the whole
@@ -23,7 +23,7 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     icon: 'icon-document',
     chromeProfile: 'full-section',
     defaultSize: { w: 1100, h: 760 },
-    group: 'structure',
+    group: 'development',
     weight: 10,
   },
   {
@@ -34,7 +34,18 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     icon: 'icon-autofill',
     chromeProfile: 'full-section',
     defaultSize: { w: 1100, h: 760 },
-    group: 'structure',
+    group: 'development',
     weight: 20,
+  },
+  {
+    alias: 'templates',
+    url: '/umbraco/section/settings/workspace/template-root',
+    section: 'Umb.Section.Settings',
+    name: '#umbraDesktop_appTemplates',
+    icon: 'icon-newspaper',
+    chromeProfile: 'full-section',
+    defaultSize: { w: 1100, h: 760 },
+    group: 'development',
+    weight: 30,
   },
 ];
