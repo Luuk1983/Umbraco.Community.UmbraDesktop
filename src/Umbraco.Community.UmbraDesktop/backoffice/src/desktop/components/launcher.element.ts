@@ -359,8 +359,10 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
          so nothing shows until hover. */
       .pin {
         position: absolute;
-        top: -4px;
-        right: -4px;
+        /* Centre the 28px circle on the tile's top-right corner (offset = half its size), so it
+           sits half-out over the corner like an app badge. */
+        top: -14px;
+        right: -14px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
