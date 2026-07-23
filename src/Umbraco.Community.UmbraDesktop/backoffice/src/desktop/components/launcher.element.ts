@@ -249,7 +249,8 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
         gap: var(--uui-size-space-5);
-        align-items: start;
+        /* Equal-height cards per row — tidier than ragged, content-sized boxes. */
+        align-items: stretch;
       }
       .card {
         background: var(--uui-color-surface);
@@ -276,10 +277,13 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         font-size: calc(var(--uui-type-small-size) + 2px);
         opacity: 1;
       }
+      /* Fixed, modest tile width (not 1fr-stretch) so the click box stays compact, spacing is
+         tight, and longer names wrap to the reserved second line. Tiles pack from the left. */
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-        gap: var(--uui-size-space-2);
+        grid-template-columns: repeat(auto-fill, 78px);
+        justify-content: start;
+        gap: var(--uui-size-space-1) var(--uui-size-space-2);
       }
       .tile {
         position: relative;
@@ -288,9 +292,9 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: var(--uui-size-space-2);
+        gap: var(--uui-size-space-1);
         width: 100%;
-        padding: var(--uui-size-space-3) var(--uui-size-space-2);
+        padding: var(--uui-size-space-2) var(--uui-size-space-1);
         border: none;
         border-radius: var(--uui-border-radius, 3px);
         background: transparent;
@@ -311,12 +315,15 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         -webkit-line-clamp: 2;
         overflow: hidden;
         max-width: 100%;
-        font-size: calc(var(--uui-type-small-size) + 1px);
+        font-size: var(--uui-type-small-size);
         line-height: 1.2;
+        /* Reserve two lines so every tile is the same height whether the name wraps or not. */
+        min-height: 2.4em;
         /* Lato sits high in its line box; nudge the label down ~1px so it optically centers. */
         transform: translateY(1px);
       }
-      /* Pin: coral + always visible when pinned; muted + hover-revealed otherwise. */
+      /* Pin: hover-only in BOTH states — a pinned app is self-evidently pinned by being in the
+         Pinned card, so there's no persistent badge cluttering the tiles. Coral once pinned. */
       .pin {
         position: absolute;
         top: 4px;
@@ -324,8 +331,8 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 22px;
-        height: 22px;
+        width: 24px;
+        height: 24px;
         padding: 0;
         border: none;
         border-radius: var(--uui-border-radius, 3px);
@@ -335,19 +342,22 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         cursor: pointer;
       }
       .pin umb-icon {
-        font-size: 13px;
+        font-size: 15px;
       }
       .tile:hover .pin,
       .pin:focus-visible {
-        opacity: 0.55;
+        opacity: 0.7;
       }
       .pin:hover {
-        opacity: 0.9;
+        opacity: 1;
         background: var(--uui-color-surface, rgba(0, 0, 0, 0.05));
       }
       .pin.on {
-        opacity: 1;
         color: var(--uui-color-current, #f5c1bc);
+      }
+      .tile:hover .pin.on,
+      .pin.on:focus-visible {
+        opacity: 1;
       }
       .footer {
         flex-shrink: 0;

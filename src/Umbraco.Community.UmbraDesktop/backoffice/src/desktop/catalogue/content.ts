@@ -1,6 +1,6 @@
 import type { UmbraDesktopCatalogueEntry } from '../types';
 
-/** Content-area apps (Content + Media sections). */
+/** Content-area apps (Content, Media + Translation sections) — editor-facing. */
 export const entries: UmbraDesktopCatalogueEntry[] = [
   {
     alias: 'content',
@@ -23,5 +23,15 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     allowMultiple: true,
     group: 'editing',
     weight: 20,
+  },
+  {
+    alias: 'translation',
+    ref: 'Umb.Section.Translation',
+    name: '#umbraDesktop_appTranslation',
+    // Icon inherited from the Translation section manifest.
+    chromeProfile: 'full-section',
+    defaultSize: { w: 960, h: 680 },
+    group: 'editing',
+    weight: 30,
   },
 ];
