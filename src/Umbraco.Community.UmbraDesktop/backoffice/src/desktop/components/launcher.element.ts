@@ -97,6 +97,33 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     this.dispatchEvent(new CustomEvent('exit'));
   }
 
+  /**
+   * The pin control glyph: a hollow pushpin when unpinned (click to pin) and a filled one when
+   * pinned (click to unpin) — the outline/filled toggle everyone reads as off/on, without
+   * relying on colour. Custom inline SVG (chrome, like the window controls).
+   * @param pinned Whether the app is currently pinned.
+   * @returns The pin SVG template.
+   */
+  #pinGlyph(pinned: boolean) {
+    return pinned
+      ? html`<svg class="pin-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 3h6l-1 7 3 3H7l3-3z" fill="currentColor" stroke="none"></path>
+          <path d="M12 13v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+        </svg>`
+      : html`<svg
+          class="pin-ico"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="M9 3h6l-1 7 3 3H7l3-3z"></path>
+          <path d="M12 13v8"></path>
+        </svg>`;
+  }
+
   #tile(app: UmbraDesktopApp) {
     const pinned = this._pinned.includes(app.alias);
     const pinLabel = this.localize.term(pinned ? 'umbraDesktop_unpin' : 'umbraDesktop_pin');
@@ -112,7 +139,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
           aria-label=${pinLabel}
           aria-pressed=${pinned ? 'true' : 'false'}
           @click=${(e: Event) => this.#togglePin(e, app)}>
-          <umb-icon name="icon-pushpin"></umb-icon>
+          ${this.#pinGlyph(pinned)}
         </button>
       </div>
     `;
@@ -282,7 +309,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       .grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: var(--uui-size-space-2);
+        gap: var(--uui-size-space-3);
       }
       .fav .grid {
         grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
@@ -347,8 +374,9 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         cursor: pointer;
         transition: opacity 90ms ease;
       }
-      .pin umb-icon {
-        font-size: 13px;
+      .pin .pin-ico {
+        width: 14px;
+        height: 14px;
       }
       .tile:hover .pin,
       .pin:focus-visible {
@@ -356,11 +384,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       }
       .pin:hover {
         border-color: var(--uui-color-border-emphasis, var(--uui-color-border));
-      }
-      /* Pinned: coral chip (dark pin stays legible on the light coral). */
-      .pin.on {
-        background: var(--uui-color-current, #f5c1bc);
-        border-color: var(--uui-color-current, #f5c1bc);
+        background: var(--uui-color-surface-alt, var(--uui-color-surface));
       }
       .footer {
         flex-shrink: 0;
