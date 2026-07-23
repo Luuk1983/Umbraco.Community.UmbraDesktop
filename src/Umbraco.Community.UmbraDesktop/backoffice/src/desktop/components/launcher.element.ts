@@ -324,42 +324,43 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         /* Lato sits high in its line box; nudge the label down ~1px so it optically centers. */
         transform: translateY(1px);
       }
-      /* Pin: hover-only in BOTH states — a pinned app is self-evidently pinned by being in the
-         Pinned card, so there's no persistent badge cluttering the tiles. Coral once pinned. */
+      /* Pin: a solid badge that peeks out of the tile's top-right corner (notification style),
+         hover-only in BOTH states. Unpinned = neutral chip ("pin it"); pinned = coral chip
+         ("pinned — click to unpin"). A pinned app is self-evidently pinned via the Pinned card,
+         so nothing shows until hover. */
       .pin {
         position: absolute;
-        top: 4px;
-        right: 4px;
+        top: -6px;
+        right: -6px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 24px;
-        height: 24px;
+        width: 22px;
+        height: 22px;
         padding: 0;
-        border: none;
-        border-radius: var(--uui-border-radius, 3px);
-        background: transparent;
-        color: var(--uui-color-text-alt, var(--uui-color-text));
+        border: 1px solid var(--uui-color-border);
+        border-radius: 50%;
+        background: var(--uui-color-surface);
+        color: var(--uui-color-text);
+        box-shadow: var(--uui-shadow-depth-1);
         opacity: 0;
         cursor: pointer;
+        transition: opacity 90ms ease;
       }
       .pin umb-icon {
-        font-size: 15px;
+        font-size: 13px;
       }
       .tile:hover .pin,
       .pin:focus-visible {
-        opacity: 0.7;
+        opacity: 1;
       }
       .pin:hover {
-        opacity: 1;
-        background: var(--uui-color-surface, rgba(0, 0, 0, 0.05));
+        border-color: var(--uui-color-border-emphasis, var(--uui-color-border));
       }
+      /* Pinned: coral chip (dark pin stays legible on the light coral). */
       .pin.on {
-        color: var(--uui-color-current, #f5c1bc);
-      }
-      .tile:hover .pin.on,
-      .pin.on:focus-visible {
-        opacity: 1;
+        background: var(--uui-color-current, #f5c1bc);
+        border-color: var(--uui-color-current, #f5c1bc);
       }
       .footer {
         flex-shrink: 0;
