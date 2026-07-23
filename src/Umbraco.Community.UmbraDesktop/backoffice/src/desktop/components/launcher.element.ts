@@ -277,13 +277,15 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         font-size: calc(var(--uui-type-small-size) + 2px);
         opacity: 1;
       }
-      /* Fixed, modest tile width (not 1fr-stretch) so the click box stays compact, spacing is
-         tight, and longer names wrap to the reserved second line. Tiles pack from the left. */
+      /* Exactly three tiles per row, evenly filling the card width with symmetric padding —
+         no ragged right edge. The full-width Pinned hero overrides this to fill its own width. */
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, 78px);
-        justify-content: start;
-        gap: var(--uui-size-space-1) var(--uui-size-space-2);
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--uui-size-space-2);
+      }
+      .fav .grid {
+        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
       }
       .tile {
         position: relative;
