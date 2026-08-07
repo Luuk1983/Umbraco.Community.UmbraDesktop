@@ -74,6 +74,32 @@ real code.
 | `readme.md` → `README.md` | Rename | Convention, and matches the reference. Windows' case-insensitive filesystem needs `git mv readme.md README.tmp && git mv README.tmp README.md`. |
 | `src/Umbraco.Community.UmbraDesktop/readme.md` | Delete | Superseded by the root README (see §4). Currently `== TO DO ==`. |
 
+### 3.1 Empty-localization cleanup
+
+Two localization mechanisms are live at once, and one of them is dead:
+
+- `backoffice/public/localization/en.js` and `nl.js` are **empty scaffold leftovers** —
+  `export default {};` — yet `umbraco-package.json` still registers them as extensions
+  `Umbraco.Community.UmbraDesktop.Localize.En` / `.Nl`.
+- `backoffice/src/desktop/localization/en.ts` and `nl.ts` hold the **real** strings
+  (`umbraDesktop.*`: app friendly names, group labels, launcher chrome), registered through the
+  bundle as `UmbraDesktop.Localization.En` / `.Nl`.
+
+The aliases differ, so nothing collides, and Umbraco merges dictionaries by area/key — this is
+dead weight rather than a bug. But shipping a manifest that advertises two localization
+extensions containing nothing is not something a 1.0 should do.
+
+**Action:** delete `backoffice/public/localization/` and remove the two `Localize.En`/`Localize.Nl`
+entries from `backoffice/public/umbraco-package.json`. The `bundle` entry and the real
+`desktop/localization/` dictionaries are untouched.
+
+**Verification:** after the change, `npm run build` must still emit the `en-*.js`/`nl-*.js`
+localization chunks (they come from the bundled TS, not `public/`), and the launcher must still
+render localized app and group names rather than raw `umbraDesktop.*` keys.
+
+This is the one item that reaches past pure plumbing into the shipped manifest; included
+deliberately as release hygiene.
+
 ---
 
 ## 4. Package metadata — `Umbraco.Community.UmbraDesktop.csproj`
