@@ -26,15 +26,29 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     this.observe(this.#manager.windows, (list) => (this._windows = list));
   }
 
+  /**
+   * Watches the desktop surface so a shrinking viewport (a narrowed browser, devtools opening, a
+   * monitor undocked) pulls any stranded window back into reach instead of losing it off the edge.
+   */
+  #surfaceObserver = new ResizeObserver((entries) => {
+    const box = entries[0]?.contentRect;
+    if (box) this.#manager.clampToBounds({ w: box.width, h: box.height });
+  });
+
   override connectedCallback() {
     super.connectedCallback();
     // Hide the outer backoffice header for a fullscreen desktop. Leaving the
     // section (via the taskbar's Exit) unmounts this element and restores it.
     this.#setOuterChrome(true);
+    this.updateComplete.then(() => {
+      const surface = this.renderRoot.querySelector('.surface');
+      if (surface) this.#surfaceObserver.observe(surface);
+    });
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
+    this.#surfaceObserver.disconnect();
     this.#setOuterChrome(false);
   }
 

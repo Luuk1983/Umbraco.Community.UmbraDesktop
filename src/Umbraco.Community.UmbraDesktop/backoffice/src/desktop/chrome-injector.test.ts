@@ -1,5 +1,11 @@
 import { expect } from '@open-wc/testing';
-import { buildHeaderCss, buildSidebarCss, findShadowRootWith } from './chrome-injector';
+import {
+  buildHeaderCss,
+  buildSidebarCss,
+  buildDashboardTabsCss,
+  findShadowRootWith,
+  findDashboardChromeRoot,
+} from './chrome-injector';
 
 it('header CSS hides the backoffice header and fills the main height', () => {
   const css = buildHeaderCss();
@@ -19,6 +25,39 @@ it('sidebar CSS lifts the section main area to fill the section body', () => {
   expect(css).to.contain('umb-section-main');
   expect(css).to.contain('position: absolute');
   expect(css).to.contain('inset: 0');
+});
+
+it('dashboard-tabs CSS hides the section dashboard header bar', () => {
+  const css = buildDashboardTabsCss();
+  expect(css).to.contain('#header');
+  expect(css).to.contain('display: none');
+});
+
+it('findDashboardChromeRoot returns the umb-body-layout shadow root nested under umb-section-main-views', () => {
+  // document > [host] #shadow > umb-section-main-views #shadow > umb-body-layout #shadow > div#header
+  const host = document.createElement('div');
+  const outer = host.attachShadow({ mode: 'open' });
+  const views = document.createElement('umb-section-main-views');
+  outer.appendChild(views);
+  const viewsRoot = views.attachShadow({ mode: 'open' });
+  const layout = document.createElement('umb-body-layout');
+  viewsRoot.appendChild(layout);
+  const layoutRoot = layout.attachShadow({ mode: 'open' });
+  const header = document.createElement('div');
+  header.id = 'header';
+  layoutRoot.appendChild(header);
+  document.body.appendChild(host);
+
+  try {
+    const found = findDashboardChromeRoot(document);
+    expect(found).to.equal(layoutRoot);
+  } finally {
+    host.remove();
+  }
+});
+
+it('findDashboardChromeRoot returns null when no umb-section-main-views is mounted', () => {
+  expect(findDashboardChromeRoot(document)).to.equal(null);
 });
 
 it('findShadowRootWith locates the nested shadow root that owns a matching element', () => {

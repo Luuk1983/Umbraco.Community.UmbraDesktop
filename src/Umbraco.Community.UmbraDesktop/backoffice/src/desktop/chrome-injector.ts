@@ -4,6 +4,8 @@ import type { UmbraDesktopChromeProfile } from './types';
 const HEADER_STYLE_ID = 'umbradesktop-injected-chrome';
 /** Style-element id for the injected sidebar-stripping rules. */
 const SIDEBAR_STYLE_ID = 'umbradesktop-injected-sidebar';
+/** Style-element id for the injected dashboard-tab-bar-stripping rules. */
+const DASHBOARD_TABS_STYLE_ID = 'umbradesktop-injected-dashboard-tabs';
 
 /**
  * CSS injected into the shell's header shadow root: hide the top backoffice header and
@@ -35,6 +37,22 @@ export function buildSidebarCss(): string {
       height: 100% !important;
       z-index: 1000000 !important;
     }
+  `;
+}
+
+/**
+ * CSS injected into the `umb-body-layout` shadow root that the section's dashboard collection
+ * (`umb-section-main-views`) renders — used only by the `bare` profile. Deep-linking to a
+ * dashboard still shows the section's dashboard tab strip (Welcome / … / the sibling
+ * dashboards), rendered as `<uui-tab-group slot="header">` inside `umb-body-layout`'s `#header`.
+ * That header has a fixed height and bottom border, and its visibility tracks slotted-node
+ * *assignment* (not CSS `display`), so hiding the tab group alone would leave an empty bar —
+ * we hide the whole `#header` div instead, letting the active dashboard fill the window.
+ * @returns A CSS string.
+ */
+export function buildDashboardTabsCss(): string {
+  return `
+    #header { display: none !important; }
   `;
 }
 
@@ -75,6 +93,23 @@ export function findChromeRoot(from: Document | ShadowRoot): ShadowRoot | null {
 }
 
 /**
+ * Find the `umb-body-layout` shadow root owned by the section's dashboard collection
+ * (`umb-section-main-views` → its `umb-body-layout` → that layout's shadow root). This is the
+ * root whose `#header` carries the dashboard tab strip; injecting there targets only the
+ * section-level layout, never an `umb-body-layout` nested inside a dashboard's own content
+ * (those live in deeper shadow roots the layout's own `querySelector` cannot reach). Returns
+ * null until both the collection element and its layout have mounted.
+ * @param from The document or shadow root to search from.
+ * @returns The section dashboard layout's shadow root, or null if not present yet.
+ */
+export function findDashboardChromeRoot(from: Document | ShadowRoot): ShadowRoot | null {
+  const viewsRoot = findShadowRootWith(from, 'umb-section-main-views');
+  const views = viewsRoot?.querySelector('umb-section-main-views') as HTMLElement | null;
+  const layout = views?.shadowRoot?.querySelector('umb-body-layout') as HTMLElement | null;
+  return layout?.shadowRoot ?? null;
+}
+
+/**
  * Inject (or refresh) a keyed `<style>` into a shadow root.
  * @param root The shadow root to inject into.
  * @param doc The owning document (for creating the element).
@@ -92,10 +127,12 @@ export function injectStyle(root: ShadowRoot, doc: Document, id: string, css: st
 }
 
 /**
- * Inject the chrome-stripping stylesheets into a same-origin iframe: always hide the top
- * header; for non-`full-section` profiles also strip the section sidebar and expand the main
- * area. The backoffice boots asynchronously and the header/section shells mount independently,
- * so we poll until each target root appears. No-op if the iframe document is unreachable.
+ * Inject the chrome-stripping stylesheets into a same-origin iframe. Every profile hides the
+ * top header; non-`full-section` profiles also strip the section sidebar and expand the main
+ * area; the `bare` profile additionally strips the dashboard tab strip (see
+ * {@link buildDashboardTabsCss}). The backoffice boots asynchronously and the header/section/
+ * dashboard shells mount independently, so we poll until each target root appears. No-op if the
+ * iframe document is unreachable.
  * @param iframe The window's iframe.
  * @param profile The chrome profile to apply.
  * @param onApplied Called once, when the header has been stripped (lets the window reveal its
@@ -111,8 +148,10 @@ export function injectChromeStyles(
   if (!doc || !win) return;
 
   const stripSidebar = profile !== 'full-section';
+  const stripDashboardTabs = profile === 'bare';
   let headerApplied = false;
   let sidebarApplied = false;
+  let dashboardTabsApplied = false;
 
   const tick = (): boolean => {
     if (!headerApplied) {
@@ -132,7 +171,20 @@ export function injectChromeStyles(
         sidebarApplied = true;
       }
     }
-    return headerApplied && (!stripSidebar || sidebarApplied);
+    if (stripDashboardTabs && !dashboardTabsApplied) {
+      // The dashboard tab strip mounts later than the section shell (its routes resolve async),
+      // so this root often appears a tick or two after the sidebar's — hence its own flag.
+      const dashboardRoot = findDashboardChromeRoot(doc);
+      if (dashboardRoot) {
+        injectStyle(dashboardRoot, doc, DASHBOARD_TABS_STYLE_ID, buildDashboardTabsCss());
+        dashboardTabsApplied = true;
+      }
+    }
+    return (
+      headerApplied &&
+      (!stripSidebar || sidebarApplied) &&
+      (!stripDashboardTabs || dashboardTabsApplied)
+    );
   };
 
   if (tick()) return;

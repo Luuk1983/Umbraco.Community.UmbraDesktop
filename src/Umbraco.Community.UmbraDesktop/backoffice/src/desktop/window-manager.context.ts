@@ -8,7 +8,9 @@ import {
   setWindowState,
   findAppWindow,
   setWindowRect,
+  clampWindowsToBounds,
 } from './window-model';
+import { UMBRADESKTOP_WINDOW_KEEP_VISIBLE } from './constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-token';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
 import { UmbArrayState } from '@umbraco-cms/backoffice/observable-api';
@@ -78,6 +80,32 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    */
   public resize(id: string, rect: Rect): void {
     this.#windows.setValue(setWindowRect(this.#windows.getValue(), id, rect));
+  }
+
+  /**
+   * Un-maximize a window straight to a given position, in one update. Dragging a maximized window
+   * restores it, and doing that as a state change followed by a move would paint the window
+   * full-size for a frame before it snapped under the pointer.
+   * @param id The window to restore.
+   * @param x The position to restore it at.
+   * @param y The position to restore it at.
+   */
+  public restoreTo(id: string, x: number, y: number): void {
+    const restored = setWindowState(this.#windows.getValue(), id, 'normal');
+    this.#windows.setValue(moveWindow(restored, id, x, y));
+  }
+
+  /**
+   * Re-clamp every window into the desktop's current size. Called when the desktop surface itself
+   * resizes — a viewport that shrinks under a window would otherwise strand it out of reach with no
+   * way to drag it back. Skips the update entirely when nothing had to move, so a resize that
+   * affects no window costs no re-render.
+   * @param bounds The new desktop surface size in px.
+   */
+  public clampToBounds(bounds: { w: number; h: number }): void {
+    const current = this.#windows.getValue();
+    const next = clampWindowsToBounds(current, bounds, UMBRADESKTOP_WINDOW_KEEP_VISIBLE);
+    if (next !== current) this.#windows.setValue(next);
   }
 
   /** Set a window's state (normal / minimized / maximized). */

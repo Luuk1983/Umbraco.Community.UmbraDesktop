@@ -37,7 +37,8 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     ref: 'Umb.Dashboard.ModelsBuilder',
     name: '#umbraDesktop_appModelsBuilder',
     icon: 'icon-code',
-    chromeProfile: 'workspace-only',
+    // A single-focus dashboard: `bare` strips the section's dashboard tab strip too.
+    chromeProfile: 'bare',
     defaultSize: { w: 1200, h: 780 },
     minSize: { w: 900, h: 540 },
     group: 'system',

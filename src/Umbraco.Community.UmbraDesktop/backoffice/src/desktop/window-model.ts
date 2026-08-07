@@ -125,6 +125,106 @@ export function resizeRect(
 }
 
 /**
+ * Clamp a proposed window position so the window can always be dragged back: every real window
+ * manager refuses to let a window be lost off-screen. What has to stay reachable is not "some of
+ * the window" but the part you can actually grab — the titlebar minus the controls at its right
+ * end, which swallow pointerdown so their buttons stay clickable. Keeping only the window's right
+ * edge on screen would leave nothing but those buttons: visible, but undraggable. Pure.
+ * @param proposed The rectangle the drag is asking for (its `w` decides how far it may hang).
+ * @param bounds The desktop surface size in px.
+ * @param keep The margins to honour: `grab` px of draggable titlebar, `controls` px of
+ * non-draggable buttons at its right end, and `titlebar` px kept above the desktop bottom.
+ * @returns The clamped position.
+ */
+export function clampWindowPosition(
+  proposed: Rect,
+  bounds: { w: number; h: number },
+  keep: { grab: number; controls: number; titlebar: number },
+): { x: number; y: number } {
+  // The draggable strip runs from the window's left edge to where the controls begin.
+  const strip = Math.max(0, proposed.w - keep.controls);
+  // Never ask for more than exists: a window with no strip at all (narrower than its own controls)
+  // simply stays wholly on screen rather than being shunted inward by an impossible margin.
+  const grab = Math.min(keep.grab, strip);
+  const lo = strip > 0 ? grab - strip : 0;
+  const hi = strip > 0 ? bounds.w - grab : bounds.w - proposed.w;
+  return {
+    x: clamp(proposed.x, lo, hi),
+    y: clamp(proposed.y, 0, bounds.h - Math.min(keep.titlebar, proposed.h)),
+  };
+}
+
+/**
+ * Clamp `value` into [lo, hi], with `lo` winning if the range is inverted (which happens when the
+ * desktop is smaller than the margin we want to keep visible).
+ * @param value The value to clamp.
+ * @param lo The lower bound.
+ * @param hi The upper bound.
+ * @returns The clamped value.
+ */
+function clamp(value: number, lo: number, hi: number): number {
+  return Math.min(Math.max(lo, hi), Math.max(lo, value));
+}
+
+/**
+ * Where a maximized window should land when its titlebar is dragged. Dragging a maximized window
+ * un-maximizes it, and the restored window has to arrive under the pointer or the drag feels like
+ * the window jumped out of your hand: the pointer keeps the same *proportional* grip along the
+ * titlebar it had while maximized (Windows and macOS both do this). The window lands flush with the
+ * desktop top, so the pointer also keeps its depth into the bar. Pure.
+ * @param pointerX The pointer's x position relative to the desktop surface's left edge.
+ * @param bounds The desktop surface width in px.
+ * @param size The size the window restores to.
+ * @returns The position to restore the window at; always fully inside the desktop.
+ */
+export function restoreDragPosition(
+  pointerX: number,
+  bounds: { w: number },
+  size: { w: number },
+): { x: number; y: number } {
+  const ratio = bounds.w > 0 ? pointerX / bounds.w : 0;
+  return { x: Math.round(pointerX - ratio * size.w), y: 0 };
+}
+
+/**
+ * Re-clamp every window after the desktop itself changed size. Shrinking the viewport (undocking a
+ * monitor, opening devtools, rotating a tablet) can strand a window outside the new surface just as
+ * surely as dragging it there, and nothing but this pass would bring it back. Sizes are left alone —
+ * only positions move, so an oversized window can still be resized by hand. Pure.
+ * @param windows The current window list.
+ * @param bounds The new desktop surface size in px.
+ * @param keep How much of each window must stay visible; see {@link clampWindowPosition}.
+ * @returns A new list, or the input list unchanged when every window is already in reach.
+ */
+export function clampWindowsToBounds(
+  windows: UmbraDesktopWindow[],
+  bounds: { w: number; h: number },
+  keep: { grab: number; controls: number; titlebar: number },
+): UmbraDesktopWindow[] {
+  let moved = false;
+  const next = windows.map((w) => {
+    const pos = clampWindowPosition(w.rect, bounds, keep);
+    if (pos.x === w.rect.x && pos.y === w.rect.y) return w;
+    moved = true;
+    return { ...w, rect: { ...w.rect, ...pos } };
+  });
+  return moved ? next : windows;
+}
+
+/**
+ * Keep a resized rectangle's origin inside the desktop's top-left corner, holding the opposite
+ * edge still so the resize reads as "the edge stopped at the border". Without this, dragging the
+ * top edge upward walks the titlebar off-screen and the window becomes ungrabbable. Pure.
+ * @param rect The rectangle produced by {@link resizeRect}.
+ * @returns The rectangle with a non-negative origin.
+ */
+export function clampResizeOrigin(rect: Rect): Rect {
+  const x = Math.max(0, rect.x);
+  const y = Math.max(0, rect.y);
+  return { x, y, w: rect.w - (x - rect.x), h: rect.h - (y - rect.y) };
+}
+
+/**
  * Return a new list with `id`'s rectangle replaced.
  * @param windows The current window list.
  * @param id The window to update.

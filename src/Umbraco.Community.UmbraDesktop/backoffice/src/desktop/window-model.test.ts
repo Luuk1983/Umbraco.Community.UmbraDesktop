@@ -10,6 +10,10 @@ import {
   resizeRect,
   setWindowRect,
   taskActivation,
+  clampWindowPosition,
+  clampResizeOrigin,
+  clampWindowsToBounds,
+  restoreDragPosition,
 } from './window-model';
 import type { UmbraDesktopApp, UmbraDesktopWindow } from './types';
 
@@ -126,6 +130,112 @@ it('resizeRect clamps the top edge so the origin never overshoots the minimum he
   // Shrinking from the top by 200 would drop below min (300-200=100 < 200) → height pins to 200,
   // so y only advances by (300-200)=100.
   expect(resizeRect(START, { top: true }, 0, 200, MIN)).to.deep.equal({ x: 100, y: 200, w: 400, h: 200 });
+});
+
+const BOUNDS = { w: 1000, h: 700 };
+const KEEP = { grab: 80, controls: 138, titlebar: 40 };
+const DRAGGED: import('./types').Rect = { x: 100, y: 100, w: 400, h: 300 };
+
+it('clampWindowPosition leaves a fully on-screen position untouched', () => {
+  expect(clampWindowPosition(DRAGGED, BOUNDS, KEEP)).to.deep.equal({ x: 100, y: 100 });
+});
+
+it('clampWindowPosition keeps a drag strip on screen when dragged off the left edge', () => {
+  // Hanging off the left, the visible sliver is the window's right end — which is all controls.
+  // Those swallow pointerdown to stay clickable, so the clamp must also spare 80px of titlebar
+  // beside them: x pins at (80 + 138) - 400.
+  expect(clampWindowPosition({ ...DRAGGED, x: -900 }, BOUNDS, KEEP)).to.deep.equal({ x: -182, y: 100 });
+});
+
+it('clampWindowPosition leaves something to grab however far left it is thrown', () => {
+  const { x } = clampWindowPosition({ ...DRAGGED, x: -5000 }, BOUNDS, KEEP);
+  const visible = DRAGGED.w + x;
+  expect(visible - KEEP.controls).to.be.at.least(KEEP.grab);
+});
+
+it('clampWindowPosition keeps a slice on screen when dragged off the right edge', () => {
+  // Hanging off the right, the visible sliver is the title end of the bar — draggable all the
+  // way across — so 80px of it is enough: x pins at 1000-80.
+  expect(clampWindowPosition({ ...DRAGGED, x: 5000 }, BOUNDS, KEEP)).to.deep.equal({ x: 920, y: 100 });
+});
+
+it('clampWindowPosition never lets the titlebar go above the desktop top', () => {
+  expect(clampWindowPosition({ ...DRAGGED, y: -300 }, BOUNDS, KEEP)).to.deep.equal({ x: 100, y: 0 });
+});
+
+it('clampWindowPosition keeps the titlebar above the taskbar when dragged down', () => {
+  // The full titlebar (40px) must stay inside, so y pins at 700-40.
+  expect(clampWindowPosition({ ...DRAGGED, y: 5000 }, BOUNDS, KEEP)).to.deep.equal({ x: 100, y: 660 });
+});
+
+it('clampWindowPosition still pins to the top when the desktop is shorter than the titlebar', () => {
+  expect(clampWindowPosition({ ...DRAGGED, y: 500 }, { w: 1000, h: 20 }, KEEP).y).to.equal(0);
+});
+
+it('clampWindowPosition never demands more visible width than the window has', () => {
+  // A 100px window is narrower than its own controls, so it has no drag strip to spare; it simply
+  // stays wholly on screen rather than being shunted inward by an impossible margin.
+  expect(clampWindowPosition({ x: 0, y: 0, w: 100, h: 100 }, BOUNDS, KEEP)).to.deep.equal({ x: 0, y: 0 });
+  expect(clampWindowPosition({ x: -40, y: 0, w: 100, h: 100 }, BOUNDS, KEEP)).to.deep.equal({ x: 0, y: 0 });
+});
+
+it('clampResizeOrigin leaves a rectangle inside the desktop untouched', () => {
+  expect(clampResizeOrigin(DRAGGED)).to.deep.equal(DRAGGED);
+});
+
+it('clampResizeOrigin pins a top-edge resize at the desktop top, holding the bottom edge', () => {
+  // Top edge pulled 50px above the desktop: y pins to 0 and the height gives back those 50px.
+  expect(clampResizeOrigin({ x: 100, y: -50, w: 400, h: 350 })).to.deep.equal({ x: 100, y: 0, w: 400, h: 300 });
+});
+
+it('clampResizeOrigin pins a left-edge resize at the desktop left, holding the right edge', () => {
+  expect(clampResizeOrigin({ x: -60, y: 100, w: 460, h: 300 })).to.deep.equal({ x: 0, y: 100, w: 400, h: 300 });
+});
+
+it('clampWindowsToBounds returns the same list when every window is already in reach', () => {
+  const windows = [win('a', 1), win('b', 2, { rect: { x: 300, y: 200, w: 400, h: 300 } })];
+  expect(clampWindowsToBounds(windows, BOUNDS, KEEP)).to.equal(windows);
+});
+
+it('clampWindowsToBounds pulls windows back when the desktop shrinks under them', () => {
+  // A window parked at x=900 on a wide desktop is out of reach once the desktop is 500 wide.
+  const windows = [win('a', 1, { rect: { x: 900, y: 600, w: 400, h: 300 } })];
+  const next = clampWindowsToBounds(windows, { w: 500, h: 300 }, KEEP);
+  expect(next[0].rect).to.deep.equal({ x: 420, y: 260, w: 400, h: 300 });
+});
+
+it('clampWindowsToBounds keeps window size and identity intact while repositioning', () => {
+  const windows = [win('a', 3, { active: true, state: 'minimized', rect: { x: 900, y: 10, w: 400, h: 300 } })];
+  const moved = clampWindowsToBounds(windows, { w: 500, h: 700 }, KEEP)[0];
+  expect(moved).to.include({ id: 'a', z: 3, active: true, state: 'minimized' });
+  expect(moved.rect).to.include({ w: 400, h: 300, y: 10 });
+});
+
+it('clampWindowsToBounds leaves in-reach windows as the very same objects', () => {
+  const inside = win('a', 1);
+  const outside = win('b', 2, { rect: { x: 900, y: 10, w: 400, h: 300 } });
+  const next = clampWindowsToBounds([inside, outside], { w: 500, h: 700 }, KEEP);
+  expect(next[0]).to.equal(inside);
+  expect(next[1]).to.not.equal(outside);
+});
+
+it('restoreDragPosition keeps the pointer at the same point along the titlebar', () => {
+  // Grabbed dead centre of a 1000-wide maximized bar; the restored 400-wide window centres there.
+  expect(restoreDragPosition(500, { w: 1000 }, { w: 400 })).to.deep.equal({ x: 300, y: 0 });
+});
+
+it('restoreDragPosition keeps the pointer proportionally placed near the edges', () => {
+  // A quarter along the bar stays a quarter along the restored bar.
+  expect(restoreDragPosition(250, { w: 1000 }, { w: 400 })).to.deep.equal({ x: 150, y: 0 });
+});
+
+it('restoreDragPosition never lands the window outside the desktop', () => {
+  expect(restoreDragPosition(0, { w: 1000 }, { w: 400 })).to.deep.equal({ x: 0, y: 0 });
+  expect(restoreDragPosition(1000, { w: 1000 }, { w: 400 })).to.deep.equal({ x: 600, y: 0 });
+});
+
+it('restoreDragPosition survives a zero-width desktop without producing NaN', () => {
+  expect(restoreDragPosition(0, { w: 0 }, { w: 400 })).to.deep.equal({ x: 0, y: 0 });
 });
 
 it('setWindowRect replaces only the target window rectangle', () => {

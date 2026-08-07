@@ -1,8 +1,8 @@
 import type { Rect, UmbraDesktopWindow } from '../types';
 import type { UmbraDesktopResizeEdges } from '../window-model';
-import { resizeRect } from '../window-model';
+import { clampResizeOrigin, clampWindowPosition, resizeRect, restoreDragPosition } from '../window-model';
 import { injectChromeStyles } from '../chrome-injector';
-import { UMBRADESKTOP_WINDOW_MIN_SIZE } from '../constants';
+import { UMBRADESKTOP_WINDOW_KEEP_VISIBLE, UMBRADESKTOP_WINDOW_MIN_SIZE } from '../constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { css, customElement, html, property, state } from '@umbraco-cms/backoffice/external/lit';
@@ -19,6 +19,13 @@ const RESIZE_HANDLES: ReadonlyArray<{ dir: string; edges: UmbraDesktopResizeEdge
   { dir: 'se', edges: { bottom: true, right: true } },
   { dir: 'sw', edges: { bottom: true, left: true } },
 ];
+
+/**
+ * How far the pointer must travel across a maximized titlebar before the drag un-maximizes the
+ * window. Without it a bare click — or the first half of the double-click that toggles maximize —
+ * would shrink the window out from under the user.
+ */
+const RESTORE_DRAG_THRESHOLD = 5;
 
 /**
  * A single draggable desktop window hosting a backoffice iframe. Presentational
@@ -38,6 +45,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   #manager?: UmbraDesktopWindowManagerContext;
   #startPointer = { x: 0, y: 0 };
   #startRect = { x: 0, y: 0 };
+  #startSurface = { left: 0, top: 0, w: 0, h: 0 };
+  #pendingRestore = false;
   #resizing = false;
   #resizeEdges: UmbraDesktopResizeEdges = {};
   #resizeStartPointer = { x: 0, y: 0 };
@@ -60,23 +69,75 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     window.setTimeout(() => (this._loading = false), 12000);
   }
 
+  /**
+   * Position and size of the desktop surface this window is laid out against — the frame's offset
+   * parent. Measured once per drag so the clamp costs no layout work per pointer move.
+   * @returns The surface rectangle in client coordinates, falling back to the viewport if the
+   * frame is not laid out yet.
+   */
+  #surfaceRect(): { left: number; top: number; w: number; h: number } {
+    const frame = this.renderRoot?.querySelector('.frame') as HTMLElement | null;
+    const surface = frame?.offsetParent as HTMLElement | null;
+    if (!surface) return { left: 0, top: 0, w: window.innerWidth, h: window.innerHeight };
+    const box = surface.getBoundingClientRect();
+    return { left: box.left, top: box.top, w: surface.clientWidth, h: surface.clientHeight };
+  }
+
   #onTitlePointerDown = (e: PointerEvent) => {
-    if (!this.window || this.window.state === 'maximized') return;
-    this._dragging = true;
+    if (!this.window) return;
     this.#startPointer = { x: e.clientX, y: e.clientY };
-    this.#startRect = { x: this.window.rect.x, y: this.window.rect.y };
+    this.#startSurface = this.#surfaceRect();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    if (this.window.state === 'maximized') {
+      // Arm the drag rather than starting it — a maximized window only un-maximizes once the
+      // pointer proves the intent by moving.
+      this.#pendingRestore = true;
+      return;
+    }
+    this._dragging = true;
+    this.#startRect = { x: this.window.rect.x, y: this.window.rect.y };
   };
 
+  /**
+   * Turn a drag on a maximized titlebar into a drag of the restored window, the way Windows and
+   * macOS do: past the movement threshold the window un-maximizes to its previous size, arriving
+   * under the pointer, and the drag carries on from there.
+   * @param e The pointer move being handled.
+   */
+  #restoreUnderPointer(e: PointerEvent) {
+    const w = this.window;
+    if (!w) return;
+    const travelled = Math.max(
+      Math.abs(e.clientX - this.#startPointer.x),
+      Math.abs(e.clientY - this.#startPointer.y),
+    );
+    if (travelled < RESTORE_DRAG_THRESHOLD) return;
+    const pos = restoreDragPosition(e.clientX - this.#startSurface.left, this.#startSurface, w.rect);
+    this.#pendingRestore = false;
+    this._dragging = true;
+    // Re-anchor the drag to where the window now is, so the next move is a delta from here.
+    this.#startPointer = { x: e.clientX, y: e.clientY };
+    this.#startRect = pos;
+    this.#manager?.restoreTo(w.id, pos.x, pos.y);
+  }
+
   #onTitlePointerMove = (e: PointerEvent) => {
+    if (this.#pendingRestore) this.#restoreUnderPointer(e);
     if (!this._dragging || !this.window) return;
     const dx = e.clientX - this.#startPointer.x;
     const dy = e.clientY - this.#startPointer.y;
-    this.#manager?.move(this.window.id, this.#startRect.x + dx, Math.max(0, this.#startRect.y + dy));
+    // Clamped so a window can never be dragged out of reach: the titlebar stays on the desktop.
+    const { x, y } = clampWindowPosition(
+      { ...this.window.rect, x: this.#startRect.x + dx, y: this.#startRect.y + dy },
+      this.#startSurface,
+      UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
+    );
+    this.#manager?.move(this.window.id, x, y);
   };
 
   #onTitlePointerUp = (e: PointerEvent) => {
     this._dragging = false;
+    this.#pendingRestore = false;
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
   };
 
@@ -95,12 +156,16 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (!this.#resizing || !this.window) return;
     const dx = e.clientX - this.#resizeStartPointer.x;
     const dy = e.clientY - this.#resizeStartPointer.y;
-    const rect = resizeRect(
-      this.#resizeStartRect,
-      this.#resizeEdges,
-      dx,
-      dy,
-      this.window.app.minSize ?? UMBRADESKTOP_WINDOW_MIN_SIZE,
+    // Origin-clamped for the same reason as the drag: pulling the top edge up past the desktop
+    // would take the titlebar — the only grab handle — with it.
+    const rect = clampResizeOrigin(
+      resizeRect(
+        this.#resizeStartRect,
+        this.#resizeEdges,
+        dx,
+        dy,
+        this.window.app.minSize ?? UMBRADESKTOP_WINDOW_MIN_SIZE,
+      ),
     );
     this.#manager?.resize(this.window.id, rect);
   };

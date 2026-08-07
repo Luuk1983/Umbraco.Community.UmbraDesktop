@@ -1,6 +1,14 @@
 /**
- * How much of the backoffice shell a window keeps. Lower confidence in an app
- * means keeping more chrome so it still works (see design doc §4.1).
+ * How much of the backoffice shell a window keeps — a monotonic ladder, each rung stripping
+ * one more layer of chrome (see design doc §4.1):
+ * - `full-section`: hide only the top backoffice header; keep the section sidebar (menu/tree).
+ *   For tools where the tree IS the tool (Document Types, Templates, …).
+ * - `workspace-only`: also strip the section sidebar so the workspace fills the window.
+ *   For self-contained workspaces (Log Viewer, Webhooks).
+ * - `bare`: also strip the dashboard tab strip a section shows when deep-linked to a dashboard.
+ *   For single-focus dashboards (Examine, Health Check, Profiling, Models Builder).
+ *
+ * Lower confidence in an app means choosing a higher rung (more chrome) so it still works.
  */
 export type UmbraDesktopChromeProfile = 'full-section' | 'workspace-only' | 'bare';
 
