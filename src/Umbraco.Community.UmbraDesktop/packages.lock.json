@@ -2,6 +2,23 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "Microsoft.SourceLink.GitHub": {
+        "type": "Direct",
+        "requested": "[10.0.301, )",
+        "resolved": "10.0.301",
+        "contentHash": "S9U9Ye2bylMeDkzdNh+TsbRUNr6rkBORrnXDk45maPIxVvTmHV1SN2/qtZ/6yO7cdWmQv1LHv77yIeG6Q3nvMQ==",
+        "dependencies": {
+          "Microsoft.Build.Tasks.Git": "10.0.301",
+          "Microsoft.SourceLink.Common": "10.0.301",
+          "System.IO.Hashing": "10.0.10"
+        }
+      },
+      "MinVer": {
+        "type": "Direct",
+        "requested": "[7.0.0, )",
+        "resolved": "7.0.0",
+        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
+      },
       "Umbraco.Cms.Api.Common": {
         "type": "Direct",
         "requested": "[17.0.0, 18.0.0)",
@@ -322,6 +339,14 @@
         "contentHash": "9l/Y/CO3q8tET3w+dDiByREH8lRtpd14cMevwMV5nw2a/avJ5qcE3VVIE5U5hesec2phTT6udQEgwjHmdRRbig==",
         "dependencies": {
           "Microsoft.Extensions.Primitives": "1.0.1"
+        }
+      },
+      "Microsoft.Build.Tasks.Git": {
+        "type": "Transitive",
+        "resolved": "10.0.301",
+        "contentHash": "9Tah8f2BYuXlff9nIsJAeQJcqnijJTXNraIcTOF2f/f9kLmg0HNWPlMemnD6FBLd/UQcE0s9Vze2zCkA6nrZAA==",
+        "dependencies": {
+          "System.IO.Hashing": "10.0.10"
         }
       },
       "Microsoft.Extensions.AmbientMetadata.Application": {
@@ -755,6 +780,11 @@
         "type": "Transitive",
         "resolved": "2.3.0",
         "contentHash": "5RZpjyt0JMmoc/aEgY9c1vE5pusdDGvkPl9qKIy9KFbRiIXD+w7gBJxX+unSjzzOcfgRoYxnO4okZyqDAL2WEw=="
+      },
+      "Microsoft.SourceLink.Common": {
+        "type": "Transitive",
+        "resolved": "10.0.301",
+        "contentHash": "oz44EclJdAYVZcRb9dSbWd+6RaE+8a4j5zdE+O7yw5qPRZZhu3pcpDZ/Moy6pLeIXZqBP1FMd8CSE0sgJAGV0g=="
       },
       "MimeKit": {
         "type": "Transitive",
@@ -1205,6 +1235,11 @@
         "type": "Transitive",
         "resolved": "7.0.0",
         "contentHash": "Ckj+tg2BVOZ0oLp7FAbjfvRyA/BMkUhVxROLd+x22zncRR6KD7CdFzAYp+9Mo2cedxAMo2X9ZNyhZu68jdDITw=="
+      },
+      "System.IO.Hashing": {
+        "type": "Transitive",
+        "resolved": "10.0.10",
+        "contentHash": "eE839zyWZD/UBZYzP2lu9fhHX6RWe63/jz3Jxf+JumzO/db+Vc2s7CMiDwxk9ti2NTUft2tdRx31Rw2OjKbecA=="
       },
       "System.Linq.Async": {
         "type": "Transitive",
