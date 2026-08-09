@@ -56,8 +56,9 @@ real code.
 | `RELEASE.md` | Not included | — |
 | `umbraco-marketplace.json` | Included | Required for the Marketplace listing |
 | CI tests | `npm test` only | No C# test project exists; a vacuous `dotnet test` is worse than none |
-| Icon | Supplied by the repo owner | House style is a rendered 3D look that cannot be hand-authored here |
-| Screenshots | Captured by the repo owner | — |
+| Icon | Supplied by the repo owner — **done** | House style is a rendered 3D look that cannot be hand-authored here |
+| Screenshots | Deferred until after the repo is public | Don't block the pipeline test on artwork (§7.3) |
+| Backoffice types | Pin `^*` → `^17` | Prevents a fresh `npm install` resolving v18 types |
 | Repo visibility | Private until all files land, then public | Branch protection and raw image URLs both need public (or Pro) |
 
 ---
@@ -135,8 +136,9 @@ Plus `PackageReference`s for `MinVer` and `Microsoft.SourceLink.GitHub`, both `P
 | `Title` | `Umbraco.Community.UmbraDesktop` | `UmbraDesktop` | This is the human-facing name on NuGet, not the package ID. |
 | `Description` | One line | Expanded (see §4.3) | It's the NuGet listing copy. |
 | `PackageTags` | `umbraco package backoffice desktop windows` | `umbraco;backoffice;desktop;windows;multitasking;productivity;umbraco-marketplace` | Semicolon-delimited, and **`umbraco-marketplace` is mandatory** or the Marketplace never indexes the package. |
-| `PackageIcon` | `Package-image_128_128.png` | `package_logo_128x128.png` | Reference convention; the old file is the stock Umbraco placeholder and gets deleted. |
 | `PackageReadmeFile` | `readme.md` (package-level) | `README.md` via `<None Include="..\..\README.md" Pack="true" PackagePath="\" />` | One readme, one source of truth — the root one, which is also what GitHub renders. |
+
+`PackageIcon` stays as `Package-image_128_128.png` — see §8.
 
 ### 4.3 Remove
 
@@ -180,6 +182,19 @@ on Umbraco 17.0–17.4 while simultaneously claiming to support 18, 19 and beyon
 Add `PackageVersion` entries for `MinVer` and `Microsoft.SourceLink.GitHub`.
 
 The test-instance entries (`Umbraco.Cms`, `uSync`) are not published and may keep floating.
+
+**Decision on the 17.0.0 floor:** confirmed by the owner on the grounds that Umbraco does not
+ship breaking changes within a major, so a v17-wide range is a fair claim even though testing
+has only been done on 17.5.3. No import audit is required. See R1.
+
+### 5.1 Pin the backoffice types
+
+`package.json` currently declares `"@umbraco-cms/backoffice": "^*"`. Change to `"^17"`.
+
+`^*` can resolve to v18 types on a fresh `npm install`, silently type-checking the code against
+the wrong backoffice major. CI is insulated (`npm ci` uses the lockfile), but a contributor
+running `npm install` is not. Regenerate `package-lock.json` with the pin and confirm the
+resolved version stays within 17.
 
 ---
 
@@ -250,23 +265,81 @@ automatically. The `.snupkg` is pushed alongside the `.nupkg` by `dotnet nuget p
 
 ### 7.1 `README.md` (root — also packed into the nupkg)
 
-Structure mirrors the reference: logo image → `# UmbraDesktop` → one-line tagline → NuGet /
-downloads / licence badges → sections:
+**Tone: not too technical.** The first two thirds must sell the package and get someone running;
+implementation detail is quarantined in the final section. Header: logo image →
+`# UmbraDesktop` → one-line tagline → NuGet / downloads / licence badges.
 
-- **Features** — side-by-side windows; the grouped launcher with pinnable favourites; taskbar;
-  per-app window chrome; native backoffice styling.
-- **How It Works** — each window is a same-origin `<iframe>` deep-linked into the backoffice, so
-  it gets its own `window`, `location`, History and event bus. That is what makes independent
-  navigation per window possible without touching Umbraco core. Cover the three chrome profiles
-  (`full-section`, `workspace-only`, `bare`) and cross-window freshness via Umbraco's own
-  observers/server-events rather than a custom sync layer.
-- **Installation** — `dotnet add package Umbraco.Community.UmbraDesktop`.
-- **Prerequisites** — Umbraco **17**, **.NET 10**.
-- **Documentation** — link `docs/design/umbradesktop-design.md`.
-- **License** — MIT, link `LICENSE`.
+Section order (owner's outline, with install and use swapped — a reader sold by Features wants
+to install next, and "how to use it" only makes sense once it's installed):
 
-Source material: `docs/design/umbradesktop-design.md` §§1–5 and
-`docs/design/2026-07-23-header-app-launcher-design.md`.
+1. **Introduction** — short. The backoffice shows one section at a time; UmbraDesktop turns it
+   into a desktop where tools open as real windows you can put side by side.
+
+2. **Features** — the "why would I want this" section. Side-by-side windows (edit on the left,
+   watch the result on the right); drag, resize, minimise, maximise; a grouped launcher with
+   pinnable favourites; a taskbar for open windows; styled to match the backoffice rather than
+   bolted on.
+
+3. **Installation & configuration**
+   - Prerequisites: Umbraco **17**, **.NET 10**.
+   - `dotnet add package Umbraco.Community.UmbraDesktop`.
+   - **Grant the Desktop section to a user group** — the one required configuration step.
+     Nothing appears until this is done. That single grant both makes the desktop reachable and
+     reveals the launcher, because the header app is gated on the section-user-permission
+     condition for the Desktop section alias (`headerapps/manifest.ts`).
+   - **Which apps a user sees follows their existing section permissions** — every app is gated
+     on its source section (`deriveApps`), so the desktop grants no access the user didn't
+     already have.
+
+4. **How to use it** — short. The launcher lives in the backoffice header, top-right (between
+   Help and the user avatar); the Desktop section's own nav tab is deliberately hidden, so the
+   header launcher is the way in. Open apps, arrange windows, pin favourites, use the taskbar,
+   exit back to the classic backoffice.
+
+5. **Technical explanation** — the only genuinely technical section:
+   - **Windows are iframes.** Each window deep-links into the backoffice same-origin, so it gets
+     its own `window`, `location`, History and event bus — which is what makes independent
+     per-window navigation possible without touching Umbraco core. Cross-window freshness comes
+     from Umbraco's own observers/server-events, not a custom sync layer.
+   - **The three chrome profiles** (`desktop/types.ts`), framed as the owner put it — an app can
+     appear as-is, with the sidebar removed, or stripped right back:
+     `full-section` (hides only the top header, keeps the section sidebar/tree) ·
+     `workspace-only` (also strips the sidebar) · `bare` (also strips the dashboard tab strip).
+   - **The curated catalogue** — `desktop/catalogue/*.ts` entries point at a registered extension
+     by `ref` (URL inferred from the registry) or an explicit `url`, and carry presentation:
+     name, icon, group, chrome profile, default/min size, `allowMultiple`, weight.
+   - **Unregistered apps** — any section the user may access that no catalogue entry covers is
+     auto-derived as an *uncertified* fallback app: `full-section` chrome, the generic `icon-box`
+     icon, placed in the reserved **More** group. Sections in `catalogue/exclusions.ts` (seeded
+     with UmbraDesktop's own) never appear.
+   - **Custom / third-party apps** — see §7.1.1; must be written honestly.
+
+6. **Documentation** — link `docs/design/umbradesktop-design.md`.
+
+7. **License** — MIT, link `LICENSE`.
+
+Source material: `docs/design/umbradesktop-design.md` §§1–5,
+`docs/design/2026-07-23-header-app-launcher-design.md`, and the code cited above.
+
+#### 7.1.1 The third-party-apps section must not overpromise
+
+The owner's outline asks the README to "explain how to add support for custom apps / external
+Umbraco packages". **There is no public extension point in v1.** The catalogue is compiled-in
+TypeScript (`catalogue/index.ts` collates static fragments) and there is no `desktopApp`
+extension type — `app-catalogue.context.ts` only reads `section` manifests out of the registry.
+This is the deliberate outcome of the Phase-2 app-model pivot (curated catalogue over a manifest
+type), not an oversight.
+
+So the section states the two real paths:
+
+- **Automatic (no work).** A package that registers a section shows up in the launcher's **More**
+  group for users permitted to that section — with default chrome and a generic icon.
+- **Curated (needs a PR).** Custom icon, friendly name, group placement, chrome profile or window
+  sizing requires an entry in `desktop/catalogue/*.ts` — an upstream contribution to
+  UmbraDesktop, not something a third-party package can register at runtime.
+
+A runtime extension point is a legitimate post-1.0 feature and may be mentioned as such, but the
+README must not imply v1 has one.
 
 ### 7.2 `umbraco-marketplace.json` (repo root)
 
@@ -276,11 +349,23 @@ Schema `https://marketplace.umbraco.com/umbraco-marketplace-schema.json`. `Title
 `SyncContributorsFromRepository: true`, `DocumentationUrl` and `IssueTrackerUrl` pointing at the
 repo, tags, and the screenshot array below.
 
-### 7.3 Screenshots — `docs/screenshots/`
+### 7.3 Screenshots — `docs/screenshots/` (deferred)
 
-Captured by the repo owner. Hot-linked from both README and Marketplace listing via
-`raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/…`,
-which **404s until the repo is public**.
+**The images do not exist yet and do not gate the release-prep work or going public.** The repo
+goes public without them so the Actions and versioning pipeline can be tested; the owner uploads
+them afterwards.
+
+The directory is created with a `.gitkeep`, and both the README and `umbraco-marketplace.json`
+carry explicit `TODO` markers rather than links to files that aren't there:
+
+- **README** — a visible `> **TODO:** screenshots pending.` blockquote where the gallery goes.
+  No broken `![]()` image tags: a broken image renders as an error glyph on both GitHub and
+  NuGet, which looks worse than an honest note.
+- **`umbraco-marketplace.json`** — ship with an **empty `Screenshots` array** plus a TODO comment
+  in the design/plan, not entries pointing at non-existent files. Broken `ImageUrl`s are exactly
+  the silent-breakage failure mode the reference repo's release notes warn about.
+
+Planned shots, for when they are captured:
 
 | Filename | Shot |
 |---|---|
@@ -289,21 +374,26 @@ which **404s until the repo is public**.
 | `taskbar.jpg` | Taskbar with several running apps |
 | `header_app_launcher.jpg` | The gated header-app entry point in the backoffice header |
 
-A `.gitkeep` lands first so the directory exists and the README/Marketplace wiring can be
-committed and reviewed while the images are still being captured. The real images must be in
-place before the merge to `main` in §10 step 1 — the `.gitkeep` is an intermediate state within
-that step, not a shippable one.
+They hot-link via
+`raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/…`,
+which resolves only once the repo is public — by then it will be.
+
+**Adding the screenshots is a release blocker for `v1.0.0`, not for `v1.0.0-beta.1`.**
 
 ---
 
-## 8. Icon
+## 8. Icon — **delivered**
 
-The repo owner supplies `src/Umbraco.Community.UmbraDesktop/package_logo_128x128.png` in the
-established house style (glossy 3D isometric object, orange→red gradient, small domain badge
-bottom-right, white ground — matching `Umbraco.Community.AdvancedPermissions`).
+Done. The owner replaced `src/Umbraco.Community.UmbraDesktop/Package-image_128_128.png` with
+artwork in the established house style (glossy 3D isometric mark, blue gradient, window badge
+bottom-right — the sibling of the `Umbraco.Community.AdvancedPermissions` logo). Currently an
+uncommitted working-tree change.
 
-Wiring: `PackageIcon` in the csproj, the README header image, and deletion of the stock
-`Package-image_128_128.png`.
+The originally-proposed rename to `package_logo_128x128.png` is **dropped**: the filename is
+invisible to consumers, and renaming a file the owner has already placed is pure churn. The
+existing `PackageIcon` value in the csproj is correct as-is.
+
+Remaining wiring: reference the same file as the README header image.
 
 ---
 
@@ -324,8 +414,9 @@ the repo is public.
 
 ## 10. Release sequencing
 
-1. Land **every file** from §§3–8 on `feature/release_preparation` (including the real icon,
-   README and screenshots) and merge to `main`.
+1. Land **every file** from §§3–8 on `feature/release_preparation` — icon (done), README,
+   `umbraco-marketplace.json`, licence, CODEOWNERS, workflows, csproj/deps changes — and merge to
+   `main`. Screenshots are explicitly **excluded** from this step (§7.3).
 2. **Make the repo public.**
 3. Apply repo settings + branch protection ruleset (§9).
 4. Complete the nuget.org and environment/secret setup (§6.3).
@@ -333,7 +424,9 @@ the repo is public.
    the Marketplace tag on a throwaway prerelease.
 6. Verify: package installs into the TestInstance, nupkg contents correct, dependency ranges
    correct, `umbraco-package.json` version stamped, Marketplace listing renders.
-7. Tag **`v1.0.0`**.
+7. **Capture and commit the screenshots**, then replace the README TODO blockquote and populate
+   the Marketplace `Screenshots` array.
+8. Tag **`v1.0.0`**.
 
 ---
 
@@ -349,21 +442,23 @@ the repo is public.
 
 ## 12. Risks and open items
 
-**R1 — The `[17.0.0,18.0.0)` floor claims untested support.** Development and testing have only
-ever run against **17.5.3**. Declaring a 17.0.0 floor asserts compatibility that has not been
-exercised, and a backoffice API introduced in, say, 17.3 would install cleanly on 17.0 and then
-fail at runtime.
-*Mitigation:* audit the `@umbraco-cms/backoffice` imports across `backoffice/src/` against the
-17.0 surface. If anything post-dates 17.0, raise the floor to the earliest version that actually
-supports it rather than shipping a false claim.
+**R1 — `[17.0.0,18.0.0)` floor — CLOSED, accepted.** Testing has only ever run against **17.5.3**,
+so a 17.0.0 floor asserts compatibility not directly exercised. The owner accepts this on the
+grounds that Umbraco does not ship breaking changes within a major. No import audit will be run.
+Residual exposure is small and, if a 17.0-incompatible API surfaces, the fix is a patch release
+raising the floor.
 
-**R2 — `"@umbraco-cms/backoffice": "^*"` in `package.json`.** This spec can resolve to v18 types
-on a fresh `npm install`, breaking a build against v17 APIs. CI is insulated because `npm ci`
-uses the lockfile. Flagged, not fixed — pinning to `^17` is a one-line change pending the owner's
-call.
+**R2 — `"@umbraco-cms/backoffice": "^*"` — CLOSED, fixed.** Pinned to `^17` (§5.1).
 
-**R3 — Screenshot URLs 404 while private.** README and Marketplace images resolve only once the
-repo is public. Expected during steps 1–2 of §10; verify after step 2.
+**R3 — Screenshots deferred — CLOSED, planned.** The repo goes public without screenshots so the
+pipeline can be tested; README and Marketplace listing carry TODO markers and an empty
+`Screenshots` array rather than broken image links (§7.3). Adding them blocks `v1.0.0` but not
+`v1.0.0-beta.1`.
+
+**R5 — The README's third-party section is the easiest place to overpromise.** v1 has no runtime
+extension point for custom apps; the catalogue is compiled-in. Wording must describe the
+automatic section fallback and the upstream-PR route, and must not imply a `desktopApp` manifest
+exists (§7.1.1).
 
 **R4 — `TreatWarningsAsErrors` plus `GenerateDocumentationFile`.** Any public member missing an
 XML doc comment fails the Release build as CS1591. CI will surface this on first run; if it
