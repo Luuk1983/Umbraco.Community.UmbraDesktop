@@ -1123,14 +1123,31 @@ Everything so far was verified incrementally on a dirty tree. This proves it wor
 
 **Files:** none modified.
 
-- [ ] **Step 1: Clean every build output**
+- [ ] **Step 1: Clean the package project's build output**
+
+> **Do NOT use `git clean -xdf` here.** It would also delete
+> `src/Umbraco.Community.UmbraDesktop.TestInstance/umbraco/` — the local SQLite database and logs —
+> and `TestInstance/wwwroot/media/`, destroying the developer's local test site content. Verified
+> by dry run. Clean only the package project's outputs:
 
 ```bash
-git clean -xdf -e node_modules
+rm -rf src/Umbraco.Community.UmbraDesktop/bin \
+       src/Umbraco.Community.UmbraDesktop/obj \
+       src/Umbraco.Community.UmbraDesktop/wwwroot \
+       ./artifacts
 cd src/Umbraco.Community.UmbraDesktop && npm ci && cd ../..
 ```
 
-`-e node_modules` keeps the install cached; drop it for a truly cold run.
+`npm ci` deletes and reinstalls `node_modules` from the lockfile, which is what CI does.
+
+> **Close Visual Studio first.** `package.json` contains
+> `"-vs-binding": { "ProjectOpened": [ "watch" ] }`, so opening the project in Visual Studio
+> auto-starts `npm run watch` (`vite build --watch`). Its esbuild worker holds
+> `node_modules/@esbuild/win32-x64/esbuild.exe` open, and `npm ci` then fails with
+> `EPERM: operation not permitted, unlink ... esbuild.exe` **after it has already deleted most of
+> `node_modules`** — leaving a broken tree missing `lit`, `typescript`, `vite` and `@open-wc`.
+> Recover with `npm install` (it repairs in place without needing to unlink the locked binary).
+> The watcher processes may be unkillable from a non-elevated shell, so closing VS is the fix.
 
 - [ ] **Step 2: Run the full sequence exactly as CI does**
 
@@ -1472,3 +1489,9 @@ unzip -l ./artifacts/*.nupkg | grep -c staticwebassets/              # 17
 unzip -l ./artifacts/*.nupkg | grep -cE "package-lock|backoffice/"   # 0
 unzip -p ./artifacts/*.nupkg staticwebassets/App_Plugins/Umbraco.Community.UmbraDesktop/umbraco-package.json | grep version   # not "GetsGenerated"
 ```
+
+**Verified end-state after Tasks 1–9** (measured 2026-08-09): 31 files total, 17 static web
+assets, 0 dev files, version `1.0.0-alpha.0.98` stamped, `.snupkg` produced alongside the
+`.nupkg`, `dotnet build -c Release` clean at 0 warnings / 0 errors, 76 frontend tests passing,
+and `npm audit --omit=dev` reporting **0 production-dependency vulnerabilities** (the ~17 audit
+findings are all devDependencies, which never ship).
