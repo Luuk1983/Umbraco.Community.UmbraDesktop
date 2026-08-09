@@ -1,0 +1,8 @@
+# CODEOWNERS for Umbraco.Community.UmbraDesktop
+#
+# Each line is a pattern followed by one or more owners.
+# The LAST matching pattern takes precedence.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-customizations/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+*       @Luuk1983
