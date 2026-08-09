@@ -105,6 +105,40 @@ deliberately as release hygiene.
 
 ## 4. Package metadata — `Umbraco.Community.UmbraDesktop.csproj`
 
+### 4.0 Critical: the package currently ships no frontend
+
+Discovered while planning, on 2026-08-09. `dotnet pack` produces a **13-file package containing
+no frontend at all** — no `staticwebassets/`, no `App_Plugins/`. It ships `package-lock.json`
+(324KB of a 361KB package), `package.json` and `backoffice/tsconfig.json` in their place.
+Installing it would appear to succeed and do nothing whatsoever.
+
+Cause — these two lines strip the built output before the Razor SDK can discover it:
+
+```xml
+<Content Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
+<None Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
+```
+
+Evidence: `obj/Release/net10.0/staticwebassets.build.json` contains **zero** `App_Plugins`
+entries, and no `staticwebassets.pack.json` is generated at all.
+
+**Fix (verified during planning):** drop the two `wwwroot\App_Plugins\…` removals, and add
+explicit removals for the development-only files that `ContentTargetFolders=.` was packing to the
+package root:
+
+```xml
+<Content Remove="backoffice\**" />
+<Content Remove="package.json" />
+<Content Remove="package-lock.json" />
+```
+
+Result, confirmed by packing: **33 files**, including 19 assets under
+`staticwebassets/App_Plugins/Umbraco.Community.UmbraDesktop/` and none of the dev files.
+
+This supersedes the assumption running through the rest of this document that packaging merely
+needed metadata. It is the single highest-priority item in the release, and every other
+verification depends on it.
+
 ### 4.1 Add
 
 ```xml
