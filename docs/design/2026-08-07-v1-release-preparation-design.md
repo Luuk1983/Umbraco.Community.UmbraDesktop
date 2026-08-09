@@ -338,8 +338,9 @@ So the section states the two real paths:
   sizing requires an entry in `desktop/catalogue/*.ts` — an upstream contribution to
   UmbraDesktop, not something a third-party package can register at runtime.
 
-A runtime extension point is a legitimate post-1.0 feature and may be mentioned as such, but the
-README must not imply v1 has one.
+**No forward-looking statement.** Do not mention a possible future extension point, roadmap item
+or "planned" runtime registration. The section describes only what exists today. (Owner's call:
+avoids setting an expectation that may never be met.)
 
 ### 7.2 `umbraco-marketplace.json` (repo root)
 
