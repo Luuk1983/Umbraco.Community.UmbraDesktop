@@ -46,14 +46,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Legacy top-level App_Plugins folder is not part of this project. -->
     <Compile Remove="App_Plugins\**" />
-    <Compile Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
     <Content Remove="App_Plugins\**" />
-    <Content Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
     <EmbeddedResource Remove="App_Plugins\**" />
-    <EmbeddedResource Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
     <None Remove="App_Plugins\**" />
-    <None Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
+
+    <!-- Development-only files. ContentTargetFolders is ".", so anything left as Content packs
+         to the package root; without these the package ships package-lock.json and the
+         TypeScript sources' config instead of just the built output. -->
+    <Content Remove="backoffice\**" />
+    <Content Remove="package.json" />
+    <Content Remove="package-lock.json" />
   </ItemGroup>
 
   <ItemGroup>
