@@ -20,6 +20,17 @@ Three facts that drive almost every task:
 2. **`npm` lives in `src/Umbraco.Community.UmbraDesktop/`**, not the repo root. Its own scripts `cd backoffice` internally, so always run npm from `src/Umbraco.Community.UmbraDesktop/`.
 3. **`RestorePackagesWithLockFile` is `true`** (`src/Directory.Build.props`). Any change to package versions *requires* regenerating `src/Umbraco.Community.UmbraDesktop/packages.lock.json` or restore fails with NU1004. Regenerate with `dotnet restore --force-evaluate`.
 
+**Always `dotnet build` before `dotnet pack`.** A bare `dotnet pack` on a cold `obj/` fails with
+`error : Manifest file at 'obj\Release\net10.0\staticwebassets.build.json' not found`. Every pack
+command in this plan is therefore `build` followed by `pack --no-build`, which is also what the CI
+workflows do.
+
+**Beware stale `obj/` when measuring packaging behaviour.** Static web asset discovery is cached,
+so a warm `obj/` can make a broken configuration look healthy. Any before/after comparison of
+packaging must `rm -rf src/Umbraco.Community.UmbraDesktop/obj src/Umbraco.Community.UmbraDesktop/bin`
+first. This bit us during planning: an incremental build reported 19 static web assets for a
+configuration that produces 0 from clean.
+
 Verified working baseline (measured during planning, on 2026-08-09):
 
 - `dotnet build -c Release` → **0 warnings, 0 errors**
@@ -90,7 +101,8 @@ Build the frontend, then pack, and count what lands in the package:
 
 ```bash
 cd src/Umbraco.Community.UmbraDesktop && npm run build && cd ../..
-dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release -o ./artifacts
+dotnet build src/Umbraco.Community.UmbraDesktop/ -c Release
+dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release --no-build -o ./artifacts
 unzip -l ./artifacts/*.nupkg | grep -c "staticwebassets/"
 ```
 
@@ -137,7 +149,9 @@ The `wwwroot\App_Plugins\...` removals are gone deliberately: the Razor SDK must
 - [ ] **Step 3: Repack**
 
 ```bash
-rm -rf ./artifacts && dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release -o ./artifacts
+rm -rf ./artifacts
+dotnet build src/Umbraco.Community.UmbraDesktop/ -c Release
+dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release --no-build -o ./artifacts
 ```
 
 Expected: `Build succeeded. 0 Warning(s) 0 Error(s)`
@@ -478,7 +492,9 @@ Expected: a `17.x` version.
 
 ```bash
 cd src/Umbraco.Community.UmbraDesktop && npm test && npm run build && cd ../..
-rm -rf ./artifacts && dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release -o ./artifacts
+rm -rf ./artifacts
+dotnet build src/Umbraco.Community.UmbraDesktop/ -c Release
+dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release --no-build -o ./artifacts
 unzip -p ./artifacts/*.nupkg Umbraco.Community.UmbraDesktop.nuspec | grep dependency
 ```
 
@@ -645,7 +661,9 @@ MinVer and SourceLink change the dependency graph:
 ```bash
 dotnet restore src/Umbraco.Community.UmbraDesktop/ --force-evaluate
 cd src/Umbraco.Community.UmbraDesktop && npm run build && cd ../..
-rm -rf ./artifacts && dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release -o ./artifacts
+rm -rf ./artifacts
+dotnet build src/Umbraco.Community.UmbraDesktop/ -c Release
+dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release --no-build -o ./artifacts
 ls ./artifacts/
 ```
 
@@ -820,7 +838,9 @@ Expected: no output. Screenshots are a `> **TODO:**` blockquote, not `![]()` tag
 - [ ] **Step 4: Verify it packs**
 
 ```bash
-rm -rf ./artifacts && dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release -o ./artifacts
+rm -rf ./artifacts
+dotnet build src/Umbraco.Community.UmbraDesktop/ -c Release
+dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release --no-build -o ./artifacts
 unzip -p ./artifacts/*.nupkg README.md | head -5
 ```
 
@@ -1423,8 +1443,10 @@ Auto-generated notes diff against the previous tag — `v1.0.0-beta.1` — so th
 # Frontend
 cd src/Umbraco.Community.UmbraDesktop && npm test && npm run build && cd ../..
 
-# Package
-dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release -o ./artifacts
+# Package — always build first; a bare `dotnet pack` on a cold obj/ fails with
+# "Manifest file at 'obj\Release\net10.0\staticwebassets.build.json' not found"
+dotnet build src/Umbraco.Community.UmbraDesktop/ -c Release
+dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release --no-build -o ./artifacts
 
 # Payload sanity — these three must always hold
 unzip -l ./artifacts/*.nupkg | grep -c staticwebassets/              # 19
