@@ -654,6 +654,22 @@ git mv readme.md README.tmp && git mv README.tmp README.md
 
 The two-step rename is required: Windows' filesystem is case-insensitive, so `git mv readme.md README.md` is rejected as "destination exists". Task 6 replaces the contents.
 
+**Also update the solution file.** `Umbraco.Community.UmbraDesktop.app.slnx` lists the readme in its
+Solution Items folder as `<File Path="readme.md" />`. Change it to:
+
+```xml
+    <File Path="README.md" />
+```
+
+Leaving it stale gives a broken entry in the Visual Studio solution explorer. Verify afterwards:
+
+```bash
+grep -o 'Path="[^"]*"' Umbraco.Community.UmbraDesktop.app.slnx
+dotnet sln Umbraco.Community.UmbraDesktop.app.slnx list
+```
+
+Expected: `Path="README.md"` present, no `Path="readme.md"`, and both projects still listed.
+
 - [ ] **Step 7: Regenerate the lock file, build and pack**
 
 MinVer and SourceLink change the dependency graph:
@@ -1130,13 +1146,16 @@ Expected: tests `76 passed, 0 failed`; build `0 Warning(s), 0 Error(s)`; two fil
 - [ ] **Step 3: Verify the package one final time**
 
 ```bash
-unzip -l ./artifacts/*.nupkg | grep -c staticwebassets/    # expect 19
+unzip -l ./artifacts/*.nupkg | grep -c staticwebassets/    # expect 17 (19 before Task 3)
 unzip -l ./artifacts/*.nupkg | grep -cE "package-lock|backoffice/"  # expect 0
 unzip -p ./artifacts/*.nupkg staticwebassets/App_Plugins/Umbraco.Community.UmbraDesktop/umbraco-package.json | grep version
 unzip -p ./artifacts/*.nupkg Umbraco.Community.UmbraDesktop.nuspec | grep -E "dependency|title|license|readme|icon"
 ```
 
-Expected: 19 static web assets; 0 dev files; a real version, not `GetsGenerated`; `[17.0.0, 18.0.0)` ranges; `UmbraDesktop` title; MIT licence; `README.md`; the icon.
+Expected: **17** static web assets; 0 dev files; a real version, not `GetsGenerated`; `[17.0.0, 18.0.0)` ranges; `UmbraDesktop` title; MIT licence; `README.md`; the icon.
+
+(17, not 19: Task 3 removed the two dead `localization/en.js` and `localization/nl.js` assets. The
+real localization ships as the hashed `en-*.js` / `nl-*.js` chunks.)
 
 - [ ] **Step 4: Install the package into the TestInstance and smoke-test it**
 
@@ -1449,7 +1468,7 @@ dotnet build src/Umbraco.Community.UmbraDesktop/ -c Release
 dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release --no-build -o ./artifacts
 
 # Payload sanity — these three must always hold
-unzip -l ./artifacts/*.nupkg | grep -c staticwebassets/              # 19
+unzip -l ./artifacts/*.nupkg | grep -c staticwebassets/              # 17
 unzip -l ./artifacts/*.nupkg | grep -cE "package-lock|backoffice/"   # 0
 unzip -p ./artifacts/*.nupkg staticwebassets/App_Plugins/Umbraco.Community.UmbraDesktop/umbraco-package.json | grep version   # not "GetsGenerated"
 ```
