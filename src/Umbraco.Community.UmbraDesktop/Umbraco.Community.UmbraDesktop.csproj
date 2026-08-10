@@ -28,7 +28,7 @@
 	  <!-- Versioning: MinVer derives the version from git tags (e.g. v1.0.0) -->
 	  <MinVerTagPrefix>v</MinVerTagPrefix>
 	  <MinVerAutoIncrement>minor</MinVerAutoIncrement>
-	  <MinVerMinimumMajorMinor>1.0</MinVerMinimumMajorMinor>
+	  <MinVerMinimumMajorMinor>17.0</MinVerMinimumMajorMinor>
 
 	  <!-- Symbols + SourceLink: consumers can debug into the source at the exact built commit -->
 	  <IncludeSymbols>true</IncludeSymbols>

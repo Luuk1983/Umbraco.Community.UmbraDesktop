@@ -1,8 +1,8 @@
-# v1.0 Release Preparation Implementation Plan
+# First Release Preparation Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn the working UmbraDesktop package into a publishable v1.0 — a package that actually contains its frontend, with real documentation, MinVer tag-driven versioning, CI, NuGet trusted publishing, an Umbraco Marketplace listing, and a protected `main`.
+**Goal:** Turn the working UmbraDesktop package into a publishable first release (`v17.0.0`) — a package that actually contains its frontend, with real documentation, MinVer tag-driven versioning, CI, NuGet trusted publishing, an Umbraco Marketplace listing, and a protected `main`.
 
 **Architecture:** No product code changes. This is packaging, documentation and repository configuration, modelled on [`Umbraco.Community.AdvancedPermissions`](https://github.com/Luuk1983/Umbraco.Community.AdvancedPermissions). The design is [`docs/design/2026-08-07-v1-release-preparation-design.md`](../design/2026-08-07-v1-release-preparation-design.md). One critical defect discovered during planning (the package ships no frontend) is fixed first, because every later verification depends on a correct package.
 
@@ -548,10 +548,10 @@ Replace the first `<PropertyGroup>` with:
 	  <PackageReadmeFile>README.md</PackageReadmeFile>
 	  <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
 
-	  <!-- Versioning: MinVer derives the version from git tags (e.g. v1.0.0) -->
+	  <!-- Versioning: MinVer derives the version from git tags (e.g. v17.0.0) -->
 	  <MinVerTagPrefix>v</MinVerTagPrefix>
 	  <MinVerAutoIncrement>minor</MinVerAutoIncrement>
-	  <MinVerMinimumMajorMinor>1.0</MinVerMinimumMajorMinor>
+	  <MinVerMinimumMajorMinor>17.0</MinVerMinimumMajorMinor>
 
 	  <!-- Symbols + SourceLink: consumers can debug into the source at the exact built commit -->
 	  <IncludeSymbols>true</IncludeSymbols>
@@ -683,7 +683,7 @@ dotnet pack src/Umbraco.Community.UmbraDesktop/ -c Release --no-build -o ./artif
 ls ./artifacts/
 ```
 
-Expected: **two** files — `Umbraco.Community.UmbraDesktop.1.0.0-alpha.0.<n>.nupkg` and a matching `.snupkg`. The `1.0.0-alpha.0.<n>` version is MinVer working correctly: no `v*` tag exists yet, so it floors at `MinVerMinimumMajorMinor` and marks the build as a prerelease.
+Expected: **two** files — `Umbraco.Community.UmbraDesktop.17.0.0-alpha.0.<n>.nupkg` and a matching `.snupkg`. The `17.0.0-alpha.0.<n>` version is MinVer working correctly: no `v*` tag exists yet, so it floors at `MinVerMinimumMajorMinor` and marks the build as a prerelease.
 
 - [ ] **Step 8: Verify the version was stamped into the manifest**
 
@@ -1106,7 +1106,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
 ```
 
-`prerelease` keys off a hyphen in the tag name, so `v1.0.0-beta.1` is published as a prerelease automatically while `v1.0.0` is not. `dotnet nuget push` uploads the matching `.snupkg` alongside the `.nupkg`.
+`prerelease` keys off a hyphen in the tag name, so `v17.0.0-beta.1` is published as a prerelease automatically while `v17.0.0` is not. `dotnet nuget push` uploads the matching `.snupkg` alongside the `.nupkg`.
 
 - [ ] **Step 2: Commit**
 
@@ -1330,8 +1330,8 @@ Proves the whole pipeline on a throwaway prerelease rather than on the 1.0 tag.
 
 ```bash
 git checkout main && git pull
-git tag v1.0.0-beta.1
-git push origin v1.0.0-beta.1
+git tag v17.0.0-beta.1
+git push origin v17.0.0-beta.1
 ```
 
 - [ ] **Step 2: Watch the publish workflow**
@@ -1345,15 +1345,15 @@ Expected: every step green, including `Login to NuGet (trusted publishing)`. A f
 - [ ] **Step 3: Verify MinVer stamped the tag version**
 
 ```bash
-gh run view --log | grep -i "1.0.0-beta.1"
+gh run view --log | grep -i "17.0.0-beta.1"
 ```
 
-Expected: the package version is exactly `1.0.0-beta.1` — no `-alpha` suffix and no build height.
+Expected: the package version is exactly `17.0.0-beta.1` — no `-alpha` suffix and no build height.
 
 - [ ] **Step 4: Verify the GitHub release**
 
 ```bash
-gh release view v1.0.0-beta.1
+gh release view v17.0.0-beta.1
 ```
 
 Expected: marked **Pre-release**, with the `.nupkg` attached and auto-generated notes.
@@ -1454,22 +1454,22 @@ Check the public repo page. Broken images here mean broken images on NuGet and t
 
 ```bash
 git checkout main && git pull
-git tag v1.0.0
-git push origin v1.0.0
+git tag v17.0.0
+git push origin v17.0.0
 ```
 
 - [ ] **Step 8: Verify the stable release**
 
 ```bash
 gh run watch
-gh release view v1.0.0
+gh release view v17.0.0
 ```
 
 Expected: the release is **not** marked pre-release, and nuget.org lists `1.0.0` as the latest stable version.
 
 - [ ] **Step 9: Curate the release notes**
 
-Auto-generated notes diff against the previous tag — `v1.0.0-beta.1` — so they will cover only the handful of commits since the beta rather than the whole 1.0 line. Edit the GitHub release body by hand to describe the actual v1.0 feature set, leaving the generated PR list beneath it.
+Auto-generated notes diff against the previous tag — `v17.0.0-beta.1` — so they will cover only the handful of commits since the beta rather than the whole 1.0 line. Edit the GitHub release body by hand to describe the actual v1.0 feature set, leaving the generated PR list beneath it.
 
 ---
 

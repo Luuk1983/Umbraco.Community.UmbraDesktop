@@ -1,6 +1,6 @@
-# v1.0 Release Preparation — Design
+# First Release Preparation — Design
 
-> Turn the working UmbraDesktop package into a publishable v1.0: real documentation, a real
+> Turn the working UmbraDesktop package into a publishable first release (`v17.0.0`): real documentation, a real
 > licence, tag-driven versioning, CI, NuGet trusted publishing, an Umbraco Marketplace listing,
 > and a protected `main`.
 
@@ -51,6 +51,7 @@ real code.
 |---|---|---|
 | Scope | Plumbing only | Product complete on `origin/main` |
 | Versioning | MinVer from `v*` git tags | Matches the reference; tag *is* the release |
+| Version scheme | Package major **tracks the Umbraco major**: first release is `v17.0.0`, first beta `v17.0.0-beta.1`, `MinVerMinimumMajorMinor=17.0` | House convention — both `AdvancedPermissions` (shipping 18.x for Umbraco 18) and `AdvancedPermissions.AI` (floor 17.0) do this. Consumers read compatibility off the major. Supersedes the earlier `v1.0.0` plan; the owner sets tags manually, so the scheme is a labelling convention rather than a build constraint |
 | Umbraco range | `[17.0.0,18.0.0)` | Widest honest v17 range (see risk R1) |
 | Ownership files | `CODEOWNERS` only | No `CONTRIBUTING.md`, no `CONTRIBUTORS.md` |
 | `RELEASE.md` | Not included | — |
@@ -88,7 +89,7 @@ Two localization mechanisms are live at once, and one of them is dead:
 
 The aliases differ, so nothing collides, and Umbraco merges dictionaries by area/key — this is
 dead weight rather than a bug. But shipping a manifest that advertises two localization
-extensions containing nothing is not something a 1.0 should do.
+extensions containing nothing is not something a first release should do.
 
 **Action:** delete `backoffice/public/localization/` and remove the two `Localize.En`/`Localize.Nl`
 entries from `backoffice/public/umbraco-package.json`. The `bundle` entry and the real
@@ -148,10 +149,10 @@ verification depends on it.
 <RepositoryUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</RepositoryUrl>
 <PackageProjectUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</PackageProjectUrl>
 
-<!-- Versioning: MinVer derives the version from git tags (e.g. v1.0.0) -->
+<!-- Versioning: MinVer derives the version from git tags (e.g. v17.0.0) -->
 <MinVerTagPrefix>v</MinVerTagPrefix>
 <MinVerAutoIncrement>minor</MinVerAutoIncrement>
-<MinVerMinimumMajorMinor>1.0</MinVerMinimumMajorMinor>
+<MinVerMinimumMajorMinor>17.0</MinVerMinimumMajorMinor>
 
 <!-- Symbols + SourceLink: consumers can debug into the source at the exact built commit -->
 <IncludeSymbols>true</IncludeSymbols>
@@ -210,7 +211,7 @@ stamp.
 
 **Why this matters.** A floating `17.*` is resolved at restore time and NuGet stamps the
 *resolved* version into the published nuspec as the minimum, with **no upper bound**. Today that
-resolves to **17.5.3**, so a v1.0 published as-is would declare `>= 17.5.3` — refusing to install
+resolves to **17.5.3**, so a first release published as-is would declare `>= 17.5.3` — refusing to install
 on Umbraco 17.0–17.4 while simultaneously claiming to support 18, 19 and beyond.
 
 Add `PackageVersion` entries for `MinVer` and `Microsoft.SourceLink.GitHub`.
@@ -277,7 +278,7 @@ Same build sequence, then:
     prerelease: ${{ contains(github.ref_name, '-') }}
 ```
 
-`prerelease` keys off a hyphen in the tag, so `v1.0.0-beta.1` publishes as a prerelease
+`prerelease` keys off a hyphen in the tag, so `v17.0.0-beta.1` publishes as a prerelease
 automatically. The `.snupkg` is pushed alongside the `.nupkg` by `dotnet nuget push`.
 
 ### 6.3 Manual steps (owner-only; documented, not automated)
@@ -413,7 +414,7 @@ They hot-link via
 `raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/…`,
 which resolves only once the repo is public — by then it will be.
 
-**Adding the screenshots is a release blocker for `v1.0.0`, not for `v1.0.0-beta.1`.**
+**Adding the screenshots is a release blocker for `v17.0.0`, not for `v17.0.0-beta.1`.**
 
 ---
 
@@ -455,13 +456,13 @@ the repo is public.
 2. **Make the repo public.**
 3. Apply repo settings + branch protection ruleset (§9).
 4. Complete the nuget.org and environment/secret setup (§6.3).
-5. Tag **`v1.0.0-beta.1`** — proves trusted publishing, MinVer stamping, the GitHub release and
+5. Tag **`v17.0.0-beta.1`** — proves trusted publishing, MinVer stamping, the GitHub release and
    the Marketplace tag on a throwaway prerelease.
 6. Verify: package installs into the TestInstance, nupkg contents correct, dependency ranges
    correct, `umbraco-package.json` version stamped, Marketplace listing renders.
 7. **Capture and commit the screenshots**, then replace the README TODO blockquote and populate
    the Marketplace `Screenshots` array.
-8. Tag **`v1.0.0`**.
+8. Tag **`v17.0.0`**.
 
 ---
 
@@ -487,8 +488,8 @@ raising the floor.
 
 **R3 — Screenshots deferred — CLOSED, planned.** The repo goes public without screenshots so the
 pipeline can be tested; README and Marketplace listing carry TODO markers and an empty
-`Screenshots` array rather than broken image links (§7.3). Adding them blocks `v1.0.0` but not
-`v1.0.0-beta.1`.
+`Screenshots` array rather than broken image links (§7.3). Adding them blocks `v17.0.0` but not
+`v17.0.0-beta.1`.
 
 **R5 — The README's third-party section is the easiest place to overpromise.** v1 has no runtime
 extension point for custom apps; the catalogue is compiled-in. Wording must describe the
