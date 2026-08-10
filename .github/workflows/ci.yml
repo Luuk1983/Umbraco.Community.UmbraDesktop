@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history needed for MinVer
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Restore dependencies
+        run: dotnet restore src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj
+
+      - name: Install frontend dependencies
+        working-directory: src/Umbraco.Community.UmbraDesktop
+        run: npm ci
+
+      - name: Test frontend
+        working-directory: src/Umbraco.Community.UmbraDesktop
+        run: npm test
+
+      # Must run before dotnet build/pack: wwwroot/App_Plugins is gitignored, so a clean
+      # checkout would otherwise pack a package with no frontend in it at all.
+      - name: Build frontend
+        working-directory: src/Umbraco.Community.UmbraDesktop
+        run: npm run build
+
+      - name: Build
+        run: dotnet build src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-restore
+
+      - name: Pack
+        run: dotnet pack src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-build --output ./artifacts
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: ./artifacts/*.nupkg
+          retention-days: 7

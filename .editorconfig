@@ -1,0 +1,29 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+# C# / .NET
+[*.{cs,csx}]
+indent_size = 4
+
+# Project files
+[*.{csproj,props,targets,xml}]
+indent_size = 2
+
+# Frontend
+[*.{ts,tsx,js,jsx,json,html,css}]
+indent_size = 2
+
+# Markdown — preserve trailing whitespace (used for line breaks)
+[*.md]
+trim_trailing_whitespace = false
+indent_size = 2
+
+# YAML
+[*.{yml,yaml}]
+indent_size = 2

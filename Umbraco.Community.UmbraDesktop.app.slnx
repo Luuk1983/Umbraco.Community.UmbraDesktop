@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/Solution files/">
     <File Path=".gitignore" />
-    <File Path="readme.md" />
+    <File Path="README.md" />
   </Folder>
   <Folder Name="/Solution files/.github/">
     <File Path=".github/copilot-instructions.md" />

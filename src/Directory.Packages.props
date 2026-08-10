@@ -5,9 +5,13 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<!-- Extension package dependencies -->
-		<PackageVersion Include="Umbraco.Cms.Api.Common" Version="17.*" />
-		<PackageVersion Include="Umbraco.Cms.Core" Version="17.*" />
+		<PackageVersion Include="Umbraco.Cms.Api.Common" Version="[17.0.0,18.0.0)" />
+		<PackageVersion Include="Umbraco.Cms.Core" Version="[17.0.0,18.0.0)" />
 		<PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
+
+		<!-- Build-time only: versioning and source-link -->
+		<PackageVersion Include="MinVer" Version="7.0.0" />
+		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
 
 		<!-- Test instance dependencies -->
 		<PackageVersion Include="Umbraco.Cms" Version="17.*" />

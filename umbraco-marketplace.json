@@ -1,0 +1,29 @@
+{
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "Title": "UmbraDesktop",
+  "Category": "Editor Tools",
+  "AlternateCategory": "Developer Tools",
+  "Description": "An OS-style windowed desktop for the Umbraco backoffice. Open content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side. Includes a grouped app launcher with pinnable favourites, a taskbar, and per-app window chrome, all styled to match the backoffice.",
+  "PackageType": "Package",
+  "LicenseTypes": ["Free"],
+  "AuthorDetails": {
+    "Name": "Luuk Peters",
+    "Description": "Umbraco developer building packages that extend the CMS with enterprise-grade features.",
+    "Url": "https://github.com/Luuk1983",
+    "SyncContributorsFromRepository": true
+  },
+  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop",
+  "IssueTrackerUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues",
+  "Tags": [
+    "desktop",
+    "windows",
+    "multitasking",
+    "productivity",
+    "backoffice",
+    "launcher",
+    "side by side",
+    "workspace",
+    "editor tools"
+  ],
+  "Screenshots": []
+}

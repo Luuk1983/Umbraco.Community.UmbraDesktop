@@ -1,0 +1,66 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  id-token: write # Required for NuGet trusted publishing
+  contents: write # Required for creating GitHub releases
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history needed for MinVer
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Restore dependencies
+        run: dotnet restore src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj
+
+      - name: Install frontend dependencies
+        working-directory: src/Umbraco.Community.UmbraDesktop
+        run: npm ci
+
+      - name: Test frontend
+        working-directory: src/Umbraco.Community.UmbraDesktop
+        run: npm test
+
+      - name: Build frontend
+        working-directory: src/Umbraco.Community.UmbraDesktop
+        run: npm run build
+
+      - name: Build
+        run: dotnet build src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-restore
+
+      - name: Pack
+        run: dotnet pack src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-build --output ./artifacts
+
+      - name: Login to NuGet (trusted publishing)
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to NuGet
+        run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./artifacts/*.nupkg
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

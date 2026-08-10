@@ -1,0 +1,108 @@
+<img src="https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop/Package-image_128_128.png" alt="UmbraDesktop" width="128" height="128">
+
+# UmbraDesktop
+
+An OS-style windowed desktop for the Umbraco backoffice — open your tools as real windows and work in several of them side by side.
+
+[![NuGet](https://img.shields.io/nuget/v/Umbraco.Community.UmbraDesktop)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop) [![NuGet Downloads](https://img.shields.io/nuget/dt/Umbraco.Community.UmbraDesktop)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop) [![License](https://img.shields.io/github/license/Luuk1983/Umbraco.Community.UmbraDesktop)](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/LICENSE)
+
+---
+
+The Umbraco backoffice shows you one thing at a time. One section is active, one workspace fills the screen. That is fine for linear editing, but it fights you the moment two tools are meant to be looked at *together*.
+
+UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections and tools as floating windows you can move, resize and place next to each other — content beside media, or a settings editor beside the thing it affects.
+
+> **TODO:** screenshots pending.
+
+## Features
+
+- **Work side by side.** Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth.
+- **Real windows.** Drag, resize, minimise, maximise, and double-click a title bar to fill the desktop. Each window remembers its own place.
+- **A launcher that stays out of the way.** Apps are grouped into Editing, Development, Users & Members, Diagnostics and System, so you find things by what they do.
+- **Pin what you use.** Pin your regulars to Favourites and they sit at the top of the launcher.
+- **A taskbar.** Every open window gets a button — click to focus, click again to minimise.
+- **Looks like Umbraco.** The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.
+- **Nothing new to learn.** The windows contain the backoffice you already know — the same trees, the same editors, the same shortcuts.
+
+## Installation & configuration
+
+### Prerequisites
+
+- Umbraco **17**
+- **.NET 10**
+
+### Install
+
+```bash
+dotnet add package Umbraco.Community.UmbraDesktop
+```
+
+### Grant the Desktop section to a user group
+
+**This step is required — until you do it, nothing appears.**
+
+In **Settings → User Groups**, pick a group and grant it access to the **Desktop** section, then have those users sign out and back in.
+
+That single grant does two things: it makes the desktop reachable, and it reveals the launcher in the backoffice header. Users without it see the backoffice exactly as before.
+
+### What each user sees
+
+UmbraDesktop grants no access of its own. Every app in the launcher is gated on the section it comes from, so a user only ever sees apps for sections they could already reach. Give an editor access to Content and Media and those are the apps they get.
+
+## How to use it
+
+Click the **desktop icon in the backoffice header**, top right, between Help and your avatar. That is the way in — the Desktop section's own tab in the section bar is deliberately hidden, so it does not clutter the list.
+
+From the launcher:
+
+- **Click an app** to open it in a window.
+- **Hover an app and click the pin** to add it to Favourites, which sit at the top.
+- **Drag a title bar** to move a window; **drag an edge or corner** to resize; **double-click the title bar** to maximise.
+- **Use the taskbar** at the bottom to switch between open windows.
+- **Exit** from the launcher's footer to return to the classic backoffice.
+
+Several apps can be open at once, and some — like the content editor and media library — can be opened more than once, so you can compare two documents side by side.
+
+## Technical explanation
+
+### Windows are iframes
+
+Each window hosts an `<iframe>` deep-linked into the backoffice on the same origin. That matters because the Umbraco router reads a single global `window.location` and patches History globally, so only one route tree can own the URL. An iframe has its own `window`, `location`, History and event bus — which is what makes genuinely independent navigation per window possible without any change to Umbraco core.
+
+Authentication is shared automatically through the existing secure cookies, so each window boots an authenticated backoffice like an extra tab.
+
+Windows stay fresh through Umbraco's own machinery rather than a custom sync layer: each iframe runs its own observers and server-events connection, so saving in one window causes the others to refresh themselves.
+
+### How much chrome a window keeps
+
+A window should not show the entire backoffice shell inside a small frame. Because the iframe is same-origin, UmbraDesktop injects a stylesheet into it, keyed off stable custom-element tags. Three profiles decide how much survives:
+
+| Profile | Keeps | Typical use |
+|---|---|---|
+| `full-section` | Section sidebar and tree, without the top header | Tools where the tree *is* the tool — Content, Media, Document Types |
+| `workspace-only` | Just the workspace | Self-contained editors — Log Viewer, Webhooks |
+| `bare` | The target view only | Single-focus dashboards — Examine, Health Check, Profiling |
+
+### The app catalogue
+
+Which apps appear, and how they present themselves, is defined by a curated catalogue in `backoffice/src/desktop/catalogue/`. Each entry points at a registered extension by alias — its URL is inferred from the registry rather than hardcoded — and carries display detail: name, icon, group, chrome profile, default and minimum window size, whether multiple instances are allowed, and sort weight.
+
+### Apps that aren't in the catalogue
+
+Any section a user can reach that no catalogue entry covers still shows up. It is derived automatically as an *uncertified* app: default `full-section` chrome, a generic icon, and placement in the reserved **More** group. Nothing is hidden from you just because it hasn't been curated.
+
+Sections listed in `catalogue/exclusions.ts` never appear this way — seeded with UmbraDesktop's own section, so you cannot open the desktop inside the desktop.
+
+### Custom and third-party apps
+
+If your package registers a section, it appears in the launcher automatically for users permitted to that section, in the **More** group with default chrome and a generic icon. No work required.
+
+For curated placement — a custom icon, a friendly name, a specific group, a different chrome profile or window sizing — the app needs an entry in `backoffice/src/desktop/catalogue/`. That means opening a pull request against this repository; there is no runtime registration point.
+
+## Documentation
+
+The full design, including the research behind the iframe approach, is in [`docs/design/umbradesktop-design.md`](docs/design/umbradesktop-design.md).
+
+## License
+
+[MIT](LICENSE)

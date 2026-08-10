@@ -9,31 +9,66 @@
 	  <ContentTargetFolders>.</ContentTargetFolders>
 	  <Product>Umbraco.Community.UmbraDesktop</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop</PackageId>
-	  <Title>Umbraco.Community.UmbraDesktop</Title>
-	  <Description>An OS-style windowed desktop for the Umbraco backoffice</Description>
-	  <PackageTags>umbraco package backoffice desktop windows</PackageTags>
+	  <Title>UmbraDesktop</Title>
+	  <Description>An OS-style windowed desktop for the Umbraco backoffice. Launch content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side — edit on the left while you watch the result on the right. Includes a grouped app launcher with pinnable favourites, a taskbar, and per-app window chrome, all styled to match the backoffice.</Description>
+	  <PackageTags>umbraco;backoffice;desktop;windows;multitasking;productivity;umbraco-marketplace</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop</RootNamespace>
-	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>
-	  <RepositoryUrl></RepositoryUrl>
+	  <Copyright>Copyright (c) Luuk Peters</Copyright>
+	  <PackageLicenseExpression>MIT</PackageLicenseExpression>
+	  <RepositoryType>git</RepositoryType>
+	  <RepositoryUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</RepositoryUrl>
+	  <PackageProjectUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</PackageProjectUrl>
 	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
 	  <PackageIcon>Package-image_128_128.png</PackageIcon>
-	  <VersionPrefix>1.0.0</VersionPrefix>
-	  <PackageReadmeFile>readme.md</PackageReadmeFile>
+	  <PackageReadmeFile>README.md</PackageReadmeFile>
 	  <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
+
+	  <!-- Versioning: MinVer derives the version from git tags. The package major tracks the
+	       Umbraco major, so the first release is v17.0.0 (not v1.0.0). -->
+	  <MinVerTagPrefix>v</MinVerTagPrefix>
+	  <MinVerAutoIncrement>minor</MinVerAutoIncrement>
+	  <MinVerMinimumMajorMinor>17.0</MinVerMinimumMajorMinor>
+
+	  <!-- Symbols + SourceLink: consumers can debug into the source at the exact built commit -->
+	  <IncludeSymbols>true</IncludeSymbols>
+	  <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	  <PublishRepositoryUrl>true</PublishRepositoryUrl>
+	  <EmbedUntrackedSources>true</EmbedUntrackedSources>
+	  <DeterministicSourcePaths Condition="'$(GITHUB_ACTIONS)' == 'true'">true</DeterministicSourcePaths>
   </PropertyGroup>
 
-	<!-- Updates the version in the umbraco-package.json file to the same version as the NuGet package -->
-	<Target Name="UpdateUmbracoPackageJsonVersion" AfterTargets="Build">
-		<PropertyGroup>
-			<UmbracoPackageJsonPath>$(ProjectDir)wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\umbraco-package.json</UmbracoPackageJsonPath>
-		</PropertyGroup>
-		<Message Text="Checking for umbraco-package.json at: $(UmbracoPackageJsonPath)" Importance="High" />
-		<JsonPathUpdateValue JsonFile="$(UmbracoPackageJsonPath)" Path="$.version" Value="&quot;$(VersionPrefix)&quot;" Condition="Exists('$(UmbracoPackageJsonPath)')" />
-		<Message Text="✅ Updated umbraco-package.json version to $(VersionPrefix)." Importance="High" Condition="Exists('$(UmbracoPackageJsonPath)')" />
-		<Message Text="⚠️ Skipped updating umbraco-package.json version - file not found at $(UmbracoPackageJsonPath)." Importance="High" Condition="!Exists('$(UmbracoPackageJsonPath)')" />
-	</Target>	
+	<!-- Sync umbraco-package.json with the MinVer-derived version at build time. The source file
+	     keeps "GetsGenerated" as its placeholder; this stamps the built copy in wwwroot. -->
+	<UsingTask TaskName="SetJsonVersion"
+	           TaskFactory="RoslynCodeTaskFactory"
+	           AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<FilePath ParameterType="System.String" Required="true" />
+			<VersionValue ParameterType="System.String" Required="true" />
+		</ParameterGroup>
+		<Task>
+			<Code Type="Fragment" Language="cs"><![CDATA[
+var text = System.IO.File.ReadAllText(FilePath);
+text = System.Text.RegularExpressions.Regex.Replace(
+    text, @"""version"":\s*""[^""]*""", $@"""version"": ""{VersionValue}""");
+System.IO.File.WriteAllText(FilePath, text);
+Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionValue}");
+      ]]></Code>
+		</Task>
+	</UsingTask>
+
+	<PropertyGroup>
+		<UmbracoPackageJsonPath>$(ProjectDir)wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\umbraco-package.json</UmbracoPackageJsonPath>
+	</PropertyGroup>
+
+	<Target Name="SyncUmbracoPackageVersion" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != ''">
+		<SetJsonVersion FilePath="$(UmbracoPackageJsonPath)" VersionValue="$(MinVerVersion)"
+		                Condition="Exists('$(UmbracoPackageJsonPath)')" />
+		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'npm run build' before packing, or the package will ship an unstamped version."
+		         Condition="!Exists('$(UmbracoPackageJsonPath)')" />
+	</Target>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
@@ -46,14 +81,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Legacy top-level App_Plugins folder is not part of this project. -->
     <Compile Remove="App_Plugins\**" />
-    <Compile Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
     <Content Remove="App_Plugins\**" />
-    <Content Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
     <EmbeddedResource Remove="App_Plugins\**" />
-    <EmbeddedResource Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
     <None Remove="App_Plugins\**" />
-    <None Remove="wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\**" />
+
+    <!-- Development-only files. ContentTargetFolders is ".", so anything left as Content packs
+         to the package root; without these the package ships package-lock.json and the
+         TypeScript sources' config instead of just the built output. -->
+    <Content Remove="backoffice\**" />
+    <Content Remove="package.json" />
+    <Content Remove="package-lock.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -64,13 +103,12 @@
   </ItemGroup>
 
 	<ItemGroup>
-		<None Include="readme.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <PackageReference Include="MinVer" PrivateAssets="all" />
+	  <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
 	  <PackageReference Include="Umbraco.Cms.Api.Common" />
 	  <PackageReference Include="Umbraco.Cms.Core" />
 	  <PackageReference Include="Umbraco.JsonSchema.Extensions" />
