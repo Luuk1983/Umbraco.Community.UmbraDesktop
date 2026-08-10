@@ -25,7 +25,8 @@
 	  <PackageReadmeFile>README.md</PackageReadmeFile>
 	  <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
 
-	  <!-- Versioning: MinVer derives the version from git tags (e.g. v1.0.0) -->
+	  <!-- Versioning: MinVer derives the version from git tags. The package major tracks the
+	       Umbraco major, so the first release is v17.0.0 (not v1.0.0). -->
 	  <MinVerTagPrefix>v</MinVerTagPrefix>
 	  <MinVerAutoIncrement>minor</MinVerAutoIncrement>
 	  <MinVerMinimumMajorMinor>17.0</MinVerMinimumMajorMinor>
