@@ -1,6 +1,7 @@
 import type { UmbraDesktopSettings, UmbraDesktopWallpaperRef } from './types';
 import type { UmbraDesktopWallpaperView } from './wallpaper-view';
 import { resolveWallpaper, wallpaperThumbUrl } from './wallpaper';
+import { togglePinned } from './pinned';
 import { UMBRADESKTOP_DEFAULT_SETTINGS, parseSettings, serialiseSettings, settingsStorageKey } from './settings-store';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from './settings.context-token';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
@@ -40,6 +41,9 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   /** The current wallpaper, resolved to paintable URLs. */
   public readonly wallpaper = this.#view.asObservable();
 
+  /** Aliases of the apps pinned to Favourites, in pin order. */
+  public readonly pinned = this.#settings.asObservablePart((settings) => settings.pinned);
+
   #imaging: UmbImagingRepository;
 
   /** The current user's id, once known. Until then nothing is persisted. */
@@ -64,7 +68,7 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    * @param wallpaper The wallpaper to use.
    */
   public setWallpaper(wallpaper: UmbraDesktopWallpaperRef): void {
-    this.#apply(wallpaper);
+    this.#update({ wallpaper });
     this.#view.setValue({
       ref: wallpaper,
       background: resolveWallpaper(wallpaper),
@@ -90,7 +94,7 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
 
     if (!url) return false;
 
-    this.#apply(ref);
+    this.#update({ wallpaper: ref });
     this.#view.setValue({
       ref,
       background: resolveWallpaper(ref, url),
@@ -100,11 +104,20 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   }
 
   /**
-   * Store a wallpaper choice, in memory and on disk.
-   * @param wallpaper The wallpaper to store.
+   * Pin an app to Favourites, or unpin it if it is already pinned.
+   * @param alias The app alias to toggle.
    */
-  #apply(wallpaper: UmbraDesktopWallpaperRef): void {
-    const settings: UmbraDesktopSettings = { v: 1, wallpaper };
+  public togglePin(alias: string): void {
+    this.#update({ pinned: togglePinned(this.#settings.getValue().pinned, alias) });
+  }
+
+  /**
+   * Merge a change into the settings, in memory and on disk. Merging rather than replacing so
+   * that changing one setting can never drop another.
+   * @param partial The fields to change.
+   */
+  #update(partial: Partial<Omit<UmbraDesktopSettings, 'v'>>): void {
+    const settings: UmbraDesktopSettings = { ...this.#settings.getValue(), ...partial };
     this.#settings.setValue(settings);
     this.#persist(settings);
   }

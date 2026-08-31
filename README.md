@@ -19,7 +19,7 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 - **Work side by side.** Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth.
 - **Real windows.** Drag, resize, minimise, maximise, and double-click a title bar to fill the desktop. Each window remembers its own place.
 - **A launcher that stays out of the way.** Apps are grouped into Editing, Development, Users & Members, Diagnostics and System, so you find things by what they do.
-- **Pin what you use.** Pin your regulars to Favourites and they sit at the top of the launcher.
+- **Pin what you use.** Pin your regulars to Favourites and they sit at the top of the launcher. Your pins are remembered per user.
 - **A taskbar.** Every open window gets a button — click to focus, click again to minimise.
 - **Choose your wallpaper.** Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user.
 - **Looks like Umbraco.** The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.

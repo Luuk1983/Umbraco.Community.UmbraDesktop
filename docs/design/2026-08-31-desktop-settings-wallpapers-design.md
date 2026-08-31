@@ -67,6 +67,7 @@ migration:
 interface UmbraDesktopSettings {
   v: 1;
   wallpaper: UmbraDesktopWallpaperRef;
+  pinned: string[]; // launcher Favourites, in pin order
 }
 
 /** Where a wallpaper comes from. */
@@ -82,6 +83,12 @@ JSON, unknown `v`, a `builtin` id that no longer exists (an image dropped in an 
 `UMBRADESKTOP_DEFAULT_WALLPAPER_ID`. A blank or broken desktop is a far worse failure than a
 silently reset preference. `localStorage` access is wrapped: private-mode and
 storage-disabled browsers fall back to in-memory state for the session.
+
+Within a payload this build understands, **each field recovers independently** — an unreadable
+wallpaper reference must not cost the user their Favourites, or vice versa. Writes go through a
+merge rather than a replace, for the same reason. `pinned` is seeded with
+`['content', 'media', 'log-viewer']` only when *nothing* is stored: a user who deliberately
+unpins everything keeps an empty list rather than having the seed reappear.
 
 ### Context
 
@@ -302,6 +309,7 @@ DOM helper** (`chrome-injector`). This feature follows that line, tests first:
 |---|---|
 | `settings-store` | Round-trip; missing key; malformed JSON; unknown `v`; unknown `builtin` id; each falls back to the default. Per-user key isolation. `localStorage` throwing (private mode) degrades to in-memory. |
 | `wallpaper` | Each `kind` resolves to the right URL and average colour; `none` yields no image; unknown ids fall through to the default. |
+| `pinned` | Toggling appends when absent and removes when present, preserves pin order, and never mutates its input. |
 | `wallpaper-naming` | `aurora-flow.png` → `{ id: 'aurora-flow', name: 'Aurora Flow' }`; multi-hyphen names; non-image files ignored. |
 
 Modal elements are not unit-tested, consistent with the current suite. They are verified by
@@ -328,5 +336,3 @@ then check a Media-sourced image and a deleted-media fallback.
 - **Roaming** settings across browsers or devices (D2).
 - Per-wallpaper **fit modes**, tiling, or a configurable scrim.
 - Wallpaper on the **header-app launcher** or anywhere outside the desktop section.
-- **Persisting pinned favourites** — still in-session only. Now that a settings store exists it
-  is a small follow-up, but it is not this change.

@@ -18,6 +18,8 @@ export interface UmbraDesktopSettings {
   v: 1;
   /** The user's chosen wallpaper. */
   wallpaper: UmbraDesktopWallpaperRef;
+  /** Aliases of the apps pinned to Favourites, in pin order. */
+  pinned: string[];
 }
 
 /** What the desktop element needs in order to paint a wallpaper. */
