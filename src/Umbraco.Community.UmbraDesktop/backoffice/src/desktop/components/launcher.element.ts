@@ -1,6 +1,7 @@
 import type { UmbraDesktopApp, UmbraDesktopLauncherGroup } from '../types';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token.js';
+import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -79,6 +80,11 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   /** Open the native backoffice search modal. */
   async #openSearch() {
     await umbOpenModal(this, UMB_SEARCH_MODAL).catch(() => undefined);
+  }
+
+  /** Open the desktop settings dialog (wallpaper today, more later). */
+  async #openSettings() {
+    await umbOpenModal(this, UMBRADESKTOP_SETTINGS_MODAL).catch(() => undefined);
   }
 
   /** Open the native current-user modal (profile, MFA, etc.). */
@@ -175,9 +181,9 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         <div class="actions">
           <button
             class="fbtn"
-            disabled
             title=${this.localize.term('umbraDesktop_desktopSettings')}
-            aria-label=${this.localize.term('umbraDesktop_desktopSettings')}>
+            aria-label=${this.localize.term('umbraDesktop_desktopSettings')}
+            @click=${this.#openSettings}>
             <umb-icon name="icon-settings"></umb-icon>
           </button>
           <button

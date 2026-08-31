@@ -157,13 +157,21 @@ export interface UmbraDesktopBuiltInWallpaper {
 }
 ```
 
-Encoding is **idempotent** — a source whose output is newer than it is skipped — so an
-unchanged build costs nothing. Outputs are committed alongside the built JS the repo already
-tracks, so CI and `dotnet pack` never need `sharp` installed. The script scans only the top
-level of `wallpapers-src/`, so a subfolder is a safe place to stage work in progress.
+Encoding is **idempotent** — a source whose output is newer than it is skipped — so a local
+rebuild costs nothing. The check is mtime-based, and git does not preserve mtimes, so a fresh
+clone (CI included) re-encodes everything once; `sharp` is deterministic, so that produces no
+diff. The script scans only the top level of `wallpapers-src/`, so a subfolder is a safe place
+to stage work in progress.
 
-`sharp` is added as a **devDependency**. Only the filename→slug/name derivation is non-trivial,
-so it lives in `scripts/wallpaper-naming.mjs` as plain JS and is unit-tested (§10).
+`public/wallpapers/` **is committed**, so the images are reviewable and a developer who never
+runs the wallpaper build still has them. `wwwroot/App_Plugins/` is **not** — `.gitignore:365`
+excludes it, and vite regenerates it from `public/` on every build. CI runs `npm ci` before
+`npm run build`, so `sharp` is present there as a devDependency.
+
+`sharp` is added as a **devDependency**, and the encode is chained into `npm run build` and
+`npm run watch` (also exposed on its own as `npm run wallpapers`). Only the filename→slug/name
+derivation is non-trivial, so it lives in `scripts/wallpaper-naming.mjs` as plain JS and is
+unit-tested (§10).
 
 ---
 
@@ -192,9 +200,16 @@ OK/Cancel, because selections apply immediately, consistent with the rest of the
 selected; **None** first. Picking closes the sidebar and returns to the settings dialog with
 the thumbnail updated.
 
-**Media library** — the core `UMB_MEDIA_PICKER_MODAL`, with its `filter` restricted to image
-media types so a PDF can't be chosen as a wallpaper. It returns
-`{ selection: Array<string | null> }`; we take the first entry as the media unique.
+**Media library** — the core `UMB_MEDIA_PICKER_MODAL`, with `pickableFilter` excluding folders
+and items the user has no access to. It returns `{ selection: Array<string | null> }`; we take
+the first entry as the media unique.
+
+Restricting the picker to *image* types is deliberately not attempted: core does it by first
+resolving the site's folder and image media types over the network, which is more machinery than
+this earns. Instead the choice is validated on the way back — `setMediaWallpaper` resolves the
+resized URLs **before** storing anything, and a file Umbraco cannot render as an image is
+reported through a warning notification with nothing persisted. The alternative, storing a
+reference that silently resolves to the default forever after, would be a worse failure.
 
 Both modals are registered as `type: 'modal'` manifests in a new `settings/manifest.ts`, added
 to `bundle.manifests.ts`. New localization keys go into both `en.ts` and `nl.ts`.
@@ -300,7 +315,7 @@ then check a Media-sourced image and a deleted-media fallback.
 | # | Item | Note |
 |---|---|---|
 | W1 | Modal z-index above the desktop | The taskbar sits at `z-index: 1000000` and the desktop hides the backoffice header. `umbOpenModal` already works here — the launcher opens `UMB_SEARCH_MODAL` today — so modals render in the shell's container above the desktop. Confirm visually for the sidebar case. |
-| W2 | `sharp` on contributor machines | A native dependency. Mitigated by committing the outputs: only someone *adding* a wallpaper needs it to install successfully. |
+| W2 | `sharp` on contributor machines | A native dependency, and it now runs as part of `npm run build`, so a machine where it fails to install cannot build the frontend at all. Prebuilt binaries cover Windows/macOS/Linux on Node 22, which is what CI uses. |
 | W3 | Softness on large displays | Blueprint Core and Retro Swoosh have crisp edges and dot patterns that go soft upscaled to 2560px. Accepted — regenerating the sources isn't practical, and behind windows under a scrim it doesn't read. |
 | W4 | `UMB_MEDIA_PICKER_MODAL` shape across the v17 line | A soft coupling to a core modal token, same class of risk as R3 in the main design. The value type `{ selection }` is stable API. |
 

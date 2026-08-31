@@ -3,6 +3,8 @@ import { UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
 import { findChromeRoot } from '../chrome-injector';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
+import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
+import type { UmbraDesktopWallpaperView } from '../settings/wallpaper-view.js';
 import './window.element.js';
 import './taskbar.element.js';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
@@ -15,8 +17,13 @@ const OUTER_CHROME_STYLE_ID = 'umbradesktop-outer-chrome';
 export class UmbraDesktopDesktopElement extends UmbLitElement {
   #manager = new UmbraDesktopWindowManagerContext(this);
 
+  #settings = new UmbraDesktopSettingsContext(this);
+
   @state()
   private _windows: UmbraDesktopWindow[] = [];
+
+  @state()
+  private _wallpaper?: UmbraDesktopWallpaperView;
 
   constructor() {
     super();
@@ -24,6 +31,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     // catalogue context to the desktop subtree; nothing here consumes it directly.
     new UmbraDesktopAppCatalogueContext(this);
     this.observe(this.#manager.windows, (list) => (this._windows = list));
+    this.observe(this.#settings.wallpaper, (wallpaper) => (this._wallpaper = wallpaper));
   }
 
   /**
@@ -77,9 +85,26 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     }
   }
 
+  /**
+   * Inline background for the desktop surface. Returns an empty string when no image is set, so
+   * the gradient declared in `styles` shows through untouched.
+   *
+   * `cover` because the shipped images are 16:9 and the desktop rarely is: `contain` would
+   * letterbox and `100% 100%` would distort. The average colour sits underneath so there is no
+   * flash before the image decodes.
+   * @returns A CSS declaration string for the `style` attribute.
+   */
+  #wallpaperStyle(): string {
+    const background = this._wallpaper?.background;
+    if (!background?.url) return '';
+    const colour = background.averageColour ? `background-color:${background.averageColour};` : '';
+    return `${colour}background-image:url("${background.url}");background-size:cover;background-position:center;background-repeat:no-repeat;`;
+  }
+
   override render() {
+    const hasImage = !!this._wallpaper?.background.url;
     return html`
-      <div class="desktop">
+      <div class="desktop ${hasImage ? 'has-image' : ''}" style=${this.#wallpaperStyle()}>
         <div class="wallpaper-brand" aria-hidden="true" style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
           <umb-icon name="icon-umbraco"></umb-icon>
         </div>
@@ -119,6 +144,21 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
           var(--uui-color-header-background, #1b264f),
           color-mix(in srgb, var(--uui-color-header-background, #1b264f) 50%, black) 70%
         );
+      }
+      /* A modest scrim over an image wallpaper, so white windows and the taskbar keep their
+         separation from a light or busy background. Deliberately light: enough to rescue
+         Ribbon Candy and Retro Swoosh, not enough to flatten Golden Valley or push Ember Glow
+         to black. Painted before .surface in DOM order, so it stays under the windows. */
+      .desktop.has-image::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.12);
+        pointer-events: none;
+      }
+      /* The watermark reads as dirt on top of a photograph, so it belongs to the gradient only. */
+      .desktop.has-image .wallpaper-brand {
+        display: none;
       }
       /* A faint Umbraco mark watermarking the desktop. It lives behind the (transparent)
          window surface, so open windows always sit on top of it. */
