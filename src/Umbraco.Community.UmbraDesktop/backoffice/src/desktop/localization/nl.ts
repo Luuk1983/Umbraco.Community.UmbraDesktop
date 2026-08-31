@@ -19,6 +19,7 @@ export default {
     appWebhooks: 'Webhooks',
     groupEditing: 'Bewerken',
     groupDevelopment: 'Ontwikkeling',
+    groupSynchronisation: 'Synchronisatie',
     groupUsersMembers: 'Gebruikers & leden',
     groupDiagnostics: 'Diagnostiek',
     groupSystem: 'Systeem',

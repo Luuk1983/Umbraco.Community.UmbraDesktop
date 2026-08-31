@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "An OS-style windowed desktop for the Umbraco backoffice. Open content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side. Includes a grouped app launcher with pinnable favourites, a taskbar, and per-app window chrome, all styled to match the backoffice.",
+  "Description": "An OS-style windowed desktop for the Umbraco backoffice. Open content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side. Includes a grouped app launcher with pinnable apps, a taskbar, and per-app window chrome, all styled to match the backoffice.",
   "PackageType": "Package",
   "LicenseTypes": ["Free"],
   "AuthorDetails": {
@@ -25,5 +25,18 @@
     "workspace",
     "editor tools"
   ],
-  "Screenshots": []
+  "Screenshots": [
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png",
+      "Caption": "Content and media open as separate windows, side by side, with the taskbar below."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png",
+      "Caption": "The launcher: your pinned apps at the top, everything else grouped by what it does."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png",
+      "Caption": "The way in: the desktop icon in the backoffice header, between Help and your avatar."
+    }
+  ]
 }

@@ -127,7 +127,11 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     }
     const manifest = umbExtensionsRegistry.getByAlias(entry.ref) as ReferencedManifest | undefined;
     if (!manifest) {
-      console.warn(`[UmbraDesktop] Catalogue entry "${entry.alias}" references unknown extension "${entry.ref}".`);
+      // An `optional` entry references a package that need not be installed (uSync, …), so an
+      // absent manifest is the expected case there — drop the app without the noise.
+      if (!entry.optional) {
+        console.warn(`[UmbraDesktop] Catalogue entry "${entry.alias}" references unknown extension "${entry.ref}".`);
+      }
       return { entry, url: null, gateSectionAlias: entry.section ?? null, isSectionRoot: false };
     }
     const described = this.#describe(manifest, entry);

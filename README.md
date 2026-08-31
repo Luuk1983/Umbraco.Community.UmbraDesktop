@@ -18,8 +18,8 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 
 - **Work side by side.** Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth.
 - **Real windows.** Drag, resize, minimise, maximise, and double-click a title bar to fill the desktop. Each window remembers its own place.
-- **A launcher that stays out of the way.** Apps are grouped into Editing, Development, Users & Members, Diagnostics and System, so you find things by what they do.
-- **Pin what you use.** Pin your regulars to Favourites and they sit at the top of the launcher. Your pins are remembered per user.
+- **A launcher that stays out of the way.** Apps are grouped into Editing, Development, Synchronisation, Users & Members, Diagnostics and System, so you find things by what they do.
+- **Pin what you use.** Pin your regulars and they sit at the top of the launcher, under **Pinned**. Your pins are remembered per user.
 - **A taskbar.** Every open window gets a button — click to focus, click again to minimise.
 - **Choose your wallpaper.** Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user.
 - **Looks like Umbraco.** The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.
@@ -56,12 +56,12 @@ Click the **desktop icon in the backoffice header**, top right, between Help and
 
 <img src="https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png" alt="The backoffice header, top right: the desktop icon sits between Help and the user avatar." width="420">
 
-![The launcher, with pinned favourites at the top and the remaining apps grouped into Editing, Development, Users &amp; Members, Diagnostics and System.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png)
+![The launcher: a search box, a Pinned row at the top, and the remaining apps grouped into Editing, Development, Synchronisation, Users &amp; Members, Diagnostics and System.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png)
 
 From the launcher:
 
 - **Click an app** to open it in a window.
-- **Hover an app and click the pin** to add it to Favourites, which sit at the top.
+- **Hover an app and click the pin** to add it to **Pinned**, which sits at the top.
 - **Drag a title bar** to move a window; **drag an edge or corner** to resize; **double-click the title bar** to maximise.
 - **Use the taskbar** at the bottom to switch between open windows.
 - **Exit** from the launcher's footer to return to the classic backoffice.
@@ -121,6 +121,8 @@ Sections listed in `catalogue/exclusions.ts` never appear this way — seeded wi
 If your package registers a section, it appears in the launcher automatically for users permitted to that section, in the **More** group with default chrome and a generic icon. No work required.
 
 For curated placement — a custom icon, a friendly name, a specific group, a different chrome profile or window sizing — the app needs an entry in `backoffice/src/desktop/catalogue/`. That means opening a pull request against this repository; there is no runtime registration point.
+
+A curated entry for a package that not every install has is marked `optional`. Because it points at the package's own extension by alias, it resolves only where that package is registered, and stays silently absent everywhere else. **uSync** ships this way: install it and a uSync app appears in the **Synchronisation** group, opening its dashboard without the Settings tree beside it.
 
 ## Documentation
 

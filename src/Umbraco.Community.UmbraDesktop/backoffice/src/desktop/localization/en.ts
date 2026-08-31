@@ -21,6 +21,7 @@ export default {
     // group labels
     groupEditing: 'Editing',
     groupDevelopment: 'Development',
+    groupSynchronisation: 'Synchronisation',
     groupUsersMembers: 'Users & Members',
     groupDiagnostics: 'Diagnostics',
     groupSystem: 'System',

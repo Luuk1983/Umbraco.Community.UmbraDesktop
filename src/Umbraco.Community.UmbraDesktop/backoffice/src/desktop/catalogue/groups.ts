@@ -4,6 +4,7 @@ import type { UmbraDesktopGroup } from '../types';
 export const groups: UmbraDesktopGroup[] = [
   { alias: 'editing', label: '#umbraDesktop_groupEditing', weight: 10 },
   { alias: 'development', label: '#umbraDesktop_groupDevelopment', weight: 20 },
+  { alias: 'synchronisation', label: '#umbraDesktop_groupSynchronisation', weight: 25 },
   { alias: 'users-members', label: '#umbraDesktop_groupUsersMembers', weight: 30 },
   { alias: 'diagnostics', label: '#umbraDesktop_groupDiagnostics', weight: 40 },
   { alias: 'system', label: '#umbraDesktop_groupSystem', weight: 50 },
