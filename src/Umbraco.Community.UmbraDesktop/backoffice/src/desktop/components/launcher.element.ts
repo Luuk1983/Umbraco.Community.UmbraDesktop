@@ -1,27 +1,27 @@
 import type { UmbraDesktopApp, UmbraDesktopLauncherGroup } from '../types';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token.js';
+import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
+import type { UmbraDesktopSettingsContext } from '../settings/settings.context';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
-import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
-import { UMB_SEARCH_MODAL } from '@umbraco-cms/backoffice/search';
-import { UMB_CURRENT_USER_CONTEXT, UMB_CURRENT_USER_MODAL } from '@umbraco-cms/backoffice/current-user';
+import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import type { UmbCurrentUserModel } from '@umbraco-cms/backoffice/current-user';
 import { UMB_AUTH_CONTEXT } from '@umbraco-cms/backoffice/auth';
-
-/**
- * Seed favourites until real persistence (Plan 2). Aliases reference real derived apps; any
- * alias with no matching app (not curated, or gated out for this user) is silently skipped.
- * Pinning/unpinning is live but in-session only — it resets on reload until Plan 2 persists it.
- */
-const SEED_FAVOURITE_ALIASES = ['content', 'media', 'log-viewer'];
 
 /**
  * The start-menu-style launcher panel: search, a full-width Favourites hero, the curated app
  * groups as cards of icon-tiles, and a footer (user, desktop settings, log out, exit). Each tile
  * carries a pin control to add/remove it from Favourites. Mounted by `<umbradesktop-taskbar>`,
  * which owns the panel's open/close state and outside-click/Escape dismissal.
+ *
+ * **This element never opens a modal itself.** It is unmounted as soon as a pointer goes down
+ * outside it — including a pointer inside a modal it opened. Umbraco proxies a modal's context
+ * requests through the element that opened it, so a modal owned by the launcher loses its
+ * context origin on the first click inside it, and every later `getContext` hangs forever with
+ * no error at all. Instead the footer reports intent (`search`, `profile`, `settings`, `exit`)
+ * and the taskbar, which lives as long as the desktop, owns the modal.
  */
 @customElement('umbradesktop-launcher')
 export class UmbraDesktopLauncherElement extends UmbLitElement {
@@ -32,12 +32,14 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   private _apps: UmbraDesktopApp[] = [];
 
   @state()
-  private _pinned: string[] = [...SEED_FAVOURITE_ALIASES];
+  private _pinned: ReadonlyArray<string> = [];
 
   @state()
   private _currentUser?: UmbCurrentUserModel;
 
   #manager?: UmbraDesktopWindowManagerContext;
+
+  #settings?: UmbraDesktopSettingsContext;
 
   constructor() {
     super();
@@ -48,6 +50,11 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     });
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
+    });
+    this.consumeContext(UMBRADESKTOP_SETTINGS_CONTEXT, (ctx) => {
+      this.#settings = ctx ?? undefined;
+      if (!ctx) return;
+      this.observe(ctx.pinned, (pinned) => (this._pinned = pinned));
     });
     this.consumeContext(UMB_CURRENT_USER_CONTEXT, (ctx) => {
       if (!ctx) return;
@@ -68,22 +75,30 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     this.dispatchEvent(new CustomEvent('launched'));
   }
 
-  /** Toggle an app's Favourites membership (in-session only until Plan 2 persistence). */
+  /**
+   * Toggle an app's Favourites membership. The settings context owns the list and persists it,
+   * so a pin survives closing the launcher, leaving the desktop, and reloading the browser.
+   * @param e The originating click, stopped so the tile does not also launch the app.
+   * @param app The app whose pin was clicked.
+   */
   #togglePin(e: Event, app: UmbraDesktopApp) {
     e.stopPropagation();
-    this._pinned = this._pinned.includes(app.alias)
-      ? this._pinned.filter((a) => a !== app.alias)
-      : [...this._pinned, app.alias];
+    this.#settings?.togglePin(app.alias);
   }
 
-  /** Open the native backoffice search modal. */
-  async #openSearch() {
-    await umbOpenModal(this, UMB_SEARCH_MODAL).catch(() => undefined);
+  /** Ask the taskbar to open the native backoffice search modal. */
+  #requestSearch() {
+    this.dispatchEvent(new CustomEvent('search'));
   }
 
-  /** Open the native current-user modal (profile, MFA, etc.). */
-  async #openUser() {
-    await umbOpenModal(this, UMB_CURRENT_USER_MODAL).catch(() => undefined);
+  /** Ask the taskbar to open the desktop settings dialog. */
+  #requestSettings() {
+    this.dispatchEvent(new CustomEvent('settings'));
+  }
+
+  /** Ask the taskbar to open the native current-user modal (profile, MFA, etc.). */
+  #requestProfile() {
+    this.dispatchEvent(new CustomEvent('profile'));
   }
 
   /** Sign the current user out. */
@@ -168,16 +183,16 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     const user = this._currentUser;
     return html`
       <div class="footer">
-        <button class="user" title=${user?.name ?? ''} @click=${this.#openUser}>
+        <button class="user" title=${user?.name ?? ''} @click=${this.#requestProfile}>
           <umb-user-avatar .name=${user?.name} .imgUrls=${user?.avatarUrls ?? []}></umb-user-avatar>
           <span class="user-name">${user?.name ?? ''}</span>
         </button>
         <div class="actions">
           <button
             class="fbtn"
-            disabled
             title=${this.localize.term('umbraDesktop_desktopSettings')}
-            aria-label=${this.localize.term('umbraDesktop_desktopSettings')}>
+            aria-label=${this.localize.term('umbraDesktop_desktopSettings')}
+            @click=${this.#requestSettings}>
             <umb-icon name="icon-settings"></umb-icon>
           </button>
           <button
@@ -201,7 +216,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
 
   override render() {
     return html`
-      <button class="search" @click=${this.#openSearch}>
+      <button class="search" @click=${this.#requestSearch}>
         <umb-icon name="icon-search"></umb-icon>
         <span>${this.localize.term('umbraDesktop_search')}</span>
       </button>

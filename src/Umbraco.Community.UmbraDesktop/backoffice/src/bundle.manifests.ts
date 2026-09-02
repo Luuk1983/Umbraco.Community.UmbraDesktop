@@ -2,6 +2,7 @@ import { manifests as entrypoints } from './entrypoints/manifest';
 import { manifests as dashboards } from './dashboards/manifest';
 import { manifests as propertyeditors } from './propertyeditors/manifest';
 import { manifests as desktop } from './desktop/manifest';
+import { manifests as desktopSettings } from './desktop/settings/manifest';
 import { manifests as headerApps } from './headerapps/manifest';
 import { manifests as desktopLocalization } from './desktop/localization/manifest';
 
@@ -12,6 +13,7 @@ export const manifests: Array<UmbExtensionManifest> = [
   ...dashboards,
   ...propertyeditors,
   ...desktop,
+  ...desktopSettings,
   ...headerApps,
   ...desktopLocalization,
 ];

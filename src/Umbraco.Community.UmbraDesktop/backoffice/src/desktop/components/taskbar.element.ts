@@ -4,15 +4,24 @@ import { taskActivation } from '../window-model';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import './launcher.element.js';
+import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
-import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
+import { umbConfirmModal, umbOpenModal } from '@umbraco-cms/backoffice/modal';
+import { UMB_SEARCH_MODAL } from '@umbraco-cms/backoffice/search';
+import { UMB_CURRENT_USER_MODAL } from '@umbraco-cms/backoffice/current-user';
 
 /**
  * The bottom panel: Umbraco-logo start button (opens the app launcher), running-window
  * buttons, clock, exit. The launcher panel itself (search/favourites/recent/grouped
- * tiles/footer) is `<umbradesktop-launcher>`, mounted here — this element only owns the
- * start button and the panel's open/close + dismissal wiring.
+ * tiles/footer) is `<umbradesktop-launcher>`, mounted here — this element owns the start
+ * button, the panel's open/close + dismissal wiring, and every modal the panel asks for.
+ *
+ * Modal ownership lives here rather than in the launcher deliberately: the launcher is
+ * unmounted on the first pointer down outside it, and Umbraco resolves a modal's contexts
+ * through the element that opened it. A modal owned by the launcher would silently lose its
+ * context origin the moment you clicked inside it. The taskbar lives as long as the desktop,
+ * so it is a safe origin.
  */
 @customElement('umbradesktop-taskbar')
 export class UmbraDesktopTaskbarElement extends UmbLitElement {
@@ -108,6 +117,28 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     this.#setLauncherOpen(false);
   };
 
+  /**
+   * Close the launcher, then open a modal owned by this element.
+   *
+   * The launcher is dismissed first for both reasons: picking something from a start menu should
+   * dismiss it, and it removes the outside-pointer listener that would otherwise unmount the
+   * launcher mid-interaction.
+   * @param modal The modal token to open.
+   */
+  async #openFromLauncher(modal: Parameters<typeof umbOpenModal>[1]) {
+    this.#setLauncherOpen(false);
+    await umbOpenModal(this, modal).catch(() => undefined);
+  }
+
+  /** Open the native backoffice search modal. */
+  #onSearch = () => this.#openFromLauncher(UMB_SEARCH_MODAL);
+
+  /** Open the native current-user modal (profile, MFA, etc.). */
+  #onProfile = () => this.#openFromLauncher(UMB_CURRENT_USER_MODAL);
+
+  /** Open the desktop settings dialog (wallpaper today, more later). */
+  #onSettings = () => this.#openFromLauncher(UMBRADESKTOP_SETTINGS_MODAL);
+
   /** Confirm, then leave the Desktop section for the classic backoffice. */
   #onExit = async () => {
     try {
@@ -132,6 +163,9 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         class="launcher"
         style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px"
         @launched=${() => this.#setLauncherOpen(false)}
+        @search=${this.#onSearch}
+        @profile=${this.#onProfile}
+        @settings=${this.#onSettings}
         @exit=${this.#onExit}></umbradesktop-launcher>
     `;
   }
@@ -178,12 +212,24 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         align-items: center;
         gap: var(--uui-size-space-2);
         padding: 0 var(--uui-size-space-2);
-        /* Match the native backoffice header, relocated to the bottom. A faint light hairline
-           on top gives a crisp panel edge against the darker wallpaper. */
-        background: var(--uui-color-header-background);
+        /* A distinctly darker plane than the wallpaper, frosted over it. This used to be
+           --uui-color-header-background, which is the same navy family as most of the shipped
+           wallpapers, so the bar dissolved into them. Going deeper and translucent separates it
+           from any background, light or dark, while the navy cast keeps it on-brand. The blur
+           needs something behind it to work, which is why the wallpaper is painted edge to edge
+           and continues underneath the bar. */
+        background: rgba(16, 20, 46, 0.72);
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
         color: var(--uui-color-header-contrast);
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.25);
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.4);
+      }
+      /* Without backdrop-filter the translucency only muddies the bar, so go fully opaque. */
+      @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+        .bar {
+          background: #0f1330;
+        }
       }
       /* The start button carries the Umbraco mark, full bar height so its hover fills the
          whole bar, centered and high-contrast on the dark background. */

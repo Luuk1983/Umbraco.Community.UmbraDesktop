@@ -4,8 +4,9 @@
 	"version": "17.0.0",
 	"type": "module",
 	"scripts": {
-		"watch": "cd backoffice && tsc && vite build --watch",
-		"build": "cd backoffice && tsc && vite build",
+		"wallpapers": "cd backoffice && node scripts/build-wallpapers.mjs",
+		"watch": "cd backoffice && node scripts/build-wallpapers.mjs && tsc && vite build --watch",
+		"build": "cd backoffice && node scripts/build-wallpapers.mjs && tsc && vite build",
 		"generate-client": "node backoffice/scripts/generate-openapi.js https://localhost:44354/umbraco/swagger/management/swagger.json",
 		"test": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve",
 		"test:watch": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve --watch"
@@ -24,8 +25,13 @@
 		"cross-env": "^10.1.0",
 		"eslint": "^9.18.0",
 		"node-fetch": "^3.3.2",
+		"sharp": "^0.35.4",
 		"typescript": "^5.9.3",
 		"vite": "^7.1.9"
 	},
-	"-vs-binding": { "ProjectOpened": [ "watch" ] }
+	"-vs-binding": {
+		"ProjectOpened": [
+			"watch"
+		]
+	}
 }

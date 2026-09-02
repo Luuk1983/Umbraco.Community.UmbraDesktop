@@ -111,6 +111,13 @@ export interface UmbraDesktopCatalogueEntry {
   weight?: number;
   /** Curatorial group alias (see catalogue/groups.ts). */
   group?: string;
+  /**
+   * True when `ref` points at an extension shipped by a package that may not be installed
+   * (a third-party integration such as uSync). Such an entry resolving to nothing is the
+   * normal case, not a misconfiguration, so the adapter stays quiet about it instead of
+   * warning on every install without that package.
+   */
+  optional?: boolean;
 }
 
 /** The collated curated catalogue (groups + entries). */

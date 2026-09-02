@@ -21,6 +21,7 @@ export default {
     // group labels
     groupEditing: 'Editing',
     groupDevelopment: 'Development',
+    groupSynchronisation: 'Synchronisation',
     groupUsersMembers: 'Users & Members',
     groupDiagnostics: 'Diagnostics',
     groupSystem: 'System',
@@ -36,6 +37,15 @@ export default {
     pin: 'Pin to top',
     unpin: 'Unpin',
     desktopSettings: 'Desktop settings',
+    // desktop settings — wallpaper
+    wallpaper: 'Wallpaper',
+    wallpaperNone: 'None (gradient)',
+    wallpaperBuiltIn: 'Built-in image',
+    wallpaperFromMedia: 'From the Media Library',
+    wallpaperBuiltInImages: 'Built-in images',
+    wallpaperMediaLibrary: 'Media library',
+    wallpaperPickerTitle: 'Choose a wallpaper',
+    wallpaperNotAnImage: 'That file cannot be used as a wallpaper. Pick an image.',
     logout: 'Log out',
     exitDesktop: 'Exit desktop',
   },

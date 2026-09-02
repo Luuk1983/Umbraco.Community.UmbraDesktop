@@ -12,15 +12,16 @@ The Umbraco backoffice shows you one thing at a time. One section is active, one
 
 UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections and tools as floating windows you can move, resize and place next to each other — content beside media, or a settings editor beside the thing it affects.
 
-> **TODO:** screenshots pending.
+![The UmbraDesktop desktop: the content editor and the media library open as separate windows, side by side, with a taskbar along the bottom.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png)
 
 ## Features
 
 - **Work side by side.** Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth.
 - **Real windows.** Drag, resize, minimise, maximise, and double-click a title bar to fill the desktop. Each window remembers its own place.
-- **A launcher that stays out of the way.** Apps are grouped into Editing, Development, Users & Members, Diagnostics and System, so you find things by what they do.
-- **Pin what you use.** Pin your regulars to Favourites and they sit at the top of the launcher.
+- **A launcher that stays out of the way.** Apps are grouped into Editing, Development, Synchronisation, Users & Members, Diagnostics and System, so you find things by what they do.
+- **Pin what you use.** Pin your regulars and they sit at the top of the launcher, under **Pinned**. Your pins are remembered per user.
 - **A taskbar.** Every open window gets a button — click to focus, click again to minimise.
+- **Choose your wallpaper.** Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user.
 - **Looks like Umbraco.** The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.
 - **Nothing new to learn.** The windows contain the backoffice you already know — the same trees, the same editors, the same shortcuts.
 
@@ -53,15 +54,37 @@ UmbraDesktop grants no access of its own. Every app in the launcher is gated on 
 
 Click the **desktop icon in the backoffice header**, top right, between Help and your avatar. That is the way in — the Desktop section's own tab in the section bar is deliberately hidden, so it does not clutter the list.
 
+<img src="https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png" alt="The backoffice header, top right: the desktop icon sits between Help and the user avatar." width="420">
+
+![The launcher: a search box, a Pinned row at the top, and the remaining apps grouped into Editing, Development, Synchronisation, Users &amp; Members, Diagnostics and System.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png)
+
 From the launcher:
 
 - **Click an app** to open it in a window.
-- **Hover an app and click the pin** to add it to Favourites, which sit at the top.
+- **Hover an app and click the pin** to add it to **Pinned**, which sits at the top.
 - **Drag a title bar** to move a window; **drag an edge or corner** to resize; **double-click the title bar** to maximise.
 - **Use the taskbar** at the bottom to switch between open windows.
 - **Exit** from the launcher's footer to return to the classic backoffice.
+- **Open Desktop settings** from the cog in the launcher's footer to change your wallpaper.
 
 Several apps can be open at once, and some — like the content editor and media library — can be opened more than once, so you can compare two documents side by side.
+
+## Changing the wallpaper
+
+Open the launcher and click the **cog** in its footer to open **Desktop settings**. The Wallpaper section shows what you are using now, with two ways to change it:
+
+- **Built-in images** — the eight backgrounds that ship with the package, plus **None**, which restores the plain gradient.
+- **Media library** — any image already in your Media Library.
+
+Your choice applies immediately and is remembered per user, in that browser.
+
+### Using your own backgrounds
+
+There is nothing to configure and nothing to deploy. Upload the image to the **Media Library** as you would any other, then pick it under **Desktop settings → Media library**.
+
+Umbraco resizes it for you: the desktop asks for a copy no wider than 2560px and serves it as WebP, so a large upload never reaches the browser at full size and the resized copy is cached server-side. You do not need to optimise anything first.
+
+If you pick something that is not an image, the desktop tells you and leaves your current wallpaper alone.
 
 ## Technical explanation
 
@@ -98,6 +121,8 @@ Sections listed in `catalogue/exclusions.ts` never appear this way — seeded wi
 If your package registers a section, it appears in the launcher automatically for users permitted to that section, in the **More** group with default chrome and a generic icon. No work required.
 
 For curated placement — a custom icon, a friendly name, a specific group, a different chrome profile or window sizing — the app needs an entry in `backoffice/src/desktop/catalogue/`. That means opening a pull request against this repository; there is no runtime registration point.
+
+A curated entry for a package that not every install has is marked `optional`. Because it points at the package's own extension by alias, it resolves only where that package is registered, and stays silently absent everywhere else. **uSync** ships this way: install it and a uSync app appears in the **Synchronisation** group, opening its dashboard without the Settings tree beside it.
 
 ## Documentation
 

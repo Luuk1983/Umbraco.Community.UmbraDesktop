@@ -2,6 +2,7 @@
   <Folder Name="/Solution files/">
     <File Path=".gitignore" />
     <File Path="README.md" />
+    <File Path="umbraco-marketplace.json" />
   </Folder>
   <Folder Name="/Solution files/.github/">
     <File Path=".github/copilot-instructions.md" />

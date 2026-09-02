@@ -41,9 +41,7 @@
 
 	<!-- Sync umbraco-package.json with the MinVer-derived version at build time. The source file
 	     keeps "GetsGenerated" as its placeholder; this stamps the built copy in wwwroot. -->
-	<UsingTask TaskName="SetJsonVersion"
-	           TaskFactory="RoslynCodeTaskFactory"
-	           AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+	<UsingTask TaskName="SetJsonVersion" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
 		<ParameterGroup>
 			<FilePath ParameterType="System.String" Required="true" />
 			<VersionValue ParameterType="System.String" Required="true" />
@@ -64,10 +62,8 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	</PropertyGroup>
 
 	<Target Name="SyncUmbracoPackageVersion" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != ''">
-		<SetJsonVersion FilePath="$(UmbracoPackageJsonPath)" VersionValue="$(MinVerVersion)"
-		                Condition="Exists('$(UmbracoPackageJsonPath)')" />
-		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'npm run build' before packing, or the package will ship an unstamped version."
-		         Condition="!Exists('$(UmbracoPackageJsonPath)')" />
+		<SetJsonVersion FilePath="$(UmbracoPackageJsonPath)" VersionValue="$(MinVerVersion)" Condition="Exists('$(UmbracoPackageJsonPath)')" />
+		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'npm run build' before packing, or the package will ship an unstamped version." Condition="!Exists('$(UmbracoPackageJsonPath)')" />
 	</Target>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -112,5 +108,9 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	  <PackageReference Include="Umbraco.Cms.Api.Common" />
 	  <PackageReference Include="Umbraco.Cms.Core" />
 	  <PackageReference Include="Umbraco.JsonSchema.Extensions" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="backoffice\wallpapers-src\" />
 	</ItemGroup>
 </Project>
