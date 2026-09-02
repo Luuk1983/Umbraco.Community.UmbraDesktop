@@ -30,33 +30,53 @@ export function buildSectionTabHideCss(alias: string): string {
 }
 
 /**
+ * Inject the hide rule into every shadow root that can render the section's tab, and report
+ * whether the tab list was found. Idempotent: the `<style>` is keyed, so repeated calls refresh
+ * the existing element rather than stacking duplicates.
+ *
+ * Two roots are needed. The tab itself lives in the shadow root of `umb-backoffice-header-sections`,
+ * but `uui-tab-group` collapses tabs that do not fit into a "More" dropdown by *cloning* them
+ * (`cloneNode(true)`) into its own shadow root — a tree the tab-list stylesheet cannot reach. The
+ * UmbraDesktop section sorts last (lowest weight), so it is the first to overflow, which would
+ * make it reappear in that dropdown on a narrow window. Styling the tab-group root too covers
+ * every clone it makes now or later, since the stylesheet outlives the clones.
+ * @param alias The section alias whose tab should be hidden.
+ * @param doc The document to search/inject into. Defaults to the current document.
+ * @returns True when the section tab was found and the rule injected.
+ */
+export function applySectionTabHide(alias: string, doc: Document = document): boolean {
+  const selector = sectionTabSelector(alias);
+  const root = findShadowRootWith(doc, selector);
+  if (!root) return false;
+  const css = buildSectionTabHideCss(alias);
+  injectStyle(root, doc, SECTION_TAB_STYLE_ID, css);
+  const groupRoot = root.querySelector(selector)?.closest('uui-tab-group')?.shadowRoot;
+  if (groupRoot) injectStyle(groupRoot, doc, SECTION_TAB_STYLE_ID, css);
+  return true;
+}
+
+/**
  * Hide the classic-backoffice nav tab for the given section, so the section can act purely as a
  * route (reached via the header-app launcher) without also cluttering the section list. Route
  * access and nav visibility are the same permission bit in core, so this presentational hide is
  * the only lever available — see the header-app launcher design doc (2026-07-23).
  *
  * The section header mounts asynchronously, so we poll (bounded) until the shadow root that owns
- * the tab appears, then inject a keyed `<style>` once. Safe to call when the current user lacks
- * the section: the tab never renders, the selector never matches, and the poll simply times out.
+ * the tab appears, then inject via {@link applySectionTabHide}. Safe to call when the current user
+ * lacks the section: the tab never renders, the selector never matches, and the poll simply times
+ * out. Also safe to call again later — {@link applySectionTabHide} is idempotent, and the desktop
+ * re-asserts the hide when it unmounts, because the outer header is invisible for as long as the
+ * desktop is open and a poll that timed out during boot would otherwise only become visible then.
  * @param alias The section alias whose tab should be hidden.
  * @param doc The document to search/inject into. Defaults to the current document.
  */
 export function hideSectionTab(alias: string, doc: Document = document): void {
-  const selector = sectionTabSelector(alias);
-
-  const apply = (): boolean => {
-    const root = findShadowRootWith(doc, selector);
-    if (!root) return false;
-    injectStyle(root, doc, SECTION_TAB_STYLE_ID, buildSectionTabHideCss(alias));
-    return true;
-  };
-
-  if (apply()) return;
+  if (applySectionTabHide(alias, doc)) return;
 
   // Shell not up yet — poll until the section header mounts, then stop. A MutationObserver on the
   // light DOM would not see the shell appear inside shadow roots.
   let tries = 0;
   const timer = window.setInterval(() => {
-    if (apply() || (tries += 1) > MAX_POLL_TRIES) window.clearInterval(timer);
+    if (applySectionTabHide(alias, doc) || (tries += 1) > MAX_POLL_TRIES) window.clearInterval(timer);
   }, POLL_INTERVAL_MS);
 }

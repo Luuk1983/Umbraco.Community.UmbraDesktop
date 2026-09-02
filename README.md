@@ -56,6 +56,8 @@ Click the desktop icon in the backoffice header, top right, between Help and you
 
 <img src="https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png" alt="The backoffice header, top right: the desktop icon sits between Help and the user avatar." width="420">
 
+Most people are probably familiar with the concept of a desktop and will have no trouble using it. The launcher is where you open the apps:
+
 ![The launcher: a search box, a Pinned row at the top, and the remaining apps grouped into Editing, Development, Synchronisation, Users &amp; Members, Diagnostics and System.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png)
 
 From the launcher:

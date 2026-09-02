@@ -1,6 +1,7 @@
 import type { UmbraDesktopWindow } from '../types';
-import { UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
+import { UMBRADESKTOP_SECTION_ALIAS, UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
 import { findChromeRoot } from '../chrome-injector';
+import { applySectionTabHide } from '../../headerapps/section-tab-hide.js';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
 import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
@@ -82,6 +83,10 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
       }
     } else {
       existing?.remove();
+      // The header was invisible for as long as the desktop was open, so a boot-time
+      // `hideSectionTab` that timed out before the shell mounted would only become apparent
+      // now. Re-assert it (idempotent) as the header comes back into view.
+      applySectionTabHide(UMBRADESKTOP_SECTION_ALIAS, this.ownerDocument);
     }
   }
 

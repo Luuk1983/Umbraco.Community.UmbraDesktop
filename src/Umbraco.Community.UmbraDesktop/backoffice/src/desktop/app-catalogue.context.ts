@@ -1,5 +1,6 @@
 import type {
   UmbraDesktopApp,
+  UmbraDesktopCatalogue,
   UmbraDesktopCatalogueEntry,
   UmbraDesktopLauncherGroup,
   UmbraDesktopRefDescriptor,
@@ -34,11 +35,40 @@ interface ReferencedManifest {
   meta?: { label?: string; pathname?: string; entityType?: string; icon?: string };
 }
 
+/** The registry surface this adapter uses — the two observable lookups, nothing more. */
+type UmbraDesktopExtensionRegistry = Pick<typeof umbExtensionsRegistry, 'byType' | 'byAlias'>;
+
+/**
+ * How long the registry must stay quiet before a still-unresolved entry is reported. Long
+ * enough for every package bundle to have imported, so a `ref` that is merely slow is not
+ * mistaken for a misconfigured one.
+ */
+const DIAGNOSTIC_DELAY_MS = 5000;
+
+/** Dependency overrides. All default to the real thing; tests inject their own. */
+export interface UmbraDesktopAppCatalogueOptions {
+  /** The curated catalogue to resolve. Defaults to the shipped catalogue. */
+  catalogue?: UmbraDesktopCatalogue;
+  /** The extension registry to resolve against. Defaults to the backoffice registry. */
+  registry?: UmbraDesktopExtensionRegistry;
+  /** Registry-quiet window before diagnostics are reported. Defaults to {@link DIAGNOSTIC_DELAY_MS}. */
+  diagnosticDelayMs?: number;
+}
+
 /**
  * Resolves the curated catalogue against the current install: reads the user's
  * permitted sections, infers each entry's URL from the registry, then derives and
  * groups the app list. Impure glue around the pure `deriveApps` / `groupApps`
  * (design §6). Provided by the desktop element so it is scoped to the desktop subtree.
+ *
+ * Every input is *observed*, never sampled. Registry contents arrive asynchronously and out of
+ * order: Umbraco registers each package's `bundle` declaration in one batch, but then imports
+ * every bundle as its own dynamic module, so an entry's `ref` may still be unregistered when the
+ * desktop mounts — reliably so when the browser loads straight into the desktop section (an F5,
+ * a bookmark), because the current user, and therefore this context, is ready long before
+ * third-party bundles finish. Sampling once left such an app missing for the rest of the session,
+ * silently for an `optional` entry. Observing makes the list self-healing: an app appears the
+ * moment its package registers.
  */
 export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   #apps = new UmbArrayState<UmbraDesktopApp>([], (a) => a.alias);
@@ -49,22 +79,130 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   /** Grouped display list for the launcher. */
   public readonly groups = this.#groups.asObservable();
 
+  /** The catalogue being resolved. */
+  #catalogue: UmbraDesktopCatalogue;
+
+  /** The registry being resolved against. */
+  #registry: UmbraDesktopExtensionRegistry;
+
   /** Sections the current user may access, resolved to {alias, label, pathname}. */
   #sections: UmbraDesktopSectionInfo[] = [];
 
+  /** Every registered `section` manifest, kept current by observation. */
+  #registeredSections: ReadonlyArray<ReferencedManifest> = [];
+
+  /** Section aliases the current user may access, kept current by observation. */
+  #allowedSections: ReadonlyArray<string> = [];
+
+  /** The manifest behind each catalogue `ref`, kept current by observation (absent = not registered). */
+  #manifests = new Map<string, ReferencedManifest | undefined>();
+
+  /** Registry-quiet window before diagnostics are reported. */
+  #diagnosticDelayMs: number;
+
+  /** Diagnostics from the latest recompute, keyed by entry + reason, awaiting the quiet window. */
+  #pendingDiagnostics = new Map<string, string>();
+
+  /** Diagnostics already reported, so a later recompute does not repeat them. */
+  #reportedDiagnostics = new Set<string>();
+
+  /** Timer for the pending diagnostic flush, if one is scheduled. */
+  #diagnosticTimer?: number;
+
   /**
    * @param host The controller host (the desktop element) this context is scoped to.
+   * @param options Dependency overrides (catalogue / registry / diagnostic delay); all default
+   *   to the real thing.
    */
-  constructor(host: UmbControllerHost) {
+  constructor(host: UmbControllerHost, options: UmbraDesktopAppCatalogueOptions = {}) {
     super(host, UMBRADESKTOP_APP_CATALOGUE_CONTEXT);
+    this.#catalogue = options.catalogue ?? catalogue;
+    this.#registry = options.registry ?? umbExtensionsRegistry;
+    this.#diagnosticDelayMs = options.diagnosticDelayMs ?? DIAGNOSTIC_DELAY_MS;
     this.#validateCatalogue();
+
+    this.observe(
+      this.#registry.byType('section'),
+      (sections) => {
+        this.#registeredSections = (sections ?? []) as ReadonlyArray<ReferencedManifest>;
+        this.#recompute();
+      },
+      'observeRegisteredSections',
+    );
+
+    // One observation per distinct `ref`. Each needs its own controller alias: `observe` otherwise
+    // derives one from the callback's source, which is identical on every iteration, so each
+    // observation would evict the previous one. `byAlias` also kind-merges the manifest, which the
+    // former `getByAlias` snapshot did not — so a menu item's `kind` now resolves correctly.
+    for (const ref of this.#refs()) {
+      this.observe(
+        this.#registry.byAlias(ref),
+        (manifest) => {
+          this.#manifests.set(ref, manifest as ReferencedManifest | undefined);
+          this.#recompute();
+        },
+        `observeRef:${ref}`,
+      );
+    }
+
     this.consumeContext(UMB_CURRENT_USER_CONTEXT, (currentUser) => {
       if (!currentUser) return;
-      this.observe(currentUser.allowedSections, (allowed) => {
-        this.#sections = this.#resolveSections(allowed ?? []);
-        this.#recompute();
-      });
+      this.observe(
+        currentUser.allowedSections,
+        (allowed) => {
+          this.#allowedSections = allowed ?? [];
+          this.#recompute();
+        },
+        'observeAllowedSections',
+      );
     });
+  }
+
+  /** Cancels any pending diagnostic flush along with the controller's own teardown. */
+  override destroy(): void {
+    if (this.#diagnosticTimer !== undefined) window.clearTimeout(this.#diagnosticTimer);
+    this.#diagnosticTimer = undefined;
+    super.destroy();
+  }
+
+  /**
+   * Record a diagnostic for the current recompute. Nothing is logged yet: an entry whose `ref`
+   * has not registered is indistinguishable from one whose package is still importing, and
+   * recompute now runs on every registry change — logging inline would both cry wolf during
+   * boot and repeat itself dozens of times.
+   * @param key Identifies the diagnostic (entry alias + reason).
+   * @param message The message to log if the condition survives the quiet window.
+   */
+  #diagnose(key: string, message: string): void {
+    if (this.#reportedDiagnostics.has(key)) return;
+    this.#pendingDiagnostics.set(key, message);
+  }
+
+  /**
+   * (Re)start the quiet window. Each recompute rebuilds the pending set from scratch, so a
+   * condition resolved by a late registration simply drops out before the flush runs; what is
+   * left when the registry finally goes quiet is a genuine misconfiguration.
+   */
+  #scheduleDiagnostics(): void {
+    if (this.#diagnosticTimer !== undefined) window.clearTimeout(this.#diagnosticTimer);
+    if (this.#pendingDiagnostics.size === 0) {
+      this.#diagnosticTimer = undefined;
+      return;
+    }
+    this.#diagnosticTimer = window.setTimeout(() => {
+      this.#diagnosticTimer = undefined;
+      for (const [key, message] of this.#pendingDiagnostics) {
+        this.#reportedDiagnostics.add(key);
+        console.warn(message);
+      }
+      this.#pendingDiagnostics.clear();
+    }, this.#diagnosticDelayMs);
+  }
+
+  /** The distinct `ref` aliases the catalogue points at. */
+  #refs(): string[] {
+    const refs = this.#catalogue.entries.map((e) => e.ref).filter((ref): ref is string => !!ref);
+    return [...new Set(refs)];
   }
 
   /**
@@ -73,8 +211,8 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
    * misplace in the launcher (it still shows — falling into "More" — just not where intended).
    */
   #validateCatalogue(): void {
-    const known = new Set(catalogue.groups.map((g) => g.alias));
-    for (const entry of catalogue.entries) {
+    const known = new Set(this.#catalogue.groups.map((g) => g.alias));
+    for (const entry of this.#catalogue.entries) {
       if (entry.group && !known.has(entry.group)) {
         console.warn(
           `[UmbraDesktop] Catalogue entry "${entry.alias}" references unknown group "${entry.group}"; it will fall into "More".`,
@@ -83,18 +221,10 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     }
   }
 
-  /** Registered sections filtered to the ones the user may access. */
-  #resolveSections(allowedAliases: ReadonlyArray<string>): UmbraDesktopSectionInfo[] {
-    const allowed = new Set(allowedAliases);
-    // Snapshot of registered sections (kind-merged). Sections are registered at boot, well before
-    // the desktop mounts, so a snapshot is sufficient; a section registered AFTER mount is only
-    // picked up when allowedSections next emits (accepted limitation — see design §6).
-    const sections = umbExtensionsRegistry.getByType('section') as Array<{
-      alias: string;
-      name?: string;
-      meta?: { label?: string; pathname?: string };
-    }>;
-    return sections
+  /** The observed section manifests, filtered to the ones the current user may access. */
+  #resolveSections(): UmbraDesktopSectionInfo[] {
+    const allowed = new Set(this.#allowedSections);
+    return this.#registeredSections
       .filter((s) => allowed.has(s.alias))
       .map((s) => ({
         alias: s.alias,
@@ -105,10 +235,13 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
 
   /** Re-resolve the catalogue and publish the derived + grouped apps. */
   #recompute(): void {
-    const resolved = catalogue.entries.map((e) => this.#resolveEntry(e));
-    const apps = deriveApps(resolved, this.#sections, catalogue.excludedSections);
+    this.#pendingDiagnostics.clear();
+    this.#sections = this.#resolveSections();
+    const resolved = this.#catalogue.entries.map((e) => this.#resolveEntry(e));
+    const apps = deriveApps(resolved, this.#sections, this.#catalogue.excludedSections);
     this.#apps.setValue(apps);
-    this.#groups.setValue(groupApps(apps, catalogue.groups));
+    this.#groups.setValue(groupApps(apps, this.#catalogue.groups));
+    this.#scheduleDiagnostics();
   }
 
   /** Resolve one catalogue entry to a concrete URL + gate + inherited presentation. */
@@ -116,7 +249,8 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     // Explicit-URL entry: the gate is the stated section.
     if (entry.url) {
       if (!entry.section) {
-        console.warn(
+        this.#diagnose(
+          `ungated:${entry.alias}`,
           `[UmbraDesktop] Catalogue entry "${entry.alias}" has a "url" but no "section" gate, so it will never appear. Add "section".`,
         );
       }
@@ -125,12 +259,17 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     if (!entry.ref) {
       return { entry, url: null, gateSectionAlias: entry.section ?? null, isSectionRoot: false };
     }
-    const manifest = umbExtensionsRegistry.getByAlias(entry.ref) as ReferencedManifest | undefined;
+    const manifest = this.#manifests.get(entry.ref);
     if (!manifest) {
       // An `optional` entry references a package that need not be installed (uSync, …), so an
-      // absent manifest is the expected case there — drop the app without the noise.
+      // absent manifest is the expected case there — drop the app without the noise. It is also
+      // the transient case while that package's bundle is still importing; this ref's observation
+      // recomputes as soon as it registers.
       if (!entry.optional) {
-        console.warn(`[UmbraDesktop] Catalogue entry "${entry.alias}" references unknown extension "${entry.ref}".`);
+        this.#diagnose(
+          `unknown-ref:${entry.alias}`,
+          `[UmbraDesktop] Catalogue entry "${entry.alias}" references unknown extension "${entry.ref}".`,
+        );
       }
       return { entry, url: null, gateSectionAlias: entry.section ?? null, isSectionRoot: false };
     }
@@ -143,7 +282,8 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
       !described.gateSectionAlias ||
       this.#sections.some((s) => s.alias === described.gateSectionAlias);
     if (!url && gatePermitted) {
-      console.warn(
+      this.#diagnose(
+        `unresolved:${entry.alias}`,
         `[UmbraDesktop] Catalogue entry "${entry.alias}" (ref "${entry.ref}", type "${manifest.type}") is permitted but could not be resolved to a URL — it may need an explicit "url".`,
       );
     }

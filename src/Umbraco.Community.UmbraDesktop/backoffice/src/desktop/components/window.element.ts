@@ -217,9 +217,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    */
   #controlGlyph(kind: 'reload' | 'minimize' | 'maximize' | 'restore' | 'close') {
     const glyphs = {
-      reload: html`<svg class="glyph round" viewBox="0 0 12 12">
-        <path d="M9.6 6 A3.6 3.6 0 1 1 6 2.4 c1.008 0 1.972 0.424 2.68 1.128 L9.6 4.4"></path>
-        <path d="M9.6 2.4 V4.4 H7.6"></path>
+      // A near-full ring with a *solid* arrowhead, the way Chrome and Material draw refresh. The
+      // stroked right-angle arrowhead that Lucide (and so Umbraco's own icon-refresh) uses is only
+      // a couple of pixels of mark at this size and reads as a nick in the circle, not an arrow.
+      reload: html`<svg class="glyph ring" viewBox="0 0 16 16">
+        <path d="M8 2.6 A5.4 5.4 0 1 0 13.4 8"></path>
+        <path class="solid" d="M7.6 0.5 L11.7 2.6 L7.6 4.7 Z"></path>
       </svg>`,
       minimize: html`<svg class="glyph" viewBox="0 0 12 12"><line x1="2.5" y1="6.5" x2="9.5" y2="6.5"></line></svg>`,
       maximize: html`<svg class="glyph" viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"></rect></svg>`,
@@ -264,7 +267,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
             @pointerdown=${(e: PointerEvent) => e.stopPropagation()}
             @dblclick=${(e: MouseEvent) => e.stopPropagation()}>
             <button
-              class="ctrl"
+              class="ctrl ${this._loading ? 'busy' : ''}"
               title="Reload"
               aria-label="Reload"
               @click=${() => this.#onReload()}>
@@ -395,10 +398,34 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         fill: none;
         stroke-linecap: square;
       }
-      /* The reload arc reads badly with the square caps the straight glyphs use. */
-      .ctrl .glyph.round {
+      /* The ring is drawn in a 16-unit box rather than 12, so it needs its own size and the
+         round caps a curve wants — the straight glyphs keep their square caps. */
+      .ctrl .glyph.ring {
+        width: 16px;
+        height: 16px;
+        stroke-width: 1.6;
         stroke-linecap: round;
-        stroke-linejoin: round;
+      }
+      .ctrl .glyph .solid {
+        fill: currentColor;
+        stroke: none;
+      }
+      /* Spins clockwise, with the arrow, for as long as the frame is loading — so it doubles as
+         the window's tab spinner on open, not just on an explicit reload. */
+      .ctrl.busy .glyph.ring {
+        /* Explicit, because an inline SVG's transform-origin is not reliably its own centre. */
+        transform-origin: 50% 50%;
+        animation: umbradesktop-reload-spin 0.8s linear infinite;
+      }
+      @keyframes umbradesktop-reload-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .ctrl.busy .glyph.ring {
+          animation: none;
+        }
       }
       .ctrl:hover {
         background: rgba(0, 0, 0, 0.07);
