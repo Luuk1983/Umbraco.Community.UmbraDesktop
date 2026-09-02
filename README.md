@@ -16,7 +16,7 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 
 ## Features
 
-- Work side by side. Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth.
+- Work side by side. Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth. This one wants room: see [A note on screen size](#a-note-on-screen-size).
 - Real windows. Drag, resize, minimise, maximise, and double-click a title bar to fill the desktop. Each window remembers its own place.
 - A launcher that stays out of the way. Apps are grouped into Editing, Development, Synchronisation, Security, Advanced security, Diagnostics and System, so you find things by what they do.
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned. Your pins are remembered per user.
@@ -68,6 +68,18 @@ From the launcher:
 - Open Desktop settings from the cog in the launcher's footer to change your wallpaper.
 
 Several apps can be open at once, and some of them (the content editor and media library, for instance) can be opened more than once, so you can compare two documents side by side.
+
+## A note on screen size
+
+The Umbraco backoffice was never built to be responsive, and it does not scale down gracefully. UmbraDesktop inherits that: the backoffice inside a window starts to break up once the window gets small, which is why catalogue entries carry a minimum window size and why you cannot shrink a window down to a tile.
+
+So how much you get out of it depends on the screen in front of you:
+
+- **On a wide screen**, roughly 1920px and up, two windows side by side are genuinely comfortable. This is where UmbraDesktop is at its best.
+- **On a laptop screen**, side by side works for the lighter, self-contained apps, but tree-heavy tools like the content editor want most of the width to themselves. Expect to work with one window in front most of the time.
+- **On anything smaller**, treat it as a single-window desktop.
+
+Side by side is not the only reason to use it, though. Opening everything from one launcher, keeping several tools loaded at once, and switching between them from the taskbar without losing your place or waiting for a section to reload is just as useful on a laptop as it is on a 4K monitor.
 
 ## Changing the wallpaper
 
