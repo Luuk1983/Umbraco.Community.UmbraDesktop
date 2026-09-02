@@ -1,6 +1,6 @@
 import type { UmbraDesktopCatalogueEntry } from '../types';
 
-/** Users & Members — whole-section apps, each its own permission gate (`Umb.Section.Users` / `Umb.Section.Members`). */
+/** Security — whole-section apps, each its own permission gate (`Umb.Section.Users` / `Umb.Section.Members`). */
 export const entries: UmbraDesktopCatalogueEntry[] = [
   {
     alias: 'users',
@@ -10,7 +10,7 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     chromeProfile: 'full-section',
     defaultSize: { w: 960, h: 680 },
     allowMultiple: true,
-    group: 'users-members',
+    group: 'security',
     weight: 10,
   },
   {
@@ -21,7 +21,7 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     chromeProfile: 'full-section',
     defaultSize: { w: 960, h: 680 },
     allowMultiple: true,
-    group: 'users-members',
+    group: 'security',
     weight: 20,
   },
 ];
