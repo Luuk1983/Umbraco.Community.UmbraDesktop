@@ -70,6 +70,28 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   }
 
   /**
+   * Reload the hosted app, the way F5 would in a browser tab. Windows host a full backoffice
+   * document, so a stale list or a change made elsewhere can only be picked up by re-fetching —
+   * and pressing F5 on the desktop itself would reload the whole desktop instead.
+   */
+  #onReload() {
+    const iframe = this.renderRoot?.querySelector('iframe.body') as HTMLIFrameElement | null;
+    if (!iframe || !this.window) return;
+    // Cover the frame again: the reloading backoffice re-renders its own header before the
+    // chrome styles are re-injected, which would otherwise flash into view.
+    this._loading = true;
+    try {
+      // Same-origin backoffice: reload in place, so the window keeps whatever route the user
+      // navigated to inside it.
+      iframe.contentWindow?.location.reload();
+    } catch {
+      // Cross-origin document — `location.reload()` is off limits there. Re-pointing the frame
+      // always reloads, at the cost of returning to the app's entry route.
+      iframe.src = this.window.app.url;
+    }
+  }
+
+  /**
    * Position and size of the desktop surface this window is laid out against — the frame's offset
    * parent. Measured once per drag so the clamp costs no layout work per pointer move.
    * @returns The surface rectangle in client coordinates, falling back to the viewport if the
@@ -193,8 +215,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * @param kind Which control the glyph represents.
    * @returns The SVG template for that control.
    */
-  #controlGlyph(kind: 'minimize' | 'maximize' | 'restore' | 'close') {
+  #controlGlyph(kind: 'reload' | 'minimize' | 'maximize' | 'restore' | 'close') {
     const glyphs = {
+      reload: html`<svg class="glyph round" viewBox="0 0 12 12">
+        <path d="M9.6 6 A3.6 3.6 0 1 1 6 2.4 c1.008 0 1.972 0.424 2.68 1.128 L9.6 4.4"></path>
+        <path d="M9.6 2.4 V4.4 H7.6"></path>
+      </svg>`,
       minimize: html`<svg class="glyph" viewBox="0 0 12 12"><line x1="2.5" y1="6.5" x2="9.5" y2="6.5"></line></svg>`,
       maximize: html`<svg class="glyph" viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"></rect></svg>`,
       restore: html`<svg class="glyph" viewBox="0 0 12 12">
@@ -237,6 +263,13 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
             class="controls"
             @pointerdown=${(e: PointerEvent) => e.stopPropagation()}
             @dblclick=${(e: MouseEvent) => e.stopPropagation()}>
+            <button
+              class="ctrl"
+              title="Reload"
+              aria-label="Reload"
+              @click=${() => this.#onReload()}>
+              ${this.#controlGlyph('reload')}
+            </button>
             <button
               class="ctrl"
               title="Minimize"
@@ -361,6 +394,11 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         stroke-width: 1.2;
         fill: none;
         stroke-linecap: square;
+      }
+      /* The reload arc reads badly with the square caps the straight glyphs use. */
+      .ctrl .glyph.round {
+        stroke-linecap: round;
+        stroke-linejoin: round;
       }
       .ctrl:hover {
         background: rgba(0, 0, 0, 0.07);

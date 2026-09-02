@@ -1,21 +1,21 @@
 <Project>
-	<PropertyGroup>
-		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-		<CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
-	</PropertyGroup>
-	<ItemGroup>
-		<!-- Extension package dependencies -->
-		<PackageVersion Include="Umbraco.Cms.Api.Common" Version="[17.0.0,18.0.0)" />
-		<PackageVersion Include="Umbraco.Cms.Core" Version="[17.0.0,18.0.0)" />
-		<PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
-
-		<!-- Build-time only: versioning and source-link -->
-		<PackageVersion Include="MinVer" Version="7.0.0" />
-		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
-
-		<!-- Test instance dependencies -->
-		<PackageVersion Include="Umbraco.Cms" Version="17.*" />
-		<PackageVersion Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" />
-		<PackageVersion Include="uSync" Version="17.*" />
-	</ItemGroup>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Extension package dependencies -->
+    <PackageVersion Include="Umbraco.Cms.Api.Common" Version="[17.0.0,18.0.0)" />
+    <PackageVersion Include="Umbraco.Cms.Core" Version="[17.0.0,18.0.0)" />
+    <PackageVersion Include="Umbraco.Community.AdvancedPermissions" Version="17.3.0" />
+    <PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
+    <!-- Build-time only: versioning and source-link -->
+    <PackageVersion Include="MinVer" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
+    <!-- Test instance dependencies -->
+    <PackageVersion Include="Umbraco.Cms" Version="17.*" />
+    <PackageVersion Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" />
+    <PackageVersion Include="Umbraco.TheStarterKit" Version="17.0.0" />
+    <PackageVersion Include="uSync" Version="17.*" />
+  </ItemGroup>
 </Project>
