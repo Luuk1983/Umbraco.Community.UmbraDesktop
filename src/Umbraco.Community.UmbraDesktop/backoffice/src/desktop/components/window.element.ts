@@ -287,6 +287,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
               @click=${() => this.#manager?.setState(w.id, maximized ? 'normal' : 'maximized')}>
               ${this.#controlGlyph(maximized ? 'restore' : 'maximize')}
             </button>
+            <!-- 'close' is kept alongside 'ctrl-close' because '.ctrl.close:hover' still keys off
+                 it for the red hover state — dropping it would silently kill that hover. -->
             <button
               class="ctrl ctrl-close close"
               title="Close"
@@ -360,6 +362,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         gap: var(--uui-size-space-2);
         font-weight: 700;
         font-size: calc(var(--uui-type-small-size) + 2px);
+        /* Pinned (rather than left to inherit) so the title can be themed independently of the
+           rest of the titlebar text; the fallback is just the color it already inherited. */
         color: var(--umbradesktop-titlebar-text, var(--uui-color-text));
       }
       .title umb-icon {
