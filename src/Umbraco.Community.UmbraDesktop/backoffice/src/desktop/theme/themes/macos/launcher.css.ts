@@ -29,8 +29,17 @@ export default css`
     align-items: center;
     padding: 12px 40px 32px;
   }
+  /* Both content blocks share one column width. The Favourites hero is rendered as a sibling of
+     '.cards', not a cell inside it, so the base rule's 'grid-column: 1 / -1' does not reach it —
+     it was only ever full width because '.body' stretched its children. Centring them (above)
+     took that away and left Pinned shrunk to a single tile's width, stacked vertically and
+     floating over the middle of the group cards. Stating the width on both is what lines their
+     left and right edges up. */
+  .fav,
   .cards {
     width: min(1100px, 100%);
+  }
+  .cards {
     gap: 22px;
   }
   /* The base rule paints group headings in --uui-color-text-alt at 0.6 opacity, which is a muted
@@ -51,9 +60,27 @@ export default css`
   .tile:hover .launch {
     border-radius: 12px;
   }
+  /* Launchpad has no chrome at the bottom of the screen at all — the user and the system actions
+     live in the menu bar, which this desktop has no equivalent of. Drawing them as a full-width
+     bar with its own fill and a rule above it is the one thing on this panel that still reads as
+     a window rather than an overlay, so the bar is dropped entirely: the same controls, sitting
+     directly on the blurred surface and lined up with the column above them. */
   .footer {
-    align-self: stretch;
-    background: rgba(0, 0, 0, 0.22);
-    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    align-self: center;
+    width: min(1100px, 100%);
+    background: none;
+    border-top: none;
+    padding: 4px 0 22px;
+  }
+  /* Quiet at rest, since nothing frames these any more; full strength on approach. */
+  .footer .fbtn,
+  .footer .user {
+    opacity: 0.72;
+    transition: opacity 120ms ease;
+  }
+  .footer:hover .fbtn,
+  .footer:hover .user,
+  .footer .fbtn:focus-visible {
+    opacity: 1;
   }
 `;

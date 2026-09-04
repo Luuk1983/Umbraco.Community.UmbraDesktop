@@ -1,12 +1,6 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { MACOS_FONT } from './palette.js';
-import {
-  MACOS_CONTROL_GAP,
-  MACOS_LIGHT_SIZE,
-  MACOS_RELOAD_MARGIN,
-  MACOS_RELOAD_SIZE,
-  MACOS_TITLEBAR_PADDING,
-} from './metrics.js';
+import { MACOS_CONTROL_GAP, MACOS_LIGHT_SIZE, MACOS_RELOAD_MARGIN, MACOS_RELOAD_SIZE, MACOS_TITLEBAR_HEIGHT, MACOS_TITLEBAR_PADDING } from './metrics.js';
 
 /**
  * The macOS window surface: traffic lights leading the titlebar, a centred title, and the reload
@@ -75,10 +69,28 @@ export default css`
   .ctrl-close,
   .ctrl-minimize,
   .ctrl-maximize {
+    position: relative;
     width: ${MACOS_LIGHT_SIZE}px;
     height: ${MACOS_LIGHT_SIZE}px;
     border-radius: 50%;
     border: 0.5px solid rgba(0, 0, 0, 0.16);
+  }
+  /* A 12px circle is the right thing to *draw* and the wrong thing to *hit*: at 12x12 these were
+     a quarter of the bar's height and genuinely hard to land on with a mouse. This transparent
+     overlay grows the pointer target to the full height of the titlebar and half the flex gap to
+     either side — adjacent targets meet without overlapping — while leaving the layout box, and
+     therefore MACOS_LEADING_CONTROLS_WIDTH and the drag clamp derived from it, untouched.
+     Everything it covers is already non-draggable chrome inside that reserved strip. */
+  .ctrl-close::after,
+  .ctrl-minimize::after,
+  .ctrl-maximize::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: ${MACOS_LIGHT_SIZE + MACOS_CONTROL_GAP}px;
+    height: ${MACOS_TITLEBAR_HEIGHT}px;
   }
   .ctrl-close {
     background: #ff5f57;

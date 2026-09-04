@@ -35,8 +35,8 @@ export default css`
      an underline across. */
   .start,
   .task {
-    height: 34px;
-    min-width: 34px;
+    height: 38px;
+    min-width: 38px;
     padding: 0 6px;
     border-radius: 8px;
   }
@@ -45,10 +45,12 @@ export default css`
     font-size: 24px;
     margin-left: 0;
   }
-  /* Nudged up 2px (paint-only — this doesn't move the centred layout box) so the running-window
-     dot below has a couple of clear pixels beneath the icon instead of sitting flush against it. */
+  /* Nudged up (paint-only — this doesn't move the centred layout box) to open up the space the
+     running-window dot sits in. At 2px on a 34px tile the dot ended up a single pixel under the
+     icon, reading as part of it rather than as a separate indicator; a taller tile and a deeper
+     nudge put roughly 4px of clear space between them, which is about what a real dock shows. */
   .task umb-icon {
-    transform: translateY(-2px);
+    transform: translateY(-4px);
   }
   /* Sanctioned exception: the dock shows icons only. The button keeps its title attribute, so
      the app name is still available as a tooltip and as the accessible name. */
@@ -63,10 +65,10 @@ export default css`
     content: '';
     position: absolute;
     left: 50%;
-    /* Inside the tile's own 34px box (2px above its bottom edge), not below it — the base rule's
+    /* Inside the tile's own 38px box (3px above its bottom edge), not below it — the base rule's
        overflow: hidden on .running is left standing (see above), and a dot drawn outside .task's
        box would be clipped by it. */
-    bottom: 2px;
+    bottom: 3px;
     width: 4px;
     height: 4px;
     margin-left: -2px;

@@ -40,7 +40,7 @@ export const MACOS_LEADING_CONTROLS_WIDTH =
 export const MACOS_TITLEBAR_HEIGHT = 30;
 
 /** Height of the floating dock itself. Feeds the palette's `--umbradesktop-taskbar-height`. */
-export const MACOS_TASKBAR_HEIGHT = 44;
+export const MACOS_TASKBAR_HEIGHT = 48;
 
 /** The dock's bottom margin. Feeds the palette's `--umbradesktop-taskbar-margin`. */
 export const MACOS_TASKBAR_BOTTOM_MARGIN = 10;
