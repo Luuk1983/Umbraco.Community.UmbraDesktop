@@ -267,28 +267,28 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
             @pointerdown=${(e: PointerEvent) => e.stopPropagation()}
             @dblclick=${(e: MouseEvent) => e.stopPropagation()}>
             <button
-              class="ctrl ${this._loading ? 'busy' : ''}"
+              class="ctrl ctrl-reload ${this._loading ? 'busy' : ''}"
               title="Reload"
               aria-label="Reload"
               @click=${() => this.#onReload()}>
               ${this.#controlGlyph('reload')}
             </button>
             <button
-              class="ctrl"
+              class="ctrl ctrl-minimize"
               title="Minimize"
               aria-label="Minimize"
               @click=${() => this.#manager?.setState(w.id, 'minimized')}>
               ${this.#controlGlyph('minimize')}
             </button>
             <button
-              class="ctrl"
+              class="ctrl ctrl-maximize"
               title=${maximized ? 'Restore' : 'Maximize'}
               aria-label=${maximized ? 'Restore' : 'Maximize'}
               @click=${() => this.#manager?.setState(w.id, maximized ? 'normal' : 'maximized')}>
               ${this.#controlGlyph(maximized ? 'restore' : 'maximize')}
             </button>
             <button
-              class="ctrl close"
+              class="ctrl ctrl-close close"
               title="Close"
               aria-label="Close"
               @click=${() => this.#manager?.close(w.id)}>
@@ -322,10 +322,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         position: absolute;
         display: flex;
         flex-direction: column;
-        background: var(--uui-color-surface);
-        border: 1px solid var(--uui-color-border);
-        border-radius: var(--uui-border-radius, 3px);
-        box-shadow: var(--uui-shadow-depth-3);
+        background: var(--umbradesktop-window-background, var(--uui-color-surface));
+        border: var(--umbradesktop-window-border, 1px solid var(--uui-color-border));
+        border-radius: var(--umbradesktop-window-radius, var(--uui-border-radius, 3px));
+        box-shadow: var(--umbradesktop-window-shadow, var(--uui-shadow-depth-3));
         overflow: hidden;
         min-width: 320px;
         min-height: 200px;
@@ -334,7 +334,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
          crisp, elevated one (full-strength titlebar + deeper shadow) and inactive windows
          recede (muted titlebar, flatter shadow) — no header tint. */
       .frame.active {
-        box-shadow: var(--uui-shadow-depth-5);
+        box-shadow: var(--umbradesktop-window-shadow-active, var(--uui-shadow-depth-5));
       }
       .titlebar {
         display: flex;
@@ -344,15 +344,15 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         /* No vertical or right padding: the controls run full height and flush to the
            top-right edge, so the corner buttons are easy targets (Fitts's law). */
         padding: 0 0 0 var(--uui-size-space-3);
-        min-height: 40px;
-        background: var(--uui-color-surface);
-        border-bottom: 1px solid var(--uui-color-border);
+        min-height: var(--umbradesktop-titlebar-height, 40px);
+        background: var(--umbradesktop-titlebar-background, var(--uui-color-surface));
+        border-bottom: var(--umbradesktop-titlebar-border-bottom, 1px solid var(--uui-color-border));
         cursor: move;
         user-select: none;
       }
       .frame:not(.active) .title,
       .frame:not(.active) .controls {
-        opacity: 0.5;
+        opacity: var(--umbradesktop-titlebar-inactive-opacity, 0.5);
       }
       .title {
         display: inline-flex;
@@ -360,6 +360,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         gap: var(--uui-size-space-2);
         font-weight: 700;
         font-size: calc(var(--uui-type-small-size) + 2px);
+        color: var(--umbradesktop-titlebar-text, var(--uui-color-text));
       }
       .title umb-icon {
         font-size: 18px;
@@ -381,13 +382,13 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 46px;
+        width: var(--umbradesktop-control-width, 46px);
         height: 100%;
         padding: 0;
         border: none;
         border-radius: 0;
         background: transparent;
-        color: var(--uui-color-text);
+        color: var(--umbradesktop-control-color, var(--uui-color-text));
         cursor: pointer;
       }
       .ctrl .glyph {
@@ -428,12 +429,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         }
       }
       .ctrl:hover {
-        background: rgba(0, 0, 0, 0.07);
+        background: var(--umbradesktop-control-hover-background, rgba(0, 0, 0, 0.07));
       }
       /* Windows/KDE close affordance: red fill + white mark on hover. */
       .ctrl.close:hover {
-        background: var(--uui-color-danger, #d42054);
-        color: #fff;
+        background: var(--umbradesktop-control-close-hover-background, var(--uui-color-danger, #d42054));
+        color: var(--umbradesktop-control-close-hover-color, #fff);
       }
       .bodywrap {
         position: relative;
@@ -444,7 +445,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         flex: 1;
         border: none;
         width: 100%;
-        background: var(--uui-color-background);
+        background: var(--umbradesktop-window-body-background, var(--uui-color-background));
       }
       .loading {
         position: absolute;
@@ -452,7 +453,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--uui-color-surface);
+        background: var(--umbradesktop-window-background, var(--uui-color-surface));
       }
       [hidden] {
         display: none !important;
