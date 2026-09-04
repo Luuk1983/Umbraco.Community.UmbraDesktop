@@ -17,17 +17,22 @@ export default css`
        ceiling would otherwise clip a few pixels off the fullscreen height computed there. */
     max-height: none;
   }
+  /* The search field and the top row below share an explicit top offset and an explicit height,
+     rather than each ending up wherever its own padding puts it. That is what actually guarantees
+     the avatar, the field and the action buttons sit on one line. */
   .search {
     align-self: center;
-    width: min(420px, 80%);
-    margin: 28px 0 8px;
+    width: min(420px, 40%);
+    height: 40px;
+    margin: 26px 0 10px;
+    padding: 0 18px;
     border-radius: 999px;
     justify-content: center;
     color: rgba(255, 255, 255, 0.85);
   }
   .body {
     align-items: center;
-    padding: 12px 40px 32px;
+    padding: 6px 40px 28px;
   }
   /* Both content blocks share one column width. The Favourites hero is rendered as a sibling of
      '.cards', not a cell inside it, so the base rule's 'grid-column: 1 / -1' does not reach it —
@@ -37,10 +42,18 @@ export default css`
      left and right edges up. */
   .fav,
   .cards {
-    width: min(1100px, 100%);
+    /* border-box because these two are sized differently by the browser and have to end up the
+       same width: '.cards' children are grid cells, whose track width already includes their
+       padding, while '.fav' is an ordinary block whose declared width is its *content* box — so a
+       plain width made the Pinned hero wider than the grid by exactly its own padding. */
+    box-sizing: border-box;
+    /* Wide enough for the group cards to flow into five columns on a normal monitor. At 1100px
+       they wrapped onto three rows and pushed the panel into a scrollbar with most of the screen
+       left empty either side, which on a fullscreen launcher is the one thing it should never do. */
+    width: min(1600px, 96%);
   }
   .cards {
-    gap: 22px;
+    gap: 18px;
   }
   /* The base rule paints group headings in --uui-color-text-alt at 0.6 opacity, which is a muted
      dark grey — invisible on this panel. Near-full white with a shadow behind it, so the headings
@@ -50,8 +63,11 @@ export default css`
     opacity: 1;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
   }
+  /* Launchpad's icons are big because it shows one flat page of them. This launcher shows grouped
+     cards with labels, so the same size just spent vertical space it did not have — enough to
+     scroll a panel that had room to spare. */
   .launch umb-icon {
-    font-size: 44px;
+    font-size: 34px;
   }
   .tlb {
     font-size: 12px;
@@ -66,11 +82,26 @@ export default css`
      a window rather than an overlay, so the bar is dropped entirely: the same controls, sitting
      directly on the blurred surface and lined up with the column above them. */
   .footer {
-    align-self: center;
-    width: min(1100px, 100%);
+    /* Out of the flow and up to the top edge, level with the search field: the avatar to the left
+       of it, the system actions to the right. That is where macOS keeps both — its menu bar — and
+       it is what leaves the bottom of the panel completely clear. ':host' is the absolutely
+       positioned '.launcher' box that taskbar.css.ts sets up, so this anchors to the panel.
+       Leaving the flow also hands the body back the strip the bar used to occupy. */
+    position: absolute;
+    top: 26px;
+    left: 40px;
+    right: 40px;
+    height: 40px;
+    align-self: auto;
+    width: auto;
+    padding: 0;
     background: none;
     border-top: none;
-    padding: 4px 0 22px;
+  }
+  /* Bounded so a long display name cannot run into the centred search field. */
+  .footer .user {
+    max-width: 26%;
+    overflow: hidden;
   }
   /* Quiet at rest, since nothing frames these any more; full strength on approach. */
   .footer .fbtn,
