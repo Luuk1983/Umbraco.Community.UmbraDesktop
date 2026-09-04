@@ -4,7 +4,14 @@ import { clampResizeOrigin, clampWindowPosition, resizeRect, restoreDragPosition
 import { injectChromeStyles } from '../chrome-injector';
 import { resolveThemeSync, syncThemeStylesheet } from '../iframe-theme.js';
 import type { UmbraDesktopThemeManifest } from '../iframe-theme.js';
-import { UMBRADESKTOP_WINDOW_KEEP_VISIBLE, UMBRADESKTOP_WINDOW_MIN_SIZE } from '../constants';
+import {
+  UMBRADESKTOP_CONTROL_WIDTH,
+  UMBRADESKTOP_TITLEBAR_BORDER,
+  UMBRADESKTOP_TITLEBAR_HEIGHT,
+  UMBRADESKTOP_WINDOW_BORDER,
+  UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
+  UMBRADESKTOP_WINDOW_MIN_SIZE,
+} from '../constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -397,7 +404,11 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         display: flex;
         flex-direction: column;
         background: var(--umbradesktop-window-background, var(--uui-color-surface));
-        border: var(--umbradesktop-window-border, 1px solid var(--uui-color-border));
+        /* The px values here and on '.titlebar'/'.ctrl' below are interpolated rather than
+           written, because the Umbraco theme's 'metrics' are the sum of exactly these boxes — see
+           UMBRADESKTOP_WINDOW_KEEP_VISIBLE. A literal in one place and a sum in the other is how
+           'trailing' came to describe three buttons for as long as there have been four. */
+        border: var(--umbradesktop-window-border, ${UMBRADESKTOP_WINDOW_BORDER}px solid var(--uui-color-border));
         border-radius: var(--umbradesktop-window-radius, var(--uui-border-radius, 3px));
         box-shadow: var(--umbradesktop-window-shadow, var(--uui-shadow-depth-3));
         overflow: hidden;
@@ -418,9 +429,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         /* No vertical or right padding: the controls run full height and flush to the
            top-right edge, so the corner buttons are easy targets (Fitts's law). */
         padding: 0 0 0 var(--uui-size-space-3);
-        min-height: var(--umbradesktop-titlebar-height, 40px);
+        min-height: var(--umbradesktop-titlebar-height, ${UMBRADESKTOP_TITLEBAR_HEIGHT}px);
         background: var(--umbradesktop-titlebar-background, var(--uui-color-surface));
-        border-bottom: var(--umbradesktop-titlebar-border-bottom, 1px solid var(--uui-color-border));
+        border-bottom: var(
+          --umbradesktop-titlebar-border-bottom,
+          ${UMBRADESKTOP_TITLEBAR_BORDER}px solid var(--uui-color-border)
+        );
         cursor: move;
         user-select: none;
       }
@@ -458,7 +472,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: var(--umbradesktop-control-width, 46px);
+        width: var(--umbradesktop-control-width, ${UMBRADESKTOP_CONTROL_WIDTH}px);
         height: 100%;
         padding: 0;
         border: none;

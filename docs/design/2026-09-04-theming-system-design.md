@@ -296,9 +296,12 @@ lo = grab - stripStart - stripWidth
 hi = bounds.w - grab - stripStart
 ```
 
-- **Umbraco** (`leading 0`, `trailing 138`) → `stripStart = 0`, `stripWidth = w - 138`, so
+- **Umbraco** (`leading 0`, `trailing 185`) → `stripStart = 0`, `stripWidth = w - 185`, so
   `lo = grab - strip` and `hi = bounds.w - grab`. Identical to today, so the existing tests hold
-  unchanged.
+  unchanged. (`trailing` reads `138` above because that is what the constant said when this was
+  written — a stale hand-computed sum describing three window buttons, of which there have been
+  four since reload was added. It is now derived from a control count and measured against the
+  rendered box by `themes/umbraco/metrics.test.ts`.)
 - **macOS** (`leading 78`, `trailing 46`) → `lo = grab - w + 46` and `hi = bounds.w - grab - 78`.
 
 `clampWindowsToBounds` passes it through. `restoreDragPosition` is unaffected — a proportional grip

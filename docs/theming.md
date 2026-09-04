@@ -157,11 +157,11 @@ CSS cannot tell the window manager where a titlebar stops being draggable. `metr
 
 ```ts
 metrics: {
-  titlebarHeight: 30,
-  leadingControlsWidth: 102,   // non-draggable chrome at the bar's left end
+  titlebarHeight: 32,
+  leadingControlsWidth: 103,   // non-draggable chrome at the bar's left end
   trailingControlsWidth: 0,    // ...and at its right end
   grab: 80,                    // draggable titlebar that must stay on screen
-  taskbarReserve: 66,
+  taskbarReserve: 67,
 }
 ```
 
@@ -176,12 +176,31 @@ export const MACOS_LIGHT_SIZE = 12;
 export const MACOS_CONTROL_GAP = 8;
 // ...
 export const MACOS_LEADING_CONTROLS_WIDTH =
-  MACOS_TITLEBAR_PADDING + 3 * MACOS_LIGHT_SIZE + 3 * MACOS_CONTROL_GAP +
+  MACOS_WINDOW_BORDER + MACOS_TITLEBAR_PADDING +
+  3 * MACOS_LIGHT_SIZE + 3 * MACOS_CONTROL_GAP +
   MACOS_RELOAD_MARGIN + MACOS_RELOAD_SIZE;
 ```
 
 Copy that pattern. If a number appears in both a `.css.ts` file and `metrics.ts`, it belongs in
-`metrics.ts` and gets interpolated into the CSS.
+`metrics.ts` and gets interpolated into the CSS — and the same goes for `palette.ts`, which is
+where the easiest term to forget lives.
+
+### Then measure it
+
+Deriving makes the sum consistent with itself. It cannot make it consistent with what the browser
+paints, because a box you never thought to add is missing from both the sum and your reading of it.
+That is not hypothetical either: after `leadingControlsWidth` was derived it still rendered `103`,
+because the frame's 1px ring is painted by a **palette token** rather than by the theme's own
+stylesheet, so it was not among the constants being summed. `titlebarHeight` was short by the same
+ring plus the caption's hairline, and `taskbarReserve` by the dock's, whose `height` token sets a
+*content* height.
+
+So each theme with geometry of its own ships a `metrics.test.ts` that mounts the real chrome,
+measures the rendered boxes and holds the published metrics against them — see
+[`themes/macos/metrics.test.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/macos/metrics.test.ts)
+and its Win98 and Umbraco counterparts. `themes/mount-themed.ts` does the mounting for you; a
+useful habit is to measure one span across the whole band (frame edge to control edge) rather than
+summing parts, so a margin nobody folded into the sum cannot hide from the test too.
 
 Changing themes with windows already open re-clamps them, so a window parked under controls that
 have just moved to the other end of the titlebar is pulled back into reach. You get that for free;
@@ -247,8 +266,9 @@ answers rather than guesses:
 | Square window buttons at the right, with bevels | Palette for `control-width`; `window.css.ts` for the bevel shadows. No `order` needed — the DOM already puts them right |
 | No light/dark variants | Ship `palettes.light` only. Windows still follow the backoffice's own theme |
 
-Its `metrics` are the Umbraco theme's with a different `titlebarHeight` and `trailingControlsWidth`
-— controls stay at the right end, so `leadingControlsWidth` is `0`.
+Its `metrics` differ from the Umbraco theme's in `titlebarHeight`, `trailingControlsWidth` and
+`taskbarReserve` — the bar is shorter than Umbraco's — while `grab` is unchanged and
+`leadingControlsWidth` stays `0`, because the controls stay at the right end.
 
 ---
 
@@ -259,6 +279,7 @@ Its `metrics` are the Umbraco theme's with a different `titlebarHeight` and `tra
       to a component without adding it to `UMBRADESKTOP_TOKENS`, or the reverse
 - [ ] Every launcher affordance still *works*: search, tiles, pinning, the user button, Desktop
       settings, Exit. A theme may restyle, never remove (design §1.1)
+- [ ] Your theme's `metrics` are measured and not merely derived — a `metrics.test.ts` (§4)
 - [ ] Windows dragged hard against all four screen edges stay grabbable
 - [ ] Switching to your theme with windows open pulls stranded windows back into reach
 - [ ] The backoffice's light, dark and high-contrast settings all render something sane

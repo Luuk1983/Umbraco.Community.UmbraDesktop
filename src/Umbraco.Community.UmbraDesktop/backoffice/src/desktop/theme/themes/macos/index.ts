@@ -1,6 +1,6 @@
 import type { UmbraDesktopTheme } from '../../types';
 import { MACOS_DARK, MACOS_LIGHT } from './palette.js';
-import { MACOS_LEADING_CONTROLS_WIDTH, MACOS_TASKBAR_RESERVE, MACOS_TITLEBAR_HEIGHT } from './metrics.js';
+import { MACOS_CAPTION_KEEP_VISIBLE, MACOS_LEADING_CONTROLS_WIDTH, MACOS_TASKBAR_RESERVE } from './metrics.js';
 
 /**
  * macOS chrome around Umbraco content: traffic lights, a floating dock, a Launchpad-style
@@ -13,7 +13,7 @@ export const UMBRADESKTOP_MACOS_THEME: UmbraDesktopTheme = {
   swatch: { chrome: '#e8e8ea', accent: '#ff5f57', surface: '#ffffff' },
   palettes: { light: MACOS_LIGHT, dark: MACOS_DARK },
   metrics: {
-    titlebarHeight: MACOS_TITLEBAR_HEIGHT,
+    titlebarHeight: MACOS_CAPTION_KEEP_VISIBLE,
     // See metrics.ts: derived from the same constants window.css.ts renders its controls with,
     // rather than a hand-computed literal that can silently drift from what actually paints.
     leadingControlsWidth: MACOS_LEADING_CONTROLS_WIDTH,

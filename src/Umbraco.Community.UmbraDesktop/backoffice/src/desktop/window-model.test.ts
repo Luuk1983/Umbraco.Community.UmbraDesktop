@@ -133,6 +133,14 @@ it('resizeRect clamps the top edge so the origin never overshoots the minimum he
 });
 
 const BOUNDS = { w: 1000, h: 700 };
+// Controls at the trailing end only, the shape the Umbraco theme has. A fixture like the two
+// below, not a copy of that theme's geometry: these cases pin the clamp's arithmetic, and the
+// numbers only have to be plausible for the expectations hand-computed in each comment to be
+// checkable by eye. UMBRADESKTOP_WINDOW_KEEP_VISIBLE has since been corrected to a derived
+// trailing of 185 (its 138 described three window buttons when there were already four) —
+// deliberately not mirrored here, because what the theme actually paints is measured against the
+// rendered box in themes/umbraco/metrics.test.ts, and following it here would only churn the
+// expectations below without testing anything more.
 const KEEP = { grab: 80, leading: 0, trailing: 138, titlebar: 40 };
 // Arbitrary non-zero fixtures for a theme with controls at both ends of the titlebar — not the
 // shipped macOS theme's actual numbers (its trailing is 0; reload leads with the cluster rather
