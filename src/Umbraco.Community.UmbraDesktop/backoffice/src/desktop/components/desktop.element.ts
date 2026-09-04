@@ -144,9 +144,9 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
            too, and it inherits down through every shadow boundary from this one place. */
         --umbradesktop-taskbar-reserve: var(--umbradesktop-taskbar-height, 50px);
         /* Wallpaper derived from the header token but pulled darker, so the desktop reads
-           distinctly darker than the taskbar (and the light windows pop). Solid colour first
-           as a fallback for browsers without color-mix; the gradient adds a soft top-left
-           highlight for depth. (A selection of background images is planned later.) */
+           distinctly darker than the taskbar (and the light windows pop). This solid colour
+           is the fallback for browsers without color-mix, upgraded by the @supports block
+           below; the gradient adds a soft top-left highlight for depth. */
         background-color: var(--umbradesktop-desktop-background-color, #0e1329);
         background-image: var(
           --umbradesktop-desktop-background-image,
@@ -157,8 +157,13 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
           )
         );
       }
-      /* Kept as a separate rule so the color-mix upgrade still applies over the token's
-         solid-colour default, exactly as it did before tokenisation. */
+      /* Kept as a separate rule, rather than a second background-color declaration inside
+         .desktop, so the color-mix upgrade still applies over the token's solid-colour
+         default. That used to work by stacking two background-color declarations and
+         relying on unsupported browsers to discard the invalid second one - but once the
+         value moved behind var(--token, color-mix(...)), that whole declaration parses as
+         valid everywhere, so the fallback would never fire. This @supports check does the
+         same job explicitly. */
       @supports (background-color: color-mix(in srgb, red 50%, black)) {
         .desktop {
           background-color: var(
