@@ -35,7 +35,19 @@ This design builds it.
 client regeneration. The global rule "test-first for all backend code" therefore has nothing to bind
 to; §10 sets out the frontend testing approach instead.
 
-### 1.1 The boundary, stated once
+### 1.1 A theme may restyle, never remove
+
+A theme is CSS, so `display: none` is always within reach — and that is the one way a stylesheet can
+break the product. Win98's Start menu has no search field and no footer; the temptation is to hide
+the launcher's. Doing so would remove the only route to Search, the user modal, Exit and Desktop
+settings — including the theme picker, leaving no way back out of the theme.
+
+**Every affordance the Umbraco theme offers must remain reachable under every theme.** A theme may
+move, resize, restyle or re-order them; it may not hide them. Win98's Start menu gets its search and
+footer restyled as menu rows, not deleted. This is a review criterion for each theme, and the reason
+§10's browser checkpoints walk the full launcher under every theme rather than only looking at it.
+
+### 1.2 The boundary, stated once
 
 A theme styles the **chrome**: the desktop surface, the taskbar/dock, the launcher panel, and the
 window frame. It does not style **content**. Window bodies are iframes hosting the real backoffice,
@@ -143,6 +155,11 @@ Two constraints:
 - On switch, the previous sheet stays adopted until the new theme's module resolves, so a lazily
   imported theme never renders a frame of unstyled chrome.
 
+Appending rather than prepending is what gives theme rules their authority: later sheets win at equal
+specificity, so a theme can restate a base selector — `.frame:not(.active) .title` — and override it
+without `!important` or a specificity arms race. Win98 needs exactly this, since its inactive
+titlebar is a different *colour*, not the base theme's reduced opacity.
+
 ---
 
 ## 4. The theme contract
@@ -183,6 +200,24 @@ Prefixed `--umbradesktop-`, matching the codebase's naming elsewhere. Grouped by
 | Launcher | `launcher-background`, `launcher-surface`, `launcher-card-background`, `launcher-border`, `launcher-radius`, `launcher-shadow`, `launcher-text`, `launcher-text-muted` |
 | Type | `font-family`, `font-size-small` |
 
+### 4.2 Validated against the themes not yet built
+
+The contract was checked against Windows 98, Windows 11 and a GNOME/Adwaita-style Linux theme before
+being settled, because a contract proven only by macOS would be a contract shaped by macOS.
+
+| Demand | Covered by |
+|---|---|
+| Win98 double bevels — white/grey/black on four sides, outer and inner | Layered `inset` box-shadows. No extra DOM, so it stays CSS |
+| Win98 active titlebar is navy with white text; inactive is grey | A theme sheet restating `.frame:not(.active) .titlebar` and resetting the base opacity rule — see §3.4 on why appended sheets win |
+| Win98 Start menu: a narrow vertical list, not a 960px card grid | `:host { width }` plus `grid-template-columns: 1fr` on `.cards` and `.grid`, and `.launch { flex-direction: row }` to turn tiles into rows |
+| Win11 centred Start + task buttons, clock pinned right | The `.cluster` wrapper added in §6 |
+| Win11 dark mode | The `dark` palette variant (D3) |
+| Linux headerbar: centred title, controls right, large radius | Palette and metrics only; no new mechanism |
+| macOS traffic lights: close red, minimize amber, maximize green | The per-control classes added in §6 |
+
+Three of these forced changes to the preparation pass rather than to the contract, which is the
+outcome to want: §6 grew, §4 did not.
+
 The **Umbraco** theme's light palette is these tokens mapped to the values the components use today
 (`--uui-color-surface`, `--uui-shadow-depth-3`, `rgba(16, 20, 46, 0.72)`, and so on). Its dark
 palette is the same list — because those `--uui-*` values already follow Umbraco's dark theme, the
@@ -213,10 +248,10 @@ export interface UmbraDesktopThemeMetrics {
 }
 ```
 
-A *side* enum would have been the obvious modelling, and it is wrong: the macOS theme keeps the
-reload control at the titlebar's right (§7.1), so controls occupy **both** ends and the draggable
-strip is interrupted on both sides. Two widths express every arrangement the themes need, including
-Win98's `_ □ ✕` cluster, without a special case.
+A *side* enum was the obvious modelling. Two widths are the same size, need no branch in the clamp
+(`stripStart = leading`, `stripWidth = w - leading - trailing`), and leave room for a theme that
+splits its controls across both ends. No shipped theme does — macOS moves reload left with the
+cluster (§7.1) — so `trailingControlsWidth` is `0` for every theme but Umbraco today.
 
 ### 5.1 Generalising the clamp
 
@@ -269,6 +304,17 @@ desktop root from the active theme's metrics.
 The `.frame` inline style in `window.element.ts` stays — it carries genuinely per-window position,
 size and z-index, and no theme needs to override it.
 
+**The window controls are not individually addressable.** Reload, minimize and maximize all render as
+bare `class="ctrl"`; only close carries a modifier. macOS needs close red, minimize amber and
+maximize green, which is impossible today. Each control gains its own class — `ctrl-reload`,
+`ctrl-minimize`, `ctrl-maximize`, `ctrl-close` — alongside the shared `ctrl`. Win98 needs the same
+handle to separate close from the `_ □` pair.
+
+**The taskbar has no cluster wrapper.** `.start`, `.running` and `.clock` are flex siblings, so a
+theme that wants Start and the task buttons centred together with the clock pinned right — Windows 11,
+and any dock-style arrangement — has no element to centre. A `.cluster` wrapper around `.start` and
+`.running` makes that a one-line rule instead of a `margin: auto` puzzle.
+
 **Regression criterion:** with the Umbraco theme selected, the desktop must be pixel-identical to
 today. That is what makes this pass safe.
 
@@ -282,7 +328,7 @@ today. That is what makes this pass safe.
 |---|---|
 | Windows | 10px radius, hairline border, deep soft shadow; light titlebar gradient with a bottom hairline |
 | Controls | Traffic lights at the **left**: three 12px circles, red/amber/green, glyphs revealed on titlebar hover. Ordered with `order: -1` on `.controls`; the title centres over the full titlebar width |
-| Reload | Kept, as a fourth control at the titlebar's right — macOS has no equivalent, and losing the ability to reload a window would cost a real feature |
+| Reload | Kept, and moves **with** the cluster to the left, sitting after a gap as a plain glyph button rather than a fourth light. Neither macOS nor Windows has a reload control, so there is no native placement to honour — keeping every control at one end keeps the draggable strip contiguous |
 | Taskbar | Centred floating dock: `left: 50%`, translated, auto width, 16px radius, translucent with `backdrop-filter`, 10px above the bottom edge. Labels hidden |
 | Clock | Stays as a dock-mounted status item. Unfaithful — macOS puts it in the menu bar — but the menu bar is out of scope, and dropping the clock loses a feature |
 | Launcher | Fills the desktop surface above the dock — the dock stays visible, as Launchpad does. Translucent, heavily blurred, no border or radius. **Content unchanged** — search, group cards, Favourites, tiles and pins all keep their structure, restyled |
@@ -298,7 +344,7 @@ Mac.** Recorded as an accepted limitation, not a defect.
 ### 7.3 Metrics
 
 ```ts
-{ titlebarHeight: 30, leadingControlsWidth: 78, trailingControlsWidth: 46, grab: 80, taskbarReserve: 62 }
+{ titlebarHeight: 30, leadingControlsWidth: 124, trailingControlsWidth: 0, grab: 80, taskbarReserve: 62 }
 ```
 
 ---
@@ -359,7 +405,9 @@ cover.
 
 Browser checkpoints: Umbraco theme is visually unchanged after tokenisation; macOS theme applied and
 switched back; backoffice light↔dark switching live-updates the desktop; a window dragged to each
-edge under macOS stays grabbable; theme survives a reload.
+edge under macOS stays grabbable; theme survives a reload; and — per §1.1 — every launcher affordance
+(search, Favourites, pinning, the user modal, Desktop settings, Exit) is still reachable and working
+under each theme, not merely present.
 
 ---
 
@@ -372,7 +420,7 @@ edge under macOS stays grabbable; theme survives a reload.
 | `backdrop-filter` on both dock and fullscreen launcher costs frames with many windows open | Already shipped on the taskbar without trouble; the launcher blur only exists while the panel is open |
 | Umbraco's dark theme is marked *Experimental* and its tokens may shift | Only the identity theme reads `--uui-*`; every other theme is insulated by construction |
 | macOS theme looks approximate on Windows and Linux because SF Pro is unavailable | Documented (§7.2). The fallback stack is deliberate, not incidental |
-| Iframe content stays Umbraco-styled inside a Win98 frame later | The §1.1 boundary, stated up front rather than discovered |
+| Iframe content stays Umbraco-styled inside a Win98 frame later | The §1.2 boundary, stated up front rather than discovered |
 
 ---
 
@@ -385,7 +433,7 @@ edge under macOS stays grabbable; theme survives a reload.
 - **Windows 98, Windows 11 and Linux themes.** The contract is designed for them; none is built.
   Each should be a folder of CSS plus a palette.
 - **Third-party themes** as an extension type (D10).
-- **Theming window content or core modals** (§1.1).
+- **Theming window content or core modals** (§1.2).
 - **An admin-enforced site-wide default theme.** Per-user only, as with wallpaper.
 - **Pairing a theme with a default wallpaper.** Tempting for macOS; a separate decision.
 - **Dock magnification, window minimize-to-dock animations,** and other motion work.
