@@ -9,8 +9,9 @@ export const UMBRADESKTOP_SECTION_PATHNAME = 'umbradesktop';
  *
  * The chrome no longer reads this directly — it takes its height from
  * `--umbradesktop-taskbar-height`, whose CSS fallback is this same number written as a literal in
- * `taskbar.element` and `desktop.element`. Change one and you must change the others, until the
- * theme catalogue makes this constant the Umbraco theme's `taskbarReserve` and closes the gap.
+ * `taskbar.element` and `desktop.element`. Its one consumer is the Umbraco theme
+ * (`theme/themes/umbraco`), which reports it back out as `metrics.taskbarReserve` so that value
+ * and the CSS fallback stay a single source rather than two literals to keep in sync by hand.
  */
 export const UMBRADESKTOP_TASKBAR_HEIGHT = 50;
 
