@@ -323,7 +323,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       }
       .task:hover {
         color: var(--umbradesktop-taskbar-text-emphasis, var(--uui-color-header-contrast-emphasis));
-        background: var(--umbradesktop-taskbar-hover-background, rgba(255, 255, 255, 0.08));
+        background: var(--umbradesktop-task-hover-background, rgba(255, 255, 255, 0.08));
       }
       .task.active {
         color: var(--umbradesktop-taskbar-text-emphasis, var(--uui-color-header-contrast-emphasis));
@@ -339,6 +339,9 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       }
       /* Positioning only — the panel's own surface (background/border/shadow/size) is
          owned by <umbradesktop-launcher> itself. */
+      /* --umbradesktop-taskbar-reserve isn't set anywhere in this file — it's defined on
+         the desktop element's root (how much of the bottom edge the bar/dock occupies)
+         and inherits in through the shadow boundary. 50px is just the fallback until then. */
       .launcher {
         position: absolute;
         left: var(--umbradesktop-launcher-left, var(--uui-size-space-3));
