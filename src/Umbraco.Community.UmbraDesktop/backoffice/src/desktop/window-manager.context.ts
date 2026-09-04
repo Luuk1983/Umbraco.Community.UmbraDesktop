@@ -42,9 +42,12 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   /**
    * The active theme's keep-visible margins. Read by the window element, which clamps live during
    * a drag rather than going through this context.
+   *
+   * `Readonly` because this hands out the live object: a caller that wrote to it would corrupt the
+   * clamp for every window, and there is nothing else to stop them.
    * @returns The margins in force.
    */
-  public get keep(): UmbraDesktopKeepVisible {
+  public get keep(): Readonly<UmbraDesktopKeepVisible> {
     return this.#keep;
   }
 
@@ -120,6 +123,10 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * resizes — a viewport that shrinks under a window would otherwise strand it out of reach with no
    * way to drag it back. Skips the update entirely when nothing had to move, so a resize that
    * affects no window costs no re-render.
+   *
+   * Also **remembers** `bounds`, so that switching theme — which can move the window controls to
+   * the other end of the titlebar and change what "reachable" means — can re-clamp immediately
+   * instead of waiting for the next resize that may never come. See {@link setMetrics}.
    * @param bounds The new desktop surface size in px.
    */
   public clampToBounds(bounds: { w: number; h: number }): void {

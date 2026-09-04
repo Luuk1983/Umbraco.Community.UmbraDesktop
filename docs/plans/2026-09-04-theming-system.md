@@ -1657,7 +1657,7 @@ Add the two fields and the getter directly after the `windows` observable:
    * a drag rather than going through this context.
    * @returns The margins in force.
    */
-  public get keep(): UmbraDesktopKeepVisible {
+  public get keep(): Readonly<UmbraDesktopKeepVisible> {
     return this.#keep;
   }
 
@@ -1689,7 +1689,8 @@ Then replace the body of `clampToBounds` so it remembers the bounds and uses the
   }
 ```
 
-Leave its JSDoc comment in place.
+Extend its JSDoc to disclose the new side effect — it is a public method that now also remembers
+its argument, and a comment describing only the resize case would be dishonest about what it does.
 
 - [ ] **Step 4: Let the window element clamp with the theme's margins too**
 

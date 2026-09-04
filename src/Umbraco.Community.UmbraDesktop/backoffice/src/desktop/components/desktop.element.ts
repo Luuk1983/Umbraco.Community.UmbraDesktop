@@ -18,12 +18,19 @@ const OUTER_CHROME_STYLE_ID = 'umbradesktop-outer-chrome';
 /** Root element of the Desktop section. Owns the window manager and layout. */
 @customElement('umbradesktop-desktop')
 export class UmbraDesktopDesktopElement extends UmbLitElement {
+  /** Owns the open windows and the operations on them, for the whole desktop subtree. */
   #manager = new UmbraDesktopWindowManagerContext(this);
 
+  /** Owns this user's persisted desktop settings — wallpaper, pinned apps, chosen theme. */
   #settings = new UmbraDesktopSettingsContext(this);
 
-  // Declared after #settings: the theme context consumes the settings context, and class field
-  // initialisers run in declaration order, so #settings must already exist when this runs.
+  /**
+   * Owns the chrome theme in force.
+   *
+   * Declared after `#settings` deliberately: the theme context consumes the settings context to
+   * read the stored theme id, and class field initialisers run in declaration order, so `#settings`
+   * has to already exist when this one is constructed.
+   */
   #theme = new UmbraDesktopThemeContext(this);
 
   @state()

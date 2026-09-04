@@ -157,6 +157,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
       this.#startSurface,
       // The active theme's margins; falls back to the Umbraco theme's until the manager context
       // resolves (the two are identical today, so there is no visible gap in practice).
+      // The manager publishes the active theme's margins; the constant only covers the moment
+      // before `consumeContext` has resolved. It stays correct because the Umbraco theme builds
+      // its own metrics from this same constant — the two are one value, not two that agree.
       this.#manager?.keep ?? UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
     );
     this.#manager?.move(this.window.id, x, y);
