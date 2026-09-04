@@ -247,6 +247,9 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         /* Roomy: cards flow into as many columns as fit, so the panel only scrolls on
            genuinely small screens. */
         width: var(--umbradesktop-launcher-width, min(960px, 92vw));
+        /* height/backdrop-filter/color below are dormant handles, not live behaviour: their
+           fallbacks (auto, none, none) are the CSS initial values, so nothing changes today.
+           They exist so a future theme can turn this panel into a fullscreen blurred surface. */
         height: var(--umbradesktop-launcher-height, auto);
         max-height: var(--umbradesktop-launcher-max-height, calc(100vh - 66px));
         overflow: hidden;
@@ -270,7 +273,10 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         margin: var(--uui-size-space-4) var(--uui-size-space-4) 0;
         padding: var(--uui-size-space-3) var(--uui-size-space-4);
         border: var(--umbradesktop-launcher-card-border, 1px solid var(--uui-color-border));
-        border-radius: var(--umbradesktop-launcher-card-radius, var(--uui-border-radius, 3px));
+        /* Its own radius token, not the cards': the search field follows the panel's radius
+           (3px) while the group cards are deliberately rounder (6px). One token with two
+           different defaults would silently reshape both the first time a theme set it. */
+        border-radius: var(--umbradesktop-launcher-search-radius, var(--uui-border-radius, 3px));
         background: var(--umbradesktop-launcher-card-background, var(--uui-color-surface));
         color: var(--umbradesktop-launcher-text, var(--uui-color-text));
         font-family: inherit;
@@ -279,7 +285,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         cursor: pointer;
       }
       .search:hover {
-        border-color: var(--uui-color-border-emphasis, var(--uui-color-border));
+        border-color: var(--umbradesktop-launcher-border-emphasis, var(--uui-color-border-emphasis, var(--uui-color-border)));
       }
       .search umb-icon {
         flex-shrink: 0;
@@ -411,9 +417,11 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       .pin:focus-visible {
         opacity: 1;
       }
+      /* Tokenised alongside the resting state, or a themed badge would snap back to Umbraco's
+         palette the moment you hovered it. */
       .pin:hover {
-        border-color: var(--uui-color-border-emphasis, var(--uui-color-border));
-        background: var(--uui-color-surface-alt, var(--uui-color-surface));
+        border-color: var(--umbradesktop-launcher-border-emphasis, var(--uui-color-border-emphasis, var(--uui-color-border)));
+        background: var(--umbradesktop-launcher-pin-hover-background, var(--uui-color-surface-alt, var(--uui-color-surface)));
       }
       .footer {
         flex-shrink: 0;
