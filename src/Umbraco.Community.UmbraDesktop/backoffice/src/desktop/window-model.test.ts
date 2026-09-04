@@ -134,7 +134,10 @@ it('resizeRect clamps the top edge so the origin never overshoots the minimum he
 
 const BOUNDS = { w: 1000, h: 700 };
 const KEEP = { grab: 80, leading: 0, trailing: 138, titlebar: 40 };
+// 124 and 46 are the macOS theme's geometry: 124 is the traffic-light cluster (leading), 46 is a
+// single reload button (trailing) — see KEEP_SPLIT below, which uses both at once.
 const KEEP_LEFT = { grab: 80, leading: 124, trailing: 0, titlebar: 40 };
+const KEEP_SPLIT = { grab: 80, leading: 124, trailing: 46, titlebar: 40 };
 const DRAGGED: import('./types').Rect = { x: 100, y: 100, w: 400, h: 300 };
 
 it('clampWindowPosition leaves a fully on-screen position untouched', () => {
@@ -196,6 +199,22 @@ it('clampWindowPosition keeps a window narrower than its own controls wholly on 
   // 100px window against 124px of leading controls: no strip exists, so it is not shunted.
   expect(clampWindowPosition({ x: 0, y: 0, w: 100, h: 100 }, BOUNDS, KEEP_LEFT)).to.deep.equal({ x: 0, y: 0 });
   expect(clampWindowPosition({ x: -40, y: 0, w: 100, h: 100 }, BOUNDS, KEEP_LEFT)).to.deep.equal({ x: 0, y: 0 });
+});
+
+it('clampWindowPosition honours controls at both ends at once', () => {
+  // The case the two-width model exists for, and the reason a side enum was rejected. Each
+  // edge is governed by the controls at the OPPOSITE end, because those are what is left on
+  // screen: lo = grab - w + trailing = 80 - 400 + 46, hi = bounds.w - grab - leading.
+  expect(clampWindowPosition({ ...DRAGGED, x: -900 }, BOUNDS, KEEP_SPLIT)).to.deep.equal({ x: -274, y: 100 });
+  expect(clampWindowPosition({ ...DRAGGED, x: 5000 }, BOUNDS, KEEP_SPLIT)).to.deep.equal({ x: 796, y: 100 });
+});
+
+it('clampWindowPosition takes its right-edge limit from the leading controls alone', () => {
+  // Adding trailing controls must not move the right-edge limit — the leading ones are the
+  // part still on screen there. Guards the algebra against a future "simplification".
+  const left = clampWindowPosition({ ...DRAGGED, x: 5000 }, BOUNDS, KEEP_LEFT);
+  const split = clampWindowPosition({ ...DRAGGED, x: 5000 }, BOUNDS, KEEP_SPLIT);
+  expect(split.x).to.equal(left.x);
 });
 
 it('clampResizeOrigin leaves a rectangle inside the desktop untouched', () => {

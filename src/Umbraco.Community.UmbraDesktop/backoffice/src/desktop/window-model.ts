@@ -131,13 +131,18 @@ export function resizeRect(
  * grab handle: what has to stay on screen is the *draggable* strip of titlebar between them.
  * Themes place controls at either end — Umbraco trails them, macOS leads them — so both ends are
  * described, and a theme that split them across both would be expressed here too.
+ *
+ * `leading`/`trailing` name physical sides, not CSS logical/writing-mode-relative ones: they mean
+ * the left and right edge of the titlebar as drawn, always. There is no bidi/RTL mirroring here —
+ * a theme states where it actually paints its controls, and nothing in this module flips that for
+ * a right-to-left layout.
  */
 export interface UmbraDesktopKeepVisible {
   /** Draggable titlebar, in px, that must remain on screen. */
   grab: number;
-  /** Width in px of non-draggable controls at the titlebar's left end. */
+  /** Width in px of non-draggable controls at the titlebar's physical left end. */
   leading: number;
-  /** Width in px of non-draggable controls at the titlebar's right end. */
+  /** Width in px of non-draggable controls at the titlebar's physical right end. */
   trailing: number;
   /** Titlebar height in px, which must stay above the desktop's bottom edge. */
   titlebar: number;
@@ -165,6 +170,9 @@ export function clampWindowPosition(
   // Never ask for more than exists: a window narrower than its own controls has no strip at all
   // and simply stays wholly on screen rather than being shunted by an impossible margin.
   const grab = Math.min(keep.grab, stripWidth);
+  // Each limit is governed by the controls at the OPPOSITE end, because those are the part left on
+  // screen when the window hangs off that side: `lo` reduces to `grab - w + trailing` (leading
+  // cancels out), `hi` reduces to `bounds.w - grab - leading` (trailing never enters it).
   const lo = stripWidth > 0 ? grab - stripStart - stripWidth : 0;
   const hi = stripWidth > 0 ? bounds.w - grab - stripStart : bounds.w - proposed.w;
   return {
