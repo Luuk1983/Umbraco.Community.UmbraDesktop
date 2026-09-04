@@ -716,64 +716,68 @@ Still no visible change: this milestone ends with the Umbraco theme selected and
 import type { CSSResult } from '@umbraco-cms/backoffice/external/lit';
 
 /**
- * Every custom property a theme may set. Declared as a union rather than a bare string so a typo
- * in a palette is a compile error, and so the desktop element can clear the full set when a theme
- * that does not use a token replaces one that did.
+ * Every custom property a theme may set, as a runtime list so it can be checked against the CSS
+ * that actually reads them — see `tokens.test.ts`. The type below is derived from it, so a typo in
+ * a palette is still a compile error.
  */
-export type UmbraDesktopToken =
-  | '--umbradesktop-window-background'
-  | '--umbradesktop-window-body-background'
-  | '--umbradesktop-window-border'
-  | '--umbradesktop-window-radius'
-  | '--umbradesktop-window-shadow'
-  | '--umbradesktop-window-shadow-active'
-  | '--umbradesktop-titlebar-height'
-  | '--umbradesktop-titlebar-background'
-  | '--umbradesktop-titlebar-border-bottom'
-  | '--umbradesktop-titlebar-text'
-  | '--umbradesktop-titlebar-inactive-opacity'
-  | '--umbradesktop-control-width'
-  | '--umbradesktop-control-color'
-  | '--umbradesktop-control-hover-background'
-  | '--umbradesktop-control-close-hover-background'
-  | '--umbradesktop-control-close-hover-color'
-  | '--umbradesktop-taskbar-height'
-  | '--umbradesktop-taskbar-reserve'
-  | '--umbradesktop-taskbar-margin'
-  | '--umbradesktop-taskbar-radius'
-  | '--umbradesktop-taskbar-background'
-  | '--umbradesktop-taskbar-background-opaque'
-  | '--umbradesktop-taskbar-backdrop'
-  | '--umbradesktop-taskbar-border-top'
-  | '--umbradesktop-taskbar-shadow'
-  | '--umbradesktop-taskbar-text'
-  | '--umbradesktop-taskbar-text-emphasis'
-  | '--umbradesktop-task-hover-background'
-  | '--umbradesktop-start-hover-background'
-  | '--umbradesktop-start-active-background'
-  | '--umbradesktop-task-active-marker'
-  | '--umbradesktop-launcher-width'
-  | '--umbradesktop-launcher-height'
-  | '--umbradesktop-launcher-max-height'
-  | '--umbradesktop-launcher-left'
-  | '--umbradesktop-launcher-bottom'
-  | '--umbradesktop-launcher-background'
-  | '--umbradesktop-launcher-backdrop'
-  | '--umbradesktop-launcher-border'
-  | '--umbradesktop-launcher-radius'
-  | '--umbradesktop-launcher-shadow'
-  | '--umbradesktop-launcher-text'
-  | '--umbradesktop-launcher-hover-background'
-  | '--umbradesktop-launcher-border-emphasis'
-  | '--umbradesktop-launcher-search-radius'
-  | '--umbradesktop-launcher-card-background'
-  | '--umbradesktop-launcher-card-border'
-  | '--umbradesktop-launcher-card-radius'
-  | '--umbradesktop-launcher-pin-hover-background'
-  | '--umbradesktop-desktop-background-color'
-  | '--umbradesktop-desktop-background-image'
-  | '--umbradesktop-desktop-scrim'
-  | '--umbradesktop-desktop-watermark-opacity';
+export const UMBRADESKTOP_TOKENS = [
+  '--umbradesktop-window-background',
+  '--umbradesktop-window-body-background',
+  '--umbradesktop-window-border',
+  '--umbradesktop-window-radius',
+  '--umbradesktop-window-shadow',
+  '--umbradesktop-window-shadow-active',
+  '--umbradesktop-titlebar-height',
+  '--umbradesktop-titlebar-background',
+  '--umbradesktop-titlebar-border-bottom',
+  '--umbradesktop-titlebar-text',
+  '--umbradesktop-titlebar-inactive-opacity',
+  '--umbradesktop-control-width',
+  '--umbradesktop-control-color',
+  '--umbradesktop-control-hover-background',
+  '--umbradesktop-control-close-hover-background',
+  '--umbradesktop-control-close-hover-color',
+  '--umbradesktop-taskbar-height',
+  '--umbradesktop-taskbar-reserve',
+  '--umbradesktop-taskbar-margin',
+  '--umbradesktop-taskbar-radius',
+  '--umbradesktop-taskbar-background',
+  '--umbradesktop-taskbar-background-opaque',
+  '--umbradesktop-taskbar-backdrop',
+  '--umbradesktop-taskbar-border-top',
+  '--umbradesktop-taskbar-shadow',
+  '--umbradesktop-taskbar-text',
+  '--umbradesktop-taskbar-text-emphasis',
+  '--umbradesktop-task-hover-background',
+  '--umbradesktop-start-hover-background',
+  '--umbradesktop-start-active-background',
+  '--umbradesktop-task-active-marker',
+  '--umbradesktop-launcher-width',
+  '--umbradesktop-launcher-height',
+  '--umbradesktop-launcher-max-height',
+  '--umbradesktop-launcher-left',
+  '--umbradesktop-launcher-bottom',
+  '--umbradesktop-launcher-background',
+  '--umbradesktop-launcher-backdrop',
+  '--umbradesktop-launcher-border',
+  '--umbradesktop-launcher-radius',
+  '--umbradesktop-launcher-shadow',
+  '--umbradesktop-launcher-text',
+  '--umbradesktop-launcher-hover-background',
+  '--umbradesktop-launcher-border-emphasis',
+  '--umbradesktop-launcher-search-radius',
+  '--umbradesktop-launcher-card-background',
+  '--umbradesktop-launcher-card-border',
+  '--umbradesktop-launcher-card-radius',
+  '--umbradesktop-launcher-pin-hover-background',
+  '--umbradesktop-desktop-background-color',
+  '--umbradesktop-desktop-background-image',
+  '--umbradesktop-desktop-scrim',
+  '--umbradesktop-desktop-watermark-opacity',
+] as const;
+
+/** Every custom property a theme may set. */
+export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
 
 /**
  * One theme's values for one variant. Partial by design: every token has a fallback baked into
@@ -814,14 +818,28 @@ export interface UmbraDesktopThemeSheets {
 /** Which chrome component a stylesheet belongs to. */
 export type UmbraDesktopSurface = keyof UmbraDesktopThemeSheets;
 
+/**
+ * The three colours the settings picker paints as a theme's preview. Named rather than a
+ * positional triple: a theme author writing a Win98 or macOS palette has to map these onto a
+ * design language that has no such words, and a swapped tuple would be invisible.
+ */
+export interface UmbraDesktopSwatch {
+  /** The dominant colour of the chrome itself — the taskbar or dock. */
+  chrome: string;
+  /** The colour this theme marks the active or selected thing with. */
+  accent: string;
+  /** The colour a window's own surface is painted. */
+  surface: string;
+}
+
 /** A theme as shipped in the package. */
 export interface UmbraDesktopTheme {
   /** Stable id, persisted in settings. */
   id: string;
   /** Display name for the picker. Not localized — these are proper nouns, as with wallpapers. */
   name: string;
-  /** The swatch colours the picker draws its preview from: [chrome, accent, surface]. */
-  swatch: readonly [string, string, string];
+  /** The colours the picker draws its preview from. */
+  swatch: UmbraDesktopSwatch;
   /** Palettes by variant. `light` is mandatory; `dark` falls back to it when absent. */
   palettes: { light: UmbraDesktopPalette; dark?: UmbraDesktopPalette };
   /** Geometry JavaScript needs. */
@@ -831,10 +849,21 @@ export interface UmbraDesktopTheme {
 }
 ```
 
-- [ ] **Step 2: Build to verify the types compile**
+- [ ] **Step 2: Add the drift test**
 
-Run: `cd src/Umbraco.Community.UmbraDesktop && npm run build`
-Expected: build succeeds.
+Create `theme/tokens.test.ts`. Import the four element modules (existing tests already do this —
+see `components/desktop-chrome.test.ts` for the idiom), flatten each class's `static styles`
+`CSSResultGroup`, join the `cssText`, extract every `--umbradesktop-*` occurrence, and assert the
+set equals `UMBRADESKTOP_TOKENS` **in both directions**, with distinct messages saying which way it
+drifted. The list is maintained by hand against CSS in four files and drift is otherwise silent: a
+name with no CSS is dead, and a property missing from the list can never be themed.
+
+Note `CSSResultGroup` leaves may be native `CSSStyleSheet`, which has no `cssText` — guard the access.
+
+- [ ] **Step 3: Build and test**
+
+Run: `cd src/Umbraco.Community.UmbraDesktop && npm run build && npm test`
+Expected: build succeeds; 142 tests pass (141 plus the drift test).
 
 - [ ] **Step 3: Commit**
 
@@ -871,7 +900,7 @@ import { UMBRADESKTOP_TASKBAR_HEIGHT, UMBRADESKTOP_WINDOW_KEEP_VISIBLE } from '.
 export const UMBRADESKTOP_UMBRACO_THEME: UmbraDesktopTheme = {
   id: 'umbraco',
   name: 'Umbraco',
-  swatch: ['#1b264f', '#f5c1bc', '#ffffff'],
+  swatch: { chrome: '#1b264f', accent: '#f5c1bc', surface: '#ffffff' },
   palettes: { light: {} },
   metrics: {
     titlebarHeight: UMBRADESKTOP_WINDOW_KEEP_VISIBLE.titlebar,
@@ -902,15 +931,11 @@ export const UMBRADESKTOP_DEFAULT_THEME_ID = UMBRADESKTOP_UMBRACO_THEME.id;
  */
 export const UMBRADESKTOP_THEMES: ReadonlyArray<UmbraDesktopTheme> = [UMBRADESKTOP_UMBRACO_THEME];
 
-/**
- * Look up a theme by id.
- * @param id The stored theme id.
- * @returns The theme, or `undefined` when no theme has that id.
- */
-export function findTheme(id: string): UmbraDesktopTheme | undefined {
-  return UMBRADESKTOP_THEMES.find((theme) => theme.id === id);
-}
 ```
+
+No `findTheme` helper: the resolver in Task 9 takes an injectable catalogue so its tests can pass a
+fixture, so it does its own `find`. A second lookup hardwired to the global list would be a trap for
+whoever reaches for it instead.
 
 - [ ] **Step 3: Build**
 
@@ -1780,7 +1805,7 @@ import { MACOS_DARK, MACOS_LIGHT } from './palette.js';
 export const UMBRADESKTOP_MACOS_THEME: UmbraDesktopTheme = {
   id: 'macos',
   name: 'macOS',
-  swatch: ['#e8e8ea', '#ff5f57', '#ffffff'],
+  swatch: { chrome: '#e8e8ea', accent: '#ff5f57', surface: '#ffffff' },
   palettes: { light: MACOS_LIGHT, dark: MACOS_DARK },
   metrics: {
     titlebarHeight: 30,
@@ -2235,7 +2260,9 @@ Add this method to the class:
                 aria-pressed=${theme.id === activeId}
                 @click=${() => this.#settings?.setTheme(theme.id)}>
                 <span class="swatch" aria-hidden="true">
-                  ${theme.swatch.map((colour) => html`<i style="background:${colour}"></i>`)}
+                  ${[theme.swatch.chrome, theme.swatch.accent, theme.swatch.surface].map(
+                    (colour) => html`<i style="background:${colour}"></i>`,
+                  )}
                 </span>
                 <span class="theme-name">${theme.name}</span>
               </button>
