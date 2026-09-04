@@ -195,14 +195,14 @@ property it feeds, so `titlebar-border-bottom` sets a `border-bottom` and `windo
 
 | Group | Examples |
 |---|---|
-| Desktop | `desktop-background`, `desktop-scrim`, `desktop-watermark-opacity` |
-| Window | `window-background`, `window-border`, `window-radius`, `window-shadow`, `window-shadow-active` |
+| Desktop | `desktop-background-color`, `desktop-background-image`, `desktop-scrim`, `desktop-watermark-opacity` |
+| Window | `window-background`, `window-body-background`, `window-border`, `window-radius`, `window-shadow`, `window-shadow-active` |
 | Titlebar | `titlebar-height`, `titlebar-background`, `titlebar-border-bottom`, `titlebar-text`, `titlebar-inactive-opacity` |
-| Controls | `control-color`, `control-hover-background`, `control-close-hover-background`, `control-close-hover-color` |
+| Controls | `control-width`, `control-color`, `control-hover-background`, `control-close-hover-background`, `control-close-hover-color` |
 | Taskbar (surface) | `taskbar-height`, `taskbar-background`, `taskbar-background-opaque`, `taskbar-backdrop`, `taskbar-border-top`, `taskbar-shadow`, `taskbar-radius`, `taskbar-margin`, `taskbar-text`, `taskbar-text-emphasis` |
 | Taskbar (elements) | `start-hover-background`, `start-active-background`, `task-hover-background`, `task-active-marker` |
-| Launcher | `launcher-background`, `launcher-surface`, `launcher-card-background`, `launcher-border`, `launcher-radius`, `launcher-shadow`, `launcher-text`, `launcher-text-muted` |
-| Type | `font-family`, `font-size-small` |
+| Launcher (panel) | `launcher-width`, `launcher-height`, `launcher-max-height`, `launcher-left`, `launcher-bottom`, `launcher-background`, `launcher-backdrop`, `launcher-border`, `launcher-radius`, `launcher-shadow`, `launcher-text` |
+| Launcher (contents) | `launcher-search-radius`, `launcher-card-background`, `launcher-card-border`, `launcher-card-radius`, `launcher-hover-background`, `launcher-border-emphasis`, `launcher-pin-hover-background` |
 
 ### 4.2 Validated against the themes not yet built
 
