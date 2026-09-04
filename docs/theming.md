@@ -270,6 +270,50 @@ Its `metrics` differ from the Umbraco theme's in `titlebarHeight`, `trailingCont
 `taskbarReserve` — the bar is shorter than Umbraco's — while `grab` is unchanged and
 `leadingControlsWidth` stays `0`, because the controls stay at the right end.
 
+### 6.1 When the source is not an operating system
+
+Umbraco 4 is the awkward case worth reading before you theme anything that is not a desktop OS,
+because a web application does not have one of everything the chrome needs.
+
+**Some surfaces have no antecedent, and you invent them.** v4 had no taskbar at all. The bar is
+assembled from v4's own raised-button vocabulary instead, which keeps it period-correct without
+being copied from anything. Say so in the theme's doc comment; the next reader will otherwise go
+looking for the original.
+
+**Some are adapted rather than copied.** v4 never shipped a modal with a titlebar, so the window
+frame comes from its content-pane header — a title strip above content with controls beside it,
+which is the same job even though it was never a window.
+
+**And some are more literal than an OS would give you.** v4 kept its Sections panel in the
+bottom-left corner, which is exactly where `--umbradesktop-launcher-left`/`-bottom` already put
+the launcher. That surface needed no repositioning whatsoever.
+
+The trap is scale. **A source design was built for the number of things it had, and the catalogue
+has more.** v4's Sections panel held six items, which is why it could afford large glossy icons in
+a grid; the catalogue holds twenty-five across seven groups, and the same grid becomes eight
+headings and nine rows of tiles with most of it below the fold. The fix was not to shrink the
+grid but to use a second idiom the source already had — v4's tree — for the long list, and keep
+the grid for Favourites where the count still fits. That split is free because the base renders
+Favourites as `.card.fav`, a **sibling** of `.cards` rather than a cell inside it, so the two can
+be styled apart:
+
+```ts
+/* Favourites keeps the grid; the grouped catalogue becomes a scrolling well of rows. */
+.card.fav .grid { grid-template-columns: repeat(4, 1fr); }
+.cards { display: flex; flex-direction: column; overflow-y: auto; }
+.cards .card .launch { flex-direction: row; }
+```
+
+If you rely on that seam, test it. A refactor that moved Favourites inside `.cards` would hand it
+the row rules and silently delete the grid, with nothing else failing.
+
+Two smaller things this theme ran into. **A theme sees position, not identity** — v4 coloured each
+section differently, and a stylesheet has no idea which app a tile is, so the hues rotate on
+`:nth-child` instead; not the original mapping, but better than one flat colour. And **the base's
+`min-height` and `height` are content-box**, so a hairline you add on top makes the caption and
+the bar each paint a pixel taller than their token claims. Set `box-sizing: border-box` or fold
+the border into `metrics` — `metrics.test.ts` catches it either way, and did.
+
 ---
 
 ## 7. Checklist before you open a PR
