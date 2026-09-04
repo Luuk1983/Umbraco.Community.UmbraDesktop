@@ -44,6 +44,9 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   /** Aliases of the apps pinned to Favourites, in pin order. */
   public readonly pinned = this.#settings.asObservablePart((settings) => settings.pinned);
 
+  /** Id of the user's chosen chrome theme. */
+  public readonly theme = this.#settings.asObservablePart((settings) => settings.theme);
+
   #imaging: UmbImagingRepository;
 
   /** The current user's id, once known. Until then nothing is persisted. */
@@ -109,6 +112,15 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    */
   public togglePin(alias: string): void {
     this.#update({ pinned: togglePinned(this.#settings.getValue().pinned, alias) });
+  }
+
+  /**
+   * Choose a chrome theme. Applies immediately and persists; the theme context observes this and
+   * resolves it against the backoffice's light/dark setting.
+   * @param id The theme id to use.
+   */
+  public setTheme(id: string): void {
+    this.#update({ theme: id });
   }
 
   /**

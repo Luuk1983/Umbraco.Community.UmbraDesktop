@@ -21,6 +21,7 @@ it('round-trips settings through serialise and parse', () => {
   const settings: UmbraDesktopSettings = {
     v: 1,
     wallpaper: { kind: 'media', unique: 'a-guid' },
+    theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: ['content'],
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
@@ -32,7 +33,10 @@ it('reads back each wallpaper kind unchanged', () => {
     { kind: 'builtin', id: 'golden-valley' },
     { kind: 'media', unique: 'a-guid' },
   ] as const) {
-    expect(parseSettings(serialiseSettings({ v: 1, wallpaper, pinned: [] })).wallpaper).to.deep.equal(wallpaper);
+    expect(
+      parseSettings(serialiseSettings({ v: 1, wallpaper, theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme, pinned: [] }))
+        .wallpaper,
+    ).to.deep.equal(wallpaper);
   }
 });
 
@@ -71,7 +75,12 @@ it('defaults to the seeded favourites when nothing is stored', () => {
 });
 
 it('round-trips a pinned list', () => {
-  const settings: UmbraDesktopSettings = { v: 1, wallpaper: { kind: 'none' }, pinned: ['media', 'content'] };
+  const settings: UmbraDesktopSettings = {
+    v: 1,
+    wallpaper: { kind: 'none' },
+    theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
+    pinned: ['media', 'content'],
+  };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
 
@@ -97,4 +106,29 @@ it('recovers each field independently, so one bad field does not discard the oth
 
 it('never returns the shared default pinned array, so a caller cannot mutate it', () => {
   expect(parseSettings(null).pinned).to.not.equal(UMBRADESKTOP_DEFAULT_PINNED);
+});
+
+it('defaults the theme when a stored payload predates theming', () => {
+  const settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: ['content'] }));
+  expect(settings.theme).to.equal(UMBRADESKTOP_DEFAULT_SETTINGS.theme);
+  // The pre-theming fields survive untouched — the point of recovering fields independently.
+  expect(settings.wallpaper).to.deep.equal({ kind: 'none' });
+  expect(settings.pinned).to.deep.equal(['content']);
+});
+
+it('keeps a stored theme id', () => {
+  const settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: [], theme: 'macos' }));
+  expect(settings.theme).to.equal('macos');
+});
+
+it('discards a malformed theme id without costing the user their wallpaper or pins', () => {
+  const settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: ['media'], theme: 42 }));
+  expect(settings.theme).to.equal(UMBRADESKTOP_DEFAULT_SETTINGS.theme);
+  expect(settings.wallpaper).to.deep.equal({ kind: 'none' });
+  expect(settings.pinned).to.deep.equal(['media']);
+});
+
+it('round-trips a theme through serialise and parse', () => {
+  const settings = { ...UMBRADESKTOP_DEFAULT_SETTINGS, theme: 'macos' };
+  expect(parseSettings(serialiseSettings(settings)).theme).to.equal('macos');
 });

@@ -1,5 +1,6 @@
 import type { UmbraDesktopSettings, UmbraDesktopWallpaperRef } from './types';
 import { UMBRADESKTOP_DEFAULT_WALLPAPER_ID } from './wallpapers.generated';
+import { UMBRADESKTOP_DEFAULT_THEME_ID } from '../theme/themes/index';
 
 /**
  * Reading and writing desktop settings, as pure functions over strings — no DOM, no storage.
@@ -20,6 +21,7 @@ export const UMBRADESKTOP_DEFAULT_PINNED: ReadonlyArray<string> = ['content', 'm
 export const UMBRADESKTOP_DEFAULT_SETTINGS: UmbraDesktopSettings = {
   v: 1,
   wallpaper: { kind: 'builtin', id: UMBRADESKTOP_DEFAULT_WALLPAPER_ID },
+  theme: UMBRADESKTOP_DEFAULT_THEME_ID,
   pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
 };
 
@@ -66,6 +68,17 @@ function isPinnedList(value: unknown): value is string[] {
 }
 
 /**
+ * Whether a decoded value is a theme id this version can store. An id naming a theme that no
+ * longer exists still passes here — that is resolved against the catalogue when the theme is
+ * applied, not when it is read, exactly as with wallpaper references.
+ * @param value The decoded `theme` property.
+ * @returns True when the value is a usable id.
+ */
+function isThemeId(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+/**
  * Decode a stored payload into settings. Never throws, and never returns something partially
  * valid: anything unreadable — absent, malformed, or a version this build predates — yields a
  * fresh copy of the defaults. A silently reset preference is a far better failure than a blank
@@ -80,6 +93,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
   const fallback = (): UmbraDesktopSettings => ({
     v: 1,
     wallpaper: { ...UMBRADESKTOP_DEFAULT_SETTINGS.wallpaper },
+    theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
   });
 
@@ -94,11 +108,12 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
 
   if (typeof decoded !== 'object' || decoded === null) return fallback();
 
-  const payload = decoded as { v?: unknown; wallpaper?: unknown; pinned?: unknown };
+  const payload = decoded as { v?: unknown; wallpaper?: unknown; pinned?: unknown; theme?: unknown };
   if (payload.v !== 1) return fallback();
 
   const settings = fallback();
   if (isWallpaperRef(payload.wallpaper)) settings.wallpaper = payload.wallpaper;
+  if (isThemeId(payload.theme)) settings.theme = payload.theme;
   if (isPinnedList(payload.pinned)) settings.pinned = payload.pinned;
   return settings;
 }

@@ -18,6 +18,8 @@ export interface UmbraDesktopSettings {
   v: 1;
   /** The user's chosen wallpaper. */
   wallpaper: UmbraDesktopWallpaperRef;
+  /** Id of the user's chosen chrome theme. */
+  theme: string;
   /** Aliases of the apps pinned to Favourites, in pin order. */
   pinned: string[];
 }
