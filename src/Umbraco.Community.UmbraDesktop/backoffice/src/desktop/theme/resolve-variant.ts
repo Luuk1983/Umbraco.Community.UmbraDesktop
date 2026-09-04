@@ -45,9 +45,9 @@ export function resolveTheme(
     };
   }
 
-  var theme = catalogue.find((entry) => entry.id === themeId) ?? UMBRADESKTOP_UMBRACO_THEME;
-  var wantsDark = umbThemeAlias === UMB_THEME_DARK_ALIAS;
-  var dark = theme.palettes.dark;
+  const theme = catalogue.find((entry) => entry.id === themeId) ?? UMBRADESKTOP_UMBRACO_THEME;
+  const wantsDark = umbThemeAlias === UMB_THEME_DARK_ALIAS;
+  const dark = theme.palettes.dark;
 
   return wantsDark && dark
     ? { theme, variant: 'dark', palette: dark, forcedByContrast: false }

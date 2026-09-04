@@ -21,7 +21,9 @@
   step below predicts a test failing on a type error, expect a *runtime* failure instead — usually
   `undefined` propagating into arithmetic as `NaN`. Run the build to see type errors.
 - **Every type, method and property gets an XML-style JSDoc comment** (`/** … */` with `@param` / `@returns`), matching the surrounding code. This codebase documents `private` members too.
-- **Use `var` for locals, `const` for module scope.** Prefer `interface`/`type` over classes for data.
+- **Use `const`/`let` for locals, never `var`.** The global CLAUDE.md's "use `var`" rule is a
+  C# rule about type inference; in TypeScript `var` is legacy function-scoped and this codebase uses
+  `const`/`let` exclusively. Prefer `interface`/`type` over classes for data.
 - **No component tests.** This project unit-tests pure modules and verifies UI in the browser with the maintainer — the convention set by the launcher and wallpaper work.
 
 ### A refinement on the design, adopted here
@@ -1076,9 +1078,9 @@ export function resolveTheme(
     };
   }
 
-  var theme = catalogue.find((entry) => entry.id === themeId) ?? UMBRADESKTOP_UMBRACO_THEME;
-  var wantsDark = umbThemeAlias === UMB_THEME_DARK_ALIAS;
-  var dark = theme.palettes.dark;
+  const theme = catalogue.find((entry) => entry.id === themeId) ?? UMBRADESKTOP_UMBRACO_THEME;
+  const wantsDark = umbThemeAlias === UMB_THEME_DARK_ALIAS;
+  const dark = theme.palettes.dark;
 
   return wantsDark && dark
     ? { theme, variant: 'dark', palette: dark, forcedByContrast: false }
@@ -1187,7 +1189,7 @@ Append to `settings-store.test.ts`:
 
 ```ts
 it('defaults the theme when a stored payload predates theming', () => {
-  var settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: ['content'] }));
+  const settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: ['content'] }));
   expect(settings.theme).to.equal(UMBRADESKTOP_DEFAULT_SETTINGS.theme);
   // The pre-theming fields survive untouched — the point of recovering fields independently.
   expect(settings.wallpaper).to.deep.equal({ kind: 'none' });
@@ -1195,19 +1197,19 @@ it('defaults the theme when a stored payload predates theming', () => {
 });
 
 it('keeps a stored theme id', () => {
-  var settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: [], theme: 'macos' }));
+  const settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: [], theme: 'macos' }));
   expect(settings.theme).to.equal('macos');
 });
 
 it('discards a malformed theme id without costing the user their wallpaper or pins', () => {
-  var settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: ['media'], theme: 42 }));
+  const settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: ['media'], theme: 42 }));
   expect(settings.theme).to.equal(UMBRADESKTOP_DEFAULT_SETTINGS.theme);
   expect(settings.wallpaper).to.deep.equal({ kind: 'none' });
   expect(settings.pinned).to.deep.equal(['media']);
 });
 
 it('round-trips a theme through serialise and parse', () => {
-  var settings = { ...UMBRADESKTOP_DEFAULT_SETTINGS, theme: 'macos' };
+  const settings = { ...UMBRADESKTOP_DEFAULT_SETTINGS, theme: 'macos' };
   expect(parseSettings(serialiseSettings(settings)).theme).to.equal('macos');
 });
 ```
@@ -1423,8 +1425,8 @@ export class UmbraDesktopThemeContext extends UmbContextBase {
    * and a theme's module is only imported when the theme in force actually differs.
    */
   #apply(): void {
-    var previous = this.#resolved.getValue();
-    var next = resolveTheme(this.#chosenId, this.#umbAlias);
+    const previous = this.#resolved.getValue();
+    const next = resolveTheme(this.#chosenId, this.#umbAlias);
     this.#resolved.setValue(next);
     if (previous.theme.id !== next.theme.id) void this.#loadSheets(next);
   }
@@ -1437,13 +1439,13 @@ export class UmbraDesktopThemeContext extends UmbContextBase {
    * @param resolved The theme now in force.
    */
   async #loadSheets(resolved: UmbraDesktopResolvedTheme): Promise<void> {
-    var ticket = ++this.#pending;
+    const ticket = ++this.#pending;
     if (!resolved.theme.sheets) {
       this.#sheets.setValue({});
       return;
     }
     try {
-      var sheets = await resolved.theme.sheets();
+      const sheets = await resolved.theme.sheets();
       // A newer selection landed while this import was in flight; its sheets win.
       if (ticket === this.#pending) this.#sheets.setValue(sheets);
     } catch {
@@ -1519,7 +1521,7 @@ export class UmbraDesktopThemeStyles extends UmbControllerBase {
    * @param sheet The theme's sheet for this surface, or `undefined` when it styles nothing here.
    */
   #adopt(host: { renderRoot?: ParentNode }, sheet?: CSSStyleSheet): void {
-    var root = host.renderRoot as ShadowRoot | undefined;
+    const root = host.renderRoot as ShadowRoot | undefined;
     if (!root || !('adoptedStyleSheets' in root)) return;
     this.#base ??= [...root.adoptedStyleSheets];
     root.adoptedStyleSheets = sheet ? [...this.#base, sheet] : [...this.#base];
@@ -2248,7 +2250,7 @@ Add this method to the class:
    */
   #renderThemes() {
     // The user's choice, not the theme in force — see `_chosenThemeId`.
-    var activeId = this._chosenThemeId ?? this._theme?.theme.id;
+    const activeId = this._chosenThemeId ?? this._theme?.theme.id;
     return html`
       <uui-box headline=${this.localize.term('umbraDesktop_theme')}>
         <p class="hint">${this.localize.term('umbraDesktop_themeDescription')}</p>
