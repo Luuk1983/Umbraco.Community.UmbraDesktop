@@ -5,6 +5,7 @@ import { UmbraDesktopTaskbarElement } from '../components/taskbar.element.js';
 import { UmbraDesktopLauncherElement } from '../components/launcher.element.js';
 import { UmbraDesktopWindowElement } from '../components/window.element.js';
 import { UMBRADESKTOP_TOKENS } from './types.js';
+import { UMBRADESKTOP_THEMES } from './themes/index.js';
 
 /**
  * `UMBRADESKTOP_TOKENS` is maintained by hand against CSS spread across four component files, and
@@ -61,5 +62,31 @@ it('has exactly the tokens the four chrome components read or write, no more and
     mentionedButUndeclared,
     'these --umbradesktop-* custom properties appear in component CSS but are missing from ' +
       'UMBRADESKTOP_TOKENS — add them there so a theme can actually set them',
+  ).to.deep.equal([]);
+});
+
+it('has no palette value containing a semicolon', () => {
+  // `paletteCss` joins palette entries as `token:value;` into one `style` attribute string. A
+  // value containing a `;` would close that declaration early, turning the rest of the value into
+  // a bogus extra declaration and silently truncating everything after it. Values here are
+  // developer-authored in-repo theme files, not user input, so this isn't an escaping concern —
+  // it's a lint against a mistake shipping unnoticed in a theme's palette.
+  const offenders: string[] = [];
+
+  for (const theme of UMBRADESKTOP_THEMES) {
+    for (const variant of ['light', 'dark'] as const) {
+      const palette = theme.palettes[variant];
+      if (!palette) continue;
+      for (const [token, value] of Object.entries(palette)) {
+        if (value?.includes(';')) offenders.push(`${theme.id}.${variant}.${token} = "${value}"`);
+      }
+    }
+  }
+
+  expect(
+    offenders,
+    'these theme palette values contain a ";" — paletteCss joins entries as "token:value;" into ' +
+      'one style attribute string, so a semicolon inside a value would close the declaration early ' +
+      'and silently truncate the rest of the palette',
   ).to.deep.equal([]);
 });
