@@ -269,7 +269,7 @@ In `#renderLauncher()`, remove the `style` attribute — the launcher's own styl
       }
       .task:hover {
         color: var(--umbradesktop-taskbar-text-emphasis, var(--uui-color-header-contrast-emphasis));
-        background: var(--umbradesktop-taskbar-hover-background, rgba(255, 255, 255, 0.08));
+        background: var(--umbradesktop-task-hover-background, rgba(255, 255, 255, 0.08));
       }
       .task.active {
         color: var(--umbradesktop-taskbar-text-emphasis, var(--uui-color-header-contrast-emphasis));
@@ -710,7 +710,7 @@ export type UmbraDesktopToken =
   | '--umbradesktop-taskbar-shadow'
   | '--umbradesktop-taskbar-text'
   | '--umbradesktop-taskbar-text-emphasis'
-  | '--umbradesktop-taskbar-hover-background'
+  | '--umbradesktop-task-hover-background'
   | '--umbradesktop-start-hover-background'
   | '--umbradesktop-start-active-background'
   | '--umbradesktop-task-active-marker'
@@ -1665,7 +1665,7 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-taskbar-shadow': '0 8px 22px rgba(0, 0, 0, 0.28)',
   '--umbradesktop-taskbar-text': '#2c2c2e',
   '--umbradesktop-taskbar-text-emphasis': '#000000',
-  '--umbradesktop-taskbar-hover-background': 'rgba(0, 0, 0, 0.08)',
+  '--umbradesktop-task-hover-background': 'rgba(0, 0, 0, 0.08)',
   '--umbradesktop-start-hover-background': 'rgba(0, 0, 0, 0.08)',
   '--umbradesktop-start-active-background': 'rgba(0, 0, 0, 0.12)',
   '--umbradesktop-task-active-marker': '#3c3c3e',
@@ -1703,7 +1703,7 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   '--umbradesktop-taskbar-border-top': '1px solid rgba(255, 255, 255, 0.18)',
   '--umbradesktop-taskbar-text': '#e8e8ea',
   '--umbradesktop-taskbar-text-emphasis': '#ffffff',
-  '--umbradesktop-taskbar-hover-background': 'rgba(255, 255, 255, 0.12)',
+  '--umbradesktop-task-hover-background': 'rgba(255, 255, 255, 0.12)',
   '--umbradesktop-start-hover-background': 'rgba(255, 255, 255, 0.12)',
   '--umbradesktop-start-active-background': 'rgba(255, 255, 255, 0.18)',
   '--umbradesktop-task-active-marker': '#ffffff',

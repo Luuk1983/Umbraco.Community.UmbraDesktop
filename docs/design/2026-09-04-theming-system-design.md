@@ -199,7 +199,8 @@ property it feeds, so `titlebar-border-bottom` sets a `border-bottom` and `windo
 | Window | `window-background`, `window-border`, `window-radius`, `window-shadow`, `window-shadow-active` |
 | Titlebar | `titlebar-height`, `titlebar-background`, `titlebar-border-bottom`, `titlebar-text`, `titlebar-inactive-opacity` |
 | Controls | `control-color`, `control-hover-background`, `control-close-hover-background`, `control-close-hover-color` |
-| Taskbar | `taskbar-background`, `taskbar-border`, `taskbar-shadow`, `taskbar-radius`, `taskbar-blur`, `taskbar-text`, `taskbar-hover-background`, `taskbar-active-marker` |
+| Taskbar (surface) | `taskbar-height`, `taskbar-background`, `taskbar-background-opaque`, `taskbar-backdrop`, `taskbar-border-top`, `taskbar-shadow`, `taskbar-radius`, `taskbar-margin`, `taskbar-text`, `taskbar-text-emphasis` |
+| Taskbar (elements) | `start-hover-background`, `start-active-background`, `task-hover-background`, `task-active-marker` |
 | Launcher | `launcher-background`, `launcher-surface`, `launcher-card-background`, `launcher-border`, `launcher-radius`, `launcher-shadow`, `launcher-text`, `launcher-text-muted` |
 | Type | `font-family`, `font-size-small` |
 
