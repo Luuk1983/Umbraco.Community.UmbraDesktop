@@ -1039,6 +1039,21 @@ import { UMB_THEME_DARK_ALIAS, UMB_THEME_HIGH_CONTRAST_ALIAS } from '@umbraco-cm
 /** Which of a theme's palettes is in use. */
 export type UmbraDesktopVariant = 'light' | 'dark';
 
+/**
+ * What to resolve. An object rather than positional arguments because `themeId` and
+ * `umbThemeAlias` are both opaque strings: transposed, they would not fail, they would quietly
+ * resolve to the identity theme and look plausible. `resolveWallpaper` takes a structured ref for
+ * the same reason.
+ */
+export interface UmbraDesktopThemeRequest {
+  /** The user's stored theme id. */
+  themeId: string;
+  /** The alias from Umbraco's own theme context. */
+  umbThemeAlias: string;
+  /** The themes to choose from. Passed in, not defaulted, so the dependency is visible at the call site. */
+  catalogue: ReadonlyArray<UmbraDesktopTheme>;
+}
+
 /** A resolved theme: what to paint, and why. */
 export interface UmbraDesktopResolvedTheme {
   /** The theme actually in force — not necessarily the one the user chose. */
@@ -1059,16 +1074,13 @@ export interface UmbraDesktopResolvedTheme {
  * redefining `--uui-*` tokens, which only the Umbraco identity theme reads, so honouring a macOS
  * palette there would quietly undo an accessibility setting. And an **unknown id** — a theme
  * dropped in an upgrade — falls back rather than leaving the desktop unstyled.
- * @param themeId The user's stored theme id.
- * @param umbThemeAlias The alias from Umbraco's own theme context.
- * @param catalogue The themes to choose from; defaults to everything the package ships.
+ * A caller that needs to tell a *deliberate* Umbraco choice from a silent fallback can compare
+ * `request.themeId` with `result.theme.id`: they differ only when the stored id was not found.
+ * @param request What to resolve; see {@link UmbraDesktopThemeRequest}.
  * @returns The theme, variant and palette to apply.
  */
-export function resolveTheme(
-  themeId: string,
-  umbThemeAlias: string,
-  catalogue: ReadonlyArray<UmbraDesktopTheme> = UMBRADESKTOP_THEMES,
-): UmbraDesktopResolvedTheme {
+export function resolveTheme(request: UmbraDesktopThemeRequest): UmbraDesktopResolvedTheme {
+  const { themeId, umbThemeAlias, catalogue } = request;
   if (umbThemeAlias === UMB_THEME_HIGH_CONTRAST_ALIAS) {
     return {
       theme: UMBRADESKTOP_UMBRACO_THEME,
@@ -1078,6 +1090,8 @@ export function resolveTheme(
     };
   }
 
+  // Falls back to the identity theme directly rather than looking the default id up in the
+  // catalogue, so a catalogue that is empty or has lost that entry still resolves to something.
   const theme = catalogue.find((entry) => entry.id === themeId) ?? UMBRADESKTOP_UMBRACO_THEME;
   const wantsDark = umbThemeAlias === UMB_THEME_DARK_ALIAS;
   const dark = theme.palettes.dark;
@@ -1349,7 +1363,7 @@ import type { UmbraDesktopResolvedTheme } from './resolve-variant';
 import type { UmbraDesktopThemeSheets } from './types';
 import { resolveTheme } from './resolve-variant.js';
 import { paletteCss } from './palette-css.js';
-import { UMBRADESKTOP_DEFAULT_THEME_ID } from './themes/index.js';
+import { UMBRADESKTOP_DEFAULT_THEME_ID, UMBRADESKTOP_THEMES } from './themes/index.js';
 import { UMBRADESKTOP_THEME_CONTEXT } from './theme.context-token.js';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
@@ -1370,7 +1384,11 @@ import { UMB_THEME_CONTEXT, UMB_THEME_LIGHT_ALIAS } from '@umbraco-cms/backoffic
  */
 export class UmbraDesktopThemeContext extends UmbContextBase {
   #resolved = new UmbObjectState<UmbraDesktopResolvedTheme>(
-    resolveTheme(UMBRADESKTOP_DEFAULT_THEME_ID, UMB_THEME_LIGHT_ALIAS),
+    resolveTheme({
+      themeId: UMBRADESKTOP_DEFAULT_THEME_ID,
+      umbThemeAlias: UMB_THEME_LIGHT_ALIAS,
+      catalogue: UMBRADESKTOP_THEMES,
+    }),
   );
 
   #sheets = new UmbObjectState<UmbraDesktopThemeSheets>({});
@@ -1426,7 +1444,11 @@ export class UmbraDesktopThemeContext extends UmbContextBase {
    */
   #apply(): void {
     const previous = this.#resolved.getValue();
-    const next = resolveTheme(this.#chosenId, this.#umbAlias);
+    const next = resolveTheme({
+      themeId: this.#chosenId,
+      umbThemeAlias: this.#umbAlias,
+      catalogue: UMBRADESKTOP_THEMES,
+    });
     this.#resolved.setValue(next);
     if (previous.theme.id !== next.theme.id) void this.#loadSheets(next);
   }
