@@ -13,8 +13,10 @@ export const UMBRADESKTOP_MACOS_THEME: UmbraDesktopTheme = {
   palettes: { light: MACOS_LIGHT, dark: MACOS_DARK },
   metrics: {
     titlebarHeight: 30,
-    // Three 12px lights with 8px gaps and 10px of padding, then the reload button after a gap.
-    leadingControlsWidth: 124,
+    // window.css.ts's .titlebar has 10px left padding, then three 12px lights with two 8px gaps
+    // between them (10 + 12 + 8 + 12 + 8 + 12 = 62), then the flex .controls gap (8px) plus
+    // .ctrl-reload's own 10px margin-left before its 22px width (62 + 8 + 10 + 22 = 102).
+    leadingControlsWidth: 102,
     trailingControlsWidth: 0,
     grab: 80,
     // 44px dock plus its 10px bottom margin and a little clearance.

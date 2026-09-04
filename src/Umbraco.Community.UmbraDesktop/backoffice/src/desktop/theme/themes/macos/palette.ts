@@ -21,6 +21,18 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-titlebar-text': '#4d4d4d',
   '--umbradesktop-titlebar-inactive-opacity': '0.55',
   '--umbradesktop-control-color': '#4d4d4d',
+  // The base window sheet's '.ctrl.close:hover' falls back to Umbraco's danger pink, which would
+  // otherwise replace the macOS red traffic light on hover. macOS only darkens the light slightly
+  // and reveals its glyph; it never changes hue. The glyph reads as a dark maroon on the deeper
+  // red, matching how the close light's 'x' looks on a real Mac, rather than turning white the
+  // way the Windows/KDE close affordance does.
+  '--umbradesktop-control-close-hover-background': '#e04640',
+  '--umbradesktop-control-close-hover-color': '#7a1610',
+  // The other two lights (minimize/maximize) are also '.ctrl', so without this they'd pick up the
+  // base '.ctrl:hover' grey tint on top of their own yellow/green fill — real macOS traffic
+  // lights don't change colour on hover at all, only their glyph appears (handled separately by
+  // '.titlebar:hover .glyph' in window.css.ts). Transparent keeps them exactly as they are.
+  '--umbradesktop-control-hover-background': 'transparent',
   '--umbradesktop-taskbar-height': '44px',
   '--umbradesktop-taskbar-reserve': '62px',
   '--umbradesktop-taskbar-margin': '0 auto 10px',

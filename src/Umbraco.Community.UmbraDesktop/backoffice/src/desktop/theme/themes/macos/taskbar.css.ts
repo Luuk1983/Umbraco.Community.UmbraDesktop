@@ -25,12 +25,10 @@ export default css`
     gap: 6px;
     align-items: center;
     /* The base rule clips horizontal overflow so a long, labelled taskbar list truncates rather
-       than spilling past the bar. The dock has no labels (icons only, .task-label hidden below)
-       so it needs far less width per app and truncation is far less likely — and this container
-       clipping would otherwise cut off the dot drawn by .task.active::after below, which sits
-       deliberately outside .task's own box (bottom:-5px). Visible trades that horizontal safety
-       net for a marker that actually renders. */
-    overflow: visible;
+       than spilling past the bar — kept as-is: with enough dock icons open, truncating the list
+       cleanly is a better failure than letting tiles spill past the dock's rounded pill. The
+       running-window dot below is drawn inside .task's own box precisely so it never needs this
+       clipping relaxed. */
   }
   /* Dock tiles: square icons, no labels, and the running indicator as a dot beneath rather than
      an underline across. */
@@ -46,6 +44,11 @@ export default css`
     font-size: 24px;
     margin-left: 0;
   }
+  /* Nudged up 2px (paint-only — this doesn't move the centred layout box) so the running-window
+     dot below has a couple of clear pixels beneath the icon instead of sitting flush against it. */
+  .task umb-icon {
+    transform: translateY(-2px);
+  }
   /* Sanctioned exception: the dock shows icons only. The button keeps its title attribute, so
      the app name is still available as a tooltip and as the accessible name. */
   .task-label {
@@ -59,7 +62,10 @@ export default css`
     content: '';
     position: absolute;
     left: 50%;
-    bottom: -5px;
+    /* Inside the tile's own 34px box (2px above its bottom edge), not below it — the base rule's
+       overflow: hidden on .running is left standing (see above), and a dot drawn outside .task's
+       box would be clipped by it. */
+    bottom: 2px;
     width: 4px;
     height: 4px;
     margin-left: -2px;
@@ -74,10 +80,18 @@ export default css`
     opacity: 1;
   }
   /* The launcher fills the surface above the dock, so it is positioned by the sheet rather than
-     offset from the bar. */
+     offset from the bar. This rule fully owns the panel's geometry (left/right/width/bottom/
+     height) — launcher.css.ts's :host sets no width or position of its own for exactly that
+     reason. */
   .launcher {
     left: 0;
     right: 0;
+    /* The base rule's :host already sets an explicit width (min(960px, 92vw)) that this sheet
+       does not otherwise touch. Left + width + right together over-constrain an absolutely
+       positioned box: the explicit width wins and right is silently dropped, so without this the
+       panel renders flush left at 960px instead of edge to edge. width: auto lets left/right do
+       the stretching the base rule's width would otherwise block. */
+    width: auto;
     bottom: var(--umbradesktop-taskbar-reserve, 62px);
     /* The launcher's containing block here is umbradesktop-taskbar's own host box, which is
        sized to the dock's content (~54px), not the desktop — bottom alone would size the panel
