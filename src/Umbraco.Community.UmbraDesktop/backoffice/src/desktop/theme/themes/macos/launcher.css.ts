@@ -33,9 +33,13 @@ export default css`
     width: min(1100px, 100%);
     gap: 22px;
   }
+  /* The base rule paints group headings in --uui-color-text-alt at 0.6 opacity, which is a muted
+     dark grey — invisible on this panel. Near-full white with a shadow behind it, so the headings
+     survive both the darkest and the palest wallpaper the panel can end up over. */
   .ch {
-    color: rgba(255, 255, 255, 0.75);
+    color: rgba(255, 255, 255, 0.92);
     opacity: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
   }
   .launch umb-icon {
     font-size: 44px;

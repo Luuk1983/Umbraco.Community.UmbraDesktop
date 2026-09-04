@@ -54,8 +54,13 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-start-hover-background': 'rgba(0, 0, 0, 0.08)',
   '--umbradesktop-start-active-background': 'rgba(0, 0, 0, 0.12)',
   '--umbradesktop-task-active-marker': '#3c3c3e',
-  '--umbradesktop-launcher-background': 'rgba(40, 36, 60, 0.62)',
-  '--umbradesktop-launcher-backdrop': 'blur(28px) saturate(160%)',
+  // Launchpad's surface is a *heavily* dimmed wallpaper, not a light tint over it, and that is
+  // what makes white text on top of an arbitrary photograph legible. An earlier 0.62 alpha over a
+  // pale wallpaper left the panel washed out and its group headings barely readable; going darker
+  // and more opaque is what buys the contrast back. The saturation boost went with it — amplifying
+  // the colours of whatever is behind the blur is the opposite of what this surface needs.
+  '--umbradesktop-launcher-background': 'rgba(26, 24, 36, 0.8)',
+  '--umbradesktop-launcher-backdrop': 'blur(30px) saturate(115%)',
   '--umbradesktop-launcher-border': 'none',
   '--umbradesktop-launcher-radius': '0',
   '--umbradesktop-launcher-shadow': 'none',
