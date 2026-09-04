@@ -243,13 +243,17 @@ In `#renderLauncher()`, remove the `style` attribute — the launcher's own styl
         }
       }
       /* Start + running windows travel together, so a theme can centre them as one group
-         (Windows 11, macOS) while the clock stays pinned to its own edge. */
+         (Windows 11, macOS) while the clock stays pinned to its own edge. The gap is
+         inherited from what `.bar` used to apply between them directly: wrapping the two in
+         a cluster takes them out of the bar's flex flow, so it has to be restated here or
+         the start button ends up sitting against the first task button. */
       .cluster {
         display: flex;
         align-items: stretch;
         height: 100%;
         flex: 1;
         min-width: 0;
+        gap: var(--uui-size-space-2);
       }
       .start {
         color: var(--umbradesktop-taskbar-text, var(--uui-color-header-contrast));
