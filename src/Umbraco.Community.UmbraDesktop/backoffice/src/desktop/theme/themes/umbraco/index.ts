@@ -15,7 +15,7 @@ import { UMBRADESKTOP_TASKBAR_HEIGHT, UMBRADESKTOP_WINDOW_KEEP_VISIBLE } from '.
 export const UMBRADESKTOP_UMBRACO_THEME: UmbraDesktopTheme = {
   id: 'umbraco',
   name: 'Umbraco',
-  swatch: ['#1b264f', '#f5c1bc', '#ffffff'],
+  swatch: { chrome: '#1b264f', accent: '#f5c1bc', surface: '#ffffff' },
   palettes: { light: {} },
   metrics: {
     titlebarHeight: UMBRADESKTOP_WINDOW_KEEP_VISIBLE.titlebar,
