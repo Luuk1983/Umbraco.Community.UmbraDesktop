@@ -124,11 +124,25 @@ export default css`
      cluster by a gap rather than pretending to be a fourth light, and ordered last so it trails
      the lights rather than leading them (DOM order otherwise puts it first). */
   .ctrl-reload {
+    position: relative;
     order: 4;
     width: ${MACOS_RELOAD_SIZE}px;
     height: ${MACOS_RELOAD_SIZE}px;
     margin-left: ${MACOS_RELOAD_MARGIN}px;
     border-radius: 50%;
+  }
+  /* Same problem as the traffic lights, same fix — but grown leftwards, into reload's own margin,
+     rather than symmetrically. That margin is dead space inside the reserved leading strip, so
+     spending it costs nothing; widening to the right would eat into the draggable part of the bar
+     and quietly disagree with MACOS_LEADING_CONTROLS_WIDTH about where dragging starts. */
+  .ctrl-reload::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: -${MACOS_RELOAD_MARGIN}px;
+    right: 0;
+    height: ${MACOS_TITLEBAR_HEIGHT}px;
   }
   .ctrl-reload:hover {
     background: rgba(0, 0, 0, 0.08);

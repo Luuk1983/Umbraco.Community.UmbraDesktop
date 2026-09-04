@@ -50,7 +50,7 @@ export default css`
     /* Wide enough for the group cards to flow into five columns on a normal monitor. At 1100px
        they wrapped onto three rows and pushed the panel into a scrollbar with most of the screen
        left empty either side, which on a fullscreen launcher is the one thing it should never do. */
-    width: min(1600px, 96%);
+    width: min(1600px, 100%);
   }
   .cards {
     gap: 18px;
@@ -89,11 +89,18 @@ export default css`
        Leaving the flow also hands the body back the strip the bar used to occupy. */
     position: absolute;
     top: 26px;
+    /* Inset by the body's own horizontal padding and then capped and centred exactly as the
+       content column is, so the avatar sits on the cards' left edge and the actions on their
+       right. Expressed as left/right + max-width + auto margins rather than a width of its own:
+       that way it collapses to the same value as 'min(1600px, 100%)' inside the padded body at
+       every viewport width, instead of only matching on a wide screen. */
     left: 40px;
     right: 40px;
+    width: auto;
+    max-width: 1600px;
+    margin-inline: auto;
     height: 40px;
     align-self: auto;
-    width: auto;
     padding: 0;
     background: none;
     border-top: none;
