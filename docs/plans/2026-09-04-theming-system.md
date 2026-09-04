@@ -427,9 +427,15 @@ Edit these declarations only; everything else — the grid columns, the tile geo
       }
       .search {
         border: var(--umbradesktop-launcher-card-border, 1px solid var(--uui-color-border));
-        border-radius: var(--umbradesktop-launcher-card-radius, var(--uui-border-radius, 3px));
+        /* Its own radius token, not the cards': the search field follows the panel's radius
+           (3px) while the group cards are deliberately rounder (6px). One token with two
+           different defaults would silently reshape both the first time a theme set it. */
+        border-radius: var(--umbradesktop-launcher-search-radius, var(--uui-border-radius, 3px));
         background: var(--umbradesktop-launcher-card-background, var(--uui-color-surface));
         color: var(--umbradesktop-launcher-text, var(--uui-color-text));
+      }
+      .search:hover {
+        border-color: var(--umbradesktop-launcher-border-emphasis, var(--uui-color-border-emphasis, var(--uui-color-border)));
       }
       .card {
         background: var(--umbradesktop-launcher-card-background, var(--uui-color-surface));
@@ -449,6 +455,12 @@ Edit these declarations only; everything else — the grid columns, the tile geo
         border: var(--umbradesktop-launcher-card-border, 1px solid var(--uui-color-border));
         background: var(--umbradesktop-launcher-card-background, var(--uui-color-surface));
         color: var(--umbradesktop-launcher-text, var(--uui-color-text));
+      }
+      /* Tokenised alongside the resting state, or a themed badge would snap back to Umbraco's
+         palette the moment you hovered it. */
+      .pin:hover {
+        border-color: var(--umbradesktop-launcher-border-emphasis, var(--uui-color-border-emphasis, var(--uui-color-border)));
+        background: var(--umbradesktop-launcher-pin-hover-background, var(--uui-color-surface-alt, var(--uui-color-surface)));
       }
       .footer {
         background: var(--umbradesktop-launcher-card-background, var(--uui-color-surface));
@@ -726,9 +738,12 @@ export type UmbraDesktopToken =
   | '--umbradesktop-launcher-shadow'
   | '--umbradesktop-launcher-text'
   | '--umbradesktop-launcher-hover-background'
+  | '--umbradesktop-launcher-border-emphasis'
+  | '--umbradesktop-launcher-search-radius'
   | '--umbradesktop-launcher-card-background'
   | '--umbradesktop-launcher-card-border'
   | '--umbradesktop-launcher-card-radius'
+  | '--umbradesktop-launcher-pin-hover-background'
   | '--umbradesktop-desktop-background-color'
   | '--umbradesktop-desktop-background-image'
   | '--umbradesktop-desktop-scrim'
