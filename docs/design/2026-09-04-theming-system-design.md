@@ -469,10 +469,6 @@ under each theme, not merely present.
   the bounds clamp — and Umbraco has no menu model to fill File/Edit/View with, so the menus would be
   decorative, which is worse than absent.
 - **A true Launchpad.** The launcher's content keeps its structure (D12).
-- **A Windows 11 theme.** The contract is designed for it and it is the likely next one, but it is
-  not built. Mostly a palette plus the centred `.cluster` arrangement §4 already provides for — and
-  worth noting that it is the closest neighbour to the macOS theme, so it adds the least visual
-  range to the picker per unit of work.
 - **A Linux theme.** Deferred rather than dropped, and for a sharper reason than "the desktops
   differ": GNOME/Adwaita is a perfectly canonical answer, but its identity is the **headerbar** —
   the titlebar fused with the application's own controls — and this shell cannot fuse anything into

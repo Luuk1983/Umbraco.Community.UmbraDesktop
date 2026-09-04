@@ -307,12 +307,48 @@ be styled apart:
 If you rely on that seam, test it. A refactor that moved Favourites inside `.cards` would hand it
 the row rules and silently delete the grid, with nothing else failing.
 
-Two smaller things this theme ran into. **A theme sees position, not identity** — v4 coloured each
-section differently, and a stylesheet has no idea which app a tile is, so the hues rotate on
-`:nth-child` instead; not the original mapping, but better than one flat colour. And **the base's
-`min-height` and `height` are content-box**, so a hairline you add on top makes the caption and
-the bar each paint a pixel taller than their token claims. Set `box-sizing: border-box` or fold
-the border into `metrics` — `metrics.test.ts` catches it either way, and did.
+### 6.2 Where the launcher can live
+
+Four themes have now answered that question four different ways, which is a reasonable sign the
+geometry tokens are the right shape — and between them they cover most of what a fifth will want:
+
+| Theme | Launcher | How |
+|---|---|---|
+| Umbraco | Corner panel above the bar | The defaults; sets nothing |
+| Win98 | Start menu, flush to the corner | `launcher-left: 0`, and `launcher-bottom` left to default to the bar's reserve |
+| Umbraco 4 | Corner panel, same anchor | Also just `launcher-left: 0` — v4 kept its Sections panel exactly there |
+| macOS | Full-screen surface above the dock | A **sheet** rule in `taskbar.css.ts`, since `left`/`right`/`width`/`height` all have to move together |
+| Windows 11 | Fixed-width card centred on the viewport | Palette only: `launcher-left: calc(50vw - <half the width>)` |
+
+The Windows 11 row is the one worth copying. Centring looks like a job for a sheet, and a sheet is
+where it goes wrong — set `left`, `right` and inherit a `width` and the browser silently drops
+`right` (§5). Computing the offset in `palette.ts` from the width the palette itself declares
+avoids the whole problem, and the two values cannot drift because one is derived from the other:
+
+```ts
+const W11_LAUNCHER_LEFT = `calc(50vw - ${W11_LAUNCHER_WIDTH / 2}px)`;
+```
+
+Reach for a sheet, as macOS does, only when the panel genuinely has to stretch rather than sit at
+a computed offset.
+
+### 6.3 Two smaller traps
+
+**A theme sees position, not identity.** Umbraco 4 coloured each section differently, and a
+stylesheet has no idea which app a tile is — so the hues rotate on `:nth-child` instead. Not the
+original mapping and it cannot be, but better than one flat colour, and stable per tile between
+renders. Reach for this whenever a source design varied something per item that the DOM does not
+distinguish.
+
+**`min-height` and `height` in the base are content-box.** A hairline you add on top of
+`--umbradesktop-titlebar-height` or `--umbradesktop-taskbar-height` therefore paints *outside*
+the number your `metrics` publishes, and the caption or the bar comes out a pixel taller than the
+clamp believes. Set `box-sizing: border-box` on the surface so the token means the whole band, or
+fold the border into the sum explicitly.
+
+This is the single most common way a new theme gets its geometry wrong: it has now caught
+Umbraco 4 twice — the caption and the bar — and Windows 11 once, in three consecutive themes, and
+in every case the only thing that noticed was `metrics.test.ts`. Write that file first.
 
 ---
 
