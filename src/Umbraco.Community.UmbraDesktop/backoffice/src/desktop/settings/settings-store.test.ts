@@ -132,3 +132,17 @@ it('round-trips a theme through serialise and parse', () => {
   const settings = { ...UMBRADESKTOP_DEFAULT_SETTINGS, theme: 'macos' };
   expect(parseSettings(serialiseSettings(settings)).theme).to.equal('macos');
 });
+
+it('keeps a stored theme even when the wallpaper beside it is unreadable', () => {
+  // The converse of the case above, and the half that is easy to lose: field recovery has to run
+  // both ways, or choosing a theme could be undone by an unrelated wallpaper written by a build
+  // that understood a shape this one does not.
+  const settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'holograph' }, pinned: [], theme: 'macos' }));
+  expect(settings.theme).to.equal('macos');
+  expect(settings.wallpaper).to.deep.equal(UMBRADESKTOP_DEFAULT_SETTINGS.wallpaper);
+});
+
+it('rejects an empty theme id, so corruption takes the default rather than an unmatchable value', () => {
+  const settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: [], theme: '' }));
+  expect(settings.theme).to.equal(UMBRADESKTOP_DEFAULT_SETTINGS.theme);
+});

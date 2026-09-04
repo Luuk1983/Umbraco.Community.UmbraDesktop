@@ -71,6 +71,9 @@ function isPinnedList(value: unknown): value is string[] {
  * Whether a decoded value is a theme id this version can store. An id naming a theme that no
  * longer exists still passes here — that is resolved against the catalogue when the theme is
  * applied, not when it is read, exactly as with wallpaper references.
+ * Stricter than the id checks inside `isWallpaperRef`, which accept any string: an empty theme id
+ * can only be corruption, and rejecting it here means such a payload takes the default instead of
+ * carrying a value no catalogue could ever match.
  * @param value The decoded `theme` property.
  * @returns True when the value is a usable id.
  */
