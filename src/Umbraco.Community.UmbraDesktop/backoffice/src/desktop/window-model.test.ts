@@ -133,7 +133,8 @@ it('resizeRect clamps the top edge so the origin never overshoots the minimum he
 });
 
 const BOUNDS = { w: 1000, h: 700 };
-const KEEP = { grab: 80, controls: 138, titlebar: 40 };
+const KEEP = { grab: 80, leading: 0, trailing: 138, titlebar: 40 };
+const KEEP_LEFT = { grab: 80, leading: 124, trailing: 0, titlebar: 40 };
 const DRAGGED: import('./types').Rect = { x: 100, y: 100, w: 400, h: 300 };
 
 it('clampWindowPosition leaves a fully on-screen position untouched', () => {
@@ -150,7 +151,7 @@ it('clampWindowPosition keeps a drag strip on screen when dragged off the left e
 it('clampWindowPosition leaves something to grab however far left it is thrown', () => {
   const { x } = clampWindowPosition({ ...DRAGGED, x: -5000 }, BOUNDS, KEEP);
   const visible = DRAGGED.w + x;
-  expect(visible - KEEP.controls).to.be.at.least(KEEP.grab);
+  expect(visible - KEEP.trailing).to.be.at.least(KEEP.grab);
 });
 
 it('clampWindowPosition keeps a slice on screen when dragged off the right edge', () => {
@@ -177,6 +178,24 @@ it('clampWindowPosition never demands more visible width than the window has', (
   // stays wholly on screen rather than being shunted inward by an impossible margin.
   expect(clampWindowPosition({ x: 0, y: 0, w: 100, h: 100 }, BOUNDS, KEEP)).to.deep.equal({ x: 0, y: 0 });
   expect(clampWindowPosition({ x: -40, y: 0, w: 100, h: 100 }, BOUNDS, KEEP)).to.deep.equal({ x: 0, y: 0 });
+});
+
+it('clampWindowPosition keeps a grab strip on screen with controls at the left edge', () => {
+  // Controls lead the bar, so the draggable strip is the window's right end. Thrown off the
+  // left, the strip's right edge (x + w) must stay 80px on screen: x pins at 80 - 400.
+  expect(clampWindowPosition({ ...DRAGGED, x: -900 }, BOUNDS, KEEP_LEFT)).to.deep.equal({ x: -320, y: 100 });
+});
+
+it('clampWindowPosition spares the leading controls when dragged off the right edge', () => {
+  // The strip starts 124px into the window, so the window may only advance until that point
+  // is 80px from the right edge: x pins at 1000 - 80 - 124.
+  expect(clampWindowPosition({ ...DRAGGED, x: 5000 }, BOUNDS, KEEP_LEFT)).to.deep.equal({ x: 796, y: 100 });
+});
+
+it('clampWindowPosition keeps a window narrower than its own controls wholly on screen', () => {
+  // 100px window against 124px of leading controls: no strip exists, so it is not shunted.
+  expect(clampWindowPosition({ x: 0, y: 0, w: 100, h: 100 }, BOUNDS, KEEP_LEFT)).to.deep.equal({ x: 0, y: 0 });
+  expect(clampWindowPosition({ x: -40, y: 0, w: 100, h: 100 }, BOUNDS, KEEP_LEFT)).to.deep.equal({ x: 0, y: 0 });
 });
 
 it('clampResizeOrigin leaves a rectangle inside the desktop untouched', () => {
