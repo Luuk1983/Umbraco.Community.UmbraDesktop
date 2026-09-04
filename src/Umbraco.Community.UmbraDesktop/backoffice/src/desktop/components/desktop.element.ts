@@ -141,7 +141,13 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         /* How much of the bottom edge the taskbar or dock occupies. Themes override this;
            a floating dock reserves more than its own height so windows clear it. Declared
            here rather than in the taskbar because the surface and the watermark need it
-           too, and it inherits down through every shadow boundary from this one place. */
+           too, and it inherits down through every shadow boundary from this one place.
+
+           It chains through --umbradesktop-taskbar-height rather than naming a literal so
+           that a theme which only resizes a full-width bar sets one value and the reserve
+           follows; a theme whose bar floats free of the edge sets both, because then the
+           reserve is the bar's height plus the gap beneath it. Don't flatten this to a
+           number — the chain is the affordance. */
         --umbradesktop-taskbar-reserve: var(--umbradesktop-taskbar-height, 50px);
         /* Wallpaper derived from the header token but pulled darker, so the desktop reads
            distinctly darker than the taskbar (and the light windows pop). This solid colour

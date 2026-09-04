@@ -4,7 +4,14 @@ export const UMBRADESKTOP_SECTION_ALIAS = 'Umbraco.Community.UmbraDesktop.Sectio
 /** URL segment for the section (…/umbraco/section/<pathname>). */
 export const UMBRADESKTOP_SECTION_PATHNAME = 'umbradesktop';
 
-/** Height of the taskbar/panel in pixels. */
+/**
+ * Height of the taskbar/panel in pixels.
+ *
+ * The chrome no longer reads this directly — it takes its height from
+ * `--umbradesktop-taskbar-height`, whose CSS fallback is this same number written as a literal in
+ * `taskbar.element` and `desktop.element`. Change one and you must change the others, until the
+ * theme catalogue makes this constant the Umbraco theme's `taskbarReserve` and closes the gap.
+ */
 export const UMBRADESKTOP_TASKBAR_HEIGHT = 50;
 
 /** Reserved group alias that collects uncurated / fallback apps. */
