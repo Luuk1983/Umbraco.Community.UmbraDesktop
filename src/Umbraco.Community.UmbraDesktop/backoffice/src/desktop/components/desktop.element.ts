@@ -6,6 +6,8 @@ import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
 import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
 import type { UmbraDesktopWallpaperView } from '../settings/wallpaper-view.js';
+import { UmbraDesktopThemeContext } from '../theme/theme.context.js';
+import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import './window.element.js';
 import './taskbar.element.js';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
@@ -20,19 +22,31 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   #settings = new UmbraDesktopSettingsContext(this);
 
+  // Declared after #settings: the theme context consumes the settings context, and class field
+  // initialisers run in declaration order, so #settings must already exist when this runs.
+  #theme = new UmbraDesktopThemeContext(this);
+
   @state()
   private _windows: UmbraDesktopWindow[] = [];
 
   @state()
   private _wallpaper?: UmbraDesktopWallpaperView;
 
+  /** The active theme's palette, rendered as `style`-attribute declarations for the `.desktop` root. */
+  @state()
+  private _paletteCss = '';
+
   constructor() {
     super();
     // Instantiating (without keeping a reference) is enough to provide the
     // catalogue context to the desktop subtree; nothing here consumes it directly.
     new UmbraDesktopAppCatalogueContext(this);
+    // Adopts the active theme's desktop-surface stylesheet into this element's shadow root.
+    new UmbraDesktopThemeStyles(this, 'desktop');
     this.observe(this.#manager.windows, (list) => (this._windows = list));
     this.observe(this.#settings.wallpaper, (wallpaper) => (this._wallpaper = wallpaper));
+    this.observe(this.#theme.paletteStyle, (style) => (this._paletteCss = style ?? ''));
+    this.observe(this.#theme.metrics, (metrics) => this.#manager.setMetrics(metrics));
   }
 
   /**
@@ -108,8 +122,11 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   override render() {
     const hasImage = !!this._wallpaper?.background.url;
+    // Palette first, wallpaper second: both are declaration strings ending in ';', so the
+    // concatenation is valid CSS, and the wallpaper's own background-color/background-image
+    // (set only when an image is chosen) must be able to win over the theme's declarations.
     return html`
-      <div class="desktop ${hasImage ? 'has-image' : ''}" style=${this.#wallpaperStyle()}>
+      <div class="desktop ${hasImage ? 'has-image' : ''}" style=${this._paletteCss + this.#wallpaperStyle()}>
         <div class="wallpaper-brand" aria-hidden="true">
           <umb-icon name="icon-umbraco"></umb-icon>
         </div>

@@ -5,6 +5,7 @@ import { injectChromeStyles } from '../chrome-injector';
 import { UMBRADESKTOP_WINDOW_KEEP_VISIBLE, UMBRADESKTOP_WINDOW_MIN_SIZE } from '../constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
+import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import { css, customElement, html, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
@@ -54,6 +55,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
 
   constructor() {
     super();
+    // Adopts the active theme's window-surface stylesheet into this element's shadow root.
+    new UmbraDesktopThemeStyles(this, 'window');
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
     });
@@ -152,7 +155,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     const { x, y } = clampWindowPosition(
       { ...this.window.rect, x: this.#startRect.x + dx, y: this.#startRect.y + dy },
       this.#startSurface,
-      UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
+      // The active theme's margins; falls back to the Umbraco theme's until the manager context
+      // resolves (the two are identical today, so there is no visible gap in practice).
+      this.#manager?.keep ?? UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
     );
     this.#manager?.move(this.window.id, x, y);
   };

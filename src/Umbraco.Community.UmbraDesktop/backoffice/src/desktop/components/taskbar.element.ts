@@ -2,6 +2,7 @@ import type { UmbraDesktopWindow } from '../types';
 import { taskActivation } from '../window-model';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
+import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import './launcher.element.js';
 import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
@@ -38,6 +39,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
 
   constructor() {
     super();
+    // Adopts the active theme's taskbar-surface stylesheet into this element's shadow root.
+    new UmbraDesktopThemeStyles(this, 'taskbar');
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
       if (ctx) this.observe(ctx.windows, (list) => (this._windows = list));

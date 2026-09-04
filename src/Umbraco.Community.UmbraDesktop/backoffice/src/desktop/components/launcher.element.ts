@@ -4,6 +4,7 @@ import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-t
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
 import type { UmbraDesktopSettingsContext } from '../settings/settings.context';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
+import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
@@ -43,6 +44,8 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
 
   constructor() {
     super();
+    // Adopts the active theme's launcher-surface stylesheet into this element's shadow root.
+    new UmbraDesktopThemeStyles(this, 'launcher');
     this.consumeContext(UMBRADESKTOP_APP_CATALOGUE_CONTEXT, (ctx) => {
       if (!ctx) return;
       this.observe(ctx.groups, (groups) => (this._groups = groups));
