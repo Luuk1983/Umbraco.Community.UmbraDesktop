@@ -42,6 +42,11 @@ export default {
     pin: 'Bovenaan vastzetten',
     unpin: 'Losmaken',
     desktopSettings: 'Bureaublad-instellingen',
+    // desktop settings — theme
+    theme: 'Thema',
+    themeDescription: 'Verandert het uiterlijk van het bureaublad, de taakbalk en de vensters. Je content blijft hetzelfde.',
+    themeHighContrast: 'De backoffice staat op hoog contrast, dus het Umbraco-thema wordt gebruikt.',
+    // desktop settings — wallpaper
     wallpaper: 'Achtergrond',
     wallpaperNone: 'Geen (verloop)',
     wallpaperBuiltIn: 'Meegeleverde afbeelding',
