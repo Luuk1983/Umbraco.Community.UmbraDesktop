@@ -2126,11 +2126,26 @@ import { UMBRADESKTOP_THEME_CONTEXT } from '../../theme/theme.context-token';
 import { UMBRADESKTOP_THEMES } from '../../theme/themes/index';
 ```
 
-Add the state field beside `_wallpaper`:
+Add two state fields beside `_wallpaper`:
 
 ```ts
   @state()
   private _theme?: UmbraDesktopResolvedTheme;
+
+  /**
+   * The theme the user *chose*, which is not always the one in force: high contrast overrides the
+   * choice without discarding it. The picker marks this one, so switching the backoffice to high
+   * contrast never looks like it silently reset the user's selection — the hint below explains the
+   * override instead.
+   */
+  @state()
+  private _chosenThemeId?: string;
+```
+
+In the existing `UMBRADESKTOP_SETTINGS_CONTEXT` callback, add one more observe beside the wallpaper one:
+
+```ts
+      this.observe(context.theme, (id) => (this._chosenThemeId = id));
 ```
 
 And in the constructor, after the settings context is consumed:
@@ -2153,7 +2168,8 @@ Add this method to the class:
    * @returns The Theme section template.
    */
   #renderThemes() {
-    var activeId = this._theme?.theme.id;
+    // The user's choice, not the theme in force — see `_chosenThemeId`.
+    var activeId = this._chosenThemeId ?? this._theme?.theme.id;
     return html`
       <uui-box headline=${this.localize.term('umbraDesktop_theme')}>
         <p class="hint">${this.localize.term('umbraDesktop_themeDescription')}</p>
@@ -2267,9 +2283,9 @@ Expected: build succeeds. The maintainer runs the Test Instance.
 
 - Desktop settings shows a Theme section with an Umbraco and a macOS swatch; the active one is marked.
 - Selecting macOS applies immediately: dock, traffic lights, rounded windows, fullscreen launcher.
-- Selecting Umbraco returns the desktop to exactly its Milestone 1 appearance.
+- Selecting Umbraco returns the desktop to exactly its Milestone 1 appearance — the dock, traffic lights and blurred launcher are all gone, not merely recoloured.
 - Switching the backoffice between Light and Dark live-updates the macOS chrome.
-- Switching the backoffice to High contrast forces the Umbraco theme and shows the explanatory line.
+- Switching the backoffice to High contrast forces the Umbraco theme and shows the explanatory line, while the picker still marks **macOS** as the user's choice; leaving high contrast restores macOS without the user re-picking it.
 - **Per design §1.1, every launcher affordance still works under macOS**, not merely appears: search opens the search modal, tiles launch windows, pinning and unpinning work, the user button opens the current-user modal, Desktop settings reopens this dialog, and Exit leaves the section.
 - Under macOS, a window dragged hard against each of the four edges stays grabbable by its titlebar.
 - Switching themes with several windows open pulls any stranded window back into reach.
