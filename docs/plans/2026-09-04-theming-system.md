@@ -1517,8 +1517,17 @@ import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
  * to a fresh copy of it. Appending, rather than prepending, is what gives theme rules their
  * authority: later sheets win at equal specificity, so a theme can restate a base selector —
  * `.frame:not(.active) .title` — and override it without `!important`.
+ *
+ * **The host must be an `UmbLitElement`**, and that is load-bearing: capturing the base only works
+ * because Lit's `connectedCallback` creates the render root — adopting `static styles`
+ * synchronously — *before* running any controller's `hostConnected`, and Umbraco's host mixin calls
+ * Lit's `connectedCallback` first. A host that started controllers before its render root existed
+ * would capture an empty base and the next adopt would leave the component unstyled.
  */
 export class UmbraDesktopThemeStyles extends UmbControllerBase {
+  /** Which of the theme's stylesheets this host wants. */
+  #surface: UmbraDesktopSurface;
+
   /** The component's own stylesheets, captured before any theme sheet is added. */
   #base?: ReadonlyArray<CSSStyleSheet>;
 
@@ -1526,14 +1535,12 @@ export class UmbraDesktopThemeStyles extends UmbControllerBase {
    * @param host The element whose shadow root receives the sheet.
    * @param surface Which of the theme's stylesheets this host wants.
    */
-  constructor(
-    host: UmbControllerHost & { renderRoot?: ParentNode },
-    private readonly surface: UmbraDesktopSurface,
-  ) {
+  constructor(host: UmbControllerHost & { renderRoot?: ParentNode }, surface: UmbraDesktopSurface) {
     super(host);
+    this.#surface = surface;
     this.consumeContext(UMBRADESKTOP_THEME_CONTEXT, (context) => {
       if (!context) return;
-      this.observe(context.sheets, (sheets) => this.#adopt(host, sheets?.[this.surface]?.styleSheet));
+      this.observe(context.sheets, (sheets) => this.#adopt(host, sheets?.[this.#surface]?.styleSheet));
     });
   }
 

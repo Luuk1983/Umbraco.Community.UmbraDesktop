@@ -11,6 +11,15 @@ import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
  * to a fresh copy of it. Appending, rather than prepending, is what gives theme rules their
  * authority: later sheets win at equal specificity, so a theme can restate a base selector —
  * `.frame:not(.active) .title` — and override it without `!important`.
+ *
+ * **The host must be an `UmbLitElement`** (or anything else built on Umbraco's controller-host
+ * element mixin), and that is load-bearing rather than incidental. Capturing the base only works
+ * because the host's own styles are already in `adoptedStyleSheets` the first time `#adopt` runs:
+ * Lit's `connectedCallback` creates the render root — which adopts `static styles` synchronously —
+ * *before* it runs any controller's `hostConnected`, and Umbraco's mixin calls Lit's
+ * `connectedCallback` first and only then cascades to its controllers. A host that instead started
+ * its controllers before its render root existed would capture an empty base, and the next adopt
+ * would drop the component's own stylesheet and leave it unstyled.
  */
 export class UmbraDesktopThemeStyles extends UmbControllerBase {
   /** Which of the theme's stylesheets this host wants. */
