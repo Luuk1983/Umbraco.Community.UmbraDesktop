@@ -1,6 +1,7 @@
 import type { UmbraDesktopTheme } from '../types';
 import { UMBRADESKTOP_UMBRACO_THEME } from './umbraco/index.js';
 import { UMBRADESKTOP_MACOS_THEME } from './macos/index.js';
+import { UMBRADESKTOP_WIN98_THEME } from './win98/index.js';
 
 /** Id of the theme a user gets before they have chosen one, and whenever a stored id is unknown. */
 export const UMBRADESKTOP_DEFAULT_THEME_ID = UMBRADESKTOP_UMBRACO_THEME.id;
@@ -17,4 +18,5 @@ export const UMBRADESKTOP_DEFAULT_THEME_ID = UMBRADESKTOP_UMBRACO_THEME.id;
 export const UMBRADESKTOP_THEMES: ReadonlyArray<UmbraDesktopTheme> = [
   UMBRADESKTOP_UMBRACO_THEME,
   UMBRADESKTOP_MACOS_THEME,
+  UMBRADESKTOP_WIN98_THEME,
 ];
