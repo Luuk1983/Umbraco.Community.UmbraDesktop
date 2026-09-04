@@ -2,12 +2,16 @@ import type { Rect, UmbraDesktopWindow } from '../types';
 import type { UmbraDesktopResizeEdges } from '../window-model';
 import { clampResizeOrigin, clampWindowPosition, resizeRect, restoreDragPosition } from '../window-model';
 import { injectChromeStyles } from '../chrome-injector';
+import { resolveThemeSync, syncThemeStylesheet } from '../iframe-theme.js';
+import type { UmbraDesktopThemeManifest } from '../iframe-theme.js';
 import { UMBRADESKTOP_WINDOW_KEEP_VISIBLE, UMBRADESKTOP_WINDOW_MIN_SIZE } from '../constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import { css, customElement, html, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
+import { UMB_THEME_CONTEXT, UMB_THEME_LIGHT_ALIAS } from '@umbraco-cms/backoffice/themes';
 
 /** The eight resize handles: direction (for the cursor class) + which edges each pulls. */
 const RESIZE_HANDLES: ReadonlyArray<{ dir: string; edges: UmbraDesktopResizeEdges }> = [
@@ -53,6 +57,19 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   #resizeStartPointer = { x: 0, y: 0 };
   #resizeStartRect: Rect = { x: 0, y: 0, w: 0, h: 0 };
 
+  /** The backoffice light/dark theme in force, as `UMB_THEME_CONTEXT` reports it. */
+  #themeAlias: string = UMB_THEME_LIGHT_ALIAS;
+
+  /** Every registered `theme` extension, so a theme's stylesheet can be looked up by alias. */
+  #themes: ReadonlyArray<UmbraDesktopThemeManifest> = [];
+
+  /**
+   * The alias this frame was last brought in line with. Undefined until the first sync, which is
+   * what keeps a frame that booted on a JS-loaded theme from reloading itself on sight — and,
+   * since the reload path re-enters through the load handler, from doing so forever.
+   */
+  #syncedAlias?: string;
+
   constructor() {
     super();
     // Adopts the active theme's window-surface stylesheet into this element's shadow root.
@@ -60,6 +77,50 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
     });
+    this.consumeContext(UMB_THEME_CONTEXT, (context) => {
+      if (!context) return;
+      this.observe(context.theme, (alias) => {
+        this.#themeAlias = alias || UMB_THEME_LIGHT_ALIAS;
+        this.#applyFrameTheme();
+      });
+    });
+    this.observe(umbExtensionsRegistry.byType('theme'), (themes) => {
+      this.#themes = themes;
+      this.#applyFrameTheme();
+    });
+  }
+
+  /**
+   * The document inside this window's frame, when it is ours to touch. `contentDocument` is null
+   * for a cross-origin frame, which is the one case there is nothing to be done about.
+   * @returns The frame's document, or undefined.
+   */
+  #frameDocument(): Document | undefined {
+    const iframe = this.renderRoot?.querySelector('iframe.body') as HTMLIFrameElement | null;
+    return iframe?.contentDocument ?? undefined;
+  }
+
+  /**
+   * Put the frame's backoffice on the same light/dark theme as the desktop around it.
+   *
+   * A frame only takes its theme from its own head, and Umbraco's theme context only reads the
+   * stored alias once, when it boots — so a window that was already open when the theme changed
+   * would otherwise stay on the old one until it was reloaded. Swapping the same stylesheet link
+   * Umbraco itself swaps costs the user nothing; reloading would cost them anything unsaved in a
+   * content editor, which is far too much for a display preference.
+   */
+  #applyFrameTheme(): void {
+    const doc = this.#frameDocument();
+    if (!doc) return;
+    const sync = resolveThemeSync(this.#themes, this.#themeAlias);
+    if (sync.mirrorable) {
+      syncThemeStylesheet(doc, sync);
+    } else if (this.#syncedAlias !== undefined && this.#syncedAlias !== this.#themeAlias) {
+      // A theme whose CSS is a loader function has no link to copy. Reloading hands the job to
+      // the frame's own theme context, which loads it exactly as it would on a fresh boot.
+      this.#onReload();
+    }
+    this.#syncedAlias = this.#themeAlias;
   }
 
   #onIframeLoad(e: Event) {
@@ -68,6 +129,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     // Keep the loader up until the header is actually stripped, so the booting
     // backoffice (with its own header) never flashes into view.
     injectChromeStyles(iframe, this.window.app.chromeProfile, () => (this._loading = false));
+    // A frame boots on the stored alias, so it is normally already right — but a theme changed
+    // while it was still loading would have been missed, and the reload path lands here too.
+    this.#applyFrameTheme();
     // Safety net: reveal anyway if the shell never reports ready.
     window.setTimeout(() => (this._loading = false), 12000);
   }
