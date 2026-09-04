@@ -2167,6 +2167,38 @@ export default css`
 `;
 ```
 
+> **As built — six corrections to the draft CSS above.** All were found by reading the components
+> rather than the notes, and four of them were real defects:
+>
+> 1. **Backticks inside a `css` template terminate it.** Every quoted selector in a CSS comment had
+>    to become plain text. Same hazard as in `html` templates.
+> 2. **`.titlebar` needed `position: relative`**, and `.title` explicit `top: 0; bottom: 0`, because
+>    an absolutely positioned box inside a flex container cannot be relied on to resolve against
+>    the flex static position.
+> 3. **The controls needed explicit `order: 1..4`.** DOM order is reload, minimize, maximize, close,
+>    so without reordering the cluster renders yellow-green-red-reload instead of macOS's
+>    red-yellow-green with reload trailing.
+> 4. **The launcher had no `width`.** `left: 0; right: 0` cannot stretch a box whose `width` the base
+>    `:host` rule already set — an over-constrained absolute box keeps `width` and silently drops
+>    `right`, so the "fullscreen" panel rendered flush left at 960px. It needs `width: auto`.
+> 5. **The launcher had no usable `height`.** Its containing block is the taskbar's own host box,
+>    which is auto-height — about 45px under the dock palette — so `bottom` alone made it a sliver.
+>    Fixed with `height: calc(100vh - var(--umbradesktop-taskbar-reserve, 62px))`. This assumes the
+>    desktop spans the viewport, which it does while mounted (the outer header is hidden); the
+>    bottom edge is anchored directly by `bottom`, so only the top edge depends on the assumption.
+> 6. **The active-window dot must sit inside the tile.** Drawing it at `bottom: -5px` required
+>    `overflow: visible` on `.running`, which defeats the truncation that keeps a long list of
+>    windows inside the dock. Moved to `bottom: 2px` inside the 34px tile, with the icon nudged up
+>    2px, so the base clipping stands.
+>
+> And `leadingControlsWidth` is **102**, not 124: 10px padding + three 12px lights + two 8px gaps =
+> 62, then an 8px gap + reload's 10px margin + its 22px width. The draft's 124 was conservative
+> rather than dangerous — it only restricts how far right a window may be dragged — but wrong.
+>
+> The palette also has to override `--umbradesktop-control-close-hover-background` and
+> `--umbradesktop-control-hover-background`, or the base rules paint Umbraco's danger pink over the
+> red light and a grey rectangle behind the small circles on hover.
+
 - [ ] **Step 5: Build and run the full suite**
 
 Run: `cd src/Umbraco.Community.UmbraDesktop && npm run build && npm test`
