@@ -334,11 +334,22 @@ a computed offset.
 
 ### 6.3 Two smaller traps
 
-**A theme sees position, not identity.** Umbraco 4 coloured each section differently, and a
-stylesheet has no idea which app a tile is — so the hues rotate on `:nth-child` instead. Not the
-original mapping and it cannot be, but better than one flat colour, and stable per tile between
-renders. Reach for this whenever a source design varied something per item that the DOM does not
-distinguish.
+**A theme can see identity, through the glyph name.** Umbraco 4 coloured each section
+differently, and it is tempting to conclude a stylesheet cannot know which app a tile is. It can:
+the base renders every tile's icon as `<umb-icon name=${app.icon}>`, and because that is an
+attribute binding the name is in the DOM, so `umb-icon[name='icon-picture']` selects Media
+wherever it sits. Umbraco 4's orb hues are keyed that way — see the map in its `launcher.css.ts`,
+which groups the catalogue's glyphs by area the way v4 grouped sections.
+
+Two things are worth copying from that map. Put the varying part in custom properties so each
+rule states only what changes, and write the geometry once. And match names **exactly**:
+`icon-document` is a prefix of `icon-documents`, so `[name^=...]` silently merges the two, and a
+name that arrives with a colour suffix appended is better falling through to the default than
+matching the wrong rule.
+
+Reach for `:nth-child` only when nothing in the DOM identifies the item, which after this is a
+narrower set of cases than it first appears. Check for an attribute before assuming position is
+all you have.
 
 **`min-height` and `height` in the base are content-box.** A hairline you add on top of
 `--umbradesktop-titlebar-height` or `--umbradesktop-taskbar-height` therefore paints *outside*

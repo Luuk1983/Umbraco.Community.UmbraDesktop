@@ -84,6 +84,99 @@ it('draws the search row as a v4 sunken field, not a rounded chip', function () 
   expect(style.boxShadow, 'a v4 field is sunken, with its shadow drawn inside it').to.contain('inset');
 });
 
+/**
+ * Build a Favourites card inside the mounted root, so the orb rules have the DOM they target.
+ *
+ * The launcher renders app tiles only with the app catalogue in context, which no browser test
+ * has, so the structure is reproduced here exactly as `#tile` and `#grid` emit it:
+ * `.card.fav > .grid > .tile > .launch > umb-icon[name]`. If that markup ever changes, these
+ * tests keep passing against a shape the launcher no longer renders, which is the one failure
+ * mode worth naming out loud.
+ * @param names The icon names to place, in grid order.
+ * @returns The card, so a test can remove it, and the orb elements in the order given.
+ */
+function favCard(names: ReadonlyArray<string>): { card: HTMLElement; orbs: HTMLElement[] } {
+  const card = document.createElement('div');
+  card.className = 'card fav';
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  card.appendChild(grid);
+
+  const orbs = names.map((name) => {
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    const launch = document.createElement('button');
+    launch.className = 'launch';
+    const icon = document.createElement('umb-icon');
+    icon.setAttribute('name', name);
+    launch.appendChild(icon);
+    tile.appendChild(launch);
+    grid.appendChild(tile);
+    return icon;
+  });
+
+  panel.root.appendChild(card);
+  return { card, orbs };
+}
+
+it('colours a Favourites orb by which app it is, not by where it sits', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // Content leads one grid and sits second in another. Hues rotated by position give those two
+  // orbs different fills; hues keyed by the app give them the same one.
+  const first = favCard(['icon-documents', 'icon-picture']);
+  const second = favCard(['icon-picture', 'icon-documents']);
+
+  const leading = getComputedStyle(first.orbs[0]).backgroundImage;
+  const trailing = getComputedStyle(second.orbs[1]).backgroundImage;
+
+  expect(leading, 'a Favourites orb should carry a gradient fill at all').to.contain('gradient');
+  expect(trailing, 'Content keeps its colour wherever it lands in the grid').to.equal(leading);
+
+  first.card.remove();
+  second.card.remove();
+});
+
+it('gives two different apps two different Favourites orbs', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // Positions 1 and 7 both fall through the 6n+2..6n rotation to the same base fill, so a
+  // position-keyed panel cannot tell Content from Media here. An identity-keyed one can.
+  const filler = ['icon-user', 'icon-settings', 'icon-code', 'icon-box', 'icon-globe'];
+  const { card, orbs } = favCard(['icon-documents', ...filler, 'icon-picture']);
+
+  expect(
+    getComputedStyle(orbs[6]).backgroundImage,
+    'Media and Content are different apps and should not share a colour',
+  ).to.not.equal(getComputedStyle(orbs[0]).backgroundImage);
+
+  card.remove();
+});
+
+it('keeps the panel multicoloured across the glyphs the catalogue really uses', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // What made v4's Sections panel recognisable was that it was multicoloured, and with hues
+  // keyed by app that property now rests on the map covering the catalogue rather than on the
+  // grid being long enough. Each glyph is mounted alone, in position one, so position cannot
+  // contribute any variety: whatever spread survives here is identity's alone.
+  const glyphs = [
+    'icon-documents',
+    'icon-picture',
+    'icon-users',
+    'icon-settings',
+    'icon-code',
+    'icon-box',
+    'icon-search',
+    'icon-diploma',
+  ];
+  const cards = glyphs.map((glyph) => favCard([glyph]));
+
+  const hues = new Set(cards.map((c) => getComputedStyle(c.orbs[0]).backgroundImage));
+  expect(hues.size, 'a one-colour Favourites panel is not the v4 Sections panel').to.be.greaterThan(
+    3,
+  );
+
+  for (const c of cards) c.card.remove();
+});
+
 it('keeps every footer action rendered and sized to be clicked', function () {
   this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
   // Desktop settings, Log out, Exit. A theme may restyle, never remove: a user who lands in

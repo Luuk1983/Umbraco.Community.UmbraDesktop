@@ -101,7 +101,10 @@ export default css`
     border-radius: 3px;
   }
   /* The glossy orb. A theme cannot add DOM, so the disc is drawn on the icon element itself:
-     a radial highlight over a linear body, a dark hairline, and an inner bottom shade. */
+     a radial highlight over a linear body, a dark hairline, and an inner bottom shade.
+
+     The two stops are custom properties so the hue rules below state only a colour pair. The
+     gradient geometry is written once, here, and every orb is guaranteed to share it. */
   .card.fav .launch umb-icon {
     box-sizing: border-box;
     width: 38px;
@@ -111,42 +114,62 @@ export default css`
     font-size: 20px;
     color: ${unsafeCSS(U4_WELL)};
     border-radius: 50%;
+    --u4-orb-top: #5b9bd8;
+    --u4-orb-bottom: #25578f;
     background-image:
       radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 46%),
-      linear-gradient(180deg, #5b9bd8 0%, #25578f 100%);
+      linear-gradient(180deg, var(--u4-orb-top) 0%, var(--u4-orb-bottom) 100%);
     box-shadow:
       0 1px 2px rgba(20, 25, 35, 0.35),
       inset 0 0 0 1px rgba(0, 0, 0, 0.16),
       inset 0 -6px 9px rgba(0, 0, 0, 0.14);
   }
-  /* v4's panel was multicoloured, one hue per section. A theme has no idea which app a tile is —
-     it sees position, not identity — so the hues rotate by position instead. That is not the
-     original mapping and cannot be, but a single-colour panel would lose the thing that made the
-     Sections panel recognisable, and rotating keeps a stable colour per tile between renders. */
-  .card.fav .grid .tile:nth-child(6n + 2) .launch umb-icon {
-    background-image:
-      radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 46%),
-      linear-gradient(180deg, #f0b055 0%, #c9721a 100%);
+  /* v4's panel was multicoloured, one hue per section, and this is that mapping — keyed by the
+     glyph each app declares in the catalogue, which the base renders as 'umb-icon[name]' and a
+     theme can therefore read. Grouping by area rather than colouring all nineteen separately is
+     the faithful part: v4 coloured *sections*, so apps from the same corner of the backoffice
+     sharing a hue is the original behaviour, not a shortcut.
+
+     Content keeps the base blue above and needs no rule of its own. An unmapped glyph — a
+     third-party icon, or a name that arrived with a colour suffix appended — falls through to
+     that same blue, which is why these are exact matches rather than prefixes: 'icon-document'
+     is a prefix of 'icon-documents', and a prefix match would quietly merge the two. */
+
+  /* Media and delivery. */
+  .card.fav .launch umb-icon[name='icon-picture'],
+  .card.fav .launch umb-icon[name='icon-globe'] {
+    --u4-orb-top: #67c3bb;
+    --u4-orb-bottom: #1f7d78;
   }
-  .card.fav .grid .tile:nth-child(6n + 3) .launch umb-icon {
-    background-image:
-      radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 46%),
-      linear-gradient(180deg, #8ec26a 0%, #4e8232 100%);
+  /* People, and the packages that extend them. */
+  .card.fav .launch umb-icon[name='icon-users'],
+  .card.fav .launch umb-icon[name='icon-user'],
+  .card.fav .launch umb-icon[name='icon-box'],
+  .card.fav .launch umb-icon[name='icon-box-alt'] {
+    --u4-orb-top: #f0b055;
+    --u4-orb-bottom: #c9721a;
   }
-  .card.fav .grid .tile:nth-child(6n + 4) .launch umb-icon {
-    background-image:
-      radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 46%),
-      linear-gradient(180deg, #a98cd4 0%, #61428f 100%);
+  /* Permissions, auditing and publishing. */
+  .card.fav .launch umb-icon[name='icon-diploma'],
+  .card.fav .launch umb-icon[name='icon-eye'],
+  .card.fav .launch umb-icon[name='icon-newspaper'] {
+    --u4-orb-top: #8ec26a;
+    --u4-orb-bottom: #4e8232;
   }
-  .card.fav .grid .tile:nth-child(6n + 5) .launch umb-icon {
-    background-image:
-      radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 46%),
-      linear-gradient(180deg, #e08a7e 0%, #b23a2d 100%);
+  /* Settings and the developer surfaces. */
+  .card.fav .launch umb-icon[name='icon-settings'],
+  .card.fav .launch umb-icon[name='icon-code'],
+  .card.fav .launch umb-icon[name='icon-webhook'],
+  .card.fav .launch umb-icon[name='icon-autofill'] {
+    --u4-orb-top: #a98cd4;
+    --u4-orb-bottom: #61428f;
   }
-  .card.fav .grid .tile:nth-child(6n) .launch umb-icon {
-    background-image:
-      radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 46%),
-      linear-gradient(180deg, #67c3bb 0%, #1f7d78 100%);
+  /* Diagnostics, where something is usually wrong. */
+  .card.fav .launch umb-icon[name='icon-search'],
+  .card.fav .launch umb-icon[name='icon-hearts'],
+  .card.fav .launch umb-icon[name='icon-speed-gauge'] {
+    --u4-orb-top: #e08a7e;
+    --u4-orb-bottom: #b23a2d;
   }
   .card.fav .tlb {
     -webkit-line-clamp: 1;
