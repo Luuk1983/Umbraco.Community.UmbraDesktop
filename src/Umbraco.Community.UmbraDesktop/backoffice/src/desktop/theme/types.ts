@@ -110,6 +110,23 @@ export interface UmbraDesktopThemeSheets {
 export type UmbraDesktopSurface = keyof UmbraDesktopThemeSheets;
 
 /**
+ * The same set once built into stylesheets a shadow root can adopt.
+ *
+ * Themes author their CSS with Lit's `css` tag, which hands back a `CSSResult` whose real
+ * `CSSStyleSheet` is built lazily on first read of `.styleSheet` and memoized **onto the
+ * `CSSResult` itself**. That write is the problem: the theme context publishes its sheets through
+ * an observable state, and Umbraco's `UmbObjectState` deep-freezes everything it holds, so the
+ * first component to read `.styleSheet` off a published `CSSResult` threw
+ * `TypeError: Cannot add property _styleSheet, object is not extensible` — silently, inside an
+ * observer — and no theme CSS was ever adopted.
+ *
+ * Building the stylesheets *before* they are published closes that off: what crosses the
+ * observable is a finished `CSSStyleSheet` with no lazy work left to do, so it no longer matters
+ * what a state does to it on the way through. Themes keep authoring in `css`.
+ */
+export type UmbraDesktopAdoptedSheets = Partial<Record<UmbraDesktopSurface, CSSStyleSheet>>;
+
+/**
  * The three colours the settings picker paints as a theme's preview. Named rather than a
  * positional triple: a theme author writing a Win98 or macOS palette has to map these onto a
  * design language that has no such words, and a swapped tuple would be invisible.

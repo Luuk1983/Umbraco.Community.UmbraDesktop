@@ -12,6 +12,11 @@ import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
  * authority: later sheets win at equal specificity, so a theme can restate a base selector —
  * `.frame:not(.active) .title` — and override it without `!important`.
  *
+ * The theme context publishes stylesheets already built (see `UmbraDesktopAdoptedSheets`), so
+ * nothing here reads a `CSSResult`'s lazy `.styleSheet`. It used to, and that was the bug that
+ * kept every theme from ever restyling the chrome: the published objects are frozen in transit,
+ * and building the sheet writes to the object it is built from.
+ *
  * **The host must be an `UmbLitElement`** (or anything else built on Umbraco's controller-host
  * element mixin), and that is load-bearing rather than incidental. Capturing the base only works
  * because the host's own styles are already in `adoptedStyleSheets` the first time `#adopt` runs:
@@ -37,7 +42,7 @@ export class UmbraDesktopThemeStyles extends UmbControllerBase {
     this.#surface = surface;
     this.consumeContext(UMBRADESKTOP_THEME_CONTEXT, (context) => {
       if (!context) return;
-      this.observe(context.sheets, (sheets) => this.#adopt(host, sheets?.[this.#surface]?.styleSheet));
+      this.observe(context.sheets, (sheets) => this.#adopt(host, sheets?.[this.#surface]));
     });
   }
 
