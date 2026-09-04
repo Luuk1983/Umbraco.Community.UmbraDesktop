@@ -16,6 +16,10 @@
 - **Full test suite:** `cd src/Umbraco.Community.UmbraDesktop && npm test`
 - **One test file:** `cd src/Umbraco.Community.UmbraDesktop/backoffice && npx web-test-runner "src/desktop/<path>.test.ts" --node-resolve`
 - **Build:** `cd src/Umbraco.Community.UmbraDesktop && npm run build`
+- **The test runner does not type-check.** It transpiles through esbuild, which strips types without
+  checking them, so a type error surfaces only in `npm run build` (which runs `tsc` first). Where a
+  step below predicts a test failing on a type error, expect a *runtime* failure instead — usually
+  `undefined` propagating into arithmetic as `NaN`. Run the build to see type errors.
 - **Every type, method and property gets an XML-style JSDoc comment** (`/** … */` with `@param` / `@returns`), matching the surrounding code. This codebase documents `private` members too.
 - **Use `var` for locals, `const` for module scope.** Prefer `interface`/`type` over classes for data.
 - **No component tests.** This project unit-tests pure modules and verifies UI in the browser with the maintainer — the convention set by the launcher and wallpaper work.
@@ -545,6 +549,28 @@ it('clampWindowPosition keeps a window narrower than its own controls wholly on 
   expect(clampWindowPosition({ x: 0, y: 0, w: 100, h: 100 }, BOUNDS, KEEP_LEFT)).to.deep.equal({ x: 0, y: 0 });
   expect(clampWindowPosition({ x: -40, y: 0, w: 100, h: 100 }, BOUNDS, KEEP_LEFT)).to.deep.equal({ x: 0, y: 0 });
 });
+
+it('clampWindowPosition honours controls at both ends at once', () => {
+  // The case the two-width model exists for, and the reason a side enum was rejected. Each
+  // edge is governed by the controls at the OPPOSITE end, because those are what is left on
+  // screen: lo = grab - w + trailing = 80 - 400 + 46, hi = bounds.w - grab - leading.
+  expect(clampWindowPosition({ ...DRAGGED, x: -900 }, BOUNDS, KEEP_SPLIT)).to.deep.equal({ x: -274, y: 100 });
+  expect(clampWindowPosition({ ...DRAGGED, x: 5000 }, BOUNDS, KEEP_SPLIT)).to.deep.equal({ x: 796, y: 100 });
+});
+
+it('clampWindowPosition takes its right-edge limit from the leading controls alone', () => {
+  // Adding trailing controls must not move the right-edge limit — the leading ones are the
+  // part still on screen there. Guards the algebra against a future "simplification".
+  const left = clampWindowPosition({ ...DRAGGED, x: 5000 }, BOUNDS, KEEP_LEFT);
+  const split = clampWindowPosition({ ...DRAGGED, x: 5000 }, BOUNDS, KEEP_SPLIT);
+  expect(split.x).to.equal(left.x);
+});
+```
+
+`KEEP_SPLIT` goes beside the other two fixtures:
+
+```ts
+const KEEP_SPLIT = { grab: 80, leading: 124, trailing: 46, titlebar: 40 };
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
