@@ -1,5 +1,6 @@
 import type { UmbraDesktopTheme } from '../../types';
 import { MACOS_DARK, MACOS_LIGHT } from './palette.js';
+import { MACOS_LEADING_CONTROLS_WIDTH, MACOS_TASKBAR_RESERVE, MACOS_TITLEBAR_HEIGHT } from './metrics.js';
 
 /**
  * macOS chrome around Umbraco content: traffic lights, a floating dock, a Launchpad-style
@@ -12,15 +13,13 @@ export const UMBRADESKTOP_MACOS_THEME: UmbraDesktopTheme = {
   swatch: { chrome: '#e8e8ea', accent: '#ff5f57', surface: '#ffffff' },
   palettes: { light: MACOS_LIGHT, dark: MACOS_DARK },
   metrics: {
-    titlebarHeight: 30,
-    // window.css.ts's .titlebar has 10px left padding, then three 12px lights with two 8px gaps
-    // between them (10 + 12 + 8 + 12 + 8 + 12 = 62), then the flex .controls gap (8px) plus
-    // .ctrl-reload's own 10px margin-left before its 22px width (62 + 8 + 10 + 22 = 102).
-    leadingControlsWidth: 102,
+    titlebarHeight: MACOS_TITLEBAR_HEIGHT,
+    // See metrics.ts: derived from the same constants window.css.ts renders its controls with,
+    // rather than a hand-computed literal that can silently drift from what actually paints.
+    leadingControlsWidth: MACOS_LEADING_CONTROLS_WIDTH,
     trailingControlsWidth: 0,
     grab: 80,
-    // 44px dock plus its 10px bottom margin and a little clearance.
-    taskbarReserve: 62,
+    taskbarReserve: MACOS_TASKBAR_RESERVE,
   },
   sheets: async () => {
     const [desktop, taskbar, launcher, window] = await Promise.all([

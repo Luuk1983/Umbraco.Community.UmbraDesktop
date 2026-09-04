@@ -1,10 +1,19 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { MACOS_FONT } from './palette.js';
+import {
+  MACOS_CONTROL_GAP,
+  MACOS_LIGHT_SIZE,
+  MACOS_RELOAD_MARGIN,
+  MACOS_RELOAD_SIZE,
+  MACOS_TITLEBAR_PADDING,
+} from './metrics.js';
 
 /**
  * The macOS window surface: traffic lights leading the titlebar, a centred title, and the reload
  * button travelling with the lights as one contiguous non-draggable cluster (which is what
- * `leadingControlsWidth` in the theme's metrics accounts for).
+ * `leadingControlsWidth` in the theme's metrics accounts for). The geometry declarations below
+ * consume the same constants that metric is derived from — see `metrics.ts` — so the two cannot
+ * disagree.
  */
 export default css`
   .titlebar {
@@ -14,7 +23,7 @@ export default css`
        to span the *bar*, not the frame — so the bar needs to be the containing block itself. */
     position: relative;
     font-family: ${unsafeCSS(MACOS_FONT)};
-    padding: 0 10px;
+    padding: 0 ${MACOS_TITLEBAR_PADDING}px;
   }
   /* Controls lead the bar; the title then centres over the bar's full width rather than the
      space left beside them. */
@@ -22,8 +31,8 @@ export default css`
     order: -1;
     align-items: center;
     align-self: center;
-    gap: 8px;
-    margin-right: 8px;
+    gap: ${MACOS_CONTROL_GAP}px;
+    margin-right: ${MACOS_CONTROL_GAP}px;
   }
   /* Native traffic-light order is close, minimize, maximize (zoom) — but the DOM order here is
      reload, minimize, maximize, close, because reload is the outermost/newest control. 'order'
@@ -66,8 +75,8 @@ export default css`
   .ctrl-close,
   .ctrl-minimize,
   .ctrl-maximize {
-    width: 12px;
-    height: 12px;
+    width: ${MACOS_LIGHT_SIZE}px;
+    height: ${MACOS_LIGHT_SIZE}px;
     border-radius: 50%;
     border: 0.5px solid rgba(0, 0, 0, 0.16);
   }
@@ -104,9 +113,9 @@ export default css`
      the lights rather than leading them (DOM order otherwise puts it first). */
   .ctrl-reload {
     order: 4;
-    width: 22px;
-    height: 22px;
-    margin-left: 10px;
+    width: ${MACOS_RELOAD_SIZE}px;
+    height: ${MACOS_RELOAD_SIZE}px;
+    margin-left: ${MACOS_RELOAD_MARGIN}px;
     border-radius: 50%;
   }
   .ctrl-reload:hover {

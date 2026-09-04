@@ -1,4 +1,10 @@
 import type { UmbraDesktopPalette } from '../../types';
+import {
+  MACOS_TASKBAR_BOTTOM_MARGIN,
+  MACOS_TASKBAR_HEIGHT,
+  MACOS_TASKBAR_RESERVE,
+  MACOS_TITLEBAR_HEIGHT,
+} from './metrics.js';
 
 /**
  * SF Pro cannot be shipped — licensing — so the stack resolves to the real thing on macOS and to
@@ -15,7 +21,7 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-radius': '10px',
   '--umbradesktop-window-shadow': '0 8px 24px rgba(0, 0, 0, 0.22)',
   '--umbradesktop-window-shadow-active': '0 16px 40px rgba(0, 0, 0, 0.34)',
-  '--umbradesktop-titlebar-height': '30px',
+  '--umbradesktop-titlebar-height': `${MACOS_TITLEBAR_HEIGHT}px`,
   '--umbradesktop-titlebar-background': 'linear-gradient(#f8f8f8, #e8e8e8)',
   '--umbradesktop-titlebar-border-bottom': '1px solid #cfcfcf',
   '--umbradesktop-titlebar-text': '#4d4d4d',
@@ -33,9 +39,9 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   // lights don't change colour on hover at all, only their glyph appears (handled separately by
   // '.titlebar:hover .glyph' in window.css.ts). Transparent keeps them exactly as they are.
   '--umbradesktop-control-hover-background': 'transparent',
-  '--umbradesktop-taskbar-height': '44px',
-  '--umbradesktop-taskbar-reserve': '62px',
-  '--umbradesktop-taskbar-margin': '0 auto 10px',
+  '--umbradesktop-taskbar-height': `${MACOS_TASKBAR_HEIGHT}px`,
+  '--umbradesktop-taskbar-reserve': `${MACOS_TASKBAR_RESERVE}px`,
+  '--umbradesktop-taskbar-margin': `0 auto ${MACOS_TASKBAR_BOTTOM_MARGIN}px`,
   '--umbradesktop-taskbar-radius': '16px',
   '--umbradesktop-taskbar-background': 'rgba(255, 255, 255, 0.4)',
   '--umbradesktop-taskbar-background-opaque': '#e9e9ef',

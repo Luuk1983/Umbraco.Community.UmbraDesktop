@@ -33,8 +33,11 @@ export const UMBRADESKTOP_WINDOW_MIN_SIZE = { w: 320, h: 200 };
 /**
  * What must stay inside the desktop while dragging, under the Umbraco theme. `trailing` is the
  * width of the three window buttons (3 × 46px) at the titlebar's right end, which are not
- * draggable; `titlebar` is the bar's own height. These are the only values in play today — no
- * theme context exists yet to vary them. A later milestone is intended to add one so each theme
- * can supply its own titlebar geometry; until then this constant is what every theme gets.
+ * draggable; `titlebar` is the bar's own height. This is the Umbraco theme's own geometry — see
+ * `theme/themes/umbraco`, which reports these same numbers back out as its `metrics` — and it is
+ * also what `window-manager.context`'s `#keep` starts as, before any theme has resolved and called
+ * `setMetrics`. Every theme now publishes its own metrics this way (see `theme/themes/macos`, whose
+ * geometry differs from this one), so this constant is no longer the only geometry in play — just
+ * this theme's contribution to it, doubling as the safe default before one is chosen.
  */
 export const UMBRADESKTOP_WINDOW_KEEP_VISIBLE = { grab: 80, leading: 0, trailing: 138, titlebar: 40 };

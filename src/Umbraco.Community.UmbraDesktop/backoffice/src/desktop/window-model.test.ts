@@ -134,8 +134,11 @@ it('resizeRect clamps the top edge so the origin never overshoots the minimum he
 
 const BOUNDS = { w: 1000, h: 700 };
 const KEEP = { grab: 80, leading: 0, trailing: 138, titlebar: 40 };
-// 124 and 46 are the macOS theme's geometry: 124 is the traffic-light cluster (leading), 46 is a
-// single reload button (trailing) — see KEEP_SPLIT below, which uses both at once.
+// Arbitrary non-zero fixtures for a theme with controls at both ends of the titlebar — not the
+// shipped macOS theme's actual numbers (its trailing is 0; reload leads with the cluster rather
+// than trailing on its own), just plausible ones exercising the general case the clamp must
+// handle: leading and trailing controls both present at once. See KEEP_SPLIT below, which uses
+// both together.
 const KEEP_LEFT = { grab: 80, leading: 124, trailing: 0, titlebar: 40 };
 const KEEP_SPLIT = { grab: 80, leading: 124, trailing: 46, titlebar: 40 };
 const DRAGGED: import('./types').Rect = { x: 100, y: 100, w: 400, h: 300 };

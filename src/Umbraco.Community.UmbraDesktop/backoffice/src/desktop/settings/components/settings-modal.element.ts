@@ -26,6 +26,12 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
   @state()
   private _wallpaper?: UmbraDesktopWallpaperView;
 
+  /**
+   * The theme actually *in force* — what is painted right now, including the variant and whether
+   * high contrast has overridden the user's choice. Distinct from `_chosenThemeId` below, which is
+   * the user's *choice*: the two agree except under high contrast, where this reflects the forced
+   * theme while `_chosenThemeId` still reflects what the user picked.
+   */
   @state()
   private _theme?: UmbraDesktopResolvedTheme;
 

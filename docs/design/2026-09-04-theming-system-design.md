@@ -47,6 +47,13 @@ move, resize, restyle or re-order them; it may not hide them. Win98's Start menu
 footer restyled as menu rows, not deleted. This is a review criterion for each theme, and the reason
 §10's browser checkpoints walk the full launcher under every theme rather than only looking at it.
 
+The test is whether something is an **affordance** — reachable only through that element — not
+whether `display: none` appears in a theme's CSS. Two uses of it shipped in the macOS theme and are
+sanctioned: the dock's `.task-label` (the dock is icon-only, matching a real Mac; the label survives
+as the button's `title` attribute, so it is still available as a tooltip and as the accessible
+name) and the desktop's `.wallpaper-brand` watermark (decorative, nothing behind it is reachable
+only through it). Neither removes a way to do something — they remove a label and a watermark.
+
 ### 1.2 The boundary, stated once
 
 A theme styles the **chrome**: the desktop surface, the taskbar/dock, the launcher panel, and the
@@ -348,8 +355,14 @@ Mac.** Recorded as an accepted limitation, not a defect.
 ### 7.3 Metrics
 
 ```ts
-{ titlebarHeight: 30, leadingControlsWidth: 124, trailingControlsWidth: 0, grab: 80, taskbarReserve: 62 }
+{ titlebarHeight: 30, leadingControlsWidth: 102, trailingControlsWidth: 0, grab: 80, taskbarReserve: 62 }
 ```
+
+`leadingControlsWidth` is 10px padding, three 12px lights, three 8px gaps (the lights and reload
+share one flex row), reload's own 10px margin, then reload's 22px width — 102, not the 124 an
+earlier draft of this document conservatively estimated. It is computed from those same constants
+rather than written down as a literal (`theme/themes/macos/metrics.ts`), so the CSS and the metric
+cannot drift apart the way they did here.
 
 ---
 

@@ -1,5 +1,6 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { MACOS_FONT } from './palette.js';
+import { MACOS_TASKBAR_RESERVE } from './metrics.js';
 
 /**
  * A centred floating dock. The `.cluster` wrapper (start + running windows) is what makes centring
@@ -92,13 +93,13 @@ export default css`
        panel renders flush left at 960px instead of edge to edge. width: auto lets left/right do
        the stretching the base rule's width would otherwise block. */
     width: auto;
-    bottom: var(--umbradesktop-taskbar-reserve, 62px);
+    bottom: var(--umbradesktop-taskbar-reserve, ${MACOS_TASKBAR_RESERVE}px);
     /* The launcher's containing block here is umbradesktop-taskbar's own host box, which is
        sized to the dock's content (~54px), not the desktop — bottom alone would size the panel
        to a sliver above the dock instead of filling the screen. 100vh sidesteps that: it is
        always relative to the viewport, never to an ancestor's box, and the desktop already fills
        the viewport while it is mounted (the outer backoffice header is hidden for as long as it
        is), so this reliably spans from the very top down to just above the dock. */
-    height: calc(100vh - var(--umbradesktop-taskbar-reserve, 62px));
+    height: calc(100vh - var(--umbradesktop-taskbar-reserve, ${MACOS_TASKBAR_RESERVE}px));
   }
 `;
