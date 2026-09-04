@@ -188,13 +188,16 @@ Adding a theme is a new folder plus one entry in `themes/index.ts` — the same 
 
 ### 4.1 Token groups
 
-Prefixed `--umbradesktop-`, matching the codebase's naming elsewhere. Grouped by surface:
+Prefixed `--umbradesktop-`, matching the codebase's naming elsewhere. Each token is named for the CSS
+property it feeds, so `titlebar-border-bottom` sets a `border-bottom` and `window-border` sets the
+`border` shorthand — a theme author never has to guess which sides a value will reach. The
+`UmbraDesktopToken` union in `theme/types.ts` is the normative list; the groups below are a summary.
 
 | Group | Examples |
 |---|---|
 | Desktop | `desktop-background`, `desktop-scrim`, `desktop-watermark-opacity` |
 | Window | `window-background`, `window-border`, `window-radius`, `window-shadow`, `window-shadow-active` |
-| Titlebar | `titlebar-background`, `titlebar-background-inactive`, `titlebar-border`, `titlebar-text`, `titlebar-inactive-opacity` |
+| Titlebar | `titlebar-height`, `titlebar-background`, `titlebar-border-bottom`, `titlebar-text`, `titlebar-inactive-opacity` |
 | Controls | `control-color`, `control-hover-background`, `control-close-hover-background`, `control-close-hover-color` |
 | Taskbar | `taskbar-background`, `taskbar-border`, `taskbar-shadow`, `taskbar-radius`, `taskbar-blur`, `taskbar-text`, `taskbar-hover-background`, `taskbar-active-marker` |
 | Launcher | `launcher-background`, `launcher-surface`, `launcher-card-background`, `launcher-border`, `launcher-radius`, `launcher-shadow`, `launcher-text`, `launcher-text-muted` |
