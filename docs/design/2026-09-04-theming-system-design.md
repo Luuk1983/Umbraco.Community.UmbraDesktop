@@ -5,7 +5,7 @@
 > Umbraco look and a **macOS** theme; shaped so Windows 98, Windows 11 and a Linux theme are each a
 > folder of CSS rather than a change to the shell.
 
-- **Status:** Approved design / pre-implementation
+- **Status:** Implemented; amended in review (see D13)
 - **Date:** 2026-09-04
 - **Branch:** `feature/1_theming`
 - **Target:** Umbraco CMS **v17**, package `Umbraco.Community.UmbraDesktop`
@@ -73,7 +73,7 @@ like anyway. This is a deliberate limit, not a gap to close later.
 | D1 | A theme **owns its whole palette**; it does not reserve slots for Umbraco branding | Win98 *is* `#c0c0c0`. A theme that can only reshape Umbraco's colours can't be Win98, and barely reads as macOS. |
 | D2 | The **Umbraco theme is the identity theme**: its palette maps every token to the `--uui-*` value in use today | Today's look is preserved bit-for-bit, it follows Umbraco light/dark for free, and it needs no special-casing — it is just the theme whose values happen to be `var(--uui-…)`. |
 | D3 | Light/dark is a **variant of one theme**, resolved from `UMB_THEME_CONTEXT` — not two picker entries | Verified available in Umbraco 17: the context exposes a reactive `theme` observable carrying `umb-light-theme` / `umb-dark-theme` / `umb-high-contrast-theme`. One "macOS" entry that follows the backoffice beats "macOS Light" and "macOS Dark". |
-| D4 | **High contrast forces the Umbraco theme** | Accessibility beats fidelity. The high-contrast stylesheet redefines `--uui-*` tokens, which only the identity theme reads. Handing someone a macOS gradient when they asked for high contrast is a regression. |
+| D4 | ~~**High contrast forces the Umbraco theme**~~ → **High contrast keeps the chosen theme, on its darkest palette** | *Reversed after the first browser session — see D13.* |
 | D5 | Theme CSS reaches components via **`adoptedStyleSheets`**, not `::part()` | `::part()` cannot reach the desktop at all: three Umbraco-owned shadow roots sit between the document and `<umbradesktop-desktop>`, none forwarding `exportparts`, and the spec has no wildcard. See §3.1. |
 | D6 | Theme CSS lives in **`themes/<id>/*.css.ts`**, never in the components | Five themes inlined into `window.element.ts` (538 lines today) would push it past 1500, and adding a theme would mean editing all four core files. |
 | D7 | A **`UmbraDesktopThemeContext`** provided by the desktop element carries theme id, variant, palette and metrics | Same pattern as the window manager, app catalogue and settings contexts. It is also the *only* channel that reaches portalled modals — see §3.3. |
@@ -82,6 +82,7 @@ like anyway. This is a deliberate limit, not a gap to close later.
 | D10 | Themes are a **closed set shipped in the package** | Matches the curated app catalogue. Nothing here forecloses opening it up later. |
 | D11 | The settings payload stays at **`v: 1`**; `theme` is added as an independently-recovered field | `parseSettings` already recovers each field independently. Bumping the version would reset every existing user's wallpaper and pins for no gain. |
 | D12 | The macOS theme is **Level 1 + a fullscreen launcher surface**; the launcher's *content* is unchanged | Restyling the panel's own surface is CSS. Rebuilding the tile grid as true Launchpad would cost the group cards and the pin affordance — a feature traded for a resemblance. |
+| D13 | **High contrast keeps the chosen theme and takes its darkest palette** — reversing D4 | D4 assumed the chrome had to carry the accessibility win. It does not: every window is a *separate document* running Umbraco's own high-contrast stylesheet, whatever chrome surrounds it, and that is where the content people actually read lives. Discarding the user's theme bought nothing and cost them their theme. A theme with no dark palette simply looks the same under all three backoffice themes — acceptable until themes ship high-contrast palettes of their own, which is out of scope. |
 
 ---
 
@@ -376,8 +377,8 @@ design anticipated.
 - The current theme is marked selected.
 - Selecting applies immediately and persists, matching the wallpaper section's no-Save behaviour;
   the dialog is non-modal enough that the change is visible behind it.
-- A line of help text where the active variant is not the theme's own: *"Following the backoffice's
-  high contrast theme."*
+- A line of help text under high contrast, saying that the window content follows it while the
+  chrome stays on the theme's darkest palette (D13).
 
 ---
 
@@ -415,7 +416,7 @@ cover.
 
 | Module | Cases |
 |---|---|
-| `resolve-variant` | each Umbraco alias → expected variant; dark falling back to light when a theme has no dark palette; high contrast forcing the Umbraco theme (D4); an unknown stored theme id falling back to Umbraco |
+| `resolve-variant` | each Umbraco alias → expected variant; dark falling back to light when a theme has no dark palette; high contrast keeping the chosen theme on its dark palette, and falling back to light when it has none (D13); an unknown stored theme id falling back to Umbraco |
 | `palette-css` | tokens rendered as declarations; a partial palette inheriting the rest |
 | `window-model` | `clampWindowPosition` with `leading 0 / trailing 138` reproduces every existing expectation; controls at both ends clamp correctly at both edges; a window narrower than its own controls stays wholly on screen |
 | `settings-store` | a v1 payload with no `theme` defaults it; an unknown theme id is discarded without costing the user their wallpaper or pins; a payload with `theme` round-trips |

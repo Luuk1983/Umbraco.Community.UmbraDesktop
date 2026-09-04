@@ -45,7 +45,8 @@ export default {
     // desktop settings — theme
     theme: 'Thema',
     themeDescription: 'Verandert het uiterlijk van het bureaublad, de taakbalk en de vensters. Je content blijft hetzelfde.',
-    themeHighContrast: 'De backoffice staat op hoog contrast, dus het Umbraco-thema wordt gebruikt.',
+    themeHighContrast:
+      'De backoffice staat op hoog contrast. De vensterinhoud volgt dat; het bureaublad houdt het donkerste palet van dit thema aan.',
     // desktop settings — wallpaper
     wallpaper: 'Achtergrond',
     wallpaperNone: 'Geen (verloop)',

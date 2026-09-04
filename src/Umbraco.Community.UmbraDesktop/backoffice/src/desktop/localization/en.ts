@@ -49,7 +49,8 @@ export default {
     // desktop settings — theme
     theme: 'Theme',
     themeDescription: 'Changes the look of the desktop, taskbar and windows. Your content stays the same.',
-    themeHighContrast: 'The backoffice is in high contrast, so the Umbraco theme is being used.',
+    themeHighContrast:
+      "The backoffice is in high contrast. Window content follows it; the desktop keeps this theme's darkest palette.",
     // desktop settings — wallpaper
     wallpaper: 'Wallpaper',
     wallpaperNone: 'None (gradient)',

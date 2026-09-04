@@ -40,22 +40,39 @@ it('falls back to light when a theme ships no dark palette', () => {
   expect(result.variant).to.equal('light');
 });
 
-it('forces the Umbraco theme under high contrast, whatever was chosen', () => {
-  // Accessibility beats fidelity: the high-contrast stylesheet redefines --uui-* tokens, which
-  // only the identity theme reads.
+it('keeps the chosen theme under high contrast, on its darkest palette', () => {
+  // High contrast used to throw the chosen theme away for the identity one. It no longer does:
+  // the accessibility win is in the *content*, which is a separate document running Umbraco's own
+  // high-contrast stylesheet either way, and losing your chrome for it bought nothing.
   const result = resolveTheme({ themeId: 'dual', umbThemeAlias: 'umb-high-contrast-theme', catalogue });
+  expect(result.theme).to.equal(dual);
+  expect(result.palette).to.equal(dual.palettes.dark);
+  expect(result.variant).to.equal('dark');
+  expect(result.highContrast).to.equal(true);
+});
+
+it('falls back to light under high contrast when a theme ships no dark palette', () => {
+  // Nothing to fall back *to* is a legitimate outcome: such a theme simply looks the same under
+  // all three backoffice themes, and its windows still go high contrast.
+  const result = resolveTheme({ themeId: 'light-only', umbThemeAlias: 'umb-high-contrast-theme', catalogue });
+  expect(result.theme).to.equal(lightOnly);
+  expect(result.variant).to.equal('light');
+  expect(result.highContrast).to.equal(true);
+});
+
+it('still falls back to the Umbraco theme under high contrast when the stored id is unknown', () => {
+  const result = resolveTheme({ themeId: 'gone', umbThemeAlias: 'umb-high-contrast-theme', catalogue });
   expect(result.theme).to.equal(UMBRADESKTOP_UMBRACO_THEME);
-  expect(result.forcedByContrast).to.equal(true);
 });
 
 it('falls back to the Umbraco theme when the stored id is unknown', () => {
   const result = resolveTheme({ themeId: 'removed-in-an-upgrade', umbThemeAlias: 'umb-light-theme', catalogue });
   expect(result.theme).to.equal(UMBRADESKTOP_UMBRACO_THEME);
-  expect(result.forcedByContrast).to.equal(false);
+  expect(result.highContrast).to.equal(false);
 });
 
-it('reports no forcing under a normal backoffice theme', () => {
-  expect(resolveTheme({ themeId: 'dual', umbThemeAlias: 'umb-light-theme', catalogue }).forcedByContrast).to.equal(false);
+it('reports no high contrast under a normal backoffice theme', () => {
+  expect(resolveTheme({ themeId: 'dual', umbThemeAlias: 'umb-light-theme', catalogue }).highContrast).to.equal(false);
 });
 
 it('falls back to the Umbraco theme when the catalogue is empty', () => {

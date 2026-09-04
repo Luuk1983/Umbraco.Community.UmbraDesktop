@@ -28,18 +28,29 @@ export interface UmbraDesktopResolvedTheme {
   variant: UmbraDesktopVariant;
   /** The palette to apply. */
   palette: UmbraDesktopPalette;
-  /** True when the user's choice was overridden because the backoffice is in high contrast. */
-  forcedByContrast: boolean;
+  /**
+   * True when the backoffice is in high contrast. The chosen theme is still honoured — this says
+   * the *variant* was decided by the accessibility setting rather than by light/dark, which is
+   * worth telling the user because the chrome is not itself high contrast.
+   */
+  highContrast: boolean;
 }
 
 /**
  * Decide which theme and variant to paint, from the user's stored choice and the backoffice's own
  * theme.
  *
- * Two overrides are deliberate. **High contrast wins over any choice**: that stylesheet works by
- * redefining `--uui-*` tokens, which only the Umbraco identity theme reads, so honouring a macOS
- * palette there would quietly undo an accessibility setting. And an **unknown id** — a theme
- * dropped in an upgrade — falls back rather than leaving the desktop unstyled.
+ * High contrast picks the chosen theme's darkest palette rather than replacing the theme. It used
+ * to force the Umbraco identity theme, on the reasoning that the high-contrast stylesheet works by
+ * redefining `--uui-*` tokens and only that theme reads them. True, but it bought nothing: the
+ * accessibility that matters is in the window *content*, and each window is a separate document
+ * running Umbraco's own high-contrast stylesheet whichever chrome surrounds it. Throwing the
+ * user's theme away only cost them their theme. A theme with no dark palette therefore looks the
+ * same under all three backoffice themes, which is a fair trade until themes ship high-contrast
+ * palettes of their own.
+ *
+ * An **unknown id** — a theme dropped in an upgrade — still falls back rather than leaving the
+ * desktop unstyled.
  *
  * A caller that needs to tell a *deliberate* Umbraco choice from a silent fallback can compare
  * `request.themeId` with `result.theme.id`: they differ only when the stored id was not found.
@@ -50,22 +61,16 @@ export interface UmbraDesktopResolvedTheme {
 export function resolveTheme(request: UmbraDesktopThemeRequest): UmbraDesktopResolvedTheme {
   const { themeId, umbThemeAlias, catalogue } = request;
 
-  if (umbThemeAlias === UMB_THEME_HIGH_CONTRAST_ALIAS) {
-    return {
-      theme: UMBRADESKTOP_UMBRACO_THEME,
-      variant: 'light',
-      palette: UMBRADESKTOP_UMBRACO_THEME.palettes.light,
-      forcedByContrast: true,
-    };
-  }
-
   // Fall back straight to the identity theme rather than looking `UMBRADESKTOP_DEFAULT_THEME_ID`
   // up in the catalogue: that keeps this robust even against an empty or broken catalogue.
   const theme = catalogue.find((entry) => entry.id === themeId) ?? UMBRADESKTOP_UMBRACO_THEME;
-  const wantsDark = umbThemeAlias === UMB_THEME_DARK_ALIAS;
+  const highContrast = umbThemeAlias === UMB_THEME_HIGH_CONTRAST_ALIAS;
+  // High contrast takes the darkest palette on offer, which is the closest a theme that has not
+  // been given a high-contrast palette of its own can get.
+  const wantsDark = highContrast || umbThemeAlias === UMB_THEME_DARK_ALIAS;
   const dark = theme.palettes.dark;
 
   return wantsDark && dark
-    ? { theme, variant: 'dark', palette: dark, forcedByContrast: false }
-    : { theme, variant: 'light', palette: theme.palettes.light, forcedByContrast: false };
+    ? { theme, variant: 'dark', palette: dark, highContrast }
+    : { theme, variant: 'light', palette: theme.palettes.light, highContrast };
 }

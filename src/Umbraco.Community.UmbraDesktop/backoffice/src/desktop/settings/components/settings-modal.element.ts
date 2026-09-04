@@ -127,7 +127,7 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
             `,
           )}
         </div>
-        ${this._theme?.forcedByContrast
+        ${this._theme?.highContrast
           ? html`<p class="hint warn">${this.localize.term('umbraDesktop_themeHighContrast')}</p>`
           : ''}
       </uui-box>
