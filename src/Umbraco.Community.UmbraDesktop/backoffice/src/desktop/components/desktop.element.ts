@@ -1,5 +1,5 @@
 import type { UmbraDesktopWindow } from '../types';
-import { UMBRADESKTOP_SECTION_ALIAS, UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
+import { UMBRADESKTOP_SECTION_ALIAS } from '../constants';
 import { findChromeRoot } from '../chrome-injector';
 import { applySectionTabHide } from '../../headerapps/section-tab-hide.js';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
@@ -110,10 +110,10 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     const hasImage = !!this._wallpaper?.background.url;
     return html`
       <div class="desktop ${hasImage ? 'has-image' : ''}" style=${this.#wallpaperStyle()}>
-        <div class="wallpaper-brand" aria-hidden="true" style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
+        <div class="wallpaper-brand" aria-hidden="true">
           <umb-icon name="icon-umbraco"></umb-icon>
         </div>
-        <div class="surface" style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
+        <div class="surface">
           ${repeat(
             this._windows,
             (w) => w.id,
@@ -138,17 +138,34 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         width: 100%;
         display: flex;
         flex-direction: column;
+        /* How much of the bottom edge the taskbar or dock occupies. Themes override this;
+           a floating dock reserves more than its own height so windows clear it. Declared
+           here rather than in the taskbar because the surface and the watermark need it
+           too, and it inherits down through every shadow boundary from this one place. */
+        --umbradesktop-taskbar-reserve: var(--umbradesktop-taskbar-height, 50px);
         /* Wallpaper derived from the header token but pulled darker, so the desktop reads
            distinctly darker than the taskbar (and the light windows pop). Solid colour first
            as a fallback for browsers without color-mix; the gradient adds a soft top-left
            highlight for depth. (A selection of background images is planned later.) */
-        background-color: #0e1329;
-        background-color: color-mix(in srgb, var(--uui-color-header-background, #1b264f) 58%, black);
-        background-image: radial-gradient(
-          130% 130% at 25% 8%,
-          var(--uui-color-header-background, #1b264f),
-          color-mix(in srgb, var(--uui-color-header-background, #1b264f) 50%, black) 70%
+        background-color: var(--umbradesktop-desktop-background-color, #0e1329);
+        background-image: var(
+          --umbradesktop-desktop-background-image,
+          radial-gradient(
+            130% 130% at 25% 8%,
+            var(--uui-color-header-background, #1b264f),
+            color-mix(in srgb, var(--uui-color-header-background, #1b264f) 50%, black) 70%
+          )
         );
+      }
+      /* Kept as a separate rule so the color-mix upgrade still applies over the token's
+         solid-colour default, exactly as it did before tokenisation. */
+      @supports (background-color: color-mix(in srgb, red 50%, black)) {
+        .desktop {
+          background-color: var(
+            --umbradesktop-desktop-background-color,
+            color-mix(in srgb, var(--uui-color-header-background, #1b264f) 58%, black)
+          );
+        }
       }
       /* A modest scrim over an image wallpaper, so white windows and the taskbar keep their
          separation from a light or busy background. Deliberately light: enough to rescue
@@ -158,7 +175,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         content: '';
         position: absolute;
         inset: 0;
-        background: rgba(0, 0, 0, 0.12);
+        background: var(--umbradesktop-desktop-scrim, rgba(0, 0, 0, 0.12));
         pointer-events: none;
       }
       /* The watermark reads as dirt on top of a photograph, so it belongs to the gradient only. */
@@ -170,9 +187,10 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
       .wallpaper-brand {
         position: absolute;
         right: -4%;
+        bottom: var(--umbradesktop-taskbar-reserve, 50px);
         pointer-events: none;
         color: var(--uui-color-header-contrast, #ffffff);
-        opacity: 0.06;
+        opacity: var(--umbradesktop-desktop-watermark-opacity, 0.06);
       }
       .wallpaper-brand umb-icon {
         display: block;
@@ -181,6 +199,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
       .surface {
         position: absolute;
         inset: 0;
+        bottom: var(--umbradesktop-taskbar-reserve, 50px);
         overflow: hidden;
       }
       umbradesktop-taskbar {
