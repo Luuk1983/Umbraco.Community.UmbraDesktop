@@ -23,6 +23,7 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 - A taskbar. Every open window gets a button: click to focus, click again to minimise.
 - Choose your wallpaper. Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user.
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.
+- Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice: the package ships the Umbraco look and a macOS one, with traffic lights, a floating dock and a fullscreen launcher.
 - Nothing new to learn. The windows contain the backoffice you already know, with the same trees, the same editors and the same shortcuts.
 
 ## Installation & configuration
@@ -83,6 +84,20 @@ So how much you get out of it depends on the screen in front of you:
 
 Side by side is not the only reason to use it, though. Opening everything from one launcher, keeping several tools loaded at once, and switching between them from the taskbar without losing your place or waiting for a section to reload is just as useful on a laptop as it is on a 4K monitor.
 
+## Changing the theme
+
+Desktop settings has a Theme section above Wallpaper. Choosing a theme restyles the launcher,
+taskbar and window chrome — never the content inside a window, which stays the backoffice you
+already know. Two ship today:
+
+- **Umbraco** — the default, built from Umbraco's own design tokens.
+- **macOS** — traffic lights on the left of each title bar, a floating dock, and a fullscreen
+  blurred launcher.
+
+Your choice applies immediately and is remembered per user, in that browser. Themes follow the
+backoffice's own Light and Dark settings; under High contrast a theme uses its darkest colours,
+while window content switches to Umbraco's real high-contrast styling.
+
 ## Changing the wallpaper
 
 Open the launcher and click the cog in its footer to open Desktop settings. The Wallpaper section shows what you are using now, with two ways to change it:
@@ -141,6 +156,10 @@ A curated entry for a package that not every install has is marked `optional`. B
 ## Documentation
 
 The full design, including the research behind the iframe approach, is in [`docs/design/umbradesktop-design.md`](docs/design/umbradesktop-design.md).
+
+Building a theme of your own — Windows 98, Windows 11, a Linux desktop — is a folder of CSS and one
+catalogue entry. [`docs/theming.md`](docs/theming.md) walks through it; the system behind it is
+described in [`docs/design/2026-09-04-theming-system-design.md`](docs/design/2026-09-04-theming-system-design.md).
 
 ## License
 

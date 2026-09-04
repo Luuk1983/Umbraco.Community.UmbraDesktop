@@ -173,8 +173,12 @@ titlebar is a different *colour*, not the base theme's reduced opacity.
 ## 4. The theme contract
 
 ```ts
-/** One theme's palette for one variant: every themeable value, as CSS custom properties. */
-export type UmbraDesktopPalette = Readonly<Record<string, string>>;
+/**
+ * One theme's values for one variant. Partial by design: every token has a fallback baked into the
+ * component that reads it, so a theme sets only what it wants to change — and because the key type
+ * is derived from `UMBRADESKTOP_TOKENS`, a typo is a compile error rather than a dead declaration.
+ */
+export type UmbraDesktopPalette = Partial<Record<UmbraDesktopToken, string>>;
 
 /** A theme as shipped in the package. */
 export interface UmbraDesktopTheme {
@@ -182,7 +186,9 @@ export interface UmbraDesktopTheme {
   id: string;
   /** Display name for the picker. Not localized — these are proper nouns, as with wallpapers (D9 of the wallpapers design). */
   name: string;
-  /** Palettes by variant. `light` is mandatory; the others fall back to it. */
+  /** The three colours the picker draws its preview from: chrome, accent, surface. */
+  swatch: UmbraDesktopSwatch;
+  /** Palettes by variant. `light` is mandatory; `dark` falls back to it. */
   palettes: { light: UmbraDesktopPalette; dark?: UmbraDesktopPalette };
   /** Geometry JavaScript needs. See §5. */
   metrics: UmbraDesktopThemeMetrics;
@@ -192,7 +198,15 @@ export interface UmbraDesktopTheme {
 ```
 
 Adding a theme is a new folder plus one entry in `themes/index.ts` — the same shape as
-`catalogue/index.ts`.
+`catalogue/index.ts`. **[docs/theming.md](../theming.md) is the practical walkthrough**; this
+section is the contract it implements.
+
+What a theme *authors* and what the desktop *adopts* are deliberately different types. Themes write
+Lit `CSSResult`s (`UmbraDesktopThemeSheets`); the theme context builds them into `CSSStyleSheet`s
+(`UmbraDesktopAdoptedSheets`) before publishing, because `CSSResult.styleSheet` is a lazy getter
+that memoizes onto the object it is read from — and the state it travels through freezes what it
+holds. Resolving it while the object is still fresh from its module is the only point where that
+laziness is safe.
 
 ### 4.1 Token groups
 
@@ -386,20 +400,24 @@ design anticipated.
 
 ```
 src/desktop/
+  iframe-theme.ts                keeps window content on the backoffice's light/dark theme [pure]
+  iframe-theme.test.ts
   theme/
-    types.ts                     UmbraDesktopTheme, Palette, Metrics, Sheets
-    theme.context.ts             provides id + variant + palette + metrics + sheets
+    types.ts                     tokens, Palette, Theme, Metrics, Sheets, AdoptedSheets
+    tokens.test.ts               token list vs. the components' CSS, both directions
+    theme.context.ts             provides theme + variant + palette + metrics + sheets
     theme.context-token.ts
     theme-styles.controller.ts   adoptedStyleSheets plumbing, shared by 4 components
-    resolve-variant.ts           (themeId, umbThemeAlias) -> theme + variant   [pure]
+    theme-adoption.test.ts       end-to-end: pick a theme, assert the chrome adopts it
+    resolve-variant.ts           request -> theme + variant + palette                 [pure]
     resolve-variant.test.ts
-    palette-css.ts               Palette -> custom-property declarations       [pure]
+    palette-css.ts               Palette -> custom-property declarations              [pure]
     palette-css.test.ts
     themes/
-      index.ts                   the catalogue: id -> UmbraDesktopTheme
-      umbraco/{index,palette}.ts        identity theme; no sheets
+      index.ts                   the catalogue: the themes, in picker order
+      umbraco/index.ts           identity theme; empty palette, no sheets
       macos/
-        index.ts palette.ts
+        index.ts palette.ts metrics.ts
         desktop.css.ts taskbar.css.ts launcher.css.ts window.css.ts
 ```
 
