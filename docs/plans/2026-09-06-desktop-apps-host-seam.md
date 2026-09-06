@@ -1040,6 +1040,14 @@ export function normaliseRegisteredApps(
 }
 ```
 
+> **Corrected after review. Two things in the sketch above are wrong; the shipped code follows design D15 and D16 rather than this snippet.**
+>
+> **The guard.** `typeof manifest.element !== 'function'` narrows `ManifestUmbraDesktopApp` to less than its own `extends ManifestElement` promises. That field is Umbraco's `ElementLoaderProperty`, a union covering a module path **string**, a loader, a module's exports, and a **class constructor**. The string is the only form a static `umbraco-package.json` can express, and this guard dropped it without a trace, so the packages likeliest to hit it were exactly the audience the feature exists for. A class constructor was worse than dropped: it satisfied `typeof`, was then treated as a loader and called, and threw `Class constructor cannot be invoked without 'new'`, leaving a tile that permanently read "could not be loaded". The fix carries Umbraco's type through and resolves with Umbraco's own `loadManifestElement`, which also removes any need to memoise a synthesised closure, because the value stays the manifest's own property.
+>
+> **`weight`.** Carrying `manifest.weight` across unchanged inverts it. Umbraco's registry sorts weight-descending, `groupApps` sorts ascending, so an author writing `weight: 1000` to mean "first", which is what it means everywhere else in Umbraco, landed last in their launcher group with nothing to warn them. The fix negates it on the way in and documents the convention at both ends.
+>
+> Also note `DEFAULT_ICON` above duplicated a literal already in `derive-apps.ts`. It shipped as a single `UMBRADESKTOP_DEFAULT_ICON` in `constants.ts`, which already collects the values more than one module reads, with both importing it.
+
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
