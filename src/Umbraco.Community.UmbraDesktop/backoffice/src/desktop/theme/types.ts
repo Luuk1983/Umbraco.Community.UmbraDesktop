@@ -1,9 +1,11 @@
 import type { CSSResult } from '@umbraco-cms/backoffice/external/lit';
 
 /**
- * Every custom property a theme may set, as a runtime list so it can be checked against the CSS
- * that actually reads them — see `tokens.test.ts`. The type below is derived from it, so a typo in
- * a palette is still a compile error.
+ * Every custom property a theme may set on the **chrome** (the desktop, taskbar, launcher and
+ * window elements this package owns), as a runtime list so it can be checked against the CSS that
+ * actually reads them — see `tokens.test.ts`. The type below is derived from it, so a typo in a
+ * palette is still a compile error. A theme may also set app tokens: see
+ * {@link UMBRADESKTOP_APP_TOKENS}.
  */
 export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-window-background',
@@ -61,7 +63,10 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-desktop-watermark-opacity',
 ] as const;
 
-/** Every custom property a theme may set. */
+/**
+ * Every custom property a theme may set on the chrome. See {@link UMBRADESKTOP_APP_TOKENS} for the
+ * other group a palette can cover.
+ */
 export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
 
 /**
@@ -71,31 +76,32 @@ export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
  * Separate from {@link UMBRADESKTOP_TOKENS} on purpose. That list is checked against the CSS of the
  * four chrome components, exactly, so that a token nothing reads cannot sit there as dead weight.
  * These have no reader in this package at all: their consumers ship in other packages, which is
- * what makes them a published contract rather than drift. `app-tokens.test.ts` holds them instead.
+ * what makes them a published contract rather than drift. `app-tokens.test.ts` holds them instead,
+ * including the assertion that keeps a chrome-only token from ever landing in this list: nothing
+ * else would notice, since a host component declaring one of these on a descendant of `.desktop`
+ * would beat the palette it inherits and make it unthemeable (see the fallback doc below).
  *
- * **There are no host-side fallbacks for these, and there cannot be.** The chrome puts each token's
- * fallback in the component that reads it, which is why the Umbraco identity theme can ship an
- * empty palette. An app's reader is in another package, and a host component declaring these on a
- * descendant of `.desktop` would beat the palette it inherits and make them unthemeable. So an app
- * carries its own fallback, and the fallback it is expected to carry is the Umbraco look:
+ * Purpose, one row per token:
  *
- * | Token | Fallback an app should write |
+ * | Token | Purpose |
  * |---|---|
- * | `--umbradesktop-app-surface` | `var(--uui-color-surface)` |
- * | `--umbradesktop-app-surface-raised` | `var(--uui-color-surface)` |
- * | `--umbradesktop-app-surface-sunken` | `var(--uui-color-background)` |
- * | `--umbradesktop-app-edge-light` | `transparent` |
- * | `--umbradesktop-app-edge-dark` | `var(--uui-color-border)` |
- * | `--umbradesktop-app-edge-width` | `1px` |
- * | `--umbradesktop-app-radius` | `3px` |
- * | `--umbradesktop-app-text` | `var(--uui-color-text)` |
- * | `--umbradesktop-app-text-muted` | `var(--uui-color-text-alt)` |
- * | `--umbradesktop-app-accent` | `var(--uui-color-selected)` |
- * | `--umbradesktop-app-font` | `inherit` |
+ * | `--umbradesktop-app-surface` | The app's own panel ground, distinct from the window body behind it |
+ * | `--umbradesktop-app-surface-raised` | A control face: a Minesweeper cell, a calculator key |
+ * | `--umbradesktop-app-surface-sunken` | A recessed field: the minefield well, a numeric display |
+ * | `--umbradesktop-app-edge-light` | The light edge of a bevel, or a top border |
+ * | `--umbradesktop-app-edge-dark` | The dark edge |
+ * | `--umbradesktop-app-edge-width` | `2px` on Win98, `0` on flat themes |
+ * | `--umbradesktop-app-radius` | `0` on Win98, `6px` on macOS and Win11 |
+ * | `--umbradesktop-app-text` | Primary text |
+ * | `--umbradesktop-app-text-muted` | Secondary text |
+ * | `--umbradesktop-app-accent` | Selection and focus |
+ * | `--umbradesktop-app-font` | The theme's UI font stack |
  *
  * `edge-width` and `radius` are the pair that lets one app stylesheet be both a bevelled Win98
  * control (width `2px`, radius `0`) and a flat rounded one (width `0`, radius `6px`) with no branch
  * in the app. Prefer widening this group over adding a per-theme branch to an app.
+ *
+ * See {@link UMBRADESKTOP_APP_TOKEN_FALLBACKS} for the fallback each app is expected to write.
  */
 export const UMBRADESKTOP_APP_TOKENS = [
   '--umbradesktop-app-surface',
@@ -115,12 +121,50 @@ export const UMBRADESKTOP_APP_TOKENS = [
 export type UmbraDesktopAppToken = (typeof UMBRADESKTOP_APP_TOKENS)[number];
 
 /**
- * One theme's values for one variant. Partial by design: every token has a fallback baked into
- * the component that reads it, so a theme sets only what it wants to change. Covers both token
- * groups: a theme paints its own chrome and may also opt into restyling the app surface, since a
- * palette is one flat set of custom properties regardless of who ends up reading each one.
+ * The published fallback contract for {@link UMBRADESKTOP_APP_TOKENS}: the value every app is
+ * expected to write as its own CSS fallback (`var(--umbradesktop-app-surface, <this value>)`),
+ * since there are no host-side fallbacks for these and there cannot be. The chrome puts each of
+ * *its* tokens' fallback in the component that reads it, which is why the Umbraco identity theme
+ * can ship an empty palette. An app's reader lives in another package, so it carries its own
+ * fallback instead — and this is data, not prose, precisely so it cannot drift from the token list
+ * above: `satisfies Record<UmbraDesktopAppToken, string>` makes a missing or extra key a compile
+ * error, and `app-tokens.test.ts` asserts the same at runtime, since the test runner does not
+ * type-check.
+ *
+ * These values are deliberately the Umbraco look. An app that reads only these therefore renders as
+ * the identity theme by construction, which is the other half of why that theme's own palette can
+ * stay empty: the chrome side is empty because each chrome component already carries the Umbraco
+ * fallback, and the app side is empty because every app already carries this one.
  */
-export type UmbraDesktopPalette = Partial<Record<UmbraDesktopToken | UmbraDesktopAppToken, string>>;
+export const UMBRADESKTOP_APP_TOKEN_FALLBACKS = {
+  '--umbradesktop-app-surface': 'var(--uui-color-surface)',
+  '--umbradesktop-app-surface-raised': 'var(--uui-color-surface)',
+  '--umbradesktop-app-surface-sunken': 'var(--uui-color-background)',
+  '--umbradesktop-app-edge-light': 'transparent',
+  '--umbradesktop-app-edge-dark': 'var(--uui-color-border)',
+  '--umbradesktop-app-edge-width': '1px',
+  '--umbradesktop-app-radius': '3px',
+  '--umbradesktop-app-text': 'var(--uui-color-text)',
+  '--umbradesktop-app-text-muted': 'var(--uui-color-text-alt)',
+  '--umbradesktop-app-accent': 'var(--uui-color-selected)',
+  '--umbradesktop-app-font': 'inherit',
+} as const satisfies Record<UmbraDesktopAppToken, string>;
+
+/**
+ * Either token group a palette can cover: the chrome, whose fallback lives in the component that
+ * reads it, and the app surface, whose fallback lives in {@link UMBRADESKTOP_APP_TOKEN_FALLBACKS}
+ * instead because its readers ship in other packages.
+ */
+export type UmbraDesktopPaletteToken = UmbraDesktopToken | UmbraDesktopAppToken;
+
+/**
+ * One theme's values for one variant. Partial by design: a chrome token's fallback is baked into
+ * the component that reads it and an app token's fallback is carried by the app itself (see
+ * {@link UMBRADESKTOP_APP_TOKEN_FALLBACKS}), so a theme sets only what it wants to change. Covers
+ * both token groups: a theme paints its own chrome and may also opt into restyling the app surface,
+ * since a palette is one flat set of custom properties regardless of who ends up reading each one.
+ */
+export type UmbraDesktopPalette = Partial<Record<UmbraDesktopPaletteToken, string>>;
 
 /**
  * The geometry a theme has to publish because JavaScript — not CSS — needs it: the window bounds
