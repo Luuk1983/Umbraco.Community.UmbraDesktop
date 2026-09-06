@@ -4,6 +4,7 @@ import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-t
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
 import type { UmbraDesktopSettingsContext } from '../settings/settings.context';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
+import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
@@ -43,6 +44,8 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
 
   constructor() {
     super();
+    // Adopts the active theme's launcher-surface stylesheet into this element's shadow root.
+    new UmbraDesktopThemeStyles(this, 'launcher');
     this.consumeContext(UMBRADESKTOP_APP_CATALOGUE_CONTEXT, (ctx) => {
       if (!ctx) return;
       this.observe(ctx.groups, (groups) => (this._groups = groups));
@@ -246,14 +249,24 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         flex-direction: column;
         /* Roomy: cards flow into as many columns as fit, so the panel only scrolls on
            genuinely small screens. */
-        width: min(960px, 92vw);
-        max-height: calc(100vh - 66px);
+        width: var(--umbradesktop-launcher-width, min(960px, 92vw));
+        /* height/backdrop-filter/color below are dormant handles, not live behaviour: their
+           fallbacks (auto, none, none) are the CSS initial values, so nothing changes today.
+           They exist so a future theme can turn this panel into a fullscreen blurred surface. */
+        height: var(--umbradesktop-launcher-height, auto);
+        max-height: var(--umbradesktop-launcher-max-height, calc(100vh - 66px));
         overflow: hidden;
         /* Light-grey canvas so the white group cards read as distinct "boxes". */
-        background: var(--uui-color-surface-alt, var(--uui-color-background));
-        border: 1px solid var(--uui-color-border);
-        border-radius: var(--uui-border-radius, 3px);
-        box-shadow: var(--uui-shadow-depth-4);
+        background: var(
+          --umbradesktop-launcher-background,
+          var(--uui-color-surface-alt, var(--uui-color-background))
+        );
+        backdrop-filter: var(--umbradesktop-launcher-backdrop, none);
+        -webkit-backdrop-filter: var(--umbradesktop-launcher-backdrop, none);
+        border: var(--umbradesktop-launcher-border, 1px solid var(--uui-color-border));
+        border-radius: var(--umbradesktop-launcher-radius, var(--uui-border-radius, 3px));
+        box-shadow: var(--umbradesktop-launcher-shadow, var(--uui-shadow-depth-4));
+        color: var(--umbradesktop-launcher-text, var(--uui-color-text));
       }
       .search {
         flex-shrink: 0;
@@ -262,17 +275,20 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         gap: var(--uui-size-space-3);
         margin: var(--uui-size-space-4) var(--uui-size-space-4) 0;
         padding: var(--uui-size-space-3) var(--uui-size-space-4);
-        border: 1px solid var(--uui-color-border);
-        border-radius: var(--uui-border-radius, 3px);
-        background: var(--uui-color-surface);
-        color: var(--uui-color-text);
+        border: var(--umbradesktop-launcher-card-border, 1px solid var(--uui-color-border));
+        /* Its own radius token, not the cards': the search field follows the panel's radius
+           (3px) while the group cards are deliberately rounder (6px). One token with two
+           different defaults would silently reshape both the first time a theme set it. */
+        border-radius: var(--umbradesktop-launcher-search-radius, var(--uui-border-radius, 3px));
+        background: var(--umbradesktop-launcher-card-background, var(--uui-color-surface));
+        color: var(--umbradesktop-launcher-text, var(--uui-color-text));
         font-family: inherit;
         font-size: var(--uui-type-small-size);
         text-align: left;
         cursor: pointer;
       }
       .search:hover {
-        border-color: var(--uui-color-border-emphasis, var(--uui-color-border));
+        border-color: var(--umbradesktop-launcher-border-emphasis, var(--uui-color-border-emphasis, var(--uui-color-border)));
       }
       .search umb-icon {
         flex-shrink: 0;
@@ -297,9 +313,9 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         align-items: stretch;
       }
       .card {
-        background: var(--uui-color-surface);
-        border: 1px solid var(--uui-color-border);
-        border-radius: 6px;
+        background: var(--umbradesktop-launcher-card-background, var(--uui-color-surface));
+        border: var(--umbradesktop-launcher-card-border, 1px solid var(--uui-color-border));
+        border-radius: var(--umbradesktop-launcher-card-radius, 6px);
         padding: var(--uui-size-space-4);
       }
       .card.fav {
@@ -344,13 +360,16 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         border: none;
         border-radius: var(--uui-border-radius, 3px);
         background: transparent;
-        color: var(--uui-color-text);
+        color: var(--umbradesktop-launcher-text, var(--uui-color-text));
         cursor: pointer;
         font-family: inherit;
         text-align: center;
       }
       .tile:hover .launch {
-        background: var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05));
+        background: var(
+          --umbradesktop-launcher-hover-background,
+          var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05))
+        );
       }
       .launch umb-icon {
         font-size: 26px;
@@ -384,10 +403,10 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         width: 28px;
         height: 28px;
         padding: 0;
-        border: 1px solid var(--uui-color-border);
+        border: var(--umbradesktop-launcher-card-border, 1px solid var(--uui-color-border));
         border-radius: 50%;
-        background: var(--uui-color-surface);
-        color: var(--uui-color-text);
+        background: var(--umbradesktop-launcher-card-background, var(--uui-color-surface));
+        color: var(--umbradesktop-launcher-text, var(--uui-color-text));
         box-shadow: var(--uui-shadow-depth-1);
         opacity: 0;
         cursor: pointer;
@@ -401,9 +420,11 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       .pin:focus-visible {
         opacity: 1;
       }
+      /* Tokenised alongside the resting state, or a themed badge would snap back to Umbraco's
+         palette the moment you hovered it. */
       .pin:hover {
-        border-color: var(--uui-color-border-emphasis, var(--uui-color-border));
-        background: var(--uui-color-surface-alt, var(--uui-color-surface));
+        border-color: var(--umbradesktop-launcher-border-emphasis, var(--uui-color-border-emphasis, var(--uui-color-border)));
+        background: var(--umbradesktop-launcher-pin-hover-background, var(--uui-color-surface-alt, var(--uui-color-surface)));
       }
       .footer {
         flex-shrink: 0;
@@ -412,8 +433,8 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         justify-content: space-between;
         gap: var(--uui-size-space-3);
         padding: var(--uui-size-space-3) var(--uui-size-space-4);
-        background: var(--uui-color-surface);
-        border-top: 1px solid var(--uui-color-border);
+        background: var(--umbradesktop-launcher-card-background, var(--uui-color-surface));
+        border-top: var(--umbradesktop-launcher-card-border, 1px solid var(--uui-color-border));
       }
       .user {
         display: flex;
@@ -424,12 +445,15 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         border: none;
         border-radius: var(--uui-border-radius, 3px);
         background: transparent;
-        color: var(--uui-color-text);
+        color: var(--umbradesktop-launcher-text, var(--uui-color-text));
         cursor: pointer;
         font-family: inherit;
       }
       .user:hover {
-        background: var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05));
+        background: var(
+          --umbradesktop-launcher-hover-background,
+          var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05))
+        );
       }
       .user-name {
         overflow: hidden;
@@ -452,11 +476,14 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         border: none;
         border-radius: var(--uui-border-radius, 3px);
         background: transparent;
-        color: var(--uui-color-text);
+        color: var(--umbradesktop-launcher-text, var(--uui-color-text));
         cursor: pointer;
       }
       .fbtn:hover {
-        background: var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05));
+        background: var(
+          --umbradesktop-launcher-hover-background,
+          var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05))
+        );
       }
       .fbtn:disabled {
         opacity: 0.4;

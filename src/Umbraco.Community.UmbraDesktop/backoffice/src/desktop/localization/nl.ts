@@ -42,6 +42,12 @@ export default {
     pin: 'Bovenaan vastzetten',
     unpin: 'Losmaken',
     desktopSettings: 'Bureaublad-instellingen',
+    // desktop settings — theme
+    theme: 'Thema',
+    themeDescription: 'Verandert het uiterlijk van het bureaublad, de taakbalk en de vensters. Je content blijft hetzelfde.',
+    themeHighContrast:
+      'De backoffice staat op hoog contrast. De vensterinhoud volgt dat; het bureaublad houdt het donkerste palet van dit thema aan.',
+    // desktop settings — wallpaper
     wallpaper: 'Achtergrond',
     wallpaperNone: 'Geen (verloop)',
     wallpaperBuiltIn: 'Meegeleverde afbeelding',

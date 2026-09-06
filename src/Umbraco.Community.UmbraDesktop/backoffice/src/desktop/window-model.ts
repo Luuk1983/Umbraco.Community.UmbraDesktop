@@ -125,29 +125,56 @@ export function resizeRect(
 }
 
 /**
+ * How much of a window must stay reachable while it is dragged.
+ *
+ * Controls swallow `pointerdown` so their buttons stay clickable, which makes them useless as a
+ * grab handle: what has to stay on screen is the *draggable* strip of titlebar between them.
+ * Themes place controls at either end — Umbraco trails them, macOS leads them — so both ends are
+ * described, and a theme that split them across both would be expressed here too.
+ *
+ * `leading`/`trailing` name physical sides, not CSS logical/writing-mode-relative ones: they mean
+ * the left and right edge of the titlebar as drawn, always. There is no bidi/RTL mirroring here —
+ * a theme states where it actually paints its controls, and nothing in this module flips that for
+ * a right-to-left layout.
+ */
+export interface UmbraDesktopKeepVisible {
+  /** Draggable titlebar, in px, that must remain on screen. */
+  grab: number;
+  /** Width in px of non-draggable controls at the titlebar's physical left end. */
+  leading: number;
+  /** Width in px of non-draggable controls at the titlebar's physical right end. */
+  trailing: number;
+  /** Titlebar height in px, which must stay above the desktop's bottom edge. */
+  titlebar: number;
+}
+
+/**
  * Clamp a proposed window position so the window can always be dragged back: every real window
  * manager refuses to let a window be lost off-screen. What has to stay reachable is not "some of
- * the window" but the part you can actually grab — the titlebar minus the controls at its right
- * end, which swallow pointerdown so their buttons stay clickable. Keeping only the window's right
- * edge on screen would leave nothing but those buttons: visible, but undraggable. Pure.
+ * the window" but the part you can actually grab — the titlebar minus the controls at either end.
+ * Keeping only the control end on screen would leave nothing but those buttons: visible, but
+ * undraggable. Pure.
  * @param proposed The rectangle the drag is asking for (its `w` decides how far it may hang).
  * @param bounds The desktop surface size in px.
- * @param keep The margins to honour: `grab` px of draggable titlebar, `controls` px of
- * non-draggable buttons at its right end, and `titlebar` px kept above the desktop bottom.
+ * @param keep The margins to honour; see {@link UmbraDesktopKeepVisible}.
  * @returns The clamped position.
  */
 export function clampWindowPosition(
   proposed: Rect,
   bounds: { w: number; h: number },
-  keep: { grab: number; controls: number; titlebar: number },
+  keep: UmbraDesktopKeepVisible,
 ): { x: number; y: number } {
-  // The draggable strip runs from the window's left edge to where the controls begin.
-  const strip = Math.max(0, proposed.w - keep.controls);
-  // Never ask for more than exists: a window with no strip at all (narrower than its own controls)
-  // simply stays wholly on screen rather than being shunted inward by an impossible margin.
-  const grab = Math.min(keep.grab, strip);
-  const lo = strip > 0 ? grab - strip : 0;
-  const hi = strip > 0 ? bounds.w - grab : bounds.w - proposed.w;
+  // Where the draggable strip begins, measured from the window's left edge, and how wide it is.
+  const stripStart = keep.leading;
+  const stripWidth = Math.max(0, proposed.w - keep.leading - keep.trailing);
+  // Never ask for more than exists: a window narrower than its own controls has no strip at all
+  // and simply stays wholly on screen rather than being shunted by an impossible margin.
+  const grab = Math.min(keep.grab, stripWidth);
+  // Each limit is governed by the controls at the OPPOSITE end, because those are the part left on
+  // screen when the window hangs off that side: `lo` reduces to `grab - w + trailing` (leading
+  // cancels out), `hi` reduces to `bounds.w - grab - leading` (trailing never enters it).
+  const lo = stripWidth > 0 ? grab - stripStart - stripWidth : 0;
+  const hi = stripWidth > 0 ? bounds.w - grab - stripStart : bounds.w - proposed.w;
   return {
     x: clamp(proposed.x, lo, hi),
     y: clamp(proposed.y, 0, bounds.h - Math.min(keep.titlebar, proposed.h)),
@@ -199,7 +226,7 @@ export function restoreDragPosition(
 export function clampWindowsToBounds(
   windows: UmbraDesktopWindow[],
   bounds: { w: number; h: number },
-  keep: { grab: number; controls: number; titlebar: number },
+  keep: UmbraDesktopKeepVisible,
 ): UmbraDesktopWindow[] {
   let moved = false;
   const next = windows.map((w) => {

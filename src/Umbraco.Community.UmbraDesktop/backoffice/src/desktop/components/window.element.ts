@@ -2,11 +2,23 @@ import type { Rect, UmbraDesktopWindow } from '../types';
 import type { UmbraDesktopResizeEdges } from '../window-model';
 import { clampResizeOrigin, clampWindowPosition, resizeRect, restoreDragPosition } from '../window-model';
 import { injectChromeStyles } from '../chrome-injector';
-import { UMBRADESKTOP_WINDOW_KEEP_VISIBLE, UMBRADESKTOP_WINDOW_MIN_SIZE } from '../constants';
+import { resolveThemeSync, syncThemeStylesheet } from '../iframe-theme.js';
+import type { UmbraDesktopThemeManifest } from '../iframe-theme.js';
+import {
+  UMBRADESKTOP_CONTROL_WIDTH,
+  UMBRADESKTOP_TITLEBAR_BORDER,
+  UMBRADESKTOP_TITLEBAR_HEIGHT,
+  UMBRADESKTOP_WINDOW_BORDER,
+  UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
+  UMBRADESKTOP_WINDOW_MIN_SIZE,
+} from '../constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
+import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import { css, customElement, html, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
+import { UMB_THEME_CONTEXT, UMB_THEME_LIGHT_ALIAS } from '@umbraco-cms/backoffice/themes';
 
 /** The eight resize handles: direction (for the cursor class) + which edges each pulls. */
 const RESIZE_HANDLES: ReadonlyArray<{ dir: string; edges: UmbraDesktopResizeEdges }> = [
@@ -52,11 +64,70 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   #resizeStartPointer = { x: 0, y: 0 };
   #resizeStartRect: Rect = { x: 0, y: 0, w: 0, h: 0 };
 
+  /** The backoffice light/dark theme in force, as `UMB_THEME_CONTEXT` reports it. */
+  #themeAlias: string = UMB_THEME_LIGHT_ALIAS;
+
+  /** Every registered `theme` extension, so a theme's stylesheet can be looked up by alias. */
+  #themes: ReadonlyArray<UmbraDesktopThemeManifest> = [];
+
+  /**
+   * The alias this frame was last brought in line with. Undefined until the first sync, which is
+   * what keeps a frame that booted on a JS-loaded theme from reloading itself on sight — and,
+   * since the reload path re-enters through the load handler, from doing so forever.
+   */
+  #syncedAlias?: string;
+
   constructor() {
     super();
+    // Adopts the active theme's window-surface stylesheet into this element's shadow root.
+    new UmbraDesktopThemeStyles(this, 'window');
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
     });
+    this.consumeContext(UMB_THEME_CONTEXT, (context) => {
+      if (!context) return;
+      this.observe(context.theme, (alias) => {
+        this.#themeAlias = alias || UMB_THEME_LIGHT_ALIAS;
+        this.#applyFrameTheme();
+      });
+    });
+    this.observe(umbExtensionsRegistry.byType('theme'), (themes) => {
+      this.#themes = themes;
+      this.#applyFrameTheme();
+    });
+  }
+
+  /**
+   * The document inside this window's frame, when it is ours to touch. `contentDocument` is null
+   * for a cross-origin frame, which is the one case there is nothing to be done about.
+   * @returns The frame's document, or undefined.
+   */
+  #frameDocument(): Document | undefined {
+    const iframe = this.renderRoot?.querySelector('iframe.body') as HTMLIFrameElement | null;
+    return iframe?.contentDocument ?? undefined;
+  }
+
+  /**
+   * Put the frame's backoffice on the same light/dark theme as the desktop around it.
+   *
+   * A frame only takes its theme from its own head, and Umbraco's theme context only reads the
+   * stored alias once, when it boots — so a window that was already open when the theme changed
+   * would otherwise stay on the old one until it was reloaded. Swapping the same stylesheet link
+   * Umbraco itself swaps costs the user nothing; reloading would cost them anything unsaved in a
+   * content editor, which is far too much for a display preference.
+   */
+  #applyFrameTheme(): void {
+    const doc = this.#frameDocument();
+    if (!doc) return;
+    const sync = resolveThemeSync(this.#themes, this.#themeAlias);
+    if (sync.mirrorable) {
+      syncThemeStylesheet(doc, sync);
+    } else if (this.#syncedAlias !== undefined && this.#syncedAlias !== this.#themeAlias) {
+      // A theme whose CSS is a loader function has no link to copy. Reloading hands the job to
+      // the frame's own theme context, which loads it exactly as it would on a fresh boot.
+      this.#onReload();
+    }
+    this.#syncedAlias = this.#themeAlias;
   }
 
   #onIframeLoad(e: Event) {
@@ -65,6 +136,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     // Keep the loader up until the header is actually stripped, so the booting
     // backoffice (with its own header) never flashes into view.
     injectChromeStyles(iframe, this.window.app.chromeProfile, () => (this._loading = false));
+    // A frame boots on the stored alias, so it is normally already right — but a theme changed
+    // while it was still loading would have been missed, and the reload path lands here too.
+    this.#applyFrameTheme();
     // Safety net: reveal anyway if the shell never reports ready.
     window.setTimeout(() => (this._loading = false), 12000);
   }
@@ -152,7 +226,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     const { x, y } = clampWindowPosition(
       { ...this.window.rect, x: this.#startRect.x + dx, y: this.#startRect.y + dy },
       this.#startSurface,
-      UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
+      // The active theme's margins; falls back to the Umbraco theme's until the manager context
+      // resolves (the two are identical today, so there is no visible gap in practice).
+      // The manager publishes the active theme's margins; the constant only covers the moment
+      // before `consumeContext` has resolved. It stays correct because the Umbraco theme builds
+      // its own metrics from this same constant — the two are one value, not two that agree.
+      this.#manager?.keep ?? UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
     );
     this.#manager?.move(this.window.id, x, y);
   };
@@ -267,28 +346,30 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
             @pointerdown=${(e: PointerEvent) => e.stopPropagation()}
             @dblclick=${(e: MouseEvent) => e.stopPropagation()}>
             <button
-              class="ctrl ${this._loading ? 'busy' : ''}"
+              class="ctrl ctrl-reload ${this._loading ? 'busy' : ''}"
               title="Reload"
               aria-label="Reload"
               @click=${() => this.#onReload()}>
               ${this.#controlGlyph('reload')}
             </button>
             <button
-              class="ctrl"
+              class="ctrl ctrl-minimize"
               title="Minimize"
               aria-label="Minimize"
               @click=${() => this.#manager?.setState(w.id, 'minimized')}>
               ${this.#controlGlyph('minimize')}
             </button>
             <button
-              class="ctrl"
+              class="ctrl ctrl-maximize"
               title=${maximized ? 'Restore' : 'Maximize'}
               aria-label=${maximized ? 'Restore' : 'Maximize'}
               @click=${() => this.#manager?.setState(w.id, maximized ? 'normal' : 'maximized')}>
               ${this.#controlGlyph(maximized ? 'restore' : 'maximize')}
             </button>
+            <!-- 'close' is kept alongside 'ctrl-close' because '.ctrl.close:hover' still keys off
+                 it for the red hover state — dropping it would silently kill that hover. -->
             <button
-              class="ctrl close"
+              class="ctrl ctrl-close close"
               title="Close"
               aria-label="Close"
               @click=${() => this.#manager?.close(w.id)}>
@@ -322,10 +403,14 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         position: absolute;
         display: flex;
         flex-direction: column;
-        background: var(--uui-color-surface);
-        border: 1px solid var(--uui-color-border);
-        border-radius: var(--uui-border-radius, 3px);
-        box-shadow: var(--uui-shadow-depth-3);
+        background: var(--umbradesktop-window-background, var(--uui-color-surface));
+        /* The px values here and on '.titlebar'/'.ctrl' below are interpolated rather than
+           written, because the Umbraco theme's 'metrics' are the sum of exactly these boxes — see
+           UMBRADESKTOP_WINDOW_KEEP_VISIBLE. A literal in one place and a sum in the other is how
+           'trailing' came to describe three buttons for as long as there have been four. */
+        border: var(--umbradesktop-window-border, ${UMBRADESKTOP_WINDOW_BORDER}px solid var(--uui-color-border));
+        border-radius: var(--umbradesktop-window-radius, var(--uui-border-radius, 3px));
+        box-shadow: var(--umbradesktop-window-shadow, var(--uui-shadow-depth-3));
         overflow: hidden;
         min-width: 320px;
         min-height: 200px;
@@ -334,7 +419,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
          crisp, elevated one (full-strength titlebar + deeper shadow) and inactive windows
          recede (muted titlebar, flatter shadow) — no header tint. */
       .frame.active {
-        box-shadow: var(--uui-shadow-depth-5);
+        box-shadow: var(--umbradesktop-window-shadow-active, var(--uui-shadow-depth-5));
       }
       .titlebar {
         display: flex;
@@ -344,15 +429,18 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         /* No vertical or right padding: the controls run full height and flush to the
            top-right edge, so the corner buttons are easy targets (Fitts's law). */
         padding: 0 0 0 var(--uui-size-space-3);
-        min-height: 40px;
-        background: var(--uui-color-surface);
-        border-bottom: 1px solid var(--uui-color-border);
+        min-height: var(--umbradesktop-titlebar-height, ${UMBRADESKTOP_TITLEBAR_HEIGHT}px);
+        background: var(--umbradesktop-titlebar-background, var(--uui-color-surface));
+        border-bottom: var(
+          --umbradesktop-titlebar-border-bottom,
+          ${UMBRADESKTOP_TITLEBAR_BORDER}px solid var(--uui-color-border)
+        );
         cursor: move;
         user-select: none;
       }
       .frame:not(.active) .title,
       .frame:not(.active) .controls {
-        opacity: 0.5;
+        opacity: var(--umbradesktop-titlebar-inactive-opacity, 0.5);
       }
       .title {
         display: inline-flex;
@@ -360,6 +448,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         gap: var(--uui-size-space-2);
         font-weight: 700;
         font-size: calc(var(--uui-type-small-size) + 2px);
+        /* Pinned (rather than left to inherit) so the title can be themed independently of the
+           rest of the titlebar text; the fallback is just the color it already inherited. */
+        color: var(--umbradesktop-titlebar-text, var(--uui-color-text));
       }
       .title umb-icon {
         font-size: 18px;
@@ -381,13 +472,13 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 46px;
+        width: var(--umbradesktop-control-width, ${UMBRADESKTOP_CONTROL_WIDTH}px);
         height: 100%;
         padding: 0;
         border: none;
         border-radius: 0;
         background: transparent;
-        color: var(--uui-color-text);
+        color: var(--umbradesktop-control-color, var(--uui-color-text));
         cursor: pointer;
       }
       .ctrl .glyph {
@@ -428,12 +519,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         }
       }
       .ctrl:hover {
-        background: rgba(0, 0, 0, 0.07);
+        background: var(--umbradesktop-control-hover-background, rgba(0, 0, 0, 0.07));
       }
       /* Windows/KDE close affordance: red fill + white mark on hover. */
       .ctrl.close:hover {
-        background: var(--uui-color-danger, #d42054);
-        color: #fff;
+        background: var(--umbradesktop-control-close-hover-background, var(--uui-color-danger, #d42054));
+        color: var(--umbradesktop-control-close-hover-color, #fff);
       }
       .bodywrap {
         position: relative;
@@ -444,7 +535,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         flex: 1;
         border: none;
         width: 100%;
-        background: var(--uui-color-background);
+        background: var(--umbradesktop-window-body-background, var(--uui-color-background));
       }
       .loading {
         position: absolute;
@@ -452,7 +543,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--uui-color-surface);
+        background: var(--umbradesktop-window-background, var(--uui-color-surface));
       }
       [hidden] {
         display: none !important;

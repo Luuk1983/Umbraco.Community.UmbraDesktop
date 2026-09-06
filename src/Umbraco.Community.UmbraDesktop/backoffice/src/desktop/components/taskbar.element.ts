@@ -1,8 +1,8 @@
 import type { UmbraDesktopWindow } from '../types';
-import { UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
 import { taskActivation } from '../window-model';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
+import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import './launcher.element.js';
 import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
@@ -39,6 +39,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
 
   constructor() {
     super();
+    // Adopts the active theme's taskbar-surface stylesheet into this element's shadow root.
+    new UmbraDesktopThemeStyles(this, 'taskbar');
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
       if (ctx) this.observe(ctx.windows, (list) => (this._windows = list));
@@ -161,7 +163,6 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     return html`
       <umbradesktop-launcher
         class="launcher"
-        style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px"
         @launched=${() => this.#setLauncherOpen(false)}
         @search=${this.#onSearch}
         @profile=${this.#onProfile}
@@ -173,28 +174,30 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   override render() {
     return html`
       ${this.#renderLauncher()}
-      <div class="bar" style="height:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
-        <button
-          class="start ${this._launcherOpen ? 'active' : ''}"
-          title="Open apps"
-          aria-label="Open apps"
-          @click=${this.#toggleLauncher}>
-          <umb-icon name="icon-umbraco"></umb-icon>
-        </button>
-        <div class="running">
-          ${repeat(
-            this._windows,
-            (w) => w.id,
-            (w) => html`
-              <button
-                class="task ${w.active ? 'active' : ''}"
-                title=${this.localize.string(w.app.name)}
-                @click=${() => this.#onTaskClick(w)}>
-                <umb-icon name=${w.app.icon}></umb-icon>
-                <span class="task-label">${this.localize.string(w.app.name)}</span>
-              </button>
-            `,
-          )}
+      <div class="bar">
+        <div class="cluster">
+          <button
+            class="start ${this._launcherOpen ? 'active' : ''}"
+            title="Open apps"
+            aria-label="Open apps"
+            @click=${this.#toggleLauncher}>
+            <umb-icon name="icon-umbraco"></umb-icon>
+          </button>
+          <div class="running">
+            ${repeat(
+              this._windows,
+              (w) => w.id,
+              (w) => html`
+                <button
+                  class="task ${w.active ? 'active' : ''}"
+                  title=${this.localize.string(w.app.name)}
+                  @click=${() => this.#onTaskClick(w)}>
+                  <umb-icon name=${w.app.icon}></umb-icon>
+                  <span class="task-label">${this.localize.string(w.app.name)}</span>
+                </button>
+              `,
+            )}
+          </div>
         </div>
         <div class="clock">${this._clock}</div>
       </div>
@@ -212,24 +215,40 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         align-items: center;
         gap: var(--uui-size-space-2);
         padding: 0 var(--uui-size-space-2);
+        height: var(--umbradesktop-taskbar-height, 50px);
+        margin: var(--umbradesktop-taskbar-margin, 0);
+        border-radius: var(--umbradesktop-taskbar-radius, 0);
         /* A distinctly darker plane than the wallpaper, frosted over it. This used to be
            --uui-color-header-background, which is the same navy family as most of the shipped
            wallpapers, so the bar dissolved into them. Going deeper and translucent separates it
            from any background, light or dark, while the navy cast keeps it on-brand. The blur
            needs something behind it to work, which is why the wallpaper is painted edge to edge
            and continues underneath the bar. */
-        background: rgba(16, 20, 46, 0.72);
-        backdrop-filter: blur(18px) saturate(140%);
-        -webkit-backdrop-filter: blur(18px) saturate(140%);
-        color: var(--uui-color-header-contrast);
-        border-top: 1px solid rgba(255, 255, 255, 0.14);
-        box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.4);
+        background: var(--umbradesktop-taskbar-background, rgba(16, 20, 46, 0.72));
+        backdrop-filter: var(--umbradesktop-taskbar-backdrop, blur(18px) saturate(140%));
+        -webkit-backdrop-filter: var(--umbradesktop-taskbar-backdrop, blur(18px) saturate(140%));
+        color: var(--umbradesktop-taskbar-text, var(--uui-color-header-contrast));
+        border-top: var(--umbradesktop-taskbar-border-top, 1px solid rgba(255, 255, 255, 0.14));
+        box-shadow: var(--umbradesktop-taskbar-shadow, 0 -4px 18px rgba(0, 0, 0, 0.4));
       }
       /* Without backdrop-filter the translucency only muddies the bar, so go fully opaque. */
       @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
         .bar {
-          background: #0f1330;
+          background: var(--umbradesktop-taskbar-background-opaque, #0f1330);
         }
+      }
+      /* Start + running windows travel together, so a theme can centre them as one group
+         (Windows 11, macOS) while the clock stays pinned to its own edge. The gap is
+         inherited from what '.bar' used to apply between them directly: wrapping the two in
+         a cluster takes them out of the bar's flex flow, so it has to be restated here or
+         the start button ends up sitting against the first task button. */
+      .cluster {
+        display: flex;
+        align-items: stretch;
+        height: 100%;
+        flex: 1;
+        min-width: 0;
+        gap: var(--uui-size-space-2);
       }
       /* The start button carries the Umbraco mark, full bar height so its hover fills the
          whole bar, centered and high-contrast on the dark background. */
@@ -242,7 +261,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         padding: 0 var(--uui-size-space-4);
         border: none;
         background: transparent;
-        color: var(--uui-color-header-contrast);
+        color: var(--umbradesktop-taskbar-text, var(--uui-color-header-contrast));
         cursor: pointer;
       }
       .start umb-icon {
@@ -250,10 +269,10 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         font-size: 26px;
       }
       .start:hover {
-        background: rgba(255, 255, 255, 0.12);
+        background: var(--umbradesktop-start-hover-background, rgba(255, 255, 255, 0.12));
       }
       .start.active {
-        background: rgba(255, 255, 255, 0.16);
+        background: var(--umbradesktop-start-active-background, rgba(255, 255, 255, 0.16));
       }
       /* Running windows: compact horizontal taskbar buttons that keep the native tab
          language — icon + label, with the active window carrying the coral "current"
@@ -280,7 +299,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         padding: 0 var(--uui-size-space-3);
         border: none;
         background: transparent;
-        color: var(--uui-color-header-contrast);
+        color: var(--umbradesktop-taskbar-text, var(--uui-color-header-contrast));
         cursor: pointer;
         font-family: inherit;
         font-size: calc(var(--uui-type-small-size) + 1px);
@@ -306,26 +325,30 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         transform: translateY(1px);
       }
       .task:hover {
-        color: var(--uui-color-header-contrast-emphasis);
-        background: rgba(255, 255, 255, 0.08);
+        color: var(--umbradesktop-taskbar-text-emphasis, var(--uui-color-header-contrast-emphasis));
+        background: var(--umbradesktop-task-hover-background, rgba(255, 255, 255, 0.08));
       }
       .task.active {
-        color: var(--uui-color-header-contrast-emphasis);
-        box-shadow: inset 0 -3px 0 var(--uui-color-current, #f5c1bc);
+        color: var(--umbradesktop-taskbar-text-emphasis, var(--uui-color-header-contrast-emphasis));
+        box-shadow: inset 0 -3px 0 var(--umbradesktop-task-active-marker, var(--uui-color-current, #f5c1bc));
       }
       .clock {
         flex-shrink: 0;
         padding-right: var(--uui-size-space-2);
         font-size: var(--uui-type-small-size);
-        color: var(--uui-color-header-contrast);
+        color: var(--umbradesktop-taskbar-text, var(--uui-color-header-contrast));
         opacity: 0.85;
         font-variant-numeric: tabular-nums;
       }
       /* Positioning only — the panel's own surface (background/border/shadow/size) is
          owned by <umbradesktop-launcher> itself. */
+      /* --umbradesktop-taskbar-reserve isn't set anywhere in this file — it's defined on
+         the desktop element's root (how much of the bottom edge the bar/dock occupies)
+         and inherits in through the shadow boundary. 50px is just the fallback until then. */
       .launcher {
         position: absolute;
-        left: var(--uui-size-space-3);
+        left: var(--umbradesktop-launcher-left, var(--uui-size-space-3));
+        bottom: var(--umbradesktop-launcher-bottom, var(--umbradesktop-taskbar-reserve, 50px));
       }
     `,
   ];

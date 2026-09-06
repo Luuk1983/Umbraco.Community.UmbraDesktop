@@ -364,3 +364,6 @@ FodyWeavers.xsd
 # Umbraco files
 **/wwwroot/App_Plugins/
 
+
+# Superpowers brainstorming mockups
+.superpowers/

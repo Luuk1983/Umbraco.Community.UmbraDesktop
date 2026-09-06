@@ -2,6 +2,9 @@ import type { UmbraDesktopWallpaperView } from '../wallpaper-view';
 import type { UmbraDesktopSettingsContext } from '../settings.context';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings.context-token';
 import { UMBRADESKTOP_WALLPAPER_PICKER_MODAL } from '../modal-tokens';
+import type { UmbraDesktopResolvedTheme } from '../../theme/resolve-variant';
+import { UMBRADESKTOP_THEME_CONTEXT } from '../../theme/theme.context-token';
+import { UMBRADESKTOP_THEMES } from '../../theme/themes/index';
 import './wallpaper-picker-modal.element.js';
 import { css, customElement, html, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbModalBaseElement } from '@umbraco-cms/backoffice/modal';
@@ -12,8 +15,8 @@ import { UMB_NOTIFICATION_CONTEXT } from '@umbraco-cms/backoffice/notification';
 /**
  * The Desktop settings dialog, opened from the launcher footer.
  *
- * Laid out as a list of sections so that adding the planned skin picker means appending one,
- * not restructuring this element. Today there is a single section: Wallpaper.
+ * Laid out as a list of sections so that adding another one means appending it, not restructuring
+ * this element. Today there are two: Theme and Wallpaper.
  *
  * There is no Save: every change applies through the settings context the moment it is made,
  * which is also what lets the user see the result behind the dialog.
@@ -23,6 +26,24 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
   @state()
   private _wallpaper?: UmbraDesktopWallpaperView;
 
+  /**
+   * The theme actually *in force* — what is painted right now, including the variant and whether
+   * high contrast has overridden the user's choice. Distinct from `_chosenThemeId` below, which is
+   * the user's *choice*: the two agree except under high contrast, where this reflects the forced
+   * theme while `_chosenThemeId` still reflects what the user picked.
+   */
+  @state()
+  private _theme?: UmbraDesktopResolvedTheme;
+
+  /**
+   * The theme the user *chose*, which is not always the one in force: high contrast overrides the
+   * choice without discarding it. The picker marks this one, so switching the backoffice to high
+   * contrast never looks like it silently reset the user's selection — the hint below explains the
+   * override instead.
+   */
+  @state()
+  private _chosenThemeId?: string;
+
   #settings?: UmbraDesktopSettingsContext;
 
   constructor() {
@@ -31,6 +52,12 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
       this.#settings = context ?? undefined;
       if (!context) return;
       this.observe(context.wallpaper, (wallpaper) => (this._wallpaper = wallpaper));
+      this.observe(context.theme, (id) => (this._chosenThemeId = id));
+    });
+
+    this.consumeContext(UMBRADESKTOP_THEME_CONTEXT, (context) => {
+      if (!context) return;
+      this.observe(context.resolved, (resolved) => (this._theme = resolved));
     });
   }
 
@@ -72,6 +99,41 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
     }
   }
 
+  /**
+   * The theme picker: one swatch per shipped theme, marking whichever the user chose. Selecting
+   * applies immediately and persists, matching the wallpaper section's no-Save behaviour.
+   * @returns The Theme section template.
+   */
+  #renderThemes() {
+    // The user's choice, not the theme in force — see "_chosenThemeId".
+    const activeId = this._chosenThemeId ?? this._theme?.theme.id;
+    return html`
+      <uui-box headline=${this.localize.term('umbraDesktop_theme')}>
+        <p class="hint">${this.localize.term('umbraDesktop_themeDescription')}</p>
+        <div class="themes">
+          ${UMBRADESKTOP_THEMES.map(
+            (theme) => html`
+              <button
+                class="theme ${theme.id === activeId ? 'selected' : ''}"
+                aria-pressed=${theme.id === activeId}
+                @click=${() => this.#settings?.setTheme(theme.id)}>
+                <span class="swatch" aria-hidden="true">
+                  ${[theme.swatch.chrome, theme.swatch.accent, theme.swatch.surface].map(
+                    (colour) => html`<i style="background:${colour}"></i>`,
+                  )}
+                </span>
+                <span class="theme-name">${theme.name}</span>
+              </button>
+            `,
+          )}
+        </div>
+        ${this._theme?.highContrast
+          ? html`<p class="hint warn">${this.localize.term('umbraDesktop_themeHighContrast')}</p>`
+          : ''}
+      </uui-box>
+    `;
+  }
+
   /** The current wallpaper's preview, or the gradient swatch when none is set. */
   #renderPreview() {
     const thumbUrl = this._wallpaper?.thumbUrl;
@@ -92,6 +154,7 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
   override render() {
     return html`
       <umb-body-layout headline=${this.localize.term('umbraDesktop_desktopSettings')}>
+        ${this.#renderThemes()}
         <uui-box headline=${this.localize.term('umbraDesktop_wallpaper')}>
           <div class="wallpaper">
             ${this.#renderPreview()}
@@ -157,6 +220,53 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
         display: flex;
         flex-wrap: wrap;
         gap: var(--uui-size-space-2);
+      }
+      .hint {
+        margin: 0 0 var(--uui-size-space-4);
+        color: var(--uui-color-text-alt, var(--uui-color-text));
+        font-size: var(--uui-type-small-size);
+      }
+      .hint.warn {
+        margin: var(--uui-size-space-4) 0 0;
+      }
+      .themes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--uui-size-space-3);
+      }
+      .theme {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--uui-size-space-2);
+        padding: var(--uui-size-space-2);
+        border: 2px solid transparent;
+        border-radius: var(--uui-border-radius, 3px);
+        background: transparent;
+        color: var(--uui-color-text);
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .theme:hover {
+        background: var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05));
+      }
+      .theme.selected {
+        border-color: var(--uui-color-selected, var(--uui-color-focus));
+      }
+      .swatch {
+        display: flex;
+        width: 96px;
+        height: 54px;
+        overflow: hidden;
+        border: 1px solid var(--uui-color-border);
+        border-radius: var(--uui-border-radius, 3px);
+      }
+      .swatch i {
+        flex: 1;
+        display: block;
+      }
+      .theme-name {
+        font-size: var(--uui-type-small-size);
       }
     `,
   ];

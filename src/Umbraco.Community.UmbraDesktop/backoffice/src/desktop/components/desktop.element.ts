@@ -1,11 +1,13 @@
 import type { UmbraDesktopWindow } from '../types';
-import { UMBRADESKTOP_SECTION_ALIAS, UMBRADESKTOP_TASKBAR_HEIGHT } from '../constants';
+import { UMBRADESKTOP_SECTION_ALIAS } from '../constants';
 import { findChromeRoot } from '../chrome-injector';
 import { applySectionTabHide } from '../../headerapps/section-tab-hide.js';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
 import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
 import type { UmbraDesktopWallpaperView } from '../settings/wallpaper-view.js';
+import { UmbraDesktopThemeContext } from '../theme/theme.context.js';
+import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import './window.element.js';
 import './taskbar.element.js';
 import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
@@ -16,9 +18,20 @@ const OUTER_CHROME_STYLE_ID = 'umbradesktop-outer-chrome';
 /** Root element of the Desktop section. Owns the window manager and layout. */
 @customElement('umbradesktop-desktop')
 export class UmbraDesktopDesktopElement extends UmbLitElement {
+  /** Owns the open windows and the operations on them, for the whole desktop subtree. */
   #manager = new UmbraDesktopWindowManagerContext(this);
 
+  /** Owns this user's persisted desktop settings — wallpaper, pinned apps, chosen theme. */
   #settings = new UmbraDesktopSettingsContext(this);
+
+  /**
+   * Owns the chrome theme in force.
+   *
+   * Declared after `#settings` deliberately: the theme context consumes the settings context to
+   * read the stored theme id, and class field initialisers run in declaration order, so `#settings`
+   * has to already exist when this one is constructed.
+   */
+  #theme = new UmbraDesktopThemeContext(this);
 
   @state()
   private _windows: UmbraDesktopWindow[] = [];
@@ -26,13 +39,21 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   @state()
   private _wallpaper?: UmbraDesktopWallpaperView;
 
+  /** The active theme's palette, rendered as `style`-attribute declarations for the `.desktop` root. */
+  @state()
+  private _paletteCss = '';
+
   constructor() {
     super();
     // Instantiating (without keeping a reference) is enough to provide the
     // catalogue context to the desktop subtree; nothing here consumes it directly.
     new UmbraDesktopAppCatalogueContext(this);
+    // Adopts the active theme's desktop-surface stylesheet into this element's shadow root.
+    new UmbraDesktopThemeStyles(this, 'desktop');
     this.observe(this.#manager.windows, (list) => (this._windows = list));
     this.observe(this.#settings.wallpaper, (wallpaper) => (this._wallpaper = wallpaper));
+    this.observe(this.#theme.paletteStyle, (style) => (this._paletteCss = style ?? ''));
+    this.observe(this.#theme.metrics, (metrics) => this.#manager.setMetrics(metrics));
   }
 
   /**
@@ -108,12 +129,15 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   override render() {
     const hasImage = !!this._wallpaper?.background.url;
+    // Palette first, wallpaper second: both are declaration strings ending in ';', so the
+    // concatenation is valid CSS, and the wallpaper's own background-color/background-image
+    // (set only when an image is chosen) must be able to win over the theme's declarations.
     return html`
-      <div class="desktop ${hasImage ? 'has-image' : ''}" style=${this.#wallpaperStyle()}>
-        <div class="wallpaper-brand" aria-hidden="true" style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
+      <div class="desktop ${hasImage ? 'has-image' : ''}" style=${this._paletteCss + this.#wallpaperStyle()}>
+        <div class="wallpaper-brand" aria-hidden="true">
           <umb-icon name="icon-umbraco"></umb-icon>
         </div>
-        <div class="surface" style="bottom:${UMBRADESKTOP_TASKBAR_HEIGHT}px">
+        <div class="surface">
           ${repeat(
             this._windows,
             (w) => w.id,
@@ -138,17 +162,45 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         width: 100%;
         display: flex;
         flex-direction: column;
+        /* How much of the bottom edge the taskbar or dock occupies. Themes override this;
+           a floating dock reserves more than its own height so windows clear it. Declared
+           here rather than in the taskbar because the surface and the watermark need it
+           too, and it inherits down through every shadow boundary from this one place.
+
+           It chains through --umbradesktop-taskbar-height rather than naming a literal so
+           that a theme which only resizes a full-width bar sets one value and the reserve
+           follows; a theme whose bar floats free of the edge sets both, because then the
+           reserve is the bar's height plus the gap beneath it. Don't flatten this to a
+           number — the chain is the affordance. */
+        --umbradesktop-taskbar-reserve: var(--umbradesktop-taskbar-height, 50px);
         /* Wallpaper derived from the header token but pulled darker, so the desktop reads
-           distinctly darker than the taskbar (and the light windows pop). Solid colour first
-           as a fallback for browsers without color-mix; the gradient adds a soft top-left
-           highlight for depth. (A selection of background images is planned later.) */
-        background-color: #0e1329;
-        background-color: color-mix(in srgb, var(--uui-color-header-background, #1b264f) 58%, black);
-        background-image: radial-gradient(
-          130% 130% at 25% 8%,
-          var(--uui-color-header-background, #1b264f),
-          color-mix(in srgb, var(--uui-color-header-background, #1b264f) 50%, black) 70%
+           distinctly darker than the taskbar (and the light windows pop). This solid colour
+           is the fallback for browsers without color-mix, upgraded by the @supports block
+           below; the gradient adds a soft top-left highlight for depth. */
+        background-color: var(--umbradesktop-desktop-background-color, #0e1329);
+        background-image: var(
+          --umbradesktop-desktop-background-image,
+          radial-gradient(
+            130% 130% at 25% 8%,
+            var(--uui-color-header-background, #1b264f),
+            color-mix(in srgb, var(--uui-color-header-background, #1b264f) 50%, black) 70%
+          )
         );
+      }
+      /* Kept as a separate rule, rather than a second background-color declaration inside
+         .desktop, so the color-mix upgrade still applies over the token's solid-colour
+         default. That used to work by stacking two background-color declarations and
+         relying on unsupported browsers to discard the invalid second one - but once the
+         value moved behind var(--token, color-mix(...)), that whole declaration parses as
+         valid everywhere, so the fallback would never fire. This @supports check does the
+         same job explicitly. */
+      @supports (background-color: color-mix(in srgb, red 50%, black)) {
+        .desktop {
+          background-color: var(
+            --umbradesktop-desktop-background-color,
+            color-mix(in srgb, var(--uui-color-header-background, #1b264f) 58%, black)
+          );
+        }
       }
       /* A modest scrim over an image wallpaper, so white windows and the taskbar keep their
          separation from a light or busy background. Deliberately light: enough to rescue
@@ -158,7 +210,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         content: '';
         position: absolute;
         inset: 0;
-        background: rgba(0, 0, 0, 0.12);
+        background: var(--umbradesktop-desktop-scrim, rgba(0, 0, 0, 0.12));
         pointer-events: none;
       }
       /* The watermark reads as dirt on top of a photograph, so it belongs to the gradient only. */
@@ -170,9 +222,10 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
       .wallpaper-brand {
         position: absolute;
         right: -4%;
+        bottom: var(--umbradesktop-taskbar-reserve, 50px);
         pointer-events: none;
         color: var(--uui-color-header-contrast, #ffffff);
-        opacity: 0.06;
+        opacity: var(--umbradesktop-desktop-watermark-opacity, 0.06);
       }
       .wallpaper-brand umb-icon {
         display: block;
@@ -181,6 +234,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
       .surface {
         position: absolute;
         inset: 0;
+        bottom: var(--umbradesktop-taskbar-reserve, 50px);
         overflow: hidden;
       }
       umbradesktop-taskbar {

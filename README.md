@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop/Package-image_128_128.png" alt="UmbraDesktop" width="128" height="128">
+![UmbraDesktop](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop/Package-image_128_128.png)
 
 # UmbraDesktop
 
@@ -23,6 +23,7 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 - A taskbar. Every open window gets a button: click to focus, click again to minimise.
 - Choose your wallpaper. Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user.
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.
+- Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice. Five ship: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98. Adding your own is a folder of CSS and one catalogue entry.
 - Nothing new to learn. The windows contain the backoffice you already know, with the same trees, the same editors and the same shortcuts.
 
 ## Installation & configuration
@@ -54,7 +55,7 @@ UmbraDesktop grants no access of its own. Every app in the launcher is gated on 
 
 Click the desktop icon in the backoffice header, top right, between Help and your avatar. That is the way in. The Desktop section's own tab in the section bar is deliberately hidden, so it does not clutter the list.
 
-<img src="https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png" alt="The backoffice header, top right: the desktop icon sits between Help and the user avatar." width="420">
+![The backoffice header, top right: the desktop icon sits between Help and the user avatar.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png)
 
 Most people are probably familiar with the concept of a desktop and will have no trouble using it. The launcher is where you open the apps:
 
@@ -82,6 +83,33 @@ So how much you get out of it depends on the screen in front of you:
 - **On anything smaller**, treat it as a single-window desktop.
 
 Side by side is not the only reason to use it, though. Opening everything from one launcher, keeping several tools loaded at once, and switching between them from the taskbar without losing your place or waiting for a section to reload is just as useful on a laptop as it is on a 4K monitor.
+
+## Changing the theme
+
+Desktop settings has a Theme section above Wallpaper. Choosing a theme restyles the launcher,
+taskbar and window chrome, never the content inside a window, which stays the backoffice you
+already know. Five ship today:
+
+- **Umbraco**. The default, built from Umbraco's own design tokens.
+- **Umbraco 4**. The 2009 backoffice as desktop chrome: warm grey gradients, hairline panels,
+  buttons that press in, and the old Sections panel as the launcher with glossy orbs for your
+  pinned apps.
+- **macOS**. Traffic lights on the left of each title bar, a floating dock, and a fullscreen
+  blurred launcher.
+- **Windows 11**. A flush acrylic taskbar with its buttons centred, rounded windows with square
+  caption buttons, and Start as a card floating above the bar.
+- **Windows 98**. Grey everywhere, double bevels, square corners, a navy title bar, and the
+  launcher as a Start menu.
+
+![The macOS theme: the same content editor and media library windows, now with traffic lights at the left of each title bar, rounded corners, and a floating dock centred along the bottom of the screen.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-macos.png)
+
+![The Windows 98 theme: the same two windows with grey frames and navy title bars, a Start menu open on the left listing the whole app catalogue by group, and a taskbar button for each open window.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-win98.png)
+
+Your choice applies immediately and is remembered per user, in that browser. Themes follow the
+backoffice's own Light and Dark settings; under High contrast a theme uses its darkest colours,
+while window content switches to Umbraco's real high-contrast styling. Umbraco 4 and Windows 98
+ship a single palette on purpose: their grey is the design rather than a light-mode choice, so
+they look the same under all three settings.
 
 ## Changing the wallpaper
 
@@ -141,6 +169,13 @@ A curated entry for a package that not every install has is marked `optional`. B
 ## Documentation
 
 The full design, including the research behind the iframe approach, is in [`docs/design/umbradesktop-design.md`](docs/design/umbradesktop-design.md).
+
+Building a theme of your own is a folder of CSS and one catalogue entry, with no change to the
+chrome itself. [`docs/theming.md`](docs/theming.md) is the guide: what a theme folder holds, the
+two channels a theme reaches the chrome through, the geometry it has to publish and why that must
+be measured rather than typed, the traps that cost real time, worked examples from the five
+shipped themes, and a checklist to run before you open a PR. The system behind it is described in
+[`docs/design/2026-09-04-theming-system-design.md`](docs/design/2026-09-04-theming-system-design.md).
 
 ## License
 

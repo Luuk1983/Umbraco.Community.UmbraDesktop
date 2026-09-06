@@ -12,6 +12,8 @@ import {
 } from './window-model';
 import { UMBRADESKTOP_WINDOW_KEEP_VISIBLE } from './constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-token';
+import type { UmbraDesktopThemeMetrics } from './theme/types';
+import type { UmbraDesktopKeepVisible } from './window-model';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
 import { UmbArrayState } from '@umbraco-cms/backoffice/observable-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
@@ -27,6 +29,27 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
 
   /** Observable list of open windows. */
   public readonly windows = this.#windows.asObservable();
+
+  /**
+   * What must stay reachable while dragging, under the active theme. Defaults to the Umbraco
+   * theme's geometry until the theme context resolves one.
+   */
+  #keep: UmbraDesktopKeepVisible = UMBRADESKTOP_WINDOW_KEEP_VISIBLE;
+
+  /** The last desktop size seen, so a theme change can re-clamp without waiting for a resize. */
+  #bounds?: { w: number; h: number };
+
+  /**
+   * The active theme's keep-visible margins. Read by the window element, which clamps live during
+   * a drag rather than going through this context.
+   *
+   * `Readonly` because this hands out the live object: a caller that wrote to it would corrupt the
+   * clamp for every window, and there is nothing else to stop them.
+   * @returns The margins in force.
+   */
+  public get keep(): Readonly<UmbraDesktopKeepVisible> {
+    return this.#keep;
+  }
 
   constructor(host: UmbControllerHost) {
     super(host, UMBRADESKTOP_WINDOW_MANAGER_CONTEXT);
@@ -100,12 +123,33 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * resizes — a viewport that shrinks under a window would otherwise strand it out of reach with no
    * way to drag it back. Skips the update entirely when nothing had to move, so a resize that
    * affects no window costs no re-render.
+   *
+   * Also **remembers** `bounds`, so that switching theme — which can move the window controls to
+   * the other end of the titlebar and change what "reachable" means — can re-clamp immediately
+   * instead of waiting for the next resize that may never come. See {@link setMetrics}.
    * @param bounds The new desktop surface size in px.
    */
   public clampToBounds(bounds: { w: number; h: number }): void {
+    this.#bounds = bounds;
     const current = this.#windows.getValue();
-    const next = clampWindowsToBounds(current, bounds, UMBRADESKTOP_WINDOW_KEEP_VISIBLE);
+    const next = clampWindowsToBounds(current, bounds, this.#keep);
     if (next !== current) this.#windows.setValue(next);
+  }
+
+  /**
+   * Adopt the active theme's geometry, then pull any window the new chrome has stranded back into
+   * reach — a window parked against the right edge under trailing controls sits outside the clamp
+   * once those controls move to the left.
+   * @param metrics The active theme's metrics.
+   */
+  public setMetrics(metrics: UmbraDesktopThemeMetrics): void {
+    this.#keep = {
+      grab: metrics.grab,
+      leading: metrics.leadingControlsWidth,
+      trailing: metrics.trailingControlsWidth,
+      titlebar: metrics.titlebarHeight,
+    };
+    if (this.#bounds) this.clampToBounds(this.#bounds);
   }
 
   /** Set a window's state (normal / minimized / maximized). */
