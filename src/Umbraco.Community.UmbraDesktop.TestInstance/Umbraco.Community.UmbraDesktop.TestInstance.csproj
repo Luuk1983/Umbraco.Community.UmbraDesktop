@@ -17,6 +17,16 @@
     <PackageReference Include="Umbraco.Community.AdvancedPermissions" />
     <PackageReference Include="Umbraco.TheStarterKit" />
     <PackageReference Include="uSync" />
+    <!-- Umbraco's commercial packages. Every one is here so the catalogue's commercial entries
+         resolve against the real registered extensions rather than being taken on trust. -->
+    <PackageReference Include="Umbraco.Forms" />
+    <PackageReference Include="Umbraco.Deploy.OnPrem" />
+    <PackageReference Include="Umbraco.Workflow" />
+    <PackageReference Include="Umbraco.Commerce" />
+    <PackageReference Include="Umbraco.Engage" />
+    <PackageReference Include="Umbraco.UIBuilder" />
+    <PackageReference Include="Umbraco.Automate" />
+    <PackageReference Include="Umbraco.AI" />
     <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />
     <RuntimeHostConfigurationOption Include="System.Globalization.AppLocalIcu" Value="72.1.0.3" Condition="$(RuntimeIdentifier.StartsWith('linux')) or $(RuntimeIdentifier.StartsWith('win')) or ('$(RuntimeIdentifier)' == '' and !$([MSBuild]::IsOSPlatform('osx')))" />
   </ItemGroup>

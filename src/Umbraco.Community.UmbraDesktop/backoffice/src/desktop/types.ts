@@ -112,12 +112,17 @@ export interface UmbraDesktopCatalogueEntry {
   /** Curatorial group alias (see catalogue/groups.ts). */
   group?: string;
   /**
-   * True when `ref` points at an extension shipped by a package that may not be installed
-   * (a third-party integration such as uSync). Such an entry resolving to nothing is the
-   * normal case, not a misconfiguration, so the adapter stays quiet about it instead of
-   * warning on every install without that package.
+   * Condition aliases on the referenced manifest that the desktop should answer before showing
+   * this app.
+   *
+   * Only conditions whose answer is independent of where the extension is mounted belong here —
+   * a user permission, a server setting, an existence check. A mount-dependent condition
+   * (`Umb.Condition.SectionAlias`, `Umb.Condition.WorkspaceAlias`, the block and collection ones)
+   * is answered by the iframe, which is mounted in the right place; naming one here denies the
+   * entry on every install. Omit the field to evaluate nothing, which is how every entry behaved
+   * before this existed.
    */
-  optional?: boolean;
+  evaluateConditions?: string[];
 }
 
 /** The collated curated catalogue (groups + entries). */

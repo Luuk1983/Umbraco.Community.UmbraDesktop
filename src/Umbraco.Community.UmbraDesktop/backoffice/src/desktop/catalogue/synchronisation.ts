@@ -3,10 +3,9 @@ import type { UmbraDesktopCatalogueEntry } from '../types';
 /**
  * Synchronisation — moving a site's shape and content between environments.
  *
- * These are third-party package surfaces, so every entry here is `optional`: it points at
- * the package's own registered extension by `ref`, which means the app appears only on
- * installs that actually have the package, and resolving to nothing elsewhere is silent
- * rather than a warning. Umbraco Deploy belongs in this group when it is added.
+ * These are third-party package surfaces, so every entry points at the package's own registered
+ * extension by `ref`: the app appears only on installs that actually have the package, and
+ * resolving to nothing elsewhere is silent. Umbraco Deploy lives in `deploy.ts` beside this.
  */
 export const entries: UmbraDesktopCatalogueEntry[] = [
   {
@@ -18,7 +17,6 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     alias: 'usync',
     ref: 'usync.menu.item',
     section: 'Umb.Section.Settings',
-    optional: true,
     // Name inherited from the uSync manifest ("uSync" — a product name, not translated).
     // uSync registers this icon itself (`usync.icons`), so it is present exactly when the
     // entry is.

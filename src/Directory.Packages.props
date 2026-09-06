@@ -17,5 +17,17 @@
     <PackageVersion Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" />
     <PackageVersion Include="Umbraco.TheStarterKit" Version="17.0.0" />
     <PackageVersion Include="uSync" Version="17.*" />
+    <!-- Umbraco's commercial packages, present so the catalogue's commercial entries can actually
+         be exercised locally. Unlicensed they run in trial mode, which is enough to register their
+         backoffice extensions — which is all the catalogue resolves against. Deploy is the on-prem
+         build, since the Cloud one is not installable here. -->
+    <PackageVersion Include="Umbraco.Forms" Version="17.*" />
+    <PackageVersion Include="Umbraco.Deploy.OnPrem" Version="17.*" />
+    <PackageVersion Include="Umbraco.Workflow" Version="17.*" />
+    <PackageVersion Include="Umbraco.Commerce" Version="17.*" />
+    <PackageVersion Include="Umbraco.Engage" Version="17.*" />
+    <PackageVersion Include="Umbraco.UIBuilder" Version="17.*" />
+    <PackageVersion Include="Umbraco.Automate" Version="17.*" />
+    <PackageVersion Include="Umbraco.AI" Version="17.*" />
   </ItemGroup>
 </Project>

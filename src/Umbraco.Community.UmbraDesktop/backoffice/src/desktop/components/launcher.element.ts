@@ -248,8 +248,16 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         display: flex;
         flex-direction: column;
         /* Roomy: cards flow into as many columns as fit, so the panel only scrolls on
-           genuinely small screens. */
-        width: var(--umbradesktop-launcher-width, min(960px, 92vw));
+           genuinely small screens. Column count is capped by this width, not by .cards itself
+           (it flows into repeat(auto-fill, minmax(260px, 1fr))): with padding
+           --uui-size-space-4 (12px) on each side and gap --uui-size-space-5 (18px) between
+           columns, N columns need 24 + N*260 + (N-1)*18 px — 840 for 3, 1118 for 4, 1396 for 5.
+           1180 rather than exactly 1118 so four columns get roughly 275px each instead of sitting
+           at their 260px minimum. Ten groups now exist, so three columns (960px) read as cramped;
+           measured in a browser after picking 1180, per docs/theming.md §4. Windows 98, Windows 11
+           and Umbraco 4 each pin --umbradesktop-launcher-width in their own palette and are
+           unaffected by this default. */
+        width: var(--umbradesktop-launcher-width, min(1180px, 92vw));
         /* height/backdrop-filter/color below are dormant handles, not live behaviour: their
            fallbacks (auto, none, none) are the CSS initial values, so nothing changes today.
            They exist so a future theme can turn this panel into a fullscreen blurred surface. */
