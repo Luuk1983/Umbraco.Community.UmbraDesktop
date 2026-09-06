@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "An OS-style windowed desktop for the Umbraco backoffice. Open content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side. Includes a grouped app launcher with pinnable apps, a taskbar, and per-app window chrome, all styled to match the backoffice.",
+  "Description": "An OS-style windowed desktop for the Umbraco backoffice. Open content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side. Includes a grouped app launcher with pinnable apps, a taskbar, per-user wallpapers, and five chrome themes: the Umbraco look, a retro Umbraco 4, macOS, Windows 11 and Windows 98. Themes restyle the desktop only, never the backoffice inside a window, and adding one of your own is a folder of CSS.",
   "PackageType": "Package",
   "LicenseTypes": ["Free"],
   "AuthorDetails": {
@@ -23,7 +23,9 @@
     "launcher",
     "side by side",
     "workspace",
-    "editor tools"
+    "editor tools",
+    "themes",
+    "wallpapers"
   ],
   "Screenshots": [
     {

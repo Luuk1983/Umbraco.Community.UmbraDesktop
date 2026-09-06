@@ -253,8 +253,9 @@ exactly this reason. You should not need to touch that code, but if you add a su
 
 ## 6. Worked example: where a Windows 98 theme lands
 
-The contract was checked against Win98, Windows 11 and GNOME before it was settled, so these are
-answers rather than guesses:
+Win98, Windows 11 and GNOME were all worked through on paper before the contract was settled. Two
+of the three have since been built against it without a change to the chrome, which is the best
+evidence the shape was right. Win98 came first, and these are what it needed:
 
 | What Win98 needs | How |
 |---|---|
@@ -365,6 +366,10 @@ in every case the only thing that noticed was `metrics.test.ts`. Write that file
 
 ## 7. Checklist before you open a PR
 
+Run **both** commands. They check different things: `npm test` runs in a browser through esbuild,
+which does not type-check, and `npm run build` runs `tsc`, which does not render anything. A theme
+has shipped a green test run and a red build, and the reverse.
+
 - [ ] `npm run build` passes — a palette typo is a compile error, so this is a real check
 - [ ] `npm test` passes, including `tokens.test.ts`, which fails if you added a `--umbradesktop-*`
       to a component without adding it to `UMBRADESKTOP_TOKENS`, or the reverse
@@ -375,3 +380,15 @@ in every case the only thing that noticed was `metrics.test.ts`. Write that file
 - [ ] Switching to your theme with windows open pulls stranded windows back into reach
 - [ ] The backoffice's light, dark and high-contrast settings all render something sane
 - [ ] Your theme's swatch is distinguishable from the others in the picker
+
+And the part that is easiest to skip, because the code already works without it:
+
+- [ ] `README.md` lists your theme in **both** places it names them: the Features bullet and the
+      Changing the theme section
+- [ ] `umbraco-marketplace.json`'s `Description` still describes what the package offers. Its
+      theme list is the one sentence users read before installing
+- [ ] This file gains whatever the build taught you that is not already in it. Every trap in §5
+      and §6 is here because a theme hit it first, and the next author should not have to
+
+The wider version of that last group, for any feature rather than a theme, is in
+[`CLAUDE.md`](../CLAUDE.md) at the repository root.

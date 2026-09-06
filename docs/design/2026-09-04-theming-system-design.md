@@ -22,7 +22,10 @@ This design builds it.
 **In scope**
 
 - A **Theme** section in Desktop settings, above Wallpaper.
-- Two themes shipped: **Umbraco** (today's look, the default) and **macOS**.
+- Two themes shipped: **Umbraco** (today's look, the default) and **macOS**. Windows 98,
+  Umbraco 4 and Windows 11 followed against this same contract, none of them needing a change to
+  a chrome component. Left as written because it records what *this* design delivered; the
+  current list lives in `theme/themes/index.ts` and the README.
 - A theme contract that carries a **palette**, a **metrics** record and a set of **stylesheets**.
 - Automatic light/dark variant selection from Umbraco's own theme setting.
 - The tokenisation pass that makes any of this possible: hardcoded colours and JS-driven inline
