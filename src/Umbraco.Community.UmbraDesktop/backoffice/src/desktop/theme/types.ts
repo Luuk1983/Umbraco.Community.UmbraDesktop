@@ -65,10 +65,62 @@ export const UMBRADESKTOP_TOKENS = [
 export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
 
 /**
- * One theme's values for one variant. Partial by design: every token has a fallback baked into
- * the component that reads it, so a theme sets only what it wants to change.
+ * Every custom property an **app** may read — a self-contained app in a window (a game, a
+ * calculator), not the chrome around it.
+ *
+ * Separate from {@link UMBRADESKTOP_TOKENS} on purpose. That list is checked against the CSS of the
+ * four chrome components, exactly, so that a token nothing reads cannot sit there as dead weight.
+ * These have no reader in this package at all: their consumers ship in other packages, which is
+ * what makes them a published contract rather than drift. `app-tokens.test.ts` holds them instead.
+ *
+ * **There are no host-side fallbacks for these, and there cannot be.** The chrome puts each token's
+ * fallback in the component that reads it, which is why the Umbraco identity theme can ship an
+ * empty palette. An app's reader is in another package, and a host component declaring these on a
+ * descendant of `.desktop` would beat the palette it inherits and make them unthemeable. So an app
+ * carries its own fallback, and the fallback it is expected to carry is the Umbraco look:
+ *
+ * | Token | Fallback an app should write |
+ * |---|---|
+ * | `--umbradesktop-app-surface` | `var(--uui-color-surface)` |
+ * | `--umbradesktop-app-surface-raised` | `var(--uui-color-surface)` |
+ * | `--umbradesktop-app-surface-sunken` | `var(--uui-color-background)` |
+ * | `--umbradesktop-app-edge-light` | `transparent` |
+ * | `--umbradesktop-app-edge-dark` | `var(--uui-color-border)` |
+ * | `--umbradesktop-app-edge-width` | `1px` |
+ * | `--umbradesktop-app-radius` | `3px` |
+ * | `--umbradesktop-app-text` | `var(--uui-color-text)` |
+ * | `--umbradesktop-app-text-muted` | `var(--uui-color-text-alt)` |
+ * | `--umbradesktop-app-accent` | `var(--uui-color-selected)` |
+ * | `--umbradesktop-app-font` | `inherit` |
+ *
+ * `edge-width` and `radius` are the pair that lets one app stylesheet be both a bevelled Win98
+ * control (width `2px`, radius `0`) and a flat rounded one (width `0`, radius `6px`) with no branch
+ * in the app. Prefer widening this group over adding a per-theme branch to an app.
  */
-export type UmbraDesktopPalette = Partial<Record<UmbraDesktopToken, string>>;
+export const UMBRADESKTOP_APP_TOKENS = [
+  '--umbradesktop-app-surface',
+  '--umbradesktop-app-surface-raised',
+  '--umbradesktop-app-surface-sunken',
+  '--umbradesktop-app-edge-light',
+  '--umbradesktop-app-edge-dark',
+  '--umbradesktop-app-edge-width',
+  '--umbradesktop-app-radius',
+  '--umbradesktop-app-text',
+  '--umbradesktop-app-text-muted',
+  '--umbradesktop-app-accent',
+  '--umbradesktop-app-font',
+] as const;
+
+/** Every custom property an app may read. */
+export type UmbraDesktopAppToken = (typeof UMBRADESKTOP_APP_TOKENS)[number];
+
+/**
+ * One theme's values for one variant. Partial by design: every token has a fallback baked into
+ * the component that reads it, so a theme sets only what it wants to change. Covers both token
+ * groups: a theme paints its own chrome and may also opt into restyling the app surface, since a
+ * palette is one flat set of custom properties regardless of who ends up reading each one.
+ */
+export type UmbraDesktopPalette = Partial<Record<UmbraDesktopToken | UmbraDesktopAppToken, string>>;
 
 /**
  * The geometry a theme has to publish because JavaScript — not CSS — needs it: the window bounds
