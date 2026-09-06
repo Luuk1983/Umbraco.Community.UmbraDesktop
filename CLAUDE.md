@@ -51,7 +51,13 @@ items did not apply:
 - [ ] `npm run build` and `npm test` both pass
 - [ ] **`README.md`** describes the feature. Check every place it could be named, not the first
       one you find. Themes, for instance, are listed in both the Features list and their own
-      section, and a change that updates one reads as sloppier than one that updates neither
+      section, and a change that updates one reads as sloppier than one that updates neither.
+      **Markdown only, no raw HTML**: this file is also the NuGet package readme
+      (`PackageReadmeFile` in the csproj), and NuGet renders a subset of Markdown that escapes
+      HTML rather than running it, so an `<img>` tag shows up on the package page as its own
+      source code. That means images are `![alt](url)` and cannot carry `width` or `height`, so
+      size a screenshot by capturing it at the size you want it. Inline code spans containing
+      tags, like the one describing an iframe, are fine
 - [ ] **`umbraco-marketplace.json`** names the feature in `Description` if it is something a
       person would choose the package for. This is not a "check it is still accurate" step: the
       Description is the summary the Umbraco Marketplace shows, it is the only thing most people

@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop/Package-image_128_128.png" alt="UmbraDesktop" width="128" height="128">
+![UmbraDesktop](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop/Package-image_128_128.png)
 
 # UmbraDesktop
 
@@ -55,7 +55,7 @@ UmbraDesktop grants no access of its own. Every app in the launcher is gated on 
 
 Click the desktop icon in the backoffice header, top right, between Help and your avatar. That is the way in. The Desktop section's own tab in the section bar is deliberately hidden, so it does not clutter the list.
 
-<img src="https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png" alt="The backoffice header, top right: the desktop icon sits between Help and the user avatar." width="420">
+![The backoffice header, top right: the desktop icon sits between Help and the user avatar.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png)
 
 Most people are probably familiar with the concept of a desktop and will have no trouble using it. The launcher is where you open the apps:
 
