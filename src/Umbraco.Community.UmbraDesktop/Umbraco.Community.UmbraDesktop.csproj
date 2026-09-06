@@ -106,6 +106,7 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	  <PackageReference Include="MinVer" PrivateAssets="all" />
 	  <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
 	  <PackageReference Include="Umbraco.Cms.Api.Common" />
+	  <PackageReference Include="Umbraco.Cms.Api.Management" />
 	  <PackageReference Include="Umbraco.Cms.Core" />
 	  <PackageReference Include="Umbraco.JsonSchema.Extensions" />
 	</ItemGroup>

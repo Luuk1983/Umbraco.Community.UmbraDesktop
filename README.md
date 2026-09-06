@@ -25,6 +25,7 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 - Choose your wallpaper. Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user.
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.
 - Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice. Five ship: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98. Adding your own is a folder of CSS and one catalogue entry.
+- See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
 - Nothing new to learn. The windows contain the backoffice you already know, with the same trees, the same editors and the same shortcuts.
 
 ## Installation & configuration
@@ -129,6 +130,33 @@ Umbraco resizes it for you: the desktop asks for a copy no wider than 2560px and
 
 If you pick something that is not an image, the desktop tells you and leaves your current wallpaper alone.
 
+## Background Jobs
+
+Umbraco runs a lot behind your site: scheduled publishing, webhook delivery, log and version
+cleanups, plus whatever the packages you installed added. It shows you none of it. Background Jobs
+is a read-only view of the lot, and it installs as an ordinary Settings dashboard, so you get it
+whether or not you use the desktop.
+
+![Background Jobs: the Distributed group listing ten jobs with how often each runs, when it last ran and when it is next due, above the Recurring group with its outcome column.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/background-jobs-viewer.png)
+
+Jobs come in two kinds and the screen keeps them apart, because they can answer different
+questions:
+
+- **Distributed** jobs are shared across every server. One server claims each run and the schedule
+  lives in the database, so it survives a restart. Umbraco does not record how a run ended, so
+  there is no outcome to show for these.
+- **Recurring** jobs are run by each server for itself. Umbraco stores nothing about them, so what
+  you see has been observed since this server started, and a job that has not come round yet reads
+  "Not since restart" rather than "Never". These do carry an outcome: succeeded, failed, or skipped
+  because this server's role was not one the job runs on.
+
+Times are shown relative to now, with the exact moment on hover, and the view refreshes itself.
+Pick 1, 5 or 10 seconds from the control at the top right. Because the data is a snapshot, a run
+due within one refresh reads "Due now" rather than counting past zero: it may already have
+happened without this copy of the report knowing yet.
+
+Nothing here can be started, paused or cancelled. It is a viewer.
+
 ## Technical explanation
 
 ### Windows are iframes
@@ -147,7 +175,7 @@ A window should not show the entire backoffice shell inside a small frame. Becau
 |---|---|---|
 | `full-section` | Section sidebar and tree, without the top header | Tools where the tree *is* the tool: Content, Media, Document Types |
 | `workspace-only` | Just the workspace | Self-contained editors: Log Viewer, Webhooks |
-| `bare` | The target view only | Single-focus dashboards: Examine, Health Check, Profiling |
+| `bare` | The target view only | Single-focus dashboards: Examine, Health Check, Profiling, Background Jobs |
 
 ### The app catalogue
 
@@ -180,6 +208,11 @@ UI Builder's generated sections still appear on their own, in More, as any unrec
 Two Workflow apps only show when they apply to you: Workflow search and Release sets both check your
 Workflow permissions, and Release sets also checks whether the feature is switched on. Rather than
 give you a tile that opens an empty window, the desktop asks first.
+### One app is ours
+
+Almost everything in the catalogue is a window onto something Umbraco or another package already provides. **Background Jobs** is the exception: the package ships it. Umbraco has no view of its own scheduled jobs anywhere in the backoffice, so there was nothing to point at.
+
+It is registered as an ordinary Settings dashboard, not as something desktop-only, which means you get it whether or not you use the desktop. The catalogue then refs it by alias like any other entry and windows it with `bare` chrome. Nothing about reading job state is desktop-specific, so tying it to the desktop would have been an arbitrary restriction.
 
 ### Apps that aren't in the catalogue
 

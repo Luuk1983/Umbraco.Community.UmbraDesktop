@@ -9,4 +9,5 @@
   </Folder>
   <Project Path="src/Umbraco.Community.UmbraDesktop.TestInstance/Umbraco.Community.UmbraDesktop.TestInstance.csproj" Id="c63e1796-4f4f-45d3-8ce8-53595441aec1" />
   <Project Path="src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj" />
+  <Project Path="src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj" />
 </Solution>
