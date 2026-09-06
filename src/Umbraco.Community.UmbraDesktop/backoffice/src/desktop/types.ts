@@ -40,6 +40,32 @@ export interface UmbraDesktopApp {
   confidence?: UmbraDesktopConfidence;
 }
 
+/**
+ * A `umbraDesktopApp` manifest reduced to what derivation needs. The context normalises the
+ * condition-evaluated manifests into these so `deriveApps` stays pure and has no opinion about
+ * where an app came from.
+ */
+export interface UmbraDesktopRegisteredApp {
+  /** The manifest alias; becomes the app alias, so it keys pins. */
+  alias: string;
+  /** Window title (localisation token or literal). */
+  name: string;
+  /** Icon alias, already defaulted. */
+  icon: string;
+  /** The element loader from the manifest. */
+  element: () => Promise<unknown>;
+  /** Launcher group alias, if the manifest named one. */
+  group?: string;
+  /** Sort weight within the group. */
+  weight?: number;
+  /** Default window size in px. */
+  defaultSize?: { w: number; h: number };
+  /** Minimum window size in px. */
+  minSize?: { w: number; h: number };
+  /** Whether more than one window may open. */
+  allowMultiple?: boolean;
+}
+
 /** A position/size rectangle in desktop pixels. */
 export interface Rect {
   x: number;

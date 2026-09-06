@@ -25,6 +25,7 @@ export default {
     appAdvancedLibraryAccess: 'Library-toegang',
     appAdvancedElementTypePermissions: 'Elementtype-machtigingen',
     appAdvancedElementTypeAccess: 'Elementtype-toegang',
+    appLoadFailed: 'Deze app kon niet worden geladen.',
     groupEditing: 'Bewerken',
     groupDevelopment: 'Ontwikkeling',
     groupSynchronisation: 'Synchronisatie',

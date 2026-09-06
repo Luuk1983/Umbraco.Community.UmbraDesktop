@@ -26,6 +26,9 @@ export default {
     appAdvancedLibraryAccess: 'Library access',
     appAdvancedElementTypePermissions: 'Element Type permissions',
     appAdvancedElementTypeAccess: 'Element Type access',
+    // window body: a registered app's element failed to load (app-host.element carries the same
+    // English as its own fallback, for the case where this dictionary is what failed to load).
+    appLoadFailed: 'This app could not be loaded.',
     // group labels
     groupEditing: 'Editing',
     groupDevelopment: 'Development',
