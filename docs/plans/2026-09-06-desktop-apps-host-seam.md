@@ -428,7 +428,7 @@ git commit -m "feat: app token values for every theme that paints its own palett
 
 **Inherited from Task 4: unify the 12-second load patience.** Task 4 gave the app host a load timeout and deliberately set it to the same twelve seconds the iframe path already allows in `#onIframeLoad`'s `setTimeout`, on the grounds that one shell should not run out of patience at two different moments depending on which kind of app a window opened. It could not unify them because `window.element.ts` was out of its scope, and it left the reasoning in `APP_LOAD_TIMEOUT_MS`'s doc comment.
 
-You own that file, so finish it: move the number to a named constant in `constants.ts` with the reasoning, and have both `app-host.element.ts` and `window.element.ts` read it. This is the repo's "derive numbers, never type them" rule, and two copies of a duration whose whole justification is that they are the same number is exactly the drift it exists to prevent. Keep `APP_LOAD_TIMEOUT_MS` exported from the host if its test still shortens it by name.
+You own that file, so finish it: move the number to a named constant in `constants.ts` with the reasoning, and have both `app-host.element.ts` and `window.element.ts` read it. This is the repo's "derive numbers, never type them" rule, and two copies of a duration whose whole justification is that they are the same number is exactly the drift it exists to prevent. The host's own `APP_LOAD_TIMEOUT_MS` goes away rather than becoming an alias: its test matches the timer by *value*, not by name, so the canonical constant satisfies it unchanged and a second exported name would re-open the seam this step closes.
 
 - [ ] **Step 1: Write the failing test**
 
