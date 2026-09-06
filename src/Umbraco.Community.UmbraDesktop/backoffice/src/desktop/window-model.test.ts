@@ -18,7 +18,7 @@ import {
 import type { UmbraDesktopApp, UmbraDesktopWindow } from './types';
 
 const app: UmbraDesktopApp = {
-  alias: 'a', name: 'A', icon: 'icon-umbraco', url: '/x', chromeProfile: 'bare',
+  alias: 'a', name: 'A', icon: 'icon-umbraco', content: { kind: 'iframe', url: '/x' }, chromeProfile: 'bare',
 };
 
 function win(id: string, z: number, over: Partial<UmbraDesktopWindow> = {}): UmbraDesktopWindow {

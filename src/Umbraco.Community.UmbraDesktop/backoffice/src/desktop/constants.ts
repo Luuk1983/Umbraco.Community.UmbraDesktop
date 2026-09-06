@@ -25,6 +25,24 @@ export const UMBRADESKTOP_MORE_GROUP_LABEL = '#umbraDesktop_groupMore';
 export const UMBRADESKTOP_MORE_GROUP_WEIGHT = 9999;
 
 /**
+ * How long a window body gets to load before the desktop stops waiting on it.
+ *
+ * One number for both kinds of body, because it is one judgement about one user: a window has
+ * already opened, so the only choice left is between "still loading" and "this is not coming", and
+ * a shell that ran out of patience at two different moments depending on which kind of app was
+ * opened would be arbitrary from the outside. It is a safety net on the iframe path (reveal the
+ * frame anyway if the booting backoffice never reports its chrome stripped, see `#onIframeLoad` in
+ * `window.element`) and a verdict on the element path (give up on the dynamic import and say so,
+ * see `app-host.element`), but the deadline is the same deadline.
+ *
+ * Long enough that a cold chunk fetch on a slow connection is not called a failure, short enough
+ * that nobody sits in front of an empty window wondering. The two paths had a literal `12000` each
+ * before this constant existed, which is exactly the drift "derive numbers, never type them" is
+ * about: their whole justification is that they are the same number.
+ */
+export const UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS = 12_000;
+
+/**
  * Minimum window size in px, used by resize clamping. Kept in sync with the window
  * frame's CSS `min-width`/`min-height` (which are declared as literals in window.element).
  */

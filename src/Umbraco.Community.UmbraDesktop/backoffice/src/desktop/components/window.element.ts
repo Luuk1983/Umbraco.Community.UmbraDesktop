@@ -5,6 +5,7 @@ import { injectChromeStyles } from '../chrome-injector';
 import { resolveThemeSync, syncThemeStylesheet } from '../iframe-theme.js';
 import type { UmbraDesktopThemeManifest } from '../iframe-theme.js';
 import {
+  UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS,
   UMBRADESKTOP_CONTROL_WIDTH,
   UMBRADESKTOP_TITLEBAR_BORDER,
   UMBRADESKTOP_TITLEBAR_HEIGHT,
@@ -15,8 +16,13 @@ import {
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
-import { css, customElement, html, property, state } from '@umbraco-cms/backoffice/external/lit';
+import { css, customElement, html, keyed, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+// Side-effect import: registering `<umbradesktop-app-host>` is what makes the element branch of
+// `#renderBody` resolve to something. Nothing else in the bundle imports that module, so without
+// this line Vite tree-shakes it out and an element window paints an empty body — invisibly to both
+// gates, since `tsc` still type-checks the file and the host's own test imports it directly.
+import './app-host.element.js';
 import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
 import { UMB_THEME_CONTEXT, UMB_THEME_LIGHT_ALIAS } from '@umbraco-cms/backoffice/themes';
 
@@ -40,8 +46,14 @@ const RESIZE_HANDLES: ReadonlyArray<{ dir: string; edges: UmbraDesktopResizeEdge
 const RESTORE_DRAG_THRESHOLD = 5;
 
 /**
- * A single draggable desktop window hosting a backoffice iframe. Presentational
- * state comes from the `window` property; all mutations go through the manager.
+ * A single draggable desktop window. Its body is whichever kind the app's `content` names: a
+ * backoffice iframe, or one self-contained app element (see `#renderBody`). Presentational state
+ * comes from the `window` property; all mutations go through the manager.
+ *
+ * Everything else in this file, the chrome injection, the theme mirroring and the reload-in-place,
+ * belongs to the iframe kind alone, because all of it exists to manage a second booting backoffice.
+ * The element kind reaches none of it, and that is by construction rather than by a flag: each of
+ * those paths starts from `iframe.body`, which an element window has not got.
  */
 @customElement('umbradesktop-window')
 export class UmbraDesktopWindowElement extends UmbLitElement {
@@ -53,6 +65,37 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
 
   @state()
   private _loading = true;
+
+  /**
+   * Bumped by reload so an element body is torn down and recreated rather than reused.
+   *
+   * Reactive state rather than a plain field because it is the `keyed` directive's key: Lit has to
+   * re-render for the key to be compared at all, and a bump that scheduled no render would reload
+   * nothing.
+   */
+  @state()
+  private _appInstance = 0;
+
+  /**
+   * The desktop chrome theme id in force, stamped onto an element app so it may branch.
+   *
+   * An element app lives in this document, so it inherits every desktop token by ordinary CSS
+   * inheritance and needs nothing from here to look right. This is for the app that wants to do
+   * more than take colours: a game whose board is square under Windows 98 and rounded under macOS
+   * has to know which it is, and an attribute it can select on is a cheaper contract than a context
+   * it has to consume.
+   *
+   * Deliberately unassigned here: giving it a value is the theme task's job, and an unassigned
+   * private field is valid and stamps an empty attribute, so the element branch works meanwhile.
+   *
+   * **Unresolved when that task picks this up.** The attribute lands on the *host*, which is the
+   * app element's parent, and design D9 promises an app can read it as
+   * `:host([data-umbradesktop-theme='win98'])` — a selector that matches the app's own element and
+   * so will never see an attribute one level up. D9 rejects the ancestor form, `:host-context`,
+   * because Firefox has never shipped it, which means the fix is for the host to forward the
+   * attribute onto the element it constructs rather than for apps to select differently.
+   */
+  #chromeThemeId = '';
 
   #manager?: UmbraDesktopWindowManagerContext;
   #startPointer = { x: 0, y: 0 };
@@ -115,6 +158,13 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * would otherwise stay on the old one until it was reloaded. Swapping the same stylesheet link
    * Umbraco itself swaps costs the user nothing; reloading would cost them anything unsaved in a
    * content editor, which is far too much for a display preference.
+   *
+   * Iframe-only, and the guard that makes it so is the `!doc` return: an element window has no
+   * frame, so `#frameDocument` gives nothing and this leaves even `#syncedAlias` alone. That
+   * matters more than it looks now that reload means "new game" for an element body, because the
+   * branch below reloads a window on a theme it cannot mirror. Reaching it with an element body
+   * would throw a player's board away every time somebody toggled dark mode. An element app needs
+   * none of this in the first place: it is in this document, so it takes the theme by inheritance.
    */
   #applyFrameTheme(): void {
     const doc = this.#frameDocument();
@@ -139,8 +189,25 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     // A frame boots on the stored alias, so it is normally already right — but a theme changed
     // while it was still loading would have been missed, and the reload path lands here too.
     this.#applyFrameTheme();
-    // Safety net: reveal anyway if the shell never reports ready.
-    window.setTimeout(() => (this._loading = false), 12000);
+    // Safety net: reveal anyway if the shell never reports ready. The same deadline the element
+    // path gives its own loader, for the reason the constant carries.
+    window.setTimeout(() => (this._loading = false), UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS);
+  }
+
+  /**
+   * Take the window's overlay down for an element body, which never raises it again.
+   *
+   * `_loading` starts `true` so the booting backoffice never flashes into view, and `#onIframeLoad`
+   * is what lowers it again. An element body has no load event of its own and the app host paints
+   * its own spinner while the dynamic import is in flight, so leaving the flag set would cover that
+   * spinner with a second one and spin the reload glyph forever. Clearing it here rather than in
+   * `render` because `render` may not write reactive state: Lit warns about it and it costs a
+   * second render pass. `willUpdate` is the hook that exists for exactly this, and a write from it
+   * lands in the update already in flight.
+   * @param changed The properties this update is for.
+   */
+  override willUpdate(changed: Map<string, unknown>) {
+    if (changed.has('window') && this.window?.app.content.kind === 'element') this._loading = false;
   }
 
   /**
@@ -149,8 +216,16 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * and pressing F5 on the desktop itself would reload the whole desktop instead.
    */
   #onReload() {
+    const w = this.window;
+    if (!w) return;
+    if (w.app.content.kind === 'element') {
+      // Recreating the element *is* the reload: a fresh instance starts from its initial state,
+      // which for a game is "new game". Bumping the key discards the old instance.
+      this._appInstance += 1;
+      return;
+    }
     const iframe = this.renderRoot?.querySelector('iframe.body') as HTMLIFrameElement | null;
-    if (!iframe || !this.window) return;
+    if (!iframe) return;
     // Cover the frame again: the reloading backoffice re-renders its own header before the
     // chrome styles are re-injected, which would otherwise flash into view.
     this._loading = true;
@@ -161,7 +236,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     } catch {
       // Cross-origin document — `location.reload()` is off limits there. Re-pointing the frame
       // always reloads, at the cost of returning to the app's entry route.
-      iframe.src = this.window.app.url;
+      iframe.src = w.app.content.url;
     }
   }
 
@@ -317,6 +392,34 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     return glyphs[kind];
   }
 
+  /**
+   * The window body: a backoffice iframe, or a self-contained app element.
+   *
+   * The element branch deliberately carries none of the iframe branch's machinery: no chrome
+   * injection, no theme mirroring, no reload-in-place, because all three exist to manage a booting
+   * second backoffice and there is not one here. The app host owns its own load state, including a
+   * spinner for the dynamic import and a timeout for one that never resolves, so this window does
+   * not put an overlay over it either.
+   *
+   * `keyed` on `_appInstance` is what makes reload mean anything for an element: Lit compares the
+   * key, and a changed one throws the old element away instead of reusing it with its board still
+   * on screen.
+   * @param w The window to render the body of.
+   * @returns The body template.
+   */
+  #renderBody(w: UmbraDesktopWindow) {
+    if (w.app.content.kind === 'element') {
+      return keyed(
+        this._appInstance,
+        html`<umbradesktop-app-host
+          class="body"
+          data-umbradesktop-theme=${this.#chromeThemeId}
+          .load=${w.app.content.element}></umbradesktop-app-host>`,
+      );
+    }
+    return html`<iframe class="body" src=${w.app.content.url} @load=${this.#onIframeLoad}></iframe>`;
+  }
+
   override render() {
     const w = this.window;
     if (!w) return null;
@@ -378,7 +481,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
           </span>
         </div>
         <div class="bodywrap">
-          <iframe class="body" src=${w.app.url} @load=${this.#onIframeLoad}></iframe>
+          ${this.#renderBody(w)}
           ${!w.active
             ? html`<div class="focus-catcher" @pointerdown=${this.#onFocus}></div>`
             : ''}

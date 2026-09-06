@@ -113,7 +113,10 @@ it('picks up an entry whose referenced extension registers after the desktop has
     await settle();
 
     expect(harness.aliases(), 'the late-registered uSync app should appear').to.contain('usync');
-    expect(harness.app('usync')!.url).to.equal('/umbraco/section/settings/workspace/usync-root');
+    expect(harness.app('usync')!.content).to.deep.equal({
+      kind: 'iframe',
+      url: '/umbraco/section/settings/workspace/usync-root',
+    });
   } finally {
     harness.teardown();
   }

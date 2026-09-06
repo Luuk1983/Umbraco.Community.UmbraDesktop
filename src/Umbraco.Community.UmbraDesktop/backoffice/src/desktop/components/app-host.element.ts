@@ -1,4 +1,5 @@
 import { UMBRADESKTOP_APP_TOKEN_FALLBACKS } from '../theme/types.js';
+import { UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS } from '../constants.js';
 import { customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
@@ -23,19 +24,15 @@ const APP_LOAD_FAILED_FALLBACK = 'This app could not be loaded.';
 /**
  * How long a loader gets to settle before the host gives up and shows the failure message.
  *
- * Deliberately the same twelve seconds the iframe path allows its own safety net
- * (`window.element.ts`, the `setTimeout` in `#onIframeLoad`), because the two are the same
- * judgement about the same user: a window has already opened, so the choice is between "still
- * loading" and "tell them it is broken", and one shell should not run out of patience at two
- * different moments depending on which kind of app it opened. Long enough that a cold chunk fetch
- * on a slow connection is not called a failure, short enough that nobody sits in front of an empty
- * window wondering.
+ * An alias for {@link UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS}, which both body kinds now read: the
+ * iframe path's own safety net in `window.element.ts` is the same deadline for the same reason, and
+ * the constant's doc carries that reasoning.
  *
- * Exported so the test can shorten exactly this timer instead of waiting it out, which also pins
- * that the number lives here. The iframe path still spells its own copy out as a literal; unifying
- * them means touching `window.element.ts`, which is worth doing the next time that file is open.
+ * Re-exported under this local name because the host's test shortens exactly this timer by name
+ * rather than waiting twelve seconds out, and asserts that the delay it collapsed was the named
+ * constant rather than a literal of the host's own.
  */
-export const APP_LOAD_TIMEOUT_MS = 12_000;
+export const APP_LOAD_TIMEOUT_MS = UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS;
 
 /**
  * Inline style for the failure message, because a light-DOM element has no shadow root for

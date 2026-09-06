@@ -12,7 +12,23 @@
  */
 export type UmbraDesktopChromeProfile = 'full-section' | 'workspace-only' | 'bare';
 
-/** A launchable app: a backoffice deep-link plus how to frame and present it. */
+/**
+ * What a window's body is.
+ *
+ * `iframe` is every app derived from the curated catalogue: a whole second backoffice, deep-linked,
+ * needing its chrome stripped and its theme mirrored across the document boundary. `element` is a
+ * self-contained app registered by a package (see `app.extension.ts`): one custom element in the
+ * body, in this document, inheriting the desktop's tokens by ordinary CSS inheritance.
+ *
+ * A union rather than an optional `url` plus an optional `element`, because that pair makes both
+ * "neither" and "both" representable and neither means anything. Here the compiler finds every
+ * place that has to care.
+ */
+export type UmbraDesktopAppContent =
+  | { kind: 'iframe'; url: string }
+  | { kind: 'element'; element: () => Promise<unknown> };
+
+/** A launchable app: what its window body is, plus how to frame and present it. */
 export interface UmbraDesktopApp {
   /** Stable identifier for the app. */
   alias: string;
@@ -20,8 +36,8 @@ export interface UmbraDesktopApp {
   name: string;
   /** Umbraco icon alias, e.g. "icon-umbraco". */
   icon: string;
-  /** Backoffice path the window's iframe loads, e.g. "/umbraco/section/content". */
-  url: string;
+  /** What this app's window body is: a backoffice iframe, or a self-contained element. */
+  content: UmbraDesktopAppContent;
   /** Default chrome profile for windows of this app. */
   chromeProfile: UmbraDesktopChromeProfile;
   /** Default window size in px. */

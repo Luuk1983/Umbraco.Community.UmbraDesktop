@@ -32,7 +32,7 @@ const PROBE_APP: UmbraDesktopApp = {
   alias: 'umbraco4-metrics-probe',
   name: 'Probe',
   icon: 'icon-umbraco',
-  url: 'about:blank',
+  content: { kind: 'iframe', url: 'about:blank' },
   chromeProfile: 'bare',
 };
 
