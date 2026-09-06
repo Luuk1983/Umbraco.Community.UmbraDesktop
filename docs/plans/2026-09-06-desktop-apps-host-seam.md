@@ -1442,53 +1442,26 @@ git commit -m "feat: a games group for registered apps to land in"
 
 Append to `backoffice/src/desktop/components/desktop-chrome.test.ts`, reusing that file's existing fixture helpers for mounting a window:
 
-```ts
-it('stamps the chrome theme id on an element app so it can branch per theme', async () => {
-  const app = {
-    alias: 'Pkg.Minesweeper',
-    name: 'Minesweeper',
-    icon: 'icon-bomb',
-    content: { kind: 'element' as const, element: async () => ({}) },
-    chromeProfile: 'bare' as const,
-  };
-  const element = await fixture<UmbraDesktopWindowElement>(
-    html`<umbradesktop-window
-      .window=${{ id: 'w1', app, rect: { x: 0, y: 0, w: 400, h: 300 }, z: 1, active: true, state: 'normal' }}></umbradesktop-window>`,
-  );
-  await element.updateComplete;
-  const host = element.renderRoot.querySelector('umbradesktop-app-host')!;
-  expect(host, 'an element app renders through the app host').to.not.be.null;
-  expect(host.getAttribute('data-umbradesktop-theme')).to.be.a('string');
-});
+Task 3 already shipped `backoffice/src/desktop/components/window-body.test.ts`, which covers "which body does a window render, and never both", including that an element window renders a host and no iframe and keeps no overlay. **Append to that file and reuse its `mountWindow` helper.** Do not write these in `desktop-chrome.test.ts`: that file is about re-asserting the section-tab hide, a different subject, and both it and `window-body.test.ts` document that `fixture()` never resolves in the backgrounded pages this runner uses with several files in flight, so the helper exists for a reason.
 
-it('renders no iframe for an element app, so nothing polls for a backoffice header', async () => {
-  const app = {
-    alias: 'Pkg.Minesweeper',
-    name: 'Minesweeper',
-    icon: 'icon-bomb',
-    content: { kind: 'element' as const, element: async () => ({}) },
-    chromeProfile: 'bare' as const,
-  };
-  const element = await fixture<UmbraDesktopWindowElement>(
-    html`<umbradesktop-window
-      .window=${{ id: 'w1', app, rect: { x: 0, y: 0, w: 400, h: 300 }, z: 1, active: true, state: 'normal' }}></umbradesktop-window>`,
-  );
-  await element.updateComplete;
-  expect(element.renderRoot.querySelector('iframe')).to.be.null;
-  expect(
-    element.renderRoot.querySelector('.loading'),
-    'an element app paints immediately, so the loading overlay must be gone',
-  ).to.be.null;
-});
-```
+Two assertions are genuinely new here. Everything else the earlier sketch of this task proposed is already covered, so writing it again would only duplicate:
 
-- [ ] **Step 2: Run test to verify it fails**
+1. **The app's own element carries the theme id**, not merely the host. Mount an element window whose loader resolves to a test element, wait for the host's `mountComplete`, then read `data-umbradesktop-theme` from the *app element inside the host*. This is the assertion that would have caught the original defect, so it has to look at the app element rather than the host.
+2. **A theme change updates the attribute in place without remounting.** Capture the app element by identity, drive a theme change, and assert both that the attribute changed *and* that it is still the same node (`.to.equal(before)`). Identity is the whole point: a remount is what would throw a player's board away.
+
+Add a third if the empty-value decision below goes that way: an unresolved theme renders **no** attribute rather than an empty one.
+
+- [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-npx web-test-runner "src/desktop/components/desktop-chrome.test.ts" --node-resolve
+npx web-test-runner "src/desktop/components/window-body.test.ts" --node-resolve
 ```
 
-Expected: FAIL. `#chromeThemeId` is never assigned, so the attribute is the empty string and `.to.be.a('string')` passes, but the second test fails on the loading overlay unless Task 3's `_loading = false` landed. If the first test fails on a null host, Task 3's `#renderBody` is not wired.
+Expected: FAIL. `#chromeThemeId` is declared but never assigned, and nothing forwards it to the app element, so both new assertions fail rather than passing vacuously. Check the failure messages say what you expect: an assertion that passes here means it is not testing what you think.
+
+**Decide the empty case deliberately.** `#chromeThemeId` starts as `''`, and `data-umbradesktop-theme=""` still *matches* `[data-umbradesktop-theme]`, so an app testing for the attribute's existence gets a match and no usable value. Prefer rendering nothing at all until the theme resolves (Lit's `nothing` on the attribute binding), so the selector an app writes is either absent or right, never present and useless.
+
+**`#chromeThemeId` is a plain private field, so writing to it will not re-render.** Either call `requestUpdate()` after assigning, as Step 3 does, or make it `@state`, which removes the need to remember. Say which you chose.
 
 - [ ] **Step 3: Consume the desktop theme context**
 
