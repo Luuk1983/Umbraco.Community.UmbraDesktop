@@ -10,6 +10,10 @@
 
 **Spec:** [`docs/design/2026-09-06-desktop-apps-design.md`](../design/2026-09-06-desktop-apps-design.md) §4–§7.
 
+**Where to run commands.** `npm test` and `npm run build` run from `src/Umbraco.Community.UmbraDesktop`, and both `cd backoffice` internally. The single-file `npx web-test-runner …` commands in this plan must be run **from `src/Umbraco.Community.UmbraDesktop/backoffice`**, because that is where `web-test-runner.config.mjs` lives; run from anywhere else the config is not picked up and imports fail to resolve regardless of whether the code is correct. Their paths are relative to `backoffice/`.
+
+`npm run build` regenerates `backoffice/src/desktop/settings/wallpapers.generated.ts`, which can then show as modified with an **empty** diff. That is a line-ending artifact (the generator writes LF, the repo stores CRLF), not a change. Do not commit it; `git restore` it if it appears.
+
 ---
 
 ## Findings that amend the spec
@@ -102,10 +106,9 @@ it('has no duplicate app tokens', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run from `src/Umbraco.Community.UmbraDesktop`:
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/theme/app-tokens.test.ts" --node-resolve
+npx web-test-runner "src/desktop/theme/app-tokens.test.ts" --node-resolve
 ```
 
 Expected: FAIL. The import of `UMBRADESKTOP_APP_TOKENS` is undefined, so the first test errors on `.length` of undefined.
@@ -177,7 +180,7 @@ export type UmbraDesktopPalette = Partial<
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/theme/app-tokens.test.ts" --node-resolve
+npx web-test-runner "src/desktop/theme/app-tokens.test.ts" --node-resolve
 ```
 
 Expected: PASS, 3 tests.
@@ -256,7 +259,7 @@ it('keeps the Umbraco identity theme palette empty', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/theme/app-tokens.test.ts" --node-resolve
+npx web-test-runner "src/desktop/theme/app-tokens.test.ts" --node-resolve
 ```
 
 Expected: FAIL, listing 66 missing entries (11 tokens × 6 palettes: umbraco4 light, macos light, macos dark, win11 light, win11 dark, win98 light).
@@ -458,7 +461,7 @@ apps.filter(
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/derive-apps.test.ts" --node-resolve
+npx web-test-runner "src/desktop/derive-apps.test.ts" --node-resolve
 ```
 
 Expected: FAIL. `app.content` is undefined, so the first `deep.equal` fails.
@@ -673,7 +676,7 @@ it('reports a loader that throws rather than leaving an empty body', async () =>
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/components/app-host.element.test.ts" --node-resolve
+npx web-test-runner "src/desktop/components/app-host.element.test.ts" --node-resolve
 ```
 
 Expected: FAIL, cannot resolve `./app-host.element.js`.
@@ -851,7 +854,7 @@ export interface UmbraDesktopRegisteredApp {
 - [ ] **Step 6: Run tests to verify they pass**
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/components/app-host.element.test.ts" --node-resolve
+npx web-test-runner "src/desktop/components/app-host.element.test.ts" --node-resolve
 npm run build
 ```
 
@@ -951,7 +954,7 @@ it('drops a manifest with no element loader rather than opening an empty window'
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/registered-apps.test.ts" --node-resolve
+npx web-test-runner "src/desktop/registered-apps.test.ts" --node-resolve
 ```
 
 Expected: FAIL, cannot resolve `./registered-apps`.
@@ -1002,7 +1005,7 @@ export function normaliseRegisteredApps(
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/registered-apps.test.ts" --node-resolve
+npx web-test-runner "src/desktop/registered-apps.test.ts" --node-resolve
 ```
 
 Expected: PASS, 5 tests.
@@ -1049,7 +1052,7 @@ it('gives a registered app the bare chrome profile, which nothing on that path r
 - [ ] **Step 6: Run test to verify it fails**
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/derive-apps.test.ts" --node-resolve
+npx web-test-runner "src/desktop/derive-apps.test.ts" --node-resolve
 ```
 
 Expected: FAIL. `deriveApps` takes three parameters, so the fourth is ignored and no registered app is derived.
@@ -1205,7 +1208,7 @@ The `settleDiagnostics()` helper (80ms) is used for the negative case rather tha
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/app-catalogue.context.test.ts" --node-resolve
+npx web-test-runner "src/desktop/app-catalogue.context.test.ts" --node-resolve
 ```
 
 Expected: FAIL on the first test — nothing observes `umbraDesktopApp`, so the app never appears.
@@ -1338,7 +1341,7 @@ it('gives every group a unique alias and a token label', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/catalogue/groups.test.ts" --node-resolve
+npx web-test-runner "src/desktop/catalogue/groups.test.ts" --node-resolve
 ```
 
 Expected: FAIL, `games` is undefined.
@@ -1424,7 +1427,7 @@ it('renders no iframe for an element app, so nothing polls for a backoffice head
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx web-test-runner "backoffice/src/desktop/components/desktop-chrome.test.ts" --node-resolve
+npx web-test-runner "src/desktop/components/desktop-chrome.test.ts" --node-resolve
 ```
 
 Expected: FAIL. `#chromeThemeId` is never assigned, so the attribute is the empty string and `.to.be.a('string')` passes, but the second test fails on the loading overlay unless Task 3's `_loading = false` landed. If the first test fails on a null host, Task 3's `#renderBody` is not wired.
