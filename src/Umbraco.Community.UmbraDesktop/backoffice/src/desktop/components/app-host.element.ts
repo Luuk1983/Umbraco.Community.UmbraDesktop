@@ -28,8 +28,8 @@ const APP_LOAD_FAILED_FALLBACK = 'This app could not be loaded.';
  * where the app would and a theme sets those two together: taking the colour from one group and
  * the ground from another is how you get near-invisible text on a dark theme. Both fallbacks are
  * interpolated from the published contract rather than retyped (see `theme/types.ts`), and the
- * ground is `background`, not `background-color`, for the reason that contract gives: two of the
- * shipped themes make the app surface a gradient, which `background-color` refuses.
+ * ground is `background`, not `background-color`, for the reason that contract gives: a surface
+ * token is allowed to carry a gradient, which `background-color` refuses outright.
  */
 const FAILURE_STYLE = [
   'margin: 0',

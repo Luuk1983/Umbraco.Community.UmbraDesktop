@@ -110,11 +110,13 @@ export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
  * on every theme's accent, so the theme names the one that does rather than the app guessing.
  * Prefer widening this group over adding a per-theme branch to an app.
  *
- * The three `surface` tokens may carry **any valid `background` value, including a gradient**, and
- * two of the shipped themes are gradient-based. An app must therefore write
- * `background: var(--umbradesktop-app-surface)` and never `background-color:`, which accepts only a
- * colour and would drop a gradient value entirely, leaving the element unpainted. The `edge-*`,
- * `text*` and `accent*` tokens are plain colours, since each feeds a property that takes one.
+ * The three `surface` tokens may carry **any valid `background` value, including a gradient**. No
+ * shipped theme sets a gradient app surface today, but four of the five use gradients elsewhere in
+ * their chrome, so the first one to reach for it here is a question of when rather than whether. An
+ * app must therefore write `background: var(--umbradesktop-app-surface)` and never
+ * `background-color:`, which accepts only a colour and would drop a gradient value entirely,
+ * leaving the element unpainted. The `edge-*`, `text*` and `accent*` tokens are plain colours,
+ * since each feeds a property that takes one.
  *
  * See {@link UMBRADESKTOP_APP_TOKEN_FALLBACKS} for the fallback each app is expected to write.
  */

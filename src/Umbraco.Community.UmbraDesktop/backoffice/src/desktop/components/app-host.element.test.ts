@@ -53,9 +53,11 @@ it('reports a loader that throws rather than leaving an empty body', async () =>
 });
 
 /**
- * `ElementLoaderProperty` lets a manifest hand over the constructor itself rather than a module,
- * and `UmbExtensionElementInitializer` accepts both. A host that only understood the module shape
- * would fail on half the manifests Umbraco itself considers valid.
+ * A manifest's `element` is typed loosely enough to hand over the constructor itself rather than a
+ * module, so this host accepts that shape too. It is deliberately **more lenient** than Umbraco's
+ * own `loadManifestElement`, which resolves only `{ element }` or `{ default }` and yields
+ * `undefined` for a bare constructor: the cost of accepting one more shape is a line, and the cost
+ * of rejecting it is a package author's app silently failing to mount.
  */
 it('mounts a loader that resolves to a bare constructor', async () => {
   const host = await hostWith(async () => TestAppElement);
