@@ -21,6 +21,23 @@ const APP_LOAD_FAILED_TOKEN = 'umbraDesktop_appLoadFailed';
 const APP_LOAD_FAILED_FALLBACK = 'This app could not be loaded.';
 
 /**
+ * How long a loader gets to settle before the host gives up and shows the failure message.
+ *
+ * Deliberately the same twelve seconds the iframe path allows its own safety net
+ * (`window.element.ts`, the `setTimeout` in `#onIframeLoad`), because the two are the same
+ * judgement about the same user: a window has already opened, so the choice is between "still
+ * loading" and "tell them it is broken", and one shell should not run out of patience at two
+ * different moments depending on which kind of app it opened. Long enough that a cold chunk fetch
+ * on a slow connection is not called a failure, short enough that nobody sits in front of an empty
+ * window wondering.
+ *
+ * Exported so the test can shorten exactly this timer instead of waiting it out, which also pins
+ * that the number lives here. The iframe path still spells its own copy out as a literal; unifying
+ * them means touching `window.element.ts`, which is worth doing the next time that file is open.
+ */
+export const APP_LOAD_TIMEOUT_MS = 12_000;
+
+/**
  * Inline style for the failure message, because a light-DOM element has no shadow root for
  * `static styles` to land in.
  *
@@ -33,6 +50,25 @@ const APP_LOAD_FAILED_FALLBACK = 'This app could not be loaded.';
  */
 const FAILURE_STYLE = [
   'margin: 0',
+  'padding: var(--uui-size-space-5, 18px)',
+  `background: var(--umbradesktop-app-surface, ${UMBRADESKTOP_APP_TOKEN_FALLBACKS['--umbradesktop-app-surface']})`,
+  `color: var(--umbradesktop-app-text, ${UMBRADESKTOP_APP_TOKEN_FALLBACKS['--umbradesktop-app-text']})`,
+].join(';');
+
+/**
+ * Inline style for the in-flight loader, for the same no-shadow-root reason as
+ * {@link FAILURE_STYLE}.
+ *
+ * Fills the body and paints the app surface so the gap before the app arrives looks like the app's
+ * own ground rather than a hole, and centres the spinner in it. `min-height` rather than `height`
+ * because the host is a plain light-DOM element with no size of its own until something inside it
+ * has one.
+ */
+const PENDING_STYLE = [
+  'display: flex',
+  'align-items: center',
+  'justify-content: center',
+  'min-height: 100%',
   'padding: var(--uui-size-space-5, 18px)',
   `background: var(--umbradesktop-app-surface, ${UMBRADESKTOP_APP_TOKEN_FALLBACKS['--umbradesktop-app-surface']})`,
   `color: var(--umbradesktop-app-text, ${UMBRADESKTOP_APP_TOKEN_FALLBACKS['--umbradesktop-app-text']})`,
@@ -55,9 +91,27 @@ const FAILURE_STYLE = [
  * does not change `_app` leaves the app's element untouched, which is what a game with a board in
  * progress needs.
  *
- * A loader that throws is reported in place. It is the one failure mode with no other surface: the
- * manifest resolved, so the app is in the launcher and the window opened, and an empty body would
- * read as a broken desktop rather than a missing bundle.
+ * A loader that throws, resolves to no constructor, or never settles at all (see
+ * {@link APP_LOAD_TIMEOUT_MS}) is reported in place. It is the one failure mode with no other
+ * surface: the manifest resolved, so the app is in the launcher and the window opened, and an
+ * empty body would read as a broken desktop rather than a missing bundle. While the loader is in
+ * flight the body shows a spinner instead, as the iframe path does, because a dynamic import is a
+ * network hop.
+ *
+ * ## What an app author can rely on
+ *
+ * **Teardown is the browser's own.** The app's element is a child of this host, so closing the
+ * window (which removes the host) or reassigning `load` fires the app's `disconnectedCallback` —
+ * exactly once, and on a swap before the replacement's `connectedCallback`. That is the whole
+ * teardown contract: an app cancels its `requestAnimationFrame`, clears its intervals and drops
+ * its listeners there, and needs no signal from the desktop. Pinned in
+ * `app-host.element.test.ts`, since it is inferable from this shape rather than guaranteed by it,
+ * and a later move to shadow DOM could break it silently.
+ *
+ * **Minimizing does not unmount.** The window hides its frame with `?hidden` rather than tearing
+ * the body down, so a minimized game keeps running and keeps its board. An app that should idle
+ * while out of sight has to watch its own visibility; one that must keep ticking gets that for
+ * free.
  */
 @customElement('umbradesktop-app-host')
 export class UmbraDesktopAppHostElement extends UmbLitElement {
@@ -78,12 +132,36 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
   @state()
   private _failed = false;
 
+  /** Whether a loader is in flight, which puts the spinner in the body until it settles. */
+  @state()
+  private _pending = false;
+
   /**
-   * Resolves once the load has been attempted *and* its outcome is in the DOM, whether it
-   * succeeded or not. For tests: mounting is two async hops (the loader, then Lit's update), and
-   * without this a test would have to guess how many microtasks to wait.
+   * The current attempt, as {@link mountComplete} hands it out. A field rather than the getter's
+   * own promise because `willUpdate` replaces it on every loader change.
    */
-  public mounted: Promise<void> = Promise.resolve();
+  #mounting: Promise<void> = Promise.resolve();
+
+  /**
+   * Settles once the current load has been attempted *and* its outcome is in the DOM: the app
+   * mounted, or the failure message rendered. Both outcomes resolve, since a rendered message is
+   * an outcome and not an error; the only rejection is a Lit update throwing, which is a bug in
+   * this element's own `render` rather than anything the app or its loader did.
+   *
+   * A getter that awaits `updateComplete` first, so that the obvious call reads correctly:
+   * `host.load = loader; await host.mountComplete;`. The attempt itself is started from
+   * `willUpdate`, so at the moment a caller assigns `load` the promise for it does not exist yet,
+   * and returning the field directly would hand back the *previous* attempt's promise and resolve
+   * against an empty body. Awaiting Lit's update first is exactly the hop that closes that gap,
+   * and doing it here rather than in every caller is why this is not documented as a caveat.
+   *
+   * Named after `updateComplete` on purpose: it is the same kind of thing, and `mounted` read as a
+   * boolean.
+   * @returns A promise settling when the body has settled.
+   */
+  public get mountComplete(): Promise<void> {
+    return this.updateComplete.then(() => this.#mounting);
+  }
 
   /** Light DOM: the app's element is the app author's to style and inspect. */
   override createRenderRoot() {
@@ -99,7 +177,7 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
    * @param changed The properties this update is for.
    */
   override willUpdate(changed: Map<string, unknown>) {
-    if (changed.has('load')) this.mounted = this.#mount();
+    if (changed.has('load')) this.#mounting = this.#mount();
   }
 
   /**
@@ -113,42 +191,91 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
    * @returns A promise settling once the outcome, app or message, is rendered.
    */
   async #mount(): Promise<void> {
+    // Captured, so a loader that is no longer the current one can be recognised on the way back
+    // and commit nothing. Lit only calls this when `load` actually changed identity, so `this.load
+    // !== load` means precisely "superseded while in flight".
+    const load = this.load;
     // Synchronous, so a swap clears the old app in the update this is called from.
     this._app = undefined;
     this._failed = false;
-    if (this.load) {
+    this._pending = !!load;
+    if (load) {
       try {
-        const resolved = (await this.load()) as
+        const resolved = (await this.#raceTheClock(load())) as
           | { element?: CustomElementConstructor; default?: CustomElementConstructor }
           | CustomElementConstructor;
+        if (this.load !== load) return;
         // Optional chaining because a loader that resolves to nothing at all is a plausible
         // package bug (`async () => { import(…) }`, with the return forgotten), and reporting it
         // as this message rather than as a bare TypeError is the difference between a console
         // line a package author can act on and one they cannot.
         const ctor = typeof resolved === 'function' ? resolved : (resolved?.element ?? resolved?.default);
         if (typeof ctor !== 'function') throw new Error('loader resolved to no element constructor');
+        this._pending = false;
         this._app = new ctor();
       } catch (error) {
+        // Same guard on this path: a superseded attempt must not paint a failure over the app that
+        // replaced it, and a timeout arriving after a swap is exactly that case.
+        if (this.load !== load) return;
         console.error('[UmbraDesktop] app element failed to load', error);
+        this._pending = false;
         this._failed = true;
       }
     }
-    // `await host.mounted` should mean "the body is settled", not "the loader returned": the
-    // element only enters the DOM on the update these assignments schedule.
+    // `await host.mountComplete` should mean "the body is settled", not "the loader returned": the
+    // element only enters the DOM on the update these assignments schedule. Outside the `try` by
+    // design, and the one thing that can reject this promise: a throwing update is a bug in the
+    // render above rather than a load failure, and calling it one would put a "this app could not
+    // be loaded" message on screen for a bug in the host.
     await this.updateComplete;
   }
 
+  /**
+   * Race a loader against {@link APP_LOAD_TIMEOUT_MS}.
+   *
+   * A `Promise.race` rather than a `setTimeout` that flips the state directly, because the race
+   * discards the loser: once the clock has won, the loader's own resolution has nothing left
+   * awaiting it and so cannot overwrite the failure message it lost to. The timer is cleared when
+   * the loader wins so a mounted app leaves nothing pending behind it.
+   * @param loading The loader's promise, already invoked.
+   * @returns Whatever the loader resolved to.
+   * @throws If the loader itself rejects, or if it has not settled within the timeout.
+   */
+  async #raceTheClock(loading: Promise<unknown>): Promise<unknown> {
+    let timer = 0;
+    try {
+      return await Promise.race([
+        loading,
+        new Promise<never>((_resolve, reject) => {
+          timer = window.setTimeout(
+            () => reject(new Error(`loader did not settle within ${APP_LOAD_TIMEOUT_MS}ms`)),
+            APP_LOAD_TIMEOUT_MS,
+          );
+        }),
+      ]);
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+
+  /**
+   * One of three bodies: the failure message, the in-flight spinner, or the app itself.
+   *
+   * `uui-loader` is used unimported, as the iframe path in `window.element.ts` does: the element is
+   * defined by the backoffice the desktop is running inside, and importing it here would pull a
+   * second copy into this bundle.
+   * @returns The body for the current state.
+   */
   override render() {
     if (this._failed) {
       return html`<p style=${FAILURE_STYLE}>
         ${this.localize.termOrDefault(APP_LOAD_FAILED_TOKEN, APP_LOAD_FAILED_FALLBACK)}
       </p>`;
     }
+    if (this._pending) return html`<div style=${PENDING_STYLE}><uui-loader></uui-loader></div>`;
     return html`${this._app ?? nothing}`;
   }
 }
-
-export default UmbraDesktopAppHostElement;
 
 declare global {
   interface HTMLElementTagNameMap {
