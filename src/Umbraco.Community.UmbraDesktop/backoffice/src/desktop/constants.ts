@@ -1,6 +1,15 @@
 /** Alias of the UmbraDesktop backoffice section. */
 export const UMBRADESKTOP_SECTION_ALIAS = 'Umbraco.Community.UmbraDesktop.Section';
 
+/**
+ * Fallback icon for an app with no icon of its own: neither the catalogue entry nor its referenced
+ * manifest for a curated entry, nor `meta.icon` for a registered one. One constant because it is
+ * one promise to a user ("every tile has some icon"), read by both `derive-apps.ts` (catalogue
+ * fallback) and `registered-apps.ts` (registered-app normalisation) rather than typed twice and
+ * risking the two derivations disagreeing on what "no icon" renders as.
+ */
+export const UMBRADESKTOP_DEFAULT_ICON = 'icon-box';
+
 /** URL segment for the section (…/umbraco/section/<pathname>). */
 export const UMBRADESKTOP_SECTION_PATHNAME = 'umbradesktop';
 

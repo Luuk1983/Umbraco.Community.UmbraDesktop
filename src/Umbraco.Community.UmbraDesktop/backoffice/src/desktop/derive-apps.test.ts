@@ -4,6 +4,7 @@ import { UMBRADESKTOP_MORE_GROUP_ALIAS } from './constants';
 import type {
   UmbraDesktopApp,
   UmbraDesktopCatalogueEntry,
+  UmbraDesktopRegisteredApp,
   UmbraDesktopResolvedEntry,
   UmbraDesktopSectionInfo,
 } from './types';
@@ -123,4 +124,48 @@ it('carries an entry minSize through to the derived app', () => {
     SECTIONS,
   );
   expect(apps.find((a) => a.alias === 'c')!.minSize).to.deep.equal({ w: 900, h: 540 });
+});
+
+const MINESWEEPER_LOADER = async () => ({});
+
+const MINESWEEPER: UmbraDesktopRegisteredApp = {
+  alias: 'Pkg.Minesweeper',
+  name: '#pkg_minesweeper',
+  icon: 'icon-bomb',
+  element: MINESWEEPER_LOADER,
+  group: 'games',
+  weight: 10,
+};
+
+it('derives a registered app with no section gate at all', () => {
+  const apps = deriveApps([], [], [], [MINESWEEPER]);
+  const app = apps.find((a) => a.alias === 'Pkg.Minesweeper')!;
+  expect(app, 'a registered app must not need a permitted section').to.not.be.undefined;
+  expect(app.content.kind).to.equal('element');
+  expect(app.sourceSection, 'there is no section behind it').to.be.undefined;
+  expect(app.confidence).to.equal('certified');
+  expect(app.group).to.equal('games');
+});
+
+it('places registered apps ahead of the uncertified section fallback', () => {
+  const apps = deriveApps([], SECTIONS, [], [MINESWEEPER]);
+  const registeredAt = apps.findIndex((a) => a.alias === 'Pkg.Minesweeper');
+  const firstFallbackAt = apps.findIndex((a) => a.confidence === 'uncertified');
+  expect(registeredAt).to.be.lessThan(firstFallbackAt);
+});
+
+it('gives a registered app the bare chrome profile, which nothing on that path reads', () => {
+  const apps = deriveApps([], [], [], [MINESWEEPER]);
+  expect(apps[0].chromeProfile).to.equal('bare');
+});
+
+it('carries the loader through to content.element by reference, not a wrapper', () => {
+  const apps = deriveApps([], [], [], [MINESWEEPER]);
+  const app = apps.find((a) => a.alias === 'Pkg.Minesweeper')!;
+  expect(app.content.kind).to.equal('element');
+  if (app.content.kind === 'element') {
+    expect(app.content.element, 'must be the registered app loader itself, not a wrapper').to.equal(
+      MINESWEEPER_LOADER,
+    );
+  }
 });
