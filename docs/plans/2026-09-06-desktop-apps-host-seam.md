@@ -553,17 +553,16 @@ Add these two members just above `render()`:
   /**
    * The window body: a backoffice iframe, or a self-contained app element.
    *
-   * The element branch deliberately carries none of the iframe branch's machinery — no chrome
-   * injection, no loading overlay, no theme mirroring, because all three exist to manage a booting
-   * second backoffice and there is not one here. It is also why `_loading` is cleared: an element
-   * app paints as soon as it is upgraded, and leaving the overlay up would hide it until the
-   * 12-second safety net.
+   * The element branch deliberately carries none of the iframe branch's machinery: no chrome
+   * injection, no theme mirroring, no reload-in-place, because all three exist to manage a booting
+   * second backoffice and there is not one here. The app host owns its own load state, including a
+   * timeout for a dynamic import that never resolves, so this window does not put an overlay over
+   * it either.
    * @param w The window to render the body of.
    * @returns The body template.
    */
   #renderBody(w: UmbraDesktopWindow) {
     if (w.app.content.kind === 'element') {
-      this._loading = false;
       return html`<umbradesktop-app-host
         class="body"
         data-umbradesktop-theme=${this.#chromeThemeId}
@@ -605,11 +604,16 @@ Add the reload counter and the theme id beside the other private fields:
   #chromeThemeId = '';
 ```
 
-Then use the counter to force recreation, by wrapping the element in Lit's `keyed` directive. Add the import:
+Then use the counter to force recreation, by wrapping the element in Lit's `keyed` directive. Add **two** imports:
 
 ```ts
 import { keyed } from '@umbraco-cms/backoffice/external/lit';
+import '../components/app-host.element.js';
 ```
+
+The second is not optional and is not a type import. It is a **side-effect import** that registers the custom element, following the convention `desktop.element.ts` and `taskbar.element.ts` already use for the components they render. Without it nothing in the bundle imports that module, Vite tree-shakes it out, and `<umbradesktop-app-host>` is never defined.
+
+That failure is invisible to both gates: `tsc` type-checks the file because it is under `include`, and its own test file imports it directly, so `npm run build` and `npm test` both stay green. It shows up only in a browser, as a blank window body. Check the built output for the element's tag name after this task if you want certainty.
 
 and change the element branch's return to:
 
@@ -915,6 +919,16 @@ function manifest(over: Partial<ManifestUmbraDesktopApp> = {}): ManifestUmbraDes
   } as ManifestUmbraDesktopApp;
 }
 
+/**
+ * The loader must come through **by reference**, which is why the last assertion is an identity
+ * check and must stay one rather than relaxing to "is a function".
+ *
+ * `umbradesktop-app-host` remounts when its `load` property changes, and it compares by function
+ * identity. Derivation re-runs on every registry emission, so wrapping the manifest's loader in a
+ * fresh closure here would hand the host a new function each time and remount every open app: a
+ * game would lose its board because an unrelated package finished registering. Passing the
+ * manifest's own function through keeps identity stable for as long as the manifest is registered.
+ */
 it('carries alias, label, icon and the element loader through', () => {
   const [app] = normaliseRegisteredApps([
     manifest({ meta: { label: '#pkg_minesweeper', icon: 'icon-bomb', group: 'games' } }),
@@ -923,7 +937,7 @@ it('carries alias, label, icon and the element loader through', () => {
   expect(app.name).to.equal('#pkg_minesweeper');
   expect(app.icon).to.equal('icon-bomb');
   expect(app.group).to.equal('games');
-  expect(app.element).to.equal(loader);
+  expect(app.element, 'must be the manifest loader itself, not a wrapper').to.equal(loader);
 });
 
 it('defaults a missing icon to icon-box, the same fallback the catalogue uses', () => {
