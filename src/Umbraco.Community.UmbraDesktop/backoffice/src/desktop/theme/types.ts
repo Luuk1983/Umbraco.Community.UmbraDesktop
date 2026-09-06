@@ -77,9 +77,10 @@ export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
  * four chrome components, exactly, so that a token nothing reads cannot sit there as dead weight.
  * These have no reader in this package at all: their consumers ship in other packages, which is
  * what makes them a published contract rather than drift. `app-tokens.test.ts` holds them instead,
- * including the assertion that keeps a chrome-only token from ever landing in this list: nothing
- * else would notice, since a host component declaring one of these on a descendant of `.desktop`
- * would beat the palette it inherits and make it unthemeable (see the fallback doc below).
+ * including the assertion that keeps a chrome token from ever taking a name in this namespace:
+ * nothing else would notice, since a chrome component declaring `--umbradesktop-app-*` on a
+ * descendant of `.desktop` would beat the palette it inherits and make that name unthemeable for
+ * apps (see the fallback doc below).
  *
  * Purpose, one row per token:
  *
@@ -90,8 +91,8 @@ export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
  * | `--umbradesktop-app-surface-sunken` | A recessed field: the minefield well, a numeric display |
  * | `--umbradesktop-app-edge-light` | The light edge of a bevel, or a top border |
  * | `--umbradesktop-app-edge-dark` | The dark edge |
- * | `--umbradesktop-app-edge-width` | `2px` on Win98, `0` on flat themes |
- * | `--umbradesktop-app-radius` | `0` on Win98, `6px` on macOS and Win11 |
+ * | `--umbradesktop-app-edge-width` | Bevel thickness. Example values: `2px` on Win98, `0` on the flat themes |
+ * | `--umbradesktop-app-radius` | Corner rounding. Example values: `0` on Win98, `6px` on macOS and Win11 |
  * | `--umbradesktop-app-text` | Primary text |
  * | `--umbradesktop-app-text-muted` | Secondary text |
  * | `--umbradesktop-app-accent` | Selection and focus |
