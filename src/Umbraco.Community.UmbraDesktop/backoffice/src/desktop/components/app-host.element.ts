@@ -22,19 +22,6 @@ const APP_LOAD_FAILED_TOKEN = 'umbraDesktop_appLoadFailed';
 const APP_LOAD_FAILED_FALLBACK = 'This app could not be loaded.';
 
 /**
- * How long a loader gets to settle before the host gives up and shows the failure message.
- *
- * An alias for {@link UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS}, which both body kinds now read: the
- * iframe path's own safety net in `window.element.ts` is the same deadline for the same reason, and
- * the constant's doc carries that reasoning.
- *
- * Re-exported under this local name because the host's test shortens exactly this timer by name
- * rather than waiting twelve seconds out, and asserts that the delay it collapsed was the named
- * constant rather than a literal of the host's own.
- */
-export const APP_LOAD_TIMEOUT_MS = UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS;
-
-/**
  * Inline style for the failure message, because a light-DOM element has no shadow root for
  * `static styles` to land in.
  *
@@ -89,9 +76,9 @@ const PENDING_STYLE = [
  * progress needs.
  *
  * A loader that throws, resolves to no constructor, or never settles at all (see
- * {@link APP_LOAD_TIMEOUT_MS}) is reported in place. It is the one failure mode with no other
- * surface: the manifest resolved, so the app is in the launcher and the window opened, and an
- * empty body would read as a broken desktop rather than a missing bundle. While the loader is in
+ * {@link UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS}) is reported in place. It is the one failure mode with
+ * no other surface: the manifest resolved, so the app is in the launcher and the window opened, and
+ * an empty body would read as a broken desktop rather than a missing bundle. While the loader is in
  * flight the body shows a spinner instead, as the iframe path does, because a dynamic import is a
  * network hop.
  *
@@ -174,6 +161,9 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
    * @param changed The properties this update is for.
    */
   override willUpdate(changed: Map<string, unknown>) {
+    // Chained up even though neither `UmbLitElement` nor the element-api mixin defines it today:
+    // a base class gaining a `willUpdate` in an Umbraco minor would otherwise break silently.
+    super.willUpdate(changed);
     if (changed.has('load')) this.#mounting = this.#mount();
   }
 
@@ -228,7 +218,7 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
   }
 
   /**
-   * Race a loader against {@link APP_LOAD_TIMEOUT_MS}.
+   * Race a loader against {@link UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS}.
    *
    * A `Promise.race` rather than a `setTimeout` that flips the state directly, because the race
    * discards the loser: once the clock has won, the loader's own resolution has nothing left
@@ -245,8 +235,8 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
         loading,
         new Promise<never>((_resolve, reject) => {
           timer = window.setTimeout(
-            () => reject(new Error(`loader did not settle within ${APP_LOAD_TIMEOUT_MS}ms`)),
-            APP_LOAD_TIMEOUT_MS,
+            () => reject(new Error(`loader did not settle within ${UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS}ms`)),
+            UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS,
           );
         }),
       ]);

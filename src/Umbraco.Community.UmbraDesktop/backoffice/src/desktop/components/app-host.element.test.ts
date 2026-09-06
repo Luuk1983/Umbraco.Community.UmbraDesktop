@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
 import './app-host.element.js';
-import { APP_LOAD_TIMEOUT_MS } from './app-host.element.js';
+import { UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS } from '../constants.js';
 import type { UmbraDesktopAppHostElement } from './app-host.element.js';
 
 /**
@@ -144,11 +144,14 @@ it('shows a pending state while the loader is in flight', async () => {
 
 /**
  * Run a body with the host's load timeout collapsed to nothing, since the runner's own per-test
- * limit is well under {@link APP_LOAD_TIMEOUT_MS} and the alternative is waiting twelve seconds.
+ * limit is well under {@link UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS} and the alternative is waiting
+ * twelve seconds.
  *
  * Rewrites only calls whose delay is exactly that constant, which leaves Lit's own timers alone
  * and doubles as an assertion that the host schedules the documented constant rather than a
- * literal of its own.
+ * literal of its own. It matches on the *value*, so it would collapse anything else scheduling the
+ * same twelve seconds in a page that had one: `window.element.ts`'s iframe safety net is the other
+ * reader of this constant, and no test here mounts a window, but a future one should re-read this.
  * @param run The body, taking nothing and returning whatever it asserts on.
  * @returns Whatever `run` resolved to, once the real `setTimeout` is back in place.
  */
@@ -156,7 +159,7 @@ async function withCollapsedLoadTimeout<T>(run: () => Promise<T>): Promise<T> {
   const realSetTimeout = window.setTimeout;
   let scheduled = false;
   window.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
-    if (delay === APP_LOAD_TIMEOUT_MS) {
+    if (delay === UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS) {
       scheduled = true;
       delay = 0;
     }
@@ -164,7 +167,7 @@ async function withCollapsedLoadTimeout<T>(run: () => Promise<T>): Promise<T> {
   }) as typeof window.setTimeout;
   try {
     const result = await run();
-    expect(scheduled, 'the host should schedule APP_LOAD_TIMEOUT_MS, not a number of its own').to.be.true;
+    expect(scheduled, 'the host should schedule the shared body-load timeout, not a number of its own').to.be.true;
     return result;
   } finally {
     window.setTimeout = realSetTimeout;
