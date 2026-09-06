@@ -1177,6 +1177,16 @@ git commit -m "feat: derive registered apps as an ungated third pass"
 - Modify: `backoffice/src/desktop/app-catalogue.context.ts`
 - Modify: `backoffice/src/desktop/app-catalogue.context.test.ts`
 
+**Two findings inherited from Task 5's review, both landing here because this is where the impure glue lives.**
+
+**A. Report a dropped manifest through `#diagnose`.** `normaliseRegisteredApps` drops a manifest it cannot get an element out of, silently, and that was justified as "not worth a user's attention". True but beside the point: this context already has `#diagnose`, a deduplicating console-only warning held back by a quiet window, used for two neighbouring cases (an unknown `ref`, an entry that resolved to nothing). It is dev-facing, not user-facing, which is exactly the register this needs. Today a package author whose app never appears in the launcher gets no signal at all.
+
+Keep the pure function pure: have it report which aliases it dropped (return them, or expose a second pure helper), and let this context turn that into a diagnostic. Do not make the normaliser log.
+
+**B. Decide what happens when a registered alias collides with a curated one.** Registry uniqueness only holds *within* the registered set. A manifest whose alias matches a curated entry produces two apps with the same alias, and alias is what keys pinned favourites: `launcher.element.ts` resolves a pin with `.find(a => a.alias === alias)`, so whichever comes first wins. Today the pass order makes the curated entry win, which is the right precedence, but only by accident of ordering rather than by decision.
+
+Make it a decision: drop the registered app when its alias is already taken by a curated one, and diagnose it. A package cannot fix a collision it cannot see, and two tiles with one alias means a pin that silently points at the wrong app.
+
 - [ ] **Step 1: Write the failing test**
 
 Append to `backoffice/src/desktop/app-catalogue.context.test.ts`. This uses that file's existing `setup()` harness (which returns `{ registry, warnings, aliases, app, teardown }`) and its existing `settle()` helper — no new helpers, no new imports:
