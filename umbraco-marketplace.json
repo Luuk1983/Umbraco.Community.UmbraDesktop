@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "An OS-style windowed desktop for the Umbraco backoffice. Open content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side. Includes a grouped app launcher with pinnable apps, a taskbar, per-user wallpapers, and five chrome themes: the Umbraco look, a retro Umbraco 4, macOS, Windows 11 and Windows 98. Themes restyle the desktop only, never the backoffice inside a window, and adding one of your own is a folder of CSS.",
+  "Description": "An OS-style windowed desktop for the Umbraco backoffice. Open content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side. Includes a grouped app launcher with pinnable apps, a taskbar, per-user wallpapers, and five chrome themes: the Umbraco look, a retro Umbraco 4, macOS, Windows 11 and Windows 98. Themes restyle the desktop only, never the backoffice inside a window, and adding one of your own is a folder of CSS. It also adds Background Jobs, a read-only view of every scheduled job Umbraco runs behind your site (publishing, webhooks, cleanups, and any a package added) with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else, and it installs as an ordinary Settings dashboard, so you get it whether or not you use the desktop.",
   "PackageType": "Package",
   "LicenseTypes": ["Free"],
   "AuthorDetails": {
@@ -25,7 +25,10 @@
     "workspace",
     "editor tools",
     "themes",
-    "wallpapers"
+    "wallpapers",
+    "background jobs",
+    "scheduled tasks",
+    "diagnostics"
   ],
   "Screenshots": [
     {
@@ -43,6 +46,10 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-win98.png",
       "Caption": "The Windows 98 theme: grey chrome, navy title bars, and the launcher as a Start menu."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/background-jobs-viewer.png",
+      "Caption": "Background Jobs: every scheduled job Umbraco runs, grouped into distributed and recurring, with when each last ran and when it is due next."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png",
