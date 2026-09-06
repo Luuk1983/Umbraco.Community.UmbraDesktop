@@ -14,6 +14,8 @@
 
 `npm run build` regenerates `backoffice/src/desktop/settings/wallpapers.generated.ts`, which can then show as modified with an **empty** diff. That is a line-ending artifact (the generator writes LF, the repo stores CRLF), not a change. Do not commit it; `git restore` it if it appears.
 
+**A mounted `uui-loader` stalls the test runner instead of failing it.** Found while mutation-testing Task 3, and worth knowing before it costs someone an hour: a spinner left in the DOM keeps the runner's page from ever reaching idle, so the file times out at 120 seconds with "Error while running tests" rather than reporting a clean failure. It is a property of web-test-runner, not of this code. Two consequences. A test that renders a loading state must settle it before it ends, as `app-host.element.test.ts`'s pending-state case does by resolving its loader. And if a mutation you introduce produces a 120-second stall rather than a red test, suspect a stuck spinner before you suspect the runner.
+
 ---
 
 ## Findings that amend the spec
@@ -613,7 +615,7 @@ Then use the counter to force recreation, by wrapping the element in Lit's `keye
 
 ```ts
 import { keyed } from '@umbraco-cms/backoffice/external/lit';
-import '../components/app-host.element.js';
+import './app-host.element.js';
 ```
 
 The second is not optional and is not a type import. It is a **side-effect import** that registers the custom element, following the convention `desktop.element.ts` and `taskbar.element.ts` already use for the components they render. Without it nothing in the bundle imports that module, Vite tree-shakes it out, and `<umbradesktop-app-host>` is never defined.
