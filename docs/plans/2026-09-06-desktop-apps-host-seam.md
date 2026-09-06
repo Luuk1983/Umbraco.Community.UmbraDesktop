@@ -1195,6 +1195,12 @@ Keep the pure function pure: have it report which aliases it dropped (return the
 
 Make it a decision: drop the registered app when its alias is already taken by a curated one, and diagnose it. A package cannot fix a collision it cannot see, and two tiles with one alias means a pin that silently points at the wrong app.
 
+**C. Close the last hole in the loading path** (in `components/app-host.element.ts`, which is otherwise Task 4's file; it lands here because it pairs with the diagnostics above).
+
+Umbraco's `loadManifestElement` distinguishes a loader from a constructor by testing for `prototype`. A loader written as a plain `function () { return import('./game.js'); }` **has** a prototype, so it is misclassified as the constructor, `new` returns the Promise the function returns rather than an element, and Lit is handed a Promise as a child. The symptom is bizarre and gives an author nothing to work from.
+
+This is Umbraco-wide rather than something the desktop introduced, and the arrow and `async` forms every real manifest uses are unaffected, which is why the loader-contract round documented it in `isElementLoaderFunction` instead of fixing it. Close it anyway: it is a plausible authoring slip in a contract other packages write against, and the fix is to check the constructed value is really an `HTMLElement` and fail to the existing "could not be loaded" message if not, with a diagnostic saying which alias and why. A clear message beats a Promise rendered as a child.
+
 - [ ] **Step 1: Write the failing test**
 
 Append to `backoffice/src/desktop/app-catalogue.context.test.ts`. This uses that file's existing `setup()` harness (which returns `{ registry, warnings, aliases, app, teardown }`) and its existing `settle()` helper — no new helpers, no new imports:
