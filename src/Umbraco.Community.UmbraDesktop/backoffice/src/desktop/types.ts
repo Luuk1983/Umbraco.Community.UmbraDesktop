@@ -20,6 +20,13 @@ export type UmbraDesktopChromeProfile = 'full-section' | 'workspace-only' | 'bar
  * self-contained app registered by a package (see `app.extension.ts`): one custom element in the
  * body, in this document, inheriting the desktop's tokens by ordinary CSS inheritance.
  *
+ * `element` holds a *loader*, not an element: a function resolving to the constructor, or to a
+ * module exporting one. It is named `element` regardless because that is Umbraco's own vocabulary
+ * for this field, which is what {@link UmbraDesktopRegisteredApp} copies it from: `ManifestElement`
+ * calls it `element` and types it `ElementLoaderProperty`. Renaming it here to match the code that
+ * consumes it (`load`, `#mount`) would buy local consistency at the price of diverging from the
+ * manifest this whole union is derived from.
+ *
  * A union rather than an optional `url` plus an optional `element`, because that pair makes both
  * "neither" and "both" representable and neither means anything. Here the compiler finds every
  * place that has to care.

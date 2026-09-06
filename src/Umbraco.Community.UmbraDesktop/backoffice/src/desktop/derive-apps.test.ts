@@ -2,10 +2,23 @@ import { expect } from '@open-wc/testing';
 import { deriveApps } from './derive-apps';
 import { UMBRADESKTOP_MORE_GROUP_ALIAS } from './constants';
 import type {
+  UmbraDesktopApp,
   UmbraDesktopCatalogueEntry,
   UmbraDesktopResolvedEntry,
   UmbraDesktopSectionInfo,
 } from './types';
+
+/**
+ * Whether an app's body is an iframe pointing at `url`.
+ *
+ * Every app derivation produces is an iframe app, so the kind check is never the interesting half
+ * of these assertions, only the narrowing that lets the compiler see `url` at all. Doing it once
+ * here rather than inline six times is what keeps those assertions about the URL they check.
+ * @param a The derived app.
+ * @param url The URL the body is expected to point at.
+ * @returns True when the app is an iframe app at that URL.
+ */
+const iframeAt = (a: UmbraDesktopApp, url: string) => a.content.kind === 'iframe' && a.content.url === url;
 
 const SECTIONS: UmbraDesktopSectionInfo[] = [
   { alias: 'Umb.Section.Content', label: 'Content', pathname: 'content' },
@@ -32,15 +45,6 @@ it('emits a certified app whose content is an iframe pointing at the resolved UR
   expect(app.sourceSection).to.equal('Umb.Section.Content');
 });
 
-it('emits section fallbacks as iframe content too', () => {
-  const apps = deriveApps([], SECTIONS);
-  const fallback = apps.filter((a) => a.confidence === 'uncertified');
-  expect(fallback.map((a) => a.content)).to.deep.equal([
-    { kind: 'iframe', url: '/umbraco/section/content' },
-    { kind: 'iframe', url: '/umbraco/section/settings' },
-  ]);
-});
-
 it('skips an entry whose gate section is not permitted', () => {
   const apps = deriveApps(
     [resolved({ gateSectionAlias: 'Umb.Section.Media' })],
@@ -63,9 +67,7 @@ it('adds an uncertified fallback for a permitted section with no section-root en
   ]);
   expect(fallback.every((a) => a.group === UMBRADESKTOP_MORE_GROUP_ALIAS)).to.be.true;
   expect(fallback.every((a) => a.icon === 'icon-box')).to.be.true;
-  const settingsFallback = fallback.find(
-    (a) => a.content.kind === 'iframe' && a.content.url === '/umbraco/section/settings',
-  )!;
+  const settingsFallback = fallback.find((a) => iframeAt(a, '/umbraco/section/settings'))!;
   expect(settingsFallback.sourceSection).to.equal('Umb.Section.Settings');
 });
 
@@ -74,16 +76,9 @@ it('does NOT add a fallback for a section already covered by a section-root entr
     [resolved({ entry: entry({ alias: 'content' }), gateSectionAlias: 'Umb.Section.Content', url: '/umbraco/section/content', isSectionRoot: true })],
     SECTIONS,
   );
-  const contentFallback = apps.filter(
-    (a) => a.confidence === 'uncertified' && a.content.kind === 'iframe' && a.content.url === '/umbraco/section/content',
-  );
+  const contentFallback = apps.filter((a) => a.confidence === 'uncertified' && iframeAt(a, '/umbraco/section/content'));
   expect(contentFallback).to.have.length(0);
-  expect(
-    apps.some(
-      (a) =>
-        a.confidence === 'uncertified' && a.content.kind === 'iframe' && a.content.url === '/umbraco/section/settings',
-    ),
-  ).to.be.true;
+  expect(apps.some((a) => a.confidence === 'uncertified' && iframeAt(a, '/umbraco/section/settings'))).to.be.true;
 });
 
 it('still falls back a section that only has a non-root (e.g. dashboard) certified entry', () => {
@@ -92,12 +87,7 @@ it('still falls back a section that only has a non-root (e.g. dashboard) certifi
     SECTIONS,
   );
   expect(apps.some((a) => a.alias === 'welcome' && a.confidence === 'certified')).to.be.true;
-  expect(
-    apps.some(
-      (a) =>
-        a.confidence === 'uncertified' && a.content.kind === 'iframe' && a.content.url === '/umbraco/section/settings',
-    ),
-  ).to.be.true;
+  expect(apps.some((a) => a.confidence === 'uncertified' && iframeAt(a, '/umbraco/section/settings'))).to.be.true;
 });
 
 it('prefers entry overrides over inherited name/icon', () => {
@@ -122,9 +112,9 @@ it('falls back to inherited name/icon when the entry omits them', () => {
 
 it('omits fallback apps for excluded sections', () => {
   const apps = deriveApps([], SECTIONS, ['Umb.Section.Settings']);
-  expect(apps.some((a) => a.content.kind === 'iframe' && a.content.url === '/umbraco/section/settings')).to.be.false;
+  expect(apps.some((a) => iframeAt(a, '/umbraco/section/settings'))).to.be.false;
   // non-excluded permitted sections still get their fallback
-  expect(apps.some((a) => a.content.kind === 'iframe' && a.content.url === '/umbraco/section/content')).to.be.true;
+  expect(apps.some((a) => iframeAt(a, '/umbraco/section/content'))).to.be.true;
 });
 
 it('carries an entry minSize through to the derived app', () => {

@@ -36,9 +36,11 @@ export const UMBRADESKTOP_MORE_GROUP_WEIGHT = 9999;
  * see `app-host.element`), but the deadline is the same deadline.
  *
  * Long enough that a cold chunk fetch on a slow connection is not called a failure, short enough
- * that nobody sits in front of an empty window wondering. The two paths had a literal `12000` each
- * before this constant existed, which is exactly the drift "derive numbers, never type them" is
- * about: their whole justification is that they are the same number.
+ * that nobody sits in front of an empty window wondering. Before this constant existed the element
+ * path had a named, documented `APP_LOAD_TIMEOUT_MS` of its own while the iframe path in
+ * `window.element.ts` had a bare `12000`, so the same deadline was stated twice in two places with
+ * only one of them saying why. That is what "derive numbers, never type them" is about here: their
+ * whole justification is that they are the same number.
  */
 export const UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS = 12_000;
 
