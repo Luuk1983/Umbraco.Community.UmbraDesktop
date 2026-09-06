@@ -174,4 +174,19 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   // not to need the help.
   '--umbradesktop-desktop-scrim': 'transparent',
   '--umbradesktop-desktop-watermark-opacity': '0.08',
+
+  // Apps. Win98 is the theme the app token group was shaped around: `edge-width: 2px` with
+  // `radius: 0` is what makes a plain app stylesheet render as a bevelled control here and as a
+  // flat rounded one everywhere else, with no branch in the app.
+  '--umbradesktop-app-surface': WIN98_FACE,
+  '--umbradesktop-app-surface-raised': WIN98_FACE,
+  '--umbradesktop-app-surface-sunken': WIN98_WINDOW,
+  '--umbradesktop-app-edge-light': WIN98_HILIGHT,
+  '--umbradesktop-app-edge-dark': WIN98_SHADOW,
+  '--umbradesktop-app-edge-width': '2px',
+  '--umbradesktop-app-radius': '0',
+  '--umbradesktop-app-text': WIN98_TEXT,
+  '--umbradesktop-app-text-muted': WIN98_SHADOW,
+  '--umbradesktop-app-accent': WIN98_MENU_HILIGHT,
+  '--umbradesktop-app-font': WIN98_FONT,
 };

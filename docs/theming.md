@@ -126,10 +126,11 @@ documents running Umbraco's own high-contrast stylesheet whatever chrome surroun
 D13). A theme with no dark palette therefore looks the same under all three backoffice themes.
 That is a fair trade, not a bug.
 
-A palette is `Partial<Record<UmbraDesktopToken, string>>`, so **a typo is a compile error** and you
-can only set tokens the chrome actually reads. The normative list is `UMBRADESKTOP_TOKENS` in
-[`theme/types.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/types.ts) —
-53 tokens in these groups:
+A palette is `Partial<Record<UmbraDesktopPaletteToken, string>>`, so **a typo is a compile error**,
+and it covers two token groups rather than one. The normative source is two lists in
+[`theme/types.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/types.ts):
+`UMBRADESKTOP_TOKENS`, the chrome group, and `UMBRADESKTOP_APP_TOKENS`, the app group. Read those
+lists rather than a count here, which would only go stale the next time either grows.
 
 | Group | What it covers |
 |---|---|
@@ -140,6 +141,20 @@ can only set tokens the chrome actually reads. The normative list is `UMBRADESKT
 | `taskbar-*` | The bar itself: height, reserve, margin, radius, background (plus an opaque fallback), backdrop filter, top border, shadow, two text colours |
 | `start-*`, `task-*` | The buttons inside the bar: hover and active fills, and the running-window marker |
 | `launcher-*` | The panel: geometry, background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills |
+| `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent, and the UI font |
+
+The two groups are checked differently, which is why they are two lists rather than one. The
+chrome group is checked against the CSS that actually reads it, in `tokens.test.ts` — a token
+nothing reads cannot sit there as dead weight. The app group has no reader in this package at all;
+its consumers live in the other packages that ship apps, so it is a published contract instead,
+checked in `app-tokens.test.ts`. That test also holds the one asymmetry worth knowing before you
+touch a palette: every theme other than the Umbraco identity theme must set **all** of the app
+tokens, never a subset, because a chrome token's fallback lives in the component that reads it,
+but an app token's fallback lives in the app itself (`UMBRADESKTOP_APP_TOKEN_FALLBACKS`, and those
+values *are* the Umbraco look). The identity theme leans on exactly that: it answers neither group,
+which is what makes "the Umbraco theme is unchanged" a structural guarantee. Any other theme that
+answered the chrome group but not the app one would render a correct desktop around an app painted
+in the identity theme's colours.
 
 Each token is named for the CSS property it feeds, so `titlebar-border-bottom` sets a
 `border-bottom` and `window-border` sets the `border` shorthand. You never have to guess which
@@ -372,7 +387,9 @@ has shipped a green test run and a red build, and the reverse.
 
 - [ ] `npm run build` passes — a palette typo is a compile error, so this is a real check
 - [ ] `npm test` passes, including `tokens.test.ts`, which fails if you added a `--umbradesktop-*`
-      to a component without adding it to `UMBRADESKTOP_TOKENS`, or the reverse
+      to a component without adding it to `UMBRADESKTOP_TOKENS`, or the reverse, and
+      `app-tokens.test.ts`, which fails if your palette answers the chrome group but misses an app
+      token — a theme can pass the first and fail the second
 - [ ] Every launcher affordance still *works*: search, tiles, pinning, the user button, Desktop
       settings, Exit. A theme may restyle, never remove (design §1.1)
 - [ ] Your theme's `metrics` are measured and not merely derived — a `metrics.test.ts` (§4)

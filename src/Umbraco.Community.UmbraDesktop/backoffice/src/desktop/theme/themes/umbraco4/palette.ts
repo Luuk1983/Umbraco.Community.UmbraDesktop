@@ -166,4 +166,19 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   // opaque enough to read against it without dimming anything.
   '--umbradesktop-desktop-scrim': 'transparent',
   '--umbradesktop-desktop-watermark-opacity': '0.09',
+
+  // Apps. A single hairline edge rather than a two-tone bevel: Umbraco 4's controls were outlined,
+  // not chiselled, so `edge-light` is the same white it uses to lift a panel and `edge-dark` is its
+  // ordinary border colour.
+  '--umbradesktop-app-surface': U4_FACE,
+  '--umbradesktop-app-surface-raised': U4_FACE_LIT,
+  '--umbradesktop-app-surface-sunken': U4_WELL,
+  '--umbradesktop-app-edge-light': U4_HILIGHT,
+  '--umbradesktop-app-edge-dark': U4_EDGE,
+  '--umbradesktop-app-edge-width': '1px',
+  '--umbradesktop-app-radius': '2px',
+  '--umbradesktop-app-text': U4_TEXT,
+  '--umbradesktop-app-text-muted': U4_TEXT_SOFT,
+  '--umbradesktop-app-accent': U4_SELECT_LINE,
+  '--umbradesktop-app-font': U4_FONT,
 };

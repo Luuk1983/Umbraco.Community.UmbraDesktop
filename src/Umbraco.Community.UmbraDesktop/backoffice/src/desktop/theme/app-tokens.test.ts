@@ -1,5 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { UMBRADESKTOP_APP_TOKEN_FALLBACKS, UMBRADESKTOP_APP_TOKENS, UMBRADESKTOP_TOKENS } from './types.js';
+import { UMBRADESKTOP_THEMES } from './themes/index.js';
+import { UMBRADESKTOP_UMBRACO_THEME } from './themes/umbraco/index.js';
 
 /**
  * The app token group is a *published contract* with no reader inside this package — apps that
@@ -67,5 +69,44 @@ it('gives every app token exactly one fallback entry, no more and no fewer', () 
     extraFallback,
     'these fallback keys do not correspond to any entry in UMBRADESKTOP_APP_TOKENS — either the ' +
       'token was removed and the fallback is stale, or the key is misspelled',
+  ).to.deep.equal([]);
+});
+
+/**
+ * A theme that answers the chrome tokens but not the app tokens would render a correct desktop
+ * around an app painted in another theme's colours. The identity theme is the deliberate exception:
+ * its palette is empty by design, and the fallbacks an app carries *are* the Umbraco look, so
+ * requiring it to restate them here would duplicate the contract and break that guarantee.
+ */
+it('has every non-identity theme palette answer every app token', () => {
+  const missing: string[] = [];
+
+  for (const theme of UMBRADESKTOP_THEMES) {
+    // Identified by id, not by "is the palette empty". The heuristic would invert this test's
+    // intent the moment the identity theme sets a single chrome token: it would silently start
+    // demanding all eleven app tokens from the one theme that must answer none. Compared against
+    // the theme's own id rather than the literal 'umbraco' so a rename cannot leave this stale.
+    if (theme.id === UMBRADESKTOP_UMBRACO_THEME.id) continue;
+    for (const variant of ['light', 'dark'] as const) {
+      const palette = theme.palettes[variant];
+      // A theme need not ship a dark palette (Win98 and Umbraco 4 do not).
+      if (!palette) continue;
+      for (const token of UMBRADESKTOP_APP_TOKENS) {
+        if (!(token in palette)) missing.push(`${theme.id}.${variant} is missing ${token}`);
+      }
+    }
+  }
+
+  expect(
+    missing,
+    'every theme other than the identity theme must answer the whole app token group, or an app ' +
+      'will fall back to the Umbraco look on some tokens and this theme on others',
+  ).to.deep.equal([]);
+});
+
+it('keeps the Umbraco identity theme palette empty', () => {
+  expect(
+    Object.keys(UMBRADESKTOP_UMBRACO_THEME.palettes.light ?? {}),
+    'the identity theme renders today\'s look by setting nothing; app fallbacks are its values',
   ).to.deep.equal([]);
 });

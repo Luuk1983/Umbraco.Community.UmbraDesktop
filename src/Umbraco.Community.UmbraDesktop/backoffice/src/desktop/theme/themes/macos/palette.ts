@@ -77,6 +77,21 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
     'linear-gradient(155deg, #4a3f78 0%, #3b6ea5 55%, #2f8f96 100%)',
   '--umbradesktop-desktop-scrim': 'rgba(0, 0, 0, 0.1)',
   '--umbradesktop-desktop-watermark-opacity': '0.05',
+
+  // Apps. No bevel at all: `edge-width: 0` is the point, and the separation comes from the sunken
+  // surface instead. `edge-dark` matches the window border so an app that does draw a rule agrees
+  // with the frame around it.
+  '--umbradesktop-app-surface': '#ffffff',
+  '--umbradesktop-app-surface-raised': '#ffffff',
+  '--umbradesktop-app-surface-sunken': '#f2f2f7',
+  '--umbradesktop-app-edge-light': '#ffffff',
+  '--umbradesktop-app-edge-dark': 'rgba(0, 0, 0, 0.16)',
+  '--umbradesktop-app-edge-width': '0',
+  '--umbradesktop-app-radius': '6px',
+  '--umbradesktop-app-text': '#2c2c2e',
+  '--umbradesktop-app-text-muted': '#6e6e73',
+  '--umbradesktop-app-accent': '#0a84ff',
+  '--umbradesktop-app-font': MACOS_FONT,
 };
 
 /** macOS in its dark appearance, applied when the backoffice is in dark mode. */
@@ -103,4 +118,16 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   '--umbradesktop-desktop-background-color': '#1d3550',
   '--umbradesktop-desktop-background-image':
     'linear-gradient(155deg, #2a2340 0%, #1d3550 55%, #17414a 100%)',
+
+  '--umbradesktop-app-surface': '#1e1e1e',
+  '--umbradesktop-app-surface-raised': '#2c2c2e',
+  '--umbradesktop-app-surface-sunken': '#000000',
+  '--umbradesktop-app-edge-light': 'rgba(255, 255, 255, 0.10)',
+  '--umbradesktop-app-edge-dark': 'rgba(0, 0, 0, 0.60)',
+  '--umbradesktop-app-edge-width': '0',
+  '--umbradesktop-app-radius': '6px',
+  '--umbradesktop-app-text': '#f5f5f7',
+  '--umbradesktop-app-text-muted': '#98989d',
+  '--umbradesktop-app-accent': '#0a84ff',
+  '--umbradesktop-app-font': MACOS_FONT,
 };

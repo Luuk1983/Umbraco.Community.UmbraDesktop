@@ -115,6 +115,21 @@ export const W11_LIGHT: UmbraDesktopPalette = {
     'radial-gradient(120% 100% at 50% 42%, #4aa3e8 0%, #2464b4 42%, #14265e 100%)',
   '--umbradesktop-desktop-scrim': 'transparent',
   '--umbradesktop-desktop-watermark-opacity': '0.06',
+
+  // Apps. Mica's flat planes, so no bevel; the raised surface is a step *lighter* than the ground,
+  // which is the inverse of Win98 and is why an app should read these rather than assume a
+  // direction. Accent is the theme's own, so a selection matches the taskbar.
+  '--umbradesktop-app-surface': '#f3f3f3',
+  '--umbradesktop-app-surface-raised': '#fbfbfb',
+  '--umbradesktop-app-surface-sunken': '#ffffff',
+  '--umbradesktop-app-edge-light': '#ffffff',
+  '--umbradesktop-app-edge-dark': 'rgba(0, 0, 0, 0.08)',
+  '--umbradesktop-app-edge-width': '0',
+  '--umbradesktop-app-radius': '4px',
+  '--umbradesktop-app-text': '#1a1a1a',
+  '--umbradesktop-app-text-muted': '#5d5d5d',
+  '--umbradesktop-app-accent': W11_ACCENT,
+  '--umbradesktop-app-font': W11_FONT,
 };
 
 /**
@@ -157,4 +172,16 @@ export const W11_DARK: UmbraDesktopPalette = {
   '--umbradesktop-desktop-background-color': '#0b1b3a',
   '--umbradesktop-desktop-background-image':
     'radial-gradient(120% 100% at 50% 42%, #1f5c96 0%, #12356e 45%, #060f2b 100%)',
+
+  '--umbradesktop-app-surface': '#202020',
+  '--umbradesktop-app-surface-raised': '#2b2b2b',
+  '--umbradesktop-app-surface-sunken': '#1c1c1c',
+  '--umbradesktop-app-edge-light': 'rgba(255, 255, 255, 0.08)',
+  '--umbradesktop-app-edge-dark': 'rgba(0, 0, 0, 0.40)',
+  '--umbradesktop-app-edge-width': '0',
+  '--umbradesktop-app-radius': '4px',
+  '--umbradesktop-app-text': '#ffffff',
+  '--umbradesktop-app-text-muted': '#a0a0a0',
+  '--umbradesktop-app-accent': W11_ACCENT_DARK,
+  '--umbradesktop-app-font': W11_FONT,
 };
