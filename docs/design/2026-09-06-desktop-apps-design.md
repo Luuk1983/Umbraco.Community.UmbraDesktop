@@ -235,17 +235,31 @@ The proposed group, to be added to every theme:
 | `--umbradesktop-app-surface-sunken` | A recessed field: the minefield well, a numeric display |
 | `--umbradesktop-app-edge-light` | The light edge of a bevel, or a top border |
 | `--umbradesktop-app-edge-dark` | The dark edge |
-| `--umbradesktop-app-edge-width` | `2px` on Win98, `0` on flat themes |
-| `--umbradesktop-app-radius` | `0` on Win98, `6px` on macOS and Win11 |
+| `--umbradesktop-app-edge-width` | Bevel thickness: wide enough to chisel an edge on a theme whose controls are bevelled, down to zero on one whose controls are flat |
+| `--umbradesktop-app-radius` | Corner rounding: zero on a theme whose controls are square-cornered, non-zero on one whose controls are rounded |
 | `--umbradesktop-app-text` | Primary text |
 | `--umbradesktop-app-text-muted` | Secondary text |
 | `--umbradesktop-app-accent` | Selection and focus |
+| `--umbradesktop-app-accent-text` | Text and icons on an `accent` fill. A theme sets whichever of light or dark actually reads on its own accent |
 | `--umbradesktop-app-font` | The theme's UI font stack |
 
-The pair that does the real work is `edge-width` and `radius`. One app stylesheet, written once, is
-a bevelled Win98 control at width `2px` radius `0` and a flat rounded one at width `0` radius `6px`,
-with no branch anywhere in the app. That is the mechanism behind "correct under a theme it has never
-heard of" (§1.2), and the reason the group is worth designing rather than growing by accident.
+Those first two rows named values when this was written — `2px`/`0` on Win98, `6px` on macOS and
+Win11 — and the prediction was already wrong by the time the palettes landed: Win11 ships `4px`. The
+rows describe the *shape* contrast instead, since a design doc that states a number the shipped code
+contradicts is worse than one that states none.
+
+The pair that does the real work is `edge-width` and `radius`. One app stylesheet, written once, is a
+bevelled control at a non-zero width with no rounding, and a flat rounded one at zero width with a
+rounding, with no branch anywhere in the app. That is the mechanism behind "correct under a theme it
+has never heard of" (§1.2), and the reason the group is worth designing rather than growing by
+accident. `accent-text` was added for the same reason once the values existed: no single text colour
+reads on every theme's accent (white is 16:1 on Win98's navy and 2.52:1 on Umbraco 4's selection
+blue, and Win11 flips direction between its own two variants), so the alternative was the per-theme
+branch in the app that this group exists to prevent.
+
+The three `surface` tokens may carry any valid `background` value, a gradient included, so an app
+writes `background: var(--umbradesktop-app-surface)` and never `background-color:`. Two of the five
+themes are gradient-based, and `background-color` would drop such a value entirely.
 
 Deliberately absent: anything semantic to a particular app. No mine colour, no flag red. An app owns
 its own domain palette; the theme owns the surface it sits on.
@@ -254,6 +268,27 @@ Every theme answers all of them, per the existing contract: a palette is `Partia
 fallback in the component that reads it, and a theme sets only what it changes. Here the "component
 that reads it" is in another package, which is why the fallbacks must be written down as part of the
 contract rather than left implicit in whichever app happens to be first.
+
+**Open: how a raised control gets a boundary on the flat themes.** Text contrast is now an enforced
+invariant, asserted per theme and variant in `app-tokens.test.ts` at WCAG AA's 4.5:1. A control's
+*boundary* is not, and on the three flat themes it has nothing to lean on. Their `edge-width` is
+legitimately `0`, so the only separation between a raised control and the ground under it is the fill
+step between `surface-raised` and `surface`: 1.07:1 on Win11 light, 1.15:1 on Win11 dark, 1.09:1 on
+macOS light, 1.20:1 on macOS dark, 1.03:1 on Umbraco 4. WCAG 1.4.11 asks 3:1 of a control boundary,
+so every one of those is well under it, and macOS light was 1.00:1 — literally white on white — until
+the surfaces were separated.
+
+Two candidate answers, and picking between them from hex values is precisely the mistake:
+
+- Strengthen `edge-dark` and give the flat themes a non-zero `edge-width`, accepting a hairline where
+  the real OS draws none.
+- Add an elevation or shadow channel the group does not currently have, which is how macOS and
+  Windows 11 actually separate a control face from its ground.
+
+Deliberately **not** decided here. A hairline that reads as a crisp 1px rule at one zoom level is a
+grey smudge at another, and whether a 1.20:1 fill step plus a soft shadow reads as a raised control is
+not a question hex codes answer. This goes to the §9 browser checkpoint, judged against a real app —
+Minesweeper's grid is the honest test, since it is nothing but raised control faces edge to edge.
 
 ### 6.2 Branching on the theme, for apps that care
 
@@ -388,7 +423,14 @@ neither subsumes the other.
 - **App tokens** — every theme answers every entry in `UMBRADESKTOP_APP_TOKENS`, or declares the
   omission. This replaces the coverage `tokens.test.ts` gives the chrome group, which cannot apply
   here (§6.3).
-- **Browser checkpoint** — Minesweeper under all five themes, then Solitaire under all five. The
+- **App token contrast** — every theme's `text` on all three surfaces, `text-muted` on `surface`, and
+  `accent-text` on `accent`, at WCAG AA's 4.5:1, per variant, accumulated so one run reports every
+  failure. This is machine-checked because a human reading hex codes in a diff is what caught the
+  three that shipped, and that does not scale to a sixth theme.
+- **Browser checkpoint** — Minesweeper under all five themes, then Solitaire under all five. Carries
+  the open question from §6.1: whether a raised control reads as raised on the flat themes on a fill
+  step of 1.03:1 to 1.20:1, and if not, whether the answer is a hairline `edge-width` or an elevation
+  token the group does not yet have. The
   first belongs to the entertainment plan and is what promotes the token group from provisional (§1)
   to settled (§8.2); a token it turns out to need is a host minor, not a redesign. The second is the
   harder check, because a card table exercises surfaces the token group was not designed against.

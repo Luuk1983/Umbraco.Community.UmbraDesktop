@@ -24,8 +24,9 @@ theme/themes/<id>/
 ```
 
 Every file except `index.ts` is optional. The **Umbraco** theme is one `index.ts` with an empty
-palette and no sheets at all — every token carries today's value as its CSS fallback, so setting
-nothing renders exactly what shipped before theming existed. Read
+palette and no sheets at all — every chrome token carries today's value as its CSS fallback, and an
+app token's fallback is carried by the app itself (§3), so setting nothing renders exactly what
+shipped before theming existed. Read
 [`themes/umbraco/index.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/umbraco/index.ts)
 first; it is the shortest complete theme there can be.
 
@@ -130,7 +131,8 @@ A palette is `Partial<Record<UmbraDesktopPaletteToken, string>>`, so **a typo is
 and it covers two token groups rather than one. The normative source is two lists in
 [`theme/types.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/types.ts):
 `UMBRADESKTOP_TOKENS`, the chrome group, and `UMBRADESKTOP_APP_TOKENS`, the app group. Read those
-lists rather than a count here, which would only go stale the next time either grows.
+lists rather than a count here, which would only go stale the next time either grows. What each
+prefix is for:
 
 | Group | What it covers |
 |---|---|
@@ -141,7 +143,7 @@ lists rather than a count here, which would only go stale the next time either g
 | `taskbar-*` | The bar itself: height, reserve, margin, radius, background (plus an opaque fallback), backdrop filter, top border, shadow, two text colours |
 | `start-*`, `task-*` | The buttons inside the bar: hover and active fills, and the running-window marker |
 | `launcher-*` | The panel: geometry, background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills |
-| `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent, and the UI font |
+| `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent with the text that reads on it, and the UI font |
 
 The two groups are checked differently, which is why they are two lists rather than one. The
 chrome group is checked against the CSS that actually reads it, in `tokens.test.ts` — a token
@@ -159,6 +161,24 @@ in the identity theme's colours.
 Each token is named for the CSS property it feeds, so `titlebar-border-bottom` sets a
 `border-bottom` and `window-border` sets the `border` shorthand. You never have to guess which
 sides a value will reach.
+
+That rule does not settle the three `app-surface*` tokens, because `surface` is not a CSS property,
+so here is the ruling: **a surface token may carry any valid `background` value, including a
+gradient.** Two of the five shipped themes are gradient-based and there is no reason an app ground
+should be the one place they cannot be. The consequence is on the reading side, and it is in the
+contract doc comment in `types.ts` as well: an app writes
+`background: var(--umbradesktop-app-surface)` and **never** `background-color:`, which accepts only
+a colour and would drop a gradient value entirely, leaving the element unpainted. The `edge-*`,
+`text*` and `accent*` tokens are plain colours, since each feeds a property that takes one.
+
+Two more things about the app group, both because its readers are in other packages and cannot fix
+what you get wrong. `accent-text` exists so you can name the text colour that reads on *your*
+accent: white is 16:1 on Win98's navy and 2.52:1 on Umbraco 4's selection blue, so there is no value
+an app could have guessed. And the contrast of the pairs an app is entitled to rely on —
+`text` on all three surfaces, `text-muted` on `surface`, `accent-text` on `accent` — is asserted at
+WCAG AA's 4.5:1 in `app-tokens.test.ts`, per theme and per variant. If your palette lands under it
+the test names the pair and the ratio it measured. Fix the colour rather than the threshold: the
+whole point is that an app author reads these values on trust.
 
 `taskbar-reserve` deserves a note: it is how much of the bottom edge is unavailable to windows, and
 it defaults to the taskbar's own height. A floating dock must set it **higher** than its height,
