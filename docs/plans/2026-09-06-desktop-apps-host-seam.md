@@ -1414,7 +1414,27 @@ git commit -m "feat: a games group for registered apps to land in"
 
 **Files:**
 - Modify: `backoffice/src/desktop/components/window.element.ts`
-- Test: `backoffice/src/desktop/components/desktop-chrome.test.ts`
+- Modify: `backoffice/src/desktop/components/app-host.element.ts`
+- Test: `backoffice/src/desktop/components/app-host.element.test.ts` and the window's body test
+
+> **Read this before Step 1: the attribute is currently on the wrong element.**
+>
+> Task 3 stamped `data-umbradesktop-theme` on `<umbradesktop-app-host>`, following this plan's own sketch. That sketch contradicted the design it was implementing. D9 and §6.2 both say the id goes **on the app element**, and they are right: the selector the design promises an app author is
+>
+> ```css
+> :host([data-umbradesktop-theme='win98']) .cell { /* hand-tuned bevels */ }
+> ```
+>
+> `:host` matches the app's *own* element. An attribute on its parent is invisible to it. The ancestor form that *would* see it, `:host-context`, is the one D9 explicitly rejected because Firefox has never shipped it. So as it stands the attribute is unreadable by the only mechanism the design offers, and §6.2's example would silently never match.
+>
+> **So this task's real work is forwarding it one level down**, from the host onto the element the host constructs. Two requirements, and the second is the one that will bite:
+>
+> 1. The app's element must carry the attribute **before its first render**, or a Win98 app paints unstyled and then corrects itself.
+> 2. A theme change must **update the attribute in place, never remount**. The host remounts when `load` changes; if a theme switch went through that path a game would lose its board every time somebody toggled dark mode. So the host has to treat the theme id as its own reactive input and write it onto the already-mounted element, independently of the mount path.
+>
+> The window keeps stamping the host too. That costs nothing, and it is what lets an app that renders into light DOM (no shadow root, so no `:host`) still read the theme from its parent.
+>
+> Keep `#chromeThemeId` in the window as the source: Task 3 declared it unassigned for exactly this task to fill in.
 
 - [ ] **Step 1: Write the failing test**
 
