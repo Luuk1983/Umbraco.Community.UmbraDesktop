@@ -50,10 +50,14 @@ const RESTORE_DRAG_THRESHOLD = 5;
  * backoffice iframe, or one self-contained app element (see `#renderBody`). Presentational state
  * comes from the `window` property; all mutations go through the manager.
  *
- * Everything else in this file, the chrome injection, the theme mirroring and the reload-in-place,
- * belongs to the iframe kind alone, because all of it exists to manage a second booting backoffice.
- * The element kind reaches none of it, and that is by construction rather than by a flag: each of
- * those paths starts from `iframe.body`, which an element window has not got.
+ * The chrome injection, the theme mirroring and the reload-in-place belong to the iframe kind
+ * alone, because all of it exists to manage a second booting backoffice. Mostly the element kind
+ * misses them by construction rather than by a flag, since those paths start from `iframe.body`,
+ * which an element window has not got; `#onReload` and `willUpdate` are the two that do branch on
+ * `content.kind` explicitly, and they say so where they do.
+ *
+ * `.focus-catcher` is the one piece of iframe machinery an element body does reach on purpose, and
+ * its own comment in `render` explains why it is kept there.
  */
 @customElement('umbradesktop-window')
 export class UmbraDesktopWindowElement extends UmbLitElement {
@@ -204,9 +208,17 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * `render` because `render` may not write reactive state: Lit warns about it and it costs a
    * second render pass. `willUpdate` is the hook that exists for exactly this, and a write from it
    * lands in the update already in flight.
+   *
+   * The kind check is the load-bearing half, not a tidiness one: without it the overlay comes down
+   * on the first update of an *iframe* window too, which is the flash of the booting backoffice's
+   * own header that `_loading = true` exists to prevent and that `#onIframeLoad` is built to time.
+   * `window-body.test.ts` asserts both directions so dropping it fails rather than looks fine.
    * @param changed The properties this update is for.
    */
   override willUpdate(changed: Map<string, unknown>) {
+    // Chained up even though neither `UmbLitElement` nor the element-api mixin defines it today:
+    // a base class gaining a `willUpdate` in an Umbraco minor would otherwise break silently.
+    super.willUpdate(changed);
     if (changed.has('window') && this.window?.app.content.kind === 'element') this._loading = false;
   }
 
@@ -425,6 +437,14 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (!w) return null;
     const min = w.app.minSize ?? UMBRADESKTOP_WINDOW_MIN_SIZE;
     const maximized = w.state === 'maximized';
+    // One button, two meanings, so the label has to say which. On the iframe path a reload
+    // re-fetches and keeps whatever route the user navigated to inside the frame, so nothing of
+    // theirs is lost; on the element path the instance is discarded, and for a game that is the
+    // board. Naming both "Reload" promised a refresh to someone four minutes into Minesweeper.
+    // "Restart" rather than "New game" because the shell cannot know the app is a game: all it
+    // knows is that this kind starts over. The button stays unguarded either way, since F5 costs a
+    // browser game its state too and people understand that.
+    const reloadLabel = w.app.content.kind === 'element' ? 'Restart' : 'Reload';
     const style = maximized
       ? `left:0; top:0; width:100%; height:100%; z-index:${w.z};`
       : `left:${w.rect.x}px; top:${w.rect.y}px; width:${w.rect.w}px; height:${w.rect.h}px; z-index:${w.z}; min-width:${min.w}px; min-height:${min.h}px;`;
@@ -450,8 +470,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
             @dblclick=${(e: MouseEvent) => e.stopPropagation()}>
             <button
               class="ctrl ctrl-reload ${this._loading ? 'busy' : ''}"
-              title="Reload"
-              aria-label="Reload"
+              title=${reloadLabel}
+              aria-label=${reloadLabel}
               @click=${() => this.#onReload()}>
               ${this.#controlGlyph('reload')}
             </button>
@@ -482,6 +502,14 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         </div>
         <div class="bodywrap">
           ${this.#renderBody(w)}
+          <!-- Kept for both body kinds, deliberately. It exists because an inactive iframe
+               swallows the pointer event that should have focused its window, so the catcher takes
+               the click instead. An element body needs no such help: a click on it bubbles to the
+               frame's own '@pointerdown'. Leaving the catcher up anyway costs an inactive element
+               window its first click, and that is the intended trade: click-to-focus then act is
+               what every OS window does, and a stray click landing on a card or a mine in a window
+               the user was not looking at is the worse outcome. 'window-body.test.ts' pins it so
+               the catcher cannot quietly become iframe-only. -->
           ${!w.active
             ? html`<div class="focus-catcher" @pointerdown=${this.#onFocus}></div>`
             : ''}

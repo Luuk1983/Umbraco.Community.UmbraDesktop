@@ -11,6 +11,10 @@ import type { UmbraDesktopApp, UmbraDesktopAppContent, UmbraDesktopWindow } from
  * `injectChromeStyles` poll a game for ten seconds looking for a header it does not have. Both
  * failures are invisible in a screenshot of a working game, which is why the absence of the other
  * kind is asserted rather than assumed from the presence of the right one.
+ *
+ * The overlay is the exception and gets asserted in both directions, because it is the one piece of
+ * shared state where the *iframe* side is the one that breaks: a guard dropped from `willUpdate`
+ * clears it for every window, and only a positive assertion on an iframe body catches that.
  */
 
 /** A trivial app element, standing in for a game. */
@@ -56,9 +60,11 @@ function app(content: UmbraDesktopAppContent): UmbraDesktopApp {
  * awaits a `nextFrame()` that never resolves in the backgrounded pages this runner uses when it
  * has several files in flight.
  * @param content What the window's body should be.
+ * @param over Window state to override, for the cases that are about the frame rather than the
+ * body: `active: false` is the only one so far, and it is what puts the focus catcher on screen.
  * @returns The mounted window element, and a dispose to take it off the page again.
  */
-async function mountWindow(content: UmbraDesktopAppContent) {
+async function mountWindow(content: UmbraDesktopAppContent, over: Partial<UmbraDesktopWindow> = {}) {
   const element = document.createElement('umbradesktop-window') as UmbraDesktopWindowElement;
   const state: UmbraDesktopWindow = {
     id: 'w1',
@@ -67,6 +73,7 @@ async function mountWindow(content: UmbraDesktopAppContent) {
     z: 1,
     active: true,
     state: 'normal',
+    ...over,
   };
   element.window = state;
   document.body.appendChild(element);
@@ -145,6 +152,68 @@ it('renders an iframe body as an iframe, with no app host beside it', async () =
       win.root.querySelector('umbradesktop-app-host'),
       'no app host: a deep-linked backoffice has no element to mount',
     ).to.equal(null);
+    // The positive half of the overlay pair above. Without it, dropping the `content.kind` check
+    // from `willUpdate` clears `_loading` on every window's first update and the suite stays green
+    // while the booting backoffice's own header flashes into view on every iframe window.
+    expect(
+      win.root.querySelector('.loading'),
+      'an iframe body keeps the overlay up until the chrome is stripped',
+    ).to.not.equal(null);
+  } finally {
+    win.dispose();
+  }
+});
+
+/**
+ * The reload button does two different things and used to claim it did one.
+ *
+ * On the iframe path it re-fetches and, same-origin, keeps whatever route the user navigated to
+ * inside the frame. On the element path it discards the instance, which for a game is the board,
+ * with no confirm and no undo. The button stays unguarded, since F5 costs a browser game its state
+ * too, but a shared "Reload" promised a refresh to someone four minutes into Minesweeper.
+ */
+it('labels the reload control for what it costs: Reload for an iframe, Restart for an element', async () => {
+  const frame = await mountWindow({ kind: 'iframe', url: 'about:blank' });
+  try {
+    const ctrl = frame.root.querySelector('.ctrl-reload')!;
+    expect(ctrl.getAttribute('title'), 'an iframe reload keeps the route and loses nothing').to.equal('Reload');
+    expect(ctrl.getAttribute('aria-label')).to.equal('Reload');
+  } finally {
+    frame.dispose();
+  }
+
+  const el = await mountWindow({ kind: 'element', element: loadTestApp });
+  try {
+    await settleHost(el.root);
+    const ctrl = el.root.querySelector('.ctrl-reload')!;
+    // "Restart" and not "New game": the shell cannot know the app is a game, only that this kind
+    // starts over.
+    expect(ctrl.getAttribute('title'), 'an element reload throws the instance away').to.equal('Restart');
+    expect(ctrl.getAttribute('aria-label')).to.equal('Restart');
+  } finally {
+    el.dispose();
+  }
+});
+
+/**
+ * The focus catcher covers an element body too, and that is the decision rather than an oversight.
+ *
+ * It exists because an inactive iframe swallows the pointer event that should have focused its
+ * window. An element body needs no such help, so leaving the catcher up costs an inactive game its
+ * first click. Kept anyway: click-to-focus then act is what every OS window does, and a stray
+ * click landing on a mine in a window the user was not looking at is the worse outcome. Pinned
+ * here so the catcher cannot quietly become iframe-only on the grounds that it is iframe
+ * machinery.
+ */
+it('covers an inactive element body with the focus catcher, so the first click only focuses', async () => {
+  const win = await mountWindow({ kind: 'element', element: loadTestApp }, { active: false });
+  try {
+    await settleHost(win.root);
+    expect(
+      win.root.querySelector('.focus-catcher'),
+      'an inactive element window is click-to-focus, like every other window',
+    ).to.not.equal(null);
+    expect(win.root.querySelector('umbradesktop-app-host'), 'and the app is mounted beneath it').to.not.equal(null);
   } finally {
     win.dispose();
   }
