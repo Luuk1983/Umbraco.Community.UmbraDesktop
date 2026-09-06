@@ -37,6 +37,14 @@
       "Caption": "The launcher: your pinned apps at the top, everything else grouped by what it does."
     },
     {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-macos.png",
+      "Caption": "The macOS theme: traffic lights on every title bar, a floating dock, and the backoffice in dark mode."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-win98.png",
+      "Caption": "The Windows 98 theme: grey chrome, navy title bars, and the launcher as a Start menu."
+    },
+    {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png",
       "Caption": "The way in: the desktop icon in the backoffice header, between Help and your avatar."
     }

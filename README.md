@@ -101,6 +101,10 @@ already know. Five ship today:
 - **Windows 98**. Grey everywhere, double bevels, square corners, a navy title bar, and the
   launcher as a Start menu.
 
+![The macOS theme: the same content editor and media library windows, now with traffic lights at the left of each title bar, rounded corners, and a floating dock centred along the bottom of the screen.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-macos.png)
+
+![The Windows 98 theme: the same two windows with grey frames and navy title bars, a Start menu open on the left listing the whole app catalogue by group, and a taskbar button for each open window.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-win98.png)
+
 Your choice applies immediately and is remembered per user, in that browser. Themes follow the
 backoffice's own Light and Dark settings; under High contrast a theme uses its darkest colours,
 while window content switches to Umbraco's real high-contrast styling. Umbraco 4 and Windows 98
