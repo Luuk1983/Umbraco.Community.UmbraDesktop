@@ -129,6 +129,10 @@ export const W11_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-app-text': '#1a1a1a',
   '--umbradesktop-app-text-muted': '#5d5d5d',
   '--umbradesktop-app-accent': W11_ACCENT,
+  // White on the default accent, at 4.53:1. This theme is the clearest demonstration of why the
+  // token cannot be one value for everyone: the dark variant below flips it, because its accent is
+  // a light cyan rather than this blue.
+  '--umbradesktop-app-accent-text': '#ffffff',
   '--umbradesktop-app-font': W11_FONT,
 };
 
@@ -173,15 +177,25 @@ export const W11_DARK: UmbraDesktopPalette = {
   '--umbradesktop-desktop-background-image':
     'radial-gradient(120% 100% at 50% 42%, #1f5c96 0%, #12356e 45%, #060f2b 100%)',
 
+  // Apps. Only the values that actually change are restated; `edge-width`, `radius` and `font` are
+  // geometry and typography rather than colour, so the spread above is already correct for them.
+  //
+  // One piece of reasoning inverts, and it is the sunken surface. In light mode a Win11 well is a
+  // step *lighter* than the ground it sits in — a white text field on a Mica grey — because light
+  // is what a recess in a bright interface is filled with. In dark mode that same logic makes it
+  // darker: brightening a recess on a near-black ground would read as a raised panel, not a well.
+  // The raised surface keeps its direction, one step lighter, in both. An app that assumed either
+  // token was always the brighter of the two would be wrong in one variant.
   '--umbradesktop-app-surface': '#202020',
   '--umbradesktop-app-surface-raised': '#2b2b2b',
   '--umbradesktop-app-surface-sunken': '#1c1c1c',
   '--umbradesktop-app-edge-light': 'rgba(255, 255, 255, 0.08)',
   '--umbradesktop-app-edge-dark': 'rgba(0, 0, 0, 0.40)',
-  '--umbradesktop-app-edge-width': '0',
-  '--umbradesktop-app-radius': '4px',
   '--umbradesktop-app-text': '#ffffff',
   '--umbradesktop-app-text-muted': '#a0a0a0',
   '--umbradesktop-app-accent': W11_ACCENT_DARK,
-  '--umbradesktop-app-font': W11_FONT,
+  // The accent flips to a light cyan here, so its text has to flip with it: white on that cyan is
+  // 2.01:1, while this near-black is 8.59:1. The `#1b1b1b` is Win11's own dark-mode-on-accent ink
+  // rather than pure black, which reads slightly hard against a saturated fill.
+  '--umbradesktop-app-accent-text': '#1b1b1b',
 };

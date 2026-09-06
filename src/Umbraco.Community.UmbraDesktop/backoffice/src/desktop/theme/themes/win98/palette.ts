@@ -42,6 +42,24 @@ export const WIN98_TEXT = '#000000';
 export const WIN98_WINDOW = '#ffffff';
 
 /**
+ * Muted body text, and the one colour in this file that is **not** what Windows 98 shipped.
+ *
+ * Windows' own `COLOR_GRAYTEXT` was `#808080`, the same value as `COLOR_3DSHADOW`. On
+ * `COLOR_3DFACE` that is 2.17:1, and on `COLOR_WINDOW` 3.95:1 — both under WCAG AA's 4.5:1 for
+ * body text. The authentic look was never really that pair on its own: Windows drew disabled text
+ * as an engraved pair, the grey offset by a white shadow one pixel down and right, and the notch
+ * that produces is what made it legible. This contract is one colour per token and cannot express
+ * a second offset layer, so the honest option is a darker grey. `#4d4d4d` is 4.65:1 on the face
+ * and 8.45:1 on the window, still unmistakably a dimmed grey next to `WIN98_TEXT`'s black.
+ *
+ * It is a separate constant rather than a changed {@link WIN98_SHADOW} deliberately. Reusing the
+ * bevel colour coupled body text to the inner shaded edge of every raised control, so tuning a
+ * bevel would have silently moved the readability of an app's secondary text. The bevel keeps its
+ * authentic `#808080`, because a bevel is decoration and not something anybody has to read.
+ */
+export const WIN98_GRAY_TEXT = '#4d4d4d';
+
+/**
  * `COLOR_ACTIVECAPTION` to `COLOR_GRADIENTACTIVECAPTION`. Windows 98 turned the gradient caption
  * on by default, which is the single clearest tell that this is 98 rather than 95.
  */
@@ -186,7 +204,11 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-app-edge-width': '2px',
   '--umbradesktop-app-radius': '0',
   '--umbradesktop-app-text': WIN98_TEXT,
-  '--umbradesktop-app-text-muted': WIN98_SHADOW,
+  // Not `WIN98_SHADOW`, despite Windows using one value for both: see {@link WIN98_GRAY_TEXT}.
+  '--umbradesktop-app-text-muted': WIN98_GRAY_TEXT,
   '--umbradesktop-app-accent': WIN98_MENU_HILIGHT,
+  // `COLOR_HIGHLIGHTTEXT` is literally the answer this token asks for: the colour Windows itself
+  // wrote on `COLOR_HIGHLIGHT`. White on that navy is 16:1, the widest margin of any theme here.
+  '--umbradesktop-app-accent-text': WIN98_MENU_HILIGHT_TEXT,
   '--umbradesktop-app-font': WIN98_FONT,
 };

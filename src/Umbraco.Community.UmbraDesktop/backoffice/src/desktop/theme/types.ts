@@ -91,16 +91,30 @@ export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
  * | `--umbradesktop-app-surface-sunken` | A recessed field: the minefield well, a numeric display |
  * | `--umbradesktop-app-edge-light` | The light edge of a bevel, or a top border |
  * | `--umbradesktop-app-edge-dark` | The dark edge |
- * | `--umbradesktop-app-edge-width` | Bevel thickness. Example values: `2px` on Win98, `0` on the flat themes |
- * | `--umbradesktop-app-radius` | Corner rounding. Example values: `0` on Win98, `6px` on macOS and Win11 |
+ * | `--umbradesktop-app-edge-width` | Bevel thickness. Wide enough to chisel an edge on a theme whose controls are bevelled, down to zero on one whose controls are flat |
+ * | `--umbradesktop-app-radius` | Corner rounding. Zero on a theme whose controls are square-cornered, non-zero on one whose controls are rounded |
  * | `--umbradesktop-app-text` | Primary text |
  * | `--umbradesktop-app-text-muted` | Secondary text |
  * | `--umbradesktop-app-accent` | Selection and focus |
+ * | `--umbradesktop-app-accent-text` | Text and icons on an `accent` fill. A theme sets whichever of light or dark actually reads on its own accent |
  * | `--umbradesktop-app-font` | The theme's UI font stack |
  *
- * `edge-width` and `radius` are the pair that lets one app stylesheet be both a bevelled Win98
- * control (width `2px`, radius `0`) and a flat rounded one (width `0`, radius `6px`) with no branch
- * in the app. Prefer widening this group over adding a per-theme branch to an app.
+ * No row states a shipped value, deliberately: this file is the normative contract, so a number
+ * here that a palette later contradicts is worse than no number at all. It said `radius` was `6px`
+ * "on macOS and Win11" while Win11 shipped `4px`, which is exactly the drift the rows above are now
+ * written to be incapable of.
+ *
+ * `edge-width` and `radius` are the pair that lets one app stylesheet be both a bevelled control
+ * (a non-zero width with no rounding) and a flat rounded one (zero width with a rounding) with no
+ * branch in the app. `accent-text` is the same idea applied to a fill: no single text colour reads
+ * on every theme's accent, so the theme names the one that does rather than the app guessing.
+ * Prefer widening this group over adding a per-theme branch to an app.
+ *
+ * The three `surface` tokens may carry **any valid `background` value, including a gradient**, and
+ * two of the shipped themes are gradient-based. An app must therefore write
+ * `background: var(--umbradesktop-app-surface)` and never `background-color:`, which accepts only a
+ * colour and would drop a gradient value entirely, leaving the element unpainted. The `edge-*`,
+ * `text*` and `accent*` tokens are plain colours, since each feeds a property that takes one.
  *
  * See {@link UMBRADESKTOP_APP_TOKEN_FALLBACKS} for the fallback each app is expected to write.
  */
@@ -115,6 +129,7 @@ export const UMBRADESKTOP_APP_TOKENS = [
   '--umbradesktop-app-text',
   '--umbradesktop-app-text-muted',
   '--umbradesktop-app-accent',
+  '--umbradesktop-app-accent-text',
   '--umbradesktop-app-font',
 ] as const;
 
@@ -148,6 +163,10 @@ export const UMBRADESKTOP_APP_TOKEN_FALLBACKS = {
   '--umbradesktop-app-text': 'var(--uui-color-text)',
   '--umbradesktop-app-text-muted': 'var(--uui-color-text-alt)',
   '--umbradesktop-app-accent': 'var(--uui-color-selected)',
+  // The Umbraco look puts white-ish text on its selected blue, so the fallback is the surface
+  // colour rather than a bare `#fff`: it tracks the backoffice's own light/dark setting the way
+  // every other value here does.
+  '--umbradesktop-app-accent-text': 'var(--uui-color-surface)',
   '--umbradesktop-app-font': 'inherit',
 } as const satisfies Record<UmbraDesktopAppToken, string>;
 

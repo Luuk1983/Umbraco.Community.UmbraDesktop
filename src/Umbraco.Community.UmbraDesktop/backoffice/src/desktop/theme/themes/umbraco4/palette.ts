@@ -170,7 +170,12 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   // Apps. A single hairline edge rather than a two-tone bevel: Umbraco 4's controls were outlined,
   // not chiselled, so `edge-light` is the same white it uses to lift a panel and `edge-dark` is its
   // ordinary border colour.
-  '--umbradesktop-app-surface': U4_FACE,
+  //
+  // `U4_PANEL`, not `U4_FACE`. This token is the app's own panel ground, and every other panel
+  // ground in this theme — the window background, the launcher, its cards — is `U4_PANEL`, the
+  // half-step lighter grey v4 laid a pane's contents on. `U4_FACE` is the chrome grey of a toolbar
+  // or a button, so using it here made the app panel *darker* than the window it sits inside.
+  '--umbradesktop-app-surface': U4_PANEL,
   '--umbradesktop-app-surface-raised': U4_FACE_LIT,
   '--umbradesktop-app-surface-sunken': U4_WELL,
   '--umbradesktop-app-edge-light': U4_HILIGHT,
@@ -180,5 +185,9 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-app-text': U4_TEXT,
   '--umbradesktop-app-text-muted': U4_TEXT_SOFT,
   '--umbradesktop-app-accent': U4_SELECT_LINE,
+  // The accent is the *border* of a v4 selection, a mid blue, and white on it is only 2.52:1. This
+  // theme is the reason the token exists at all: body text reads on it at 5.67:1, so the dark
+  // answer is the right one here and the light answer is the right one on Win98's navy.
+  '--umbradesktop-app-accent-text': U4_TEXT,
   '--umbradesktop-app-font': U4_FONT,
 };
