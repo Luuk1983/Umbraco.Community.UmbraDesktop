@@ -983,7 +983,7 @@ it('carries sizes, weight and allowMultiple through', () => {
 
 it('drops a manifest with no element loader rather than opening an empty window', () => {
   const apps = normaliseRegisteredApps([
-    manifest({ element: undefined as unknown as () => Promise<unknown> }),
+    manifest({ element: undefined as unknown as ManifestUmbraDesktopApp['element'] }),
   ]);
   expect(apps).to.deep.equal([]);
 });
@@ -1094,6 +1094,8 @@ npx web-test-runner "src/desktop/derive-apps.test.ts" --node-resolve
 ```
 
 Expected: FAIL. `deriveApps` takes three parameters, so the fourth is ignored and no registered app is derived.
+
+**A hand-written function type will not do here.** Casting the missing loader to `() => Promise<unknown>` type-checks in the test runner and fails the build: esbuild does not type-check, and `tsc` rejects it because `Promise<unknown>` is not assignable to Umbraco's `ElementLoaderProperty` union. Cast to `ManifestUmbraDesktopApp['element']` instead, which is the same runtime value and cannot drift from whatever Umbraco's type becomes. This is the "neither command subsumes the other" rule earning its keep, so run both.
 
 - [ ] **Step 7: Add the third pass**
 
