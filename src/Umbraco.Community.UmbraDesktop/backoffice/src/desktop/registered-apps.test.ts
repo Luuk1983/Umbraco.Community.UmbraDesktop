@@ -1,5 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { normaliseRegisteredApps } from './registered-apps';
+import { deriveApps } from './derive-apps';
+import { groupApps } from './group-apps';
 import type { ManifestUmbraDesktopApp } from './app.extension';
 
 const loader = async () => ({});
@@ -51,7 +53,7 @@ it('falls back to the manifest name, then the alias, when meta has no label', ()
   expect(bare.name).to.equal('Pkg.Minesweeper');
 });
 
-it('carries sizes, weight and allowMultiple through', () => {
+it('carries sizes and allowMultiple through, and inverts the weight', () => {
   const [app] = normaliseRegisteredApps([
     manifest({
       weight: 20,
@@ -63,10 +65,39 @@ it('carries sizes, weight and allowMultiple through', () => {
       },
     }),
   ]);
-  expect(app.weight).to.equal(20);
+  // Negated, not copied: see the ordering case below for why, and `registered-apps.ts` for the
+  // full reasoning. A test that expected 20 here would be pinning the bug.
+  expect(app.weight).to.equal(-20);
   expect(app.defaultSize).to.deep.equal({ w: 360, h: 460 });
   expect(app.minSize).to.deep.equal({ w: 320, h: 400 });
   expect(app.allowMultiple).to.be.false;
+});
+
+/** No weight at all must stay absent rather than becoming `-0`, so the launcher's own default wins. */
+it('leaves an unset weight unset', () => {
+  const [app] = normaliseRegisteredApps([manifest()]);
+  expect(app.weight).to.be.undefined;
+});
+
+/**
+ * The whole reason the weight is negated, asserted end to end because that is the only level the
+ * claim can be made at: normalise, derive, group, and read the launcher's order.
+ *
+ * A package author writes `weight: 1000` to mean "put me first", because that is what root `weight`
+ * means everywhere else in Umbraco: the registry sorts manifests with
+ * `(b.weight || 0) - (a.weight || 0)`, higher first. The desktop's internal scale runs the other
+ * way (`group-apps.ts` sorts ascending, matching the curated catalogue's own numbers), so carrying
+ * the manifest's number across unchanged put that author last in their group with nothing to warn
+ * them. Honouring Umbraco's meaning is the only choice that is not a trap, so the inversion happens
+ * once, here, at the boundary between the two scales.
+ */
+it('puts the higher manifest weight first in the launcher, as Umbraco means it', () => {
+  const registered = normaliseRegisteredApps([
+    manifest({ alias: 'Pkg.Second', weight: 10, meta: { label: 'second', group: 'games' } }),
+    manifest({ alias: 'Pkg.First', weight: 1000, meta: { label: 'first', group: 'games' } }),
+  ]);
+  const [games] = groupApps(deriveApps([], [], [], registered), [{ alias: 'games', label: '#games' }]);
+  expect(games.apps.map((a) => a.alias)).to.deep.equal(['Pkg.First', 'Pkg.Second']);
 });
 
 it('drops a manifest with no element loader rather than opening an empty window', () => {
@@ -74,4 +105,38 @@ it('drops a manifest with no element loader rather than opening an empty window'
     manifest({ element: undefined as unknown as ManifestUmbraDesktopApp['element'] }),
   ]);
   expect(apps).to.deep.equal([]);
+});
+
+/**
+ * A **module path string** is a first-class form of `element`, and the only one a static
+ * `umbraco-package.json` can express: a JSON file cannot hold a function. It used to be dropped
+ * here by a `typeof manifest.element !== 'function'` guard, which silently excluded precisely the
+ * packages this feature exists for, so the string has to survive normalisation untouched for
+ * Umbraco's resolver to import later.
+ */
+it('keeps a manifest whose element is a module path string', () => {
+  const [app] = normaliseRegisteredApps([manifest({ element: '/App_Plugins/pkg/game.js' })]);
+  expect(app, 'a path is a legal element, not a missing one').to.not.be.undefined;
+  expect(app.element).to.equal('/App_Plugins/pkg/game.js');
+});
+
+/**
+ * A **class constructor** is legal too, and used to be the worse of the two failures: it passed the
+ * `typeof === 'function'` guard, so the app reached the launcher typed as a loader and the host then
+ * *called* it, turning `TypeError: Class constructor cannot be invoked without 'new'` into a tile
+ * that permanently said the app could not be loaded. Nothing here has to tell the forms apart any
+ * more; it passes the value on and `loadManifestElement` decides.
+ */
+it('keeps a manifest whose element is a class constructor', () => {
+  class GameElement extends HTMLElement {}
+  const [app] = normaliseRegisteredApps([manifest({ element: GameElement })]);
+  expect(app.element).to.equal(GameElement);
+});
+
+/**
+ * The guard rejects only what genuinely cannot yield an element. An empty string is that: it is a
+ * path to nothing, and `import('')` fails at a point where the only surface left is a broken tile.
+ */
+it('drops a manifest whose element is an empty string', () => {
+  expect(normaliseRegisteredApps([manifest({ element: '' })])).to.deep.equal([]);
 });

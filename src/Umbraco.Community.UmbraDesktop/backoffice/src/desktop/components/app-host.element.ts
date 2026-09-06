@@ -1,7 +1,13 @@
 import { UMBRADESKTOP_APP_TOKEN_FALLBACKS } from '../theme/types.js';
 import { UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS } from '../constants.js';
 import { customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
+import { loadManifestElement } from '@umbraco-cms/backoffice/extension-api';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+import type {
+  ClassConstructor,
+  ElementLoaderExports,
+  ElementLoaderProperty,
+} from '@umbraco-cms/backoffice/extension-api';
 
 /**
  * Localization token for the load-failure message. A token rather than a literal because the
@@ -59,6 +65,30 @@ const PENDING_STYLE = [
 ].join(';');
 
 /**
+ * Whether an `element` value is a loader function rather than a class constructor.
+ *
+ * The two are indistinguishable to `typeof`, which is the trap this exists to avoid: treating a
+ * constructor as a loader calls it, and `TypeError: Class constructor cannot be invoked without
+ * 'new'` is what the user then reads as "this app could not be loaded". The `prototype` test is
+ * Umbraco's own, copied deliberately from `loadManifestElement` so the two agree on every input:
+ * class declarations and `function` expressions carry a `prototype`, arrow functions and `async`
+ * functions do not.
+ *
+ * Narrow rather than general: the only caller needs to know whether it may safely wrap the value in
+ * an observing closure, and that is exactly the loader case.
+ * @param value The manifest's `element` value, in any of its forms.
+ * @returns True when calling it is the way to get at the element.
+ */
+function isElementLoaderFunction(
+  value: ElementLoaderProperty,
+): value is () => Promise<ElementLoaderExports> {
+  // Cast because neither arm of the union that `typeof` leaves declares `prototype`: TypeScript
+  // models call and construct signatures without it, so the property that tells them apart at
+  // runtime is invisible at compile time.
+  return typeof value === 'function' && !(value as { prototype?: unknown }).prototype;
+}
+
+/**
  * Mounts a self-contained app's element inside a window body.
  *
  * Renders into the **light DOM** (`createRenderRoot` returns `this`) rather than a shadow root, on
@@ -99,9 +129,17 @@ const PENDING_STYLE = [
  */
 @customElement('umbradesktop-app-host')
 export class UmbraDesktopAppHostElement extends UmbLitElement {
-  /** The manifest's element loader. Set by the window from the app's `content`. */
+  /**
+   * The manifest's `element` value, set by the window from the app's `content`.
+   *
+   * Umbraco's own `ElementLoaderProperty`, not the loader-function arm of it: a module path string,
+   * a loader, an imported module object and a bare constructor are all legal in a manifest, and
+   * typing this as the one arm the first implementation handled did not make the others go away, it
+   * only meant they arrived as a runtime error. Resolution is `loadManifestElement`'s (see
+   * `#mount` below), so this property's job is to carry the value untouched.
+   */
   @property({ attribute: false })
-  load?: () => Promise<unknown>;
+  load?: ElementLoaderProperty;
 
   /**
    * The app's element once constructed, rendered as a template value.
@@ -168,13 +206,14 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
   }
 
   /**
-   * Resolve the loader and hand Lit the element it yields.
+   * Resolve the manifest's `element` value and hand Lit the element it yields.
    *
-   * Accepts either shape an Umbraco element loader can resolve to: the module (whose `element` or
-   * `default` export is the class) or the constructor itself, both of which
-   * `ElementLoaderProperty` permits and `UmbExtensionElementInitializer` accepts. Registering the
-   * custom element is the app's own job, done by its module's side effects, so this only has to
-   * construct it.
+   * The resolving is `loadManifestElement`'s, not this method's: it is the function Umbraco's own
+   * extension initializers use, and it is the only code that handles all four forms an `element`
+   * may take. This used to unwrap the shapes by hand, which worked for a loader resolving to a
+   * module and silently failed for the other two thirds of the union. Registering the custom
+   * element is the app's own job, done by its module's side effects, so this only has to construct
+   * what comes back.
    * @returns A promise settling once the outcome, app or message, is rendered.
    */
   async #mount(): Promise<void> {
@@ -188,16 +227,15 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
     this._pending = !!load;
     if (load) {
       try {
-        const resolved = (await this.#raceTheClock(load())) as
-          | { element?: CustomElementConstructor; default?: CustomElementConstructor }
-          | CustomElementConstructor;
+        const ctor = await this.#raceTheClock(this.#resolveConstructor(load));
         if (this.load !== load) return;
-        // Optional chaining because a loader that resolves to nothing at all is a plausible
-        // package bug (`async () => { import(…) }`, with the return forgotten), and reporting it
-        // as this message rather than as a bare TypeError is the difference between a console
-        // line a package author can act on and one they cannot.
-        const ctor = typeof resolved === 'function' ? resolved : (resolved?.element ?? resolved?.default);
-        if (typeof ctor !== 'function') throw new Error('loader resolved to no element constructor');
+        // `loadManifestElement` reports every failure as `undefined` rather than throwing, so this
+        // is where a package bug becomes the message: a loader that resolved to nothing at all
+        // (`async () => { import(…) }`, with the return forgotten), a module exporting neither
+        // `element` nor `default`, a path that imported something with no element in it. Throwing
+        // here rather than rendering an empty body is the difference between a console line a
+        // package author can act on and one they cannot.
+        if (!ctor) throw new Error('element could not be resolved to a constructor');
         this._pending = false;
         this._app = new ctor();
       } catch (error) {
@@ -218,17 +256,58 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
   }
 
   /**
-   * Race a loader against {@link UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS}.
+   * Hand the `element` value to `loadManifestElement`, keeping one leniency it does not have.
+   *
+   * Umbraco declines a loader that resolves to a bare constructor: for the function form it
+   * requires the resolution to be an *object* carrying `element` or `default`, so
+   * `async () => MyGame` yields `undefined`. That is a package author's forgotten
+   * `export default`, and a whole app failing over it is out of proportion to the mistake, so it
+   * is accepted here. Deliberate divergence, pinned by its own case in `app-host.element.test.ts`.
+   *
+   * Keeping it costs an observing wrapper rather than a second resolution pass. The loader is
+   * wrapped so its resolved value can be read on the way past, and Umbraco still does the
+   * resolving; if it returns nothing and what the loader actually produced was a constructor, that
+   * is used. Wrapping rather than calling the loader a second time because a second call is a
+   * second `import()` for the author to reason about, and because a loader with a side effect
+   * would run it twice.
+   *
+   * Only the loader arm is wrapped. The other three (a path string, a module object, a
+   * constructor) are passed through untouched, since there is nothing to observe: they are not
+   * called, and Umbraco already accepts every shape they can be in.
+   * @param load The manifest's `element` value.
+   * @returns The element's constructor, or undefined when nothing in it was one.
+   * @throws Whatever the loader or the dynamic import threw.
+   */
+  async #resolveConstructor(load: ElementLoaderProperty): Promise<ClassConstructor<HTMLElement> | undefined> {
+    let resolved: unknown;
+    const observed: ElementLoaderProperty = isElementLoaderFunction(load)
+      ? () => load().then((value) => ((resolved = value), value))
+      : load;
+    const ctor = await loadManifestElement<HTMLElement>(observed);
+    if (ctor) return ctor;
+    // The leniency, and the only place `resolved` is read: a function here can only have come from
+    // the loader resolving to one, since Umbraco would have returned a constructor for any shape
+    // it recognised.
+    return typeof resolved === 'function' ? (resolved as ClassConstructor<HTMLElement>) : undefined;
+  }
+
+  /**
+   * Race a resolution against {@link UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS}.
    *
    * A `Promise.race` rather than a `setTimeout` that flips the state directly, because the race
    * discards the loser: once the clock has won, the loader's own resolution has nothing left
    * awaiting it and so cannot overwrite the failure message it lost to. The timer is cleared when
    * the loader wins so a mounted app leaves nothing pending behind it.
-   * @param loading The loader's promise, already invoked.
-   * @returns Whatever the loader resolved to.
-   * @throws If the loader itself rejects, or if it has not settled within the timeout.
+   *
+   * Wraps the whole resolution, not just the loader's own promise, because a module path string is
+   * a network hop too and a package pointing at a file the server never returns must reach the same
+   * message as a loader that hangs.
+   * @param loading The resolution in flight.
+   * @returns Whatever the resolution produced.
+   * @typeParam T What the resolution produces.
+   * @throws If the resolution itself rejects, or if it has not settled within the timeout.
    */
-  async #raceTheClock(loading: Promise<unknown>): Promise<unknown> {
+  async #raceTheClock<T>(loading: Promise<T>): Promise<T> {
     let timer = 0;
     try {
       return await Promise.race([

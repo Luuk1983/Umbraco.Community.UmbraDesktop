@@ -29,10 +29,17 @@ customElements.define('umbradesktop-window-body-test-app', BodyTestAppElement);
 /** How many times the element loader has been called, so reload can be told from a re-render. */
 let loads = 0;
 
-/** The manifest-style loader an element app's `content` carries. */
+/**
+ * The manifest-style loader an element app's `content` carries.
+ *
+ * Resolves to `{ element }`, the module shape Umbraco's own resolver looks for, because `content`
+ * is typed as Umbraco's `ElementLoaderProperty` and a loader resolving to a bare constructor is
+ * outside it. The host accepts that shape too, as a deliberate leniency, but this file is about
+ * which body a window renders and has no business testing that: `app-host.element.test.ts` owns it.
+ */
 const loadTestApp = async () => {
   loads += 1;
-  return BodyTestAppElement;
+  return { element: BodyTestAppElement };
 };
 
 /**

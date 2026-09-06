@@ -126,7 +126,12 @@ it('carries an entry minSize through to the derived app', () => {
   expect(apps.find((a) => a.alias === 'c')!.minSize).to.deep.equal({ w: 900, h: 540 });
 });
 
-const MINESWEEPER_LOADER = async () => ({});
+/**
+ * A loader in the module shape Umbraco's resolver looks for. Never invoked here: derivation copies
+ * this value and only its identity is asserted, but it is typed as a real `ElementLoaderProperty`
+ * so the compiler keeps checking that what derivation carries is what a manifest can hold.
+ */
+const MINESWEEPER_LOADER = async () => ({ element: HTMLElement });
 
 const MINESWEEPER: UmbraDesktopRegisteredApp = {
   alias: 'Pkg.Minesweeper',
@@ -156,7 +161,10 @@ it('places registered apps ahead of the uncertified section fallback', () => {
 
 it('gives a registered app the bare chrome profile, which nothing on that path reads', () => {
   const apps = deriveApps([], [], [], [MINESWEEPER]);
-  expect(apps[0].chromeProfile).to.equal('bare');
+  // Found by alias rather than read off index 0, as its siblings do: this app is only first
+  // because no earlier pass emitted anything here, and a later pass added ahead of the registered
+  // one would turn this into an assertion about a different app's chrome profile.
+  expect(apps.find((a) => a.alias === 'Pkg.Minesweeper')!.chromeProfile).to.equal('bare');
 });
 
 it('carries the loader through to content.element by reference, not a wrapper', () => {

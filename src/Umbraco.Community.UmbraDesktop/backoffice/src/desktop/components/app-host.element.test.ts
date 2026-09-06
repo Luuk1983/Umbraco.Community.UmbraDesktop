@@ -1,6 +1,7 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
 import './app-host.element.js';
 import { UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS } from '../constants.js';
+import type { ElementLoaderProperty } from '@umbraco-cms/backoffice/extension-api';
 import type { UmbraDesktopAppHostElement } from './app-host.element.js';
 
 /**
@@ -46,11 +47,48 @@ class OtherTestAppElement extends HTMLElement {
 customElements.define('umbradesktop-test-app-two', OtherTestAppElement);
 
 /**
+ * Where the test runner really serves {@link './app-host.string-loader-app.ts'} from.
+ *
+ * Derived from `import.meta.url` rather than typed as a literal, so it stays correct whatever the
+ * runner mounts its root at, and so moving either file cannot leave a path string behind that is
+ * wrong in a way only a 404 would tell you about. `pathname` because a manifest's string form is a
+ * server-absolute path (`/App_Plugins/pkg/game.js`), which is what this stands in for.
+ */
+const STRING_LOADER_APP_PATH = new URL('./app-host.string-loader-app.ts', import.meta.url).pathname;
+
+/**
+ * A loader in the canonical module shape, for the cases where the loader is only the vehicle and
+ * not the subject.
+ *
+ * `{ element }` rather than a bare constructor because that is the shape Umbraco's own resolver
+ * looks for, so these cases stay inside the published contract and the compiler keeps checking
+ * them. The bare-constructor shape is this host's own leniency and is exercised by exactly the one
+ * case that is about it, through {@link outsideTheContract}.
+ * @param ctor The app element the module publishes.
+ * @returns A loader resolving to a module exporting it.
+ */
+const moduleLoader = (ctor: CustomElementConstructor) => async () => ({ element: ctor });
+
+/**
+ * Widen a deliberately out-of-contract loader to the property type, for the failure cases.
+ *
+ * `ElementLoaderProperty` cannot describe a loader that resolves to a bare constructor, to nothing,
+ * or to an object with no constructor in it, which is the whole point of the three cases using
+ * this: they are what a package author writes by accident, and the host has to survive them anyway.
+ * A cast here keeps every *other* case in this file type-checked against Umbraco's real type
+ * instead of loosening the property to make the mistakes expressible.
+ * @param load The loader, resolving to whatever it resolves to.
+ * @returns The same function, typed as the manifest property it stands in for.
+ */
+const outsideTheContract = (load: () => Promise<unknown>) => load as ElementLoaderProperty;
+
+/**
  * Mount a host and give it a loader, settling both the render and the load.
- * @param load The loader to assign, exactly as the window will assign the manifest's.
+ * @param load The `element` value to assign, exactly as the window assigns the manifest's: any form
+ * of Umbraco's `ElementLoaderProperty`, not only a loader function.
  * @returns The host, with its first load attempt finished and reflected in the DOM.
  */
-async function hostWith(load: () => Promise<unknown>): Promise<UmbraDesktopAppHostElement> {
+async function hostWith(load: ElementLoaderProperty): Promise<UmbraDesktopAppHostElement> {
   const host = await fixture<UmbraDesktopAppHostElement>(html`<umbradesktop-app-host></umbradesktop-app-host>`);
   host.load = load;
   await host.mountComplete;
@@ -73,7 +111,7 @@ it('mounts the element the manifest loader resolves to', async () => {
  */
 it('settles mountComplete against the DOM without an updateComplete first', async () => {
   const host = await fixture<UmbraDesktopAppHostElement>(html`<umbradesktop-app-host></umbradesktop-app-host>`);
-  host.load = async () => TestAppElement;
+  host.load = moduleLoader(TestAppElement);
   await host.mountComplete;
   expect(host.children.length, 'the body should not still be empty').to.be.greaterThan(0);
   expect(host.querySelector('umbradesktop-test-app')).to.not.be.null;
@@ -89,14 +127,44 @@ it('reports a loader that throws rather than leaving an empty body', async () =>
 });
 
 /**
+ * A **module path string**, which is the only form of `element` a static `umbraco-package.json` can
+ * express and therefore the form the packages this feature exists for will actually ship. It was
+ * dropped silently for a while: the pipeline guarded on `typeof element === 'function'`, so a path
+ * produced no tile and no signal. This is the case that stops that returning, and it is a real
+ * import of a real file (see `app-host.string-loader-app.ts`) rather than a stubbed resolver,
+ * because what has to be proven is Umbraco's behaviour and not our restatement of it.
+ */
+it('mounts an app whose element is a module path string', async () => {
+  const host = await hostWith(STRING_LOADER_APP_PATH);
+  expect(host.querySelector('umbradesktop-test-string-app')).to.not.be.null;
+});
+
+/**
+ * A **class constructor**, the other legal form the old pipeline mishandled, and worse than the
+ * string: `typeof` said `'function'`, so it passed the guard, was treated as a loader and called,
+ * and the user got a permanent "could not be loaded" out of a `TypeError: Class constructor cannot
+ * be invoked without 'new'`. Umbraco's resolver tells the two apart by looking for a `prototype`,
+ * which is exactly why resolution is delegated to it rather than re-derived here.
+ */
+it('mounts an app whose element is the constructor itself', async () => {
+  const host = await hostWith(TestAppElement);
+  expect(host.querySelector('umbradesktop-test-app')).to.not.be.null;
+});
+
+/**
  * A manifest's `element` is typed loosely enough to hand over the constructor itself rather than a
  * module, so this host accepts that shape too. It is deliberately **more lenient** than Umbraco's
  * own `loadManifestElement`, which resolves only `{ element }` or `{ default }` and yields
- * `undefined` for a bare constructor: the cost of accepting one more shape is a line, and the cost
- * of rejecting it is a package author's app silently failing to mount.
+ * `undefined` for a loader landing on a bare constructor: the cost of accepting one more shape is a
+ * line, and the cost of rejecting it is a package author's app silently failing to mount.
+ *
+ * Read this together with the case above it, because the two look alike and are not: there, the
+ * manifest *is* the constructor and Umbraco handles it; here, a loader function *resolves* to one,
+ * which Umbraco declines and the host picks up afterwards. This is the assertion holding that
+ * leniency in place now that the resolution itself is Umbraco's.
  */
 it('mounts a loader that resolves to a bare constructor', async () => {
-  const host = await hostWith(async () => TestAppElement);
+  const host = await hostWith(outsideTheContract(async () => TestAppElement));
   expect(host.querySelector('umbradesktop-test-app')).to.not.be.null;
 });
 
@@ -112,7 +180,7 @@ it('mounts a loader that resolves to a module default export', async () => {
  * leave the user with an empty window and no clue.
  */
 it('reports a loader that resolves to no element constructor', async () => {
-  const host = await hostWith(async () => ({ notAnElement: 42 }));
+  const host = await hostWith(outsideTheContract(async () => ({ notAnElement: 42 })));
   expect(host.textContent).to.contain('could not be loaded');
 });
 
@@ -121,7 +189,7 @@ it('reports a loader that resolves to no element constructor', async () => {
  * forgotten. Cheap to write and it must read as the same failure, not as a blank window.
  */
 it('reports a loader that resolves to nothing', async () => {
-  const host = await hostWith(async () => undefined);
+  const host = await hostWith(outsideTheContract(async () => undefined));
   expect(host.textContent).to.contain('could not be loaded');
 });
 
@@ -131,12 +199,12 @@ it('reports a loader that resolves to nothing', async () => {
  * to be the one window kind that shows nothing while it loads.
  */
 it('shows a pending state while the loader is in flight', async () => {
-  let land: (value: unknown) => void = () => {};
+  let land: (value: { element: CustomElementConstructor }) => void = () => {};
   const host = await fixture<UmbraDesktopAppHostElement>(html`<umbradesktop-app-host></umbradesktop-app-host>`);
   host.load = () => new Promise((resolve) => (land = resolve));
   await host.updateComplete;
   expect(host.querySelector('uui-loader'), 'the gap before the app arrives should be covered').to.not.be.null;
-  land(TestAppElement);
+  land({ element: TestAppElement });
   await host.mountComplete;
   expect(host.querySelector('uui-loader'), 'and uncovered once it has').to.be.null;
   expect(host.querySelector('umbradesktop-test-app')).to.not.be.null;
@@ -190,7 +258,7 @@ it('reports a loader that never settles', async () => {
  */
 it('keeps the timeout message when the slow loader lands afterwards', async () => {
   const host = await withCollapsedLoadTimeout(() =>
-    hostWith(() => new Promise((resolve) => window.setTimeout(() => resolve(TestAppElement), 60))),
+    hostWith(() => new Promise((resolve) => window.setTimeout(() => resolve({ element: TestAppElement }), 60))),
   );
   expect(host.textContent).to.contain('could not be loaded');
   await aTimeout(120);
@@ -226,8 +294,8 @@ it('paints the failure message with the app tokens', async () => {
  * behind the later.
  */
 it('replaces the mounted element when the loader is re-assigned', async () => {
-  const host = await hostWith(async () => TestAppElement);
-  host.load = async () => OtherTestAppElement;
+  const host = await hostWith(moduleLoader(TestAppElement));
+  host.load = moduleLoader(OtherTestAppElement);
   await host.mountComplete;
   expect(host.querySelector('umbradesktop-test-app-two')).to.not.be.null;
   expect(host.querySelector('umbradesktop-test-app')).to.be.null;
@@ -235,7 +303,7 @@ it('replaces the mounted element when the loader is re-assigned', async () => {
 
 /** A failed load must not leave the previous app's element stranded under the error message. */
 it('clears the mounted element when a later load fails', async () => {
-  const host = await hostWith(async () => TestAppElement);
+  const host = await hostWith(moduleLoader(TestAppElement));
   host.load = async () => {
     throw new Error('bundle missing');
   };
@@ -253,10 +321,10 @@ it('clears the mounted element when a later load fails', async () => {
  */
 it('ignores a loader that is superseded before it resolves', async () => {
   const host = await fixture<UmbraDesktopAppHostElement>(html`<umbradesktop-app-host></umbradesktop-app-host>`);
-  host.load = () => new Promise((resolve) => window.setTimeout(() => resolve(TestAppElement), 60));
+  host.load = () => new Promise((resolve) => window.setTimeout(() => resolve({ element: TestAppElement }), 60));
   // Lit batches property writes, so the first load has to actually start before the second lands.
   await host.updateComplete;
-  host.load = async () => OtherTestAppElement;
+  host.load = moduleLoader(OtherTestAppElement);
   await host.mountComplete;
   expect(host.querySelector('umbradesktop-test-app-two'), 'the winner should be mounted').to.not.be.null;
   await aTimeout(120);
@@ -271,7 +339,7 @@ it('ignores a loader that is superseded before it resolves', async () => {
  * that is torn down and reconstructed has silently lost its board.
  */
 it('leaves the mounted app in place across an unrelated re-render', async () => {
-  const host = await hostWith(async () => TestAppElement);
+  const host = await hostWith(moduleLoader(TestAppElement));
   const app = host.querySelector('umbradesktop-test-app');
   // Without this the identity check below would pass on two nulls.
   expect(app, 'the app should have mounted before the re-render').to.not.be.null;
@@ -296,7 +364,7 @@ it('leaves the failure message in place across an unrelated re-render', async ()
  * on a second connect would leave a closed window's animation frame running.
  */
 it('disconnects the mounted app exactly once when the host is removed', async () => {
-  const host = await hostWith(async () => TestAppElement);
+  const host = await hostWith(moduleLoader(TestAppElement));
   lifecycle.length = 0;
   host.remove();
   expect(lifecycle).to.deep.equal(['disconnect:one']);
@@ -308,9 +376,9 @@ it('disconnects the mounted app exactly once when the host is removed', async ()
  * window's keyboard.
  */
 it('disconnects the old app before connecting its replacement', async () => {
-  const host = await hostWith(async () => TestAppElement);
+  const host = await hostWith(moduleLoader(TestAppElement));
   lifecycle.length = 0;
-  host.load = async () => OtherTestAppElement;
+  host.load = moduleLoader(OtherTestAppElement);
   await host.mountComplete;
   expect(lifecycle).to.deep.equal(['disconnect:one', 'connect:two']);
 });

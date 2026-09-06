@@ -1,3 +1,5 @@
+import type { ElementLoaderProperty } from '@umbraco-cms/backoffice/extension-api';
+
 /**
  * How much of the backoffice shell a window keeps — a monotonic ladder, each rung stripping
  * one more layer of chrome (see design doc §4.1):
@@ -20,12 +22,22 @@ export type UmbraDesktopChromeProfile = 'full-section' | 'workspace-only' | 'bar
  * self-contained app registered by a package (see `app.extension.ts`): one custom element in the
  * body, in this document, inheriting the desktop's tokens by ordinary CSS inheritance.
  *
- * `element` holds a *loader*, not an element: a function resolving to the constructor, or to a
- * module exporting one. It is named `element` regardless because that is Umbraco's own vocabulary
- * for this field, which is what {@link UmbraDesktopRegisteredApp} copies it from: `ManifestElement`
- * calls it `element` and types it `ElementLoaderProperty`. Renaming it here to match the code that
- * consumes it (`load`, `#mount`) would buy local consistency at the price of diverging from the
- * manifest this whole union is derived from.
+ * `element` rarely holds an element: it is Umbraco's `ElementLoaderProperty`, the union its own
+ * `ManifestElement.element` is typed as, and it can be a module path string, a function resolving
+ * to a module, an already-imported module object, or the constructor itself. Carrying that whole
+ * type rather than the one arm this desktop happens to have handled first is the correction: a
+ * narrower type here does not make the other forms unreachable, it only makes them arrive
+ * unannounced. The string arm in particular is the only form a static `umbraco-package.json` can
+ * express, and it used to be dropped on the floor.
+ *
+ * Which also means nothing downstream may assume it can *call* this: resolution belongs to
+ * Umbraco's `loadManifestElement`, which is the only code that knows every arm. See
+ * `components/app-host.element.ts`.
+ *
+ * It is named `element` rather than after the code consuming it (`load`, `#mount`) because that is
+ * Umbraco's own vocabulary for this field, which is what {@link UmbraDesktopRegisteredApp} copies
+ * it from. Local consistency is not worth diverging from the manifest this whole union is derived
+ * from.
  *
  * A union rather than an optional `url` plus an optional `element`, because that pair makes both
  * "neither" and "both" representable and neither means anything. Here the compiler finds every
@@ -33,7 +45,7 @@ export type UmbraDesktopChromeProfile = 'full-section' | 'workspace-only' | 'bar
  */
 export type UmbraDesktopAppContent =
   | { kind: 'iframe'; url: string }
-  | { kind: 'element'; element: () => Promise<unknown> };
+  | { kind: 'element'; element: ElementLoaderProperty };
 
 /** A launchable app: what its window body is, plus how to frame and present it. */
 export interface UmbraDesktopApp {
@@ -75,11 +87,18 @@ export interface UmbraDesktopRegisteredApp {
   name: string;
   /** Icon alias, already defaulted. */
   icon: string;
-  /** The element loader from the manifest. */
-  element: () => Promise<unknown>;
+  /**
+   * The manifest's own `element` value, in whatever form it wrote it, passed through by reference.
+   * See {@link UmbraDesktopAppContent} for why the whole of Umbraco's union is carried and why
+   * nobody but `loadManifestElement` resolves it.
+   */
+  element: ElementLoaderProperty;
   /** Launcher group alias, if the manifest named one. */
   group?: string;
-  /** Sort weight within the group. */
+  /**
+   * Sort weight within the group, on the desktop's **ascending** scale (lower shows first), already
+   * inverted from the manifest's Umbraco-convention weight by `registered-apps.ts`.
+   */
   weight?: number;
   /** Default window size in px. */
   defaultSize?: { w: number; h: number };
