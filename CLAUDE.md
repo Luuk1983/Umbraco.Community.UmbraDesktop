@@ -52,17 +52,27 @@ items did not apply:
 - [ ] **`README.md`** describes the feature. Check every place it could be named, not the first
       one you find. Themes, for instance, are listed in both the Features list and their own
       section, and a change that updates one reads as sloppier than one that updates neither
-- [ ] **`umbraco-marketplace.json`** still describes what the package offers. Its `Description` is
-      the text users read before installing, and `Tags` is how they find it. A screenshot in
-      `docs/screenshots/` is worth adding when a feature changes what the package looks like
+- [ ] **`umbraco-marketplace.json`** names the feature in `Description` if it is something a
+      person would choose the package for. This is not a "check it is still accurate" step: the
+      Description is the summary the Umbraco Marketplace shows, it is the only thing most people
+      read before installing, and a headline feature missing from it is a feature nobody knows
+      exists. The picker reached five themes before this file mentioned theming at all. Add to `Tags`
+      too,
+      since that is how the feature gets found, and add a screenshot to `docs/screenshots/` plus
+      the `Screenshots` array when the feature changes what the package looks like
 - [ ] **`docs/`** covers it. A user-facing feature belongs in the README; something a contributor
       would need to extend belongs in its own guide, as theming does; a decision worth its
       reasoning belongs in a dated `docs/design/` doc
 - [ ] Anything a build taught you that is not obvious from the code is written down where the next
       person will hit it, not left in a commit message
 
-`umbraco-package.json` almost never changes. It registers a single bundle, and everything inside
-the desktop is wired up in TypeScript rather than as separate manifest entries.
+Two files have confusingly similar names and opposite answers, so to be explicit:
+
+- **`umbraco-marketplace.json`** (repository root) is the marketplace listing. User-facing, and it
+  changes whenever the package gains something worth choosing it for. It is on the list above.
+- **`backoffice/public/umbraco-package.json`** is the Umbraco extension manifest. It registers one
+  bundle, and everything inside the desktop is wired up in TypeScript rather than as separate
+  manifest entries, so it almost never changes for a feature.
 
 ## Themes
 
