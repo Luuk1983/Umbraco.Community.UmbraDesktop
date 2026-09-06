@@ -422,6 +422,11 @@ git commit -m "feat: app token values for every theme that paints its own palett
 - Modify: `backoffice/src/desktop/derive-apps.ts`
 - Modify: `backoffice/src/desktop/derive-apps.test.ts`
 - Modify: `backoffice/src/desktop/components/window.element.ts`
+- Modify: `backoffice/src/desktop/constants.ts` (see the note below)
+
+**Inherited from Task 4: unify the 12-second load patience.** Task 4 gave the app host a load timeout and deliberately set it to the same twelve seconds the iframe path already allows in `#onIframeLoad`'s `setTimeout`, on the grounds that one shell should not run out of patience at two different moments depending on which kind of app a window opened. It could not unify them because `window.element.ts` was out of its scope, and it left the reasoning in `APP_LOAD_TIMEOUT_MS`'s doc comment.
+
+You own that file, so finish it: move the number to a named constant in `constants.ts` with the reasoning, and have both `app-host.element.ts` and `window.element.ts` read it. This is the repo's "derive numbers, never type them" rule, and two copies of a duration whose whole justification is that they are the same number is exactly the drift it exists to prevent. Keep `APP_LOAD_TIMEOUT_MS` exported from the host if its test still shortens it by name.
 
 - [ ] **Step 1: Write the failing test**
 
