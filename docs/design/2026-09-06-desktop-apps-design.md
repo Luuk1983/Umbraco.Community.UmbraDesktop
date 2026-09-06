@@ -39,10 +39,13 @@ This design adds that second kind, and the seam a separate package needs in orde
 migrations. The global "test-first for all backend code" rule has nothing to bind to; §9 sets out
 the frontend approach the repo already uses.
 
-**Two deliverables, two implementation plans.** The host seam (§4 to §7) ships on its own and is
-independently valuable: it opens the manifest type and the app token group without any app existing
-to use them. The entertainment package (§8) follows as its own plan, against a contract that is already
-released. Building them as one plan would mean designing the token group against a game being
+**Three implementation plans, in order.** The host seam (§4 to §7) ships first and is independently
+valuable: it opens the manifest type and the app token group without any app existing to use them.
+Minesweeper follows, against a contract that is already released, and settles the token group on the
+evidence of a real app. Solitaire follows that, and is much the largest of the three for reasons that
+are mostly not the card game (§8.2).
+
+Building the seam and a game as one plan would mean designing the token group against a game being
 written at the same time, which is how a contract ends up shaped like its first consumer.
 
 The ordering is safe because the token group has **no consumers until the entertainment package exists**.
@@ -320,7 +323,35 @@ entertainment.** A calculator, a notepad or a colour picker would be lying under
 however tempting the empty project is. Windows filed those under Accessories, a level up. If the
 desktop wants them, they want their own package, and this one stays honest.
 
-### 8.2 Versioning: lockstep on one tag (D13)
+### 8.2 The two games, and why they are not the same size
+
+Issue #8 asks for Minesweeper and Solitaire, and both are in the first release. They are not
+comparable pieces of work, so the plan should not treat them as a pair.
+
+**Minesweeper is the contract validator.** A grid, a flood fill, three colours of bevel. It reads
+almost nothing but the app tokens (§6.1), which is exactly what makes it the right first consumer:
+if the token group is insufficient, Minesweeper is where that shows up cheaply. Build it first,
+promote the token group on the strength of it, then build the other one.
+
+**Solitaire is several times the work, and most of it is not the game.** The rules are trivial; what
+is not trivial is that it needs **52 card faces plus backs**, and that decision is its own. Inline
+SVG scales and themes but is 52 sets of paths to draw or find. A sprite sheet is how the original
+did it and gives that look exactly, at a fixed resolution and with the licensing question attached
+to whatever deck art it came from. Unicode playing cards render at the mercy of the user's fonts.
+None of these is obviously right, and none of them should be picked halfway through building the
+game. **This design does not settle it**; it names it as the first decision in the Solitaire plan,
+because it determines the game's whole rendering approach and, less obviously, whether cards
+participate in theming at all.
+
+Solitaire is also the first app to need **real pointer interaction inside the window body**, which
+is worth checking rather than assuming. The window's own drag and resize use `setPointerCapture` on
+the titlebar and the resize handles, never on the body, so a game dragging inside the body does not
+contend with them. The one behaviour to leave alone is the `focus-catcher` overlay an inactive window
+renders: it swallows the first pointerdown to focus the window instead of passing it through. On a
+card table that is correct, the same as every real OS, and someone will eventually mistake it for a
+bug.
+
+### 8.3 Versioning: lockstep on one tag (D13)
 
 - **No `MinVerTagPrefix` of its own.** Both projects build from `v*` and therefore carry the same
   version. There is no second prefix to configure and no second release job.
@@ -357,9 +388,10 @@ neither subsumes the other.
 - **App tokens** — every theme answers every entry in `UMBRADESKTOP_APP_TOKENS`, or declares the
   omission. This replaces the coverage `tokens.test.ts` gives the chrome group, which cannot apply
   here (§6.3).
-- **Browser checkpoint** — Minesweeper under all five themes. This belongs to the entertainment plan, and it
-  is what promotes the token group from provisional (§1) to settled. A token the group turns out to
-  need is a host minor, not a redesign.
+- **Browser checkpoint** — Minesweeper under all five themes, then Solitaire under all five. The
+  first belongs to the entertainment plan and is what promotes the token group from provisional (§1)
+  to settled (§8.2); a token it turns out to need is a host minor, not a redesign. The second is the
+  harder check, because a card table exercises surfaces the token group was not designed against.
 
 ---
 
@@ -388,5 +420,10 @@ neither subsumes the other.
   different design.
 - **Vendoring existing games.** D12. If it ever becomes attractive, the iframe kind already exists
   and would need only a chrome-injection bypass and the palette written into the frame document.
-- **A games launcher, scores UI or cross-game shell.** Each game is one app. If a second one wants
-  to share code with the first, that is a decision for when it exists.
+- **A games launcher, scores UI or cross-game shell.** Each game is one app, registered on its own
+  and opening in its own window. With two games shipping together the temptation to build a shared
+  frame around them is real and should be resisted: sharing a module between them inside the package
+  is ordinary code reuse, but a shell they both live in would make them one app wearing two names.
+- **The Solitaire card deck.** Named as the first decision of the Solitaire plan (§8.2), deliberately
+  not settled here. It governs that game's rendering and whether cards theme at all, and it deserves
+  its own short design rather than a paragraph in this one.
