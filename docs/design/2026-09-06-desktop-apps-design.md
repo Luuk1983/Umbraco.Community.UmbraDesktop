@@ -271,12 +271,17 @@ contract rather than left implicit in whichever app happens to be first.
 
 **Open: how a raised control gets a boundary on the flat themes.** Text contrast is now an enforced
 invariant, asserted per theme and variant in `app-tokens.test.ts` at WCAG AA's 4.5:1. A control's
-*boundary* is not, and on the three flat themes it has nothing to lean on. Their `edge-width` is
-legitimately `0`, so the only separation between a raised control and the ground under it is the fill
-step between `surface-raised` and `surface`: 1.07:1 on Win11 light, 1.15:1 on Win11 dark, 1.09:1 on
-macOS light, 1.20:1 on macOS dark, 1.03:1 on Umbraco 4. WCAG 1.4.11 asks 3:1 of a control boundary,
-so every one of those is well under it, and macOS light was 1.00:1 — literally white on white — until
-the surfaces were separated.
+*boundary* is not, and the fill step between `surface-raised` and `surface` is thin everywhere:
+1.07:1 on Win11 light, 1.15:1 on Win11 dark, 1.09:1 on macOS light, 1.20:1 on macOS dark, 1.03:1 on
+Umbraco 4. WCAG 1.4.11 asks 3:1 of a control boundary, so no theme's fill step carries one alone, and
+macOS light was 1.00:1, literally white on white, until the surfaces were separated.
+
+What each theme has left to lean on differs, which is why this is one open question and not five.
+Win98 chisels a two-tone bevel at `edge-width: 2px`. Umbraco 4 draws a 1px hairline, though at
+`U4_EDGE` on its own surface that measures 2.68:1 and so is itself under 1.4.11. **macOS and Win11
+are the sharp cases**: both ship `edge-width: 0`, so the fill step is genuinely all they have, and an
+app drawing a control as `background: var(--app-surface-raised); border: var(--app-edge-width) solid
+var(--app-edge-dark)` renders no border at all under them.
 
 Two candidate answers, and picking between them from hex values is precisely the mistake:
 

@@ -22,11 +22,12 @@ export const MACOS_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", system
  * across two literals.
  *
  * It is **not** Apple's own `#0a84ff`, and that is a considered departure. White on `#0a84ff` is
- * 3.65:1 and near-black on it is 3.82:1, so no text colour reaches WCAG AA for body text on it in
- * either direction — an app filling a selection with the accent and writing on it would be
- * illegible under this theme whatever it chose. Darkening the blue channel to `cc` brings white to
- * 5.51:1 while keeping the hue unmistakably macOS blue. Apple can rely on a system control's
- * hand-tuned rendering here; a published token that another package writes text on cannot.
+ * 3.65:1, short of WCAG AA for body text, and this theme's own `app-text` on it is 3.82:1. Pure
+ * black would clear it at 5.76:1, but macOS writes *white* on a selection, never black, so buying
+ * the contrast that way would trade a faithful accent for an unfaithful one. Darkening the blue
+ * channel to `cc` instead brings white to 5.51:1 while keeping the hue unmistakably macOS blue.
+ * Apple can rely on a system control's hand-tuned rendering here; a published token that another
+ * package writes text on cannot.
  */
 export const MACOS_ACCENT = '#0067cc';
 
