@@ -5,8 +5,8 @@ import type { UmbraDesktopCatalogueEntry } from '../types';
  *
  * The package registers its tools as default-kind menu items inside the Users section, so each
  * entry infers `/umbraco/section/users/workspace/{entityType}` — the same route the package's
- * own sidebar links to. Every entry is `optional`: it resolves only where the package is
- * installed, and its absence elsewhere is silent rather than a warning.
+ * own sidebar links to. Every entry resolves only where the package is installed, and its
+ * absence elsewhere is silent.
  *
  * This fragment describes the **v18 surface (8 tools)** deliberately. The v17 release of the
  * package registers only the first four menu-item aliases; the other four resolve to nothing
@@ -27,7 +27,6 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     alias: 'advanced-content-permissions',
     ref: 'UAP.MenuItem.PermissionsEditor',
     section: 'Umb.Section.Users',
-    optional: true,
     name: '#umbraDesktop_appAdvancedContentPermissions',
     icon: 'icon-document',
     chromeProfile: 'workspace-only',
@@ -40,7 +39,6 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     alias: 'advanced-content-access',
     ref: 'UAP.MenuItem.AccessViewer',
     section: 'Umb.Section.Users',
-    optional: true,
     name: '#umbraDesktop_appAdvancedContentAccess',
     icon: 'icon-eye',
     chromeProfile: 'workspace-only',
@@ -55,7 +53,6 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     alias: 'advanced-doc-type-permissions',
     ref: 'UAP.MenuItem.DocTypePermissions',
     section: 'Umb.Section.Users',
-    optional: true,
     name: '#umbraDesktop_appAdvancedDocTypePermissions',
     icon: 'icon-diploma',
     chromeProfile: 'workspace-only',
@@ -69,7 +66,6 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     alias: 'advanced-doc-type-access',
     ref: 'UAP.MenuItem.InsertOptions',
     section: 'Umb.Section.Users',
-    optional: true,
     name: '#umbraDesktop_appAdvancedDocTypeAccess',
     icon: 'icon-eye',
     chromeProfile: 'workspace-only',
@@ -84,7 +80,6 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     alias: 'advanced-library-permissions',
     ref: 'UAP.MenuItem.LibraryPermissions',
     section: 'Umb.Section.Users',
-    optional: true,
     name: '#umbraDesktop_appAdvancedLibraryPermissions',
     icon: 'icon-globe',
     chromeProfile: 'workspace-only',
@@ -97,7 +92,6 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     alias: 'advanced-library-access',
     ref: 'UAP.MenuItem.LibraryAccessViewer',
     section: 'Umb.Section.Users',
-    optional: true,
     name: '#umbraDesktop_appAdvancedLibraryAccess',
     icon: 'icon-eye',
     chromeProfile: 'workspace-only',
@@ -112,7 +106,6 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     alias: 'advanced-element-type-permissions',
     ref: 'UAP.MenuItem.ElementTypePermissions',
     section: 'Umb.Section.Users',
-    optional: true,
     name: '#umbraDesktop_appAdvancedElementTypePermissions',
     icon: 'icon-thumbnail-list',
     chromeProfile: 'workspace-only',
@@ -126,7 +119,6 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     alias: 'advanced-element-type-access',
     ref: 'UAP.MenuItem.LibraryInsertOptions',
     section: 'Umb.Section.Users',
-    optional: true,
     name: '#umbraDesktop_appAdvancedElementTypeAccess',
     icon: 'icon-eye',
     chromeProfile: 'workspace-only',

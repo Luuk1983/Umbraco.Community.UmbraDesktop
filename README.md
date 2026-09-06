@@ -18,7 +18,8 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 
 - Work side by side. Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth. This one wants room: see [A note on screen size](#a-note-on-screen-size).
 - Real windows. Drag, resize, minimise, maximise, and double-click a title bar to fill the desktop. Each window remembers its own place.
-- A launcher that stays out of the way. Apps are grouped into Editing, Development, Synchronisation, Security, Advanced security, Diagnostics and System, so you find things by what they do.
+- A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do.
+- Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned. Your pins are remembered per user.
 - A taskbar. Every open window gets a button: click to focus, click again to minimise.
 - Choose your wallpaper. Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user.
@@ -60,7 +61,7 @@ Click the desktop icon in the backoffice header, top right, between Help and you
 
 Most people are probably familiar with the concept of a desktop and will have no trouble using it. The launcher is where you open the apps:
 
-![The launcher: a search box, a Pinned row at the top, and the remaining apps grouped into Editing, Development, Synchronisation, Users &amp; Members, Diagnostics and System.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png)
+![The launcher: a search box, a Pinned row at the top, and the remaining apps grouped into Editing, Development, Synchronisation, Security, Advanced security, Diagnostics and System.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png)
 
 From the launcher:
 
@@ -180,6 +181,33 @@ A window should not show the entire backoffice shell inside a small frame. Becau
 
 Which apps appear, and how they present themselves, is defined by a curated catalogue in `backoffice/src/desktop/catalogue/`. Each entry points at a registered extension by alias, so its URL is inferred from the registry rather than hardcoded, and carries display detail: name, icon, group, chrome profile, default and minimum window size, whether multiple instances are allowed, and sort weight.
 
+### Umbraco's commercial packages
+
+The catalogue covers the eight commercial packages explicitly, so each opens as a proper app rather
+than a generic tile. Entries resolve against the package's own registered extensions, so an app
+appears only on installs that have that package, and nothing needs configuring either way.
+
+| Package | What you get | Where it lands |
+| --- | --- | --- |
+| Umbraco Forms | The Forms section | Editing |
+| Umbraco Workflow | The Workflow section, plus Workflow tasks, Workflow search and Release sets as their own windows | Workflow |
+| Umbraco Deploy | Deploy and Deploy environments on v17; Deploy status, schema and configuration on v18 | Synchronisation |
+| Umbraco Commerce | The Commerce section | Marketing and sales |
+| Umbraco Engage | The Engage section, and Engage configuration | Marketing and sales, System |
+| Umbraco UI Builder | The UI Builder settings workspace | Development |
+| Umbraco Automate | The Automate section | Automation |
+| Umbraco AI | The AI section | AI |
+
+Most of these are a single app on purpose. Commerce, Engage and UI Builder navigate internally in
+ways that have no stable link to point a tile at — Commerce scopes everything to a store, Engage
+uses its own screen system, UI Builder generates its sections from your configuration at runtime —
+so the section opens with its own sidebar and does the navigating, which is what you want anyway.
+
+UI Builder's generated sections still appear on their own, in More, as any unrecognised section does.
+
+Two Workflow apps only show when they apply to you: Workflow search and Release sets both check your
+Workflow permissions, and Release sets also checks whether the feature is switched on. Rather than
+give you a tile that opens an empty window, the desktop asks first.
 ### One app is ours
 
 Almost everything in the catalogue is a window onto something Umbraco or another package already provides. **Background Jobs** is the exception: the package ships it. Umbraco has no view of its own scheduled jobs anywhere in the backoffice, so there was nothing to point at.
@@ -198,7 +226,7 @@ If your package registers a section, it appears in the launcher automatically fo
 
 Curated placement (a custom icon, a friendly name, a specific group, a different chrome profile or window sizing) needs an entry in `backoffice/src/desktop/catalogue/`. That means opening a pull request against this repository; there is no runtime registration point.
 
-A curated entry for a package that not every install has is marked `optional`. Because it points at the package's own extension by alias, it resolves only where that package is registered, and stays silently absent everywhere else. uSync ships this way: install it and a uSync app appears in the Synchronisation group, opening its dashboard without the Settings tree beside it.
+A curated entry for a third-party package points at its extension by alias rather than by URL, so it resolves only where that package is registered and stays silently absent everywhere else. No flag is needed and none exists: any package can unregister any extension, so no entry is ever guaranteed to resolve. uSync ships this way — install it and a uSync app appears in the Synchronisation group, opening its dashboard without the Settings tree beside it.
 
 ## Documentation
 
