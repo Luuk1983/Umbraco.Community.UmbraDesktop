@@ -630,7 +630,9 @@ npm test
 npm run build
 ```
 
-Expected: `npm test` PASSES. `npm run build` FAILS on `umbradesktop-app-host` not existing and on `#chromeThemeId` never being assigned — both are Task 4 and Task 7. If you want a green build at this commit, do Steps 5–6 of this task after Task 4 instead; the tests do not depend on the element branch.
+Expected: both PASS. Task 4 already shipped `umbradesktop-app-host`, so the element branch resolves.
+
+`#chromeThemeId` is declared here but only assigned in Task 8, which is deliberate: an unassigned private field is valid TypeScript and stamps an empty attribute, so the element branch works and Task 8 only has to give the field a value. Do not reach forward into Task 8 to populate it, and do not remove the field to silence a linter.
 
 - [ ] **Step 7: Commit**
 
@@ -1546,6 +1548,10 @@ git commit -m "docs: how to build a desktop app, and the seam in the README"
 
 **Not covered, deliberately.** §8 is the entertainment package, which is the next plan. Nothing here creates the second project.
 
-**Known ordering wrinkle.** Task 3 leaves the build red between its Step 5 and Task 4, because the window references the app host element before it exists. The step says so and offers the alternative of doing Task 3's element branch after Task 4. Every other task ends green on both `npm test` and `npm run build`.
+**Ordering: Task 4 is done before Task 3.** As written, Task 3 left the build red between its Step 5 and Task 4, because the window references the app host element before it exists. Task 4 is purely additive (new files nothing else imports), so doing it first removes that window entirely rather than documenting it. Executed order is 1, 2, **4, 3**, 5, 6, 7, 8, 9. Every task ends green on both `npm test` and `npm run build`.
+
+**Correction to Task 4's Step 4 sketch, found by executing it.** The sketch's `#mount` used `this.replaceChildren(new ctor())` alongside `createRenderRoot() { return this; }`. That combination is permanently broken, not merely fragile: `replaceChildren` removes the marker comments Lit uses to track its own template parts, so the *next* update throws `This ChildPart has no parentNode and therefore cannot accept a value`. Implementing the sketch verbatim gave 0 passed / 9 failed, every failure that same error.
+
+The working arrangement is to make the app element **a value in the template** rather than a child appended beside it: hold the constructed element in `@state`, return it from `render()` (`html\`${this._app ?? nothing}\``), and have `#mount` assign rather than append, so Lit owns every child of the light-DOM root. Lit compares node values by identity, so a re-render that does not change the state leaves the app's element physically untouched, which is what a game mid-play needs. The shipped tests hold this by asserting node *identity* across an unrelated `requestUpdate()`, not merely that something is still there.
 
 **Verified against the installed packages while writing**, so no step rests on a guess: `keyed` is re-exported from `@umbraco-cms/backoffice/external/lit` (Task 3); `UmbExtensionsManifestInitializer` is exported from `@umbraco-cms/backoffice/extension-api` and `permitted` is computed from a manifest's `conditions`, with no conditions meaning permitted (Task 6); the `UmbExtensionManifestMap` global augmentation is how Umbraco's own kinds declare themselves (Task 4); the theme context publishes `resolved`, not a `themeId` (Task 8); `groupGames` already exists in both locale files (Task 7); and the Umbraco identity theme ships an empty palette on purpose, which is why Task 2's coverage test exempts it.
