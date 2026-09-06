@@ -34,7 +34,7 @@ Therefore each app reads `var(--umbradesktop-app-surface, var(--uui-color-surfac
 
 | File | Responsibility |
 |---|---|
-| `backoffice/src/desktop/theme/app-tokens.test.ts` | Every non-identity theme palette answers every app token; the identity theme answers none |
+| `backoffice/src/desktop/theme/app-tokens.test.ts` | The app token contract's invariants. **Created by Task 1** (prefix, disjointness from the chrome list, fallback coverage); **appended to by Task 2** (every non-identity theme palette answers every token). A worker executing Task 2 alone should append, not recreate |
 | `backoffice/src/desktop/app.extension.ts` | The `ManifestUmbraDesktopApp` type + `UmbExtensionManifestMap` augmentation |
 | `backoffice/src/desktop/components/app-host.element.ts` | Mounts an app's element into a window body, in light DOM |
 | `backoffice/src/desktop/components/app-host.element.test.ts` | Tests for the above |
@@ -217,6 +217,7 @@ Append to `backoffice/src/desktop/theme/app-tokens.test.ts`:
 
 ```ts
 import { UMBRADESKTOP_THEMES } from './themes/index.js';
+import { UMBRADESKTOP_UMBRACO_THEME } from './themes/umbraco/index.js';
 
 /**
  * A theme that answers the chrome tokens but not the app tokens would render a correct desktop
@@ -228,12 +229,15 @@ it('has every non-identity theme palette answer every app token', () => {
   const missing: string[] = [];
 
   for (const theme of UMBRADESKTOP_THEMES) {
+    // Identified by id, not by "is the palette empty". The heuristic would invert this test's
+    // intent the moment the identity theme sets a single chrome token: it would silently start
+    // demanding all eleven app tokens from the one theme that must answer none. Compared against
+    // the theme's own id rather than the literal 'umbraco' so a rename cannot leave this stale.
+    if (theme.id === UMBRADESKTOP_UMBRACO_THEME.id) continue;
     for (const variant of ['light', 'dark'] as const) {
       const palette = theme.palettes[variant];
       // A theme need not ship a dark palette (Win98 and Umbraco 4 do not).
       if (!palette) continue;
-      // The identity theme's palette is empty on purpose — see the doc comment above.
-      if (Object.keys(palette).length === 0) continue;
       for (const token of UMBRADESKTOP_APP_TOKENS) {
         if (!(token in palette)) missing.push(`${theme.id}.${variant} is missing ${token}`);
       }
@@ -242,19 +246,20 @@ it('has every non-identity theme palette answer every app token', () => {
 
   expect(
     missing,
-    'every theme that sets a palette at all must answer the whole app token group, or an app will ' +
-      'fall back to the Umbraco look on some tokens and this theme on others',
+    'every theme other than the identity theme must answer the whole app token group, or an app ' +
+      'will fall back to the Umbraco look on some tokens and this theme on others',
   ).to.deep.equal([]);
 });
 
 it('keeps the Umbraco identity theme palette empty', () => {
-  const umbraco = UMBRADESKTOP_THEMES.find((theme) => theme.id === 'umbraco')!;
   expect(
-    Object.keys(umbraco.palettes.light ?? {}),
+    Object.keys(UMBRADESKTOP_UMBRACO_THEME.palettes.light ?? {}),
     'the identity theme renders today\'s look by setting nothing; app fallbacks are its values',
   ).to.deep.equal([]);
 });
 ```
+
+Both the skip above and the emptiness assertion below now key off the same theme object, so they cannot disagree about which theme is the identity one.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -391,10 +396,20 @@ Expected: both PASS. If `tsc` reports an unused import for a palette constant yo
 
 These values are the starting set. The spec's §9 browser checkpoint, run against a real game, is what promotes them from provisional to settled; a value that reads wrong beside its own chrome is a palette fix, not a contract change.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Update the theming guide, which is now wrong**
+
+`docs/theming.md` is the guide for theme authors, written deliberately for someone outside this repository, and this task is the one that asks them to set app tokens. Three places in it are false as of Task 1:
+
+- **Line ~130:** "you can only set tokens the chrome actually reads. The normative list is `UMBRADESKTOP_TOKENS`". A palette may now also set app tokens, which no component in this package reads.
+- **Line ~132:** "53 tokens in these groups", followed by a group table with no app row. Add the app group to the table and correct the count, or better, stop stating a count that has now gone stale twice and name the two lists instead.
+- **Line ~374:** the PR checklist names only `tokens.test.ts`. Name `app-tokens.test.ts` beside it, since a theme that misses an app token fails that one and not the other.
+
+Explain the two-list split in the author's terms: the chrome group is checked against the components that read it, the app group is a published contract for apps in other packages, and the identity theme answers only the chrome group because an app's own fallbacks are the Umbraco look.
+
+- [ ] **Step 9: Commit**
 
 ```bash
-git add backoffice/src/desktop/theme
+git add backoffice/src/desktop/theme docs/theming.md
 git commit -m "feat: app token values for every theme that paints its own palette"
 ```
 
@@ -1493,7 +1508,11 @@ The repo's checklist (CLAUDE.md) is part of the feature, not paperwork after it.
 
 - [ ] **Step 1: Amend the design doc with the two findings**
 
-In §3, replace the "Verify before building" block with the answer: `byType` does not evaluate conditions, `UmbExtensionsManifestInitializer` is the public route, and it is what the implementation uses. In §10, strike the risk row about it. In §6.1, add that app tokens have no host-side fallbacks and cannot, that the documented fallback chain is the Umbraco look and lives in each app, and that the coverage test therefore exempts the identity theme.
+In §3, replace the "Verify before building" block with the answer: `byType` does not evaluate conditions, `UmbExtensionsManifestInitializer` is the public route, and it is what the implementation uses. In §10, strike the risk row about it.
+
+In §6.1, two edits. Add that app tokens have no host-side fallbacks and cannot, that the documented fallback chain is the Umbraco look, that it lives in `UMBRADESKTOP_APP_TOKEN_FALLBACKS` as type-checked data rather than prose, and that each app carries those values itself. Then correct its **last paragraph**, which currently reads "Every theme answers all of them, per the existing contract" — that is now false and is the sentence a later reader will trust over an executed and archived plan. The identity theme answers none, on purpose.
+
+Also cite `docs/theming.md` (updated in Task 2) and `docs/desktop-apps.md` from §6.1, so a theme author and an app author each have somewhere to go from the spec.
 
 - [ ] **Step 2: Write the contributor guide**
 
