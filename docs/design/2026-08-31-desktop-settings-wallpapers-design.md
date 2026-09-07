@@ -257,6 +257,23 @@ are WebP while built-ins are AVIF: ImageSharp, behind Umbraco's imaging endpoint
 upload still reaches the browser as a sane, server-cached, resized file — the dynamic
 compression question, answered at no cost to us.
 
+> **Corrected 2026-09-07 ([issue #19](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/19)).**
+> That request is wrong in two ways and never worked. The live shape, and why, is in
+> `settings/media-imaging.ts`; do not copy the block above.
+>
+> - **`format: 'webp'` breaks the whole request.** Umbraco 17 signs image URLs with an HMAC
+>   (`Umbraco:CMS:Imaging:HMACSecretKey`, generated into `appsettings.json` on first boot), and
+>   ImageSharp's middleware sits in front of the entire pipeline. `format` is one of its own
+>   processing commands, so *any* request carrying one — the site root included — is
+>   short-circuited with an empty `400` before it reaches the management API. Empty body means
+>   the backoffice cannot read a ProblemDetails out of it and shows its generic "A fatal server
+>   error occurred", and nothing is logged server-side, because nothing threw. Umbraco decides
+>   the output format on its own anyway: a source it cannot re-encode becomes WebP, a JPEG or
+>   PNG stays as it is.
+> - **`width` alone is not "any height".** The endpoint's `height` parameter defaults to 200, and
+>   `Max` fits the image inside `width` × `height`, so a 4K upload came back 200px tall. Both
+>   edges have to be given.
+
 ---
 
 ## 8. What consumers do

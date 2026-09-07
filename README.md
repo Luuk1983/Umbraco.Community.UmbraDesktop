@@ -126,7 +126,7 @@ Your choice applies immediately and is remembered per user, in that browser.
 
 There is nothing to configure and nothing to deploy. Upload the image to the Media Library as you would any other, then pick it under Desktop settings, Media library.
 
-Umbraco resizes it for you: the desktop asks for a copy no wider than 2560px and serves it as WebP, so a large upload never reaches the browser at full size and the resized copy is cached server-side. You do not need to optimise anything first.
+Umbraco resizes it for you: the desktop asks for a copy with no side longer than 2560px, so a large upload never reaches the browser at full size and the resized copy is cached server-side. You do not need to optimise anything first.
 
 If you pick something that is not an image, the desktop tells you and leaves your current wallpaper alone.
 
