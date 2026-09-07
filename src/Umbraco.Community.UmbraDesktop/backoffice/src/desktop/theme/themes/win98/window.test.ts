@@ -3,6 +3,7 @@ import '../../../components/window.element.js';
 import type { UmbraDesktopWindowElement } from '../../../components/window.element.js';
 import type { UmbraDesktopApp } from '../../../types.js';
 import { mountThemed, UMBRADESKTOP_THEME_TEST_TIMEOUT_MS } from './mount-themed.js';
+import { measureUnsavedMarker } from '../mount-themed.js';
 import type { UmbraDesktopThemedMount } from './mount-themed.js';
 
 /**
@@ -128,4 +129,18 @@ it('maps a whole number of pixels to each viewBox unit of its straight glyphs', 
         'whole multiple of their viewBox so the strokes fall on pixel boundaries',
     ).to.equal(0);
   }
+});
+
+it('paints the unsaved-changes marker against the navy Win98 caption', async function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // A theme may restyle chrome and never remove it, and a marker sized to nothing or painted in
+  // the caption's own colour is removed in every way the person looking at it can tell.
+  const marker = await measureUnsavedMarker(win.element, win.root);
+
+  expect(marker.present, 'the window still marks unsaved changes under this theme').to.equal(true);
+  expect(marker.width, 'and the mark is actually painted').to.be.greaterThan(0);
+  expect(marker.height).to.be.greaterThan(0);
+  expect(marker.background, 'in a colour that is not the caption behind it').to.not.equal(
+    marker.titlebarBackground,
+  );
 });

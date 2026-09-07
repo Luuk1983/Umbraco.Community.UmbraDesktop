@@ -19,6 +19,8 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-titlebar-border-bottom',
   '--umbradesktop-titlebar-text',
   '--umbradesktop-titlebar-inactive-opacity',
+  '--umbradesktop-titlebar-dirty-color',
+  '--umbradesktop-titlebar-dirty-size',
   '--umbradesktop-control-width',
   '--umbradesktop-control-color',
   '--umbradesktop-control-hover-background',

@@ -79,6 +79,15 @@ export default {
     wallpaperNotAnImage: 'That file cannot be used as a wallpaper. Pick an image.',
     logout: 'Log out',
     exitDesktop: 'Exit desktop',
+    // exiting the desktop
+    exitHeadline: 'Exit desktop mode',
+    exitQuestion: 'Return to the classic Umbraco backoffice? Your open windows will be closed.',
+    exitConfirm: 'Exit',
+    exitStay: 'Stay',
+    // unsaved changes
+    unsavedChanges: 'Unsaved changes',
+    exitUnsavedOne: 'One window has unsaved changes, which will be discarded.',
+    exitUnsaved: '%0% windows have unsaved changes, which will be discarded.',
     // Background Jobs app
     backgroundJobsIntro:
       'Every scheduled job Umbraco runs behind your site: publishing, webhooks, cleanups, and anything a package added. Nothing here can be started or stopped, it is a read-only view of what the CMS is doing on its own.',

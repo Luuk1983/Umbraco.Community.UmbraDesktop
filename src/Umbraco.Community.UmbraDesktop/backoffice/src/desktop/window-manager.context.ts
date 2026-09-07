@@ -8,6 +8,8 @@ import {
   setWindowState,
   findAppWindow,
   setWindowRect,
+  setWindowDirty,
+  unsavedWindows,
   clampWindowsToBounds,
 } from './window-model';
 import { UMBRADESKTOP_DEFAULT_METRICS, UMBRADESKTOP_WINDOW_KEEP_VISIBLE } from './constants';
@@ -16,6 +18,7 @@ import { windowSizeForContent } from './window-chrome';
 import type { UmbraDesktopThemeMetrics } from './theme/types';
 import type { UmbraDesktopKeepVisible } from './window-model';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
+import { UMB_DISCARD_CHANGES_MODAL, umbOpenModal } from '@umbraco-cms/backoffice/modal';
 import { UmbArrayState } from '@umbraco-cms/backoffice/observable-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 
@@ -112,9 +115,73 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     this.#windows.setValue(focusWindow(this.#windows.getValue(), id));
   }
 
-  /** Close a window. */
+  /** Close a window, unconditionally. Prefer {@link requestClose}, which guards unsaved work. */
   public close(id: string): void {
     this.#windows.setValue(removeWindow(this.#windows.getValue(), id));
+  }
+
+  /**
+   * Record whether a window's frame is holding unsaved changes. Written by the window element's
+   * dirty watcher; read by the titlebar marker and by every guard below.
+   * @param id The window to mark.
+   * @param dirty Whether it holds unsaved changes.
+   */
+  public setDirty(id: string, dirty: boolean): void {
+    this.#windows.setValue(setWindowDirty(this.#windows.getValue(), id, dirty));
+  }
+
+  /**
+   * Every open window holding unsaved changes. Exit warns from this; see the taskbar.
+   * @returns The marked windows, in list order.
+   */
+  public unsavedWindows(): ReadonlyArray<UmbraDesktopWindow> {
+    return unsavedWindows(this.#windows.getValue());
+  }
+
+  /**
+   * Open the backoffice's own discard-changes dialog.
+   *
+   * Split out as its own method purely so it can be substituted in tests — a modal manager context
+   * only resolves inside a booted backoffice, and the guard's decisions are worth testing without
+   * one. Resolving the modal means discard; rejecting it means the user chose to stay.
+   * @returns True when the user chose to discard.
+   */
+  protected async _askToDiscard(): Promise<boolean> {
+    try {
+      await umbOpenModal(this, UMB_DISCARD_CHANGES_MODAL);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Ask, if there is anything to lose, whether a window's unsaved changes may be discarded.
+   *
+   * Answers without a dialog for a window that is clean — or one that is no longer open, so a
+   * caller racing a close is not stranded. Reused rather than inlined into {@link requestClose}
+   * because the titlebar's reload button needs the same question and then does something else
+   * entirely with the answer: it reloads the frame in place rather than closing the window.
+   *
+   * The dialog is core's `UMB_DISCARD_CHANGES_MODAL`, the same token `entity-detail-workspace-base`
+   * opens when you navigate away from a dirty workspace. Reusing the token is what makes this *the
+   * same wording* the backoffice uses elsewhere, rather than a copy of it that drifts.
+   * @param id The window whose changes are at stake.
+   * @returns True when the window may be discarded.
+   */
+  public async confirmDiscard(id: string): Promise<boolean> {
+    const target = this.#windows.getValue().find((w) => w.id === id);
+    if (!target?.dirty) return true;
+    return this._askToDiscard();
+  }
+
+  /**
+   * Close a window, asking first when it holds unsaved changes. Cancelling leaves the window open
+   * with its edits still in it. This is what the titlebar's close button calls.
+   * @param id The window to close.
+   */
+  public async requestClose(id: string): Promise<void> {
+    if (await this.confirmDiscard(id)) this.close(id);
   }
 
   /** Move a window to an absolute desktop position. */

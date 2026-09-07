@@ -138,7 +138,7 @@ prefix is for:
 |---|---|
 | `desktop-*` | Wallpaper fallback colour and gradient, the image scrim, the watermark's opacity |
 | `window-*` | The frame: background, body background, border, radius, resting and active shadows |
-| `titlebar-*` | Height, background, bottom border, text colour, the inactive-frame opacity |
+| `titlebar-*` | Height, background, bottom border, text colour, the inactive-frame opacity, and the unsaved-changes marker's colour and size |
 | `control-*` | The window buttons: width, glyph colour, hover fills, and close's own hover pair |
 | `taskbar-*` | The bar itself: height, reserve, margin, radius, background (plus an opaque fallback), backdrop filter, top border, shadow, two text colours |
 | `start-*`, `task-*` | The buttons inside the bar: hover and active fills, and the running-window marker |
@@ -209,6 +209,13 @@ person in another package who consumes them, and it is also where the promise yo
 `edge-width` and `radius` is spelled out. An app author writes one stylesheet expecting it to be a
 bevelled square control under Win98 and a flat rounded one under macOS, with no branch anywhere in
 the app, so a palette that sets both to values from the same visual idiom quietly costs them that.
+
+`titlebar-dirty-color` is worth calling out as well: it is the dot marking a window whose content
+has unsaved changes, and it defaults to `titlebar-text`, so every theme gets a mark that contrasts
+with its own caption without setting anything. Override it only for a colour you can still see — and never to
+nothing. A theme may restyle chrome, never remove it, and a marker that has been hidden, sized to
+zero or painted in the caption's own colour has been removed as far as the person losing their work
+is concerned. `theme/unsaved-marker.test.ts` holds that for all five themes.
 
 `taskbar-reserve` deserves a note: it is how much of the bottom edge is unavailable to windows, and
 it defaults to the taskbar's own height. A floating dock must set it **higher** than its height,

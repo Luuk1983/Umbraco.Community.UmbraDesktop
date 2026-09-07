@@ -73,6 +73,15 @@ export default {
     wallpaperNotAnImage: 'Dit bestand kan niet als achtergrond worden gebruikt. Kies een afbeelding.',
     logout: 'Uitloggen',
     exitDesktop: 'Bureaublad verlaten',
+    // bureaublad verlaten
+    exitHeadline: 'Bureaublad verlaten',
+    exitQuestion: 'Terug naar de klassieke Umbraco-backoffice? Je open vensters worden gesloten.',
+    exitConfirm: 'Verlaten',
+    exitStay: 'Blijven',
+    // niet-opgeslagen wijzigingen
+    unsavedChanges: 'Niet-opgeslagen wijzigingen',
+    exitUnsavedOne: 'In één venster staan niet-opgeslagen wijzigingen, die verloren gaan.',
+    exitUnsaved: 'In %0% vensters staan niet-opgeslagen wijzigingen, die verloren gaan.',
     // Background Jobs app
     backgroundJobsIntro:
       'Alle geplande taken die Umbraco achter je site uitvoert: publiceren, webhooks, opschoningen, en alles wat een pakket heeft toegevoegd. Je kunt hier niets starten of stoppen, dit is een alleen-lezen overzicht van wat het CMS uit zichzelf doet.',

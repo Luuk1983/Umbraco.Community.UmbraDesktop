@@ -1,5 +1,6 @@
 import { paletteCss } from '../palette-css.js';
 import type { UmbraDesktopPalette, UmbraDesktopSurface, UmbraDesktopTheme } from '../types';
+import type { UmbraDesktopWindow } from '../../types';
 
 /**
  * Test support shared by the themes' browser-rendered checks: mount one chrome component exactly
@@ -129,4 +130,57 @@ export async function mountThemedWith<T extends UmbraDesktopUpdatable>(
   await element.updateComplete;
 
   return { element, root, dispose: () => host.remove() };
+}
+
+/** What a themed window paints for the unsaved-changes marker, as measured in the browser. */
+export interface UmbraDesktopUnsavedMarkerMeasurement {
+  /** Whether the marker is in the DOM at all. */
+  present: boolean;
+  /** Its painted width in px. */
+  width: number;
+  /** Its painted height in px. */
+  height: number;
+  /** The colour it is painted in. */
+  background: string;
+  /** The colour of the caption behind it, so a test can prove the two are not the same. */
+  titlebarBackground: string;
+}
+
+/**
+ * Show a mounted window's unsaved-changes marker and measure what the theme paints, then put the
+ * window back the way it was.
+ *
+ * Shared rather than restated per theme because the measurement is the fiddly part and the three
+ * themes that mount a window all want the same one: *a theme may restyle chrome, never remove it*,
+ * and a marker that a theme has sized to nothing or painted in its own caption colour is removed in
+ * every way that matters to the person looking at it.
+ *
+ * Restores the window afterwards so the file's other assertions, which measure caption geometry,
+ * are unaffected by the order they happen to run in.
+ * @param element The mounted window element.
+ * @param root Its shadow root.
+ * @returns What the theme painted.
+ */
+export async function measureUnsavedMarker(
+  element: UmbraDesktopUpdatable & { window?: UmbraDesktopWindow },
+  root: ShadowRoot,
+): Promise<UmbraDesktopUnsavedMarkerMeasurement> {
+  const original = element.window;
+  element.window = { ...(original as UmbraDesktopWindow), dirty: true };
+  await element.updateComplete;
+
+  const marker = root.querySelector('.dirty') as HTMLElement | null;
+  const titlebar = root.querySelector('.titlebar') as HTMLElement;
+  const box = marker?.getBoundingClientRect();
+  const measurement: UmbraDesktopUnsavedMarkerMeasurement = {
+    present: !!marker,
+    width: box?.width ?? 0,
+    height: box?.height ?? 0,
+    background: marker ? getComputedStyle(marker).backgroundColor : '',
+    titlebarBackground: getComputedStyle(titlebar).backgroundColor,
+  };
+
+  element.window = original;
+  await element.updateComplete;
+  return measurement;
 }

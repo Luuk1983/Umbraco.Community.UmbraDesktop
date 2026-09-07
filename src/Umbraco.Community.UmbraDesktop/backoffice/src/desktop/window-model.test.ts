@@ -10,6 +10,8 @@ import {
   resizeRect,
   setWindowRect,
   taskActivation,
+  setWindowDirty,
+  unsavedWindows,
   clampWindowPosition,
   clampResizeOrigin,
   clampWindowsToBounds,
@@ -307,4 +309,36 @@ it('taskActivation focuses an inactive window when clicked in the taskbar', () =
 
 it('taskActivation focuses (restores) a minimized window', () => {
   expect(taskActivation({ active: false, state: 'minimized' })).to.equal('focus');
+});
+
+it('setWindowDirty marks only the target window', () => {
+  const next = setWindowDirty([win('a', 1), win('b', 2)], 'a', true);
+  expect(next.find((w) => w.id === 'a')!.dirty).to.equal(true);
+  expect(next.find((w) => w.id === 'b')!.dirty).to.equal(undefined);
+});
+
+it('setWindowDirty clears the mark again when the content is saved', () => {
+  const dirty = setWindowDirty([win('a', 1)], 'a', true);
+  expect(setWindowDirty(dirty, 'a', false)[0].dirty).to.equal(false);
+});
+
+it('setWindowDirty returns the same list when nothing changed, so no re-render is triggered', () => {
+  // Every keystroke in an already-dirty window reports dirty again. Returning a new array each
+  // time would repaint the whole desktop on every character typed anywhere in it.
+  const windows = setWindowDirty([win('a', 1), win('b', 2)], 'a', true);
+  expect(setWindowDirty(windows, 'a', true)).to.equal(windows);
+});
+
+it('setWindowDirty ignores an id that is not open', () => {
+  const windows = [win('a', 1)];
+  expect(setWindowDirty(windows, 'gone', true)).to.equal(windows);
+});
+
+it('unsavedWindows returns only the marked windows, in list order', () => {
+  const windows = [win('a', 1, { dirty: true }), win('b', 2), win('c', 3, { dirty: true })];
+  expect(unsavedWindows(windows).map((w) => w.id)).to.deep.equal(['a', 'c']);
+});
+
+it('unsavedWindows is empty when nothing is marked', () => {
+  expect(unsavedWindows([win('a', 1), win('b', 2, { dirty: false })])).to.deep.equal([]);
 });

@@ -1,5 +1,6 @@
 import type { UmbraDesktopWindow } from '../types';
 import { taskActivation } from '../window-model';
+import { exitDialogContent } from '../exit-message.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -141,14 +142,25 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   /** Open the desktop settings dialog (wallpaper today, more later). */
   #onSettings = () => this.#openFromLauncher(UMBRADESKTOP_SETTINGS_MODAL);
 
-  /** Confirm, then leave the Desktop section for the classic backoffice. */
+  /**
+   * Confirm, then leave the Desktop section for the classic backoffice.
+   *
+   * Exit unmounts the whole desktop with every open window in it, so it is the one route that can
+   * discard several windows' work at once. It asks **once**, naming how many of them are unsaved,
+   * rather than stacking a discard dialog on top of this one — see `exit-message.ts`. Cancelling
+   * returns to the desktop with every window still open and still marked, because nothing here
+   * touches the windows.
+   */
   #onExit = async () => {
     try {
       await umbConfirmModal(this, {
-        headline: 'Exit desktop mode',
-        content: 'Return to the classic Umbraco backoffice? Your open windows will be closed.',
-        confirmLabel: 'Exit',
-        cancelLabel: 'Stay',
+        headline: this.localize.term('umbraDesktop_exitHeadline'),
+        content: exitDialogContent(
+          this.#manager?.unsavedWindows().length ?? 0,
+          (key, ...args) => this.localize.term(key, ...args),
+        ),
+        confirmLabel: this.localize.term('umbraDesktop_exitConfirm'),
+        cancelLabel: this.localize.term('umbraDesktop_exitStay'),
         color: 'danger',
       });
     } catch {

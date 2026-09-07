@@ -147,6 +147,15 @@ export interface UmbraDesktopWindow {
   active: boolean;
   /** Window state. */
   state: UmbraDesktopWindowState;
+  /**
+   * Whether the backoffice inside this window is holding unsaved changes.
+   *
+   * Optional, and absent rather than `false` on a freshly opened window: nothing is dirty until the
+   * frame's own workspace says so, and a window whose content has no editable workspace — Log
+   * Viewer, any dashboard — never carries it at all. Written only by the dirty watcher, through
+   * the manager; read by the titlebar marker and by every guard that could throw the work away.
+   */
+  dirty?: boolean;
 }
 
 /** Whether an app was maintainer-certified or auto-derived as an untested fallback. */
