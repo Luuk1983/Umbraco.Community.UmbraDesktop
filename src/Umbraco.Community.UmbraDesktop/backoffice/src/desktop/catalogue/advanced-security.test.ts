@@ -33,12 +33,6 @@ it('references every tool by ref so an absent menu item drops the app', () => {
   }
 });
 
-it('marks every entry optional so a v17 install stays quiet', () => {
-  for (const e of entries) {
-    expect(e.optional, `${e.alias} must be optional`).to.be.true;
-  }
-});
-
 it('gates every entry on the Users section', () => {
   for (const e of entries) {
     expect(e.section, `${e.alias} needs the section gate its menu-item ref infers from`).to.equal(

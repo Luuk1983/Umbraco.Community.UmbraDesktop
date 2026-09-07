@@ -57,4 +57,16 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     group: 'diagnostics',
     weight: 40,
   },
+  {
+    // Our own dashboard, so the ref always resolves; no `optional` flag needed.
+    alias: 'background-jobs',
+    ref: 'Umbraco.Community.UmbraDesktop.Dashboard.BackgroundJobs',
+    name: '#umbraDesktop_appBackgroundJobs',
+    icon: 'icon-time',
+    chromeProfile: 'bare',
+    defaultSize: { w: 1200, h: 780 },
+    minSize: { w: 900, h: 540 },
+    group: 'diagnostics',
+    weight: 50,
+  },
 ];
