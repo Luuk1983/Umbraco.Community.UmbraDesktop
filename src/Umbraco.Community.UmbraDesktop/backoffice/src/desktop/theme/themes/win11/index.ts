@@ -2,6 +2,8 @@ import type { UmbraDesktopTheme } from '../../types';
 import { W11_DARK, W11_LIGHT } from './palette.js';
 import {
   W11_CAPTION_KEEP_VISIBLE,
+  W11_CHROME_HEIGHT,
+  W11_CHROME_WIDTH,
   W11_GRAB,
   W11_TASKBAR_HEIGHT,
   W11_TRAILING_CONTROLS_WIDTH,
@@ -47,6 +49,10 @@ export const UMBRADESKTOP_WIN11_THEME: UmbraDesktopTheme = {
     leadingControlsWidth: 0,
     trailingControlsWidth: W11_TRAILING_CONTROLS_WIDTH,
     grab: W11_GRAB,
+    // What an app's content box does not get: the caption band alone, this theme drawing no
+    // hairline under it and keeping its frame content-box.
+    chromeWidth: W11_CHROME_WIDTH,
+    chromeHeight: W11_CHROME_HEIGHT,
     taskbarReserve: W11_TASKBAR_HEIGHT,
   },
   sheets: async () => {

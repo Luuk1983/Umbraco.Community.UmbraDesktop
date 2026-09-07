@@ -74,6 +74,126 @@ it('gives every app token exactly one fallback entry, no more and no fewer', () 
 });
 
 /**
+ * Every place an app token value is written down: the fallback set plus each theme's palettes, as
+ * `[where, token, value]` triples so a failure can name the file a reader has to go and edit.
+ *
+ * Built once and shared, because the two invariants below (no unitless number, and the fallback
+ * surfaces being distinct) are both properties of *values* rather than of names, and a second
+ * hand-rolled walk over the same six palettes is a second place to forget a variant.
+ *
+ * @returns One triple per app token value that any palette or the fallback set actually sets.
+ */
+function everyAppTokenValue(): ReadonlyArray<readonly [string, UmbraDesktopAppToken, string]> {
+  const values: [string, UmbraDesktopAppToken, string][] = [];
+
+  for (const token of UMBRADESKTOP_APP_TOKENS) {
+    values.push(['UMBRADESKTOP_APP_TOKEN_FALLBACKS', token, UMBRADESKTOP_APP_TOKEN_FALLBACKS[token]]);
+  }
+
+  for (const theme of UMBRADESKTOP_THEMES) {
+    for (const variant of ['light', 'dark'] as const) {
+      const palette = theme.palettes[variant];
+      // A theme need not ship a dark palette (Win98 and Umbraco 4 do not).
+      if (!palette) continue;
+      for (const token of UMBRADESKTOP_APP_TOKENS) {
+        const value = palette[token];
+        // The identity theme sets none of them, and a missing token is the coverage test's failure.
+        if (value === undefined) continue;
+        values.push([`${theme.id}.${variant}`, token, value]);
+      }
+    }
+  }
+
+  return values;
+}
+
+/**
+ * A bare number — `0` above all — is a valid `<length>` on its own and **invalid inside `calc()`,
+ * `min()` or `max()`**, where CSS demands a unit even on zero. The failure is silent and takes the
+ * whole declaration with it, so this is the one hazard in the group that no amount of review at the
+ * consuming end can defend against: the app author reads `edge-width`, writes
+ * `max(1px, var(--umbradesktop-app-edge-width))` to floor a grid ruling, and loses the entire
+ * `border` shorthand including `border-style`, under exactly the two themes that publish zero.
+ *
+ * Which is not a hypothetical. Minesweeper, the first consumer of this contract and the first code
+ * to read these tokens from outside this repository, hit it on its closed board.
+ *
+ * The chrome's own tokens can get away with a unitless zero — Win11's `launcher-card-radius` is
+ * one — because both ends of that contract are in this repository and a reader that wraps one in
+ * `calc()` is a diff away from being fixed. This group cannot: its readers ship in packages this
+ * repository cannot inspect, let alone edit. Hence the assertion, rather than a comment in six
+ * palette files that the seventh theme author will not have read.
+ *
+ * Written as "no bare number" rather than "no bare zero" on purpose. Every token in this group is a
+ * length or a colour and none of them is legally unitless, so `0.5` would be as broken as `0` and
+ * there is nothing to be gained by only catching the value that happens to have shipped.
+ */
+it('never publishes an app token as a unitless number, which cannot survive a calc()', () => {
+  // A value that is nothing but digits (with an optional sign, decimal point or exponent) and no
+  // unit. Anything with a unit, a function, a colour or a keyword in it passes.
+  const UNITLESS_NUMBER = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
+
+  const offenders = everyAppTokenValue()
+    .filter(([, , value]) => UNITLESS_NUMBER.test(value.trim()))
+    .map(([where, token, value]) => `${where} sets ${token} to '${value}'`);
+
+  expect(
+    offenders,
+    'these app token values are unitless numbers — valid as a standalone length but invalid inside ' +
+      "calc(), min() or max(), where the whole declaration is dropped silently. Write '0px' rather " +
+      "than '0'. The consumers of this group are in other packages and cannot work around it",
+  ).to.deep.equal([]);
+});
+
+/**
+ * The three surfaces are documented as three distinct roles — a panel ground, a control face, a
+ * recessed well — so a fallback set that resolves two of them to one value is a defect in the
+ * contract's own data rather than a matter of taste. It shipped as one: `surface` and
+ * `surface-raised` were both `var(--uui-color-surface)`, and under the identity theme, whose
+ * palette is empty and whose values therefore *are* these fallbacks, Minesweeper measured a closed
+ * cell against the app ground behind it at 1.00:1 — the same colour, separated only by a 1.43:1
+ * hairline.
+ *
+ * **What this test proves, and what it does not.** These values are `var(--uui-*)` references,
+ * resolved by whichever Umbraco theme stylesheet is loaded, so a unit test cannot compute their
+ * contrast the way the palette test below computes a theme's hex codes: there is no number here to
+ * measure. What it asserts is the weaker property that is still worth having, and the one whose
+ * absence caused the bug: the three are three *different* references. That catches the collision
+ * that shipped and any future one, and it does not prove the resolved colours are far enough apart
+ * to see. They are not, in fact, and no `--uui-*` trio would be: the widest separation Umbraco's
+ * surface family offers in its light theme is 1.07:1, well under the 3:1 WCAG 1.4.11 asks of a
+ * control boundary. That is the boundary problem the design doc §6.1 settles on the app side with
+ * the grid-gap technique in `desktop-apps.md` §4, and it is not something a fallback value can fix
+ * without ceasing to be the Umbraco look.
+ */
+it('keeps the three surface fallbacks mutually distinguishable', () => {
+  const surfaces = [
+    '--umbradesktop-app-surface',
+    '--umbradesktop-app-surface-raised',
+    '--umbradesktop-app-surface-sunken',
+  ] as const satisfies ReadonlyArray<UmbraDesktopAppToken>;
+
+  // Normalised before comparing so that two spellings of one reference still read as a collision.
+  const resolved = surfaces.map((token) => UMBRADESKTOP_APP_TOKEN_FALLBACKS[token].replace(/\s+/g, ''));
+  const collisions: string[] = [];
+
+  for (let i = 0; i < surfaces.length; i++) {
+    for (let j = i + 1; j < surfaces.length; j++) {
+      if (resolved[i] === resolved[j]) {
+        collisions.push(`${surfaces[i]} and ${surfaces[j]} are both '${resolved[i]}'`);
+      }
+    }
+  }
+
+  expect(
+    collisions,
+    'these surface fallbacks resolve to the same value, so an app that reads only the published ' +
+      'contract draws two of its three documented surfaces in one colour — a control face flush ' +
+      'with the panel behind it under the identity theme, which is the default',
+  ).to.deep.equal([]);
+});
+
+/**
  * A theme that answers the chrome tokens but not the app tokens would render a correct desktop
  * around an app painted in another theme's colours. The identity theme is the deliberate exception:
  * its palette is empty by design, and the fallbacks an app carries *are* the Umbraco look, so
@@ -297,5 +417,90 @@ it('keeps every app text pair legible on the ground it is promised against', () 
     'these app token pairs could not be measured, so this test is no longer checking them — a text ' +
       'or ground token must stay an opaque colour (#rgb, #rrggbb or rgb()/rgba() at full alpha) or ' +
       'the contrast it promises cannot be verified at all',
+  ).to.deep.equal([]);
+});
+
+/**
+ * The ratio WCAG 1.4.11 asks of "visual information required to identify user interface components
+ * and their states", which is what a grid's ruling, a field's outline and a row separator are.
+ *
+ * 3:1 rather than the {@link WCAG_AA_BODY_TEXT} above because none of the pairs below is text: a
+ * line is a graphical object, and holding it to the body-text ratio would force every theme's
+ * divider to the weight of its own prose.
+ */
+const WCAG_NON_TEXT_BOUNDARY = 3;
+
+/**
+ * The boundary token, as the one contrast in this group that is *guaranteed* rather than left to a
+ * theme's taste.
+ *
+ * Measured against **all three** surfaces and not against `surface` alone, which is the whole
+ * reason the token exists: an app draws a line wherever it draws a control, so a value that is
+ * legible on the panel and invisible in the well is no more usable than no value at all. The
+ * `edge-*` pair is deliberately not held to this — a theme is entitled to a bevel as subtle as its
+ * own controls, and two of the five publish `edge-width: 0px` — and Windows 11 is what happens when
+ * an app has nothing else to reach for: `edge-dark` composited to 1.15:1 against a closed cell in
+ * light mode and 1.33:1 in dark, over a fill step of 1.03:1 and 1.20:1. That is what a reported
+ * "the contrast is way too low" looks like from inside a palette file, and it was found in a
+ * browser by a person rather than here, which is the gap this closes.
+ *
+ * A palette whose three surfaces are too far apart for any single line colour to clear 3:1 against
+ * all of them fails this test, and that failure is the right one: it says the surfaces are not one
+ * family, not that the border colour was chosen badly.
+ */
+it('keeps the boundary token visible against every surface an app may draw it on', () => {
+  const grounds = [
+    '--umbradesktop-app-surface',
+    '--umbradesktop-app-surface-raised',
+    '--umbradesktop-app-surface-sunken',
+  ] as const satisfies ReadonlyArray<UmbraDesktopAppToken>;
+
+  const failures: string[] = [];
+  // Separate from `failures` for the same reason the text test keeps the two apart: a translucent
+  // or computed value would quietly empty this test rather than fail it, and a boundary colour has
+  // no defined contrast without knowing what is behind it.
+  const unmeasurable: string[] = [];
+
+  for (const theme of UMBRADESKTOP_THEMES) {
+    // The identity theme sets nothing and its fallbacks are `var(--uui-*)` references with no
+    // number in them, exactly as in the text test above.
+    if (theme.id === UMBRADESKTOP_UMBRACO_THEME.id) continue;
+
+    for (const variant of ['light', 'dark'] as const) {
+      const palette = theme.palettes[variant];
+      // A theme need not ship a dark palette (Win98 and Umbraco 4 do not).
+      if (!palette) continue;
+
+      const border = palette['--umbradesktop-app-border'];
+      // A missing token is the coverage test's failure, not this one's.
+      if (border === undefined) continue;
+
+      for (const ground of grounds) {
+        const value = palette[ground];
+        if (value === undefined) continue;
+
+        const where = `${theme.id}.${variant} --umbradesktop-app-border on ${ground}`;
+        const ratio = contrastRatio(border, value);
+        if (ratio === null) {
+          unmeasurable.push(`${where} (${border} on ${value})`);
+          continue;
+        }
+        if (ratio < WCAG_NON_TEXT_BOUNDARY) {
+          failures.push(`${where} is ${ratio.toFixed(2)}:1, below ${WCAG_NON_TEXT_BOUNDARY}:1`);
+        }
+      }
+    }
+  }
+
+  expect(
+    failures,
+    'these boundary pairs fall below WCAG 1.4.11 for a control boundary — an app ruling a grid or ' +
+      'outlining a field with this token draws a line nobody can see on that surface, and cannot ' +
+      'know it from inside another package',
+  ).to.deep.equal([]);
+  expect(
+    unmeasurable,
+    'the boundary token and the surfaces must stay opaque colours (#rgb, #rrggbb or rgb()/rgba() ' +
+      'at full alpha) or the 3:1 this token guarantees is not being checked at all',
   ).to.deep.equal([]);
 });

@@ -59,9 +59,23 @@ export interface UmbraDesktopApp {
   content: UmbraDesktopAppContent;
   /** Default chrome profile for windows of this app. */
   chromeProfile: UmbraDesktopChromeProfile;
-  /** Default window size in px. */
+  /**
+   * The **content** box this app opens at, in px — its own box, with the active theme's chrome
+   * added by the host. See `window-chrome.ts` for why the host owns that arithmetic and not the
+   * app.
+   *
+   * One meaning for both sources, deliberately. A curated entry's numbers were written as window
+   * sizes, and re-reading them as content sizes makes an iframe window a caption taller than
+   * before; two semantics for one field would have been worse than that, and "the same amount of
+   * backoffice whichever theme is on" is the better reading of a round number like 1200x780
+   * anyway.
+   */
   defaultSize?: { w: number; h: number };
-  /** Minimum window size in px (resize floor); falls back to the global minimum when unset. */
+  /**
+   * The smallest **content** box this app can work in, in px; falls back to the desktop's global
+   * content minimum when unset. The resize floor is this plus the chrome, or what the chrome itself
+   * needs — whichever is larger.
+   */
   minSize?: { w: number; h: number };
   /** Whether more than one instance may open (default: allowed). */
   allowMultiple?: boolean;
@@ -100,9 +114,9 @@ export interface UmbraDesktopRegisteredApp {
    * inverted from the manifest's Umbraco-convention weight by `registered-apps.ts`.
    */
   weight?: number;
-  /** Default window size in px. */
+  /** The manifest's `meta.defaultSize`: the app's **content** box in px, chrome excluded. */
   defaultSize?: { w: number; h: number };
-  /** Minimum window size in px. */
+  /** The manifest's `meta.minSize`: the smallest **content** box, in px, chrome excluded. */
   minSize?: { w: number; h: number };
   /** Whether more than one window may open. */
   allowMultiple?: boolean;
@@ -169,9 +183,12 @@ export interface UmbraDesktopCatalogueEntry {
   icon?: string;
   /** Chrome profile (defaults to `full-section`). */
   chromeProfile?: UmbraDesktopChromeProfile;
-  /** Default window size in px. */
+  /** The window **body's** size in px when this entry opens; the theme's chrome is added on top. */
   defaultSize?: { w: number; h: number };
-  /** Minimum window size in px (resize floor); falls back to the global minimum when unset. */
+  /**
+   * The smallest body, in px, the user may resize to; falls back to the desktop's global content
+   * minimum. Floored at what the active theme's chrome needs either way.
+   */
   minSize?: { w: number; h: number };
   /** Whether more than one instance may open. */
   allowMultiple?: boolean;

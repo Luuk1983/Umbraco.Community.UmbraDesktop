@@ -91,6 +91,7 @@ export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
  * | `--umbradesktop-app-surface-sunken` | A recessed field: the minefield well, a numeric display |
  * | `--umbradesktop-app-edge-light` | The light edge of a bevel, or a top border |
  * | `--umbradesktop-app-edge-dark` | The dark edge |
+ * | `--umbradesktop-app-border` | A boundary line that stays visible on all three surfaces: a field's outline, a grid's ruling, a row separator |
  * | `--umbradesktop-app-edge-width` | Bevel thickness. Wide enough to chisel an edge on a theme whose controls are bevelled, down to zero on one whose controls are flat |
  * | `--umbradesktop-app-radius` | Corner rounding. Zero on a theme whose controls are square-cornered, non-zero on one whose controls are rounded |
  * | `--umbradesktop-app-text` | Primary text |
@@ -110,6 +111,20 @@ export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
  * on every theme's accent, so the theme names the one that does rather than the app guessing.
  * Prefer widening this group over adding a per-theme branch to an app.
  *
+ * `border` is the group's one **guaranteed** colour, and it exists because the `edge-*` pair is
+ * not one. A theme is entitled to make its bevel as subtle as its own controls are: two of the
+ * five publish `edge-width: 0px` with an `edge-dark` at 8% black, correctly, and an app whose only
+ * boundary comes from that pair draws nothing at all under them. Windows 11's Minesweeper board
+ * rendered as one undivided sheet for exactly that reason, in both variants: a 1.03:1 fill step
+ * between a closed cell and the well behind it, ruled by a 1.15:1 hairline. `border` is instead
+ * asserted at **3:1 against all three of its own palette's surfaces** — WCAG 1.4.11's ratio for
+ * the boundary of a user interface component — which `app-tokens.test.ts` measures, so a grid
+ * ruled with it is legible under every theme including one not written yet.
+ *
+ * It cannot be folded into `edge-dark` instead of being its own token. On a dark palette a visible
+ * boundary is a *lighter* line than the surface it separates, so strengthening `edge-dark` there
+ * would leave it lighter than `edge-light` and invert every bevel an app drew from the pair.
+ *
  * The three `surface` tokens may carry **any valid `background` value, including a gradient**. No
  * shipped theme sets a gradient app surface today, but four of the five use gradients elsewhere in
  * their chrome, so the first one to reach for it here is a question of when rather than whether. An
@@ -117,6 +132,18 @@ export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
  * `background-color:`, which accepts only a colour and would drop a gradient value entirely,
  * leaving the element unpainted. The `edge-*`, `text*` and `accent*` tokens are plain colours,
  * since each feeds a property that takes one.
+ *
+ * **A length-valued token in this group always carries a unit, zero included.** `edge-width` and
+ * `radius` are written `0px` and never `0`, because a bare number is a valid `<length>` on its own
+ * and **invalid inside `calc()`, `min()` or `max()`**, where the invalid value takes the entire
+ * declaration with it and nothing is logged. The chrome's own tokens are allowed the shorter
+ * spelling — Win11's `launcher-card-radius` is `0` — since both ends of that contract live in this
+ * repository and a reader that wraps one in `calc()` is one diff from being fixed. This group's
+ * readers ship in packages this repository cannot inspect, so the same value here is a trap rather
+ * than a shorthand: the first real consumer wrote `max(1px, var(--umbradesktop-app-edge-width))` to
+ * floor a grid ruling and silently lost its `border` shorthand, `border-style` included, under the
+ * two themes whose controls are flat. `app-tokens.test.ts` asserts it of every palette and of the
+ * fallback set, since a comment in six files is not something a seventh theme's author has read.
  *
  * See {@link UMBRADESKTOP_APP_TOKEN_FALLBACKS} for the fallback each app is expected to write.
  */
@@ -126,6 +153,7 @@ export const UMBRADESKTOP_APP_TOKENS = [
   '--umbradesktop-app-surface-sunken',
   '--umbradesktop-app-edge-light',
   '--umbradesktop-app-edge-dark',
+  '--umbradesktop-app-border',
   '--umbradesktop-app-edge-width',
   '--umbradesktop-app-radius',
   '--umbradesktop-app-text',
@@ -156,10 +184,40 @@ export type UmbraDesktopAppToken = (typeof UMBRADESKTOP_APP_TOKENS)[number];
  */
 export const UMBRADESKTOP_APP_TOKEN_FALLBACKS = {
   '--umbradesktop-app-surface': 'var(--uui-color-surface)',
-  '--umbradesktop-app-surface-raised': 'var(--uui-color-surface)',
+  // Not `--uui-color-surface` again, which is what shipped and was a defect in this contract's own
+  // data: two tokens documented as distinct roles resolved to one value, so under the identity
+  // theme — whose palette is empty and whose values therefore *are* these fallbacks — a raised
+  // control was exactly the colour of the panel behind it. Minesweeper measured 1.00:1.
+  //
+  // `--uui-color-surface-emphasis` is Umbraco's own "a step off `surface`" token, and it is the
+  // only member of that family that differs from `--uui-color-surface` in all three of Umbraco's
+  // themes: light (`#fafafa` against `#fff`), dark (`#333a42` against `#2d333b`) and high contrast
+  // (`#dadada` against `#fff`). `--uui-color-surface-alt` is the obvious alternative and does not
+  // work: in the light theme it is `--uui-palette-sand`, the same value as `--uui-color-background`
+  // and therefore a collision with `surface-sunken` below instead.
+  //
+  // Being three values is all this fixes. The steps are thin — 1.04:1 in light, 1.11:1 in dark —
+  // because Umbraco publishes no surface trio with more, and a boundary that meets WCAG 1.4.11's
+  // 3:1 is not something a fallback can invent while still being the Umbraco look. That is the
+  // separate problem the design doc's §6.1 settles on the app side: rule a tiled grid with the
+  // grid's own `edge-dark` ground showing through a 1px gap (`docs/desktop-apps.md` §4).
+  '--umbradesktop-app-surface-raised': 'var(--uui-color-surface-emphasis)',
   '--umbradesktop-app-surface-sunken': 'var(--uui-color-background)',
   '--umbradesktop-app-edge-light': 'transparent',
   '--umbradesktop-app-edge-dark': 'var(--uui-color-border)',
+  // Not `--uui-color-border`, which is what `edge-dark` above uses and is a 1.43:1 hairline against
+  // Umbraco's own surfaces — the value that left the identity theme's board as hard to read as
+  // Win11's. Nothing in Umbraco's border family reaches the 3:1 this token promises, so the
+  // fallback borrows the muted text colour, which does, and which tracks the backoffice's
+  // light/dark setting the way every other value here does. Under the identity theme `border` and
+  // `text-muted` therefore resolve to one colour. They are still two tokens: a theme that wants a
+  // delicate 3:1 rule rather than a text-weight one only has to say so, and five of them do.
+  '--umbradesktop-app-border': 'var(--uui-color-text-alt)',
+  // Both lengths carry a unit even when the value is zero, and every palette's app tokens must too:
+  // a bare `0` is a valid length on its own and invalid inside `calc()`, `min()` or `max()`, where
+  // it drops the whole declaration silently. A chrome token can get away with that because its
+  // reader is in this repository; these readers are not, which is why `app-tokens.test.ts` asserts
+  // no app token value anywhere is a unitless number.
   '--umbradesktop-app-edge-width': '1px',
   '--umbradesktop-app-radius': '3px',
   '--umbradesktop-app-text': 'var(--uui-color-text)',
@@ -190,8 +248,9 @@ export type UmbraDesktopPalette = Partial<Record<UmbraDesktopPaletteToken, strin
 
 /**
  * The geometry a theme has to publish because JavaScript — not CSS — needs it: the window bounds
- * clamp must know where the non-draggable controls are, and the desktop must know how much of its
- * bottom edge the taskbar or dock occupies.
+ * clamp must know where the non-draggable controls are, the window manager must know what this
+ * theme's chrome costs an app before it can size a window around one, and the desktop must know
+ * how much of its bottom edge the taskbar or dock occupies.
  *
  * Sibling shape to {@link UmbraDesktopKeepVisible `UmbraDesktopKeepVisible`} in `window-model.ts`,
  * with different field names for a deliberate reason rather than an oversight: this one is
@@ -208,6 +267,35 @@ export interface UmbraDesktopThemeMetrics {
   trailingControlsWidth: number;
   /** Draggable titlebar, in px, that must stay on screen while dragging. */
   grab: number;
+  /**
+   * Width in px this theme's chrome takes out of a window's declared size before anything reaches
+   * the app inside it. Zero for a theme whose frame sizes content-box, since its border ring is
+   * then painted outside the width the window manager set.
+   *
+   * Published because `meta.defaultSize` and `meta.minSize` are an app's **content** size and the
+   * host adds the chrome: an app ships in another package and cannot read a titlebar height, a
+   * frame ring or a sunken well, so it cannot do this arithmetic and must not have to try. See
+   * `window-chrome.ts`, and its sibling {@link chromeHeight}.
+   *
+   * Measured in the same reference frame the window's size is written in — the box `.frame`'s
+   * `width` sizes — so a theme that opts `.frame` into `border-box` counts its ring here and one
+   * that leaves it content-box does not. Every theme's own `metrics.test.ts` subtracts the app's
+   * rendered box from the window's rect and holds this number against the difference, which is the
+   * only check that catches a `padding` or a `box-sizing` nobody folded back into the sum.
+   */
+  chromeWidth: number;
+  /**
+   * Height in px this theme's chrome takes out of a window's declared size: the titlebar, plus
+   * whatever else sits outside the app's box on the vertical axis.
+   *
+   * Not the same number as {@link titlebarHeight}, and the difference is what the reported bug was
+   * made of. That one is measured from the window's outer top edge for the drag clamp, so it
+   * includes a frame ring painted outside the sized box and excludes anything below the caption.
+   * This one is what the app does not get: under Windows 98 that is a ring at the top *and* the
+   * bottom plus a sunken well, which is why an app's "tallest titlebar of the five" guess came out
+   * 32px short there and looked right everywhere else.
+   */
+  chromeHeight: number;
   /** Height in px reserved at the desktop's bottom edge for the taskbar or dock. */
   taskbarReserve: number;
 }

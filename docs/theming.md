@@ -171,6 +171,19 @@ contract doc comment in `types.ts` as well: an app writes
 a colour and would drop a gradient value entirely, leaving the element unpainted. The `edge-*`,
 `text*` and `accent*` tokens are plain colours, since each feeds a property that takes one.
 
+There is a second ruling on the app group's lengths, and it is the one most likely to look like
+pedantry in review. **Write `0px`, never `0`.** A bare zero is a valid `<length>` on its own and is
+**invalid inside `calc()`, `min()` or `max()`**, where the invalid value takes the entire
+declaration with it and nothing is logged. You are allowed the short spelling in the chrome group —
+Win11's `launcher-card-radius` is `0` — because both ends of that contract are in this repository,
+so a component that later wraps one in `calc()` is one diff away from being fixed. An app token's
+reader is in a package you cannot inspect: four palettes shipped `edge-width: 0` and
+`radius: 0`, the first game built against the contract wrote
+`max(1px, var(--umbradesktop-app-edge-width))` to floor a grid ruling, and it silently lost its
+whole `border` shorthand, `border-style` included, under both of the themes that publish zero.
+`app-tokens.test.ts` now fails on any unitless app token value in any palette, so this is enforced
+rather than remembered.
+
 Two more things about the app group, both because its readers are in other packages and cannot fix
 what you get wrong. `accent-text` exists so you can name the text colour that reads on *your*
 accent: white is 16:1 on Win98's navy and 2.52:1 on Umbraco 4's selection blue, so there is no value
@@ -179,6 +192,23 @@ an app could have guessed. And the contrast of the pairs an app is entitled to r
 WCAG AA's 4.5:1 in `app-tokens.test.ts`, per theme and per variant. If your palette lands under it
 the test names the pair and the ratio it measured. Fix the colour rather than the threshold: the
 whole point is that an app author reads these values on trust.
+
+`--umbradesktop-app-border` is held to WCAG 1.4.11's 3:1 instead, and against **all three** of your
+surfaces rather than one, in the same test. It is the colour an app rules a grid or outlines a field
+with, so a value that is legible on your panel and invisible in your well is no more usable than no
+value at all — which is what shipped: Win11's board was ruled at 1.15:1 and the theme was reported
+as unreadable in both variants. Pick it from whatever your source material uses for a boundary that
+has to be found rather than felt, and expect it to be a *lighter* line than its surroundings in a
+dark palette and a darker one in a light palette. That is the one value in the group that inverts,
+and it is why this is not simply a stronger `edge-dark`: doing that in a dark palette would leave a
+bevel's shadowed half brighter than its lit half.
+
+If you want to see what your thirteen values are actually being asked to do, read
+[`desktop-apps.md`](desktop-apps.md) §4: it is the other side of this contract, written for the
+person in another package who consumes them, and it is also where the promise you are making about
+`edge-width` and `radius` is spelled out. An app author writes one stylesheet expecting it to be a
+bevelled square control under Win98 and a flat rounded one under macOS, with no branch anywhere in
+the app, so a palette that sets both to values from the same visual idiom quietly costs them that.
 
 `taskbar-reserve` deserves a note: it is how much of the bottom edge is unavailable to windows, and
 it defaults to the taskbar's own height. A floating dock must set it **higher** than its height,
@@ -196,6 +226,8 @@ metrics: {
   leadingControlsWidth: 103,   // non-draggable chrome at the bar's left end
   trailingControlsWidth: 0,    // ...and at its right end
   grab: 80,                    // draggable titlebar that must stay on screen
+  chromeWidth: 0,              // what your chrome costs an app, horizontally...
+  chromeHeight: 31,            // ...and vertically
   taskbarReserve: 67,
 }
 ```
@@ -219,6 +251,33 @@ export const MACOS_LEADING_CONTROLS_WIDTH =
 Copy that pattern. If a number appears in both a `.css.ts` file and `metrics.ts`, it belongs in
 `metrics.ts` and gets interpolated into the CSS — and the same goes for `palette.ts`, which is
 where the easiest term to forget lives.
+
+### `chromeWidth` and `chromeHeight`: what your chrome costs an app
+
+These two are not for the drag clamp. A registered app (see
+[`desktop-apps.md`](desktop-apps.md)) declares the size of **its own box** and the host adds your
+chrome around it, because an app ships in someone else's package and cannot read your titlebar's
+height. These are that cost: what a window's declared size loses on the way to the app's box.
+
+They are **not** `titlebarHeight` under another name, and confusing the two is the mistake this
+pair exists because of. `titlebarHeight` is measured from the window's *outer* top edge, because a
+`rect.y` places the border box and that is the coordinate system the clamp works in.
+`chromeHeight` is measured against the box `.frame`'s `width`/`height` actually size, and that is
+where `box-sizing` decides everything:
+
+- Leave `.frame` content-box, as four of the five themes do, and its border ring is painted
+  *outside* the window's rect: it costs an app nothing, so `chromeWidth` is `0` and `chromeHeight`
+  is just your caption band.
+- Opt `.frame` into `border-box` and pad it, as Win98 does for its bevel, and that padding comes
+  out of the rect on all four sides — a ring below the body as well as above it. Win98 also pads
+  `.bodywrap` for its sunken well, which comes out of the same rect, so its numbers are `10` and
+  `32` where every other theme's width cost is zero.
+
+Get it wrong and every registered app opens that many pixels too small or too large under your
+theme, which shows up as an app's last row of content sitting on your frame's bevel. So measure
+this one exactly as you measure the rest — `measureChromeCost` in `themes/mount-themed.ts`
+subtracts the app's rendered box from the window's rect for you, and every shipped theme's
+`metrics.test.ts` holds its published pair against it.
 
 ### Then measure it
 
@@ -255,6 +314,12 @@ the taskbar's sheet. `launcher.css.ts` styles the panel's surface and contents o
 **`left` + `right` + an inherited `width` silently drops `right`.** An absolutely positioned box
 with all three is over-constrained, and the width wins with no warning. To stretch a panel that
 already has a width from the base rule, set `width: auto` as well as `left`/`right`.
+
+**A backtick in a CSS comment ends the stylesheet.** Every sheet here is a `css` tagged template, so
+a comment written in prose that quotes a property name the way this document does terminates the
+template literal, and what you get is a parse error further down the file pointing at a word inside
+your comment. It cost a build cycle to recognise. Write property and token names plain inside
+`/* ... */` — the shipped sheets all do, and that is not a coincidence.
 
 **DOM order is not visual order.** The window controls are reload, minimize, maximize, close in the
 DOM, because reload was added last. macOS renders close-minimize-maximize-reload using explicit
@@ -304,7 +369,10 @@ evidence the shape was right. Win98 came first, and these are what it needed:
 
 Its `metrics` differ from the Umbraco theme's in `titlebarHeight`, `trailingControlsWidth` and
 `taskbarReserve` — the bar is shorter than Umbraco's — while `grab` is unchanged and
-`leadingControlsWidth` stays `0`, because the controls stay at the right end.
+`leadingControlsWidth` stays `0`, because the controls stay at the right end. It is also the only
+shipped theme with a non-zero `chromeWidth` (§4), because that bevel is `border-box` padding on the
+frame and so comes out of the window's own rect: the two facts are the same fact, and the second
+one is the one a registered app feels.
 
 ### 6.1 When the source is not an operating system
 
@@ -412,7 +480,9 @@ has shipped a green test run and a red build, and the reverse.
       token — a theme can pass the first and fail the second
 - [ ] Every launcher affordance still *works*: search, tiles, pinning, the user button, Desktop
       settings, Exit. A theme may restyle, never remove (design §1.1)
-- [ ] Your theme's `metrics` are measured and not merely derived — a `metrics.test.ts` (§4)
+- [ ] Your theme's `metrics` are measured and not merely derived — a `metrics.test.ts` (§4),
+      `chromeWidth` and `chromeHeight` included, since those are what every registered app's window
+      is sized from
 - [ ] Windows dragged hard against all four screen edges stay grabbable
 - [ ] Switching to your theme with windows open pulls stranded windows back into reach
 - [ ] The backoffice's light, dark and high-contrast settings all render something sane

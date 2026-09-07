@@ -39,6 +39,38 @@ export const WIN98_TITLEBAR_HEIGHT = 22;
  */
 export const WIN98_CAPTION_KEEP_VISIBLE = WIN98_FRAME_BORDER + WIN98_TITLEBAR_HEIGHT;
 
+/**
+ * The sunken well the client area sits in, in px per side: `.bodywrap` opts into `border-box` and
+ * pads itself by one bevel depth so the well's own edge has somewhere to paint, exactly as the
+ * frame does for its ring. It comes out of the window's rect the same way, so it is part of what
+ * the chrome costs an app below.
+ */
+export const WIN98_BODY_WELL = WIN98_BEVEL_DEPTH;
+
+/**
+ * What this theme's chrome takes out of a window's declared width before anything reaches the app:
+ * the frame ring on both sides, and the sunken well on both sides.
+ *
+ * The only theme of the five where this is not zero, and the reason it is a per-theme metric at
+ * all: `.frame` is `border-box` here, so its ring is inside the width the window manager set,
+ * where a content-box frame paints its border outside it and charges the app nothing.
+ */
+export const WIN98_CHROME_WIDTH = 2 * WIN98_FRAME_BORDER + 2 * WIN98_BODY_WELL;
+
+/**
+ * What it takes out of the declared height: the ring above the caption, the caption, the ring
+ * **below** the body, and the well's top and bottom.
+ *
+ * The ring at the bottom is the term no app could have guessed. Every other shipped theme spends
+ * nothing below the body, so an app that subtracted "the tallest titlebar of the five" from its own
+ * content height came out exactly this theme's bottom ring plus well short, and its last row of
+ * content landed where the bevel should be. That was the reported bug, and it is the reason this
+ * number is published rather than inferred from {@link WIN98_CAPTION_KEEP_VISIBLE}, which stops at
+ * the bottom of the caption because the drag clamp is all it was ever for.
+ */
+export const WIN98_CHROME_HEIGHT =
+  2 * WIN98_FRAME_BORDER + WIN98_TITLEBAR_HEIGHT + 2 * WIN98_BODY_WELL;
+
 /** Width of each window button. Feeds the palette's `--umbradesktop-control-width`. */
 export const WIN98_CONTROL_WIDTH = 20;
 

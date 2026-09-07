@@ -112,7 +112,19 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-app-surface-sunken': '#e8e8ed',
   '--umbradesktop-app-edge-light': '#ffffff',
   '--umbradesktop-app-edge-dark': 'rgba(0, 0, 0, 0.16)',
-  '--umbradesktop-app-edge-width': '0',
+  // Apple's own systemGray, darkened just enough to clear 3:1 against all three surfaces (the
+  // literal `#8e8e93` is 2.7:1 in the sunken field). `edge-dark` above is the 16% wash a real
+  // separator is and is left alone: it is the right hairline between two rows of text and the
+  // wrong one around a control, which is the distinction between the two tokens.
+  '--umbradesktop-app-border': '#7f7f85',
+  // Flat controls, so no bevel. `0px` and not `0`, and that unit is load-bearing rather than
+  // tidiness: a bare `0` is a valid length on its own but **invalid inside `calc()`, `min()` or
+  // `max()`**, which drops the whole declaration silently. The chrome's own tokens can get away
+  // with a unitless zero because both ends of that contract are in this repository; an app token's
+  // reader ships in a package this repository cannot inspect, and Minesweeper lost its entire
+  // `border` shorthand to exactly this. `app-tokens.test.ts` now fails on any unitless app token,
+  // so this cannot be undone by accident.
+  '--umbradesktop-app-edge-width': '0px',
   '--umbradesktop-app-radius': '6px',
   '--umbradesktop-app-text': '#2c2c2e',
   '--umbradesktop-app-text-muted': '#6e6e73',
@@ -163,6 +175,10 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   '--umbradesktop-app-surface-sunken': '#000000',
   '--umbradesktop-app-edge-light': 'rgba(255, 255, 255, 0.10)',
   '--umbradesktop-app-edge-dark': 'rgba(0, 0, 0, 0.60)',
+  // systemGray unmodified here: this palette's surfaces sit far enough down that Apple's own grey
+  // clears 3:1 against all three without help. Lighter than everything it separates, for the
+  // reason Win11's dark half gives at length.
+  '--umbradesktop-app-border': '#8e8e93',
   '--umbradesktop-app-text': '#f5f5f7',
   '--umbradesktop-app-text-muted': '#98989d',
 };

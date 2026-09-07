@@ -45,6 +45,26 @@ export const W11_CAPTION_KEEP_VISIBLE =
   W11_WINDOW_BORDER + W11_TITLEBAR_HEIGHT + W11_TITLEBAR_BORDER;
 
 /**
+ * What this theme's chrome takes out of a window's declared height before anything reaches the app:
+ * the caption band, and — this being the theme that draws no hairline — nothing else.
+ *
+ * The frame ring is not in it, where {@link W11_CAPTION_KEEP_VISIBLE} above does count it: that
+ * number is measured from the window's outer top edge for the drag clamp, and this one against the
+ * box `.frame` sizes, which is inside a content-box border. The caption is `border-box` here, so
+ * `W11_TITLEBAR_BORDER` is inside `W11_TITLEBAR_HEIGHT` rather than added to it — it is a term in
+ * the sum above because that sum starts outside the frame, and adding it here would count a line
+ * this theme deliberately does not draw. Feeds `metrics.chromeHeight`.
+ */
+export const W11_CHROME_HEIGHT = W11_TITLEBAR_HEIGHT;
+
+/**
+ * And nothing horizontally: `.frame` stays content-box, so its 1px ring is painted outside the
+ * width the window manager set. Named rather than a bare `0` for the reason
+ * {@link W11_TITLEBAR_BORDER} gives about its own zero.
+ */
+export const W11_CHROME_WIDTH = 0;
+
+/**
  * The non-draggable band at the caption's trailing end: the frame's border and the four buttons.
  *
  * No separating gap before reload, unlike the Umbraco 4 theme. Windows 11 draws its caption

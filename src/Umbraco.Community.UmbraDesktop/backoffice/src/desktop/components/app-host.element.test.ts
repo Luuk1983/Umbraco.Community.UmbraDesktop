@@ -86,13 +86,38 @@ const outsideTheContract = (load: () => Promise<unknown>) => load as ElementLoad
  * Mount a host and give it a loader, settling both the render and the load.
  * @param load The `element` value to assign, exactly as the window assigns the manifest's: any form
  * of Umbraco's `ElementLoaderProperty`, not only a loader function.
+ * @param alias The app's manifest alias, assigned before the loader as the window's own template
+ * assigns it. Omitted where the diagnostic is not the subject, which is also the case that proves
+ * the host survives an alias nobody set.
  * @returns The host, with its first load attempt finished and reflected in the DOM.
  */
-async function hostWith(load: ElementLoaderProperty): Promise<UmbraDesktopAppHostElement> {
+async function hostWith(load: ElementLoaderProperty, alias?: string): Promise<UmbraDesktopAppHostElement> {
   const host = await fixture<UmbraDesktopAppHostElement>(html`<umbradesktop-app-host></umbradesktop-app-host>`);
+  if (alias !== undefined) host.alias = alias;
   host.load = load;
   await host.mountComplete;
   return host;
+}
+
+/**
+ * Run a body with `console.error` captured, so the load-failure diagnostic can be asserted on
+ * rather than trusted.
+ *
+ * The real function is put back whatever happens: a swallowed `console.error` would silence every
+ * later failure in this file, which is the kind of test-harness bug that costs an afternoon.
+ * @param run The body, expected to trigger one or more load failures.
+ * @returns The first argument of every `console.error` the body produced, in order.
+ */
+async function capturedErrors(run: () => Promise<unknown>): Promise<string[]> {
+  const messages: string[] = [];
+  const realError = console.error;
+  console.error = (...args: unknown[]) => messages.push(String(args[0]));
+  try {
+    await run();
+  } finally {
+    console.error = realError;
+  }
+  return messages;
 }
 
 it('mounts the element the manifest loader resolves to', async () => {
@@ -181,6 +206,45 @@ it('mounts a loader that resolves to a module default export', async () => {
  */
 it('reports a loader that resolves to no element constructor', async () => {
   const host = await hostWith(outsideTheContract(async () => ({ notAnElement: 42 })));
+  expect(host.textContent).to.contain('could not be loaded');
+});
+
+/**
+ * A loader written as a **plain `function`**, which is the one shape of a correct manifest that
+ * Umbraco's resolver gets wrong, and it gets it wrong silently.
+ *
+ * `loadManifestElement` tells a loader from a constructor by testing for `prototype` (see
+ * `isElementLoaderFunction`, which copies that test deliberately). A `function` expression has one;
+ * an arrow and an `async` function do not. So this loader is classified as the app's constructor,
+ * `new` on it returns the promise the function returns, and Lit is handed a Promise where an
+ * element should be. What the author saw before this case existed was a window containing the text
+ * `[object Promise]`, with nothing in the console, for a loader that is legal JavaScript and
+ * indistinguishable from the arrow form at a glance.
+ *
+ * The trap is Umbraco-wide rather than ours and cannot be fixed from here, so it is *contained*
+ * here: whatever comes out of the constructor is checked for actually being an element, and
+ * anything else reaches the same message a missing bundle does. Written with the deliberately
+ * non-arrow syntax rather than a cast, because the syntax **is** the subject.
+ */
+it('reports a loader written as a plain function rather than mounting a Promise', async () => {
+  const host = await hostWith(function () {
+    return Promise.resolve({ element: TestAppElement });
+  } as unknown as ElementLoaderProperty);
+  expect(host.querySelector('umbradesktop-test-app'), 'nothing should have mounted').to.be.null;
+  expect(host.textContent).to.contain('could not be loaded');
+  // The symptom this closes: the Promise stringified into the body.
+  expect(host.textContent, 'a Promise must never reach the body').to.not.contain('[object Promise]');
+});
+
+/**
+ * The same containment from the other side: an `element` that is a class but not an element class.
+ * `loadManifestElement` returns any constructor it is handed without checking what it constructs,
+ * so a package pointing at (say) its API class instead of its element used to render that object as
+ * text too.
+ */
+it('reports an element that constructs something which is not an element', async () => {
+  class NotAnElement {}
+  const host = await hostWith(NotAnElement as unknown as ElementLoaderProperty);
   expect(host.textContent).to.contain('could not be loaded');
 });
 
@@ -381,4 +445,80 @@ it('disconnects the old app before connecting its replacement', async () => {
   host.load = moduleLoader(OtherTestAppElement);
   await host.mountComplete;
   expect(lifecycle).to.deep.equal(['disconnect:one', 'connect:two']);
+});
+
+/** The alias used wherever the diagnostic is the subject, so the assertions read as one thing. */
+const BROKEN_APP_ALIAS = 'Pkg.Minesweeper';
+
+/**
+ * The error explains *why* a load failed; only the alias says *which* app it was. With two element
+ * apps installed the console line was previously unattributable, so the first thing anyone had to do
+ * with it was work out which package it was about.
+ */
+it('names the app in the load-failure diagnostic', async () => {
+  const errors = await capturedErrors(() =>
+    hostWith(async () => {
+      throw new Error('bundle missing');
+    }, BROKEN_APP_ALIAS),
+  );
+  expect(errors, 'one line, not none and not two').to.have.lengthOf(1);
+  expect(errors[0], 'the desktop prefix keeps it findable').to.contain('[UmbraDesktop]');
+  expect(errors[0], 'and the alias says which app').to.contain(`"${BROKEN_APP_ALIAS}"`);
+});
+
+/**
+ * Every way a load can fail, because a diagnostic that names the app on one path and not the others
+ * is worse than none: it teaches the reader that an unattributed line means "not one of those".
+ * All four paths funnel into the single `console.error` in `#mount`'s catch, which is why one
+ * message serves them; this is the case that fails if a path ever grows a log of its own.
+ */
+it('names the app on every load-failure path', async () => {
+  const failures: Array<{ what: string; mount: () => Promise<unknown> }> = [
+    {
+      what: 'a loader that throws',
+      mount: () =>
+        hostWith(async () => {
+          throw new Error('bundle missing');
+        }, BROKEN_APP_ALIAS),
+    },
+    {
+      what: 'a loader that resolves to nothing',
+      mount: () => hostWith(outsideTheContract(async () => undefined), BROKEN_APP_ALIAS),
+    },
+    {
+      what: 'an element that constructs something else',
+      mount: () => hostWith(class NotAnElement {} as unknown as ElementLoaderProperty, BROKEN_APP_ALIAS),
+    },
+    {
+      what: 'a loader that never settles',
+      mount: () => withCollapsedLoadTimeout(() => hostWith(() => new Promise<never>(() => {}), BROKEN_APP_ALIAS)),
+    },
+  ];
+  for (const { what, mount } of failures) {
+    const errors = await capturedErrors(mount);
+    expect(errors, `${what} should log exactly one line`).to.have.lengthOf(1);
+    expect(errors[0], `${what} should name the app`).to.contain(`"${BROKEN_APP_ALIAS}"`);
+  }
+});
+
+/**
+ * The alias is a diagnostic input and must stay one.
+ *
+ * The host remounts when `load` changes, and a second input that participated in mounting would be
+ * a way to throw away a running app for no reason at all: a re-render that happened to re-set the
+ * alias would restart a game mid-board. So the alias is deliberately **not** a reactive property,
+ * which this pins from both ends: assigning it schedules no update at all, and the app that was
+ * mounted is still the same instance with no teardown in its log.
+ */
+it('cannot remount a live app by setting or changing the alias', async () => {
+  const host = await hostWith(moduleLoader(TestAppElement), 'Pkg.First');
+  const app = host.querySelector('umbradesktop-test-app');
+  // Without this the identity check below would pass on two nulls.
+  expect(app, 'the app should have mounted before the alias moves').to.not.be.null;
+  lifecycle.length = 0;
+  host.alias = 'Pkg.Second';
+  expect(host.isUpdatePending, 'the alias must not be a reactive input at all').to.be.false;
+  await host.mountComplete;
+  expect(host.querySelector('umbradesktop-test-app'), 'the same instance must still be mounted').to.equal(app);
+  expect(lifecycle, 'and it must not have been torn down and rebuilt').to.deep.equal([]);
 });

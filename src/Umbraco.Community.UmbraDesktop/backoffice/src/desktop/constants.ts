@@ -1,3 +1,5 @@
+import type { UmbraDesktopThemeMetrics } from './theme/types';
+
 /** Alias of the UmbraDesktop backoffice section. */
 export const UMBRADESKTOP_SECTION_ALIAS = 'Umbraco.Community.UmbraDesktop.Section';
 
@@ -12,6 +14,25 @@ export const UMBRADESKTOP_DEFAULT_ICON = 'icon-box';
 
 /** URL segment for the section (…/umbraco/section/<pathname>). */
 export const UMBRADESKTOP_SECTION_PATHNAME = 'umbradesktop';
+
+/**
+ * The attribute carrying the active chrome theme's id onto a self-contained app.
+ *
+ * A published contract, not an implementation detail: an app branches on it with
+ * `:host([data-umbradesktop-theme='win98'])` when a theme's difference is structural rather than a
+ * colour, which is the one thing the app token group cannot express (design §6.2, D9). It is an
+ * ancestor selector everywhere else — `:host-context` — and that has never shipped in Firefox,
+ * which is why the id is stamped on the app's own element rather than offered further up the tree.
+ *
+ * Named here because it is written in three places that must agree, and two of them are outside
+ * this repository's control: `app-host.element` stamps it on the app, `window.element` stamps it on
+ * the host for an app that renders into light DOM and so has no `:host` to select with, and the
+ * app's own stylesheet selects on it. The one place that cannot read this constant is
+ * `window.element`'s template, since Lit's `html` interpolates attribute *values* and not their
+ * names; `window-body.test.ts` reads the rendered attribute back through this constant, so a
+ * literal that drifts from it fails a test rather than quietly killing every app's selector.
+ */
+export const UMBRADESKTOP_THEME_ATTRIBUTE = 'data-umbradesktop-theme';
 
 /**
  * Height of the taskbar/panel in pixels.
@@ -54,8 +75,17 @@ export const UMBRADESKTOP_MORE_GROUP_WEIGHT = 9999;
 export const UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS = 12_000;
 
 /**
- * Minimum window size in px, used by resize clamping. Kept in sync with the window
- * frame's CSS `min-width`/`min-height` (which are declared as literals in window.element).
+ * The smallest **content** box the desktop asks for on behalf of an app that named none, in px.
+ *
+ * Content and not window: `defaultSize`/`minSize` are an app's content box everywhere now (see
+ * `window-chrome.ts`), so the fallback for an app that declares no minimum is a content box too,
+ * and the chrome is added to it like anybody else's. It is a comfort floor rather than a
+ * correctness one — the correctness floor is what the chrome itself needs, which is derived from
+ * the active theme's metrics and applied on top of this.
+ *
+ * Also interpolated into the window frame's own CSS `min-width`/`min-height` in `window.element`,
+ * which is what governs a **maximized** window, whose inline style carries no minimum. Those were
+ * two literals with a comment saying they had to be kept in sync with this constant by hand.
  */
 export const UMBRADESKTOP_WINDOW_MIN_SIZE = { w: 320, h: 200 };
 
@@ -126,4 +156,44 @@ export const UMBRADESKTOP_WINDOW_KEEP_VISIBLE = {
   leading: 0,
   trailing: UMBRADESKTOP_WINDOW_BORDER + UMBRADESKTOP_CONTROL_COUNT * UMBRADESKTOP_CONTROL_WIDTH,
   titlebar: UMBRADESKTOP_WINDOW_BORDER + UMBRADESKTOP_TITLEBAR_HEIGHT + UMBRADESKTOP_TITLEBAR_BORDER,
+};
+
+/**
+ * What the base chrome costs an app: the caption and its hairline, and **nothing** horizontally.
+ *
+ * The zero is a fact about `box-sizing` rather than about there being no frame. `.frame` sizes
+ * content-box, so the border ring is painted outside the width the window manager set and takes
+ * none of it from the app — where Win98's ring is `border-box` padding and comes straight out of
+ * the rect. That difference is exactly why this is a per-theme metric and not one number in the
+ * chrome, and why {@link UmbraDesktopThemeMetrics.chromeHeight} is not simply `titlebarHeight`:
+ * that one counts the ring above the caption, which this must not.
+ *
+ * Deliberately *not* summed from `UMBRADESKTOP_WINDOW_KEEP_VISIBLE.titlebar` minus a border, even
+ * though the two happen to be a border apart today. They answer different questions — one is what
+ * stays grabbable when a window is dragged off the bottom edge, the other is what an app's box does
+ * not get — and a subtraction between them would read as arithmetic rather than as two facts.
+ */
+export const UMBRADESKTOP_WINDOW_CHROME = {
+  w: 0,
+  h: UMBRADESKTOP_TITLEBAR_HEIGHT + UMBRADESKTOP_TITLEBAR_BORDER,
+};
+
+/**
+ * The geometry in force before any theme has resolved, which is also the Umbraco theme's own.
+ *
+ * One object with two jobs, and they are the same numbers by construction rather than by
+ * agreement: `theme/themes/umbraco` publishes this as its `metrics` (its palettes are empty, so
+ * every number it describes belongs to the base chrome and its CSS fallbacks — see that file), and
+ * the window manager and window element both start here until `setMetrics` arrives. Before this
+ * existed the theme restated each field from the same constants, which is one edit away from the
+ * two disagreeing about what "no theme yet" looks like.
+ */
+export const UMBRADESKTOP_DEFAULT_METRICS: UmbraDesktopThemeMetrics = {
+  titlebarHeight: UMBRADESKTOP_WINDOW_KEEP_VISIBLE.titlebar,
+  leadingControlsWidth: UMBRADESKTOP_WINDOW_KEEP_VISIBLE.leading,
+  trailingControlsWidth: UMBRADESKTOP_WINDOW_KEEP_VISIBLE.trailing,
+  grab: UMBRADESKTOP_WINDOW_KEEP_VISIBLE.grab,
+  chromeWidth: UMBRADESKTOP_WINDOW_CHROME.w,
+  chromeHeight: UMBRADESKTOP_WINDOW_CHROME.h,
+  taskbarReserve: UMBRADESKTOP_TASKBAR_HEIGHT,
 };

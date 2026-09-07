@@ -4,6 +4,10 @@ import type { UmbraDesktopWindowElement } from '../../../components/window.eleme
 import type { UmbraDesktopApp } from '../../../types.js';
 import { paletteCss } from '../../palette-css.js';
 import { UMBRADESKTOP_UMBRACO_THEME } from './index.js';
+// Two pieces of the shared themed-mount module, and only two: this theme mounts its own bare
+// chrome for the reason below, but the probe rectangle and the chrome-cost measurement have to be
+// the same ones the other four themes are held to, or the numbers are not comparable.
+import { measureChromeCost, UMBRADESKTOP_PROBE_WINDOW_RECT } from '../mount-themed.js';
 
 /**
  * The Umbraco theme's `metrics` describe CSS that nothing in this theme writes: its palettes are
@@ -83,7 +87,7 @@ before(async function () {
   element.window = {
     id: 'w1',
     app: PROBE_APP,
-    rect: { x: 0, y: 0, w: 640, h: 400 },
+    rect: UMBRADESKTOP_PROBE_WINDOW_RECT,
     z: 1,
     active: true,
     state: 'normal',
@@ -115,6 +119,30 @@ it('reserves exactly the trailing strip of titlebar its window controls actually
       'draggable titlebar than intended at the right edge and too large a one shoves the window ' +
       'back in — derive it from the same constants window.element interpolates',
   ).to.equal(rendered);
+});
+
+/**
+ * What the base chrome costs an app, which is the number every app gets before a theme resolves
+ * and the one the app-token fallbacks are written against.
+ *
+ * Zero horizontally, and that is a fact about `box-sizing` rather than about this theme having no
+ * frame: `.frame` sizes content-box, so its 1px ring is painted *outside* the width the window
+ * manager set and takes nothing from the app. Win98's ring is inside its rect, which is exactly
+ * why this is a per-theme metric and not one number in the chrome.
+ */
+it('reports what the base chrome costs an app, so no app has to guess', () => {
+  const cost = measureChromeCost(root, UMBRADESKTOP_PROBE_WINDOW_RECT);
+
+  expect(
+    UMBRADESKTOP_UMBRACO_THEME.metrics.chromeWidth,
+    'the published chromeWidth disagrees with what the base chrome takes out of a window ' +
+      'horizontally, so every registered app opens that much narrower or wider than it asked for',
+  ).to.equal(cost.w);
+  expect(
+    UMBRADESKTOP_UMBRACO_THEME.metrics.chromeHeight,
+    'and the same vertically, where the caption and its hairline are: an app asking for a 460px ' +
+      'content box has to get one, and the host is the only party that knows what this costs',
+  ).to.equal(cost.h);
 });
 
 it('reports the titlebar height a window actually paints, frame border included', () => {

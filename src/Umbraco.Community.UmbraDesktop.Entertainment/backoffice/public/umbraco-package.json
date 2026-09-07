@@ -1,0 +1,14 @@
+{
+	"$schema": "../../umbraco-package-schema.json",
+	"id": "Umbraco.Community.UmbraDesktop.Entertainment",
+	"name": "UmbraDesktop Entertainment",
+	"version": "GetsGenerated",
+	"extensions": [
+		{
+			"type": "bundle",
+			"alias": "Umbraco.Community.UmbraDesktop.Entertainment.Bundle",
+			"name": "UmbraDesktop Entertainment Bundle",
+			"js": "/App_Plugins/Umbraco.Community.UmbraDesktop.Entertainment/umbradesktop-entertainment.js"
+		}
+	]
+}

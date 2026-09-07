@@ -11,4 +11,8 @@ export const groups: UmbraDesktopGroup[] = [
   { alias: 'advanced-security', label: '#umbraDesktop_groupAdvancedSecurity', weight: 35 },
   { alias: 'diagnostics', label: '#umbraDesktop_groupDiagnostics', weight: 40 },
   { alias: 'system', label: '#umbraDesktop_groupSystem', weight: 50 },
+  // Games, last of the real groups and before the reserved "More". Populated entirely by registered
+  // apps from the entertainment package: nothing in this repository puts an app here, which is why
+  // the group can exist without either package knowing the other's release schedule.
+  { alias: 'games', label: '#umbraDesktop_groupGames', weight: 60 },
 ];

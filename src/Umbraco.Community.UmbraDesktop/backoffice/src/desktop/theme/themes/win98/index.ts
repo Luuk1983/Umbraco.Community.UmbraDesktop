@@ -2,6 +2,8 @@ import type { UmbraDesktopTheme } from '../../types';
 import { WIN98_LIGHT } from './palette.js';
 import {
   WIN98_CAPTION_KEEP_VISIBLE,
+  WIN98_CHROME_HEIGHT,
+  WIN98_CHROME_WIDTH,
   WIN98_GRAB,
   WIN98_TASKBAR_HEIGHT,
   WIN98_TRAILING_CONTROLS_WIDTH,
@@ -44,6 +46,11 @@ export const UMBRADESKTOP_WIN98_THEME: UmbraDesktopTheme = {
     leadingControlsWidth: 0,
     trailingControlsWidth: WIN98_TRAILING_CONTROLS_WIDTH,
     grab: WIN98_GRAB,
+    // The only theme of the five that charges an app anything horizontally, and the only one with
+    // a ring below the body as well as above it. Both because its frame and its client well are
+    // `border-box` padding, so they come out of the window's rect rather than growing it.
+    chromeWidth: WIN98_CHROME_WIDTH,
+    chromeHeight: WIN98_CHROME_HEIGHT,
     taskbarReserve: WIN98_TASKBAR_HEIGHT,
   },
   sheets: async () => {

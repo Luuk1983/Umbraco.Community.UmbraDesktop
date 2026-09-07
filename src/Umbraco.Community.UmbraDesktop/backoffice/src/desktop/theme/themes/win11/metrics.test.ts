@@ -6,6 +6,7 @@ import type { UmbraDesktopApp } from '../../../types.js';
 import { UMBRADESKTOP_WIN11_THEME } from './index.js';
 import { mountThemed, UMBRADESKTOP_THEME_TEST_TIMEOUT_MS } from './mount-themed.js';
 import type { UmbraDesktopThemedMount } from './mount-themed.js';
+import { measureChromeCost, UMBRADESKTOP_PROBE_WINDOW_RECT } from '../mount-themed.js';
 
 /**
  * `metrics` is the one thing a theme publishes that JavaScript acts on rather than paints: the
@@ -40,7 +41,7 @@ before(async function () {
   win.element.window = {
     id: 'w1',
     app: PROBE_APP,
-    rect: { x: 0, y: 0, w: 640, h: 400 },
+    rect: UMBRADESKTOP_PROBE_WINDOW_RECT,
     z: 1,
     active: true,
     state: 'normal',
@@ -99,6 +100,27 @@ it('draws no hairline under the caption, which is what W11_TITLEBAR_BORDER claim
     parseFloat(getComputedStyle(titlebar).borderBottomWidth),
     'Windows 11 draws no divider under the caption, and titlebarHeight is derived assuming none',
   ).to.equal(0);
+});
+
+/**
+ * The chrome cost here is the caption alone, and the caption is `border-box`, so it is the height
+ * token exactly — no hairline to add, unlike the two Umbraco themes and macOS. Measured anyway,
+ * because "no hairline" is a decision this theme could lose in a diff and the sum would not notice.
+ */
+it('reports what its chrome costs an app, so no app has to guess', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  const cost = measureChromeCost(win.root, UMBRADESKTOP_PROBE_WINDOW_RECT);
+
+  expect(
+    UMBRADESKTOP_WIN11_THEME.metrics.chromeWidth,
+    'the published chromeWidth disagrees with what this theme takes out of a window ' +
+      'horizontally, so every registered app opens that much narrower or wider than it asked for',
+  ).to.equal(cost.w);
+  expect(
+    UMBRADESKTOP_WIN11_THEME.metrics.chromeHeight,
+    'and the same vertically: the caption is `border-box` here, so its declared height is the ' +
+      'whole band and a hairline added on top would be counting a line this theme does not draw',
+  ).to.equal(cost.h);
 });
 
 it('reserves exactly the height of the bar it paints at the bottom edge', function () {

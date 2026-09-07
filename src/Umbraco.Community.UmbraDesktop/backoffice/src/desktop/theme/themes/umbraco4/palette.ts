@@ -180,6 +180,10 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-app-surface-sunken': U4_WELL,
   '--umbradesktop-app-edge-light': U4_HILIGHT,
   '--umbradesktop-app-edge-dark': U4_EDGE,
+  // The window-frame border rather than the raised-control one, and the difference is 2.74:1
+  // against a lit face against 3.28:1. v4's own hierarchy happened to have a line at each
+  // strength, so this theme needed no new colour to answer the token.
+  '--umbradesktop-app-border': U4_EDGE_STRONG,
   '--umbradesktop-app-edge-width': '1px',
   '--umbradesktop-app-radius': '2px',
   '--umbradesktop-app-text': U4_TEXT,

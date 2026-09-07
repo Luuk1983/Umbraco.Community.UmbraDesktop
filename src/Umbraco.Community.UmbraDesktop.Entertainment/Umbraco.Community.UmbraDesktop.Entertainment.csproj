@@ -1,0 +1,108 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+	  <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+	  <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+	  <ContentTargetFolders>.</ContentTargetFolders>
+	  <Product>Umbraco.Community.UmbraDesktop.Entertainment</Product>
+	  <PackageId>Umbraco.Community.UmbraDesktop.Entertainment</PackageId>
+	  <Title>UmbraDesktop Entertainment</Title>
+	  <Description>Games for UmbraDesktop. An optional add-on that puts self-contained games on the UmbraDesktop desktop: each one opens in a real window of its own, is themed along with the rest of the desktop, and needs no section, no URL and no permission behind it. Install it if you want the fun drawer; the desktop itself works without it.</Description>
+	  <PackageTags>umbraco;backoffice;desktop;games;entertainment;umbradesktop;umbraco-marketplace</PackageTags>
+	  <RootNamespace>Umbraco.Community.UmbraDesktop.Entertainment</RootNamespace>
+	  <Authors>Luuk Peters</Authors>
+	  <Company>Luuk Peters</Company>
+	  <Copyright>Copyright (c) Luuk Peters</Copyright>
+	  <PackageLicenseExpression>MIT</PackageLicenseExpression>
+	  <RepositoryType>git</RepositoryType>
+	  <RepositoryUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</RepositoryUrl>
+	  <PackageProjectUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</PackageProjectUrl>
+	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
+	  <!-- Shares the host package's artwork rather than inventing a second logo: the two ship as one
+	       release and read as one product on the Marketplace. Naming a file that does not exist
+	       fails the pack, so this points at the host project's image and packs it by path below. -->
+	  <PackageIcon>Package-image_128_128.png</PackageIcon>
+	  <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
+
+	  <!-- Versioning: MinVer, from the same "v*" tags as the host, so both packages carry the same
+	       version off one tag (design D13). The prefix has to be repeated here rather than dropped:
+	       with no MinVerTagPrefix, MinVer only recognises bare "17.0.0"-style tags and would ignore
+	       this repository's "v17.0.0" entirely, versioning this package 17.0.0-alpha.0 while the host
+	       said 17.0.0. Repeating it is what "no prefix of its own" means. Keep all three identical to
+	       the host's; there is no shared props file to inherit them from. -->
+	  <MinVerTagPrefix>v</MinVerTagPrefix>
+	  <MinVerAutoIncrement>minor</MinVerAutoIncrement>
+	  <MinVerMinimumMajorMinor>17.0</MinVerMinimumMajorMinor>
+
+	  <!-- Symbols + SourceLink: consumers can debug into the source at the exact built commit -->
+	  <IncludeSymbols>true</IncludeSymbols>
+	  <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	  <PublishRepositoryUrl>true</PublishRepositoryUrl>
+	  <EmbedUntrackedSources>true</EmbedUntrackedSources>
+	  <DeterministicSourcePaths Condition="'$(GITHUB_ACTIONS)' == 'true'">true</DeterministicSourcePaths>
+  </PropertyGroup>
+
+	<!-- Sync umbraco-package.json with the MinVer-derived version at build time. The source file
+	     keeps "GetsGenerated" as its placeholder; this stamps the built copy in wwwroot. -->
+	<UsingTask TaskName="SetJsonVersion" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<FilePath ParameterType="System.String" Required="true" />
+			<VersionValue ParameterType="System.String" Required="true" />
+		</ParameterGroup>
+		<Task>
+			<Code Type="Fragment" Language="cs"><![CDATA[
+var text = System.IO.File.ReadAllText(FilePath);
+text = System.Text.RegularExpressions.Regex.Replace(
+    text, @"""version"":\s*""[^""]*""", $@"""version"": ""{VersionValue}""");
+System.IO.File.WriteAllText(FilePath, text);
+Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionValue}");
+      ]]></Code>
+		</Task>
+	</UsingTask>
+
+	<PropertyGroup>
+		<UmbracoPackageJsonPath>$(ProjectDir)wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop.Entertainment\umbraco-package.json</UmbracoPackageJsonPath>
+	</PropertyGroup>
+
+	<Target Name="SyncUmbracoPackageVersion" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != ''">
+		<SetJsonVersion FilePath="$(UmbracoPackageJsonPath)" VersionValue="$(MinVerVersion)" Condition="Exists('$(UmbracoPackageJsonPath)')" />
+		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'npm run build' before packing, or the package will ship an unstamped version." Condition="!Exists('$(UmbracoPackageJsonPath)')" />
+	</Target>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+	  <WarningsNotAsErrors>NU5104</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+	  <WarningsNotAsErrors>NU5104</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Development-only files. ContentTargetFolders is ".", so anything left as Content packs
+         to the package root; without these the package ships package-lock.json and the
+         TypeScript sources' config instead of just the built output. -->
+    <Content Remove="backoffice\**" />
+    <Content Remove="package.json" />
+    <Content Remove="package-lock.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Packs the host project's icon into this package's root, where PackageIcon expects it. -->
+    <None Include="..\Umbraco.Community.UmbraDesktop\Package-image_128_128.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="MinVer" PrivateAssets="all" />
+	  <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+	  <!-- The host, by version range and never as a ProjectReference: a ProjectReference packs the
+	       exact version built alongside it, which would force an Entertainment release for every
+	       host release and break anyone who upgraded the host in between (design D13). -->
+	  <PackageReference Include="Umbraco.Community.UmbraDesktop" />
+	</ItemGroup>
+
+</Project>

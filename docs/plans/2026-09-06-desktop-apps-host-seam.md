@@ -10,6 +10,8 @@
 
 **Spec:** [`docs/design/2026-09-06-desktop-apps-design.md`](../design/2026-09-06-desktop-apps-design.md) §4–§7.
 
+**Ignore the "Commit" step in every task below.** Each task ends with one because that is how the plan was written; the repository owner's standing rule is that nothing is committed unless they ask for it in that message, and that rule overrides a plan or a skill that says otherwise. Finish a task, leave the work as uncommitted changes, and report what changed in which files. Offer a commit as a question if you like, never as something already done.
+
 **Where to run commands.** `npm test` and `npm run build` run from `src/Umbraco.Community.UmbraDesktop`, and both `cd backoffice` internally. The single-file `npx web-test-runner …` commands in this plan must be run **from `src/Umbraco.Community.UmbraDesktop/backoffice`**, because that is where `web-test-runner.config.mjs` lives; run from anywhere else the config is not picked up and imports fail to resolve regardless of whether the code is correct. Their paths are relative to `backoffice/`.
 
 `npm run build` regenerates `backoffice/src/desktop/settings/wallpapers.generated.ts`, which can then show as modified with an **empty** diff. That is a line-ending artifact (the generator writes LF, the repo stores CRLF), not a change. Do not commit it; `git restore` it if it appears.
@@ -1288,14 +1290,15 @@ import type { ManifestUmbraDesktopApp } from './app.extension';
 import type { UmbraDesktopRegisteredApp } from './types';
 ```
 
-Widen the registry facade so the initializer can take it:
+Widen the registry facade so the initializer can take it. **Not by adding a key to the `Pick`, which cannot work:**
 
 ```ts
-type UmbraDesktopExtensionRegistry = Pick<
-  typeof umbExtensionsRegistry,
-  'byType' | 'byAlias' | 'extensions'
->;
+type UmbraDesktopExtensionRegistry = typeof umbExtensionsRegistry;
 ```
+
+The context narrowed its dependency to `Pick<typeof umbExtensionsRegistry, 'byType' | 'byAlias'>` so its tests could inject a small double, and the obvious move here is to add `'extensions'` to that list. It does not compile, and no longer list would: `UmbExtensionRegistry` declares `#private` fields, so it is **nominally** typed and no structural subset of it is ever assignable to it. Widening to the whole type is the honest fix. Record the reason in a doc comment on the alias, because "why is this not a `Pick` any more" is otherwise a question someone re-narrows their way into.
+
+Do **not** reach for `as unknown as typeof umbExtensionsRegistry` to keep the `Pick`. A cast here defeats the only reason the facade exists, and it would hide the nominal-typing fact rather than record it.
 
 Add the field:
 
@@ -1313,8 +1316,8 @@ And in the constructor, after the `byType('section')` observation:
     // condition-evaluated manifests — it hands back only the permitted ones, and re-fires whenever
     // a condition flips.
     new UmbExtensionsManifestInitializer(
-      host,
-      this.#registry as unknown as typeof umbExtensionsRegistry,
+      this,
+      this.#registry,
       'umbraDesktopApp',
       null,
       (permitted) => {
@@ -1326,6 +1329,10 @@ And in the constructor, after the `byType('section')` observation:
       'observeRegisteredApps',
     );
 ```
+
+The host is **`this`**, the context, not the element. The context is what owns this observation, so making it the controller host is what gets the initializer and its per-manifest condition controllers destroyed when the context is destroyed, instead of outliving it on the element.
+
+**A test-environment trap this task pays for.** `UmbExtensionsManifestInitializer` coalesces its notifications through `requestAnimationFrame`, and the test runner's page is hidden, so it never gets a frame and the callback never fires: tests hang or assert against nothing rather than failing informatively. `app-catalogue.context.test.ts` patches `requestAnimationFrame` for this reason, and its comment there is the explanation. Two consequences worth knowing before writing any future test that observes an extension type through an initializer: the patch is required, and it must stub `cancelAnimationFrame` too, because the initializer's own teardown calls the real one with the fake handles.
 
 Finally, pass them to derivation in `#recompute()`:
 
@@ -1485,9 +1492,11 @@ npx web-test-runner "src/desktop/components/window-body.test.ts" --node-resolve
 
 Expected: FAIL. `#chromeThemeId` is declared but never assigned, and nothing forwards it to the app element, so both new assertions fail rather than passing vacuously. Check the failure messages say what you expect: an assertion that passes here means it is not testing what you think.
 
-**Decide the empty case deliberately.** `#chromeThemeId` starts as `''`, and `data-umbradesktop-theme=""` still *matches* `[data-umbradesktop-theme]`, so an app testing for the attribute's existence gets a match and no usable value. Prefer rendering nothing at all until the theme resolves (Lit's `nothing` on the attribute binding), so the selector an app writes is either absent or right, never present and useless.
+**The empty case is a live bug, not a decision to weigh.** Task 3 shipped `data-umbradesktop-theme=""`, and an empty attribute still **matches** `[data-umbradesktop-theme]`, so today *every* app gets a positive existence match carrying no usable value. Render no attribute at all until the theme resolves (Lit's `nothing` on the binding), on the host and on the app element alike, so an app's selector is either absent or right and never present and useless. Removing rather than emptying also matters for a live element that loses its theme: a stale id is worse than none, because an app can detect a missing attribute and cannot detect an out-of-date one.
 
 **`#chromeThemeId` is a plain private field, so writing to it will not re-render.** Either call `requestUpdate()` after assigning, as Step 3 does, or make it `@state`, which removes the need to remember. Say which you chose.
+
+Note that those two options are not interchangeable in place: a decorator cannot be applied to a `#`-private name, so taking the `@state` branch means **renaming the field** (it shipped as `_chromeThemeId`). "Reactive" and "`#`-private" are not both available.
 
 - [ ] **Step 3: Consume the desktop theme context**
 
@@ -1558,27 +1567,51 @@ Also cite `docs/theming.md` (updated in Task 2) and `docs/desktop-apps.md` from 
 
 - [ ] **Step 2: Write the contributor guide**
 
-Create `docs/desktop-apps.md`, written for someone outside this repository, the way `docs/theming.md` is: the manifest shape (§4 of the design), the app token table with the fallback each app should write, how to branch per theme, and the boundary — a self-contained app is registerable, a backoffice deep link is a PR against `catalogue/`.
+Create `docs/desktop-apps.md`, written for someone outside this repository, the way `docs/theming.md` is: the manifest shape (§4 of the design), the app token table with the fallback each app should write, how to branch per theme, and the boundary, which is that a self-contained app is registerable while a backoffice deep link is a pull request against `catalogue/`.
+
+**Four things an author can only get wrong if nobody writes them down**, all found while building the seam:
+
+1. **`background`, never `background-color`.** A surface token may carry a gradient, and `background-color` drops a gradient value entirely, leaving the element unpainted.
+2. **Read the theme id in CSS, not in a constructor.** `data-umbradesktop-theme` is set on the app's element after it is constructed and before it is inserted, so a `:host([data-umbradesktop-theme='win98'])` rule is always safe: CSS is declarative and applies the moment the attribute exists, so nothing is ever painted unstyled. But an app that calls `this.getAttribute(…)` in its **own constructor** and branches on it in JavaScript will read nothing, because the element has to exist before an attribute can be set on it. `connectedCallback` is the earliest safe point for the imperative route. This is the one way an author can hold a correctly implemented attribute wrongly.
+3. **`weight` follows Umbraco's convention, higher first** (D16), which is the inverse of the desktop's internal scale. Say it plainly; the negation is invisible from outside.
+4. **Every form of `element` works** (D15): a module path string, a loader, a module's exports, a class constructor. The string form is what a static `umbraco-package.json` can express, so it deserves a worked example rather than a mention.
 
 - [ ] **Step 3: Update the README**
 
-Add desktop apps to the Features list *and* give them their own short section, checking every place apps could be named rather than the first. Markdown only, no raw HTML: this file is the NuGet package readme.
+CLAUDE.md's rule is to check every place a feature could be named rather than the first one found. Here that is not a courtesy: **two statements in the README are now false**, and both are load-bearing.
+
+**`### Windows are iframes` is false as a heading and as a first sentence.** It reads "Each window hosts an `<iframe>` deep-linked into the backoffice on the same origin." A window body is now either that or a self-contained element. Everything the section goes on to say about the iframe kind remains true and worth keeping, including the reason it exists: Umbraco's router reads one global `window.location`, so only one route tree can own the URL, and an iframe has its own. Reframe the section around the two body kinds with that explanation intact underneath, rather than bolting a paragraph onto the end.
+
+**`### Custom and third-party apps` says the opposite of what now ships.** Its closing line is "there is no runtime registration point." There is one, and this plan built it. That paragraph becomes the two paths: a self-contained app registers a `umbraDesktopApp` manifest and never talks to this repository, while anything pointing at a backoffice surface is still a pull request against `catalogue/`, because that is where a URL and a chrome profile get verified. Point at `docs/desktop-apps.md` for the first.
+
+Also check against the diff: `### How much chrome a window keeps` presents three profiles as the whole story, and an element body has no chrome to keep; `### The app catalogue` describes the catalogue as deciding "which apps appear", now one of two sources; `## Features` needs the capability; and `## Documentation` needs the new guide listed.
+
+Markdown only, no raw HTML: this file is also the NuGet package readme.
+
+- [ ] **Step 3a: a deferred decision may have quietly unblocked**
+
+CLAUDE.md and the theming design both defer a Linux theme with this reasoning: GNOME/Adwaita's identity is the headerbar, which fuses the titlebar with the application's own controls, and *"this shell cannot do that because a window's content is someone else's document in an iframe."*
+
+That sentence is now only true of iframe windows. An element app renders in this document, so fusing its controls into the titlebar is no longer impossible for that kind of window.
+
+Do **not** build a Linux theme, and do not claim it is now viable: a theme that worked for element apps but not for the backoffice windows would be a worse answer than no theme at all. But the recorded reason for deferring it has changed, so amend it where the deferral lives rather than leaving a stale reason to read as current in six months.
 
 - [ ] **Step 4: Update the marketplace listing**
 
-Add to `Description` in `umbraco-marketplace.json` — an optional games package is exactly something a person would choose the package for — and add a tag (`games`, `apps`). A screenshot belongs to the entertainment plan, once there is a game to photograph.
+`Description` in `umbraco-marketplace.json` currently ends on the themes and never mentions apps. Add the capability in the register the rest of that text already uses, and remember what the field is for: it is the only thing most people read before installing, so "an optional games package exists" is worth more to them than "there is an extension point". Add tags too, since that is how a feature gets found (`games` and `apps` at least). A screenshot belongs to the entertainment plan, once there is a game to photograph.
 
-- [ ] **Step 5: Run everything and commit**
+- [ ] **Step 5: Run both gates, then stop**
 
 ```bash
 npm test
 npm run build
 ```
 
-```bash
-git add README.md umbraco-marketplace.json docs/
-git commit -m "docs: how to build a desktop app, and the seam in the README"
-```
+Then **do not commit**. Report what changed in which files and leave the working tree for review, per the note at the top of this plan.
+
+- [ ] **Step 6: Walk the checklist out loud**
+
+CLAUDE.md asks for an explicit statement of which items did not apply, not silence on them. Say where `docs/screenshots/` and the `Screenshots` array landed (deferred with the games, since there is nothing to photograph yet), and confirm `backoffice/public/umbraco-package.json` needed no change, because everything inside the desktop is wired up in TypeScript rather than as separate manifest entries.
 
 ---
 

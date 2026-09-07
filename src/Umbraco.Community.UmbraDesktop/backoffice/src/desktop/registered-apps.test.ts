@@ -29,7 +29,7 @@ function manifest(over: Partial<ManifestUmbraDesktopApp> = {}): ManifestUmbraDes
 it('carries alias, label, icon and the element loader through', () => {
   const [app] = normaliseRegisteredApps([
     manifest({ meta: { label: '#pkg_minesweeper', icon: 'icon-bomb', group: 'games' } }),
-  ]);
+  ]).apps;
   expect(app.alias).to.equal('Pkg.Minesweeper');
   expect(app.name).to.equal('#pkg_minesweeper');
   expect(app.icon).to.equal('icon-bomb');
@@ -38,18 +38,18 @@ it('carries alias, label, icon and the element loader through', () => {
 });
 
 it('defaults a missing icon to icon-box, the same fallback the catalogue uses', () => {
-  const [app] = normaliseRegisteredApps([manifest()]);
+  const [app] = normaliseRegisteredApps([manifest()]).apps;
   expect(app.icon).to.equal('icon-box');
 });
 
 it('falls back to the manifest name, then the alias, when meta has no label', () => {
   const [named] = normaliseRegisteredApps([
     manifest({ name: 'Minesweeper', meta: { label: undefined as unknown as string } }),
-  ]);
+  ]).apps;
   expect(named.name).to.equal('Minesweeper');
   const [bare] = normaliseRegisteredApps([
     manifest({ name: undefined, meta: { label: undefined as unknown as string } }),
-  ]);
+  ]).apps;
   expect(bare.name).to.equal('Pkg.Minesweeper');
 });
 
@@ -64,7 +64,7 @@ it('carries sizes and allowMultiple through, and inverts the weight', () => {
         allowMultiple: false,
       },
     }),
-  ]);
+  ]).apps;
   // Negated, not copied: see the ordering case below for why, and `registered-apps.ts` for the
   // full reasoning. A test that expected 20 here would be pinning the bug.
   expect(app.weight).to.equal(-20);
@@ -75,7 +75,7 @@ it('carries sizes and allowMultiple through, and inverts the weight', () => {
 
 /** No weight at all must stay absent rather than becoming `-0`, so the launcher's own default wins. */
 it('leaves an unset weight unset', () => {
-  const [app] = normaliseRegisteredApps([manifest()]);
+  const [app] = normaliseRegisteredApps([manifest()]).apps;
   expect(app.weight).to.be.undefined;
 });
 
@@ -92,7 +92,7 @@ it('leaves an unset weight unset', () => {
  * once, here, at the boundary between the two scales.
  */
 it('puts the higher manifest weight first in the launcher, as Umbraco means it', () => {
-  const registered = normaliseRegisteredApps([
+  const { apps: registered } = normaliseRegisteredApps([
     manifest({ alias: 'Pkg.Second', weight: 10, meta: { label: 'second', group: 'games' } }),
     manifest({ alias: 'Pkg.First', weight: 1000, meta: { label: 'first', group: 'games' } }),
   ]);
@@ -101,10 +101,68 @@ it('puts the higher manifest weight first in the launcher, as Umbraco means it',
 });
 
 it('drops a manifest with no element loader rather than opening an empty window', () => {
-  const apps = normaliseRegisteredApps([
+  const { apps } = normaliseRegisteredApps([
     manifest({ element: undefined as unknown as ManifestUmbraDesktopApp['element'] }),
   ]);
   expect(apps).to.deep.equal([]);
+});
+
+/**
+ * And it *says* which manifest it dropped, because the drop is invisible from every other angle:
+ * the package registered, Umbraco permitted it, and the tile simply is not there. The report is a
+ * return value rather than a `console.warn` so this function stays pure and the caller can decide
+ * how loudly to say it (the catalogue context holds it behind a quiet window and deduplicates it,
+ * which is not a decision this function should be making).
+ */
+it('reports the dropped manifest by alias, with a reason', () => {
+  const { dropped } = normaliseRegisteredApps([
+    manifest({ alias: 'Pkg.Empty', element: undefined as unknown as ManifestUmbraDesktopApp['element'] }),
+  ]);
+  expect(dropped).to.have.lengthOf(1);
+  expect(dropped[0].alias).to.equal('Pkg.Empty');
+  expect(dropped[0].reason, 'a reason an author can act on').to.contain('element');
+});
+
+/** Nothing to report is an empty list, not an absent one: the caller iterates it unconditionally. */
+it('reports nothing when every manifest yielded an app', () => {
+  expect(normaliseRegisteredApps([manifest()]).dropped).to.deep.equal([]);
+});
+
+/**
+ * `js` is the trap this reason exists to disarm, and it is not a hypothetical one: `js` is the field
+ * name every other Umbraco element extension accepts (Umbraco's own `createExtensionElement`
+ * resolves `manifest.element ?? manifest.js`), it is inherited here from `ManifestElement`, and it
+ * type-checks clean. So an author arriving from a dashboard or a property editor writes `js`, the
+ * compiler agrees, and the desktop, which resolves only `element`, drops the app.
+ *
+ * The generic reason is actively misleading in that case. "No element to load" reads as *you forgot
+ * to point at your module*, when the author is looking at a manifest that plainly points at one, so
+ * the one line they get sends them to check the path rather than the field name. Naming `js` turns
+ * an afternoon into a rename.
+ */
+it('names "js" in the reason when a dropped manifest carries one', () => {
+  const { dropped } = normaliseRegisteredApps([
+    manifest({
+      alias: 'Pkg.WrongField',
+      element: undefined as unknown as ManifestUmbraDesktopApp['element'],
+      js: '/App_Plugins/pkg/game.js',
+    }),
+  ]);
+  expect(dropped).to.have.lengthOf(1);
+  expect(dropped[0].reason, 'the field the author actually wrote must be named').to.contain('"js"');
+  expect(dropped[0].reason, 'and the field they should have written').to.contain('"element"');
+});
+
+/**
+ * And it must not name `js` when there is none. A reason that mentions every field it *could* have
+ * been is a reason nobody reads, and it would send an author who genuinely wrote nothing off to
+ * delete a `js` key that is not in their manifest.
+ */
+it('does not mention "js" when the dropped manifest has none', () => {
+  const { dropped } = normaliseRegisteredApps([
+    manifest({ element: undefined as unknown as ManifestUmbraDesktopApp['element'] }),
+  ]);
+  expect(dropped[0].reason, 'no speculative advice about a field that is absent').to.not.contain('"js"');
 });
 
 /**
@@ -115,7 +173,7 @@ it('drops a manifest with no element loader rather than opening an empty window'
  * Umbraco's resolver to import later.
  */
 it('keeps a manifest whose element is a module path string', () => {
-  const [app] = normaliseRegisteredApps([manifest({ element: '/App_Plugins/pkg/game.js' })]);
+  const [app] = normaliseRegisteredApps([manifest({ element: '/App_Plugins/pkg/game.js' })]).apps;
   expect(app, 'a path is a legal element, not a missing one').to.not.be.undefined;
   expect(app.element).to.equal('/App_Plugins/pkg/game.js');
 });
@@ -129,7 +187,7 @@ it('keeps a manifest whose element is a module path string', () => {
  */
 it('keeps a manifest whose element is a class constructor', () => {
   class GameElement extends HTMLElement {}
-  const [app] = normaliseRegisteredApps([manifest({ element: GameElement })]);
+  const [app] = normaliseRegisteredApps([manifest({ element: GameElement })]).apps;
   expect(app.element).to.equal(GameElement);
 });
 
@@ -138,5 +196,5 @@ it('keeps a manifest whose element is a class constructor', () => {
  * path to nothing, and `import('')` fails at a point where the only surface left is a broken tile.
  */
 it('drops a manifest whose element is an empty string', () => {
-  expect(normaliseRegisteredApps([manifest({ element: '' })])).to.deep.equal([]);
+  expect(normaliseRegisteredApps([manifest({ element: '' })]).apps).to.deep.equal([]);
 });

@@ -1,5 +1,5 @@
 import { UMBRADESKTOP_APP_TOKEN_FALLBACKS } from '../theme/types.js';
-import { UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS } from '../constants.js';
+import { UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS, UMBRADESKTOP_THEME_ATTRIBUTE } from '../constants.js';
 import { customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { loadManifestElement } from '@umbraco-cms/backoffice/extension-api';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -74,6 +74,13 @@ const PENDING_STYLE = [
  * class declarations and `function` expressions carry a `prototype`, arrow functions and `async`
  * functions do not.
  *
+ * Agreeing with Umbraco means inheriting its one wrong answer: a loader written as a plain
+ * `function` expression carries a `prototype` and so is taken for a constructor by both. Disagreeing
+ * would be worse (this decides only whether to wrap the value, while Umbraco decides what to do with
+ * it, so a private opinion here would just split the two paths), which is why that case is contained
+ * where the misclassification finally shows up instead: `#mount` checks that the constructor really
+ * built an element.
+ *
  * Narrow rather than general: the only caller needs to know whether it may safely wrap the value in
  * an observing closure, and that is exactly the loader case.
  * @param value The manifest's `element` value, in any of its forms.
@@ -105,10 +112,11 @@ function isElementLoaderFunction(
  * does not change `_app` leaves the app's element untouched, which is what a game with a board in
  * progress needs.
  *
- * A loader that throws, resolves to no constructor, or never settles at all (see
- * {@link UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS}) is reported in place. It is the one failure mode with
- * no other surface: the manifest resolved, so the app is in the launcher and the window opened, and
- * an empty body would read as a broken desktop rather than a missing bundle. While the loader is in
+ * A loader that throws, resolves to no constructor, yields a "constructor" that builds something
+ * other than an element, or never settles at all (see {@link UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS}) is
+ * reported in place, and named by its alias in the console. It is the one failure mode with no
+ * other surface: the manifest resolved, so the app is in the launcher and the window opened, and an
+ * empty body would read as a broken desktop rather than a missing bundle. While the loader is in
  * flight the body shows a spinner instead, as the iframe path does, because a dynamic import is a
  * network hop.
  *
@@ -126,6 +134,13 @@ function isElementLoaderFunction(
  * the body down, so a minimized game keeps running and keeps its board. An app that should idle
  * while out of sight has to watch its own visibility; one that must keep ticking gets that for
  * free.
+ *
+ * **The active theme's id is on the app's own element**, as `data-umbradesktop-theme`, from before
+ * its first render and updated in place for the life of the instance. So
+ * `:host([data-umbradesktop-theme='win98'])` is a selector an app can write, which is the contract
+ * design D9 promises and the reason this host forwards the attribute rather than merely carrying
+ * it: `:host` matches the app's own element, and the ancestor form that would have seen it on this
+ * host, `:host-context`, has never shipped in Firefox. See {@link chromeThemeId}.
  */
 @customElement('umbradesktop-app-host')
 export class UmbraDesktopAppHostElement extends UmbLitElement {
@@ -140,6 +155,62 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
    */
   @property({ attribute: false })
   load?: ElementLoaderProperty;
+
+  /**
+   * The app's manifest alias, set by the window alongside `load`, and read only when a load fails.
+   *
+   * A plain field rather than a `@property`, which is the whole point of it being here at all: this
+   * host remounts whenever `load` changes, and a *second* reactive input would be a second way to
+   * throw away a running app. Nothing renders the alias, so a reactive one would buy an update pass
+   * per assignment and put `'alias'` in `willUpdate`'s changed map, one line away from a remount
+   * condition that restarts a game mid-board for a re-render that changed nothing. Non-reactive
+   * makes that unreachable rather than merely unwritten (pinned in `app-host.element.test.ts`), and
+   * costs nothing: the window sets it in the same binding commit as `load`, so it is already in
+   * place by the time the mount it might have to name is attempted.
+   *
+   * Optional because it is diagnostic-only: an alias nobody set must degrade the message, never the
+   * app. See the `#describeApp` method.
+   */
+  public alias?: string;
+
+  /**
+   * The chrome theme in force, forwarded onto the app's own element as
+   * {@link UMBRADESKTOP_THEME_ATTRIBUTE} so the app can branch on it.
+   *
+   * Declared with `attribute`, so the window's `data-umbradesktop-theme` binding on *this* element
+   * is what sets it. One binding then does both halves of the contract and they cannot disagree:
+   * the attribute stays on this host, which is where an app rendering into light DOM reads it since
+   * it has no shadow root and so no `:host`, and the property carries the same value down to the
+   * app element for the app that does.
+   *
+   * Reactive, where `alias` above is deliberately not. The two are opposites for the same reason: a
+   * remount is what throws a running game's board away, and `alias` never changes at runtime so
+   * making it unreactive removes a way to cause one, while the theme id *does* change at runtime
+   * and a value that could not react would leave a switched theme unpainted until the next reload.
+   * What keeps the reaction safe is that only `load` remounts — `willUpdate` writes this onto the
+   * element already mounted and touches nothing else, so a theme switch mid-game recolours the
+   * board rather than clearing it. Pinned in `window-body.test.ts`, by node identity, because
+   * "the attribute changed" passes under a remount too.
+   *
+   * `reflect` is for a hypothetical external caller that sets the property instead of the
+   * attribute, which is anything mounting this host by hand rather than through
+   * `window.element.ts`. Kept for that reason, and stated no more strongly than that, because it is
+   * also the only thing that could bite such a caller: setting `chromeThemeId = null` while a
+   * window's own binding holds `'win98'` reflects the removal, and that binding's `AttributePart`
+   * still has `'win98'` cached, so a later re-render with the same value writes nothing and the
+   * attribute does not come back. Doubly unreachable today (nothing sets the property, and the one
+   * thing that sets the attribute is the binding itself), and removing `reflect` would trade a
+   * corner case no caller can currently reach for a plain gap every hand-mounting caller would.
+   * Nothing loops either way: Lit suppresses the reflection when the value arrived from the
+   * attribute in the first place.
+   *
+   * `string | null` and not `string`: an absent attribute converts to `null`, and that is a state
+   * with a meaning here rather than an accident. No theme has resolved yet, so no attribute is
+   * written at all — an empty one would match an app's `[data-umbradesktop-theme]` existence check
+   * and answer it with nothing usable.
+   */
+  @property({ attribute: UMBRADESKTOP_THEME_ATTRIBUTE, reflect: true })
+  public chromeThemeId?: string | null;
 
   /**
    * The app's element once constructed, rendered as a template value.
@@ -191,11 +262,20 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
   }
 
   /**
-   * Re-mount whenever the loader changes, and only then.
+   * Re-mount whenever the loader changes, and only then. Re-stamp the theme whenever it changes,
+   * and never re-mount for it.
    *
    * In `willUpdate` rather than `updated` so the clearing half of `#mount` lands in the render that
    * is already scheduled: the outgoing app leaves the DOM as the loader changes, instead of
    * lingering for one frame beside its replacement.
+   *
+   * The two branches are independent, which is the point of writing them as two. A theme change
+   * reaches an app that is already mounted through the second one only, so it never touches `load`,
+   * never re-enters `#mount`, and leaves Lit's `_app` value identical — a `ChildPart` compares node
+   * values by identity, so the render this update schedules leaves the app's element exactly where
+   * it was, board and all. Both branches run when both changed, and the theme one is then a no-op:
+   * `#mount` has already cleared `_app` synchronously by the time it is reached, and stamps the
+   * replacement itself once its loader settles.
    * @param changed The properties this update is for.
    */
   override willUpdate(changed: Map<string, unknown>) {
@@ -203,6 +283,26 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
     // a base class gaining a `willUpdate` in an Umbraco minor would otherwise break silently.
     super.willUpdate(changed);
     if (changed.has('load')) this.#mounting = this.#mount();
+    if (changed.has('chromeThemeId')) this.#stampTheme(this._app);
+  }
+
+  /**
+   * Write the theme id onto an app element, or take it off again when no theme has resolved.
+   *
+   * A direct DOM write rather than a template binding, because the app's element is a value Lit
+   * renders and not a tag Lit authored: there is no attribute part to bind. Idempotent and safe to
+   * call with nothing mounted, so both callers can be unconditional.
+   *
+   * The remove arm is not symmetry for its own sake. An app that has been shown a theme and then
+   * loses it — a context torn down, a window re-parented — must not keep selecting on a theme that
+   * is no longer in force, and leaving a stale id there is worse than none: an app can see that the
+   * attribute is missing, and cannot see that it is out of date.
+   * @param app The app element to stamp, if there is one.
+   */
+  #stampTheme(app?: HTMLElement): void {
+    if (!app) return;
+    if (this.chromeThemeId) app.setAttribute(UMBRADESKTOP_THEME_ATTRIBUTE, this.chromeThemeId);
+    else app.removeAttribute(UMBRADESKTOP_THEME_ATTRIBUTE);
   }
 
   /**
@@ -236,13 +336,43 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
         // here rather than rendering an empty body is the difference between a console line a
         // package author can act on and one they cannot.
         if (!ctor) throw new Error('element could not be resolved to a constructor');
+        const app = new ctor();
+        // Umbraco returns any constructor it is handed without checking what it constructs, and
+        // `prototype` is all it has to recognise one by, so two legal-looking manifests arrive here
+        // as "constructors" that build something else entirely. A loader written as a plain
+        // `function () { return import('./game.js'); }` has a `prototype`, so it is taken for the
+        // constructor and `new` returns the promise it returns; an `element` pointing at a class
+        // that is not an element class constructs a plain object. Both then reached Lit as a child
+        // value and were stringified into the window: `[object Promise]`, no console line, nothing
+        // for an author to work from. Neither is fixable upstream from here, so this is where the
+        // shape is finally checked, and both land on the message every other load failure lands on.
+        if (!(app instanceof HTMLElement)) {
+          throw new Error(
+            'element constructed something that is not an HTMLElement (a loader must be an arrow or async function, not a plain function)',
+          );
+        }
+        // Before `_app`, and that order is the requirement rather than tidiness: the element is
+        // still detached here, so its first render has not happened, and an app that branches on
+        // the theme paints correctly the first time instead of painting unstyled and correcting
+        // itself a frame later. Assigning `_app` first is what would put it in the DOM.
+        this.#stampTheme(app);
         this._pending = false;
-        this._app = new ctor();
+        this._app = app;
       } catch (error) {
         // Same guard on this path: a superseded attempt must not paint a failure over the app that
         // replaced it, and a timeout arriving after a swap is exactly that case.
         if (this.load !== load) return;
-        console.error('[UmbraDesktop] app element failed to load', error);
+        // One log site for every failure above: a thrown loader, a resolution with no constructor
+        // in it, a "constructor" that built something else, and the clock winning. They differ in
+        // the `error`, never in what has to be said about them, and a diagnostic naming the app on
+        // one path and not the others would teach the reader that an unattributed line means "some
+        // other kind of failure". Kept in the register of the catalogue context's messages
+        // (`<noun> "<alias>" <problem>. <remedy>.`), because this is the same audience reading the
+        // same console: the package author whose app is the one that is broken.
+        console.error(
+          `[UmbraDesktop] ${this.#describeApp()} could not be loaded. Check the manifest's "element".`,
+          error,
+        );
         this._pending = false;
         this._failed = true;
       }
@@ -253,6 +383,21 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
     // render above rather than a load failure, and calling it one would put a "this app could not
     // be loaded" message on screen for a bug in the host.
     await this.updateComplete;
+  }
+
+  /**
+   * How this app is named in the load-failure diagnostic.
+   *
+   * "Registered app" is the noun the catalogue context already uses for a package's own app, so a
+   * reader following one of its lines and one of these is reading about the same kind of thing.
+   *
+   * The no-alias arm is not defensive padding: `alias` is a public property on a shipped element,
+   * so anything mounting this host by hand can leave it unset, and a message reading
+   * `Registered app "undefined"` would send its reader looking for a manifest with that alias.
+   * @returns The subject of the sentence, with the alias when there is one.
+   */
+  #describeApp(): string {
+    return this.alias ? `Registered app "${this.alias}"` : 'A registered app';
   }
 
   /**

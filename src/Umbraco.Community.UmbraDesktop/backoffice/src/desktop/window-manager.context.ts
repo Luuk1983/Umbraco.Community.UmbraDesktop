@@ -10,15 +10,23 @@ import {
   setWindowRect,
   clampWindowsToBounds,
 } from './window-model';
-import { UMBRADESKTOP_WINDOW_KEEP_VISIBLE } from './constants';
+import { UMBRADESKTOP_DEFAULT_METRICS, UMBRADESKTOP_WINDOW_KEEP_VISIBLE } from './constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-token';
+import { windowSizeForContent } from './window-chrome';
 import type { UmbraDesktopThemeMetrics } from './theme/types';
 import type { UmbraDesktopKeepVisible } from './window-model';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
 import { UmbArrayState } from '@umbraco-cms/backoffice/observable-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 
-const DEFAULT_SIZE = { w: 800, h: 600 };
+/**
+ * The **content** box a window opens at when its app names no `defaultSize`.
+ *
+ * Content and not window, like every size an app declares: the active theme's chrome is added on
+ * top, so an app with no opinion opens with the same amount of usable room under all five themes
+ * rather than losing a taller theme's caption out of the bottom of it.
+ */
+const DEFAULT_CONTENT_SIZE = { w: 800, h: 600 };
 
 /**
  * Owns the list of open desktop windows and the operations on it. Provided by
@@ -35,6 +43,17 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * theme's geometry until the theme context resolves one.
    */
   #keep: UmbraDesktopKeepVisible = UMBRADESKTOP_WINDOW_KEEP_VISIBLE;
+
+  /**
+   * The active theme's full geometry, which is what {@link open} needs: sizing a window around an
+   * app's content box takes the theme's chrome cost, and that is not one of the four fields
+   * {@link keep} carries.
+   *
+   * Defaults to the base chrome's own metrics, which is the same object the Umbraco theme
+   * publishes — so "before a theme resolves" and "under the identity theme" are one state rather
+   * than two that happen to agree.
+   */
+  #metrics: UmbraDesktopThemeMetrics = UMBRADESKTOP_DEFAULT_METRICS;
 
   /** The last desktop size seen, so a theme change can re-clamp without waiting for a resize. */
   #bounds?: { w: number; h: number };
@@ -58,6 +77,10 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   /**
    * Open a new window for the given app and focus it. If the app forbids multiple
    * instances and one is already open, focus that instead of opening another.
+   *
+   * `defaultSize` is the app's **content** box, so the active theme's chrome is added here rather
+   * than being the app's problem: the app cannot read a titlebar height from another package, and
+   * the one that tried guessed a single allowance for five different titlebars.
    * @param app The app to open.
    */
   public open(app: UmbraDesktopApp): void {
@@ -69,7 +92,10 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
         return;
       }
     }
-    const rect = nextWindowRect(current.length, app.defaultSize ?? DEFAULT_SIZE);
+    const rect = nextWindowRect(
+      current.length,
+      windowSizeForContent(app.defaultSize ?? DEFAULT_CONTENT_SIZE, this.#metrics),
+    );
     const win: UmbraDesktopWindow = {
       id: crypto.randomUUID(),
       app,
@@ -140,9 +166,15 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * Adopt the active theme's geometry, then pull any window the new chrome has stranded back into
    * reach — a window parked against the right edge under trailing controls sits outside the clamp
    * once those controls move to the left.
+   *
+   * The whole object is kept, not only the four fields the clamp reads: {@link open} sizes a window
+   * around an app's content box and needs this theme's chrome cost to do it. Windows already open
+   * keep the size they have, which is the same decision the clamp makes — a theme change moves a
+   * window only when the new chrome would otherwise put it out of reach.
    * @param metrics The active theme's metrics.
    */
   public setMetrics(metrics: UmbraDesktopThemeMetrics): void {
+    this.#metrics = metrics;
     this.#keep = {
       grab: metrics.grab,
       leading: metrics.leadingControlsWidth,

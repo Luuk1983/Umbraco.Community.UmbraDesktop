@@ -18,12 +18,13 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 
 - Work side by side. Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth. This one wants room: see [A note on screen size](#a-note-on-screen-size).
 - Real windows. Drag, resize, minimise, maximise, and double-click a title bar to fill the desktop. Each window remembers its own place.
-- A launcher that stays out of the way. Apps are grouped into Editing, Development, Synchronisation, Security, Advanced security, Diagnostics and System, so you find things by what they do.
+- A launcher that stays out of the way. Apps are grouped into Editing, Development, Synchronisation, Security, Advanced security, Diagnostics and System, so you find things by what they do, plus Games once a package puts an app there. Empty groups never show.
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned. Your pins are remembered per user.
 - A taskbar. Every open window gets a button: click to focus, click again to minimise.
 - Choose your wallpaper. Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user.
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.
 - Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice. Five ship: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98. Adding your own is a folder of CSS and one catalogue entry.
+- Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
 - Nothing new to learn. The windows contain the backoffice you already know, with the same trees, the same editors and the same shortcuts.
 
 ## Installation & configuration
@@ -130,15 +131,21 @@ If you pick something that is not an image, the desktop tells you and leaves you
 
 ## Technical explanation
 
-### Windows are iframes
+### Two kinds of window body
 
-Each window hosts an `<iframe>` deep-linked into the backoffice on the same origin. That matters because the Umbraco router reads a single global `window.location` and patches History globally, so only one route tree can own the URL. An iframe has its own `window`, `location`, History and event bus, which is what makes genuinely independent navigation per window possible without any change to Umbraco core.
+A window holds one of two things, and which one it is decides almost everything else about it.
+
+**A backoffice `<iframe>`**, deep-linked into the backoffice on the same origin. Every app in the curated catalogue is one of these. The iframe is not a shortcut: the Umbraco router reads a single global `window.location` and patches History globally, so only one route tree can own the URL. An iframe has its own `window`, `location`, History and event bus, which is what makes genuinely independent navigation per window possible without any change to Umbraco core.
 
 Authentication is shared automatically through the existing secure cookies, so each window boots an authenticated backoffice like an extra tab.
 
 Windows stay fresh through Umbraco's own machinery rather than a custom sync layer: each iframe runs its own observers and server-events connection, so saving in one window causes the others to refresh themselves.
 
+**A self-contained app element**, registered by any package. There is no route behind it and no second backoffice to boot, so none of the above applies and none of it is needed: the element renders in the desktop's own document, picks up the active theme's colours through ordinary CSS inheritance, and the titlebar drops its reload button, since an app has no page to re-fetch and closing the window already does what restarting it would. Games and small tools are what this kind is for. See [Custom and third-party apps](#custom-and-third-party-apps).
+
 ### How much chrome a window keeps
+
+This applies to iframe windows only. An app element has no backoffice chrome to strip, so there is nothing to decide.
 
 A window should not show the entire backoffice shell inside a small frame. Because the iframe is same-origin, UmbraDesktop injects a stylesheet into it, keyed off stable custom-element tags. Three profiles decide how much survives:
 
@@ -150,7 +157,9 @@ A window should not show the entire backoffice shell inside a small frame. Becau
 
 ### The app catalogue
 
-Which apps appear, and how they present themselves, is defined by a curated catalogue in `backoffice/src/desktop/catalogue/`. Each entry points at a registered extension by alias, so its URL is inferred from the registry rather than hardcoded, and carries display detail: name, icon, group, chrome profile, default and minimum window size, whether multiple instances are allowed, and sort weight.
+The launcher fills from two sources. The first, and the one that provides everything you see out of the box, is a curated catalogue in `backoffice/src/desktop/catalogue/`. Each entry points at a registered extension by alias, so its URL is inferred from the registry rather than hardcoded, and carries display detail: name, icon, group, chrome profile, default and minimum window size, whether multiple instances are allowed, and sort weight.
+
+The second is apps other packages register for themselves, covered below.
 
 ### Apps that aren't in the catalogue
 
@@ -162,13 +171,26 @@ Sections listed in `catalogue/exclusions.ts` never appear this way. That list is
 
 If your package registers a section, it appears in the launcher automatically for users permitted to that section, in the More group with default chrome and a generic icon. No work required.
 
-Curated placement (a custom icon, a friendly name, a specific group, a different chrome profile or window sizing) needs an entry in `backoffice/src/desktop/catalogue/`. That means opening a pull request against this repository; there is no runtime registration point.
+Beyond that there are two paths, and which one you take depends on what your app points at rather than on who wrote it.
+
+**A self-contained app you register yourself.** If your app is its own custom element, with no backoffice route behind it, register a `umbraDesktopApp` extension manifest and you are done. It gets a launcher tile, a group, a window, pinning, a taskbar button and the active theme's colours, and your package never talks to this repository. There is nothing for anyone here to verify: an element in a box cannot point at the wrong URL or pick the wrong chrome profile. This is how games and small tools get onto the desktop. [`docs/desktop-apps.md`](docs/desktop-apps.md) is the guide.
+
+**Curated placement for a backoffice surface.** If your app *is* a backoffice page (a custom icon, a friendly name, a specific group, a chrome profile or window sizing for a section or dashboard), it needs an entry in `backoffice/src/desktop/catalogue/`, which means opening a pull request against this repository. That is deliberate rather than a gap: a deep link needs its URL checked and its chrome profile chosen, and getting either wrong ships a broken window whose blame lands on the desktop. The manifest type has no `url`, `section` or `chromeProfile` field, so the split is structural and not a rule anyone has to remember.
 
 A curated entry for a package that not every install has is marked `optional`. Because it points at the package's own extension by alias, it resolves only where that package is registered, and stays silently absent everywhere else. uSync ships this way: install it and a uSync app appears in the Synchronisation group, opening its dashboard without the Settings tree beside it.
 
 ## Documentation
 
 The full design, including the research behind the iframe approach, is in [`docs/design/umbradesktop-design.md`](docs/design/umbradesktop-design.md).
+
+Building an app of your own, in your own package, is one extension manifest and a custom element.
+[`docs/desktop-apps.md`](docs/desktop-apps.md) is the guide: the manifest shape, every form the
+`element` may take with a worked static `umbraco-package.json`, the thirteen custom properties an
+app paints itself with and the fallback each one needs, what a grid of controls tiled edge to edge
+needs that a single control does not, how to branch per theme and why the theme
+ids are a published API, what the desktop does to your element over its lifetime, and the traps that
+cost real time. The reasoning is in
+[`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md).
 
 Building a theme of your own is a folder of CSS and one catalogue entry, with no change to the
 chrome itself. [`docs/theming.md`](docs/theming.md) is the guide: what a theme folder holds, the

@@ -84,6 +84,17 @@
           "Umbraco.Community.AdvancedPermissions.Abstractions": "17.3.0"
         }
       },
+      "Umbraco.Community.UmbraDesktop": {
+        "type": "Direct",
+        "requested": "[17.0.0, 18.0.0)",
+        "resolved": "17.0.0",
+        "contentHash": "AyqHRZ/9dRQvxr2IeOWbqDoTnJGT+DDZZPx7GTpAQs92mIbynPBDSvFL1RIZobJ8ACkOVdMrBwQwtjBNHqIYcA==",
+        "dependencies": {
+          "Umbraco.Cms.Api.Common": "[17.0.0, 18.0.0)",
+          "Umbraco.Cms.Core": "[17.0.0, 18.0.0)",
+          "Umbraco.JsonSchema.Extensions": "0.4.3"
+        }
+      },
       "Umbraco.TheStarterKit": {
         "type": "Direct",
         "requested": "[17.0.0, )",
@@ -1863,12 +1874,10 @@
           "uSync.Backoffice.Management.Api": "17.3.8"
         }
       },
-      "umbraco.community.umbradesktop": {
+      "umbraco.community.umbradesktop.entertainment": {
         "type": "Project",
         "dependencies": {
-          "Umbraco.Cms.Api.Common": "[17.0.0, 18.0.0)",
-          "Umbraco.Cms.Core": "[17.0.0, 18.0.0)",
-          "Umbraco.JsonSchema.Extensions": "[0.*, )"
+          "Umbraco.Community.UmbraDesktop": "[17.0.0, 18.0.0)"
         }
       },
       "Umbraco.Cms.Api.Common": {

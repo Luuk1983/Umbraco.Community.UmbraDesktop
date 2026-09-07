@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "An OS-style windowed desktop for the Umbraco backoffice. Open content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side. Includes a grouped app launcher with pinnable apps, a taskbar, per-user wallpapers, and five chrome themes: the Umbraco look, a retro Umbraco 4, macOS, Windows 11 and Windows 98. Themes restyle the desktop only, never the backoffice inside a window, and adding one of your own is a folder of CSS.",
+  "Description": "An OS-style windowed desktop for the Umbraco backoffice. Open content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side. Includes a grouped app launcher with pinnable apps, a taskbar, per-user wallpapers, and five chrome themes: the Umbraco look, a retro Umbraco 4, macOS, Windows 11 and Windows 98. Themes restyle the desktop only, never the backoffice inside a window, and adding one of your own is a folder of CSS. Other packages can put apps of their own on the desktop too, which is how games and small tools get there: they open in a window of their own and are themed along with everything else.",
   "PackageType": "Package",
   "LicenseTypes": ["Free"],
   "AuthorDetails": {
@@ -25,7 +25,10 @@
     "workspace",
     "editor tools",
     "themes",
-    "wallpapers"
+    "wallpapers",
+    "apps",
+    "games",
+    "extensibility"
   ],
   "Screenshots": [
     {

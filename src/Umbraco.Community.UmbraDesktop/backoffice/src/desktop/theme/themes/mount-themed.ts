@@ -40,6 +40,40 @@ import type { UmbraDesktopPalette, UmbraDesktopSurface, UmbraDesktopTheme } from
  */
 export const UMBRADESKTOP_THEME_TEST_TIMEOUT_MS = 20_000;
 
+/**
+ * The rectangle every theme's metrics test mounts its probe window at.
+ *
+ * Shared because two things now have to agree on it: the window is rendered at this size, and
+ * {@link measureChromeCost} subtracts the app's own box from it. A file that mounted at one size and
+ * measured against another would report a chrome cost that is off by the difference, and would do
+ * it silently — the number looks plausible whatever it is.
+ *
+ * Big enough that no theme's own minimum is in force at either axis, which would clamp the frame
+ * larger than the rect and make the subtraction meaningless.
+ */
+export const UMBRADESKTOP_PROBE_WINDOW_RECT = { x: 0, y: 0, w: 640, h: 400 };
+
+/**
+ * What a window's chrome takes out of its declared size before anything reaches the app's own box.
+ *
+ * Measured as exactly that difference rather than summed from a ring, a caption and a well,
+ * because the sum is what a theme's own `metrics.ts` already computes and this is the check on it:
+ * a padding or a `box-sizing` nobody folded back into that sum cannot hide from a subtraction. The
+ * app's box is `.body`, which is the iframe or the app host — whichever this window's kind renders.
+ * @param root The mounted window's shadow root.
+ * @param rect The rectangle it was rendered at, normally {@link UMBRADESKTOP_PROBE_WINDOW_RECT}.
+ * @returns The cost on each axis, in px.
+ * @throws If the window rendered no body, which would otherwise silently measure nothing.
+ */
+export function measureChromeCost(root: ShadowRoot, rect: { w: number; h: number }): { w: number; h: number } {
+  const body = root.querySelector('.body') as HTMLElement | null;
+  // Thrown rather than asserted with chai, for the reason `mountThemedWith` gives below: this
+  // module lives under `src/` and must not import a devDependency.
+  if (!body) throw new Error('The window rendered no body, so there is no app box to measure the chrome against.');
+  const box = body.getBoundingClientRect();
+  return { w: rect.w - box.width, h: rect.h - box.height };
+}
+
 /** One mounted chrome component, with the handles a measuring test needs. */
 export interface UmbraDesktopThemedMount<T extends HTMLElement> {
   /** The mounted chrome element. */

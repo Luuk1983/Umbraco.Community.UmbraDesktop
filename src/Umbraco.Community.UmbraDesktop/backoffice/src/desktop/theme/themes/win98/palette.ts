@@ -201,8 +201,21 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-app-surface-sunken': WIN98_WINDOW,
   '--umbradesktop-app-edge-light': WIN98_HILIGHT,
   '--umbradesktop-app-edge-dark': WIN98_SHADOW,
+  // The black outer ring, not `WIN98_SHADOW`: a boundary has to clear 3:1 on the button face as
+  // well as in a white field, and the shadow grey manages 2.17:1 on its own face. Black is what
+  // this operating system ruled a list box and a grid with anyway. Minesweeper never shows it —
+  // its cells are butted bevels and its branch paints the gaps between them in face grey — but an
+  // app that draws a plain divider gets a Win98 divider.
+  '--umbradesktop-app-border': WIN98_DKSHADOW,
   '--umbradesktop-app-edge-width': '2px',
-  '--umbradesktop-app-radius': '0',
+  // Square corners. `0px` and not `0`, and that unit is load-bearing rather than tidiness: a bare
+  // `0` is a valid length on its own but **invalid inside `calc()`, `min()` or `max()`**, which
+  // drops the whole declaration silently. The chrome's own tokens can get away with a unitless
+  // zero because both ends of that contract are in this repository; an app token's reader ships in
+  // a package this repository cannot inspect, and Minesweeper lost its entire `border` shorthand
+  // to exactly this. `app-tokens.test.ts` now fails on any unitless app token, so this cannot be
+  // undone by accident.
+  '--umbradesktop-app-radius': '0px',
   '--umbradesktop-app-text': WIN98_TEXT,
   // Not `WIN98_SHADOW`, despite Windows using one value for both: see {@link WIN98_GRAY_TEXT}.
   '--umbradesktop-app-text-muted': WIN98_GRAY_TEXT,

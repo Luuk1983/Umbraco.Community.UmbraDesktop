@@ -1,6 +1,12 @@
 import type { UmbraDesktopTheme } from '../../types';
 import { MACOS_DARK, MACOS_LIGHT } from './palette.js';
-import { MACOS_CAPTION_KEEP_VISIBLE, MACOS_LEADING_CONTROLS_WIDTH, MACOS_TASKBAR_RESERVE } from './metrics.js';
+import {
+  MACOS_CAPTION_KEEP_VISIBLE,
+  MACOS_CHROME_HEIGHT,
+  MACOS_CHROME_WIDTH,
+  MACOS_LEADING_CONTROLS_WIDTH,
+  MACOS_TASKBAR_RESERVE,
+} from './metrics.js';
 
 /**
  * macOS chrome around Umbraco content: traffic lights, a floating dock, a Launchpad-style
@@ -19,6 +25,11 @@ export const UMBRADESKTOP_MACOS_THEME: UmbraDesktopTheme = {
     leadingControlsWidth: MACOS_LEADING_CONTROLS_WIDTH,
     trailingControlsWidth: 0,
     grab: 80,
+    // What an app's content box does not get. Nothing horizontally: the traffic lights are inside
+    // the caption, so a theme moving its controls to the leading end changes the drag clamp above
+    // and not this.
+    chromeWidth: MACOS_CHROME_WIDTH,
+    chromeHeight: MACOS_CHROME_HEIGHT,
     taskbarReserve: MACOS_TASKBAR_RESERVE,
   },
   sheets: async () => {
