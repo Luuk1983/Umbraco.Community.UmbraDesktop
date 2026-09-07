@@ -34,6 +34,26 @@ export const U4_TITLEBAR_HEIGHT = 25;
 export const U4_CAPTION_KEEP_VISIBLE = U4_WINDOW_BORDER + U4_TITLEBAR_HEIGHT;
 
 /**
+ * What this theme's chrome takes out of a window's declared height before anything reaches the app:
+ * the header band, its own hairline included.
+ *
+ * The frame ring is not in it, where {@link U4_CAPTION_KEEP_VISIBLE} above counts it: that number
+ * is measured from the window's outer top edge for the drag clamp, and this one against the box
+ * `.frame` sizes, which sits inside a content-box border. The hairline needs no term of its own
+ * because `window.css.ts` makes the header `border-box`, so it comes out of
+ * {@link U4_TITLEBAR_HEIGHT} rather than adding to it — the opposite arrangement from the base
+ * chrome, whose hairline is outside its 40px, and precisely why this is a per-theme number.
+ * Feeds `metrics.chromeHeight`.
+ */
+export const U4_CHROME_HEIGHT = U4_TITLEBAR_HEIGHT;
+
+/**
+ * And nothing horizontally: `.frame` stays content-box, so its 1px ring is painted outside the
+ * width the window manager set and costs the app nothing.
+ */
+export const U4_CHROME_WIDTH = 0;
+
+/**
  * Width of each window button. Wider than Win98's 20px because these are flat icon buttons that
  * only draw an edge on hover, and a target with no permanent border needs more room around its
  * glyph to read as a button at all.

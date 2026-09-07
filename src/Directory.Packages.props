@@ -9,6 +9,10 @@
     <PackageVersion Include="Umbraco.Cms.Api.Management" Version="[17.0.0,18.0.0)" />
     <PackageVersion Include="Umbraco.Cms.Core" Version="[17.0.0,18.0.0)" />
     <PackageVersion Include="Umbraco.Community.AdvancedPermissions" Version="17.3.0" />
+    <!-- The Entertainment add-on's dependency on the host package. A range, not the exact version
+         it is built beside, so a host release does not force an Entertainment release (design D13).
+         Central package management means the version lives here rather than in that csproj. -->
+    <PackageVersion Include="Umbraco.Community.UmbraDesktop" Version="[17.0.0,18.0.0)" />
     <PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
     <!-- Build-time only: versioning and source-link -->
     <PackageVersion Include="MinVer" Version="7.0.0" />

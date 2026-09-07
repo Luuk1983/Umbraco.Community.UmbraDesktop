@@ -6,6 +6,7 @@ import type { UmbraDesktopApp } from '../../../types.js';
 import { UMBRADESKTOP_WIN98_THEME } from './index.js';
 import { mountThemed, UMBRADESKTOP_THEME_TEST_TIMEOUT_MS } from './mount-themed.js';
 import type { UmbraDesktopThemedMount } from './mount-themed.js';
+import { measureChromeCost, UMBRADESKTOP_PROBE_WINDOW_RECT } from '../mount-themed.js';
 
 /**
  * `metrics` is the one thing a theme publishes that JavaScript acts on rather than paints: the
@@ -26,7 +27,7 @@ const PROBE_APP: UmbraDesktopApp = {
   alias: 'win98-metrics-probe',
   name: 'Probe',
   icon: 'icon-umbraco',
-  url: 'about:blank',
+  content: { kind: 'iframe', url: 'about:blank' },
   chromeProfile: 'bare',
 };
 
@@ -42,7 +43,7 @@ before(async function () {
   win.element.window = {
     id: 'w1',
     app: PROBE_APP,
-    rect: { x: 0, y: 0, w: 640, h: 400 },
+    rect: UMBRADESKTOP_PROBE_WINDOW_RECT,
     z: 1,
     active: true,
     state: 'normal',
@@ -95,6 +96,30 @@ it('reports the titlebar height a window actually paints, frame border included'
     'the published titlebarHeight disagrees with the caption the theme paints, so a window ' +
       'dragged against the bottom edge keeps the wrong amount of itself grabbable',
   ).to.equal(rendered);
+});
+
+/**
+ * This is the theme the chrome-cost metric exists for. It is the only one of the five that spends
+ * pixels at the *bottom* of a window as well as the top — a 3px bevel all the way round, plus the
+ * 2px sunken well inside it — so an app guessing at "the tallest titlebar of the five" came out
+ * 32px short here and nowhere else, and its own last row landed where the bevel should be.
+ */
+it('reports what its chrome costs an app, on both axes, so no app has to guess', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  const cost = measureChromeCost(win.root, UMBRADESKTOP_PROBE_WINDOW_RECT);
+
+  expect(
+    UMBRADESKTOP_WIN98_THEME.metrics.chromeWidth,
+    'the published chromeWidth disagrees with what this theme actually takes out of a window ' +
+      'horizontally, so every app registered against it opens that much narrower or wider than ' +
+      'it asked for — the ring and the sunken well both come out of the rect here, because both ' +
+      'are `border-box` padding',
+  ).to.equal(cost.w);
+  expect(
+    UMBRADESKTOP_WIN98_THEME.metrics.chromeHeight,
+    'and the same vertically, which is the axis the reported bug was on: caption plus a ring at ' +
+      'the top and the bottom plus the well',
+  ).to.equal(cost.h);
 });
 
 it('reserves exactly the height of the bar it paints at the bottom edge', function () {

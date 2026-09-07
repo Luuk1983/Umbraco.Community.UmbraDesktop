@@ -3,7 +3,12 @@ import '../../../components/window.element.js';
 import '../../../components/taskbar.element.js';
 import type { UmbraDesktopWindowElement } from '../../../components/window.element.js';
 import type { UmbraDesktopApp } from '../../../types.js';
-import { mountThemedWith, UMBRADESKTOP_THEME_TEST_TIMEOUT_MS } from '../mount-themed.js';
+import {
+  measureChromeCost,
+  mountThemedWith,
+  UMBRADESKTOP_PROBE_WINDOW_RECT,
+  UMBRADESKTOP_THEME_TEST_TIMEOUT_MS,
+} from '../mount-themed.js';
 import type { UmbraDesktopThemedMount, UmbraDesktopUpdatable } from '../mount-themed.js';
 import { UMBRADESKTOP_MACOS_THEME } from './index.js';
 import { MACOS_TASKBAR_CLEARANCE } from './metrics.js';
@@ -29,7 +34,7 @@ const PROBE_APP: UmbraDesktopApp = {
   alias: 'macos-metrics-probe',
   name: 'Probe',
   icon: 'icon-umbraco',
-  url: 'about:blank',
+  content: { kind: 'iframe', url: 'about:blank' },
   chromeProfile: 'bare',
 };
 
@@ -50,7 +55,7 @@ before(async function () {
   win.element.window = {
     id: 'w1',
     app: PROBE_APP,
-    rect: { x: 0, y: 0, w: 640, h: 400 },
+    rect: UMBRADESKTOP_PROBE_WINDOW_RECT,
     z: 1,
     active: true,
     state: 'normal',
@@ -108,6 +113,29 @@ it('reports the titlebar height a window actually paints, frame border included'
     'the published titlebarHeight disagrees with the caption the theme paints, so a window ' +
       'dragged against the bottom edge keeps the wrong amount of itself grabbable',
   ).to.equal(rendered);
+});
+
+/**
+ * The chrome cost is the caption and its hairline, and nothing horizontally: the traffic lights
+ * sit *inside* the caption, so where a theme puts its controls changes the drag clamp and not what
+ * an app's box is worth. Worth measuring here precisely because this is the theme where those two
+ * facts could most easily be conflated.
+ */
+it('reports what its chrome costs an app, so no app has to guess', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  const cost = measureChromeCost(win.root, UMBRADESKTOP_PROBE_WINDOW_RECT);
+
+  expect(
+    UMBRADESKTOP_MACOS_THEME.metrics.chromeWidth,
+    'the published chromeWidth disagrees with what this theme takes out of a window ' +
+      'horizontally. The traffic lights are inside the caption, so they cost the app nothing — ' +
+      'but the frame ring would, if this theme ever moved it inside the rect',
+  ).to.equal(cost.w);
+  expect(
+    UMBRADESKTOP_MACOS_THEME.metrics.chromeHeight,
+    'and the same vertically: caption plus the hairline under it, which is part of the caption ' +
+      "band and so part of what the app's box does not get",
+  ).to.equal(cost.h);
 });
 
 it('reserves the dock it paints, plus the clearance it declares above it', function () {

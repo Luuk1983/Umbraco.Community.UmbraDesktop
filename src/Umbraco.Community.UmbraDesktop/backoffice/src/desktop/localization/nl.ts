@@ -35,6 +35,7 @@ export default {
     appDeployConfiguration: 'Deploy-configuratie',
     appEngageConfiguration: 'Engage-configuratie',
     appBackgroundJobs: 'Achtergrondtaken',
+    appLoadFailed: 'Deze app kon niet worden geladen.',
     groupEditing: 'Bewerken',
     groupWorkflow: 'Workflow',
     groupMarketingSales: 'Marketing en verkoop',

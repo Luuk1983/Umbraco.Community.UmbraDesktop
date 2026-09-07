@@ -9,7 +9,7 @@ import {
   WIN98_INACTIVE_CAPTION_TEXT,
 } from './palette.js';
 import {
-  WIN98_BEVEL_DEPTH,
+  WIN98_BODY_WELL,
   WIN98_CONTROL_GAP,
   WIN98_CONTROL_HEIGHT,
   WIN98_FRAME_BORDER,
@@ -163,10 +163,13 @@ export default css`
   }
   /* The client area is a sunken well, as it is in every Win98 application window. Padded by the
      bevel's own depth so the well's edge is visible around the frame's content; the grey it shows
-     is the frame's background, which is why no body background is set. */
+     is the frame's background, which is why no body background is set. That padding comes out of
+     the window's rect (border-box, as the frame's ring does), so it is counted in
+     WIN98_CHROME_WIDTH and WIN98_CHROME_HEIGHT — an app's content box is inside this well, not
+     inside the frame. */
   .bodywrap {
     box-sizing: border-box;
-    padding: ${WIN98_BEVEL_DEPTH}px;
+    padding: ${WIN98_BODY_WELL}px;
     box-shadow: ${unsafeCSS(WIN98_BEVEL_SUNKEN)};
   }
 `;

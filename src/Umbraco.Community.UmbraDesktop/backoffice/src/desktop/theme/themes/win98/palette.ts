@@ -42,6 +42,24 @@ export const WIN98_TEXT = '#000000';
 export const WIN98_WINDOW = '#ffffff';
 
 /**
+ * Muted body text, and the one colour in this file that is **not** what Windows 98 shipped.
+ *
+ * Windows' own `COLOR_GRAYTEXT` was `#808080`, the same value as `COLOR_3DSHADOW`. On
+ * `COLOR_3DFACE` that is 2.17:1, and on `COLOR_WINDOW` 3.95:1 — both under WCAG AA's 4.5:1 for
+ * body text. The authentic look was never really that pair on its own: Windows drew disabled text
+ * as an engraved pair, the grey offset by a white shadow one pixel down and right, and the notch
+ * that produces is what made it legible. This contract is one colour per token and cannot express
+ * a second offset layer, so the honest option is a darker grey. `#4d4d4d` is 4.65:1 on the face
+ * and 8.45:1 on the window, still unmistakably a dimmed grey next to `WIN98_TEXT`'s black.
+ *
+ * It is a separate constant rather than a changed {@link WIN98_SHADOW} deliberately. Reusing the
+ * bevel colour coupled body text to the inner shaded edge of every raised control, so tuning a
+ * bevel would have silently moved the readability of an app's secondary text. The bevel keeps its
+ * authentic `#808080`, because a bevel is decoration and not something anybody has to read.
+ */
+export const WIN98_GRAY_TEXT = '#4d4d4d';
+
+/**
  * `COLOR_ACTIVECAPTION` to `COLOR_GRADIENTACTIVECAPTION`. Windows 98 turned the gradient caption
  * on by default, which is the single clearest tell that this is 98 rather than 95.
  */
@@ -174,4 +192,36 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   // not to need the help.
   '--umbradesktop-desktop-scrim': 'transparent',
   '--umbradesktop-desktop-watermark-opacity': '0.08',
+
+  // Apps. Win98 is the theme the app token group was shaped around: `edge-width: 2px` with
+  // `radius: 0` is what makes a plain app stylesheet render as a bevelled control here and as a
+  // flat rounded one everywhere else, with no branch in the app.
+  '--umbradesktop-app-surface': WIN98_FACE,
+  '--umbradesktop-app-surface-raised': WIN98_FACE,
+  '--umbradesktop-app-surface-sunken': WIN98_WINDOW,
+  '--umbradesktop-app-edge-light': WIN98_HILIGHT,
+  '--umbradesktop-app-edge-dark': WIN98_SHADOW,
+  // The black outer ring, not `WIN98_SHADOW`: a boundary has to clear 3:1 on the button face as
+  // well as in a white field, and the shadow grey manages 2.17:1 on its own face. Black is what
+  // this operating system ruled a list box and a grid with anyway. Minesweeper never shows it —
+  // its cells are butted bevels and its branch paints the gaps between them in face grey — but an
+  // app that draws a plain divider gets a Win98 divider.
+  '--umbradesktop-app-border': WIN98_DKSHADOW,
+  '--umbradesktop-app-edge-width': '2px',
+  // Square corners. `0px` and not `0`, and that unit is load-bearing rather than tidiness: a bare
+  // `0` is a valid length on its own but **invalid inside `calc()`, `min()` or `max()`**, which
+  // drops the whole declaration silently. The chrome's own tokens can get away with a unitless
+  // zero because both ends of that contract are in this repository; an app token's reader ships in
+  // a package this repository cannot inspect, and Minesweeper lost its entire `border` shorthand
+  // to exactly this. `app-tokens.test.ts` now fails on any unitless app token, so this cannot be
+  // undone by accident.
+  '--umbradesktop-app-radius': '0px',
+  '--umbradesktop-app-text': WIN98_TEXT,
+  // Not `WIN98_SHADOW`, despite Windows using one value for both: see {@link WIN98_GRAY_TEXT}.
+  '--umbradesktop-app-text-muted': WIN98_GRAY_TEXT,
+  '--umbradesktop-app-accent': WIN98_MENU_HILIGHT,
+  // `COLOR_HIGHLIGHTTEXT` is literally the answer this token asks for: the colour Windows itself
+  // wrote on `COLOR_HIGHLIGHT`. White on that navy is 16:1, the widest margin of any theme here.
+  '--umbradesktop-app-accent-text': WIN98_MENU_HILIGHT_TEXT,
+  '--umbradesktop-app-font': WIN98_FONT,
 };

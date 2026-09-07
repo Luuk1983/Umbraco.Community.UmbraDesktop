@@ -16,6 +16,21 @@ import {
  */
 export const MACOS_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
 
+/**
+ * The blue a macOS selection is filled with, in both appearances: light and dark deliberately
+ * share one value, and naming it is how they visibly say so rather than agreeing by coincidence
+ * across two literals.
+ *
+ * It is **not** Apple's own `#0a84ff`, and that is a considered departure. White on `#0a84ff` is
+ * 3.65:1, short of WCAG AA for body text, and this theme's own `app-text` on it is 3.82:1. Pure
+ * black would clear it at 5.76:1, but macOS writes *white* on a selection, never black, so buying
+ * the contrast that way would trade a faithful accent for an unfaithful one. Darkening the blue
+ * channel to `cc` instead brings white to 5.51:1 while keeping the hue unmistakably macOS blue.
+ * Apple can rely on a system control's hand-tuned rendering here; a published token that another
+ * package writes text on cannot.
+ */
+export const MACOS_ACCENT = '#0067cc';
+
 /** macOS in its light appearance. */
 export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-background': '#ffffff',
@@ -77,6 +92,46 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
     'linear-gradient(155deg, #4a3f78 0%, #3b6ea5 55%, #2f8f96 100%)',
   '--umbradesktop-desktop-scrim': 'rgba(0, 0, 0, 0.1)',
   '--umbradesktop-desktop-watermark-opacity': '0.05',
+
+  // Apps. No bevel at all: `edge-width: 0` is the point, so all a raised control has to separate it
+  // from its ground is the fill step between these surfaces. `edge-dark` matches the window border
+  // so an app that does draw a rule agrees with the frame around it.
+  //
+  // The three surfaces are three distinct grounds on purpose. They shipped as `#ffffff`, `#ffffff`
+  // and `#f2f2f7`, which made `surface` and `surface-raised` the same white — so an app drawing a
+  // control as `background: var(--app-surface-raised)` with a `var(--app-edge-width)` border
+  // rendered white on white with nothing to separate it at all. Apple's grouped-content grey is the
+  // ground now, a control face lifts off it in white, and a well recesses below it, which is the
+  // arrangement the token names were describing all along.
+  //
+  // A step is not the same as a boundary. White on this grey is 1.09:1, and whether that reads as a
+  // raised control without either a hairline or a shadow is the open question the design doc's §6.1
+  // sends to the browser checkpoint rather than settling from hex values here.
+  '--umbradesktop-app-surface': '#f5f5f7',
+  '--umbradesktop-app-surface-raised': '#ffffff',
+  '--umbradesktop-app-surface-sunken': '#e8e8ed',
+  '--umbradesktop-app-edge-light': '#ffffff',
+  '--umbradesktop-app-edge-dark': 'rgba(0, 0, 0, 0.16)',
+  // Apple's own systemGray, darkened just enough to clear 3:1 against all three surfaces (the
+  // literal `#8e8e93` is 2.7:1 in the sunken field). `edge-dark` above is the 16% wash a real
+  // separator is and is left alone: it is the right hairline between two rows of text and the
+  // wrong one around a control, which is the distinction between the two tokens.
+  '--umbradesktop-app-border': '#7f7f85',
+  // Flat controls, so no bevel. `0px` and not `0`, and that unit is load-bearing rather than
+  // tidiness: a bare `0` is a valid length on its own but **invalid inside `calc()`, `min()` or
+  // `max()`**, which drops the whole declaration silently. The chrome's own tokens can get away
+  // with a unitless zero because both ends of that contract are in this repository; an app token's
+  // reader ships in a package this repository cannot inspect, and Minesweeper lost its entire
+  // `border` shorthand to exactly this. `app-tokens.test.ts` now fails on any unitless app token,
+  // so this cannot be undone by accident.
+  '--umbradesktop-app-edge-width': '0px',
+  '--umbradesktop-app-radius': '6px',
+  '--umbradesktop-app-text': '#2c2c2e',
+  '--umbradesktop-app-text-muted': '#6e6e73',
+  '--umbradesktop-app-accent': MACOS_ACCENT,
+  // White, which the darkened accent is chosen to carry: see {@link MACOS_ACCENT}.
+  '--umbradesktop-app-accent-text': '#ffffff',
+  '--umbradesktop-app-font': MACOS_FONT,
 };
 
 /** macOS in its dark appearance, applied when the backoffice is in dark mode. */
@@ -103,4 +158,27 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   '--umbradesktop-desktop-background-color': '#1d3550',
   '--umbradesktop-desktop-background-image':
     'linear-gradient(155deg, #2a2340 0%, #1d3550 55%, #17414a 100%)',
+
+  // Apps. Only the colours change: `edge-width`, `radius`, `font` and now `accent` are identical in
+  // both appearances, so the spread above already carries them and restating them here would be
+  // four lines that can only ever drift.
+  //
+  // The one choice worth explaining is the **pure black** well. Every other value in this block is
+  // a step off near-black, and a well one step darker than `#1e1e1e` would be a two-percent
+  // difference nobody can see. macOS itself goes to true black for a content area in dark mode for
+  // that reason, which also gives the recess somewhere to go: `surface` can then sit above it and
+  // `surface-raised` above that, so the same three-plane order as the light variant survives with
+  // no room to spare at the bottom. `edge-dark` is 60% black rather than the light variant's 16%
+  // for the same reason — on this ground a faint dark rule is invisible.
+  '--umbradesktop-app-surface': '#1e1e1e',
+  '--umbradesktop-app-surface-raised': '#2c2c2e',
+  '--umbradesktop-app-surface-sunken': '#000000',
+  '--umbradesktop-app-edge-light': 'rgba(255, 255, 255, 0.10)',
+  '--umbradesktop-app-edge-dark': 'rgba(0, 0, 0, 0.60)',
+  // systemGray unmodified here: this palette's surfaces sit far enough down that Apple's own grey
+  // clears 3:1 against all three without help. Lighter than everything it separates, for the
+  // reason Win11's dark half gives at length.
+  '--umbradesktop-app-border': '#8e8e93',
+  '--umbradesktop-app-text': '#f5f5f7',
+  '--umbradesktop-app-text-muted': '#98989d',
 };

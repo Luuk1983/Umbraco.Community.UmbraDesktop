@@ -28,6 +28,14 @@
     <PackageReference Include="Umbraco.Automate" />
     <PackageReference Include="Umbraco.AI" />
     <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />
+    <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Entertainment\Umbraco.Community.UmbraDesktop.Entertainment.csproj" />
+    <!-- The Entertainment project depends on the host by version range rather than by project
+         (design D13), so restore pulls the published host package in behind it. Here the host is
+         also a ProjectReference, and two copies of the same App_Plugins assets make the static web
+         assets manifest fail with "Sequence contains more than one element". Excluding the
+         package's assets leaves the local project as the single source, which is what this harness
+         is for: it must run the host code in this tree, never the last release of it. -->
+    <PackageReference Include="Umbraco.Community.UmbraDesktop" ExcludeAssets="all" />
     <RuntimeHostConfigurationOption Include="System.Globalization.AppLocalIcu" Value="72.1.0.3" Condition="$(RuntimeIdentifier.StartsWith('linux')) or $(RuntimeIdentifier.StartsWith('win')) or ('$(RuntimeIdentifier)' == '' and !$([MSBuild]::IsOSPlatform('osx')))" />
   </ItemGroup>
 

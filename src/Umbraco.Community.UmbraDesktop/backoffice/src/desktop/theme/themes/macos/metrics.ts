@@ -75,6 +75,27 @@ export const MACOS_TITLEBAR_HEIGHT = 30;
 export const MACOS_CAPTION_KEEP_VISIBLE = MACOS_WINDOW_BORDER + MACOS_TITLEBAR_HEIGHT + MACOS_TITLEBAR_BORDER;
 
 /**
+ * What this theme's chrome takes out of a window's declared height before anything reaches the app:
+ * the caption and the hairline under it, and nothing else.
+ *
+ * The frame ring is **not** in it, unlike {@link MACOS_CAPTION_KEEP_VISIBLE} above, and the
+ * difference is the whole reason these are two numbers. That one is measured from the window's outer
+ * top edge, because a `rect.y` places the border box and the drag clamp works in those
+ * coordinates. This one is measured against the box `.frame`'s `width`/`height` size, and this
+ * theme leaves `.frame` content-box, so the ring is painted outside it and costs the app nothing.
+ * Feeds `metrics.chromeHeight`, which is what lets an app declare a content size and get one.
+ */
+export const MACOS_CHROME_HEIGHT = MACOS_TITLEBAR_HEIGHT + MACOS_TITLEBAR_BORDER;
+
+/**
+ * And nothing at all horizontally, for the same `box-sizing` reason: the traffic lights sit inside
+ * the caption, so where this theme puts its controls changes the drag clamp and not what an app's
+ * box is worth. Named rather than written as a bare `0` in `index.ts`, so it stays a term with a
+ * reason attached — the same argument `W11_TITLEBAR_BORDER` makes for its own zero.
+ */
+export const MACOS_CHROME_WIDTH = 0;
+
+/**
  * Height of the floating dock itself. Feeds the palette's `--umbradesktop-taskbar-height`, which
  * sets a plain `height` — a *content* height, since the base `.bar` is content-box (unlike Win98's,
  * which opts into `border-box` so its padding comes out of its declared height).

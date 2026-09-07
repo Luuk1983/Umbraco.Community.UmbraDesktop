@@ -6,6 +6,7 @@ import type { UmbraDesktopApp } from '../../../types.js';
 import { UMBRADESKTOP_UMBRACO4_THEME } from './index.js';
 import { mountThemed, UMBRADESKTOP_THEME_TEST_TIMEOUT_MS } from './mount-themed.js';
 import type { UmbraDesktopThemedMount } from './mount-themed.js';
+import { measureChromeCost, UMBRADESKTOP_PROBE_WINDOW_RECT } from '../mount-themed.js';
 
 /**
  * `metrics` is the one thing a theme publishes that JavaScript acts on rather than paints: the
@@ -32,7 +33,7 @@ const PROBE_APP: UmbraDesktopApp = {
   alias: 'umbraco4-metrics-probe',
   name: 'Probe',
   icon: 'icon-umbraco',
-  url: 'about:blank',
+  content: { kind: 'iframe', url: 'about:blank' },
   chromeProfile: 'bare',
 };
 
@@ -48,7 +49,7 @@ before(async function () {
   win.element.window = {
     id: 'w1',
     app: PROBE_APP,
-    rect: { x: 0, y: 0, w: 640, h: 400 },
+    rect: UMBRADESKTOP_PROBE_WINDOW_RECT,
     z: 1,
     active: true,
     state: 'normal',
@@ -104,6 +105,28 @@ it('reports the titlebar height a window actually paints, frame border included'
     'the published titlebarHeight disagrees with the header the theme paints, so a window ' +
       'dragged against the bottom edge keeps the wrong amount of itself grabbable',
   ).to.equal(rendered);
+});
+
+/**
+ * The chrome cost here is the header band, hairline included, because this theme makes the band
+ * `border-box` so its own line comes out of the declared height rather than adding to it. That is
+ * the opposite arrangement from the base chrome, whose hairline is outside its 40px — two themes,
+ * two sums, one metric, which is the whole argument for measuring this per theme.
+ */
+it('reports what its chrome costs an app, so no app has to guess', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  const cost = measureChromeCost(win.root, UMBRADESKTOP_PROBE_WINDOW_RECT);
+
+  expect(
+    UMBRADESKTOP_UMBRACO4_THEME.metrics.chromeWidth,
+    'the published chromeWidth disagrees with what this theme takes out of a window ' +
+      'horizontally, so every registered app opens that much narrower or wider than it asked for',
+  ).to.equal(cost.w);
+  expect(
+    UMBRADESKTOP_UMBRACO4_THEME.metrics.chromeHeight,
+    'and the same vertically: the header is `border-box` here, so its hairline is inside the ' +
+      'height the token declares and adding it again would count it twice',
+  ).to.equal(cost.h);
 });
 
 it('reserves exactly the height of the bar it paints at the bottom edge', function () {

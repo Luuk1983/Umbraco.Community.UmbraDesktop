@@ -478,6 +478,18 @@ under each theme, not merely present.
   a titlebar that sits above someone else's iframe. Stripped of it, Adwaita is a rounded window with
   a round close button, which beside the macOS theme reads as macOS with different button colours.
   It needs an idea for that problem before it needs CSS.
+
+  *Amended 2026-09-06, and still deferred.* That reason has narrowed rather than disappeared: since
+  [the desktop-apps seam](2026-09-06-desktop-apps-design.md), a window body is either an iframe or a
+  self-contained app element rendering in **this** document, and for the second kind fusing an app's
+  controls into the titlebar is no longer structurally impossible. This does **not** make a Linux
+  theme viable, and it should not be read as an unblocking: a theme whose defining surface worked
+  for app windows and not for the backoffice windows that are the entire point of the package would
+  be a worse answer than no theme at all, and the rule that a theme may restyle but never remove
+  (§1.1) rules out a headerbar that only half the windows can have. The reason is recorded here
+  because a stale one reads as current, and because if a Linux theme is ever attempted the honest
+  version of this problem is now "the two window kinds would need the same titlebar", not "no window
+  can have a headerbar".
 - **Third-party themes** as an extension type (D10).
 - **Theming window content or core modals** (§1.2).
 - **An admin-enforced site-wide default theme.** Per-user only, as with wallpaper.

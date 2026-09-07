@@ -2,6 +2,8 @@ import type { UmbraDesktopTheme } from '../../types';
 import { U4_LIGHT } from './palette.js';
 import {
   U4_CAPTION_KEEP_VISIBLE,
+  U4_CHROME_HEIGHT,
+  U4_CHROME_WIDTH,
   U4_GRAB,
   U4_TASKBAR_HEIGHT,
   U4_TRAILING_CONTROLS_WIDTH,
@@ -50,6 +52,10 @@ export const UMBRADESKTOP_UMBRACO4_THEME: UmbraDesktopTheme = {
     leadingControlsWidth: 0,
     trailingControlsWidth: U4_TRAILING_CONTROLS_WIDTH,
     grab: U4_GRAB,
+    // What an app's content box does not get: the header band, hairline included, since this theme
+    // makes that band `border-box`. Its frame ring stays outside the window's rect.
+    chromeWidth: U4_CHROME_WIDTH,
+    chromeHeight: U4_CHROME_HEIGHT,
     taskbarReserve: U4_TASKBAR_HEIGHT,
   },
   sheets: async () => {

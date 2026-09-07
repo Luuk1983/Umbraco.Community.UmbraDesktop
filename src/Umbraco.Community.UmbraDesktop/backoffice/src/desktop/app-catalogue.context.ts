@@ -4,13 +4,16 @@ import type {
   UmbraDesktopCatalogueEntry,
   UmbraDesktopLauncherGroup,
   UmbraDesktopRefDescriptor,
+  UmbraDesktopRegisteredApp,
   UmbraDesktopResolvedEntry,
   UmbraDesktopSectionInfo,
 } from './types';
+import type { ManifestUmbraDesktopApp } from './app.extension.js';
 import { catalogue } from './catalogue/index.js';
 import { inferUrl } from './url-inference.js';
 import { deriveApps } from './derive-apps.js';
 import { groupApps } from './group-apps.js';
+import { normaliseRegisteredApps } from './registered-apps.js';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from './app-catalogue.context-token.js';
 import { UmbraDesktopConditionGateController } from './condition-gate.controller.js';
 import type { UmbraDesktopConditionConfig } from './condition-gate';
@@ -19,6 +22,7 @@ import { UmbArrayState } from '@umbraco-cms/backoffice/observable-api';
 import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
+import { UmbExtensionsManifestInitializer } from '@umbraco-cms/backoffice/extension-api';
 import { UMB_SECTION_ALIAS_CONDITION_ALIAS } from '@umbraco-cms/backoffice/section';
 
 /** The subset of a referenced manifest this adapter reads. */
@@ -40,11 +44,28 @@ interface ReferencedManifest {
   meta?: { label?: string; pathname?: string; entityType?: string; icon?: string };
 }
 
-/** The registry surface this adapter uses — the three observable lookups (`byType`, `byAlias`, `byTypeAndAliases`), nothing more. */
-type UmbraDesktopExtensionRegistry = Pick<
-  typeof umbExtensionsRegistry,
-  'byType' | 'byAlias' | 'byTypeAndAliases'
->;
+/**
+ * The registry this adapter resolves against: the whole thing, not a facade over it.
+ *
+ * It was `Pick<…, 'byType' | 'byAlias' | 'byTypeAndAliases'>` while those lookups were all this
+ * file and the condition gate called, which documented its own appetite and let a test inject a
+ * hand-written stub. `UmbExtensionsManifestInitializer` ends that: it takes an
+ * `UmbExtensionRegistry`, that class declares `#private` fields, and a class with private fields is
+ * nominal in TypeScript, so *no* structural subset of it is assignable no matter how many methods
+ * the subset lists. The choice was therefore between widening here and casting at the one call
+ * site, and a cast would be a lie told in the place where it is least visible: the initializer
+ * really does reach past `byType`/`byAlias` into `byTypeAndAliases` (it observes each app's
+ * condition manifests) and would reach further still if it were given an array of types or a
+ * filter.
+ *
+ * `UmbraDesktopConditionGateController` keeps its own `Pick<…, 'byTypeAndAliases'>` and is handed
+ * this, which satisfies it: widening the type this file passes around costs the gate nothing.
+ *
+ * Nothing is lost in practice. The tests already inject a real `new UmbExtensionRegistry()` rather
+ * than a stub, because condition evaluation is the behaviour under test and only the real registry
+ * has it, so the facade was already documenting an appetite nobody was exploiting.
+ */
+type UmbraDesktopExtensionRegistry = typeof umbExtensionsRegistry;
 
 /**
  * How long the registry must stay quiet before a still-unresolved entry is reported. Long
@@ -65,18 +86,31 @@ export interface UmbraDesktopAppCatalogueOptions {
 
 /**
  * Resolves the curated catalogue against the current install: reads the user's
- * permitted sections, infers each entry's URL from the registry, then derives and
- * groups the app list. Impure glue around the pure `deriveApps` / `groupApps`
- * (design §6). Provided by the desktop element so it is scoped to the desktop subtree.
+ * permitted sections, infers each entry's URL from the registry, collects the
+ * self-contained apps packages have registered, then derives and groups the app
+ * list. Impure glue around the pure `deriveApps` / `groupApps` (design §6).
+ * Provided by the desktop element so it is scoped to the desktop subtree.
  *
- * Every input is *observed*, never sampled. Registry contents arrive asynchronously and out of
- * order: Umbraco registers each package's `bundle` declaration in one batch, but then imports
- * every bundle as its own dynamic module, so an entry's `ref` may still be unregistered when the
- * desktop mounts — reliably so when the browser loads straight into the desktop section (an F5,
- * a bookmark), because the current user, and therefore this context, is ready long before
- * third-party bundles finish. Sampling once left such an app missing for the rest of the session,
- * silently, since nothing warns about an absent package. Observing makes the list self-healing:
- * an app appears the moment its package registers.
+ * Every input is *observed*, never sampled, for two reasons that arrive from different directions.
+ *
+ * The first is timing. Registry contents arrive asynchronously and out of order: Umbraco registers
+ * each package's `bundle` declaration in one batch, but then imports every bundle as its own
+ * dynamic module, so an entry's `ref` may still be unregistered when the desktop mounts — reliably
+ * so when the browser loads straight into the desktop section (an F5, a bookmark), because the
+ * current user, and therefore this context, is ready long before third-party bundles finish.
+ * Sampling once left such an app missing for the rest of the session, silently for an `optional`
+ * entry. Observing makes the list self-healing: an app appears the moment its package registers.
+ *
+ * The second is not about timing at all, and it is conditions. A curated entry may opt into them
+ * (answered by `UmbraDesktopConditionGateController`) and a `umbraDesktopApp` manifest may carry
+ * them (answered by the extension initializer below), and a condition can flip while the desktop is
+ * up. Nothing else here does that. A `ref` that has registered stays registered, and a user's
+ * permitted sections do not change under them mid-session, so for every other input "observe" is
+ * only insurance against arriving late. For a conditioned app there is no moment at which sampling
+ * would have been correct: the answer is a function of state the desktop does not own (a workspace,
+ * a variant, a user permission) and is *expected* to change. Which is why the app list has to be
+ * able to shrink as well as grow, and why `#recompute` rebuilds it rather than accumulating into
+ * it.
  */
 export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   #apps = new UmbArrayState<UmbraDesktopApp>([], (a) => a.alias);
@@ -105,6 +139,23 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   /** The manifest behind each catalogue `ref`, kept current by observation (absent = not registered). */
   #manifests = new Map<string, ReferencedManifest | undefined>();
 
+  /**
+   * Every registered `umbraDesktopApp` manifest whose conditions are currently met, kept current by
+   * observation. Manifests rather than normalised apps, so the normalisation (and the drops it
+   * reports) happens in one place, in `#recompute`, on the same pass as everything else.
+   */
+  #registeredAppManifests: ReadonlyArray<ManifestUmbraDesktopApp> = [];
+
+  /**
+   * Aliases the curated catalogue has claimed, for the collision check in `#recompute`.
+   *
+   * Every entry's alias, not only the entries that resolved: the rule has to be answerable without
+   * knowing who is looking. Filtering against the apps that actually derived would make a package's
+   * app appear for a user without the colliding entry's section and vanish for a user with it, which
+   * is a support case nobody can reproduce. Reserved is reserved.
+   */
+  #curatedAliases: ReadonlySet<string>;
+
   /** Registry-quiet window before diagnostics are reported. */
   #diagnosticDelayMs: number;
 
@@ -121,6 +172,25 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   #diagnosticTimer?: number;
 
   /**
+   * Whether this context has stopped being about a desktop anyone can see: destroyed, or its host
+   * disconnected.
+   *
+   * It exists because a recompute can happen on the way out, and one of those arms a timer that
+   * outlives the thing it is about. Two routes lead there and neither is hypothetical. Leaving the
+   * desktop section calls `hostDisconnected` on every controller and destroys none of them, and the
+   * extension initializer is the one input that *calls back* during that (it cancels its pending
+   * frame and flushes synchronously), so the exit itself recomputes. `destroy()` is worse: the
+   * initializer's own `destroy` reports an empty permitted set, and it runs from inside
+   * `super.destroy()`, which is to say strictly after this class has cleared its timer, so a
+   * diagnostic armed there would survive the very teardown meant to cancel it.
+   *
+   * Defaults to `false` and is only ever set by the lifecycle hooks, so the guard can never suppress
+   * a diagnostic for a desktop nobody has left: a context that has not been disconnected or
+   * destroyed behaves exactly as it did before this existed.
+   */
+  #stopped = false;
+
+  /**
    * @param host The controller host (the desktop element) this context is scoped to.
    * @param options Dependency overrides (catalogue / registry / diagnostic delay); all default
    *   to the real thing.
@@ -130,12 +200,45 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     this.#catalogue = options.catalogue ?? catalogue;
     this.#registry = options.registry ?? umbExtensionsRegistry;
     this.#diagnosticDelayMs = options.diagnosticDelayMs ?? DIAGNOSTIC_DELAY_MS;
+    this.#curatedAliases = new Set(this.#catalogue.entries.map((e) => e.alias));
     this.#validateCatalogue();
 
     // A verdict change calls back in to recompute, which is why `track` no-ops on an unchanged
     // condition set: without that, every recompute would rebuild the conditions and recompute again.
     this.#conditionGate = new UmbraDesktopConditionGateController(host, this.#registry, () =>
       this.#recompute(),
+    );
+
+    // Self-contained apps any package may register. `UmbExtensionsManifestInitializer` rather than
+    // `this.observe(this.#registry.byType('umbraDesktopApp'), …)`, and that is the whole point of
+    // this being seven lines instead of five: `byType` hands over raw manifests and never evaluates
+    // a manifest's `conditions`, so every registered app would appear whether or not its author
+    // said when it should. Condition evaluation lives in the extension-api controllers — one
+    // `UmbExtensionManifestInitializer` per manifest, each computing `permitted` from the conditions
+    // and calling back when that changes — and this initializer is how they are managed as a set.
+    // No conditions means permitted, which is the common case here and stays free.
+    //
+    // Not the condition gate above, and the two are not redundant. The gate exists because a
+    // *curated* entry's conditions are this repository's own data, declared beside the entry and
+    // evaluated against a manifest the adapter resolved itself; there are no extension controllers
+    // to lean on because the thing being gated is a catalogue row rather than a manifest. A
+    // registered app is the other way round: the conditions are the author's, they live on their
+    // own manifest, and the platform already has machinery that evaluates exactly that. Each side
+    // uses the mechanism that fits what it is gating.
+    //
+    // The callback's entries are those controllers, not manifests, hence the `.manifest`. It also
+    // fires again whenever any app's conditions flip, so an app can appear and disappear mid-session
+    // exactly as one whose bundle registers late does; recompute handles both the same way.
+    new UmbExtensionsManifestInitializer(
+      this,
+      this.#registry,
+      'umbraDesktopApp',
+      null,
+      (permitted) => {
+        this.#registeredAppManifests = permitted.map((controller) => controller.manifest);
+        this.#recompute();
+      },
+      'observeRegisteredApps',
     );
 
     this.observe(
@@ -179,20 +282,57 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
    * Cancels any pending diagnostic flush and releases the condition gate, along with the
    * controller's own teardown.
    *
-   * The gate is destroyed here because this context constructs it, and nothing else can: the gate
-   * registers against the *host element*, not against this context, so `super.destroy()` leaves
-   * its condition apis and registry observation running on an otherwise unreachable object. That
-   * is also what makes cancelling the timer stick. The gate's callback is `#recompute`, which
-   * reaches `#scheduleDiagnostics` and can `window.setTimeout` a fresh warning, so a gate left
-   * alive would re-arm the very timer this override just cancelled. `destroy()` is idempotent
+   * The flag is set *before* `super.destroy()`, not merely alongside the cancel: destroying the
+   * controllers destroys the extension initializer, whose own `destroy` reports an empty permitted
+   * set, which recomputes and would re-arm the timer this method just cancelled.
+   *
+   * The gate is destroyed here for the same reason from the other end, and because this context
+   * constructs it and nothing else can: the gate registers against the *host element*, not against
+   * this context, so `super.destroy()` would leave its condition apis and registry observation
+   * running on an otherwise unreachable object. Its callback is `#recompute`, which reaches
+   * `#scheduleDiagnostics` and can `window.setTimeout` a fresh warning, so a gate left alive would
+   * re-arm the very timer this override just cancelled. `destroy()` is idempotent
    * (`UmbClassMixin.destroy` guards on `_host` and nulls it, and `removeUmbController` finds no
    * index on a second pass), so destroying the gate twice is safe.
    */
   override destroy(): void {
-    if (this.#diagnosticTimer !== undefined) window.clearTimeout(this.#diagnosticTimer);
-    this.#diagnosticTimer = undefined;
+    this.#stopped = true;
+    this.#cancelDiagnostics();
     this.#conditionGate.destroy();
     super.destroy();
+  }
+
+  /**
+   * Stops diagnostics when the desktop leaves the DOM, which is what changing backoffice section
+   * does.
+   *
+   * The flag goes up before `super.hostDisconnected()`, because that is what tells the extension
+   * initializer to flush, and its flush recomputes. Then the cancel, for a timer armed earlier while
+   * the desktop was still open.
+   */
+  override hostDisconnected(): void {
+    this.#stopped = true;
+    super.hostDisconnected();
+    this.#cancelDiagnostics();
+  }
+
+  /**
+   * Re-arms diagnostics when the desktop is mounted again, so the guard is a pause and not a mute.
+   *
+   * Nothing has to be rescheduled here: the observations unsubscribed on the way out and
+   * `super.hostConnected()` re-subscribes them, so each one emits its current value and the
+   * recompute that follows re-arms whatever is still wrong. A misconfiguration the user walked away
+   * from is still worth a line when they walk back.
+   */
+  override hostConnected(): void {
+    this.#stopped = false;
+    super.hostConnected();
+  }
+
+  /** Drop any armed diagnostic flush, leaving the pending set for the next recompute to rebuild. */
+  #cancelDiagnostics(): void {
+    if (this.#diagnosticTimer !== undefined) window.clearTimeout(this.#diagnosticTimer);
+    this.#diagnosticTimer = undefined;
   }
 
   /**
@@ -212,13 +352,14 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
    * (Re)start the quiet window. Each recompute rebuilds the pending set from scratch, so a
    * condition resolved by a late registration simply drops out before the flush runs; what is
    * left when the registry finally goes quiet is a genuine misconfiguration.
+   *
+   * Nothing is armed once this context has stopped (see the `#stopped` field): the window is five
+   * seconds long, and a desktop the user has left is a desktop nobody wants a warning about.
    */
   #scheduleDiagnostics(): void {
-    if (this.#diagnosticTimer !== undefined) window.clearTimeout(this.#diagnosticTimer);
-    if (this.#pendingDiagnostics.size === 0) {
-      this.#diagnosticTimer = undefined;
-      return;
-    }
+    this.#cancelDiagnostics();
+    if (this.#stopped) return;
+    if (this.#pendingDiagnostics.size === 0) return;
     this.#diagnosticTimer = window.setTimeout(() => {
       this.#diagnosticTimer = undefined;
       for (const [key, message] of this.#pendingDiagnostics) {
@@ -281,10 +422,53 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     this.#pendingDiagnostics.clear();
     this.#sections = this.#resolveSections();
     const resolved = this.#catalogue.entries.map((e) => this.#resolveEntry(e));
-    const apps = deriveApps(resolved, this.#sections, this.#catalogue.excludedSections);
+    const apps = deriveApps(
+      resolved,
+      this.#sections,
+      this.#catalogue.excludedSections,
+      this.#resolveRegisteredApps(),
+    );
     this.#apps.setValue(apps);
     this.#groups.setValue(groupApps(apps, this.#catalogue.groups));
     this.#scheduleDiagnostics();
+  }
+
+  /**
+   * Normalise the permitted `umbraDesktopApp` manifests, reporting what did not survive.
+   *
+   * Two things can cost a permitted manifest its tile, and neither is visible from anywhere else: a
+   * package registered, Umbraco allowed it, and the launcher simply has no such app in it. So both
+   * go through `#diagnose`, which is the register they belong in — dev-facing, console-only,
+   * deduplicated, and held back until the registry stops changing so a diagnostic is never printed
+   * about a state that was merely transient.
+   * @returns The registered apps derivation should see.
+   */
+  #resolveRegisteredApps(): UmbraDesktopRegisteredApp[] {
+    const { apps, dropped } = normaliseRegisteredApps(this.#registeredAppManifests);
+    for (const drop of dropped) {
+      this.#diagnose(
+        `registered-dropped:${drop.alias}`,
+        `[UmbraDesktop] Registered app "${drop.alias}" was dropped because ${drop.reason}.`,
+      );
+    }
+    return apps.filter((app) => {
+      // Registry uniqueness holds only inside the registered set, so a manifest is free to claim an
+      // alias the curated catalogue already uses, and the alias is not decoration: it is the key a
+      // pinned favourite is stored under, and the launcher resolves a pin with a `find` over the app
+      // list. Two apps under one alias therefore means a pin that opens whichever of them
+      // derivation happened to emit first. The curated entry wins because it is the one whose URL
+      // and chrome profile this repository has verified, and it used to win by accident of pass
+      // ordering; this makes it the decision, and tells the package, which is the half that was
+      // missing. (Only catalogue aliases are checked, not derivation's synthesised
+      // `section:<alias>` fallbacks: those cannot collide without a manifest deliberately aliasing
+      // itself `section:…`, and a package that does that has said what it wants.)
+      if (!this.#curatedAliases.has(app.alias)) return true;
+      this.#diagnose(
+        `registered-collision:${app.alias}`,
+        `[UmbraDesktop] Registered app "${app.alias}" was dropped because a curated catalogue entry already owns that alias. Rename the manifest alias.`,
+      );
+      return false;
+    });
   }
 
   /** Resolve one catalogue entry to a concrete URL + gate + inherited presentation. */

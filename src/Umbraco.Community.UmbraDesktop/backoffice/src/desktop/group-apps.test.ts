@@ -8,7 +8,7 @@ const groups: UmbraDesktopGroup[] = [
   { alias: 'diagnostics', label: '#g_diagnostics', weight: 20 },
 ];
 function app(alias: string, over: Partial<UmbraDesktopApp> = {}): UmbraDesktopApp {
-  return { alias, name: `#a_${alias}`, icon: 'icon-box', url: '/x', chromeProfile: 'bare', ...over };
+  return { alias, name: `#a_${alias}`, icon: 'icon-box', content: { kind: 'iframe', url: '/x' }, chromeProfile: 'bare', ...over };
 }
 
 it('groups apps by their group alias, sorted by group weight', () => {

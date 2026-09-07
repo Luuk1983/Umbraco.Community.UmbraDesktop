@@ -1,3 +1,5 @@
+import type { ElementLoaderProperty } from '@umbraco-cms/backoffice/extension-api';
+
 /**
  * How much of the backoffice shell a window keeps — a monotonic ladder, each rung stripping
  * one more layer of chrome (see design doc §4.1):
@@ -12,7 +14,40 @@
  */
 export type UmbraDesktopChromeProfile = 'full-section' | 'workspace-only' | 'bare';
 
-/** A launchable app: a backoffice deep-link plus how to frame and present it. */
+/**
+ * What a window's body is.
+ *
+ * `iframe` is every app derived from the curated catalogue: a whole second backoffice, deep-linked,
+ * needing its chrome stripped and its theme mirrored across the document boundary. `element` is a
+ * self-contained app registered by a package (see `app.extension.ts`): one custom element in the
+ * body, in this document, inheriting the desktop's tokens by ordinary CSS inheritance.
+ *
+ * `element` rarely holds an element: it is Umbraco's `ElementLoaderProperty`, the union its own
+ * `ManifestElement.element` is typed as, and it can be a module path string, a function resolving
+ * to a module, an already-imported module object, or the constructor itself. Carrying that whole
+ * type rather than the one arm this desktop happens to have handled first is the correction: a
+ * narrower type here does not make the other forms unreachable, it only makes them arrive
+ * unannounced. The string arm in particular is the only form a static `umbraco-package.json` can
+ * express, and it used to be dropped on the floor.
+ *
+ * Which also means nothing downstream may assume it can *call* this: resolution belongs to
+ * Umbraco's `loadManifestElement`, which is the only code that knows every arm. See
+ * `components/app-host.element.ts`.
+ *
+ * It is named `element` rather than after the code consuming it (`load`, `#mount`) because that is
+ * Umbraco's own vocabulary for this field, which is what {@link UmbraDesktopRegisteredApp} copies
+ * it from. Local consistency is not worth diverging from the manifest this whole union is derived
+ * from.
+ *
+ * A union rather than an optional `url` plus an optional `element`, because that pair makes both
+ * "neither" and "both" representable and neither means anything. Here the compiler finds every
+ * place that has to care.
+ */
+export type UmbraDesktopAppContent =
+  | { kind: 'iframe'; url: string }
+  | { kind: 'element'; element: ElementLoaderProperty };
+
+/** A launchable app: what its window body is, plus how to frame and present it. */
 export interface UmbraDesktopApp {
   /** Stable identifier for the app. */
   alias: string;
@@ -20,13 +55,27 @@ export interface UmbraDesktopApp {
   name: string;
   /** Umbraco icon alias, e.g. "icon-umbraco". */
   icon: string;
-  /** Backoffice path the window's iframe loads, e.g. "/umbraco/section/content". */
-  url: string;
+  /** What this app's window body is: a backoffice iframe, or a self-contained element. */
+  content: UmbraDesktopAppContent;
   /** Default chrome profile for windows of this app. */
   chromeProfile: UmbraDesktopChromeProfile;
-  /** Default window size in px. */
+  /**
+   * The **content** box this app opens at, in px — its own box, with the active theme's chrome
+   * added by the host. See `window-chrome.ts` for why the host owns that arithmetic and not the
+   * app.
+   *
+   * One meaning for both sources, deliberately. A curated entry's numbers were written as window
+   * sizes, and re-reading them as content sizes makes an iframe window a caption taller than
+   * before; two semantics for one field would have been worse than that, and "the same amount of
+   * backoffice whichever theme is on" is the better reading of a round number like 1200x780
+   * anyway.
+   */
   defaultSize?: { w: number; h: number };
-  /** Minimum window size in px (resize floor); falls back to the global minimum when unset. */
+  /**
+   * The smallest **content** box this app can work in, in px; falls back to the desktop's global
+   * content minimum when unset. The resize floor is this plus the chrome, or what the chrome itself
+   * needs — whichever is larger.
+   */
   minSize?: { w: number; h: number };
   /** Whether more than one instance may open (default: allowed). */
   allowMultiple?: boolean;
@@ -38,6 +87,39 @@ export interface UmbraDesktopApp {
   sourceSection?: string;
   /** Confidence tier (always set by derivation; optional for back-compat). */
   confidence?: UmbraDesktopConfidence;
+}
+
+/**
+ * A `umbraDesktopApp` manifest reduced to what derivation needs. The context normalises the
+ * condition-evaluated manifests into these so `deriveApps` stays pure and has no opinion about
+ * where an app came from.
+ */
+export interface UmbraDesktopRegisteredApp {
+  /** The manifest alias; becomes the app alias, so it keys pins. */
+  alias: string;
+  /** Window title (localisation token or literal). */
+  name: string;
+  /** Icon alias, already defaulted. */
+  icon: string;
+  /**
+   * The manifest's own `element` value, in whatever form it wrote it, passed through by reference.
+   * See {@link UmbraDesktopAppContent} for why the whole of Umbraco's union is carried and why
+   * nobody but `loadManifestElement` resolves it.
+   */
+  element: ElementLoaderProperty;
+  /** Launcher group alias, if the manifest named one. */
+  group?: string;
+  /**
+   * Sort weight within the group, on the desktop's **ascending** scale (lower shows first), already
+   * inverted from the manifest's Umbraco-convention weight by `registered-apps.ts`.
+   */
+  weight?: number;
+  /** The manifest's `meta.defaultSize`: the app's **content** box in px, chrome excluded. */
+  defaultSize?: { w: number; h: number };
+  /** The manifest's `meta.minSize`: the smallest **content** box, in px, chrome excluded. */
+  minSize?: { w: number; h: number };
+  /** Whether more than one window may open. */
+  allowMultiple?: boolean;
 }
 
 /** A position/size rectangle in desktop pixels. */
@@ -101,9 +183,12 @@ export interface UmbraDesktopCatalogueEntry {
   icon?: string;
   /** Chrome profile (defaults to `full-section`). */
   chromeProfile?: UmbraDesktopChromeProfile;
-  /** Default window size in px. */
+  /** The window **body's** size in px when this entry opens; the theme's chrome is added on top. */
   defaultSize?: { w: number; h: number };
-  /** Minimum window size in px (resize floor); falls back to the global minimum when unset. */
+  /**
+   * The smallest body, in px, the user may resize to; falls back to the desktop's global content
+   * minimum. Floored at what the active theme's chrome needs either way.
+   */
   minSize?: { w: number; h: number };
   /** Whether more than one instance may open. */
   allowMultiple?: boolean;
