@@ -2,6 +2,7 @@ import type { Rect, UmbraDesktopWindow } from '../types';
 import type { UmbraDesktopResizeEdges } from '../window-model';
 import { clampResizeOrigin, clampWindowPosition, resizeRect, restoreDragPosition } from '../window-model';
 import { injectChromeStyles } from '../chrome-injector';
+import { watchWorkspaceDirtyState } from '../dirty-watcher.js';
 import { resolveThemeSync, syncThemeStylesheet } from '../iframe-theme.js';
 import type { UmbraDesktopThemeManifest } from '../iframe-theme.js';
 import {
@@ -10,6 +11,7 @@ import {
   UMBRADESKTOP_DEFAULT_METRICS,
   UMBRADESKTOP_TITLEBAR_BORDER,
   UMBRADESKTOP_TITLEBAR_HEIGHT,
+  UMBRADESKTOP_UNSAVED_MARKER_SIZE,
   UMBRADESKTOP_WINDOW_BORDER,
   UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
   UMBRADESKTOP_WINDOW_MIN_SIZE,
@@ -120,6 +122,14 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   private _metrics = UMBRADESKTOP_DEFAULT_METRICS;
 
   #manager?: UmbraDesktopWindowManagerContext;
+
+  /**
+   * Stops the current frame's unsaved-changes watcher. Replaced on every frame load — a reload
+   * hands us a new document, and the listeners on the old one are gone with it — and called on
+   * disconnect so a closed window leaves nothing subscribed inside a frame that is about to die.
+   */
+  #stopDirtyWatch?: () => void;
+
   #startPointer = { x: 0, y: 0 };
   #startRect = { x: 0, y: 0 };
   #startSurface = { left: 0, top: 0, w: 0, h: 0 };
@@ -184,6 +194,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     });
   }
 
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    this.#stopDirtyWatch?.();
+    this.#stopDirtyWatch = undefined;
+  }
+
   /**
    * The document inside this window's frame, when it is ours to touch. `contentDocument` is null
    * for a cross-origin frame, which is the one case there is nothing to be done about.
@@ -230,6 +246,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     // Keep the loader up until the header is actually stripped, so the booting
     // backoffice (with its own header) never flashes into view.
     injectChromeStyles(iframe, this.window.app.chromeProfile, () => (this._loading = false));
+    this.#startDirtyWatch(iframe);
     // A frame boots on the stored alias, so it is normally already right — but a theme changed
     // while it was still loading would have been missed, and the reload path lands here too.
     this.#applyFrameTheme();
@@ -260,6 +277,47 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     // a base class gaining a `willUpdate` in an Umbraco minor would otherwise break silently.
     super.willUpdate(changed);
     if (changed.has('window') && this.window?.app.content.kind === 'element') this._loading = false;
+  }
+
+  /**
+   * Watch the freshly loaded frame for unsaved changes, reporting them to the manager so the
+   * titlebar can mark this window and every guard can read it.
+   *
+   * Restarted rather than reused on each load, because a reload replaces the frame's document and
+   * takes the previous watcher's listeners with it. The window is reset to clean at the same time:
+   * whatever the frame held a moment ago, it has just been re-fetched from the server.
+   * @param iframe The window's freshly loaded frame.
+   */
+  #startDirtyWatch(iframe: HTMLIFrameElement) {
+    this.#stopDirtyWatch?.();
+    this.#stopDirtyWatch = undefined;
+    const id = this.window?.id;
+    const doc = iframe.contentDocument;
+    if (!id || !doc) return;
+    this.#manager?.setDirty(id, false);
+    this.#stopDirtyWatch = watchWorkspaceDirtyState(doc, (dirty) => this.#manager?.setDirty(id, dirty));
+  }
+
+  /**
+   * Handle the titlebar's reload button: ask first when the frame is holding unsaved changes,
+   * since reloading discards them exactly as closing the window would.
+   *
+   * Deliberately separate from {@link #onReload}, which must stay silent. Its other caller is
+   * {@link #applyFrameTheme}, reloading a frame to pick up a theme whose CSS is a loader function
+   * rather than a link — a display preference the user did not aim at this window, and one that
+   * would otherwise interrogate every dirty window the moment the backoffice theme changed.
+   *
+   * The button this handles is drawn for an iframe body only, so this is the iframe path by
+   * construction. An element app is never watched for unsaved changes in the first place — the
+   * watcher starts from `#onIframeLoad`, which such a window has not got — so it closes without a
+   * question, which is the same call the reload button's own removal made about a game's state.
+   */
+  async #onReloadClick() {
+    if (!this.window) return;
+    // No manager means nothing knows this window is dirty, so there is nothing to warn about —
+    // reload rather than swallowing the click, which is what `await this.#manager?.…` would do.
+    const mayDiscard = this.#manager ? await this.#manager.confirmDiscard(this.window.id) : true;
+    if (mayDiscard) this.#onReload();
   }
 
   /**
@@ -538,6 +596,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
           <span class="title">
             <umb-icon name=${w.app.icon}></umb-icon>
             <span class="title-text">${this.localize.string(w.app.name)}</span>
+            ${w.dirty
+              ? html`<span
+                  class="dirty"
+                  title=${this.localize.term('umbraDesktop_unsavedChanges')}
+                  aria-label=${this.localize.term('umbraDesktop_unsavedChanges')}></span>`
+              : ''}
           </span>
           <span
             class="controls"
@@ -556,7 +620,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
                   class="ctrl ctrl-reload ${this._loading ? 'busy' : ''}"
                   title="Reload"
                   aria-label="Reload"
-                  @click=${() => this.#onReload()}>
+                  @click=${() => this.#onReloadClick()}>
                   ${this.#controlGlyph('reload')}
                 </button>`
               : nothing}
@@ -580,7 +644,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
               class="ctrl ctrl-close close"
               title="Close"
               aria-label="Close"
-              @click=${() => this.#manager?.close(w.id)}>
+              @click=${() => this.#manager?.requestClose(w.id)}>
               ${this.#controlGlyph('close')}
             </button>
           </span>
@@ -700,6 +764,21 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+      }
+      /* The unsaved marker. Deliberately not an alarm colour: it states a fact about the document,
+         and the dialog is where the consequence lives — an always-red dot in every titlebar you
+         have edited reads as an error. Chaining the colour to the titlebar's own text is also what
+         makes it come out right under every theme without a theme touching it: Win98's white-on-navy
+         caption and the macOS light caption both hand it a colour that already contrasts. */
+      .dirty {
+        flex: none;
+        width: var(--umbradesktop-titlebar-dirty-size, ${UMBRADESKTOP_UNSAVED_MARKER_SIZE}px);
+        height: var(--umbradesktop-titlebar-dirty-size, ${UMBRADESKTOP_UNSAVED_MARKER_SIZE}px);
+        border-radius: 50%;
+        background: var(
+          --umbradesktop-titlebar-dirty-color,
+          var(--umbradesktop-titlebar-text, var(--uui-color-text))
+        );
       }
       .controls {
         display: inline-flex;

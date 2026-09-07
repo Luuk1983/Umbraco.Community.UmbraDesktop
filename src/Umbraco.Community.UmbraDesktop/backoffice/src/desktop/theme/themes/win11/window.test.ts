@@ -3,6 +3,7 @@ import '../../../components/window.element.js';
 import type { UmbraDesktopWindowElement } from '../../../components/window.element.js';
 import type { UmbraDesktopApp, UmbraDesktopWindow } from '../../../types.js';
 import { mountThemed, UMBRADESKTOP_THEME_TEST_TIMEOUT_MS } from './mount-themed.js';
+import { measureUnsavedMarker } from '../mount-themed.js';
 import type { UmbraDesktopThemedMount } from './mount-themed.js';
 import { UMBRADESKTOP_CONTROL_WIDTH } from '../../../constants.js';
 
@@ -104,4 +105,18 @@ it('turns close red on hover while the other buttons only tint', function () {
     host.style.getPropertyValue('--umbradesktop-control-close-hover-color').trim(),
     'with a white glyph on it, unlike the macOS light which keeps a dark one',
   ).to.equal('#ffffff');
+});
+
+it('paints the unsaved-changes marker against the flush Windows 11 caption', async function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // A theme may restyle chrome and never remove it, and a marker sized to nothing or painted in
+  // the caption's own colour is removed in every way the person looking at it can tell.
+  const marker = await measureUnsavedMarker(win.element, win.root);
+
+  expect(marker.present, 'the window still marks unsaved changes under this theme').to.equal(true);
+  expect(marker.width, 'and the mark is actually painted').to.be.greaterThan(0);
+  expect(marker.height).to.be.greaterThan(0);
+  expect(marker.background, 'in a colour that is not the caption behind it').to.not.equal(
+    marker.titlebarBackground,
+  );
 });

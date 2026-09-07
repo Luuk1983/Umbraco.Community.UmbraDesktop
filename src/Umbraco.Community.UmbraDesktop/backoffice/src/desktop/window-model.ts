@@ -265,3 +265,41 @@ export function setWindowRect(
 ): UmbraDesktopWindow[] {
   return windows.map((w) => (w.id === id ? { ...w, rect } : w));
 }
+
+/**
+ * Return a new list with `id`'s unsaved mark set, or **the same list** when nothing changed.
+ *
+ * The identity shortcut is the point rather than an optimisation: the dirty watcher re-reports the
+ * frame's state on every change inside it, so an already-dirty window reports dirty again on every
+ * keystroke. Handing back a new array each time would re-render every window on the desktop for
+ * each character typed in one of them. An id that is not open is likewise a no-op — a window can
+ * be closed while its frame is still settling. Pure.
+ * @param windows The current window list.
+ * @param id The window to mark.
+ * @param dirty Whether that window is holding unsaved changes.
+ * @returns A new list, or the input list when it already said this.
+ */
+export function setWindowDirty(
+  windows: UmbraDesktopWindow[],
+  id: string,
+  dirty: boolean,
+): UmbraDesktopWindow[] {
+  const target = windows.find((w) => w.id === id);
+  if (!target || (target.dirty ?? false) === dirty) return windows;
+  return windows.map((w) => (w.id === id ? { ...w, dirty } : w));
+}
+
+/**
+ * Every window currently holding unsaved changes, in list order.
+ *
+ * Returns the windows rather than a count because the two callers want different things from the
+ * same question: Exit only needs how many, but the honest thing to hand a future "which ones?" is
+ * the list, and deriving a count from a list is free while the reverse is not. Pure.
+ * @param windows The current window list.
+ * @returns The marked windows.
+ */
+export function unsavedWindows(
+  windows: ReadonlyArray<UmbraDesktopWindow>,
+): ReadonlyArray<UmbraDesktopWindow> {
+  return windows.filter((w) => w.dirty === true);
+}

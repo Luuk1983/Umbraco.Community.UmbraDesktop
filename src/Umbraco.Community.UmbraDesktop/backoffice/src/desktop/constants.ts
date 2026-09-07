@@ -122,6 +122,17 @@ export const UMBRADESKTOP_WINDOW_BORDER = 1;
 export const UMBRADESKTOP_TITLEBAR_HEIGHT = 40;
 
 /**
+ * Diameter of the unsaved-changes dot in the titlebar, in px, behind
+ * `--umbradesktop-titlebar-dirty-size`.
+ *
+ * Interpolated into `.dirty` in `window.element` rather than written there, so this file stays the
+ * one place the caption's geometry is stated. It does **not** enter
+ * `UMBRADESKTOP_WINDOW_KEEP_VISIBLE`: the marker sits inside `.title`, which is the draggable part
+ * of the caption, so it takes nothing away from the grab strip.
+ */
+export const UMBRADESKTOP_UNSAVED_MARKER_SIZE = 8;
+
+/**
  * The hairline under the caption, in px, behind `--umbradesktop-titlebar-border-bottom`. Part of
  * `.titlebar`'s own box — and so part of the drag handle — rather than of the body below it.
  */

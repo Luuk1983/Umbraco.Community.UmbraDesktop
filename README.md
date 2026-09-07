@@ -18,6 +18,7 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 
 - Work side by side. Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth. This one wants room: see [A note on screen size](#a-note-on-screen-size).
 - Real windows. Drag, resize, minimise, maximise, and double-click a title bar to fill the desktop. Each window remembers its own place.
+- Never loses your work. A window holding unsaved changes shows a dot in its title bar, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
 - A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus Games once a package puts an app there. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned. Your pins are remembered per user.
@@ -70,6 +71,7 @@ From the launcher:
 - Hover an app and click the pin to add it to Pinned, which sits at the top.
 - Drag a title bar to move a window, drag an edge or corner to resize, double-click the title bar to maximise.
 - Use the taskbar at the bottom to switch between open windows.
+- A dot in a title bar means that window has unsaved changes. Closing or reloading it asks before discarding them; saving clears the dot.
 - Choose Exit in the launcher's footer to return to the classic backoffice.
 - Open Desktop settings from the cog in the launcher's footer to change your wallpaper.
 
