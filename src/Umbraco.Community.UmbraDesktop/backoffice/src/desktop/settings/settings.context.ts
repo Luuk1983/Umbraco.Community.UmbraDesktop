@@ -4,18 +4,16 @@ import { resolveWallpaper, wallpaperThumbUrl } from './wallpaper';
 import { togglePinned } from './pinned';
 import { UMBRADESKTOP_DEFAULT_SETTINGS, parseSettings, serialiseSettings, settingsStorageKey } from './settings-store';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from './settings.context-token';
+import {
+  UMBRADESKTOP_MEDIA_THUMB_SIZE,
+  UMBRADESKTOP_MEDIA_WALLPAPER_SIZE,
+  mediaImagingRequest,
+} from './media-imaging';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
 import { UmbObjectState } from '@umbraco-cms/backoffice/observable-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import { UmbImagingRepository } from '@umbraco-cms/backoffice/imaging';
-import { ImageCropModeModel } from '@umbraco-cms/backoffice/external/backend-api';
-
-/** Width requested for a Media Library wallpaper. `Max` never upscales, so a small upload stays small. */
-const MEDIA_FULL_WIDTH = 2560;
-
-/** Width requested for a Media Library wallpaper's thumbnail. */
-const MEDIA_THUMB_WIDTH = 480;
 
 /**
  * Owns the current user's desktop settings: the persisted preference, and the resolved view the
@@ -91,8 +89,8 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   public async setMediaWallpaper(unique: string): Promise<boolean> {
     const ref: UmbraDesktopWallpaperRef = { kind: 'media', unique };
     const [url, thumbUrl] = await Promise.all([
-      this.#resizedMediaUrl(unique, MEDIA_FULL_WIDTH),
-      this.#resizedMediaUrl(unique, MEDIA_THUMB_WIDTH),
+      this.#resizedMediaUrl(unique, UMBRADESKTOP_MEDIA_WALLPAPER_SIZE),
+      this.#resizedMediaUrl(unique, UMBRADESKTOP_MEDIA_THUMB_SIZE),
     ]);
 
     if (!url) return false;
@@ -154,8 +152,8 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
     }
 
     const [url, thumbUrl] = await Promise.all([
-      this.#resizedMediaUrl(ref.unique, MEDIA_FULL_WIDTH),
-      this.#resizedMediaUrl(ref.unique, MEDIA_THUMB_WIDTH),
+      this.#resizedMediaUrl(ref.unique, UMBRADESKTOP_MEDIA_WALLPAPER_SIZE),
+      this.#resizedMediaUrl(ref.unique, UMBRADESKTOP_MEDIA_THUMB_SIZE),
     ]);
 
     // A deleted or unreadable media item leaves both null, and resolveWallpaper falls back to
@@ -168,20 +166,16 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   }
 
   /**
-   * Ask Umbraco for a resized copy of a media item. This is what keeps a consumer's 12MB upload
-   * from ever reaching the browser at full size — and why media wallpapers are WebP while the
-   * built-ins are AVIF: ImageSharp, behind this endpoint, cannot encode AVIF.
+   * Ask Umbraco for a resized copy of a media item, bounded to a square box. See
+   * `media-imaging.ts` for what the request has to look like and why — both of its rules were
+   * bugs that made picking a Media Library wallpaper fail outright.
    * @param unique The media item's key.
-   * @param width The width to request.
+   * @param size The longest edge to allow, in pixels.
    * @returns The resized URL, or `null` when the item cannot be resolved.
    */
-  async #resizedMediaUrl(unique: string, width: number): Promise<string | null> {
+  async #resizedMediaUrl(unique: string, size: number): Promise<string | null> {
     try {
-      const { data } = await this.#imaging.requestResizedItems([unique], {
-        width,
-        mode: ImageCropModeModel.MAX,
-        format: 'webp',
-      });
+      const { data } = await this.#imaging.requestResizedItems([unique], mediaImagingRequest(size));
       return data?.[0]?.url ?? null;
     } catch {
       return null;
