@@ -84,8 +84,10 @@ export default css`
     max-width: none;
     transition: background-color 90ms ease;
   }
+  /* '.task .task-icon' and not '.task umb-icon': the notice badge is an 'umb-icon' in this button
+     now, and 22px is the task tile's size, not the badge's. */
   .start umb-icon,
-  .task umb-icon {
+  .task .task-icon {
     font-size: 22px;
     margin-left: 0;
   }
@@ -113,5 +115,36 @@ export default css`
     margin-left: -${W11_TASK_MARKER_WIDTH / 2}px;
     border-radius: ${W11_TASK_MARKER_HEIGHT / 2}px;
     background: var(--umbradesktop-task-active-marker, #0078d4);
+  }
+  /* An overlay on the tile, not the inline glyph after the label that the base draws — this
+     taskbar hides the label (see '.task-label' above), so there is nothing for an inline glyph to
+     follow. 'position: absolute' is therefore required of this theme rather than optional, and
+     'theme/notice.test.ts' asserts it of any theme that hides the label.
+
+     Top-trailing, and drawn exactly as the macOS dock's is: a filled disc in the severity colour
+     with the glyph punched out of it in the taskbar's own ground. It sat on the bottom-trailing
+     corner first, on the reasoning that the top of a task button is where the window preview flyout
+     points from — but a badge down there reads as a second status marker competing with the accent
+     underline two pixels away, rather than as a badge on the icon. See the macOS sheet's note for
+     why the disc is a fixed square box and why the glyph is punched out rather than plated. */
+  .notice-badge {
+    position: absolute;
+    top: 0;
+    bottom: auto;
+    right: 0;
+    box-sizing: border-box;
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+    border-radius: 50%;
+    background: var(--umbradesktop-notice-warning-color, var(--uui-color-warning-standalone));
+    color: var(--umbradesktop-taskbar-background-opaque, #f3f3f3);
+  }
+  /* Both halves restated, not just the background: the base's own severity rule carries an
+     attribute selector, so a bare '.notice-badge' here would lose to it and paint the error glyph
+     in the same danger colour as the disc it sits on. */
+  .notice-badge[data-severity='error'] {
+    background: var(--umbradesktop-notice-error-color, var(--uui-color-danger));
+    color: var(--umbradesktop-taskbar-background-opaque, #f3f3f3);
   }
 `;

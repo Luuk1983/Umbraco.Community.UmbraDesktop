@@ -156,6 +156,56 @@ export interface UmbraDesktopWindow {
    * the manager; read by the titlebar marker and by every guard that could throw the work away.
    */
   dirty?: boolean;
+
+  /**
+   * Whether the server holds a version of this window's subject that neither this window's editor
+   * nor its last save produced, i.e. somebody else wrote it.
+   *
+   * Optional and absent rather than `false`, like {@link dirty}, and set only by the server-event
+   * router after it has classified an event. Meaningful only alongside `dirty`: a window with
+   * nothing unsaved takes the server's version in place instead of carrying this.
+   */
+  changedElsewhere?: boolean;
+
+  /**
+   * Whether this window's subject has been moved to the recycle bin.
+   *
+   * A trashed node still exists, but core's document workspace context adds a read-only guard while
+   * `isTrashed` is true, so it cannot be saved once the window has reloaded to see that. It stays
+   * fully editable until then, because `isTrashed` comes from the workspace's own data and a dirty
+   * window has not reloaded. Either way, a restore undoes it completely, which is why this is a
+   * warning and not the error {@link deleted} is.
+   */
+  trashed?: boolean;
+
+  /**
+   * Whether this window's subject has been permanently deleted.
+   *
+   * The one state that marks a clean window, because it is the one with nothing to refresh to.
+   * `submit()` branches on `getIsNew()`, which is false for a loaded document, so a save from here
+   * always takes the `PUT` path and receives a 404: it cannot succeed and it recreates nothing.
+   */
+  deleted?: boolean;
+
+  /**
+   * Whether the editor has confirmed they mean to keep their own version over somebody else's.
+   *
+   * Quiets that notice's banner and nothing else: the marker and the taskbar badge stay, so an
+   * acknowledged window never goes back to looking safe.
+   */
+  acknowledged?: boolean;
+
+  /**
+   * Whether a workspace in this window is re-fetching itself after somebody else changed it.
+   *
+   * Drives the titlebar reload glyph and nothing else. Deliberately not the window element's own
+   * `_loading`, which also raises the body overlay: covering the content is the exact opposite of
+   * what a refresh in place is for, since the editor keeps their scroll position, their open tab
+   * and their split view and the only thing that should move is the glyph. On the model rather than
+   * in the element because both refresh paths are triggered from outside it, by the server-event
+   * router and by the banner's discard action. Design D7.
+   */
+  refreshing?: boolean;
 }
 
 /** Whether an app was maintainer-certified or auto-derived as an untested fallback. */

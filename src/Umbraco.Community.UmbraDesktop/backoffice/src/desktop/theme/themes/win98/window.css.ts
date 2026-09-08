@@ -7,8 +7,10 @@ import {
   WIN98_FONT,
   WIN98_INACTIVE_CAPTION,
   WIN98_INACTIVE_CAPTION_TEXT,
+  WIN98_TEXT,
 } from './palette.js';
 import {
+  WIN98_BEVEL_DEPTH,
   WIN98_BODY_WELL,
   WIN98_CONTROL_GAP,
   WIN98_CONTROL_HEIGHT,
@@ -82,7 +84,9 @@ export default css`
        own type scale is doing. */
     font-size: 11px;
   }
-  .title umb-icon {
+  /* '.app-icon' and not '.title umb-icon': the severity marker is an 'umb-icon' in this same
+     caption now, and 14px is the app icon's size, not the marker's. */
+  .title .app-icon {
     font-size: 14px;
   }
   .title-text {
@@ -171,5 +175,61 @@ export default css`
     box-sizing: border-box;
     padding: ${WIN98_BODY_WELL}px;
     box-shadow: ${unsafeCSS(WIN98_BEVEL_SUNKEN)};
+  }
+  /* No alpha, no rounding, no drop shadow: a sunken well with a bevelled edge, which is the only
+     way this theme says "read this". Grey face and black text, as every Win98 dialog is — the
+     severity is the icon beside the text and the coloured bar on the leading edge, both of which
+     the base draws and neither of which this theme has to restate. */
+  .notice {
+    background: var(--umbradesktop-notice-background, ${unsafeCSS(WIN98_FACE)});
+    color: var(--umbradesktop-notice-text, ${unsafeCSS(WIN98_TEXT)});
+    border-bottom: none;
+    box-shadow: ${unsafeCSS(WIN98_BEVEL_SUNKEN)};
+    margin: 2px;
+    padding: 4px 6px;
+  }
+  /* The buttons are 'uui-button's now, so everything this theme does to them goes through UUI's own
+     custom properties: this sheet is adopted into the notices element's shadow root, one boundary
+     above the button's own, and no selector reaches inside it.
+
+     What is reachable is the whole of the Win98 button: a square, bevelled, grey face with black
+     text. What is not is the pressed bevel — ':active' lives on the inner button and there is no
+     '--uui-button-*' property for a box-shadow — so a notice button here does not sink when
+     clicked, unlike every other button in this theme. That is the price of using the real
+     component, and it is the right trade: the hand-rolled span it replaces had no focus ring, no
+     disabled state and no keyboard behaviour beyond what a bare button gives you.
+
+     The padding is what makes the bevel visible at all, and it is not spacing. Every bevel in this
+     theme is a stack of *inset* shadows (see 'palette.ts'), and an inset shadow paints on the
+     element's own background but underneath its children — while 'uui-button' fills its host edge
+     to edge with an opaque inner button carrying the face colour. So the bevel was painted, covered
+     and gone: two flat grey labels on a grey banner, with nothing to say they were buttons. 2px of
+     padding on the host is exactly the depth of the bevel, and holds the ring clear of the face
+     that was hiding it. */
+  .notice .notice-actions uui-button {
+    padding: ${WIN98_BEVEL_DEPTH}px;
+    --uui-button-border-radius: 0;
+    --uui-button-background-color: ${unsafeCSS(WIN98_FACE)};
+    --uui-button-background-color-hover: ${unsafeCSS(WIN98_FACE)};
+    --uui-button-border-color: ${unsafeCSS(WIN98_FACE)};
+    --uui-button-border-color-hover: ${unsafeCSS(WIN98_FACE)};
+    --uui-button-contrast: ${unsafeCSS(WIN98_TEXT)};
+    --uui-button-contrast-hover: ${unsafeCSS(WIN98_TEXT)};
+    --uui-button-font-weight: 400;
+    box-shadow: ${unsafeCSS(WIN98_BEVEL_RAISED)};
+  }
+  /* The severity marker in the caption.
+     Both severity colours come from the 16-colour palette (see 'palette.ts'), and against this
+     theme's navy caption gradient the dark red reads at roughly 1.1:1 — present, sized, and
+     invisible, which is the exact failure 'theme/notice.test.ts' exists to catch and cannot see,
+     because painting a colour badly is not the same as removing it. Win98 title bars never carried
+     a coloured glyph anyway: the caption's own ink is the ink here and the icon's *shape* is the
+     severity. The taskbar badge, which sits on grey, keeps both colours.
+
+     'inherit' rather than the caption token, so this follows the '.frame:not(.active) .title' rule
+     above into the inactive palette too — the token holds only the active caption's white. */
+  .notice-marker.notice-warning,
+  .notice-marker.notice-error {
+    color: inherit;
   }
 `;

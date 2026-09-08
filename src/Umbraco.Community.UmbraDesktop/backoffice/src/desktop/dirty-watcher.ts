@@ -56,14 +56,61 @@ interface ComparableWorkspace {
   data: Subscribable<unknown>;
   /** The workspace's data as last saved. */
   persistedData: Subscribable<unknown>;
+  /** The subject's unique id, when this workspace has one. */
+  unique?: Subscribable<string | null | undefined>;
+  /** The subject's entity type, when this workspace has one. */
+  entityType?: Subscribable<string | undefined>;
+  /** Re-fetch and apply in place. */
+  reload?: () => Promise<void>;
+  /** The server's copy, without applying it. */
+  loadWithoutPersist?: () => Promise<unknown>;
 }
 
-/** One tracked workspace: its live subscriptions and the last dirty answer it gave. */
+/**
+ * The parts of a workspace context the server-event router needs, lifted out of the frame's realm
+ * into plain functions the shell can hold.
+ *
+ * Functions rather than the instance itself, so nothing outside this module depends on the shape of
+ * a core class, and so a subject stays valid to *read* even as the data behind it moves: the two
+ * getters close over the values this module is already subscribed to, which is what lets the router
+ * fetch and compare against a live pair rather than a snapshot taken when the event arrived.
+ */
+export interface UmbraDesktopWorkspaceSubject {
+  /** The entity type, e.g. `document`. */
+  entityType: string;
+  /** The entity's unique id, which is the GUID a server event carries as its `key`. */
+  unique: string;
+  /** Re-fetch and apply in place, keeping scroll position, the open tab and split view. */
+  reload: () => Promise<void>;
+  /**
+   * The server's current copy, without applying it to the workspace.
+   *
+   * Optional: it is declared on `UmbEntityDetailWorkspaceContextBase`, and a comparable workspace
+   * that lacks it simply cannot be classified rather than being an exception to handle. Design R3.
+   */
+  loadWithoutPersist?: () => Promise<unknown>;
+  /** What this workspace last saved, live. */
+  getPersistedData: () => unknown;
+  /** What the editor is holding, live. */
+  getData: () => unknown;
+}
+
+/** What a frame currently is, as far as the shell is concerned. */
+export interface UmbraDesktopFrameState {
+  /** Whether anything in the frame is holding unsaved changes. */
+  dirty: boolean;
+  /** What the frame's workspaces are showing, for matching server events against. */
+  subjects: ReadonlyArray<UmbraDesktopWorkspaceSubject>;
+}
+
+/** One tracked workspace: its live subscriptions, its last dirty answer and what it is showing. */
 interface TrackedWorkspace {
-  /** Drops both subscriptions. */
+  /** Drops every subscription. */
   release: () => void;
   /** Whether this workspace is currently holding unsaved changes. */
   dirty: boolean;
+  /** The subject it is showing, or undefined until its unique and entity type both arrive. */
+  subject?: UmbraDesktopWorkspaceSubject;
 }
 
 /**
@@ -132,8 +179,8 @@ function requestWorkspaceContext(element: EventTarget, onInstance: (instance: un
 }
 
 /**
- * Watch a frame's document for workspaces holding unsaved changes, reporting each time the answer
- * flips.
+ * Watch a frame's document for the workspaces inside it, reporting each time what the frame is —
+ * whether anything in it holds unsaved changes, and what its workspaces are showing — changes.
  *
  * **Why it listens for provides instead of asking.** A context request travels *up* the tree, so a
  * probe element parked at the document root is an ancestor of every workspace and its request rises
@@ -144,54 +191,120 @@ function requestWorkspaceContext(element: EventTarget, onInstance: (instance: un
  * asks *it* directly. It fires again on every navigation inside the window, which is what makes
  * opening a second document in the same window work with no extra machinery.
  *
- * `onChange` is called only when the overall answer changes, never on start: an already-dirty
+ * `onChange` is called only when the reported state changes, never on start: an already-dirty
  * window re-reports dirty on every keystroke, and passing that through would repaint the desktop
  * per character.
  * @param doc The frame's document.
- * @param onChange Called with the new answer each time it flips.
+ * @param onChange Called with the frame's new state each time it changes.
  * @returns A function that stops watching and drops every subscription.
  */
 export function watchWorkspaceDirtyState(
   doc: Document,
-  onChange: (dirty: boolean) => void,
+  onChange: (state: UmbraDesktopFrameState) => void,
 ): () => void {
+  /**
+   * A comparable string standing for one frame state, which is how a report is suppressed.
+   *
+   * Over the whole answer rather than over the dirty boolean alone, because the answer now has two
+   * halves and either can move on its own: a window navigating from one clean document to another
+   * changes nothing about dirtiness and everything about what an event should match. The identity of
+   * the subject's functions is deliberately not part of it, so re-evaluating the same document — as
+   * every keystroke does — does not count as a change.
+   * @param dirty Whether anything in the frame holds unsaved changes.
+   * @param subjects What the frame's workspaces are showing.
+   * @returns A string equal for two states the desktop would draw identically.
+   */
+  const signatureOf = (
+    dirty: boolean,
+    subjects: ReadonlyArray<UmbraDesktopWorkspaceSubject>,
+  ): string => `${dirty}|${subjects.map((s) => `${s.entityType}:${s.unique}`).join(',')}`;
+
   const tracked = new Map<object, TrackedWorkspace>();
-  let reported = false;
+  /**
+   * The signature last handed to `onChange`, seeded with the state a frame starts in: nothing
+   * tracked and nothing dirty.
+   *
+   * Seeded rather than left undefined, and that is what keeps "never on start" true. Tracking a
+   * workspace evaluates it before its observables have delivered anything, so the first `publish`
+   * of a freshly opened window computes the empty signature; against an unset baseline that counts
+   * as a change and every window would report clean-with-no-subjects the moment it loaded.
+   */
+  let reported = signatureOf(false, []);
   let stopped = false;
 
-  /** Push the overall answer out, but only when it has actually changed. */
+  /** Push the frame's state out, but only when it has actually changed. */
   const publish = () => {
-    const dirty = [...tracked.values()].some((entry) => entry.dirty);
-    if (dirty === reported) return;
-    reported = dirty;
-    onChange(dirty);
+    const entries = [...tracked.values()];
+    const dirty = entries.some((entry) => entry.dirty);
+    const subjects = entries
+      .map((entry) => entry.subject)
+      .filter((subject): subject is UmbraDesktopWorkspaceSubject => subject !== undefined);
+    const signature = signatureOf(dirty, subjects);
+    if (signature === reported) return;
+    reported = signature;
+    onChange({ dirty, subjects });
   };
 
-  /** Subscribe to a workspace's two halves and keep its dirty answer up to date. */
+  /** Subscribe to a workspace's halves and its identity, and keep its entry up to date. */
   const track = (workspace: ComparableWorkspace) => {
     const key = workspace as unknown as object;
     if (stopped || tracked.has(key)) return;
     let persisted: unknown;
     let current: unknown;
+    let unique: string | null | undefined;
+    let entityType: string | undefined;
     const entry: TrackedWorkspace = { dirty: false, release: () => {} };
+    /**
+     * Recompute this entry's dirty answer and its subject, then publish the frame's total.
+     *
+     * The subject is rebuilt rather than patched, because a navigation inside the window moves the
+     * unique on the same context instance and the subject is what an event is matched against. Its
+     * getters close over the `persisted` and `current` variables above rather than copying them, so
+     * a subject handed out earlier still reads the pair in force now: the router asks after an
+     * await, by which time the editor has been typing.
+     */
     const evaluate = () => {
       entry.dirty = hasUnsavedChanges(persisted, current);
+      entry.subject =
+        unique && entityType && workspace.reload
+          ? {
+              entityType,
+              unique,
+              reload: () => workspace.reload!(),
+              loadWithoutPersist: workspace.loadWithoutPersist
+                ? () => workspace.loadWithoutPersist!()
+                : undefined,
+              getPersistedData: () => persisted,
+              getData: () => current,
+            }
+          : undefined;
       publish();
     };
-    // Registered before subscribing, because both observables emit their current value straight
+    // Registered before subscribing, because every observable emits its current value straight
     // away and `evaluate` has to find the entry already in the map to publish a truthful total.
     tracked.set(key, entry);
-    const persistedSub = workspace.persistedData.subscribe((value) => {
-      persisted = value;
-      evaluate();
-    });
-    const currentSub = workspace.data.subscribe((value) => {
-      current = value;
-      evaluate();
-    });
+    const subs = [
+      workspace.persistedData.subscribe((value) => {
+        persisted = value;
+        evaluate();
+      }),
+      workspace.data.subscribe((value) => {
+        current = value;
+        evaluate();
+      }),
+      // Optional, and absent is not an error: a workspace with no identity to publish simply has no
+      // subject, so nothing outside this module has to know which workspaces those are. Design R3.
+      workspace.unique?.subscribe((value) => {
+        unique = value;
+        evaluate();
+      }),
+      workspace.entityType?.subscribe((value) => {
+        entityType = value;
+        evaluate();
+      }),
+    ];
     entry.release = () => {
-      persistedSub.unsubscribe();
-      currentSub.unsubscribe();
+      for (const sub of subs) sub?.unsubscribe();
     };
   };
 

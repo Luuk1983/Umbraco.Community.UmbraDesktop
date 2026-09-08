@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { UmbraDesktopWindowManagerContext } from './window-manager.context';
-import type { UmbraDesktopApp } from './types';
+import type { UmbraDesktopApp, UmbraDesktopWindow } from './types';
 import { UmbElementControllerHost } from '@umbraco-cms/backoffice/controller-api';
 
 /**
@@ -59,8 +59,8 @@ function manager(): ProbeManager {
  * @param ctx The manager to read.
  * @returns The open windows.
  */
-function windowsOf(ctx: UmbraDesktopWindowManagerContext) {
-  let list: ReadonlyArray<{ id: string; dirty?: boolean }> = [];
+function windowsOf(ctx: UmbraDesktopWindowManagerContext): ReadonlyArray<UmbraDesktopWindow> {
+  let list: ReadonlyArray<UmbraDesktopWindow> = [];
   ctx.windows.subscribe((value) => (list = value)).unsubscribe();
   return list;
 }
@@ -172,4 +172,229 @@ it('drops a closed window from unsavedWindows, so Exit cannot warn about a windo
   await ctx.requestClose(id);
 
   expect(ctx.unsavedWindows()).to.have.lengthOf(0);
+});
+
+describe('server state and its guards', () => {
+  /** A manager whose two dialogs are recorded answers instead of modals. */
+  class GuardProbe extends UmbraDesktopWindowManagerContext {
+    /** What the discard dialog answers. */
+    public discardAnswer = true;
+    /** What the keep-mine confirmation answers. */
+    public keepAnswer = true;
+    /** Which dialogs were opened, in order. */
+    public opened: string[] = [];
+
+    protected override async _askToDiscard(): Promise<boolean> {
+      this.opened.push('discard');
+      return this.discardAnswer;
+    }
+
+    protected override async _askToDiscardConflicted(): Promise<boolean> {
+      this.opened.push('discard-conflicted');
+      return this.discardAnswer;
+    }
+
+    protected override async _askToKeepMine(): Promise<boolean> {
+      this.opened.push('keep');
+      return this.keepAnswer;
+    }
+  }
+
+  let guardHost: UmbElementControllerHost;
+  let guard: GuardProbe;
+
+  beforeEach(() => {
+    guardHost = new UmbElementControllerHost(document.createElement('div'));
+    guard = new GuardProbe(guardHost);
+    guard.open(APP);
+  });
+
+  afterEach(() => {
+    guardHost.destroy();
+  });
+
+  /** The one open window's id. */
+  const only = () => windowsOf(guard)[0].id;
+
+  it('asks the ordinary discard question for a dirty window', async () => {
+    guard.setDirty(only(), true);
+    expect(await guard.confirmDiscard(only())).to.equal(true);
+    expect(guard.opened).to.eql(['discard']);
+  });
+
+  it('asks the inverted question when the window also changed elsewhere', async () => {
+    guard.setDirty(only(), true);
+    guard.setServerState(only(), { changedElsewhere: true });
+    expect(await guard.confirmDiscard(only())).to.equal(true);
+    expect(guard.opened).to.eql(['discard-conflicted']);
+  });
+
+  it('asks nothing at all for a deleted window', async () => {
+    guard.setDirty(only(), true);
+    guard.setServerState(only(), { deleted: true });
+    expect(await guard.confirmDiscard(only())).to.equal(true);
+    expect(guard.opened).to.eql([]);
+  });
+
+  // A trashed document cannot be saved from a window once it reloads, so closing it loses the
+  // editor's own work and nobody else's. It is a warning like a conflict is, and it wants the
+  // opposite dialog.
+  it('asks the ordinary discard question for a trashed window', async () => {
+    guard.setDirty(only(), true);
+    guard.setServerState(only(), { trashed: true });
+    expect(await guard.confirmDiscard(only())).to.equal(true);
+    expect(guard.opened).to.eql(['discard']);
+  });
+
+  it('records an acknowledgement only when the confirmation is confirmed', async () => {
+    guard.setDirty(only(), true);
+    guard.setServerState(only(), { changedElsewhere: true });
+    guard.keepAnswer = false;
+    await guard.acknowledge(only());
+    expect(windowsOf(guard)[0].acknowledged).to.equal(undefined);
+    guard.keepAnswer = true;
+    await guard.acknowledge(only());
+    expect(windowsOf(guard)[0].acknowledged).to.equal(true);
+  });
+
+  it('counts the windows whose work is at risk', () => {
+    guard.setDirty(only(), true);
+    expect(guard.conflictedWindows().length).to.equal(0);
+    guard.setServerState(only(), { changedElsewhere: true });
+    expect(guard.conflictedWindows().length).to.equal(1);
+  });
+
+  it('keeps a window subjects out of the render model', () => {
+    // The marker is deliberately not hex and not a GUID. A window's own `id` is a
+    // `crypto.randomUUID()`, whose 31 hex characters contain any given pair like 'a1' about one
+    // run in nine, so a scan of the serialised window for such a marker fails intermittently on
+    // the id rather than on anything this test is about. 'zz' cannot appear in a UUID at all.
+    const subjects = [{ entityType: 'document', unique: 'zz-subject-marker' }];
+    guard.setSubjects(only(), subjects as never);
+    expect(guard.subjectsOf(only())).to.equal(subjects);
+    expect(JSON.stringify(windowsOf(guard)[0])).to.not.contain('zz-subject-marker');
+  });
+
+  it('forgets a closed window subjects', () => {
+    const id = only();
+    guard.setSubjects(id, [{ entityType: 'document', unique: 'a1' }] as never);
+    guard.close(id);
+    expect(guard.subjectsOf(id)).to.eql([]);
+  });
+
+  it('going clean clears an acknowledged conflict, so a later edit does not resurrect it', async () => {
+    guard.setDirty(only(), true);
+    guard.setServerState(only(), { changedElsewhere: true });
+    guard.keepAnswer = true;
+    await guard.acknowledge(only());
+    expect(windowsOf(guard)[0].changedElsewhere).to.equal(true);
+    expect(windowsOf(guard)[0].acknowledged).to.equal(true);
+
+    guard.setDirty(only(), false);
+
+    expect(windowsOf(guard)[0].changedElsewhere).to.equal(false);
+    expect(windowsOf(guard)[0].acknowledged).to.equal(false);
+  });
+
+  it('going clean leaves a trashed mark alone', () => {
+    guard.setDirty(only(), true);
+    guard.setServerState(only(), { trashed: true });
+
+    guard.setDirty(only(), false);
+
+    expect(windowsOf(guard)[0].trashed).to.equal(true);
+  });
+
+  it('going clean leaves a deleted mark alone', () => {
+    guard.setDirty(only(), true);
+    guard.setServerState(only(), { deleted: true });
+
+    guard.setDirty(only(), false);
+
+    expect(windowsOf(guard)[0].deleted).to.equal(true);
+  });
+
+  it('going dirty clears nothing, so an already-flagged window keeps its flags', async () => {
+    guard.setDirty(only(), true);
+    guard.setServerState(only(), { changedElsewhere: true });
+    guard.keepAnswer = true;
+    await guard.acknowledge(only());
+
+    guard.setDirty(only(), true);
+
+    expect(windowsOf(guard)[0].changedElsewhere).to.equal(true);
+    expect(windowsOf(guard)[0].acknowledged).to.equal(true);
+  });
+
+  // A window hosting the Content section navigates internally all the time, and in-window
+  // navigation is not an iframe load — so `#startDirtyWatch`'s own reset never runs for it, and
+  // `setSubjects` is the only hook left that knows a window has started showing something else.
+  describe('setSubjects clearing the subject-scoped flags on a document change', () => {
+    it('clears changedElsewhere, trashed, deleted and acknowledged when the subject changes', async () => {
+      const id = only();
+      guard.setDirty(id, true);
+      guard.setServerState(id, { changedElsewhere: true, trashed: true, deleted: true });
+      guard.keepAnswer = true;
+      await guard.acknowledge(id);
+      // Establish node A as the last subject this window reported.
+      guard.setSubjects(id, [{ entityType: 'document', unique: 'a1' }] as never);
+
+      guard.setSubjects(id, [{ entityType: 'document', unique: 'b2' }] as never);
+
+      const w = windowsOf(guard)[0];
+      expect(w.changedElsewhere, 'changedElsewhere').to.equal(false);
+      expect(w.trashed, 'trashed').to.equal(false);
+      expect(w.deleted, 'deleted').to.equal(false);
+      expect(w.acknowledged, 'acknowledged').to.equal(false);
+    });
+
+    it('clears nothing when the same subject is reported again', () => {
+      const id = only();
+      guard.setDirty(id, true);
+      guard.setServerState(id, { trashed: true });
+      guard.setSubjects(id, [{ entityType: 'document', unique: 'a1' }] as never);
+
+      // The dirty watcher re-evaluates on every keystroke and rebuilds the subject object each
+      // time, so a same-node report is a fresh object with the same identity, not the same
+      // reference.
+      guard.setSubjects(id, [{ entityType: 'document', unique: 'a1' }] as never);
+
+      expect(windowsOf(guard)[0].trashed).to.equal(true);
+    });
+
+    it('clears nothing when an empty subject set is reported', () => {
+      // `#startDirtyWatch` reports `[]` while a frame is between documents on every reload,
+      // including a reload of a document that was permanently deleted — which must keep saying so
+      // rather than silently forgetting the moment the reload starts.
+      const id = only();
+      guard.setDirty(id, true);
+      guard.setServerState(id, { deleted: true });
+      guard.setSubjects(id, [{ entityType: 'document', unique: 'a1' }] as never);
+
+      guard.setSubjects(id, []);
+
+      expect(windowsOf(guard)[0].deleted).to.equal(true);
+    });
+
+    it('DATA LOSS: after a different subject is reported, confirmDiscard asks again instead of returning true', async () => {
+      // This is the regression the fix closes. Before it, opening node A, having a colleague
+      // empty the recycle bin under it (`deleted: true`), and then clicking node B in the same
+      // window would carry `deleted` onto B — and `confirmDiscard`'s `if (target.deleted) return
+      // true` would let the editor close over unsaved work on B with no prompt at all.
+      const id = only();
+      guard.setSubjects(id, [{ entityType: 'document', unique: 'a1' }] as never);
+      guard.setDirty(id, true);
+      guard.setServerState(id, { deleted: true });
+
+      // The editor navigates to a different node, B, inside the same window, and edits it — the
+      // navigation clears `deleted` (asserted by the sibling test above), and the edit is what
+      // makes B's own unsaved work the thing at stake below.
+      guard.setSubjects(id, [{ entityType: 'document', unique: 'b2' }] as never);
+      guard.setDirty(id, true);
+
+      guard.discardAnswer = true;
+      expect(await guard.confirmDiscard(id), 'confirmDiscard still answers true once asked').to.equal(true);
+      expect(guard.opened, 'it must ask the ordinary discard question rather than skip it').to.eql(['discard']);
+    });
+  });
 });

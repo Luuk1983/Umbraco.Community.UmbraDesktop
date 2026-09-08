@@ -16,6 +16,10 @@ import {
   clampResizeOrigin,
   clampWindowsToBounds,
   restoreDragPosition,
+  setWindowServerState,
+  setWindowAcknowledged,
+  setWindowRefreshing,
+  conflictedWindows,
 } from './window-model';
 import type { UmbraDesktopApp, UmbraDesktopWindow } from './types';
 
@@ -341,4 +345,60 @@ it('unsavedWindows returns only the marked windows, in list order', () => {
 
 it('unsavedWindows is empty when nothing is marked', () => {
   expect(unsavedWindows([win('a', 1), win('b', 2, { dirty: false })])).to.deep.equal([]);
+});
+
+describe('server state', () => {
+  /**
+   * Two windows, so a test can prove the other one is left alone. Built with this file's own
+   * `win(id, z, over)` helper rather than a second fixture.
+   */
+  const two = (): UmbraDesktopWindow[] => [win('a', 1, { active: true }), win('b', 2)];
+
+  it('sets a flag on one window', () => {
+    const next = setWindowServerState(two(), 'a', { changedElsewhere: true });
+    expect(next[0].changedElsewhere).to.equal(true);
+    expect(next[1].changedElsewhere).to.equal(undefined);
+  });
+
+  it('hands back the same list when nothing changed', () => {
+    const windows = setWindowServerState(two(), 'a', { changedElsewhere: true });
+    expect(setWindowServerState(windows, 'a', { changedElsewhere: true })).to.equal(windows);
+  });
+
+  it('hands back the same list for a window that is not open', () => {
+    const windows = two();
+    expect(setWindowServerState(windows, 'gone', { deleted: true })).to.equal(windows);
+  });
+
+  it('leaves the flags it was not given alone', () => {
+    const windows = setWindowServerState(two(), 'a', { trashed: true });
+    const next = setWindowServerState(windows, 'a', { changedElsewhere: true });
+    expect(next[0].trashed).to.equal(true);
+    expect(next[0].changedElsewhere).to.equal(true);
+  });
+
+  it('records an acknowledgement', () => {
+    const next = setWindowAcknowledged(two(), 'a', true);
+    expect(next[0].acknowledged).to.equal(true);
+    expect(setWindowAcknowledged(next, 'a', true)).to.equal(next);
+  });
+
+  it('records a refresh in flight', () => {
+    const next = setWindowRefreshing(two(), 'a', true);
+    expect(next[0].refreshing).to.equal(true);
+    expect(next[1].refreshing).to.equal(undefined);
+    expect(setWindowRefreshing(next, 'a', true)).to.equal(next);
+  });
+
+  it('lists windows whose unsaved work is at risk', () => {
+    let windows = setWindowDirty(two(), 'a', true);
+    windows = setWindowDirty(windows, 'b', true);
+    windows = setWindowServerState(windows, 'a', { changedElsewhere: true });
+    expect(conflictedWindows(windows).map((w) => w.id)).to.eql(['a']);
+  });
+
+  it('does not count a changed window that has nothing unsaved', () => {
+    const windows = setWindowServerState(two(), 'a', { changedElsewhere: true });
+    expect(conflictedWindows(windows)).to.eql([]);
+  });
 });

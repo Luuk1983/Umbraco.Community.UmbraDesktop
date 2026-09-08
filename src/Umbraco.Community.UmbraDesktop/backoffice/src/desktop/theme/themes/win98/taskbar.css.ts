@@ -95,7 +95,11 @@ export default css`
        bevel that fades between raised and pressed looks like a rendering fault. */
     transition: none;
   }
-  .task umb-icon {
+  /* '.task .task-icon' and not '.task umb-icon': the notice badge is an 'umb-icon' in this button
+     now, and 14px is the app icon's size, not the badge's. The '.task.active umb-icon' rule below
+     deliberately keeps matching both, because the whole button's contents shift when it is held
+     down. */
+  .task .task-icon {
     font-size: 14px;
     /* The base pulls the icon left to balance the transparent padding inside an Umbraco glyph
        against a wider label gap. This theme's gap is tight enough that the pull just clips it
@@ -140,4 +144,11 @@ export default css`
        dimmed black on grey just reads as a rendering artefact. */
     opacity: 1;
   }
+  /* This theme shows the task label, so the base rule's inline glyph after the name is right here
+     and the 11px MS Sans Serif button hands it its own size through the base's '1em'. What is left
+     is the pull the base gives the app icon, which this theme already undoes above for the same
+     reason: at this button's tight padding a negative margin clips the glyph against the bevel.
+     The bevelled corner tile this replaced was an overlay drawn over the button's own bevel, which
+     only existed because the badge used to be an overlay in every theme. So there is no
+     '.notice-badge' rule here at all, deliberately. */
 `;

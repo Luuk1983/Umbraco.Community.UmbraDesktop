@@ -143,6 +143,7 @@ prefix is for:
 | `taskbar-*` | The bar itself: height, reserve, margin, radius, background (plus an opaque fallback), backdrop filter, top border, shadow, two text colours |
 | `start-*`, `task-*` | The buttons inside the bar: hover and active fills, and the running-window marker |
 | `launcher-*` | The panel: geometry, background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills |
+| `notice-*` | The overwrite guard: the titlebar marker and taskbar badge colours at `info`/`warning`/`error`, the marker and badge sizes, and the banner's own background, text and leading-edge width |
 | `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent with the text that reads on it, and the UI font |
 
 The two groups are checked differently, which is why they are two lists rather than one. The
@@ -216,6 +217,60 @@ with its own caption without setting anything. Override it only for a colour you
 nothing. A theme may restyle chrome, never remove it, and a marker that has been hidden, sized to
 zero or painted in the caption's own colour has been removed as far as the person losing their work
 is concerned. `theme/unsaved-marker.test.ts` holds that for all five themes.
+
+The `notice-*` group carries the overwrite guard: a window that changed on the server, or is now in
+the recycle bin, or has been deleted for good, while you had unsaved changes.
+
+**Severity is carried by an icon, not by a colour.** `info` is the unsaved-changes dot above, on
+`.dirty`, and nothing about it has changed. `warning` and `error` fill that same slot with an
+Umbraco icon instead — `icon-alert` and `icon-wrong` — on a different element, `.notice-marker`,
+carrying `.notice-warning` or `.notice-error`. Both glyphs are stroked in `currentColor`, so
+`notice-warning-color` and `notice-error-color` reach them as an ordinary `color` and colour the
+taskbar badge and the banner's own icon with the same two values. `notice-info-color` still chains
+to `titlebar-dirty-color`, so a theme that has never heard of notices keeps painting exactly what it
+painted before; `notice-marker-size` sizes the severity icon and defaults to `1.15em` of the
+caption's own type, so it tracks a theme that resets the caption's font size.
+
+The banner is a light tint of the severity colour with a bar of it on the leading edge, not a wash:
+`notice-background` defaults to that tint, `notice-text` to the ordinary text colour, and
+`notice-border-width` is the width of the bar. Set `notice-background` and the tint goes away, which
+is what four of the five themes do — a translucent sheet on macOS, a ruled strip on Umbraco 4. Its
+buttons are real `uui-button`s, so a theme restyles them through UUI's `--uui-button-*` properties
+rather than by selecting into them: the sheet is adopted one shadow boundary above the button's own.
+Windows 98's `window.css.ts` is the worked example of both halves.
+
+**Your `window` sheet is adopted into the banner strip too.** It has its own shadow root nested
+inside the window's, and it adopts the same sheet, because that is where the `.notice` rules live.
+So every selector you wrote for the frame also runs against the banner's markup. The banner's own
+classes are all namespaced — `.notice`, `.notice-title`, `.notice-body`, `.notice-actions` — so they
+cannot be hit by accident, and `components/window-notices.test.ts` holds that. Your own selectors
+are not: a bare `strong`, `umb-icon` or `[class]` rule meant for a caption will land in the banner
+as well, and nothing will fail. `.title { position: absolute; inset: 0 }`, which is how macOS
+centres a window title, is what taught this — it tore the banner's heading out of its column and
+laid it across the middle of the strip on the one theme that did it.
+
+`notice-badge-size` sizes the taskbar badge on its own, separately from the marker, and it defaults
+to `1em` — the task label's own text size, because that is where the badge sits. See §5's trap about
+the two themes for which that is not true.
+
+All three severities reach the taskbar, and shape is what says which: `info` is a dot, the other two
+are the glyph. The dot shares the badge's `.notice-badge` class, so whatever your theme does to
+position the badge positions the dot too; it adds `.notice-badge-dot`, and the dot itself is a
+pseudo-element centred in that box rather than the box's own background. That is what lets a theme
+that fills `.notice-badge` with the severity colour carry the dot without writing a second rule —
+the fill is switched off at `.notice-badge.notice-badge-dot`, two classes deep, so it survives your
+one-class rule. Style it yourself with the same two classes if you want it different. Its colour is
+`notice-info-color` and its diameter is `titlebar-dirty-size`: the caption's own dot token, shared
+on purpose, so a theme that resizes one dot cannot end up with two sizes of dot on one window.
+
+**If your theme hides its task labels, set `notice-info-color`.** The dot then rides the tile's
+corner on top of the app icon — and a task button draws that icon in `taskbar-text`, which is the
+last fallback in the dot's own colour chain, so leaving the token unset paints the dot in exactly
+the colour of the thing it is sitting on. macOS and Windows 11 both set it to their accent, and each
+splits that accent light/dark the way its other markers do. A ring of the bar's own ground was tried
+first and reads as a bullseye at 8px, so hue is what does the separating. `theme/notice.test.ts`
+fails you if you paint the token in the caption background, the opaque bar ground, or the bar's text
+colour, which are the three things the dot has to be seen against.
 
 `taskbar-reserve` deserves a note: it is how much of the bottom edge is unavailable to windows, and
 it defaults to the taskbar's own height. A floating dock must set it **higher** than its height,
@@ -355,6 +410,35 @@ silently, inside an observer. That defect shipped once and made every theme reco
 without ever restyling it. The theme context builds its stylesheets before publishing them for
 exactly this reason. You should not need to touch that code, but if you add a surface, do not
 "tidy" it.
+
+**The overwrite guard's taskbar badge has to be drawn inside the button's own box.** `.running`
+keeps `overflow: hidden` in the base stylesheet and in every shipped theme, so a badge positioned
+outside `.task`'s own box is clipped and simply never appears. The active-window marker answers to
+the same constraint, with `position: relative` on the button for the same reason.
+
+**A marker after the label is invisible in two of the five themes.** The macOS and Windows 11 themes
+both set `.task-label { display: none }` and draw icon-only tiles, so anything appended to the label
+has nowhere to sit. The base draws the badge inline all the same, after the label and at the label's
+own text size, because at label height beside the name it reads as part of the button rather than as
+decoration on it — and each of those two themes restyles that **same element** into an overlay on
+the tile's corner, which is its own notification idiom. If you write a theme that hides the label,
+you have to do the same, and `theme/notice.test.ts` will fail you if you do not: it derives the rule
+from your own stylesheet rather than from a list of theme names.
+
+Both of them draw it as a filled disc in the severity colour with the glyph punched out in the
+taskbar's own ground, which is what a badge is on either platform, and there are two traps in that.
+An `umb-icon` paints its glyph edge to edge of a square box, so a `border-radius` alone rounds the
+plate *under* corners the glyph still occupies and leaves a triangle poking out of its own disc:
+give it padding, enough that the disc's radius clears the glyph box's half-diagonal. And restate the
+ink in your `[data-severity='error']` rule as well as the fill, because the base's severity rule
+carries an attribute selector and a bare `.notice-badge` of yours loses to it — leaving the error
+glyph painted in the same danger colour as the disc under it.
+
+**Do not select an icon in the chrome as `umb-icon`.** A window's caption and a task button each
+hold two of them now — the app's own icon and the severity marker or badge — and they answer to
+opposite geometry. The app icon is `.app-icon` in the caption and `.task-icon` in the taskbar; the
+guard's is `.notice-marker` and `.notice-badge`. This is not tidiness: the macOS theme hides the app
+icon in the caption entirely, and while both shared one selector that rule hid the marker with it.
 
 ---
 

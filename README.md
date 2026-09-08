@@ -18,7 +18,8 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 
 - Work side by side. Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth. This one wants room: see [A note on screen size](#a-note-on-screen-size).
 - Real windows. Drag, resize, minimise, maximise, and double-click a title bar to fill the desktop. Each window remembers its own place.
-- Never loses your work. A window holding unsaved changes shows a dot in its title bar, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
+- Never loses your work. A window holding unsaved changes shows a dot in its title bar and on its taskbar button, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
+- Warns before you overwrite someone. If somebody else saves, bins or deletes a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. The plain backoffice does not warn about this at all.
 - A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus Games once a package puts an app there. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned. Your pins are remembered per user.
@@ -71,7 +72,7 @@ From the launcher:
 - Hover an app and click the pin to add it to Pinned, which sits at the top.
 - Drag a title bar to move a window, drag an edge or corner to resize, double-click the title bar to maximise.
 - Use the taskbar at the bottom to switch between open windows.
-- A dot in a title bar means that window has unsaved changes. Closing or reloading it asks before discarding them; saving clears the dot.
+- A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
 - Choose Exit in the launcher's footer to return to the classic backoffice.
 - Open Desktop settings from the cog in the launcher's footer to change your wallpaper.
 
@@ -159,6 +160,29 @@ due within one refresh reads "Due now" rather than counting past zero: it may al
 happened without this copy of the report knowing yet.
 
 Nothing here can be started, paused or cancelled. It is a viewer.
+
+## Overwrite protection
+
+Open a page in two browsers, edit both, save both, and in a plain Umbraco backoffice the second
+save wins silently: nobody is told and the first person's work is gone with no trace in the UI.
+Umbraco broadcasts the change over SignalR and the backoffice uses that only to drop its cached
+copy.
+
+UmbraDesktop listens to the same signal and tells you. A window whose document changed while you
+were reading it refreshes itself in place, keeping your scroll position, the tab you were on and
+any split view. A window whose document changed while you had *unsaved changes* raises a banner in
+its own chrome and marks both its titlebar and its taskbar button with a warning icon, so it reaches
+you on a window you had minimized an hour ago. The icon is the same one Umbraco uses elsewhere, and
+it is a warning triangle or a circle-x rather than a coloured dot, so the severity survives a
+monochrome screen. You can keep your version, after confirming that saving loses the other person's
+change, or load theirs and lose yours.
+
+It knows the difference between somebody else's save and your own, including your own publishes,
+and it says something different when a document has been moved to the recycle bin, where the
+window turns read-only the moment it catches up with that, than when it has been deleted for good,
+where there is nothing left to save to.
+
+Every theme carries it in its own idiom, and no theme is allowed to remove it.
 
 ## Technical explanation
 

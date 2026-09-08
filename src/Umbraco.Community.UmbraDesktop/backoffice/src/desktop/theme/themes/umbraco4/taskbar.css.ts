@@ -95,7 +95,9 @@ export default css`
     gap: 5px;
     padding: 0 7px;
   }
-  .task umb-icon {
+  /* '.task .task-icon' and not '.task umb-icon': the notice badge is an 'umb-icon' in this button
+     now, and 14px is the app icon's size, not the badge's. */
+  .task .task-icon {
     font-size: 14px;
     /* The base pulls the icon left to balance the transparent padding inside an Umbraco glyph
        against a wider label gap. This theme's gap is tight enough that the pull just clips the
@@ -136,4 +138,8 @@ export default css`
        rendering artefact. */
     opacity: 1;
   }
+  /* No '.notice-badge' rule at all, deliberately. This theme shows the task label, so the base
+     rule's inline glyph after the name is exactly right here, and the 11px Verdana button hands it
+     its own size through the base's '1em'. The corner-dot rule this replaced existed only because
+     the badge used to be an overlay in every theme. */
 `;

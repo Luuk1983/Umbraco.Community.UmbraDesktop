@@ -1,4 +1,5 @@
 import type { UmbraDesktopWindow } from '../types';
+import { UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
 import { taskActivation } from '../window-model';
 import { exitDialogContent } from '../exit-message.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
@@ -6,7 +7,9 @@ import type { UmbraDesktopWindowManagerContext } from '../window-manager.context
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import './launcher.element.js';
 import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
-import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
+import { noticeIconName, windowNotices, worstSeverity } from '../notices/notices.js';
+import type { UmbraDesktopNoticeSeverity } from '../notices/types.js';
+import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbConfirmModal, umbOpenModal } from '@umbraco-cms/backoffice/modal';
 import { UMB_SEARCH_MODAL } from '@umbraco-cms/backoffice/search';
@@ -157,6 +160,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         headline: this.localize.term('umbraDesktop_exitHeadline'),
         content: exitDialogContent(
           this.#manager?.unsavedWindows().length ?? 0,
+          this.#manager?.conflictedWindows().length ?? 0,
           (key, ...args) => this.localize.term(key, ...args),
         ),
         confirmLabel: this.localize.term('umbraDesktop_exitConfirm'),
@@ -183,6 +187,40 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     `;
   }
 
+  /**
+   * The marker on a task button for the worst thing its window has to say, or nothing at all.
+   *
+   * One slot and one marker, exactly as the titlebar has: a window with a conflict is dirty by
+   * definition, so both notices exist and only the worst one draws. What changes with severity is
+   * the *shape* — `info` is a dot, `warning` and `error` are the Umbraco glyph `notices.ts` maps
+   * them to. That mapping is asked for here rather than written inline so the three surfaces cannot
+   * disagree about what a warning looks like.
+   *
+   * A dot for `info` rather than an `info` glyph, which was the alternative. Every window somebody
+   * is editing is dirty, so a glyph on all of them would spend the scarcity that makes a glyph here
+   * mean "look at this" — and a dot is what every other application uses for unsaved work anyway
+   * (macOS in the close button, VS Code on the tab). The two shapes share the `.notice-badge` class
+   * so a theme's positioning applies to both without being written twice; only the dot carries
+   * `.notice-badge-dot`.
+   *
+   * Neither is given an accessible name: the button's own `title` and `aria-label` already carry
+   * the notice's heading in words, and naming the marker too would read the state twice.
+   * @param severity The worst severity the window is carrying, if any.
+   * @returns The marker's template, or nothing.
+   */
+  #renderBadge(severity: UmbraDesktopNoticeSeverity | undefined) {
+    if (!severity) return nothing;
+    const icon = noticeIconName(severity);
+    if (!icon) {
+      return html`<span class="notice-badge notice-badge-dot" data-severity=${severity} aria-hidden="true"></span>`;
+    }
+    return html`<umb-icon
+      class="notice-badge"
+      data-severity=${severity}
+      name=${icon}
+      aria-hidden="true"></umb-icon>`;
+  }
+
   override render() {
     return html`
       ${this.#renderLauncher()}
@@ -199,15 +237,30 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
             ${repeat(
               this._windows,
               (w) => w.id,
-              (w) => html`
-                <button
-                  class="task ${w.active ? 'active' : ''}"
-                  title=${this.localize.string(w.app.name)}
-                  @click=${() => this.#onTaskClick(w)}>
-                  <umb-icon name=${w.app.icon}></umb-icon>
-                  <span class="task-label">${this.localize.string(w.app.name)}</span>
-                </button>
-              `,
+              (w) => {
+                const notices = windowNotices(w);
+                // Every severity reaches the taskbar, and the *shape* says which — see `#renderBadge`.
+                // Design D4 kept `info` off it originally; the reasoning that put a conflict here in
+                // the first place applies to unsaved work too, because a window you minimized an
+                // hour ago is exactly the one whose state you cannot see.
+                const worst = worstSeverity(notices);
+                const name = this.localize.string(w.app.name);
+                // The words, not just the shape: this is the accessible name and the tooltip, so the
+                // state is readable to a screen reader and on a monochrome display. `notices[0]` is
+                // the worst notice, which is the one the badge is drawing.
+                const label = worst ? `${name} — ${this.localize.term(notices[0].title)}` : name;
+                return html`
+                  <button
+                    class="task ${w.active ? 'active' : ''}"
+                    title=${label}
+                    aria-label=${label}
+                    @click=${() => this.#onTaskClick(w)}>
+                    <umb-icon class="task-icon" name=${w.app.icon}></umb-icon>
+                    <span class="task-label">${name}</span>
+                    ${this.#renderBadge(worst)}
+                  </button>
+                `;
+              },
             )}
           </div>
         </div>
@@ -302,6 +355,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         margin-left: var(--uui-size-space-1);
       }
       .task {
+        position: relative;
         display: inline-flex;
         align-items: center;
         height: 100%;
@@ -321,7 +375,12 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           color 120ms,
           background-color 120ms;
       }
-      .task umb-icon {
+      /* '.task-icon' rather than a bare '.task umb-icon', which is what this was until the notice
+         badge became an icon too. There are now two 'umb-icon's in a task button and they answer to
+         opposite geometry — the app icon is 18px and pulled left, the badge is at label size — so a
+         selector that cannot tell them apart sizes the badge to the app icon in the base and in all
+         four themes that restate this rule. Every theme's copy was renamed with this one. */
+      .task .task-icon {
         flex-shrink: 0;
         font-size: 18px;
         /* Umbraco icon glyphs carry transparent padding inside their box, making the space
@@ -343,6 +402,79 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       .task.active {
         color: var(--umbradesktop-taskbar-text-emphasis, var(--uui-color-header-contrast-emphasis));
         box-shadow: inset 0 -3px 0 var(--umbradesktop-task-active-marker, var(--uui-color-current, #f5c1bc));
+      }
+      /* Drawn INSIDE the button's own box, deliberately. '.running' keeps 'overflow: hidden' in the
+         base stylesheet and in every one of the five themes, so anything drawn outside the button is
+         clipped — the same constraint '.task.active' already answers to with 'position: relative'
+         above.
+
+         Inline, after the label and at the label's own text size, rather than a badge on the
+         button's corner: at label height beside the name it reads as part of the button, where a
+         corner badge reads as decoration on it. 'font-size' is the whole of the sizing, because
+         'umb-icon' scales with type; '1em' is the label's size rather than a second copy of the
+         number '.task' above sets.
+
+         Two themes cannot use this. macOS and Windows 11 both set '.task-label { display: none }'
+         and draw icon-only tiles, where there is no label for an icon to follow, so each restyles
+         this same element into an overlay on the tile's corner — its own notification idiom.
+         'theme/notice.test.ts' requires exactly that of any theme that hides the label, so a sixth
+         theme hiding it cannot forget. */
+      .notice-badge {
+        flex-shrink: 0;
+        line-height: 1;
+        font-size: var(--umbradesktop-notice-badge-size, 1em);
+        color: var(--umbradesktop-notice-warning-color, var(--uui-color-warning-standalone));
+      }
+      .notice-badge[data-severity='error'] {
+        color: var(--umbradesktop-notice-error-color, var(--uui-color-danger-standalone));
+      }
+      /* 'info' in the same slot, drawn as the dot the titlebar draws rather than as a third glyph:
+         every window being edited is dirty, and a glyph on all of them would spend the scarcity
+         that makes a glyph here mean something.
+
+         The dot is a pseudo-element centred in the badge's box rather than the box itself, and that
+         is what lets the two themes with icon-only tiles carry it without a line of extra CSS. They
+         restyle '.notice-badge' into a 16px disc pinned to the tile's corner, filled with the
+         severity colour; this rule paints nothing on that box and puts a small dot in the middle of
+         it, so the dot lands exactly where the glyph's disc was, and in the themes that keep their
+         labels the box shrink-wraps the dot and sits inline after the name. 'background: none' is
+         the load-bearing half: without it those two themes' severity fill would paint a full disc
+         behind a dot that is trying to be quiet.
+
+         Both selectors are two classes deep on purpose. A theme's badge rule is '.notice-badge', so
+         at equal specificity it would win and size the dot to the glyph's 16px box; at 0,2,0 the
+         shape survives a theme that has never heard of it, and a theme that wants the dot its own
+         way still has a selector to say so with.
+
+         Size and colour are the titlebar marker's own, not a second pair: 'notice-info-color'
+         already chains to the caption's dirty colour, and the size token is shared so a theme that
+         resizes one dot cannot end up with two dots of different sizes on one window. Only the tail
+         of the colour chain differs — the taskbar's text rather than the caption's, because this
+         dot sits on the taskbar.
+
+         That tail is a last resort and a theme with icon-only tiles must not settle for it. A task
+         button draws its app icon in 'taskbar-text' too, so on those themes the dot inherits the
+         exact colour of the thing it is sitting on top of and cannot be seen — reported as "the dot
+         does not come across" on the macOS dock. What separates it there is hue: macOS and Windows
+         11 both set 'notice-info-color' to their accent (see their palettes). A ring of the bar's
+         own ground was tried first and read as a bullseye at this size, which is why it is not
+         here. 'theme/notice.test.ts' fails a theme that paints this token in any of the three
+         things the dot has to be seen against. */
+      .notice-badge.notice-badge-dot {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+      }
+      .notice-badge.notice-badge-dot::before {
+        content: '';
+        width: var(--umbradesktop-titlebar-dirty-size, ${UMBRADESKTOP_UNSAVED_MARKER_SIZE}px);
+        height: var(--umbradesktop-titlebar-dirty-size, ${UMBRADESKTOP_UNSAVED_MARKER_SIZE}px);
+        border-radius: 50%;
+        background: var(
+          --umbradesktop-notice-info-color,
+          var(--umbradesktop-titlebar-dirty-color, var(--umbradesktop-taskbar-text, var(--uui-color-header-contrast)))
+        );
       }
       .clock {
         flex-shrink: 0;
