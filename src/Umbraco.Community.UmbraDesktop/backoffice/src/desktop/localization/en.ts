@@ -84,6 +84,8 @@ export default {
     exitQuestion: 'Return to the classic Umbraco backoffice? Your open windows will be closed.',
     exitConfirm: 'Exit',
     exitStay: 'Stay',
+    // path strip
+    pathLabel: 'Location',
     // unsaved changes
     unsavedChanges: 'Unsaved changes',
     exitUnsavedOne: 'One window has unsaved changes, which will be discarded.',

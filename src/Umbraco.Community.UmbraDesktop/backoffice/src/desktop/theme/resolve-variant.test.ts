@@ -13,7 +13,7 @@ const dual: UmbraDesktopTheme = {
   },
   metrics: {
     titlebarHeight: 30, leadingControlsWidth: 124, trailingControlsWidth: 0,
-    grab: 80, chromeWidth: 0, chromeHeight: 29, taskbarReserve: 62,
+    grab: 80, chromeWidth: 0, chromeHeight: 29, pathbarHeight: 24, taskbarReserve: 62,
   },
 };
 

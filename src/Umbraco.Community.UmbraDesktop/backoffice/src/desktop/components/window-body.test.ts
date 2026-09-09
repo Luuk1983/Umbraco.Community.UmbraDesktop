@@ -534,3 +534,50 @@ it("has the theme id on the app's element before the app's own first render", as
     win.dispose();
   }
 });
+
+/**
+ * The path strip is drawn for the windows that can get lost in a tree, and for no others.
+ *
+ * Both negatives matter more than the positive here, as everywhere else in this file. A strip on a
+ * dashboard window is a permanent empty bar, and a strip on an element app is worse than useless:
+ * `windowShowsPath` checks the body kind as well as the profile precisely because an element app's
+ * `chromeProfile` is a required field nobody reads, so a check on the profile alone would put a
+ * path on a game the day some manifest said `full-section`.
+ */
+it('draws the path strip on a full-section iframe window and on no other', async () => {
+  const url = '/umbraco/section/media';
+  const section = await mountWindow(
+    { kind: 'iframe', url },
+    { app: { ...app({ kind: 'iframe', url }), chromeProfile: 'full-section' } },
+  );
+  try {
+    expect(section.root.querySelector('umbradesktop-window-path')).to.exist;
+  } finally {
+    section.dispose();
+  }
+
+  const dashboard = await mountWindow({
+    kind: 'iframe',
+    url: '/umbraco/section/settings/dashboard/examine-management',
+  });
+  try {
+    expect(
+      dashboard.root.querySelector('umbradesktop-window-path'),
+      'a bare dashboard window has no ancestry to show and must not carry an empty strip',
+    ).to.not.exist;
+  } finally {
+    dashboard.dispose();
+  }
+});
+
+it('draws no path strip on an element window, whatever profile its app claims', async () => {
+  const content: UmbraDesktopAppContent = { kind: 'element', element: loadTestApp };
+  const win = await mountWindow(content, {
+    app: { ...app(content), chromeProfile: 'full-section' },
+  });
+  try {
+    expect(win.root.querySelector('umbradesktop-window-path')).to.not.exist;
+  } finally {
+    win.dispose();
+  }
+});

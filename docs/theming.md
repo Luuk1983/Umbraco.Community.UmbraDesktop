@@ -143,6 +143,7 @@ prefix is for:
 | `taskbar-*` | The bar itself: height, reserve, margin, radius, background (plus an opaque fallback), backdrop filter, top border, shadow, two text colours |
 | `start-*`, `task-*` | The buttons inside the bar: hover and active fills, and the running-window marker |
 | `launcher-*` | The panel: geometry, background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills |
+| `path-*` | The path strip under a section window's caption: its height, padding, background, bottom border, text and link colours, the hover fill behind a crumb, the separator's colour and the strip's font size |
 | `notice-*` | The overwrite guard: the titlebar marker and taskbar badge colours at `info`/`warning`/`error`, the marker and badge sizes, and the banner's own background, text and leading-edge width |
 | `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent with the text that reads on it, and the UI font |
 
@@ -290,6 +291,7 @@ metrics: {
   grab: 80,                    // draggable titlebar that must stay on screen
   chromeWidth: 0,              // what your chrome costs an app, horizontally...
   chromeHeight: 31,            // ...and vertically
+  pathbarHeight: 28,           // your path strip's height, for the windows that draw one
   taskbarReserve: 67,
 }
 ```
@@ -340,6 +342,27 @@ theme, which shows up as an app's last row of content sitting on your frame's be
 this one exactly as you measure the rest — `measureChromeCost` in `themes/mount-themed.ts`
 subtracts the app's rendered box from the window's rect for you, and every shipped theme's
 `metrics.test.ts` holds its published pair against it.
+
+### `pathbarHeight`: the strip that only some windows carry
+
+A window that hosts a whole section draws a path under its caption — `Media library / Campaigns /
+hero.jpg` — because the desktop strips the backoffice header, and the header is where you would
+otherwise click the section name to climb back out of a tree.
+
+It is its own metric rather than part of `chromeHeight` because it is not charged to every window.
+Only a `full-section` window draws one; a single-workspace window has no ancestors to show, and a
+window hosting a self-contained app has no frame at all. Fold it into `chromeHeight` and every game
+in the launcher opens that many pixels shorter than it asked for.
+
+So state it here, and state the same number as `--umbradesktop-path-height` in your palette, from
+one constant that both read — the strip is drawn at the token's height and paid for at the metric's,
+and the two disagreeing is exactly the kind of sum §4 opens by warning about. Windows 98 keeps its
+at 22 to match its 11px caption type; the rest sit at or near the shared default of 28.
+
+Your `window` sheet is adopted into the strip as well as the banner, with the same consequence: its
+own classes are all namespaced (`.path-bar`, `.path-crumb`, `.path-current`, `.path-separator`, held
+by `components/window-path.test.ts`), but a bare `button` or `nav` rule you wrote for the frame will
+land in it too.
 
 ### Then measure it
 

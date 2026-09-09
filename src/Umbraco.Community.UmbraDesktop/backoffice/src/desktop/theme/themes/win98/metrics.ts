@@ -134,3 +134,12 @@ export const WIN98_LAUNCHER_TOP_CLEARANCE = 16;
 
 /** Width of the start menu panel. Narrow, because it is a vertical list rather than a card grid. */
 export const WIN98_LAUNCHER_WIDTH = 224;
+
+/**
+ * The path strip's height under this theme, in px.
+ *
+ * MS Sans Serif is a small face and this theme's other strips are tight, so the path well is shorter than the shared default. Read twice from here and nowhere else: the palette sets
+ * `--umbradesktop-path-height` from it and `metrics.pathbarHeight` reports it, so the strip
+ * cannot be drawn at one height and paid for at another.
+ */
+export const WIN98_PATH_HEIGHT = 22;

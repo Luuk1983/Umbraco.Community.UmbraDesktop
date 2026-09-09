@@ -63,8 +63,17 @@ const PROBE_APP: UmbraDesktopApp = {
   minSize: PROBE_CONTENT,
 };
 
-/** The window the app opens at: its content size plus what this theme's chrome costs. */
-const OPENING_RECT: Rect = { x: 0, y: 0, ...windowSizeForContent(PROBE_CONTENT, UMBRADESKTOP_WIN98_THEME.metrics) };
+/**
+ * The window the app opens at: its content size plus what this theme's chrome costs.
+ *
+ * No path strip in the sum, and that is the probe's own case rather than an omission: it is an
+ * element app, and only a `full-section` iframe window draws one.
+ */
+const OPENING_RECT: Rect = {
+  x: 0,
+  y: 0,
+  ...windowSizeForContent(PROBE_CONTENT, UMBRADESKTOP_WIN98_THEME.metrics, 0),
+};
 
 /** The themed window under test, mounted once for the whole file. */
 let win: UmbraDesktopThemedMount<UmbraDesktopWindowElement>;

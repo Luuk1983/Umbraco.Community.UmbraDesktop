@@ -28,9 +28,35 @@ const THEMES = UMBRADESKTOP_THEMES.map((theme) => [theme.name, theme.metrics] as
  */
 const TINY = { w: 1, h: 1 };
 
+it("charges a window with a path strip for it, and one without it nothing", () => {
+  for (const [name, metrics] of THEMES) {
+    const plain = windowSizeForContent({ w: 300, h: 200 }, metrics, 0);
+    const withPath = windowSizeForContent({ w: 300, h: 200 }, metrics, metrics.pathbarHeight);
+    expect(
+      withPath.h - plain.h,
+      `${name}: a section window's strip comes out of the window, not out of the app — an app that ` +
+        'asked for 680px of content and got 652px is the bug this term exists to prevent',
+    ).to.equal(metrics.pathbarHeight);
+    expect(withPath.w, `${name}: the strip costs nothing horizontally`).to.equal(plain.w);
+    expect(metrics.pathbarHeight, `${name}: every theme has to state a strip height`).to.be.greaterThan(0);
+  }
+});
+
+it('floors a window with a strip below the chrome plus the strip, never the chrome alone', () => {
+  for (const [name, metrics] of THEMES) {
+    const bare = minWindowSizeForContent(TINY, UMBRADESKTOP_WINDOW_MIN_SIZE, metrics, 0);
+    const withPath = minWindowSizeForContent(TINY, UMBRADESKTOP_WINDOW_MIN_SIZE, metrics, metrics.pathbarHeight);
+    expect(
+      withPath.h,
+      `${name}: squashed to its floor, a section window still has to be able to draw its strip — ` +
+        'an affordance that vanishes when a window is small is a bug, not a style',
+    ).to.equal(bare.h + metrics.pathbarHeight);
+  }
+});
+
 it("adds the active theme's chrome to the content size an app asked for", () => {
   for (const [name, metrics] of THEMES) {
-    const window = windowSizeForContent({ w: 300, h: 200 }, metrics);
+    const window = windowSizeForContent({ w: 300, h: 200 }, metrics, 0);
     expect(
       window.w,
       `${name}: a window has to be the app's content box plus what this theme spends beside it, ` +
@@ -62,7 +88,7 @@ it('spends a different amount of the window on chrome from one theme to the next
 
 it('floors the window minimum at what the chrome itself needs, however little the app asked for', () => {
   for (const [name, metrics] of THEMES) {
-    const min = minWindowSizeForContent(TINY, UMBRADESKTOP_WINDOW_MIN_SIZE, metrics);
+    const min = minWindowSizeForContent(TINY, UMBRADESKTOP_WINDOW_MIN_SIZE, metrics, 0);
     const controls = metrics.leadingControlsWidth + metrics.trailingControlsWidth + metrics.grab;
     expect(
       min.w,
@@ -87,7 +113,7 @@ it('floors the window minimum at what the chrome itself needs, however little th
 it('respects an app minimum that already clears the floor, chrome included', () => {
   for (const [name, metrics] of THEMES) {
     const content = { w: 900, h: 540 };
-    const min = minWindowSizeForContent(content, UMBRADESKTOP_WINDOW_MIN_SIZE, metrics);
+    const min = minWindowSizeForContent(content, UMBRADESKTOP_WINDOW_MIN_SIZE, metrics, 0);
     expect(min.w, `${name}: an app that needs 900px of content needs 900px plus the chrome`).to.equal(
       900 + metrics.chromeWidth,
     );
@@ -97,8 +123,8 @@ it('respects an app minimum that already clears the floor, chrome included', () 
 
 it("falls back to the desktop's own content minimum for an app that names none", () => {
   for (const [name, metrics] of THEMES) {
-    const min = minWindowSizeForContent(undefined, UMBRADESKTOP_WINDOW_MIN_SIZE, metrics);
-    const expected = minWindowSizeForContent(UMBRADESKTOP_WINDOW_MIN_SIZE, UMBRADESKTOP_WINDOW_MIN_SIZE, metrics);
+    const min = minWindowSizeForContent(undefined, UMBRADESKTOP_WINDOW_MIN_SIZE, metrics, 0);
+    const expected = minWindowSizeForContent(UMBRADESKTOP_WINDOW_MIN_SIZE, UMBRADESKTOP_WINDOW_MIN_SIZE, metrics, 0);
     expect(min, `${name}: an app with no minSize is the global content minimum, not no minimum`).to.deep.equal(
       expected,
     );
@@ -153,7 +179,7 @@ it('writes the chrome floor into the frame, not the tiny minimum the app declare
     // What the element is expected to write: the same function, against the metrics in force here.
     // Asserted against the function rather than against a number, because the number is already
     // pinned per theme by the cases above and restating one here would be a third copy of it.
-    const expected = minWindowSizeForContent(TINY, UMBRADESKTOP_WINDOW_MIN_SIZE, UMBRADESKTOP_DEFAULT_METRICS);
+    const expected = minWindowSizeForContent(TINY, UMBRADESKTOP_WINDOW_MIN_SIZE, UMBRADESKTOP_DEFAULT_METRICS, 0);
     expect(
       parseFloat(frame.style.minWidth),
       'the inline min-width is the one that wins, so it is the one that has to hold the floor: ' +

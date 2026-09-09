@@ -1,6 +1,7 @@
 import type { UmbraDesktopTheme } from '../../types';
 import { W11_DARK, W11_LIGHT } from './palette.js';
 import {
+  W11_PATH_HEIGHT,
   W11_CAPTION_KEEP_VISIBLE,
   W11_CHROME_HEIGHT,
   W11_CHROME_WIDTH,
@@ -53,6 +54,7 @@ export const UMBRADESKTOP_WIN11_THEME: UmbraDesktopTheme = {
     // hairline under it and keeping its frame content-box.
     chromeWidth: W11_CHROME_WIDTH,
     chromeHeight: W11_CHROME_HEIGHT,
+    pathbarHeight: W11_PATH_HEIGHT,
     taskbarReserve: W11_TASKBAR_HEIGHT,
   },
   sheets: async () => {

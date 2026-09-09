@@ -163,6 +163,17 @@ export const UMBRADESKTOP_NOTICE_STACK_MAX_SHARE = 0.45;
 export const UMBRADESKTOP_TITLEBAR_BORDER = 1;
 
 /**
+ * The path strip's height in px, behind `--umbradesktop-path-height`.
+ *
+ * One number with two readers, which is the whole reason it is stated here rather than in the CSS:
+ * `window-path.element` interpolates it as its fallback, and `theme/themes/umbraco` reports it back
+ * out as `metrics.pathbarHeight`, which is what the window sizing spends. The same arrangement
+ * {@link UMBRADESKTOP_TASKBAR_HEIGHT} has, and for the same reason — a strip that measured one
+ * height and was paid for at another would leave every section window's app that many pixels short.
+ */
+export const UMBRADESKTOP_PATH_HEIGHT = 28;
+
+/**
  * What must stay inside the desktop while dragging, under the Umbraco theme.
  *
  * `trailing` is the non-draggable band at the titlebar's right end, measured from the window's own
@@ -230,5 +241,6 @@ export const UMBRADESKTOP_DEFAULT_METRICS: UmbraDesktopThemeMetrics = {
   grab: UMBRADESKTOP_WINDOW_KEEP_VISIBLE.grab,
   chromeWidth: UMBRADESKTOP_WINDOW_CHROME.w,
   chromeHeight: UMBRADESKTOP_WINDOW_CHROME.h,
+  pathbarHeight: UMBRADESKTOP_PATH_HEIGHT,
   taskbarReserve: UMBRADESKTOP_TASKBAR_HEIGHT,
 };

@@ -114,3 +114,12 @@ export const W11_LAUNCHER_GAP = 12;
 
 /** Clearance above the panel, so a tall catalogue stops short of the top of the screen. */
 export const W11_LAUNCHER_TOP_CLEARANCE = 24;
+
+/**
+ * The path strip's height under this theme, in px.
+ *
+ * Matches the shared default: Windows 11 breadcrumbs sit on a comfortable strip, and 28px is that. Read twice from here and nowhere else: the palette sets
+ * `--umbradesktop-path-height` from it and `metrics.pathbarHeight` reports it, so the strip
+ * cannot be drawn at one height and paid for at another.
+ */
+export const W11_PATH_HEIGHT = 28;

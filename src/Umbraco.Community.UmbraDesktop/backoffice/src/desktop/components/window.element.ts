@@ -17,6 +17,14 @@ import {
   UMBRADESKTOP_WINDOW_MIN_SIZE,
 } from '../constants';
 import { minWindowSizeForContent } from '../window-chrome.js';
+import { buildCrumbs, windowShowsPath } from '../path/crumbs.js';
+import { watchFramePath } from '../path/path-watcher.js';
+import type { UmbraDesktopPathCrumb } from '../path/types.js';
+// Side-effect import, exactly as with the notices element above: registering
+// `<umbradesktop-window-path>` is what makes the strip in `render` resolve to something, and
+// nothing else in the bundle imports that module, so without this line Vite tree-shakes it out and
+// a section window silently paints no path.
+import './window-path.element.js';
 // Side-effect import, as with `app-host.element.js` below: registering
 // `<umbradesktop-window-notices>` is what makes the stack in `render` resolve to something.
 import './window-notices.element.js';
@@ -109,6 +117,16 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   private _chromeThemeId = '';
 
   /**
+   * The crumbs the frame's current route resolves to, for the windows that draw a path strip.
+   *
+   * `@state` for the same reason `_chromeThemeId` is: the watcher reports from outside the render
+   * cycle, and a plain field would leave the strip showing wherever the window happened to be when
+   * it last rendered for some other reason.
+   */
+  @state()
+  private _crumbs: UmbraDesktopPathCrumb[] = [];
+
+  /**
    * The active theme's geometry, which is what turns the app's **content** minimum into the
    * window minimum this element writes into its own inline style.
    *
@@ -133,6 +151,13 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * disconnect so a closed window leaves nothing subscribed inside a frame that is about to die.
    */
   #stopDirtyWatch?: () => void;
+
+  /**
+   * Stops the current frame's path watcher. Replaced and released on exactly the same occasions as
+   * {@link #stopDirtyWatch}, and for the same reason: both hold subscriptions inside a document
+   * that a reload replaces and a close destroys.
+   */
+  #stopPathWatch?: () => void;
 
   #startPointer = { x: 0, y: 0 };
   #startRect = { x: 0, y: 0 };
@@ -202,6 +227,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     super.disconnectedCallback();
     this.#stopDirtyWatch?.();
     this.#stopDirtyWatch = undefined;
+    this.#stopPathWatch?.();
+    this.#stopPathWatch = undefined;
   }
 
   /**
@@ -251,6 +278,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     // backoffice (with its own header) never flashes into view.
     injectChromeStyles(iframe, this.window.app.chromeProfile, () => (this._loading = false));
     this.#startDirtyWatch(iframe);
+    this.#startPathWatch(iframe);
     // A frame boots on the stored alias, so it is normally already right — but a theme changed
     // while it was still loading would have been missed, and the reload path lands here too.
     this.#applyFrameTheme();
@@ -292,6 +320,36 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * whatever the frame held a moment ago, it has just been re-fetched from the server.
    * @param iframe The window's freshly loaded frame.
    */
+  /**
+   * Watch the freshly loaded frame for where it is, so the path strip can say so.
+   *
+   * Restarted rather than reused on each load, exactly as the dirty watch is: a reload replaces the
+   * frame's document and takes the previous watcher's listeners with it. The crumbs are reset to the
+   * window's own root at the same time, so a window never shows the last document's path over the
+   * new one's while the new one is still resolving — and a window that lands somewhere with no
+   * ancestry at all keeps a strip saying where it is rather than an empty bar.
+   *
+   * Returns early for a window that draws no strip, so a Log Viewer or a game never pays for
+   * subscriptions nothing renders.
+   * @param iframe The window's freshly loaded frame.
+   */
+  #startPathWatch(iframe: HTMLIFrameElement) {
+    this.#stopPathWatch?.();
+    this.#stopPathWatch = undefined;
+    const w = this.window;
+    const doc = iframe.contentDocument;
+    if (!w || !doc || !windowShowsPath(w.app)) return;
+    this._crumbs = buildCrumbs(w.app, [], undefined);
+    this.#stopPathWatch = watchFramePath(doc, (path) => {
+      // Re-read the app rather than closing over `w.app`: a window's app never changes, but its
+      // state object is replaced on every manager update, and reading through `this.window` is how
+      // the rest of this element does it.
+      const app = this.window?.app;
+      if (!app) return;
+      this._crumbs = buildCrumbs(app, path.structure, path.currentName, path.activeVariant, path.language);
+    });
+  }
+
   #startDirtyWatch(iframe: HTMLIFrameElement) {
     this.#stopDirtyWatch?.();
     this.#stopDirtyWatch = undefined;
@@ -308,6 +366,38 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
       this.#manager?.setDirty(id, state.dirty);
       this.#manager?.setSubjects(id, state.subjects);
     });
+  }
+
+  /**
+   * Route the frame to a crumb the strip reported.
+   *
+   * Guarded by `confirmDiscard`, for the same reason the reload button is: leaving a workspace
+   * throws away whatever it is holding, and the shell asks before it does that. Declining leaves the
+   * frame exactly where it was, because nothing has happened at the point the answer comes back.
+   *
+   * The href arrives as core wrote it, which is usually base-relative — `section/media`, meant to be
+   * resolved against the frame document's `<base href="/umbraco/">`. Resolving it against `baseURI`
+   * here rather than pasting it onto a path is what stops a crumb clicked from a deep route landing
+   * on `/umbraco/section/media/workspace/media/edit/<guid>/section/media`.
+   * @param event The strip's navigate event.
+   */
+  async #onCrumbNavigate(event: CustomEvent<{ href: string }>) {
+    const w = this.window;
+    if (!w || w.app.content.kind !== 'iframe') return;
+    const iframe = this.renderRoot?.querySelector('iframe.body') as HTMLIFrameElement | null;
+    const frameWindow = iframe?.contentWindow;
+    const doc = iframe?.contentDocument;
+    if (!frameWindow || !doc) return;
+
+    const mayDiscard = this.#manager ? await this.#manager.confirmDiscard(w.id) : true;
+    if (!mayDiscard) return;
+
+    const target = new URL(event.detail.href, doc.baseURI);
+    // A route change rather than a load, so the window keeps the backoffice it has already booted.
+    // The backoffice's router acts on the history entry, so the push and the event are both needed:
+    // pushing alone changes the URL and renders nothing.
+    frameWindow.history.pushState(null, '', target.pathname + target.search);
+    frameWindow.dispatchEvent(new PopStateEvent('popstate'));
   }
 
   /**
@@ -378,7 +468,14 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * @returns The minimum window size under the active theme.
    */
   #minWindowSize(w: UmbraDesktopWindow) {
-    return minWindowSizeForContent(w.app.minSize, UMBRADESKTOP_WINDOW_MIN_SIZE, this._metrics);
+    return minWindowSizeForContent(
+      w.app.minSize,
+      UMBRADESKTOP_WINDOW_MIN_SIZE,
+      this._metrics,
+      // Same term the manager spends when it opens the window, from the same predicate, so the
+      // size a window opens at and the size it may be dragged to cannot disagree about the strip.
+      windowShowsPath(w.app) ? this._metrics.pathbarHeight : 0,
+    );
   }
 
   /**
@@ -686,6 +783,15 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
             </button>
           </span>
         </div>
+        <!-- Above the notices, deliberately: the path is part of the window's frame, saying where
+             its content is, while a notice is something that happened to that content. Ordering
+             them the other way round would put a strip describing the content between the content
+             and the thing warning about it. -->
+        ${windowShowsPath(w.app)
+          ? html`<umbradesktop-window-path
+              .crumbs=${this._crumbs}
+              @umbradesktop-path-navigate=${this.#onCrumbNavigate}></umbradesktop-window-path>`
+          : nothing}
         <umbradesktop-window-notices .window=${w}></umbradesktop-window-notices>
         <div class="bodywrap">
           ${this.#renderBody(w)}

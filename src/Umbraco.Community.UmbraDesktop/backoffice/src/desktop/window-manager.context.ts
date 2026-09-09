@@ -19,6 +19,7 @@ import {
 import { UMBRADESKTOP_DEFAULT_METRICS, UMBRADESKTOP_WINDOW_KEEP_VISIBLE } from './constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-token';
 import { windowSizeForContent } from './window-chrome';
+import { windowShowsPath } from './path/crumbs.js';
 import type { UmbraDesktopThemeMetrics } from './theme/types';
 import type { UmbraDesktopKeepVisible } from './window-model';
 import type { UmbraDesktopServerStatePatch } from './window-model';
@@ -139,7 +140,13 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     }
     const rect = nextWindowRect(
       current.length,
-      windowSizeForContent(app.defaultSize ?? DEFAULT_CONTENT_SIZE, this.#metrics),
+      windowSizeForContent(
+        app.defaultSize ?? DEFAULT_CONTENT_SIZE,
+        this.#metrics,
+        // A section window's path strip is chrome, so it is added to the window rather than taken
+        // out of the app: a Media window asking for 960x680 of backoffice still gets 680.
+        windowShowsPath(app) ? this.#metrics.pathbarHeight : 0,
+      ),
     );
     const win: UmbraDesktopWindow = {
       id: crypto.randomUUID(),

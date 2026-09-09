@@ -1,5 +1,6 @@
 import type { UmbraDesktopPalette } from '../../types';
 import {
+  MACOS_PATH_HEIGHT,
   MACOS_TASKBAR_BORDER,
   MACOS_TASKBAR_BOTTOM_MARGIN,
   MACOS_TASKBAR_HEIGHT,
@@ -53,6 +54,15 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-shadow': '0 8px 24px rgba(0, 0, 0, 0.22)',
   '--umbradesktop-window-shadow-active': '0 16px 40px rgba(0, 0, 0, 0.34)',
   '--umbradesktop-titlebar-height': `${MACOS_TITLEBAR_HEIGHT}px`,
+  '--umbradesktop-path-height': `${MACOS_PATH_HEIGHT}px`,
+  // A Finder path bar: a quiet strip below the toolbar, a shade off the window's own ground, with
+  // the crumbs in ordinary label grey rather than link blue — macOS does not colour them.
+  '--umbradesktop-path-background': 'rgba(246, 246, 246, 0.92)',
+  '--umbradesktop-path-border-bottom': '1px solid #d8d8d8',
+  '--umbradesktop-path-text': '#4d4d4d',
+  '--umbradesktop-path-link': '#4d4d4d',
+  '--umbradesktop-path-link-hover-background': 'rgba(0, 0, 0, 0.07)',
+  '--umbradesktop-path-separator': '#9a9a9e',
   '--umbradesktop-titlebar-background': 'linear-gradient(#f8f8f8, #e8e8e8)',
   '--umbradesktop-titlebar-border-bottom': `${MACOS_TITLEBAR_BORDER}px solid #cfcfcf`,
   '--umbradesktop-titlebar-text': '#4d4d4d',
@@ -164,6 +174,12 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   '--umbradesktop-window-shadow': '0 8px 24px rgba(0, 0, 0, 0.45)',
   '--umbradesktop-window-shadow-active': '0 16px 40px rgba(0, 0, 0, 0.6)',
   '--umbradesktop-titlebar-background': 'linear-gradient(#3a3a3d, #323235)',
+  '--umbradesktop-path-background': 'rgba(48, 48, 51, 0.92)',
+  '--umbradesktop-path-border-bottom': '1px solid rgba(0, 0, 0, 0.5)',
+  '--umbradesktop-path-text': '#d0d0d2',
+  '--umbradesktop-path-link': '#d0d0d2',
+  '--umbradesktop-path-link-hover-background': 'rgba(255, 255, 255, 0.1)',
+  '--umbradesktop-path-separator': '#8e8e93',
   '--umbradesktop-titlebar-border-bottom': `${MACOS_TITLEBAR_BORDER}px solid rgba(0, 0, 0, 0.5)`,
   '--umbradesktop-titlebar-text': '#d0d0d2',
   '--umbradesktop-control-color': '#d0d0d2',
