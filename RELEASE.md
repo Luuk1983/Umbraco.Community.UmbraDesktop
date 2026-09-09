@@ -60,6 +60,14 @@ Nothing in CI can do these.
   rather than a literal ID, and the narrower "Push only new package versions" scope would reject a
   brand-new ID even under a matching pattern. Nothing to do per package. Re-check this only if the
   workflow file is renamed, the `production` environment is dropped, or the pattern is narrowed.
+
+  **Publishing works from any branch, on purpose.** The `production` environment carries no
+  required reviewers, no wait timer and no deployment branch policy, and `publish.yml` does not
+  check that the tagged commit is on `main`. That looks like an oversight and is not: a hotfix may
+  have to ship from its own branch, and any of those restrictions would block exactly the release
+  you would most want out quickly. The environment exists to satisfy the trusted-publishing policy's
+  environment claim, not as an approval gate. The `v*.*.*` tag pattern is the only guard, which is
+  specific enough that publishing by accident means pushing a genuinely release-shaped tag.
 - **Screenshots.** Need a running backoffice and a login, which is why they are always the last
   thing. They live in `docs/screenshots/`, and both the README and the marketplace files reference
   them by `raw.githubusercontent.com/.../main/...` URL, so they resolve only once the commit is on
@@ -102,6 +110,11 @@ Nothing in CI can do these.
 - **`npm ci` with Visual Studio open** fails with `EPERM` after emptying most of `node_modules` —
   the `-vs-binding` entry in both `package.json` files auto-runs `npm run watch`, whose esbuild
   worker holds a lock. Recover with `npm install`.
+- **A CI-built package's SourceLink points at a commit that does not exist.** `pull_request` checks
+  out an ephemeral merge of the branch into `main`, so that is the commit the nuspec's `repository`
+  element records — not the branch tip the run reports. Harmless, because CI packages are
+  throwaway and `publish.yml` triggers on a tag push, which checks out the real commit. But never
+  try to debug into a package downloaded from a CI run's artifacts.
 - **Nothing validates `umbraco-marketplace*.json`.** A typo in a screenshot filename silently 404s
   on the live Marketplace, and a broken image is worse than a missing one. Validate against
   <https://marketplace.umbraco.com/validate>, and check every `ImageUrl` resolves.
