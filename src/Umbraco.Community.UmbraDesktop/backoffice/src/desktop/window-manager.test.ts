@@ -398,3 +398,96 @@ describe('server state and its guards', () => {
     });
   });
 });
+
+/**
+ * `allowMultiple: false`, and what the second launcher click has to do.
+ *
+ * The branch in `open()` predates these tests and had none of its own, which stopped being
+ * acceptable when the Copilot Workspace chat became a single-window app (the AI design's D16): a
+ * second click on its launcher tile must surface the conversation already open, not start a fresh
+ * document over the top of it and not quietly do nothing. `findAppWindow` is covered in
+ * `window-model.test.ts`; what is untested is the manager acting on its answer.
+ *
+ * The cases below are the four ways this can go wrong, and each one is a thing a user would report
+ * as losing their chat: stacking a duplicate, replacing the window and taking its state with it,
+ * leaving it buried behind whatever covered it, and leaving it minimized.
+ */
+describe('single-window apps', () => {
+  /** A single-window app: the shape the chat catalogue entry uses. */
+  const SOLO: UmbraDesktopApp = { ...APP, alias: 'solo', name: 'Solo', allowMultiple: false };
+  /** A second, ordinary app. Covers `SOLO` so "raises it" has something to be raised above. */
+  const OTHER: UmbraDesktopApp = { ...APP, alias: 'other', name: 'Other' };
+
+  it('focuses the window already open instead of stacking a second one', () => {
+    const ctx = manager();
+    ctx.open(SOLO);
+    const first = windowsOf(ctx)[0].id;
+
+    ctx.open(SOLO);
+
+    expect(windowsOf(ctx), 'a single-window app never stacks').to.have.lengthOf(1);
+    expect(windowsOf(ctx)[0].id, 'and it is the same window, not a replacement').to.equal(first);
+  });
+
+  it('keeps what that window was holding, unsaved changes included', () => {
+    // Why this is the load-bearing one for the chat: relaunching must not throw the conversation
+    // away. A window that was replaced rather than focused would also drop its dirty flag, so the
+    // unsaved-changes guard above would stop protecting it, and the loss would be silent.
+    const ctx = manager();
+    ctx.open(SOLO);
+    const id = windowsOf(ctx)[0].id;
+    ctx.setDirty(id, true);
+
+    ctx.open(SOLO);
+
+    // Asserted through the list rather than through `[0]`, because a stacked duplicate is appended
+    // and would leave the original sitting at index 0, still dirty — so `[0].dirty` alone passes
+    // even with the branch deleted. Verified by mutation: this is the assertion that catches it.
+    const list = windowsOf(ctx);
+    expect(list, 'no second window holding a fresh, empty copy of the chat').to.have.lengthOf(1);
+    expect(list[0].id, 'the window is the original one').to.equal(id);
+    expect(list[0].dirty, 'focusing must not reset it').to.equal(true);
+  });
+
+  it('raises the window when something is covering it', () => {
+    const ctx = manager();
+    ctx.open(SOLO);
+    const solo = windowsOf(ctx)[0].id;
+    ctx.open(OTHER);
+    expect(
+      windowsOf(ctx).find((w) => w.id === solo)!.active,
+      'precondition: opening OTHER took the focus',
+    ).to.equal(false);
+
+    ctx.open(SOLO);
+
+    const list = windowsOf(ctx);
+    const win = list.find((w) => w.id === solo)!;
+    expect(list, 'the other window is untouched').to.have.lengthOf(2);
+    expect(win.active, 'the second launch surfaces it').to.equal(true);
+    expect(win.z, 'and puts it on top').to.equal(Math.max(...list.map((w) => w.z)));
+  });
+
+  it('restores the window when it was minimized', () => {
+    // The likeliest version of the gesture: the chat is minimized to the taskbar, and clicking the
+    // launcher tile is how a user asks for it back. Left minimized, the click looks like nothing.
+    const ctx = manager();
+    ctx.open(SOLO);
+    const id = windowsOf(ctx)[0].id;
+    ctx.setState(id, 'minimized');
+
+    ctx.open(SOLO);
+
+    expect(windowsOf(ctx)[0].state, 'a minimized single-window app comes back').to.equal('normal');
+  });
+
+  it('stacks freely for an app that has not opted out', () => {
+    // The control. Without it, every assertion above would pass just as well on a manager that
+    // refused to open anything twice, which is a different and much worse desktop.
+    const ctx = manager();
+    ctx.open(OTHER);
+    ctx.open(OTHER);
+
+    expect(windowsOf(ctx), 'multiples are still the default').to.have.lengthOf(2);
+  });
+});
