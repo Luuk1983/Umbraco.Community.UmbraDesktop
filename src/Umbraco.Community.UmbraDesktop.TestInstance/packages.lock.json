@@ -17,12 +17,51 @@
       },
       "Umbraco.AI": {
         "type": "Direct",
-        "requested": "[17.*, )",
-        "resolved": "17.3.1",
-        "contentHash": "eSz4NVHpEQOvcMN2SVmNV666H+9kAepr4fC1PIW5NlrAPIfdqJeBl4yyTFC4GxsQy2zGxHngG+SWuZnoKWATPQ==",
+        "requested": "[17.4.0-rc.2, )",
+        "resolved": "17.4.0-rc.2",
+        "contentHash": "rxVk+7Z/sf2CYpSmV4BxKT8lUEqOwMD3V2eFilJpPZZPNasdJi5lXeOB+bdTt3jU0W0gpAUhtOKw9XVb/8L1Jw==",
         "dependencies": {
-          "Umbraco.AI.Startup": "17.3.1",
-          "Umbraco.AI.Web.StaticAssets": "17.3.1"
+          "Umbraco.AI.Startup": "[17.4.0-rc.2]",
+          "Umbraco.AI.Web.StaticAssets": "[17.4.0-rc.2]"
+        }
+      },
+      "Umbraco.AI.Agent": {
+        "type": "Direct",
+        "requested": "[17.2.0-rc.2, )",
+        "resolved": "17.2.0-rc.2",
+        "contentHash": "P3Uccy3FgAJk6ALj4aa46ALXgosl3/NKU9OEIMRxEBA8ogTffyS+Wo40ea1A3SdEDIHA/mzb3orvSs6X1ZlGFQ==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Startup": "[17.2.0-rc.2]",
+          "Umbraco.AI.Agent.Web.StaticAssets": "[17.2.0-rc.2]"
+        }
+      },
+      "Umbraco.AI.Agent.Copilot.Workspace": {
+        "type": "Direct",
+        "requested": "[17.0.0-rc.2, )",
+        "resolved": "17.0.0-rc.2",
+        "contentHash": "OYHoj4n+J4f3dis+f7VqxENscPexRARFlf8B/BJjgCuD6urPtiVhkkbJ1bb5CePZgcljtmR4fXzG+f51hQZP0A==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Copilot.Workspace.Startup": "[17.0.0-rc.2]",
+          "Umbraco.AI.Agent.Copilot.Workspace.Web.StaticAssets": "[17.0.0-rc.2]"
+        }
+      },
+      "Umbraco.AI.Agent.UI": {
+        "type": "Direct",
+        "requested": "[17.1.0-rc.2, )",
+        "resolved": "17.1.0-rc.2",
+        "contentHash": "Z3mI03mk1Wmo7KCNao25OJUgo85sJYHm5LrvYIWLkStIiG4U/V5+0nfSsBQpNMPnwyTM3UNlHIgNg+Gbnu1iYw==",
+        "dependencies": {
+          "Umbraco.AI.Agent": "[17.2.0-rc.2, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Anthropic": {
+        "type": "Direct",
+        "requested": "[17.1.0, )",
+        "resolved": "17.1.0",
+        "contentHash": "EmZYSJgT4iVsooswArDtAlgFj62+mCRTPWpqUhBsVFWuIzWPHCRbB3T05Z4GR44hqvWwCwKXL3J0ebpz8pyP0Q==",
+        "dependencies": {
+          "Anthropic": "[12.29.1, 12.999.999)",
+          "Umbraco.AI.Core": "[17.3.0, 17.999.999)"
         }
       },
       "Umbraco.Automate": {
@@ -211,6 +250,14 @@
         "resolved": "1.5.2",
         "contentHash": "LVZ7rrr6GHbhERhTgVDarVygl1e6KwE96pronA90LBOMacDhxR4lB+xYLjn/vlnUu+xbOB2RM9fuCPEx5bdyWA=="
       },
+      "Anthropic": {
+        "type": "Transitive",
+        "resolved": "12.29.1",
+        "contentHash": "EVq7ygOtMejWNXW+Dz+vv/ie50JgZB4jFc4gT2TTpBZXtp64zWRR7DqdGhbEaYThyMuaevN4ZRGUWBrSrb0+rg==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.5.1"
+        }
+      },
       "Asp.Versioning.Abstractions": {
         "type": "Transitive",
         "resolved": "8.1.0",
@@ -388,6 +435,11 @@
           "Lucene.Net.QueryParser": "4.8.0-beta00017",
           "Lucene.Net.Replicator": "4.8.0-beta00017"
         }
+      },
+      "Google.Protobuf": {
+        "type": "Transitive",
+        "resolved": "3.30.2",
+        "contentHash": "Y2aOVLIt75yeeEWigg9V9YnjsEm53sADtLGq0gLhwaXpk3iu8tYSoauolyhenagA2sWno2TQ2WujI0HQd6s1Vw=="
       },
       "HtmlAgilityPack": {
         "type": "Transitive",
@@ -586,6 +638,44 @@
         "resolved": "3.1.8",
         "contentHash": "Vm4g0cR4YRKRchEOmMJ0uVFU6yxdg7cJa2KHv3SUAHEsdYKvMpHMF5A1hZfsix89ymD5cmuzRnw9a6dKMcvq+Q=="
       },
+      "Microsoft.Agents.AI": {
+        "type": "Transitive",
+        "resolved": "1.18.0",
+        "contentHash": "jj65gSDbHgUNbIuUSxXpE229EHkY7J2gq8Y8Jfqb+knWbX7ZmfGaRS8uiOV17Zc1Q3k+yMBeXgOpw5ttkTmknA==",
+        "dependencies": {
+          "Microsoft.Agents.AI.Abstractions": "1.18.0",
+          "Microsoft.Extensions.AI": "10.7.0",
+          "Microsoft.Extensions.AI.Abstractions": "10.7.0",
+          "Microsoft.Extensions.AI.Evaluation": "10.7.0",
+          "Microsoft.Extensions.Compliance.Abstractions": "10.5.0",
+          "Microsoft.Extensions.VectorData.Abstractions": "10.7.0",
+          "Microsoft.ML.Tokenizers": "2.0.0"
+        }
+      },
+      "Microsoft.Agents.AI.Abstractions": {
+        "type": "Transitive",
+        "resolved": "1.18.0",
+        "contentHash": "kMab7u/cfZ45S5Eqq2MeoIowgHxkx7hXkpCPzv2So4ZUv2EJA5TeOV0e025ZLaNbj4DdW7oiyMJfsMS89QbXhA==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.7.0"
+        }
+      },
+      "Microsoft.Agents.AI.Workflows": {
+        "type": "Transitive",
+        "resolved": "1.18.0",
+        "contentHash": "Q0W4YY6JLTP024jwDYt3A7DDxfwoHij3SRg9CliAyxXeI+hST+5MirNEvykbLxo3Kw3DflT5y4rbUjHMeG3Z5g==",
+        "dependencies": {
+          "Microsoft.Agents.AI": "1.18.0",
+          "Microsoft.Agents.AI.Abstractions": "1.18.0",
+          "Microsoft.Extensions.AI": "10.7.0",
+          "Microsoft.Extensions.AI.Abstractions": "10.7.0",
+          "Microsoft.Extensions.AI.Evaluation": "10.7.0",
+          "Microsoft.Extensions.Compliance.Abstractions": "10.5.0",
+          "Microsoft.Extensions.VectorData.Abstractions": "10.7.0",
+          "Microsoft.ML.Tokenizers": "2.0.0",
+          "OpenTelemetry.Api": "1.15.3"
+        }
+      },
       "Microsoft.AspNet.WebApi.Client": {
         "type": "Transitive",
         "resolved": "6.0.0",
@@ -731,6 +821,14 @@
         "resolved": "10.7.0",
         "contentHash": "Lf822igMm8NkTYHZhTp7kjoNYkLLEvJnX3SkG/LVBvsZHC0Y9choogHz8YtITBoy0TOylM3kVUZ6iaHf0my0ug=="
       },
+      "Microsoft.Extensions.AI.Evaluation": {
+        "type": "Transitive",
+        "resolved": "10.7.0",
+        "contentHash": "BdbJNfhc/pb3RkD19Sm/XuLK3x5AdU+AB+0HC8Nlu7WZTrVLnA8lpqIx1BB4k+KIKy5ZSH5RVH5HHfT+gwL9yg==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.7.0"
+        }
+      },
       "Microsoft.Extensions.AmbientMetadata.Application": {
         "type": "Transitive",
         "resolved": "10.8.0",
@@ -826,6 +924,14 @@
           "Microsoft.Extensions.Compliance.Abstractions": "10.8.0"
         }
       },
+      "Microsoft.Extensions.VectorData.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.7.0",
+        "contentHash": "eh0JLxoztc9Wz7TrFVRQyotMY9CBh2t22lMPvzy61yaBDDFBsrisrFOD4NId2z/ujwsHVKDtyfDb9tkXwSV5Vw==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.7.0"
+        }
+      },
       "Microsoft.ICU.ICU4C.Runtime.linux-arm64": {
         "type": "Transitive",
         "resolved": "72.1.0.3",
@@ -919,6 +1025,14 @@
         "type": "Transitive",
         "resolved": "3.0.1",
         "contentHash": "s/s20YTVY9r9TPfTrN5g8zPF1YhwxyqO6PxUkrYTGI2B+OGPe9AdajWZrLhFqXIvqIW23fnUE4+ztrUWNU1+9g=="
+      },
+      "Microsoft.ML.Tokenizers": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "+b8lT4cLLO/sBR2hjvE/qG6qrZG15h7/PBvnIrzTh4xDaAxdHUY6449rC+1pHzQUsBiCHZVbj+VMn+xS0sL7TA==",
+        "dependencies": {
+          "Google.Protobuf": "3.30.2"
+        }
       },
       "Microsoft.NET.StringTools": {
         "type": "Transitive",
@@ -1211,8 +1325,8 @@
       },
       "OpenTelemetry.Api": {
         "type": "Transitive",
-        "resolved": "1.1.0",
-        "contentHash": "K4MkthPTNVAatWSldmRHq0oGB9Z9YZYNQg1xjualeG9yJTghUj18RjReNPabCmEqOpRmFI9mO6KS4L8QKFQKUg=="
+        "resolved": "1.15.3",
+        "contentHash": "fX+fkCysfPut+qCcT3bKqyX4QN9Saf4CgX8HLOHywEVD+Xr7sULtfuypITpoDysjx8R59dn/3mWhgimMH8cm/g=="
       },
       "Polly": {
         "type": "Transitive",
@@ -1549,10 +1663,175 @@
         "resolved": "9.0.11",
         "contentHash": "s8yUYuYYu+PAwvBdhLG1KyrGrk9gkYeuPxfAsXsTqqWyepwSyEw8hAaflW4nO98NG52YpYI1am2+9o+79h2RtQ=="
       },
+      "Umbraco.AI.Agent.Conversations.Core": {
+        "type": "Transitive",
+        "resolved": "17.0.0-rc.2",
+        "contentHash": "Hc8Yl11w3yZ1Nl8lSeFX3bgE+VIPgrsmihCI84Z0FPipaiqtx3eRVUoMWDP6ndhfxiEmNt1yduMAafD3eD4g7A==",
+        "dependencies": {
+          "Microsoft.Agents.AI": "[1.18.0, 1.999.999)",
+          "Umbraco.AI.Agent.Core": "[17.2.0-rc.2, 17.999.999)",
+          "Umbraco.AI.Core": "[17.4.0-rc.2, 17.999.999)",
+          "Umbraco.Cms.Core": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Conversations.Persistence": {
+        "type": "Transitive",
+        "resolved": "17.0.0-rc.2",
+        "contentHash": "s/dnsC7mNpRDy+dKWq8ZhqP9kk4DwAF8gSViq6BVh+YCaZ8YsKCP897DgrfmrnplV6c+azu69MwpbUG/77FtUQ==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Conversations.Core": "[17.0.0-rc.2]",
+          "Umbraco.Cms.Persistence.EFCore": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Conversations.Persistence.Sqlite": {
+        "type": "Transitive",
+        "resolved": "17.0.0-rc.2",
+        "contentHash": "TKNXIryo9Fm+NTGivEe+lFc4opruF7E/+0uup4W8ZFzgYUfpXN4tnJprukESV1jwzZ/dGxCMPU2/LKQAlcDVog==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Conversations.Persistence": "[17.0.0-rc.2]",
+          "Umbraco.Cms.Persistence.EFCore.Sqlite": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Conversations.Persistence.SqlServer": {
+        "type": "Transitive",
+        "resolved": "17.0.0-rc.2",
+        "contentHash": "4gGOC7HITIlDyz1mOwCoOHMGMXBWg6R1nx+9LIWBZp1pgfVLHkvNhfiyLnsE+IjTMS6my78HU6TdPFBdkULcNA==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Conversations.Persistence": "[17.0.0-rc.2]",
+          "Umbraco.Cms.Persistence.EFCore.SqlServer": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Conversations.Web": {
+        "type": "Transitive",
+        "resolved": "17.0.0-rc.2",
+        "contentHash": "aZBPqjOJ+SegTXoJHt6qClrxmPHj8DHWijjaEcXAEhfOuHZ+TUpYLjZeU0tC+uNj+nsG+C2XfLcdoJPF3fCi/Q==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Conversations.Core": "[17.0.0-rc.2]",
+          "Umbraco.AI.Agent.Conversations.Persistence": "[17.0.0-rc.2]",
+          "Umbraco.AI.Web": "[17.4.0-rc.2, 17.999.999)",
+          "Umbraco.Cms.Api.Management": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Copilot.Workspace.Core": {
+        "type": "Transitive",
+        "resolved": "17.0.0-rc.2",
+        "contentHash": "0KvFmkgVEjQ7fykCo5SN85GO9fjRwjKfPT+gCGOsPwHnwGIDq75btddx+Fv6XC9NfGX2yMTMa8MAg6TW5GpVsw==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Conversations.Core": "[17.0.0-rc.2]",
+          "Umbraco.AI.Agent.Core": "[17.2.0-rc.2, 17.999.999)",
+          "Umbraco.Cms.Core": "[17.5.0, 17.999.999)",
+          "Umbraco.Cms.Infrastructure": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Copilot.Workspace.Startup": {
+        "type": "Transitive",
+        "resolved": "17.0.0-rc.2",
+        "contentHash": "/47hBE0LndmzDk78P3ALu3hjotr0Lygg7zlkQPzxxxvNcC1hfzvDqvDbFB0DyF1cR3rhLOqHpvsXgnAuMIFT4Q==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Conversations.Core": "[17.0.0-rc.2]",
+          "Umbraco.AI.Agent.Conversations.Persistence": "[17.0.0-rc.2]",
+          "Umbraco.AI.Agent.Conversations.Persistence.SqlServer": "[17.0.0-rc.2]",
+          "Umbraco.AI.Agent.Conversations.Persistence.Sqlite": "[17.0.0-rc.2]",
+          "Umbraco.AI.Agent.Conversations.Web": "[17.0.0-rc.2]",
+          "Umbraco.AI.Agent.Copilot.Workspace.Core": "[17.0.0-rc.2]",
+          "Umbraco.AI.Agent.Copilot.Workspace.Web": "[17.0.0-rc.2]",
+          "Umbraco.AI.Startup": "[17.4.0-rc.2, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Copilot.Workspace.Web": {
+        "type": "Transitive",
+        "resolved": "17.0.0-rc.2",
+        "contentHash": "pZeqP09vvJ8QQgUlih9c0JR64P60/W7R1PHEGKeb6lLEKvGw5RT7l9zVVq6PF1gbWgXDyZBpuUhIRNcbFOIjig==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Conversations.Core": "[17.0.0-rc.2]",
+          "Umbraco.AI.Agent.Conversations.Web": "[17.0.0-rc.2]",
+          "Umbraco.AI.Agent.Copilot.Workspace.Core": "[17.0.0-rc.2]",
+          "Umbraco.AI.Web": "[17.4.0-rc.2, 17.999.999)",
+          "Umbraco.Cms.Api.Management": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Copilot.Workspace.Web.StaticAssets": {
+        "type": "Transitive",
+        "resolved": "17.0.0-rc.2",
+        "contentHash": "jSdS0lmjHr2X7DimV0wHPYQluNVgqiB1zZBMSvEs0M3HsevzwQjq+460owVvsjZjwBUh/OXMnp/+HEy4Wl/Xwg=="
+      },
+      "Umbraco.AI.Agent.Core": {
+        "type": "Transitive",
+        "resolved": "17.2.0-rc.2",
+        "contentHash": "kN1N0oBdUFB8TiEIypg1Hb7ZDT6ntMbYaqLi3YXZvbevcKMeknqsfUxOPwbBNmb2bnYdCWEBONZYdlMS6h1VXQ==",
+        "dependencies": {
+          "Microsoft.Agents.AI": "[1.18.0, 1.999.999)",
+          "Microsoft.Agents.AI.Workflows": "[1.18.0, 1.999.999)",
+          "Umbraco.AI.AGUI": "[17.2.0-rc.2]",
+          "Umbraco.AI.Core": "[17.4.0-rc.2, 17.999.999)",
+          "Umbraco.Cms.Core": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Persistence": {
+        "type": "Transitive",
+        "resolved": "17.2.0-rc.2",
+        "contentHash": "5OpGz1twtUxKqktvM8qKOS9HUE9K2gfuP6VkK0ii/kZBpuH7xqI25tG8K4FUleLS1QioFc52hhOM4BclKdZVyw==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Core": "[17.2.0-rc.2]",
+          "Umbraco.Cms.Persistence.EFCore": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Persistence.Sqlite": {
+        "type": "Transitive",
+        "resolved": "17.2.0-rc.2",
+        "contentHash": "lDgwK5XZgVFqvulrifgsE/vcT581L8FV3XQ6goqDNO/jV/4DRRIZ1WqIu7Pywz0Y1wwFefeCb89QdQqbh2ZYbQ==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Persistence": "[17.2.0-rc.2]",
+          "Umbraco.Cms.Persistence.EFCore.Sqlite": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Persistence.SqlServer": {
+        "type": "Transitive",
+        "resolved": "17.2.0-rc.2",
+        "contentHash": "YrA1Y7vZFV2oxE7+O1rV5bOhj3u9zWKZ97bsRe+40RBEOl7ew1IUBVQVMe4I+OiY0r0HpYoJH0kDxtV67I9lQA==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Persistence": "[17.2.0-rc.2]",
+          "Umbraco.Cms.Persistence.EFCore.SqlServer": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Startup": {
+        "type": "Transitive",
+        "resolved": "17.2.0-rc.2",
+        "contentHash": "eqs4B9SKiobHrjhOBhoVqqgfsVAGi9OvvXlCBHCp6SeBdJV5Jh7GgfZAxkI2TpVxzvwqVGsO3Z02h0mws+Az8w==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Core": "[17.2.0-rc.2]",
+          "Umbraco.AI.Agent.Persistence": "[17.2.0-rc.2]",
+          "Umbraco.AI.Agent.Persistence.SqlServer": "[17.2.0-rc.2]",
+          "Umbraco.AI.Agent.Persistence.Sqlite": "[17.2.0-rc.2]",
+          "Umbraco.AI.Agent.Web": "[17.2.0-rc.2]",
+          "Umbraco.AI.Startup": "[17.4.0-rc.2, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Web": {
+        "type": "Transitive",
+        "resolved": "17.2.0-rc.2",
+        "contentHash": "aRDDJpsUttP4ySiAjLn9kx9s/Pj3Jlf8Nb04rDWY6tKMeIertdLrdeE8MvqvzXthgur0YlcpSkZGQ2YXMRoCuA==",
+        "dependencies": {
+          "Umbraco.AI.Agent.Core": "[17.2.0-rc.2]",
+          "Umbraco.AI.Agent.Persistence": "[17.2.0-rc.2]",
+          "Umbraco.AI.Web": "[17.4.0-rc.2, 17.999.999)",
+          "Umbraco.Cms.Api.Management": "[17.5.0, 17.999.999)"
+        }
+      },
+      "Umbraco.AI.Agent.Web.StaticAssets": {
+        "type": "Transitive",
+        "resolved": "17.2.0-rc.2",
+        "contentHash": "Fz7gPuSjodo4IpgT6/H+TEb1S7EuNpvYFKLPwGzmOTdrrssSt2jV0hr2dwm5n5WrL6dYlh3wrIUZzjPIzpapNg=="
+      },
+      "Umbraco.AI.AGUI": {
+        "type": "Transitive",
+        "resolved": "17.2.0-rc.2",
+        "contentHash": "pkF/lF6S6njt0i7of9+NtA2jMqP6daaXyR25LO4i/JUbVZtQ5RCO5Ti0DNrhGXMdB9iaMTP0kJ6erwQOnGTK+A=="
+      },
       "Umbraco.AI.Core": {
         "type": "Transitive",
-        "resolved": "17.3.1",
-        "contentHash": "8H/XdAbAsozqalgkWgBjQTuwFn7hOEouchZ1Lv0QXuItuNbltSNnaTwuP//LZp159z1aQnhnvqwcx4QpG0F2Sw==",
+        "resolved": "17.4.0-rc.2",
+        "contentHash": "K+ZatvYeUksmIDQ3xWwpRA9pBTDcuvdA0c5xlSbPtOqD5fIo4lQQOZq5GGGgSn649N+YFiRMWc6j65J7Ip8WNw==",
         "dependencies": {
           "DocumentFormat.OpenXml": "[3.5.1, 3.999.999)",
           "Microsoft.Extensions.AI": "[10.7.0, 10.999.999)",
@@ -1567,58 +1846,58 @@
       },
       "Umbraco.AI.Persistence": {
         "type": "Transitive",
-        "resolved": "17.3.1",
-        "contentHash": "pHrau/NoDfMKkHK8moy/cuuWxEcfmKnsM2TUbYymP+RwkjgG2aZF8X8V2HKimKOzyjnfQ06LX5BUyVqdegGYvw==",
+        "resolved": "17.4.0-rc.2",
+        "contentHash": "eSYXrpKjiaAbtALubYoqOJlJPkNnM0KfESZx5zZBURdeAe/p8WOUUAHsgndnvvXuqSO98P7EwWIYoK9+HOdJbg==",
         "dependencies": {
-          "Umbraco.AI.Core": "17.3.1",
+          "Umbraco.AI.Core": "[17.4.0-rc.2]",
           "Umbraco.Cms.Persistence.EFCore": "[17.5.0, 17.999.999)"
         }
       },
       "Umbraco.AI.Persistence.Sqlite": {
         "type": "Transitive",
-        "resolved": "17.3.1",
-        "contentHash": "qSlEveCeSwfezIB65aptlIym5sjt9BSrEFiw9PEnc4GwpEFqv8f5WFWbGp951jtUauh0KsmML9J7gIaVGW4hDg==",
+        "resolved": "17.4.0-rc.2",
+        "contentHash": "MQhzzgyj8hfgxurbYSB86N9w0aXtX/+ZxmenrOA/Er2KiIVy6nnwdBMGZLSYiCdEHX5Z2XprDK2xXCvLx4s4dg==",
         "dependencies": {
-          "Umbraco.AI.Persistence": "17.3.1",
+          "Umbraco.AI.Persistence": "[17.4.0-rc.2]",
           "Umbraco.Cms.Persistence.EFCore.Sqlite": "[17.5.0, 17.999.999)"
         }
       },
       "Umbraco.AI.Persistence.SqlServer": {
         "type": "Transitive",
-        "resolved": "17.3.1",
-        "contentHash": "A2CNutIQl9aJ47jVx541+TJ6COjkr1BtXFLr1wsNFJ4It1nyzUWsXnZVi7mcQ1ayNnSV2vqAOtHhXawI9wyUXA==",
+        "resolved": "17.4.0-rc.2",
+        "contentHash": "zTGqOX6aE1qT3a0Onp/4DalkMYVm1xiDmP8cEGdJ2DklEODpHrb0jsFFxO9fAeAL2g5bDeePPqoOd4g4AeAY/w==",
         "dependencies": {
-          "Umbraco.AI.Persistence": "17.3.1",
+          "Umbraco.AI.Persistence": "[17.4.0-rc.2]",
           "Umbraco.Cms.Persistence.EFCore.SqlServer": "[17.5.0, 17.999.999)"
         }
       },
       "Umbraco.AI.Startup": {
         "type": "Transitive",
-        "resolved": "17.3.1",
-        "contentHash": "jN1lp40UvOseRAMSke6dm+NWOYJQN9Mwr0Xk5MbVvWZrqYzzZJTEGXbcWdBydI9HwR6SRfH92EbZKT2x2o8r4Q==",
+        "resolved": "17.4.0-rc.2",
+        "contentHash": "67e4iE7dwaFwKr3mrpA8Mezy1ObFvPtKCtng3hQOHkn7eUYxDlQIw8FZdCm8qHx39PXhd9kboI8NITdsDXHwzw==",
         "dependencies": {
-          "Umbraco.AI.Core": "17.3.1",
-          "Umbraco.AI.Persistence": "17.3.1",
-          "Umbraco.AI.Persistence.SqlServer": "17.3.1",
-          "Umbraco.AI.Persistence.Sqlite": "17.3.1",
-          "Umbraco.AI.Web": "17.3.1",
+          "Umbraco.AI.Core": "[17.4.0-rc.2]",
+          "Umbraco.AI.Persistence": "[17.4.0-rc.2]",
+          "Umbraco.AI.Persistence.SqlServer": "[17.4.0-rc.2]",
+          "Umbraco.AI.Persistence.Sqlite": "[17.4.0-rc.2]",
+          "Umbraco.AI.Web": "[17.4.0-rc.2]",
           "Umbraco.Cms.Core": "[17.5.0, 17.999.999)",
           "Umbraco.Cms.Web.Common": "[17.5.0, 17.999.999)"
         }
       },
       "Umbraco.AI.Web": {
         "type": "Transitive",
-        "resolved": "17.3.1",
-        "contentHash": "/jFrV4jrkXbvc8FeVNc+n+YOEPpT+U/yTAEpElPejn+Tqi8z8pBVP/hfPrVkbmjYrugdCdOmCbjEayrWL889DQ==",
+        "resolved": "17.4.0-rc.2",
+        "contentHash": "9gfWqf3nVuinaTUfyExC3JECZyAU0s6gxegQzH4lj+2UgolRKyCr0dtczhjRvoXoBdXIU+X6m0Ja1mPG7W151w==",
         "dependencies": {
-          "Umbraco.AI.Core": "17.3.1",
+          "Umbraco.AI.Core": "[17.4.0-rc.2]",
           "Umbraco.Cms.Api.Management": "[17.5.0, 17.999.999)"
         }
       },
       "Umbraco.AI.Web.StaticAssets": {
         "type": "Transitive",
-        "resolved": "17.3.1",
-        "contentHash": "gwY7ZoS8Iy0aHWBcdlB10qhXHq4nVo8FQPWojL9rY4po3+LZ3HpnGX0d7Vjy8mCqoks/Uw8DNFyAnAo/o/3T0Q=="
+        "resolved": "17.4.0-rc.2",
+        "contentHash": "Kcvcws8e3okKCfqetFFbZUT394R+np2DpX88rWMxEKLWfHQAhDfUu3C4hhNiJN03oedCZDm7MiTSTzsmVu82Cw=="
       },
       "Umbraco.Automate.Core": {
         "type": "Transitive",

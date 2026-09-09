@@ -230,12 +230,52 @@ describe('Automate', () => {
 });
 
 describe('Umbraco AI', () => {
-  it('references the bare alias "ai", which is not a typo', () => {
-    expect(ai.map((e) => e.ref)).to.deep.equal(['ai']);
+  /** The two entries by alias, so each case can name the one it is about. */
+  const workspace = ai.find((e) => e.alias === 'copilot-workspace')!;
+  const section = ai.find((e) => e.alias === 'ai')!;
+
+  it('is the Copilot Workspace and the section, the chat first', () => {
+    expect(ai.map((e) => e.ref)).to.deep.equal(['Uai.Section.CopilotWorkspace', 'ai']);
   });
 
-  it('lands in its own ai group, not system', () => {
-    expect(ai[0].group).to.equal('ai');
+  it('references the section by the bare alias "ai", which is not a typo', () => {
+    expect(section.ref).to.equal('ai');
+  });
+
+  it('weighs the chat ahead of the section', () => {
+    expect(workspace.weight!).to.be.lessThan(section.weight!);
+  });
+
+  it('opens the chat full-section, because stripping the sidebar leaves a gutter', () => {
+    // The workspace section's shell is a bespoke `umb-split-panel` with a `<div slot="end">` and no
+    // `umb-section-main`, so `workspace-only` would hide the sidebar and then have nothing to
+    // reposition over the grid column the split panel reserved: an empty 240-460px strip down the
+    // side. Keeping the sidebar is the better answer anyway, because the conversation list is the
+    // tool here, exactly as the tree is in Document Types.
+    expect(workspace.chromeProfile).to.equal('full-section');
+  });
+
+  it('opens one chat window, not several', () => {
+    // Conversations are switched in the workspace's own sidebar, inside the window, so a second
+    // window buys a parallel agent *run* and nothing else — and the workspace aborts the run on
+    // every conversation switch regardless, server-side. `allowMultiple: false` makes a second
+    // launch focus the window already open, which is what every chat client people use does.
+    expect(workspace.allowMultiple).to.equal(false);
+  });
+
+  it('supplies the chat an icon, because that section manifest carries none', () => {
+    // Its `meta` is `label` plus `pathname` and nothing else, so an entry that inherited would
+    // land on the launcher's fallback. `icon-chat` rather than the section's `icon-wand`, so the
+    // two AI tiles are not the same picture twice.
+    //
+    // Pinned because the obvious-sounding `icon-conversation` is a refresh glyph, two circular
+    // arrows, which nobody would guess from the name and which read as "sync" on a tile.
+    expect(workspace.icon).to.equal('icon-chat');
+    expect(workspace.name, 'the label is #uaiCopilotWorkspace_sectionLabel').to.be.undefined;
+  });
+
+  it('lands both entries in the ai group, not system', () => {
+    expect(ai.map((e) => e.group)).to.deep.equal(['ai', 'ai']);
   });
 });
 
@@ -311,11 +351,12 @@ const REF_TYPES: Record<string, 'section' | 'dashboard' | 'menuItem'> = {
   'Engage.MenuItem.Configuration': 'menuItem',
   'Ua.Section.Automate': 'section',
   ai: 'section',
+  'Uai.Section.CopilotWorkspace': 'section',
 };
 
 describe('every commercial entry', () => {
-  it('is sixteen entries', () => {
-    expect(COMMERCIAL).to.have.lengthOf(16);
+  it('is seventeen entries', () => {
+    expect(COMMERCIAL).to.have.lengthOf(17);
   });
 
   it('resolves by ref and hardcodes no URL', () => {

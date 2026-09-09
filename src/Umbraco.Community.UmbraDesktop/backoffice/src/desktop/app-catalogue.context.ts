@@ -117,6 +117,19 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   /** Flat list of launchable apps for the current user. */
   public readonly apps = this.#apps.asObservable();
 
+  /**
+   * The launchable apps right now, for a caller that wants one answer rather than a subscription.
+   *
+   * The same shape and the same reason as the window manager's `getWindows()`: the AI desk tools
+   * answer a single question at the moment they are called, so a subscription would be state to
+   * hold and release for nothing. Empty rather than absent before the first recompute, because a
+   * tool can be called while the desktop is still mounting and "nothing yet" is an honest answer.
+   * @returns The apps, in launcher order.
+   */
+  public getApps(): ReadonlyArray<UmbraDesktopApp> {
+    return this.#apps.getValue();
+  }
+
   #groups = new UmbArrayState<UmbraDesktopLauncherGroup>([], (g) => g.group.alias);
   /** Grouped display list for the launcher. */
   public readonly groups = this.#groups.asObservable();
