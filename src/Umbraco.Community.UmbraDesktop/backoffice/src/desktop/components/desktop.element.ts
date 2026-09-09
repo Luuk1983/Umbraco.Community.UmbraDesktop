@@ -1,6 +1,9 @@
 import type { UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_SECTION_ALIAS } from '../constants';
 import { findChromeRoot } from '../chrome-injector';
+import { clearBootAttempt } from '../boot/boot-storage';
+import { lowerBootSplash } from '../boot/splash';
+import { waitForWallpaper } from '../boot/wallpaper-ready';
 import { applySectionTabHide } from '../../headerapps/section-tab-hide.js';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
@@ -44,6 +47,25 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   @state()
   private _paletteCss = '';
 
+  /**
+   * Whether this user's settings have been read.
+   *
+   * False means "we do not know yet", not "the defaults". The settings context seeds itself with
+   * the defaults so nothing downstream is ever undefined, and painting that seed is what made a
+   * fresh load show a desktop in the wrong theme wearing the wrong wallpaper before swapping to
+   * the user's own — visible whether you were booted here or typed the URL.
+   */
+  @state()
+  private _settingsLoaded = false;
+
+  /**
+   * The surface currently under the resize observer, so it is attached exactly once per surface.
+   *
+   * Needed because the surface does not exist for the whole life of this element any more: it
+   * appears when the hold lifts.
+   */
+  #observedSurface?: Element;
+
   constructor() {
     super();
     // Instantiating (without keeping a reference) is enough to provide the
@@ -57,6 +79,51 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     this.observe(this.#settings.wallpaper, (wallpaper) => (this._wallpaper = wallpaper));
     this.observe(this.#theme.paletteStyle, (style) => (this._paletteCss = style ?? ''));
     this.observe(this.#theme.metrics, (metrics) => this.#manager.setMetrics(metrics));
+    this.observe(this.#settings.loaded, (loaded) => this.reportSettingsLoaded(loaded === true));
+  }
+
+  /**
+   * Record that this user's settings have resolved, and hand the screen over from the boot splash.
+   *
+   * Public because it is the one moment the desktop tells the outside world it exists: the splash
+   * lifts here and the boot marker is cleared here, and those two together are what stop a desktop
+   * that mounts and then breaks from booting again on the next load. Public also lets a test drive
+   * the hold without a current-user context, which is the only way to reach the painted state in a
+   * test at all.
+   *
+   * The hand-off waits for the paint that this report causes *and* for the wallpaper image behind
+   * it, so the splash lifts onto the finished desktop rather than onto a flat colour the wallpaper
+   * then fades into — which reads as the boot finishing twice.
+   * @param loaded Whether the stored settings and their wallpaper have resolved.
+   */
+  public reportSettingsLoaded(loaded: boolean): void {
+    if (this._settingsLoaded === loaded) return;
+    this._settingsLoaded = loaded;
+    if (!loaded) return;
+    void this.#handOverFromSplash();
+  }
+
+  /**
+   * Hand the screen over from the boot splash, once there is a finished desktop to hand it to.
+   *
+   * Clearing the boot marker is part of the hand-off rather than a step before it: the marker means
+   * "a boot was attempted and never finished", so it may only be cleared at the point where the
+   * desktop is genuinely on screen.
+   */
+  async #handOverFromSplash(): Promise<void> {
+    await this.updateComplete;
+    await waitForWallpaper(this._wallpaper?.background.url ?? null);
+    clearBootAttempt();
+    lowerBootSplash();
+  }
+
+  /**
+   * The surface under the resize observer, for the boot test that checks it gets attached when the
+   * hold lifts rather than at connect time.
+   * @returns The observed surface, or undefined before one exists.
+   */
+  public get observedSurfaceForTest(): Element | undefined {
+    return this.#observedSurface;
   }
 
   /**
@@ -73,15 +140,32 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     // Hide the outer backoffice header for a fullscreen desktop. Leaving the
     // section (via the taskbar's Exit) unmounts this element and restores it.
     this.#setOuterChrome(true);
-    this.updateComplete.then(() => {
-      const surface = this.renderRoot.querySelector('.surface');
-      if (surface) this.#surfaceObserver.observe(surface);
-    });
+  }
+
+  /**
+   * Attach the resize observer to the surface once there is one.
+   *
+   * Here rather than in `connectedCallback`, because the surface is no longer rendered for the
+   * whole life of this element: while settings are loading the desktop holds, so an observer
+   * attached at connect time would watch nothing for the entire boot and the first resize after it
+   * would leave a window stranded off-screen.
+   * @param changed The changed properties, passed through to Lit.
+   */
+  override updated(changed: Map<string | number | symbol, unknown>) {
+    super.updated(changed);
+    const surface = this.renderRoot.querySelector('.surface');
+    if (!surface || surface === this.#observedSurface) return;
+    if (this.#observedSurface) this.#surfaceObserver.unobserve(this.#observedSurface);
+    this.#surfaceObserver.observe(surface);
+    this.#observedSurface = surface;
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     this.#surfaceObserver.disconnect();
+    // Forgotten along with the observation, so a re-connected desktop observes its new surface
+    // rather than comparing against one that is no longer watched.
+    this.#observedSurface = undefined;
     this.#setOuterChrome(false);
   }
 
@@ -131,6 +215,13 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   }
 
   override render() {
+    if (!this._settingsLoaded) {
+      // A neutral hold: no palette, no wallpaper, no chrome. During a boot the splash is over this,
+      // and the point is that when the splash lifts the only thing underneath is this user's own
+      // desktop — never a default one that then changes.
+      return html`<div class="booting" aria-busy="true"></div>`;
+    }
+
     const hasImage = !!this._wallpaper?.background.url;
     // Palette first, wallpaper second: both are declaration strings ending in ';', so the
     // concatenation is valid CSS, and the wallpaper's own background-color/background-image
@@ -158,6 +249,14 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         display: block;
         height: 100%;
         width: 100%;
+      }
+      /* The hold, while settings load. Deliberately the theme token's own fallback colour rather
+         than the palette: the palette is one of the things being waited for, so reading it here
+         would paint the default theme's chrome — the very flash this is here to prevent. */
+      .booting {
+        height: 100%;
+        width: 100%;
+        background-color: var(--umbradesktop-desktop-background-color, #0e1329);
       }
       .desktop {
         position: relative;

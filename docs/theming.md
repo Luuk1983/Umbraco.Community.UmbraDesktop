@@ -46,6 +46,26 @@ The `swatch` on your theme object is the three colours the settings picker paint
 them onto a design language that has no such words is a judgement call, and a swapped tuple would
 be invisible.
 
+### Two surfaces a theme does not reach
+
+Four sheets, four elements, and that is the whole of it: the desktop, the taskbar, the launcher and
+a window. Two things a user sees are deliberately outside that list and stay Umbraco-modern under
+every theme, Windows 98 included. Neither is an oversight, and "a theme may restyle, never remove"
+does not apply to them, because there is nothing of yours there to remove.
+
+**The settings panel.** It is a core modal — a `sidebar` opened through Umbraco's modal system —
+and it is chrome the backoffice owns rather than chrome this package draws. Themeing it would mean
+reimplementing the modal, and every picker it opens on top of it would still be core's.
+
+**The boot splash**, the cover that holds the screen while a desktop loads (see
+`desktop/boot/splash.ts`). This one is causal rather than a judgement: the splash goes up during the
+bundle module's own evaluation, before anything can say who is signed in, and the theme is one of
+the things it is waiting for the settings context to read. A themed splash could not paint until the
+moment it is no longer needed.
+
+If you find yourself wanting either of those to follow your theme, the honest answer is a different
+feature, not a token.
+
 ---
 
 ## 2. The two channels

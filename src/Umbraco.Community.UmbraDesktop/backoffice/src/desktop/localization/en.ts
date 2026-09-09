@@ -68,6 +68,13 @@ export default {
     themeDescription: 'Changes the look of the desktop, taskbar and windows. Your content stays the same.',
     themeHighContrast:
       "The backoffice is in high contrast. Window content follows it; the desktop keeps this theme's darkest palette.",
+    // desktop settings — the two groups the panel is divided into
+    groupAppearance: 'Appearance',
+    groupSettings: 'Settings',
+    // desktop settings — startup
+    bootIntoDesktop: 'Open the desktop when I sign in',
+    bootDescription:
+      'Takes effect the next time you open the backoffice, not right now. A link straight to a document still opens that document. Add ?desktop=off to the backoffice address to skip it once.',
     // desktop settings — wallpaper
     wallpaper: 'Wallpaper',
     wallpaperNone: 'None (gradient)',

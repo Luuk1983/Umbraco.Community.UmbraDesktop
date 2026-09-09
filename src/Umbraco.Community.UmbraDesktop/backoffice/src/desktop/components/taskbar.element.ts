@@ -2,6 +2,8 @@ import type { UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
 import { taskActivation } from '../window-model';
 import { exitDialogContent } from '../exit-message.js';
+import { suppressBootForSession } from '../boot/boot-storage.js';
+import { exitDesktopPath } from '../boot/boot-decision.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -153,6 +155,11 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
    * rather than stacking a discard dialog on top of this one — see `exit-message.ts`. Cancelling
    * returns to the desktop with every window still open and still marked, because nothing here
    * touches the windows.
+   *
+   * Leaving also suppresses booting into the desktop until this tab is closed. For a user who has
+   * that setting on, without it the next load would put them straight back and Exit would read as
+   * broken. Tab-scoped rather than persisted, because exiting means "not now", not "turn the
+   * setting off" — that is what the settings panel is for.
    */
   #onExit = async () => {
     try {
@@ -170,8 +177,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     } catch {
       return; // cancelled
     }
-    const path = window.location.pathname.replace(/\/section\/.*$/, '/section/content');
-    window.history.pushState(null, '', path);
+    suppressBootForSession();
+    window.history.pushState(null, '', exitDesktopPath(window.location.pathname));
   };
 
   #renderLauncher() {

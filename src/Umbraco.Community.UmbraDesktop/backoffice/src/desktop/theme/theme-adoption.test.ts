@@ -84,6 +84,10 @@ async function mountDesktopWithSettings(): Promise<{
 }> {
   const desktop = document.createElement('umbradesktop-desktop') as UmbraDesktopDesktopElement;
   document.body.appendChild(desktop);
+  // A desktop holds its surface until the settings context reports that this user's settings have
+  // been read, and in a test there is no current-user context for it to read them for. Reported by
+  // hand so the chrome this file inspects exists at all — see `desktop-boot.test.ts` for the hold.
+  desktop.reportSettingsLoaded(true);
   await desktop.updateComplete;
 
   const probe = document.createElement('umbradesktop-theme-test-probe') as UmbraDesktopThemeTestProbe;

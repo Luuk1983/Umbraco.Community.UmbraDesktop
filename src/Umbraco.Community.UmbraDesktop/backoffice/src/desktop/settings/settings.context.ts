@@ -9,8 +9,9 @@ import {
   UMBRADESKTOP_MEDIA_WALLPAPER_SIZE,
   mediaImagingRequest,
 } from './media-imaging';
+import { writeBootHint } from '../boot/boot-storage';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
-import { UmbObjectState } from '@umbraco-cms/backoffice/observable-api';
+import { UmbBooleanState, UmbObjectState } from '@umbraco-cms/backoffice/observable-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import { UmbImagingRepository } from '@umbraco-cms/backoffice/imaging';
@@ -45,6 +46,26 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   /** Id of the user's chosen chrome theme. */
   public readonly theme = this.#settings.asObservablePart((settings) => settings.theme);
 
+  /** Whether landing on the backoffice root should open the desktop. */
+  public readonly bootIntoDesktop = this.#settings.asObservablePart((settings) => settings.bootIntoDesktop);
+
+  /**
+   * Whether this user's stored settings have been read and their wallpaper resolved.
+   *
+   * The value seeded above is a placeholder, not a preference. Until this is true, the desktop is
+   * *holding* rather than painting the defaults, which is the difference between a boot and a flash
+   * of somebody else's desktop: without it a fresh load paints the default theme and the default
+   * wallpaper for as long as the current-user request takes, then swaps to the user's own.
+   *
+   * Only flips once the paintable view is final, because a Media Library wallpaper needs an imaging
+   * round trip after the payload is parsed. Reporting "loaded" before that would just move the
+   * flash later.
+   */
+  #loaded = new UmbBooleanState(false);
+
+  /** Whether the stored settings have been read and their wallpaper resolved. */
+  public readonly loaded = this.#loaded.asObservable();
+
   #imaging: UmbImagingRepository;
 
   /** The current user's id, once known. Until then nothing is persisted. */
@@ -59,7 +80,7 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
       this.observe(context.currentUser, (user) => {
         if (!user?.unique || user.unique === this.#userUnique) return;
         this.#userUnique = user.unique;
-        this.#load();
+        void this.#load();
       });
     });
   }
@@ -122,6 +143,22 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   }
 
   /**
+   * Turn booting straight into the desktop on or off.
+   *
+   * Takes effect the next time the user lands on the backoffice root, which is normally their next
+   * sign-in but also a plain refresh of it. Nothing changes on the spot, which is why the settings
+   * panel says so rather than leaving a toggle that looks broken.
+   *
+   * Writes the browser-level hint as well as the payload, so the next boot can raise the splash
+   * before it knows who is logged in.
+   * @param enabled Whether to boot into the desktop.
+   */
+  public setBootIntoDesktop(enabled: boolean): void {
+    this.#update({ bootIntoDesktop: enabled });
+    writeBootHint(enabled);
+  }
+
+  /**
    * Merge a change into the settings, in memory and on disk. Merging rather than replacing so
    * that changing one setting can never drop another.
    * @param partial The fields to change.
@@ -132,11 +169,21 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
     this.#persist(settings);
   }
 
-  /** Read this user's stored settings and apply them. */
-  #load(): void {
+  /**
+   * Read this user's stored settings and apply them, then report that the desktop may paint.
+   *
+   * Awaits the view refresh rather than firing it off, because `loaded` is what lifts the boot
+   * splash: lifting it while a Media Library wallpaper was still resolving would hand over to a
+   * desktop that is about to change under the user.
+   */
+  async #load(): Promise<void> {
     const settings = parseSettings(this.#read());
     this.#settings.setValue(settings);
-    void this.#refreshView(settings.wallpaper);
+    // Mirror the boot preference to a browser-level key so the *next* boot can decide whether to
+    // raise the splash before it knows who is logged in. See `boot/constants.ts`.
+    writeBootHint(settings.bootIntoDesktop);
+    await this.#refreshView(settings.wallpaper);
+    this.#loaded.setValue(true);
   }
 
   /**

@@ -62,6 +62,13 @@ export default {
     themeDescription: 'Verandert het uiterlijk van het bureaublad, de taakbalk en de vensters. Je content blijft hetzelfde.',
     themeHighContrast:
       'De backoffice staat op hoog contrast. De vensterinhoud volgt dat; het bureaublad houdt het donkerste palet van dit thema aan.',
+    // desktop settings — the two groups the panel is divided into
+    groupAppearance: 'Weergave',
+    groupSettings: 'Instellingen',
+    // desktop settings — startup
+    bootIntoDesktop: 'Open het bureaublad als ik inlog',
+    bootDescription:
+      'Werkt vanaf de volgende keer dat je de backoffice opent, niet direct. Een link rechtstreeks naar een document opent nog steeds dat document. Zet ?desktop=off achter het backoffice-adres om het één keer over te slaan.',
     // desktop settings — wallpaper
     wallpaper: 'Achtergrond',
     wallpaperNone: 'Geen (verloop)',

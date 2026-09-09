@@ -13,13 +13,15 @@ import { UMB_MEDIA_PICKER_MODAL } from '@umbraco-cms/backoffice/media';
 import { UMB_NOTIFICATION_CONTEXT } from '@umbraco-cms/backoffice/notification';
 
 /**
- * The Desktop settings dialog, opened from the launcher footer.
+ * The Desktop settings panel, opened from the launcher footer as a sidebar from the right.
  *
  * Laid out as a list of sections so that adding another one means appending it, not restructuring
- * this element. Today there are two: Theme and Wallpaper.
+ * this element. Today there are three: Theme, Wallpaper and Startup.
  *
- * There is no Save: every change applies through the settings context the moment it is made,
- * which is also what lets the user see the result behind the dialog.
+ * There is no Save: every change applies through the settings context the moment it is made, which
+ * is also what lets the user watch the result on the desktop beside the panel. Startup is the one
+ * setting that cannot show its result, since it is read while the backoffice boots — hence the hint
+ * under it saying so.
  */
 @customElement('umbradesktop-settings-modal')
 export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
@@ -44,6 +46,10 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
   @state()
   private _chosenThemeId?: string;
 
+  /** Whether this user boots straight into the desktop. */
+  @state()
+  private _bootIntoDesktop = false;
+
   #settings?: UmbraDesktopSettingsContext;
 
   constructor() {
@@ -53,6 +59,7 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
       if (!context) return;
       this.observe(context.wallpaper, (wallpaper) => (this._wallpaper = wallpaper));
       this.observe(context.theme, (id) => (this._chosenThemeId = id));
+      this.observe(context.bootIntoDesktop, (enabled) => (this._bootIntoDesktop = enabled === true));
     });
 
     this.consumeContext(UMBRADESKTOP_THEME_CONTEXT, (context) => {
@@ -102,13 +109,14 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
   /**
    * The theme picker: one swatch per shipped theme, marking whichever the user chose. Selecting
    * applies immediately and persists, matching the wallpaper section's no-Save behaviour.
-   * @returns The Theme section template.
+   * @returns The Theme subsection template.
    */
   #renderThemes() {
     // The user's choice, not the theme in force — see "_chosenThemeId".
     const activeId = this._chosenThemeId ?? this._theme?.theme.id;
     return html`
-      <uui-box headline=${this.localize.term('umbraDesktop_theme')}>
+      <section class="subsection">
+        <h4>${this.localize.term('umbraDesktop_theme')}</h4>
         <p class="hint">${this.localize.term('umbraDesktop_themeDescription')}</p>
         <div class="themes">
           ${UMBRADESKTOP_THEMES.map(
@@ -130,7 +138,59 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
         ${this._theme?.highContrast
           ? html`<p class="hint warn">${this.localize.term('umbraDesktop_themeHighContrast')}</p>`
           : ''}
-      </uui-box>
+      </section>
+    `;
+  }
+
+  /**
+   * The wallpaper subsection: what is in use now, and the two ways to change it.
+   * @returns The Wallpaper subsection template.
+   */
+  #renderWallpaper() {
+    return html`
+      <section class="subsection">
+        <h4>${this.localize.term('umbraDesktop_wallpaper')}</h4>
+        <div class="wallpaper">
+          ${this.#renderPreview()}
+          <div class="controls">
+            <span class="current">${this.#currentLabel()}</span>
+            <div class="buttons">
+              <uui-button
+                look="secondary"
+                label=${this.localize.term('umbraDesktop_wallpaperBuiltInImages')}
+                @click=${this.#pickBuiltIn}></uui-button>
+              <uui-button
+                look="secondary"
+                label=${this.localize.term('umbraDesktop_wallpaperMediaLibrary')}
+                @click=${this.#pickMedia}></uui-button>
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  /**
+   * The startup setting: one toggle, and the sentence that stops it looking broken.
+   *
+   * No sub-heading of its own, unlike the two under Appearance: the toggle's own label says what it
+   * does, and a heading over a single switch would be a label for a label. Add one when a second
+   * setting arrives.
+   *
+   * The hint is load-bearing. The preference is read while the backoffice boots, so flipping it
+   * changes nothing on screen, and a toggle that appears to do nothing reads as a bug. It also
+   * names the escape hatch, because the desktop hides the backoffice header and somebody whose
+   * desktop breaks needs a way back that does not depend on the desktop.
+   * @returns The Settings group's contents.
+   */
+  #renderBoot() {
+    return html`
+      <uui-toggle
+        label=${this.localize.term('umbraDesktop_bootIntoDesktop')}
+        ?checked=${this._bootIntoDesktop}
+        @change=${(event: Event) =>
+          this.#settings?.setBootIntoDesktop(!!(event.target as HTMLInputElement | null)?.checked)}></uui-toggle>
+      <p class="hint below">${this.localize.term('umbraDesktop_bootDescription')}</p>
     `;
   }
 
@@ -154,25 +214,12 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
   override render() {
     return html`
       <umb-body-layout headline=${this.localize.term('umbraDesktop_desktopSettings')}>
-        ${this.#renderThemes()}
-        <uui-box headline=${this.localize.term('umbraDesktop_wallpaper')}>
-          <div class="wallpaper">
-            ${this.#renderPreview()}
-            <div class="controls">
-              <span class="current">${this.#currentLabel()}</span>
-              <div class="buttons">
-                <uui-button
-                  look="secondary"
-                  label=${this.localize.term('umbraDesktop_wallpaperBuiltInImages')}
-                  @click=${this.#pickBuiltIn}></uui-button>
-                <uui-button
-                  look="secondary"
-                  label=${this.localize.term('umbraDesktop_wallpaperMediaLibrary')}
-                  @click=${this.#pickMedia}></uui-button>
-              </div>
-            </div>
-          </div>
-        </uui-box>
+        <div class="groups">
+          <uui-box headline=${this.localize.term('umbraDesktop_groupAppearance')}>
+            ${this.#renderThemes()} ${this.#renderWallpaper()}
+          </uui-box>
+          <uui-box headline=${this.localize.term('umbraDesktop_groupSettings')}> ${this.#renderBoot()} </uui-box>
+        </div>
         <uui-button
           slot="actions"
           look="primary"
@@ -184,10 +231,42 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
 
   static override styles = [
     css`
+      /* The groups need air between them: slotted into umb-body-layout they butt up against each
+         other, and two boxes touching read as one slab with a line through it. */
+      .groups {
+        display: flex;
+        flex-direction: column;
+        gap: var(--uui-size-space-5);
+      }
+      /* One setting group inside a box. The divider rather than spacing alone, because in a 500px
+         panel the wallpaper preview sits directly under the theme swatches and the eye needs
+         telling where one ends. */
+      .subsection + .subsection {
+        margin-top: var(--uui-size-space-5);
+        padding-top: var(--uui-size-space-5);
+        border-top: 1px solid var(--uui-color-divider);
+      }
+      /* Subordinate to the box's own headline, which uui-box renders at h5 size — an h5-sized
+         subsection heading competes with the category above it and inverts the hierarchy. This is
+         the launcher's group-label treatment (see .ch in launcher.element), so the two surfaces
+         label a group of things the same way. */
+      .subsection h4 {
+        margin: 0 0 var(--uui-size-space-3);
+        font-size: var(--uui-type-small-size);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--uui-color-text-alt, var(--uui-color-text));
+        opacity: 0.6;
+      }
       .wallpaper {
         display: flex;
         align-items: flex-start;
         gap: var(--uui-size-space-5);
+        /* Wraps because the panel is a small sidebar (500px): the 200px preview and the two
+           buttons beside it fit, but only just, and a longer localized button label should push
+           the controls under the preview rather than out of the panel. */
+        flex-wrap: wrap;
       }
       .preview {
         flex-shrink: 0;
@@ -228,6 +307,10 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
       }
       .hint.warn {
         margin: var(--uui-size-space-4) 0 0;
+      }
+      /* A hint that explains the control above it rather than the one below. */
+      .hint.below {
+        margin: var(--uui-size-space-3) 0 0;
       }
       .themes {
         display: flex;
