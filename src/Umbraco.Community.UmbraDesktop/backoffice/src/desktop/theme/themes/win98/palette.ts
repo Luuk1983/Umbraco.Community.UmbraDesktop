@@ -1,5 +1,6 @@
 import type { UmbraDesktopPalette } from '../../types';
 import {
+  WIN98_PATH_HEIGHT,
   WIN98_CONTROL_WIDTH,
   WIN98_LAUNCHER_TOP_CLEARANCE,
   WIN98_LAUNCHER_WIDTH,
@@ -130,6 +131,16 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-border': 'none',
   '--umbradesktop-window-radius': '0',
   '--umbradesktop-titlebar-height': `${WIN98_TITLEBAR_HEIGHT}px`,
+  '--umbradesktop-path-height': `${WIN98_PATH_HEIGHT}px`,
+  // A sunken well on the face, as this theme draws every read-only field. The crumbs are the
+  // system link navy of the era, and the hover is the selection blue rather than a tint.
+  '--umbradesktop-path-background': WIN98_FACE,
+  '--umbradesktop-path-border-bottom': 'none',
+  '--umbradesktop-path-text': WIN98_TEXT,
+  '--umbradesktop-path-link': '#000080',
+  '--umbradesktop-path-link-hover-background': '#000080',
+  '--umbradesktop-path-separator': '#404040',
+  '--umbradesktop-path-font-size': '11px',
   '--umbradesktop-titlebar-background': WIN98_ACTIVE_CAPTION,
   '--umbradesktop-titlebar-border-bottom': 'none',
   '--umbradesktop-titlebar-text': WIN98_CAPTION_TEXT,

@@ -129,3 +129,12 @@ export const MACOS_TASKBAR_CLEARANCE = 8;
  */
 export const MACOS_TASKBAR_RESERVE =
   MACOS_TASKBAR_HEIGHT + MACOS_TASKBAR_BORDER + MACOS_TASKBAR_BOTTOM_MARGIN + MACOS_TASKBAR_CLEARANCE;
+
+/**
+ * The path strip's height under this theme, in px.
+ *
+ * Matches the shared default: a Finder path bar is a low, quiet strip rather than a toolbar. Read twice from here and nowhere else: the palette sets
+ * `--umbradesktop-path-height` from it and `metrics.pathbarHeight` reports it, so the strip
+ * cannot be drawn at one height and paid for at another.
+ */
+export const MACOS_PATH_HEIGHT = 28;

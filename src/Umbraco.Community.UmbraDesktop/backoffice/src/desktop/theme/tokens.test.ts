@@ -5,6 +5,7 @@ import { UmbraDesktopTaskbarElement } from '../components/taskbar.element.js';
 import { UmbraDesktopLauncherElement } from '../components/launcher.element.js';
 import { UmbraDesktopWindowElement } from '../components/window.element.js';
 import { UmbraDesktopWindowNoticesElement } from '../components/window-notices.element.js';
+import { UmbraDesktopWindowPathElement } from '../components/window-path.element.js';
 import { UMBRADESKTOP_TOKENS } from './types.js';
 import { UMBRADESKTOP_THEMES } from './themes/index.js';
 
@@ -21,7 +22,10 @@ import { UMBRADESKTOP_THEMES } from './themes/index.js';
  *
  * The notice element is in this list for the same reason the other four are: it owns the
  * `--umbradesktop-notice-*` group, and a token declared in `UMBRADESKTOP_TOKENS` whose only reader
- * is a component this test does not scan reads as dead weight and fails here.
+ * is a component this test does not scan reads as dead weight and fails here. The path element
+ * joined it on the same terms, owning `--umbradesktop-path-*`, which is why the count in the first
+ * paragraph is six and not five: any new chrome component with tokens of its own belongs here the
+ * day it is written, or its whole group fails this test as unused.
  */
 
 /** Flatten a Lit `CSSResultGroup` — possibly a nested array — into a flat list of leaf entries. */
@@ -48,6 +52,7 @@ it('has exactly the tokens the five chrome components read or write, no more and
     UmbraDesktopLauncherElement,
     UmbraDesktopWindowElement,
     UmbraDesktopWindowNoticesElement,
+    UmbraDesktopWindowPathElement,
   ]) {
     for (const token of tokensMentionedIn(ctor.styles)) mentioned.add(token);
   }

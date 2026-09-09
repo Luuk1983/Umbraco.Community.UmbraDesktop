@@ -1,5 +1,6 @@
 import type { UmbraDesktopPalette } from '../../types';
 import {
+  U4_PATH_HEIGHT,
   U4_CONTROL_WIDTH,
   U4_LAUNCHER_TOP_CLEARANCE,
   U4_LAUNCHER_WIDTH,
@@ -110,6 +111,17 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-shadow': '0 4px 14px rgba(28, 36, 48, 0.22)',
   '--umbradesktop-window-shadow-active': '0 6px 20px rgba(28, 36, 48, 0.32)',
   '--umbradesktop-titlebar-height': `${U4_TITLEBAR_HEIGHT}px`,
+  '--umbradesktop-path-height': `${U4_PATH_HEIGHT}px`,
+  // The same cream band the notices use, under the caption's own 11px type.
+  '--umbradesktop-path-background': U4_PANEL,
+  '--umbradesktop-path-border-bottom': `1px solid ${U4_LINE_SOFT}`,
+  '--umbradesktop-path-text': U4_TEXT,
+  // No link colour of its own: this era's chrome text was one colour, and the hover is the same
+  // pale selection blue the trees and lists use.
+  '--umbradesktop-path-link': U4_TEXT,
+  '--umbradesktop-path-link-hover-background': U4_SELECT,
+  '--umbradesktop-path-separator': U4_EDGE,
+  '--umbradesktop-path-font-size': '11px',
   '--umbradesktop-titlebar-background': U4_RAISED,
   '--umbradesktop-titlebar-border-bottom': `1px solid ${U4_LINE}`,
   '--umbradesktop-titlebar-text': U4_TEXT,

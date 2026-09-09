@@ -78,6 +78,8 @@ export default {
     exitQuestion: 'Terug naar de klassieke Umbraco-backoffice? Je open vensters worden gesloten.',
     exitConfirm: 'Verlaten',
     exitStay: 'Blijven',
+    // padbalk
+    pathLabel: 'Locatie',
     // niet-opgeslagen wijzigingen
     unsavedChanges: 'Niet-opgeslagen wijzigingen',
     exitUnsavedOne: 'In één venster staan niet-opgeslagen wijzigingen, die verloren gaan.',

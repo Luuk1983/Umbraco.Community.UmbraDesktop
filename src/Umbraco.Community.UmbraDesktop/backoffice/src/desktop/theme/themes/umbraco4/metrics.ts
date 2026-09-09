@@ -118,3 +118,12 @@ export const U4_LAUNCHER_WIDTH = 320;
  * measured from the viewport top down to the bar.
  */
 export const U4_LAUNCHER_TOP_CLEARANCE = 16;
+
+/**
+ * The path strip's height under this theme, in px.
+ *
+ * Umbraco 4's caption type is 11px, so its path strip is proportionally shorter than the shared default. Read twice from here and nowhere else: the palette sets
+ * `--umbradesktop-path-height` from it and `metrics.pathbarHeight` reports it, so the strip
+ * cannot be drawn at one height and paid for at another.
+ */
+export const U4_PATH_HEIGHT = 24;

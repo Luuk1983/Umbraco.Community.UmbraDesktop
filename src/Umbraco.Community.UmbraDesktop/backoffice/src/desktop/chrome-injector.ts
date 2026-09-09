@@ -56,6 +56,23 @@ export function buildDashboardTabsCss(): string {
   `;
 }
 
+/*
+ * There is deliberately no rule here hiding Umbraco's own workspace breadcrumb.
+ *
+ * It was written, and taken out again after seeing it. The desktop draws its own path strip along
+ * the top of a section window, so core's footer breadcrumb is the same path twice — but hiding it is
+ * not something this module can do without a flash. Every other target here belongs to a shell that
+ * mounts once and lives as long as the frame; the *workspace* is rebuilt on every navigation, so a
+ * rule injected into one workspace's shadow root does not exist in the next one's. Re-injecting on
+ * each navigation still runs after that workspace has painted, which showed the breadcrumb for a
+ * frame on every single click. Two quiet paths beat one that blinks.
+ *
+ * A flash-free version would have to get a stylesheet into shadow roots that do not exist yet —
+ * patching `attachShadow` in the frame before the backoffice boots, or adopting a constructed sheet
+ * into every root as it is created. Both are a long way past injecting CSS into someone else's app,
+ * for a duplicate that is merely untidy.
+ */
+
 /**
  * Breadth-first walk across nested shadow roots, returning the first shadow root whose own
  * tree contains `selector`. Uses a duck-typed `.host` check rather than `instanceof ShadowRoot`

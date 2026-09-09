@@ -21,6 +21,15 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-titlebar-inactive-opacity',
   '--umbradesktop-titlebar-dirty-color',
   '--umbradesktop-titlebar-dirty-size',
+  '--umbradesktop-path-height',
+  '--umbradesktop-path-padding',
+  '--umbradesktop-path-background',
+  '--umbradesktop-path-border-bottom',
+  '--umbradesktop-path-text',
+  '--umbradesktop-path-link',
+  '--umbradesktop-path-link-hover-background',
+  '--umbradesktop-path-separator',
+  '--umbradesktop-path-font-size',
   '--umbradesktop-notice-info-color',
   '--umbradesktop-notice-warning-color',
   '--umbradesktop-notice-error-color',
@@ -306,6 +315,19 @@ export interface UmbraDesktopThemeMetrics {
    * 32px short there and looked right everywhere else.
    */
   chromeHeight: number;
+  /**
+   * Height in px of the path strip this theme draws, for the windows that draw one.
+   *
+   * Its own metric rather than folded into {@link chromeHeight}, because it is not charged to every
+   * window: only a `full-section` iframe window shows a strip (see `path/crumbs.ts`), and a game
+   * asking for a 274px window must not be handed 28px less of it to pay for a strip it never draws.
+   * So the sum in `window-chrome.ts` takes it as a separate term and the caller decides whether this
+   * window is one of the ones that spends it.
+   *
+   * Measured in the same reference frame as {@link chromeHeight}, and held against the rendered
+   * strip by each theme's own `metrics.test.ts`.
+   */
+  pathbarHeight: number;
   /** Height in px reserved at the desktop's bottom edge for the taskbar or dock. */
   taskbarReserve: number;
 }

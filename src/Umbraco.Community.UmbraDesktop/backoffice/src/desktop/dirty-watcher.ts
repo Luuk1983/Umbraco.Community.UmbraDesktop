@@ -1,5 +1,6 @@
 import { UMB_SUBMITTABLE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/workspace';
 import { jsonStringComparison } from '@umbraco-cms/backoffice/observable-api';
+import { aliasesOf, watchProvidedContexts } from './frame-context.js';
 
 /**
  * Watches a window's frame for unsaved changes, so the desktop can mark the window and can ask
@@ -17,21 +18,17 @@ import { jsonStringComparison } from '@umbraco-cms/backoffice/observable-api';
  * `toString()` rather than the token's fields because only `contextAlias` is public on it —
  * `apiAlias` is protected — and the two have to be taken from one place or they can disagree.
  */
-const [WORKSPACE_CONTEXT_ALIAS, WORKSPACE_API_ALIAS = 'default'] =
-  UMB_SUBMITTABLE_WORKSPACE_CONTEXT.toString().split('#');
+const [WORKSPACE_CONTEXT_ALIAS, WORKSPACE_API_ALIAS] = aliasesOf(UMB_SUBMITTABLE_WORKSPACE_CONTEXT);
 
-/** Umbraco's context-api event names. Not exported by the package, and stable across v14+. */
-const CONTEXT_REQUEST_EVENT = 'umb:context-request';
-const CONTEXT_PROVIDE_EVENT = 'umb:context-provide';
+/**
+ * The one context event this module still names for itself.
+ *
+ * Its siblings — request and provide — moved to `frame-context.ts` when the path strip needed the
+ * same dance. This one stayed, because dropping a workspace when its provider goes away is this
+ * module's own bookkeeping and not something a second consumer would want: the path watcher holds
+ * no per-workspace state to drop.
+ */
 const CONTEXT_UNPROVIDED_EVENT = 'umb:context-unprovided';
-
-/** The shape `UmbContextProvider` reads off a request event. It never checks the event's class. */
-interface ContextRequestEventLike {
-  contextAlias: string;
-  apiAlias: string;
-  callback: (instance: unknown) => boolean;
-  stopAtContextMatch: boolean;
-}
 
 /** The shape a provide/unprovide event carries; `instance` is present on unprovide only. */
 interface ContextProvideEventLike {
@@ -152,30 +149,6 @@ function isComparableWorkspace(instance: unknown): instance is ComparableWorkspa
 export function hasUnsavedChanges(persisted: unknown, current: unknown): boolean {
   if (persisted === undefined || current === undefined) return false;
   return jsonStringComparison(persisted, current) === false;
-}
-
-/**
- * Ask one element for the workspace context it provides.
- *
- * `UmbContextProvider` registers its request listener on the very element it announces itself
- * from, and answers by reading `contextAlias`, `apiAlias` and `callback` off the event without ever
- * checking its class. So a plain `Event` carrying those three is enough, and this avoids having to
- * construct core's own event class inside the frame's realm.
- * @param element The element a provider announced itself from.
- * @param onInstance Called with whatever that provider holds; return true to stop the request.
- */
-function requestWorkspaceContext(element: EventTarget, onInstance: (instance: unknown) => boolean): void {
-  const event = new Event(CONTEXT_REQUEST_EVENT, { bubbles: true, composed: true, cancelable: true });
-  const request: ContextRequestEventLike = {
-    contextAlias: WORKSPACE_CONTEXT_ALIAS,
-    apiAlias: WORKSPACE_API_ALIAS,
-    callback: onInstance,
-    // The provider stops the event at the first alias match, which is what we want: the nearest
-    // workspace to that element is the one it provides.
-    stopAtContextMatch: true,
-  };
-  Object.assign(event, request);
-  element.dispatchEvent(event);
 }
 
 /**
@@ -308,19 +281,19 @@ export function watchWorkspaceDirtyState(
     };
   };
 
-  const onProvide = (e: Event) => {
-    if ((e as ContextProvideEventLike).contextAlias !== WORKSPACE_CONTEXT_ALIAS) return;
-    // The provider announced itself from this element, so this element is where its request
-    // listener lives. `composedPath()[0]` rather than `target`, which shadow DOM has retargeted
-    // to the nearest host by the time the event reaches the document.
-    const provider = e.composedPath()[0];
-    if (!provider) return;
-    requestWorkspaceContext(provider, (instance) => {
+  // Why this listens for provides rather than asking, and why it takes the provider off the
+  // composed path, is `frame-context.ts`'s whole subject. The alias check the old inline version
+  // did here now happens in the request itself, which the provider answers only on a match.
+  const stopWatching = watchProvidedContexts(
+    doc,
+    WORKSPACE_CONTEXT_ALIAS,
+    WORKSPACE_API_ALIAS,
+    (instance) => {
       if (!isComparableWorkspace(instance)) return false;
       track(instance);
       return true;
-    });
-  };
+    },
+  );
 
   const onUnprovided = (e: Event) => {
     const event = e as ContextProvideEventLike;
@@ -333,12 +306,11 @@ export function watchWorkspaceDirtyState(
     publish();
   };
 
-  doc.addEventListener(CONTEXT_PROVIDE_EVENT, onProvide);
   doc.addEventListener(CONTEXT_UNPROVIDED_EVENT, onUnprovided);
 
   return () => {
     stopped = true;
-    doc.removeEventListener(CONTEXT_PROVIDE_EVENT, onProvide);
+    stopWatching();
     doc.removeEventListener(CONTEXT_UNPROVIDED_EVENT, onUnprovided);
     for (const entry of tracked.values()) entry.release();
     tracked.clear();

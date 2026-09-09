@@ -180,6 +180,24 @@ export default css`
      way this theme says "read this". Grey face and black text, as every Win98 dialog is — the
      severity is the icon beside the text and the coloured bar on the leading edge, both of which
      the base draws and neither of which this theme has to restate. */
+  /* A sunken well on the face, as this theme draws every read-only field: inset bevel, no bottom
+     border, and a 2px inset from the frame's ring so the well sits *inside* the window rather than
+     spanning it. The strip's own height token already accounts for the inset. */
+  .path-bar {
+    box-shadow: ${unsafeCSS(WIN98_BEVEL_SUNKEN)};
+    border-bottom: none;
+    margin: 0 2px 2px;
+    font-family: ${unsafeCSS(WIN98_FONT)};
+  }
+  /* Square corners, and the era's selection blue behind a hovered crumb with white text on it —
+     the same pairing the Start menu and every list in this theme use. */
+  .path-crumb {
+    border-radius: 0;
+  }
+  .path-crumb:hover {
+    color: #ffffff;
+  }
+
   .notice {
     background: var(--umbradesktop-notice-background, ${unsafeCSS(WIN98_FACE)});
     color: var(--umbradesktop-notice-text, ${unsafeCSS(WIN98_TEXT)});

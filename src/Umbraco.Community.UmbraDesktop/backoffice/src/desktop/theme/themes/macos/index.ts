@@ -1,6 +1,7 @@
 import type { UmbraDesktopTheme } from '../../types';
 import { MACOS_DARK, MACOS_LIGHT } from './palette.js';
 import {
+  MACOS_PATH_HEIGHT,
   MACOS_CAPTION_KEEP_VISIBLE,
   MACOS_CHROME_HEIGHT,
   MACOS_CHROME_WIDTH,
@@ -30,6 +31,7 @@ export const UMBRADESKTOP_MACOS_THEME: UmbraDesktopTheme = {
     // and not this.
     chromeWidth: MACOS_CHROME_WIDTH,
     chromeHeight: MACOS_CHROME_HEIGHT,
+    pathbarHeight: MACOS_PATH_HEIGHT,
     taskbarReserve: MACOS_TASKBAR_RESERVE,
   },
   sheets: async () => {

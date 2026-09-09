@@ -33,10 +33,18 @@ export interface UmbraDesktopSize {
  * plain sum and deliberately nothing cleverer.
  * @param content The content box the app asked for.
  * @param metrics The active theme's geometry.
+ * @param extraHeight What this window's own strip costs on top of the theme's fixed chrome:
+ * `metrics.pathbarHeight` for a window that draws a path strip, zero for one that does not. Explicit
+ * rather than defaulted, because a caller that forgets it is a window whose app is silently that
+ * many pixels shorter than it asked for, and a default would hide exactly that.
  * @returns The window size to open at.
  */
-export function windowSizeForContent(content: UmbraDesktopSize, metrics: UmbraDesktopThemeMetrics): UmbraDesktopSize {
-  return { w: content.w + metrics.chromeWidth, h: content.h + metrics.chromeHeight };
+export function windowSizeForContent(
+  content: UmbraDesktopSize,
+  metrics: UmbraDesktopThemeMetrics,
+  extraHeight: number,
+): UmbraDesktopSize {
+  return { w: content.w + metrics.chromeWidth, h: content.h + metrics.chromeHeight + extraHeight };
 }
 
 /**
@@ -79,14 +87,19 @@ export function chromeMinWindowSize(metrics: UmbraDesktopThemeMetrics): UmbraDes
  * named none.
  * @param fallback The content minimum to use for an app that named none.
  * @param metrics The active theme's geometry.
+ * @param extraHeight What this window's own strip costs, as on {@link windowSizeForContent}. It is
+ * added to *both* sides of the `max`, deliberately: a window squashed to the chrome's own floor must
+ * still be able to draw its strip, and an affordance that disappears when a window gets small is a
+ * bug rather than a style.
  * @returns The smallest window size the user may drag to.
  */
 export function minWindowSizeForContent(
   contentMin: UmbraDesktopSize | undefined,
   fallback: UmbraDesktopSize,
   metrics: UmbraDesktopThemeMetrics,
+  extraHeight: number,
 ): UmbraDesktopSize {
-  const content = windowSizeForContent(contentMin ?? fallback, metrics);
+  const content = windowSizeForContent(contentMin ?? fallback, metrics, extraHeight);
   const chrome = chromeMinWindowSize(metrics);
-  return { w: Math.max(content.w, chrome.w), h: Math.max(content.h, chrome.h) };
+  return { w: Math.max(content.w, chrome.w), h: Math.max(content.h, chrome.h + extraHeight) };
 }

@@ -1,6 +1,7 @@
 import type { UmbraDesktopTheme } from '../../types';
 import { WIN98_LIGHT } from './palette.js';
 import {
+  WIN98_PATH_HEIGHT,
   WIN98_CAPTION_KEEP_VISIBLE,
   WIN98_CHROME_HEIGHT,
   WIN98_CHROME_WIDTH,
@@ -51,6 +52,7 @@ export const UMBRADESKTOP_WIN98_THEME: UmbraDesktopTheme = {
     // `border-box` padding, so they come out of the window's rect rather than growing it.
     chromeWidth: WIN98_CHROME_WIDTH,
     chromeHeight: WIN98_CHROME_HEIGHT,
+    pathbarHeight: WIN98_PATH_HEIGHT,
     taskbarReserve: WIN98_TASKBAR_HEIGHT,
   },
   sheets: async () => {
