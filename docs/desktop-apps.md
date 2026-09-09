@@ -331,6 +331,73 @@ frame, which is what got reported. Anything a theme branch changes must leave th
 Which is §5's pattern used as intended: the unbranched rule is the correct case, and the branch is a
 refinement on top.
 
+### And if the fill itself carries meaning, derive it. Do not read it off two surfaces
+
+The ruling above makes a tiled grid legible as a grid. It does **not** make one tile legible as a
+*different state* from the tile beside it, and if your app has a state — open against closed,
+selected against not, on against off — that is a separate problem with a separate answer.
+
+The obvious answer is `surface-raised` for one state and `surface-sunken` for the other, and it is
+wrong twice over. Minesweeper shipped it and both faults were reported:
+
+- **The step can be nothing.** Nothing in this contract says two surfaces are far apart, and the
+  list below is the whole list. Umbraco's own surface family spans 1.07:1 at its widest, so under
+  the Umbraco theme a closed cell and an opened one came out 1.03:1 apart, which is one colour with
+  two names. Umbraco 4 did the same at 1.04:1. The board was unplayable under both.
+- **The step can be the wrong way round.** `surface-raised` is *a control face*, and a macOS or
+  Windows 11 control face is white, which is correct for a button and backwards for a tile nobody
+  has lifted yet. Both themes drew a white closed cell on a grey field — the exact inverse of what
+  Windows 98, which is the original, draws.
+
+Derive the state colour from the one token whose contrast **and direction** are fixed. `border`
+clears 3:1 against all three surfaces, which by construction makes it darker than a light theme's
+ground and lighter than a dark theme's, so mixing a fixed proportion of it into a surface always
+moves in the direction that reads as *material* and always moves far enough to see:
+
+```css
+.cell {
+  /* the plain answer, and what an engine without color-mix keeps */
+  background: var(--umbradesktop-app-surface-raised, var(--uui-color-surface-emphasis));
+}
+
+@supports (background-color: color-mix(in srgb, red 50%, white)) {
+  .cell {
+    background: color-mix(
+      in srgb,
+      var(--umbradesktop-app-border, var(--uui-color-text-alt)) 25%,
+      var(--umbradesktop-app-surface-sunken, var(--uui-color-background))
+    );
+  }
+}
+
+.cell[data-state='open'] {
+  /* the well's ground, undisturbed: an opened cell is a hole, not another tile */
+  background: var(--umbradesktop-app-surface-sunken, var(--uui-color-background));
+}
+```
+
+Three things about that block are load-bearing rather than style:
+
+**`in srgb`, not `in oklab`.** Perceptual interpolation is the better instinct and the worse answer
+here: mixing toward a light colour in `oklab` barely moves a near-black ground, and the dark themes
+are where the step is already tightest. Measured in Chrome across the five themes, `srgb` at 25%
+gives 1.28:1 to 1.84:1 and `oklab` at 25% gives 1.09:1 on macOS dark.
+
+**A separate `@supports` block, not `var(--token, color-mix(...))`.** The shorthand is tempting and
+does the opposite of what it looks like: a function the engine does not know, sitting inside a
+`var()` fallback, takes the whole declaration down on exactly the engines the fallback was written
+for.
+
+**The two states must differ in specificity, not in source order.** `.cell[data-state='open']` is
+(0,2,0) and beats the `.cell` inside `@supports`, so an engine with `color-mix` and one without both
+paint an opened cell with the same token and the two states cannot collapse into each other on
+either.
+
+Pick your own proportion, and pick it by measuring rather than by eye. 25% is Minesweeper's, chosen
+as the smallest round figure that clears, on every shipped theme, the step macOS and Windows 11 were
+already shipping unremarked — and it lands within one 8-bit step of `#c0c0c0` under Windows 98,
+which is the face colour that theme would have hardcoded.
+
 Three guarantees you may rely on, all machine-checked per theme and per variant in the desktop's own
 `app-tokens.test.ts`. Every theme that paints its own palette answers **all thirteen** tokens, never
 a subset, so you never get half a theme's colours and half the Umbraco ones. The contrast of the
@@ -339,6 +406,12 @@ pairs you would actually use, `text` on all three surfaces, `text-muted` on `sur
 16:1 on Windows 98's navy and 2.52:1 on Umbraco 4's selection blue, so there is no value your app
 could have guessed. And `border` clears 3:1 against `surface`, `surface-raised` and
 `surface-sunken`, so a line drawn with it is visible wherever you draw it.
+
+Three, and no more. In particular there is **no guarantee about the distance between two surfaces,
+nor about which of them is the lighter one**, and both are things an app naturally assumes it has
+been told. It has not been: the three surfaces are three *roles*, and a theme is entitled to answer
+all three with colours a hair apart, in whatever order its own design puts them. That is the
+subsection above, and it is the one thing in this group that has caused a bug in shipped code.
 
 Do not expect anything semantic to your own domain. There is no mine colour and no flag red: your
 app owns its domain palette, the theme owns the surface it sits on.
