@@ -152,7 +152,14 @@ is a separate thing you choose, not a variant of the desktop.
 `Umbraco.Cms.*` — direct or **transitive**. Entertainment has no direct Umbraco dependency at all;
 it reaches `Umbraco.Cms.Core` transitively through the host. That is documented as sufficient but
 has not been observed for this package yet, so **check the Entertainment listing appears and shows
-v17 after the first publish**. If it does not, a direct `Umbraco.Cms.Core` reference is the fix.
+v17 after its first stable release**. If it does not, a direct `Umbraco.Cms.Core` reference is the
+fix.
+
+Note *stable*, not *first publish*: the Marketplace appears to track only stable versions, so a
+package whose only published version is a prerelease has nothing for it to list. `17.1.0-rc.1`
+therefore proves nothing about the add-on's listing, and force-syncing it at that point is wasted.
+The same refresh on the host settles it either way: if `latestVersionNumber` moves to a `-rc`
+version, prereleases are indexed after all.
 
 New tagged packages are picked up in the daily 04:00 UTC scan; known packages refresh every two
 hours. A single package can be forced with a `POST` to

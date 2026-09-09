@@ -145,11 +145,11 @@ Two consequences, one good and one bad:
 | D9 | **The alarm appears on the taskbar button as well as on the window.** This deviates from the unsaved-changes guard's §8, which dropped taskbar marking. | That decision was right for its state and wrong for this one. The editor *caused* the unsaved state and knows about it, so the titlebar is enough. Nobody causes the conflict state: it arrives while you are elsewhere, possibly on a minimized window, and a warning you cannot see is not a warning. Only the alarm goes to the taskbar; the plain dot stays where it is. |
 | D10 | **The exit guard's wording inverts in the conflict state.** | Everywhere else on this desktop, closing is what loses work. Here, saving is: Umbraco submits the whole document, so saving a stale copy silently reverts the other writer. Closing loses only your own work, which you know about. A dialog that nudges toward Save in this state is worse than no dialog. |
 | D11 | **No blocking scrim over a conflicted window.** | The Save button is inside someone else's document, so we cannot intercept it. A scrim would look like prevention while the real save path stays open the moment it is dismissed, and the change underneath might be a typo in another variant. Loud and honest beats theatrical. Blocking stays available as a second step if banners turn out to be ignored. |
-| D12 | **The desktop subscribes to the event feed once and tells its windows**, rather than each window listening for itself. | The event context is a `globalContext`, so it is one instance per backoffice document, and every window is a backoffice document. Ten windows already means ten hub connections today; see R4. |
+| D12 | **The desktop subscribes to the event feed once and tells its windows**, rather than each window listening for itself. | One router in one document is the thing to reason about, and the desktop is the only place that knows what every window is showing. Not, as this row used to claim, to save connections: R4 was measured and the frames' own hub connections cost nothing. The frames keep theirs regardless, because 25 of Umbraco's client caches invalidate off that feed. |
 | D13 | **The alarm is a token group, and colour is never the only carrier.** | Per the standing rule, a chrome change means a token every theme gets. One alert red has no place in Windows 98's palette, and macOS and Umbraco each have their own way of saying "something is wrong". Icon, words and colour together, or a colour-blind editor gets nothing in the one state that matters. |
 | D14 | **The entity-adapter bridge is evaluated and rejected, not overlooked.** | It would work: windows are same-origin so the real workspace object can cross the boundary, the adapters are explicitly duck-typed rather than `instanceof`-checked, and the desktop already reaches into a frame's contexts in `dirty-watcher.ts`. It is rejected because §2.2 removed the need. Recorded so the next person does not spend the day re-deriving it. One artefact if it is ever revived: adapters classify caught errors with `error instanceof Error`, which is false across realms, so cross-frame failures would degrade to "Unknown error". |
 | D15 | **Everything AI-shaped degrades to absent.** | AI is a separate package and at RC. No catalogue entry, no tool and no contributor may appear or throw when it is missing or older. §9 says how. |
-| D16 | **Any number of chat windows, but one window per conversation, and only where the desktop owns the gesture.** | Several conversations at once is the differentiator, so `allowMultiple` stays on. What is worth preventing is narrower: a conversation is a server thread (its id *is* the AG-UI thread id, and a run is `POST /conversations/{id}/stream-agui`), so two windows on one conversation both append to it and neither sees the other, and §7's mechanism cannot help because the event feed carries only `Umbraco:CMS:*` sources and nothing for `uai:copilot-workspace-conversation`. It is confusion rather than lost work, since messages append instead of overwriting, so it earns a uniqueness rule and no watchdog. See §4.1 for where the rule can and cannot hold. |
+| D16 | **One chat window. `allowMultiple: false`.** | Reversed from "any number of windows, one per conversation" once that rule was priced. The conversation list is already inside the window (D3), so switching is native and costs a click, which is how every chat client people already use behaves. It also deletes §4.1's uniqueness rule, which that section itself admitted could not hold once the user clicked a conversation in the workspace's own sidebar. What it gives up is parallel runs, and only those: switching conversations inside one window kills the run, but so does switching inside Umbraco's own section, which aborts on every target change (§4.1). One window is therefore exactly Umbraco's behaviour rather than a reduction of it, and several windows would have exceeded it. |
 
 ---
 
@@ -165,7 +165,7 @@ already there:
   icon: 'icon-wand',            // inherited if the section's own is better
   chromeProfile: 'full-section', // D3
   defaultSize: { w: 1200, h: 820 },
-  allowMultiple: true,
+  allowMultiple: false,          // D16
   group: 'ai',
   weight: 5,                     // ahead of the AI section entry
 }
@@ -175,29 +175,38 @@ already there:
 section's user permission the same way every other curated entry is gated, which is also what makes
 D15 free for this part: no permission, no tile.
 
-`allowMultiple` is on deliberately. Two windows on the same section is how you end up with two
-conversations side by side, which is the whole point, and the workspace's own sidebar navigates
-each window independently because each is its own document.
+`allowMultiple` is **off** deliberately, per D16. §4.1 is why, and it is the whole of the rule:
+there is no per-conversation bookkeeping, no uniqueness detection and no watchdog.
 
 Nothing else is needed to make the chat useful. Everything below is additive, and each part is
 worth shipping on its own.
 
-### 4.1 One window per conversation, as far as that can be promised
+### 4.1 One chat window
 
-Per D16, the desktop keys a chat window's identity on the conversation it is showing, which it
-reads from the frame's location the same way §7 reads a frame's workspace. So opening a conversation
-that is already open focuses that window rather than stacking a second one on the same server
-thread.
+The window manager already implements this: `open()` checks `allowMultiple === false` and focuses
+the existing window instead of stacking a second one. So the entry above is the entire change, and
+it needs nothing from [#24](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/24)
+(the "open in a new window" gesture), which an earlier draft of §12 wrongly said it depended on.
+The behaviour has no test, though, and D16 now rests on it, so §10 adds one.
 
-That promise holds at the desktop's own entry points, which are the launcher, the §5 tool, and any
-future "open this conversation" action. It does **not** hold when the user clicks a conversation in
-the workspace's own sidebar inside a window, and we do not try to make it: enforcing it there means
-reaching into a third-party UI to undo a navigation the user asked for, which is the coupling most
-likely to break on an AI release, in exchange for preventing some duplicated messages.
+The cost, priced before deciding rather than discovered later: switching conversations inside the
+window kills whatever the agent was doing. `#syncTarget` in the workspace's own chat context calls
+`abortRun()` on every target change, and the server ties the run to `httpContext.RequestAborted`,
+so the run is cancelled server-side, not merely detached from the view.
 
-So: detect where we can, focus instead of duplicating, and leave the rest alone. No watchdog, no
-reconciliation, and specifically no attempt to keep two views of one conversation in step, which is
-not possible with the events available (D16).
+That is worth stating plainly because it sounds like an argument for several windows and is not.
+It is Umbraco's behaviour in Umbraco's own section: a user in the plain backoffice loses the run on
+a switch too. One window matches what the product does. Several windows would have *exceeded* it,
+by keeping parallel runs alive, and that is the one thing this decision genuinely gives up.
+
+Two consequences worth having:
+
+- **The connection budget stops mattering.** At most one run is ever in flight, so the six-stream
+  ceiling in R4 is unreachable and needs no cap, no warning and no code.
+- **The unenforceable half of the old rule is gone.** The previous D16 promised one window per
+  conversation and then conceded it could not hold once the user picked a conversation from the
+  workspace's own sidebar. A rule that stops applying inside the thing it governs is worse than no
+  rule.
 
 ---
 
@@ -411,6 +420,7 @@ one by hand rather than resolving the section. See R2.
 | What | Where | How |
 | --- | --- | --- |
 | Catalogue entry resolves to the section URL, is gated by its permission, and is absent when the section is | `catalogue/commercial.test.ts` (its existing pattern for AI-family entries) | pure, against a fake registry |
+| **A second launch of an `allowMultiple: false` app focuses the open window instead of stacking one** | `window-manager.test.ts` | pure, against the manager. Existing behaviour with no test today, and D16 now rests on it, so it gets one before the entry that depends on it |
 | Desk contributor: shape of the contributed item, front window, dirty flags, and empty when no desktop | `ai/desk.contributor.test.ts` | pure; it takes the window model, not the DOM |
 | Open-window tool: opens, focuses an already-open target rather than duplicating, refuses politely with no desktop | `ai/open-window.tool.test.ts` | via a seam on the manager, as `window-manager.test.ts` already does |
 | Event matching: an event for an open node marks it, an event for an unrelated node does not, `Deleted` alarms whatever the dirty state | `stale-watcher.test.ts` | pure over the model plus a fake event subject |
@@ -446,15 +456,35 @@ confirm no gutter (D3) and a clean console.
 - **R3 — Our frontend tool resolves in surfaces that are not the desktop**, because per-surface
   conditions are not implemented yet (§2.3). Mitigated by the tool answering "not available here"
   rather than throwing or navigating. Revisit when conditions land.
-- **R4 — The connection budget, which is the real ceiling on open windows.** The event context is a
-  `globalContext` and every window is a backoffice document, so ten windows already means ten
-  connections to `/umbraco/serverEventHub`, today, before any of this. On top of that an active
-  agent run holds an SSE stream open (`POST /conversations/{id}/stream-agui`) for as long as it
-  runs. Over HTTP/2 this is a non-issue, since streams share a connection. Over HTTP/1.1, which
-  plain-http local development often is, browsers cap around six connections per origin, and
-  exhausting that does not degrade gracefully: iframes stop loading and the desktop looks hung. D12
-  keeps *our* consumption to one, but it does not remove the ones the frames open for themselves.
-  Its own issue, not blocking, and an argument for D12 rather than for capping chat windows (D16).
+- **R4 — The connection budget. Measured, and it is not what this risk used to say.** The original
+  claim was that open windows are the ceiling, because every window is a backoffice document and
+  each opens its own connection to `/umbraco/serverEventHub`. Measured in Chromium against an
+  HTTP/1.1 origin, that is wrong, because browsers keep two separate budgets:
+  - **Hub connections are WebSockets, and effectively free.** `SignalRRoutesBase.ConfigureHubEndpoint`
+    leaves all transports enabled, so the client negotiates and WebSockets win; with
+    `ClientShouldSkipNegotiation` on, the endpoint is WebSockets-only. WebSockets have their own
+    per-host ceiling of **255**. Measured: 255 live sockets, the 256th refused, ordinary requests
+    still returning in 2ms throughout. Ten or twenty windows is nothing.
+  - **Held-open streaming responses cost one of the six, and the sixth is fatal.** An agent run is
+    `POST .../stream-agui`, an `[HttpPost]` returning `text/event-stream`, which is exactly that
+    shape. Measured: five concurrent streams fine, and at six every other request to the origin
+    times out. That is the "iframes stop loading, nothing in the console" failure, and it was never
+    about windows.
+
+  So the ceiling is concurrent agent runs, not open windows. **D16 removes it entirely**: one chat
+  window means at most one run in flight, so the budget is unreachable and there is nothing to cap.
+  Worth knowing that the budget is not ours to blow either way: it is per origin *per browser
+  profile*, shared across tabs, not per tab and not per document. Measured, three streams in one
+  tab plus three in another wedged both. So the plain backoffice has this same ceiling across six
+  tabs, with or without a desktop, and the workspace already prevents its own half of it by
+  aborting the run whenever the conversation changes.
+  Two residual notes. Over HTTP/2, which is any real HTTPS deployment, streams share a connection
+  and none of this exists (asserted from the spec and Kestrel's defaults, not measured here). And
+  if WebSockets are ever unavailable, a proxy stripping `Upgrade` being the realistic way, SignalR
+  falls back to SSE or long-polling, and *then* each window really does take one of the six and the
+  original fear becomes correct at about five windows. That is a deployment note, not code.
+  Measured under [#36](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/36), which
+  is closed as a result.
 - **R5 — A conversation deep link renders the whole section shell.** A window showing one
   conversation also shows the conversation list and the context panel, because the section element
   owns the router. Acceptable at the default size in §4, cramped if someone shrinks it, and not
@@ -488,15 +518,17 @@ confirm no gutter (D3) and a clean console.
   window-scoped chat it would restore is the thing we decided not to build. If any future version of
   the sidebar becomes worth reaching, the trigger belongs in the window titlebar, not in a restored
   header.
-- **Limiting the chat to one window.** Considered explicitly, because several windows each boot a
-  backoffice and hold connections (R4). Dropped: the workspace section already shows one
-  conversation at a time, so a single-window desktop version is strictly worse than what Umbraco
-  ships, and the differentiator disappears. The narrower rule that survives is D16.
-- **Focusing an open chat window instead of opening another on a launcher click.** The right
-  behaviour, and not AI's to fix. `allowMultiple` is binary today, so every click opens another
-  window for every app, and chat is not special in that. It belongs to
-  [#24](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/24), which is where the
-  explicit "open in a new window" gesture lives.
+- **Several chat windows, one per conversation.** Was the decision, and is now the dropped option:
+  see D16 and §4.1. Two things killed it. The rule could not hold inside the window, since the
+  workspace's own sidebar navigates wherever the user clicks. And the capability it was protecting,
+  parallel conversations, is thinner than it reads, because the workspace aborts the run on a
+  conversation switch, so what several windows really bought was parallel *runs*. Worth having, but
+  not worth an unenforceable rule plus R4's stream ceiling. Recorded because the reasoning inverted
+  once, and could invert back if Umbraco ever keeps a run alive across a switch.
+- **Focusing an open chat window instead of opening another on a launcher click.** No longer a
+  dropped option, and the claim here was simply wrong: `allowMultiple === false` already focuses the
+  existing window in `window-manager.context.ts`. [#24](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/24)
+  is about the opposite gesture, opening a *second* window on purpose, and D16 does not need it.
 - **A blocking scrim on a conflicted window.** D11.
 - **Escalating the alarm over time.** Stateless is easier to trust, and the state is already the
   loudest thing on the desk.
