@@ -133,6 +133,30 @@ export const UMBRADESKTOP_TITLEBAR_HEIGHT = 40;
 export const UMBRADESKTOP_UNSAVED_MARKER_SIZE = 8;
 
 /**
+ * The share of a window's height the notice stack may take before it scrolls instead of growing,
+ * as a fraction.
+ *
+ * A cap rather than a preference. Notices never resize the window, which is not an option for a
+ * maximized one anyway, so they take their height out of the body; three notices on a window near
+ * the chrome's own floor would leave nothing to read. Interpolated into `:host`'s `max-height` in
+ * `window-notices.element`, as a percentage of the window frame — its light-DOM parent — and not
+ * of `.stack` itself, which has no ancestor with a definite height to measure a percentage against.
+ */
+export const UMBRADESKTOP_NOTICE_STACK_MAX_SHARE = 0.45;
+
+/*
+ * There is deliberately no notice-badge size constant here any more.
+ *
+ * It was the diameter of a coloured dot on the corner of a task button, in px. The badge is now the
+ * severity icon drawn after the label at the label's own text size, so the base stylesheet spends
+ * `font-size: var(--umbradesktop-notice-badge-size, 1em)` — the `1em` *is* the label's size rather
+ * than a second statement of it, which is what this file exists to prevent. The two themes that
+ * hide the label and overlay the icon instead (macOS, Windows 11) state their own overlay size in
+ * their own stylesheet, as they already do for every other piece of their dock and taskbar
+ * geometry.
+ */
+
+/**
  * The hairline under the caption, in px, behind `--umbradesktop-titlebar-border-bottom`. Part of
  * `.titlebar`'s own box — and so part of the drag handle — rather than of the body below it.
  */

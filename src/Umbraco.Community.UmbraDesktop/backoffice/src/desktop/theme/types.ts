@@ -1,9 +1,9 @@
 import type { CSSResult } from '@umbraco-cms/backoffice/external/lit';
 
 /**
- * Every custom property a theme may set on the **chrome** (the desktop, taskbar, launcher and
- * window elements this package owns), as a runtime list so it can be checked against the CSS that
- * actually reads them — see `tokens.test.ts`. The type below is derived from it, so a typo in a
+ * Every custom property a theme may set on the **chrome** (the desktop, taskbar, launcher, window
+ * and window-notices elements this package owns), as a runtime list so it can be checked against
+ * the CSS that actually reads them — see `tokens.test.ts`. The type below is derived from it, so a typo in a
  * palette is still a compile error. A theme may also set app tokens: see
  * {@link UMBRADESKTOP_APP_TOKENS}.
  */
@@ -21,6 +21,14 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-titlebar-inactive-opacity',
   '--umbradesktop-titlebar-dirty-color',
   '--umbradesktop-titlebar-dirty-size',
+  '--umbradesktop-notice-info-color',
+  '--umbradesktop-notice-warning-color',
+  '--umbradesktop-notice-error-color',
+  '--umbradesktop-notice-marker-size',
+  '--umbradesktop-notice-background',
+  '--umbradesktop-notice-text',
+  '--umbradesktop-notice-border-width',
+  '--umbradesktop-notice-badge-size',
   '--umbradesktop-control-width',
   '--umbradesktop-control-color',
   '--umbradesktop-control-hover-background',
@@ -76,7 +84,7 @@ export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
  * calculator), not the chrome around it.
  *
  * Separate from {@link UMBRADESKTOP_TOKENS} on purpose. That list is checked against the CSS of the
- * four chrome components, exactly, so that a token nothing reads cannot sit there as dead weight.
+ * five chrome components, exactly, so that a token nothing reads cannot sit there as dead weight.
  * These have no reader in this package at all: their consumers ship in other packages, which is
  * what makes them a published contract rather than drift. `app-tokens.test.ts` holds them instead,
  * including the assertion that keeps a chrome token from ever taking a name in this namespace:

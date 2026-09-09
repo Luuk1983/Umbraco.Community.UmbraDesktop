@@ -303,3 +303,87 @@ export function unsavedWindows(
 ): ReadonlyArray<UmbraDesktopWindow> {
   return windows.filter((w) => w.dirty === true);
 }
+
+/** The flags the server-event router writes; see {@link UmbraDesktopWindow}. */
+export type UmbraDesktopServerStatePatch = Pick<
+  UmbraDesktopWindow,
+  'changedElsewhere' | 'trashed' | 'deleted'
+>;
+
+/**
+ * Return a new list with `id`'s server-state flags merged, or **the same list** when nothing
+ * changed.
+ *
+ * The identity shortcut is the same one {@link setWindowDirty} needs and for the same reason: a
+ * burst of server events for one node would otherwise hand back a new array per event and re-render
+ * every window on the desktop each time. A patch names only the flags it sets, so the router can
+ * report "trashed" without claiming anything about the other two. Pure.
+ * @param windows The current window list.
+ * @param id The window to update.
+ * @param patch The flags to set.
+ * @returns A new list, or the input list when it already said this.
+ */
+export function setWindowServerState(
+  windows: UmbraDesktopWindow[],
+  id: string,
+  patch: UmbraDesktopServerStatePatch,
+): UmbraDesktopWindow[] {
+  const target = windows.find((w) => w.id === id);
+  if (!target) return windows;
+  const keys = Object.keys(patch) as Array<keyof UmbraDesktopServerStatePatch>;
+  if (keys.every((key) => (target[key] ?? false) === (patch[key] ?? false))) return windows;
+  return windows.map((w) => (w.id === id ? { ...w, ...patch } : w));
+}
+
+/**
+ * Return a new list with `id`'s acknowledgement recorded, or the same list when it already said
+ * this. Pure.
+ * @param windows The current window list.
+ * @param id The window to update.
+ * @param acknowledged Whether the editor has confirmed they mean to keep their own version.
+ * @returns A new list, or the input list.
+ */
+export function setWindowAcknowledged(
+  windows: UmbraDesktopWindow[],
+  id: string,
+  acknowledged: boolean,
+): UmbraDesktopWindow[] {
+  const target = windows.find((w) => w.id === id);
+  if (!target || (target.acknowledged ?? false) === acknowledged) return windows;
+  return windows.map((w) => (w.id === id ? { ...w, acknowledged } : w));
+}
+
+/**
+ * Return a new list with `id` marked as refreshing, or the same list when it already said this.
+ *
+ * Its own setter rather than part of {@link UmbraDesktopServerStatePatch}, because it is not a fact
+ * about the server: it is a transient fact about this window, and folding it into a patch named for
+ * server state would make the next reader wonder which the other three are. Pure.
+ * @param windows The current window list.
+ * @param id The window to update.
+ * @param refreshing Whether a workspace in it is re-fetching itself.
+ * @returns A new list, or the input list.
+ */
+export function setWindowRefreshing(
+  windows: UmbraDesktopWindow[],
+  id: string,
+  refreshing: boolean,
+): UmbraDesktopWindow[] {
+  const target = windows.find((w) => w.id === id);
+  if (!target || (target.refreshing ?? false) === refreshing) return windows;
+  return windows.map((w) => (w.id === id ? { ...w, refreshing } : w));
+}
+
+/**
+ * Every open window whose unsaved work is at risk from somebody else's write, in list order.
+ *
+ * Requires `dirty`, because a window with nothing unsaved has nothing to lose and takes the
+ * server's version in place. This is what the Exit dialog counts for its second sentence. Pure.
+ * @param windows The current window list.
+ * @returns The windows at risk.
+ */
+export function conflictedWindows(
+  windows: ReadonlyArray<UmbraDesktopWindow>,
+): ReadonlyArray<UmbraDesktopWindow> {
+  return windows.filter((w) => w.dirty === true && w.changedElsewhere === true);
+}

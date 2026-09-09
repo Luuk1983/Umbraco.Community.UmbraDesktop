@@ -82,6 +82,30 @@ export default {
     unsavedChanges: 'Niet-opgeslagen wijzigingen',
     exitUnsavedOne: 'In één venster staan niet-opgeslagen wijzigingen, die verloren gaan.',
     exitUnsaved: 'In %0% vensters staan niet-opgeslagen wijzigingen, die verloren gaan.',
+    exitConflictedSole: 'Dat venster is ook door iemand anders gewijzigd.',
+    exitConflictedOne: 'Eén daarvan is ook door iemand anders gewijzigd.',
+    exitConflictedMany: '%0% daarvan zijn ook door iemand anders gewijzigd.',
+    // gewijzigd, in de prullenbak of verwijderd onder een venster
+    noticeChangedTitle: 'Iemand anders heeft dit gewijzigd terwijl je eraan werkte',
+    noticeChangedBody: 'Als je nu opslaat, vervang je hun versie door de jouwe.',
+    noticeTrashedTitle: 'Iemand heeft dit naar de prullenbak verplaatst',
+    noticeTrashedBody:
+      'Items in de prullenbak zijn alleen-lezen, dus dit venster accepteert geen wijzigingen meer zodra het herlaadt. Kopieer nu wat je nodig hebt, of vraag iemand om het terug te zetten.',
+    noticeDeletedTitle: 'Dit bestaat niet meer',
+    noticeDeletedBody: 'Iemand heeft het definitief verwijderd.',
+    noticeDeletedDirtyBody:
+      'Iemand heeft het definitief verwijderd. Je niet-opgeslagen wijzigingen kunnen niet worden opgeslagen, want er is niets meer om ze in op te slaan. Kopieer wat je nodig hebt voordat je dit venster sluit.',
+    noticeKeepMine: 'Mijn wijzigingen behouden',
+    noticeDiscardMine: 'Mijn wijzigingen weggooien, die van hen laden',
+    noticeCloseWindow: 'Venster sluiten',
+    noticeKeepHeadline: 'Je wijzigingen behouden?',
+    noticeKeepQuestion:
+      'Als je opslaat, gaan de wijzigingen van de ander verloren. Dit venster blijft waarschuwen tot je opslaat of weggooit.',
+    noticeKeepConfirm: 'Mijn wijzigingen behouden',
+    noticeAcknowledged: 'Door iemand anders gewijzigd',
+    discardConflictedHeadline: 'Dit venster sluiten?',
+    discardConflictedQuestion:
+      'Sluiten is hier de veilige keuze: je niet-opgeslagen wijzigingen gaan verloren en de versie die iemand anders heeft opgeslagen blijft staan.',
     // Background Jobs app
     backgroundJobsIntro:
       'Alle geplande taken die Umbraco achter je site uitvoert: publiceren, webhooks, opschoningen, en alles wat een pakket heeft toegevoegd. Je kunt hier niets starten of stoppen, dit is een alleen-lezen overzicht van wat het CMS uit zichzelf doet.',

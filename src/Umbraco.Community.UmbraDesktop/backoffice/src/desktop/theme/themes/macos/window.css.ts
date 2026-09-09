@@ -59,7 +59,11 @@ export default css`
     font-size: 11px;
     font-weight: 600;
   }
-  .title umb-icon {
+  /* '.app-icon' and not '.title umb-icon': the severity marker is an 'umb-icon' in this same
+     caption now, and the old selector would have hidden it here — an affordance that disappears
+     under one theme is a bug, not a style. A macOS titlebar shows no app icon; it does show what
+     is wrong with the document. */
+  .title .app-icon {
     display: none;
   }
   .title-text {
@@ -150,5 +154,16 @@ export default css`
   .ctrl-reload .glyph.ring {
     width: 13px;
     height: 13px;
+  }
+  /* Translucent sheet over the window's own ground, as this theme's sheets are. */
+  .notice {
+    background: var(--umbradesktop-notice-background, rgba(255, 255, 255, 0.82));
+    color: var(--umbradesktop-notice-text, #1c1c1e);
+    backdrop-filter: saturate(180%) blur(20px);
+  }
+  /* The buttons are 'uui-button's now, so their radius is reached through UUI's own custom property
+     rather than by selecting into a shadow root this sheet cannot see. */
+  .notice .notice-actions uui-button {
+    --uui-button-border-radius: 6px;
   }
 `;

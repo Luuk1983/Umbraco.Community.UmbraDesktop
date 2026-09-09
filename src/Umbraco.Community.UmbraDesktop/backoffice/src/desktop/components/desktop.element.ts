@@ -4,6 +4,7 @@ import { findChromeRoot } from '../chrome-injector';
 import { applySectionTabHide } from '../../headerapps/section-tab-hide.js';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
+import { UmbraDesktopServerEventController } from '../conflict/server-event.controller.js';
 import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
 import type { UmbraDesktopWallpaperView } from '../settings/wallpaper-view.js';
 import { UmbraDesktopThemeContext } from '../theme/theme.context.js';
@@ -50,6 +51,8 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     new UmbraDesktopAppCatalogueContext(this);
     // Adopts the active theme's desktop-surface stylesheet into this element's shadow root.
     new UmbraDesktopThemeStyles(this, 'desktop');
+    // Consumed once here, not per window: see the class doc on why.
+    new UmbraDesktopServerEventController(this, this.#manager);
     this.observe(this.#manager.windows, (list) => (this._windows = list));
     this.observe(this.#settings.wallpaper, (wallpaper) => (this._wallpaper = wallpaper));
     this.observe(this.#theme.paletteStyle, (style) => (this._paletteCss = style ?? ''));

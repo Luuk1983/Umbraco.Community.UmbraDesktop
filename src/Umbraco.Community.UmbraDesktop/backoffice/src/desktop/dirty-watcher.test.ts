@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { watchWorkspaceDirtyState } from './dirty-watcher';
+import { watchWorkspaceDirtyState, type UmbraDesktopFrameState } from './dirty-watcher';
 import { UMB_SUBMITTABLE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/workspace';
 
 /**
@@ -119,8 +119,38 @@ afterEach(() => {
  */
 function watch(): boolean[] {
   const reported: boolean[] = [];
-  teardown.push(watchWorkspaceDirtyState(document, (dirty) => reported.push(dirty)));
+  teardown.push(watchWorkspaceDirtyState(document, (state) => reported.push(state.dirty)));
   return reported;
+}
+
+/**
+ * Start a watcher and collect the whole record rather than only the dirty half.
+ *
+ * A second helper rather than a change to {@link watch}, so every existing assertion in this file
+ * stays exactly as it was: what those tests are about is the dirty answer, and rewriting them to
+ * reach through a record would be churn that proves nothing.
+ * @returns The reported states, in order.
+ */
+function watchState(): UmbraDesktopFrameState[] {
+  const reported: UmbraDesktopFrameState[] = [];
+  teardown.push(watchWorkspaceDirtyState(document, (state) => reported.push(state)));
+  return reported;
+}
+
+/**
+ * A workspace that also publishes an identity, so the watcher can build a subject from it.
+ * @param unique The unique to start on.
+ * @returns The workspace handles, plus the unique's state so a test can move it.
+ */
+function fakeSubjectWorkspace(unique = 'a1') {
+  const uniqueState = fakeState<string | null | undefined>(unique);
+  const workspace = fakeWorkspace({
+    unique: uniqueState.observable,
+    entityType: fakeState<string | undefined>('document').observable,
+    reload: () => Promise.resolve(),
+    loadWithoutPersist: () => Promise.resolve({}),
+  });
+  return { ...workspace, uniqueState };
 }
 
 it('reports nothing until a workspace actually becomes dirty', () => {
@@ -239,7 +269,7 @@ it('stays dirty while any one of several workspaces is dirty', () => {
 
 it('lets go of every subscription when it is stopped', () => {
   const reported: boolean[] = [];
-  const stop = watchWorkspaceDirtyState(document, (dirty) => reported.push(dirty));
+  const stop = watchWorkspaceDirtyState(document, (state) => reported.push(state.dirty));
   const workspace = fakeWorkspace();
   const provider = mountProvider(workspace.instance);
   teardown.push(provider.dispose);
@@ -259,7 +289,7 @@ it('lets go of every subscription when it is stopped', () => {
 
 it('ignores a workspace provided after it was stopped', () => {
   const reported: boolean[] = [];
-  const stop = watchWorkspaceDirtyState(document, (dirty) => reported.push(dirty));
+  const stop = watchWorkspaceDirtyState(document, (state) => reported.push(state.dirty));
   stop();
 
   const workspace = fakeWorkspace();
@@ -270,4 +300,86 @@ it('ignores a workspace provided after it was stopped', () => {
   workspace.current.set({ name: 'Edited' });
 
   expect(reported).to.deep.equal([]);
+});
+
+it('reports what a tracked workspace is showing', () => {
+  const reported = watchState();
+  const workspace = fakeSubjectWorkspace();
+  const provider = mountProvider(workspace.instance);
+  teardown.push(provider.dispose);
+
+  provider.provide();
+  workspace.load({ name: 'Home' });
+  workspace.current.set({ name: 'Homepage' });
+
+  const last = reported[reported.length - 1];
+  expect(last.dirty).to.equal(true);
+  expect(last.subjects.map((s) => `${s.entityType}:${s.unique}`)).to.deep.equal(['document:a1']);
+});
+
+it('gives a subject live access to both sides of the comparison', () => {
+  // Getters rather than a snapshot, because the router reads them after an await: the editor has
+  // been typing while the fetch was in flight, and the verdict is about the pair in force when the
+  // answer arrived.
+  const reported = watchState();
+  const workspace = fakeSubjectWorkspace();
+  const provider = mountProvider(workspace.instance);
+  teardown.push(provider.dispose);
+
+  provider.provide();
+  workspace.load({ name: 'Home' });
+  workspace.current.set({ name: 'Homepage' });
+
+  const subject = reported[reported.length - 1].subjects[0];
+  expect(subject.getPersistedData()).to.deep.equal({ name: 'Home' });
+  expect(subject.getData()).to.deep.equal({ name: 'Homepage' });
+  workspace.current.set({ name: 'Home page' });
+  expect(subject.getData()).to.deep.equal({ name: 'Home page' });
+});
+
+it('reports a new subject when the window navigates to another document', () => {
+  // What makes opening a second document in the same window work with no extra machinery: the
+  // dirty answer has not moved, and what an event should match has.
+  const reported = watchState();
+  const workspace = fakeSubjectWorkspace();
+  const provider = mountProvider(workspace.instance);
+  teardown.push(provider.dispose);
+
+  provider.provide();
+  workspace.load({ name: 'Home' });
+  workspace.uniqueState.set('b2');
+
+  expect(reported[reported.length - 1].subjects[0].unique).to.equal('b2');
+});
+
+it('reports no subject for a workspace that publishes no identity', () => {
+  // Design R3: not an exception to handle, simply not a match.
+  const reported = watchState();
+  const workspace = fakeWorkspace();
+  const provider = mountProvider(workspace.instance);
+  teardown.push(provider.dispose);
+
+  provider.provide();
+  workspace.load({ name: 'Home' });
+  workspace.current.set({ name: 'Homepage' });
+
+  expect(reported[reported.length - 1].subjects).to.deep.equal([]);
+});
+
+it('still does not report again for a keystroke that changes nothing about the answer', () => {
+  const reported = watchState();
+  const workspace = fakeSubjectWorkspace();
+  const provider = mountProvider(workspace.instance);
+  teardown.push(provider.dispose);
+
+  provider.provide();
+  workspace.load({ name: 'Home' });
+  workspace.current.set({ name: 'Homepage' });
+  const afterFirstEdit = reported.length;
+  workspace.current.set({ name: 'Homepag' });
+  workspace.current.set({ name: 'Homepa' });
+
+  expect(reported.length, 'a keystroke in an already-dirty window repaints the whole desktop').to.equal(
+    afterFirstEdit,
+  );
 });

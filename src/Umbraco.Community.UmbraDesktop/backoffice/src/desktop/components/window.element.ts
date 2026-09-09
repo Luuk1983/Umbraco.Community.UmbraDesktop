@@ -17,6 +17,10 @@ import {
   UMBRADESKTOP_WINDOW_MIN_SIZE,
 } from '../constants';
 import { minWindowSizeForContent } from '../window-chrome.js';
+// Side-effect import, as with `app-host.element.js` below: registering
+// `<umbradesktop-window-notices>` is what makes the stack in `render` resolve to something.
+import './window-notices.element.js';
+import { noticeIconName, windowNotices, worstSeverity } from '../notices/notices.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -295,7 +299,15 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     const doc = iframe.contentDocument;
     if (!id || !doc) return;
     this.#manager?.setDirty(id, false);
-    this.#stopDirtyWatch = watchWorkspaceDirtyState(doc, (dirty) => this.#manager?.setDirty(id, dirty));
+    // Subjects cleared too, not left standing. A reload replaces the frame's document, so the
+    // previous subjects' getters close over a dead realm, and between the reload starting and the
+    // new watcher's first report a server event could match a document this window is no longer
+    // showing.
+    this.#manager?.setSubjects(id, []);
+    this.#stopDirtyWatch = watchWorkspaceDirtyState(doc, (state) => {
+      this.#manager?.setDirty(id, state.dirty);
+      this.#manager?.setSubjects(id, state.subjects);
+    });
   }
 
   /**
@@ -594,14 +606,39 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
           @pointerup=${this.#onTitlePointerUp}
           @dblclick=${this.#onTitleDblClick}>
           <span class="title">
-            <umb-icon name=${w.app.icon}></umb-icon>
+            <umb-icon class="app-icon" name=${w.app.icon}></umb-icon>
             <span class="title-text">${this.localize.string(w.app.name)}</span>
-            ${w.dirty
-              ? html`<span
-                  class="dirty"
-                  title=${this.localize.term('umbraDesktop_unsavedChanges')}
-                  aria-label=${this.localize.term('umbraDesktop_unsavedChanges')}></span>`
-              : ''}
+            ${(() => {
+              const notices = windowNotices(w);
+              const worst = worstSeverity(notices);
+              if (!worst) return '';
+              const icon = noticeIconName(worst);
+              const label =
+                worst === 'info'
+                  ? this.localize.term('umbraDesktop_unsavedChanges')
+                  : this.localize.term(notices[0].title);
+              // One slot, never two markers: this is a change of what fills it, not an addition
+              // beside the dot.
+              //
+              // `info` keeps `.dirty` exactly as #20 shipped it, because all five themes style
+              // that class, `unsaved-marker.test.ts` keys off it and `docs/theming.md` documents
+              // it for readers outside this repository — renaming it would silently drop every
+              // theme's styling of the one state whose appearance must not change.
+              //
+              // `warning` and `error` are a different element, `.notice-marker`, because they are
+              // no longer a dot: severity is carried by the icon's shape, so a yellow triangle and
+              // a red circle-x say something a coloured dot cannot. Keeping them on `.dirty` would
+              // hand every theme's dot styling — a border radius, a size in the caption's own
+              // units — to a glyph it was never written for.
+              return icon
+                ? html`<umb-icon
+                    class="notice-marker notice-${worst}"
+                    name=${icon}
+                    role="img"
+                    title=${label}
+                    aria-label=${label}></umb-icon>`
+                : html`<span class="dirty notice-${worst}" title=${label} aria-label=${label}></span>`;
+            })()}
           </span>
           <span
             class="controls"
@@ -617,7 +654,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
                  wanted 311px of it. -->
             ${w.app.content.kind === 'iframe'
               ? html`<button
-                  class="ctrl ctrl-reload ${this._loading ? 'busy' : ''}"
+                  class="ctrl ctrl-reload ${this._loading || w.refreshing ? 'busy' : ''}"
                   title="Reload"
                   aria-label="Reload"
                   @click=${() => this.#onReloadClick()}>
@@ -649,6 +686,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
             </button>
           </span>
         </div>
+        <umbradesktop-window-notices .window=${w}></umbradesktop-window-notices>
         <div class="bodywrap">
           ${this.#renderBody(w)}
           <!-- Kept for both body kinds, deliberately. It exists because an inactive iframe
@@ -750,7 +788,13 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
            rest of the titlebar text; the fallback is just the color it already inherited. */
         color: var(--umbradesktop-titlebar-text, var(--uui-color-text));
       }
-      .title umb-icon {
+      /* '.app-icon' rather than a bare '.title umb-icon', which is what this was until the severity
+         marker became an icon too: there are now two 'umb-icon's in this caption, and a selector
+         that cannot tell them apart hands the marker the app icon's geometry. macOS is the reason
+         it matters rather than a tidiness argument — its 'window.css.ts' sets 'display: none' on
+         the app icon, because a macOS titlebar shows no icon at all, and a marker sharing that
+         selector would be invisible in that theme. Every theme's rule was renamed with this one. */
+      .title .app-icon {
         font-size: 18px;
         /* The icon is the app's identity and is the same 18px at every width: the text beside it
            is what yields. */
@@ -779,6 +823,39 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
           --umbradesktop-titlebar-dirty-color,
           var(--umbradesktop-titlebar-text, var(--uui-color-text))
         );
+      }
+      /* Severity on the one marker slot. 'info' chains to the existing dirty token, so a theme that
+         has never heard of notices keeps painting exactly what it painted before. Note the
+         specificity: these are '.dirty.notice-*', so a theme that ever styles the marker with a
+         bare '.dirty' rule rather than through the tokens would lose to them. No shipped theme has
+         such a rule — 'unsaved-marker.test.ts' scans for them — and the fix if one appears is to
+         give the theme the token, not to reach for '!important'. */
+      .dirty.notice-info {
+        background: var(
+          --umbradesktop-notice-info-color,
+          var(--umbradesktop-titlebar-dirty-color, var(--umbradesktop-titlebar-text, var(--uui-color-text)))
+        );
+      }
+      /* The two severities above 'info' are an icon in the same slot, not a coloured dot. A dot can
+         only encode severity as hue, which is weak — nobody reads a yellow dot as danger — and is
+         the one thing this design says colour must never be. Both glyphs are stroked in
+         'currentColor' by Umbraco, so 'color' is the whole of the plumbing.
+
+         Its own size token read here rather than the dirty dot's: the dot is a mark in a line of
+         caption text and is right at ${UMBRADESKTOP_UNSAVED_MARKER_SIZE}px, and a glyph at that
+         size is a smudge. The fallback is stated relative to the caption's own font size so it
+         tracks a theme that resets the caption's type — Win98's 11px MS Sans Serif caption and
+         Windows 11's 12px Segoe one both get a marker in proportion without setting the token. */
+      .notice-marker {
+        flex: none;
+        line-height: 1;
+        font-size: var(--umbradesktop-notice-marker-size, 1.15em);
+      }
+      .notice-marker.notice-warning {
+        color: var(--umbradesktop-notice-warning-color, var(--uui-color-warning-standalone));
+      }
+      .notice-marker.notice-error {
+        color: var(--umbradesktop-notice-error-color, var(--uui-color-danger-standalone));
       }
       .controls {
         display: inline-flex;

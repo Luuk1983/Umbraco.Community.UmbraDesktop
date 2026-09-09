@@ -4,19 +4,24 @@ import { UmbraDesktopDesktopElement } from '../components/desktop.element.js';
 import { UmbraDesktopTaskbarElement } from '../components/taskbar.element.js';
 import { UmbraDesktopLauncherElement } from '../components/launcher.element.js';
 import { UmbraDesktopWindowElement } from '../components/window.element.js';
+import { UmbraDesktopWindowNoticesElement } from '../components/window-notices.element.js';
 import { UMBRADESKTOP_TOKENS } from './types.js';
 import { UMBRADESKTOP_THEMES } from './themes/index.js';
 
 /**
- * `UMBRADESKTOP_TOKENS` is maintained by hand against CSS spread across four component files, and
+ * `UMBRADESKTOP_TOKENS` is maintained by hand against CSS spread across five component files, and
  * the two can drift silently in either direction: a name added to the union with no matching CSS
  * is dead weight nobody notices, and a `--umbradesktop-*` custom property added to a component's
  * CSS without a matching entry in the union can never be reached by a theme, palette typo-checking
  * or not. Milestone 3 adds a lot more chrome CSS, so this test makes that drift loud instead of
- * silent: it collects every `--umbradesktop-*` name actually mentioned in the four elements'
+ * silent: it collects every `--umbradesktop-*` name actually mentioned in the five elements'
  * `static styles` (both `var(--x, …)` reads and the one `--x: …` write) and compares that set,
  * exactly, against `UMBRADESKTOP_TOKENS`. A failure here means the list and the CSS disagree —
  * fix the smaller side, whichever the message says is missing.
+ *
+ * The notice element is in this list for the same reason the other four are: it owns the
+ * `--umbradesktop-notice-*` group, and a token declared in `UMBRADESKTOP_TOKENS` whose only reader
+ * is a component this test does not scan reads as dead weight and fails here.
  */
 
 /** Flatten a Lit `CSSResultGroup` — possibly a nested array — into a flat list of leaf entries. */
@@ -35,13 +40,14 @@ function tokensMentionedIn(styles: CSSResultGroup): Set<string> {
   return new Set(matches);
 }
 
-it('has exactly the tokens the four chrome components read or write, no more and no fewer', () => {
+it('has exactly the tokens the five chrome components read or write, no more and no fewer', () => {
   const mentioned = new Set<string>();
   for (const ctor of [
     UmbraDesktopDesktopElement,
     UmbraDesktopTaskbarElement,
     UmbraDesktopLauncherElement,
     UmbraDesktopWindowElement,
+    UmbraDesktopWindowNoticesElement,
   ]) {
     for (const token of tokensMentionedIn(ctor.styles)) mentioned.add(token);
   }

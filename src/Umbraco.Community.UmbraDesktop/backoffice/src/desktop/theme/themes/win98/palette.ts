@@ -224,4 +224,11 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   // wrote on `COLOR_HIGHLIGHT`. White on that navy is 16:1, the widest margin of any theme here.
   '--umbradesktop-app-accent-text': WIN98_MENU_HILIGHT_TEXT,
   '--umbradesktop-app-font': WIN98_FONT,
+
+  // The 16-colour palette has no modern warning colour, so the two severities above `info` borrow
+  // its dark yellow and dark red rather than a `uui-color-warning`/`-danger` this theme never had.
+  // There is no dark variant to repeat these in — see the note above about Win98 shipping light
+  // only.
+  '--umbradesktop-notice-warning-color': '#808000',
+  '--umbradesktop-notice-error-color': '#800000',
 };

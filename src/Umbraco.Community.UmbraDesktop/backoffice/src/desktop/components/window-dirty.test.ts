@@ -198,3 +198,73 @@ it('does not ask before reloading a window with nothing unsaved', async function
 
   expect(manager.asked).to.equal(0);
 });
+
+/**
+ * The severity marker, which is a different element from the `info` dot: `warning` and `error` are
+ * an Umbraco icon in the same slot, so that severity is carried by a shape and not only by a hue.
+ * @returns The marker, or null.
+ */
+const noticeMarker = () => element.shadowRoot!.querySelector('.notice-marker');
+
+it('paints the marker at the worst severity present', async function () {
+  this.timeout(MOUNT_TIMEOUT_MS);
+  const win = await showWindow(true);
+  manager.setServerState(win.id, { changedElsewhere: true });
+  element.window = current()[0];
+  await element.updateComplete;
+
+  const marker = noticeMarker();
+  expect(marker?.classList.contains('notice-warning')).to.equal(true);
+  expect(
+    element.shadowRoot!.querySelector('.title')!.contains(marker!),
+    'it fills the same slot the dot did, beside the name',
+  ).to.equal(true);
+});
+
+it('paints the marker on a clean window whose document was deleted', async function () {
+  this.timeout(MOUNT_TIMEOUT_MS);
+  // Clean, deliberately: `deleted` is the one condition that marks a window with nothing unsaved,
+  // because it is the one with nothing to refresh to.
+  const win = await showWindow(false);
+  manager.setServerState(win.id, { deleted: true });
+  element.window = current()[0];
+  await element.updateComplete;
+
+  expect(noticeMarker()?.classList.contains('notice-error')).to.equal(true);
+});
+
+it('carries severity as an icon, never as a hue on its own', async function () {
+  this.timeout(MOUNT_TIMEOUT_MS);
+  // The check that stops this quietly going back to a coloured dot. A dot can only say "something"
+  // and leaves the severity to a colour nobody reads as danger, which is also the one thing the
+  // design says colour must never be — so the shape is asserted here, not the colour.
+  const win = await showWindow(true);
+
+  manager.setServerState(win.id, { changedElsewhere: true });
+  element.window = current()[0];
+  await element.updateComplete;
+  const warning = noticeMarker()!;
+  expect(warning.localName, 'a warning is an icon element').to.equal('umb-icon');
+  expect(warning.getAttribute('name'), 'and the warning triangle Umbraco already ships').to.equal(
+    'icon-alert',
+  );
+  expect(
+    element.shadowRoot!.querySelector('.dirty'),
+    'and it replaces the dot rather than standing beside it — one slot, never two markers',
+  ).to.equal(null);
+
+  manager.setServerState(win.id, { changedElsewhere: false, deleted: true });
+  element.window = current()[0];
+  await element.updateComplete;
+  const error = noticeMarker()!;
+  expect(error.getAttribute('name'), 'an error is the circle-x').to.equal('icon-wrong');
+
+  manager.setServerState(win.id, { deleted: false });
+  element.window = current()[0];
+  await element.updateComplete;
+  expect(noticeMarker(), 'and ordinary unsaved changes draw no icon at all').to.equal(null);
+  expect(
+    element.shadowRoot!.querySelector('.dirty'),
+    'they draw the dot #20 shipped, whose appearance must not change',
+  ).to.not.equal(null);
+});

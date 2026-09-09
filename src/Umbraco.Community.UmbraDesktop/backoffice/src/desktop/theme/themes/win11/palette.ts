@@ -79,6 +79,11 @@ export const W11_LIGHT: UmbraDesktopPalette = {
   // Acrylic: a light tint over a heavy blur of whatever is behind it.
   '--umbradesktop-taskbar-background': 'rgba(243, 243, 243, 0.82)',
   '--umbradesktop-taskbar-background-opaque': '#f3f3f3',
+  // The unsaved-changes dot in the accent, for the reason the macOS palette spells out: this
+  // taskbar hides its labels, so the dot sits on the app icon, and the icon is drawn in
+  // `taskbar-text` — the value the dot used to inherit. The accent pair below is the same one
+  // `task-active-marker` uses, so every marker in this theme is one of two blues.
+  '--umbradesktop-notice-info-color': W11_ACCENT,
   '--umbradesktop-taskbar-backdrop': 'blur(30px) saturate(140%)',
   '--umbradesktop-taskbar-border-top': '1px solid rgba(0, 0, 0, 0.06)',
   '--umbradesktop-taskbar-shadow': 'none',
@@ -180,6 +185,8 @@ export const W11_DARK: UmbraDesktopPalette = {
   '--umbradesktop-control-hover-background': 'rgba(255, 255, 255, 0.08)',
   '--umbradesktop-taskbar-background': 'rgba(32, 32, 32, 0.82)',
   '--umbradesktop-taskbar-background-opaque': '#202020',
+  // See the light palette. The lighter accent on a dark ground, as every other marker here does.
+  '--umbradesktop-notice-info-color': W11_ACCENT_DARK,
   '--umbradesktop-taskbar-border-top': '1px solid rgba(255, 255, 255, 0.08)',
   '--umbradesktop-taskbar-text': '#ffffff',
   '--umbradesktop-taskbar-text-emphasis': '#ffffff',

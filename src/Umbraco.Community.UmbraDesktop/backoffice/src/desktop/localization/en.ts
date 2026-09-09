@@ -88,6 +88,33 @@ export default {
     unsavedChanges: 'Unsaved changes',
     exitUnsavedOne: 'One window has unsaved changes, which will be discarded.',
     exitUnsaved: '%0% windows have unsaved changes, which will be discarded.',
+    exitConflictedSole: 'That window has also been changed by someone else.',
+    exitConflictedOne: 'One of them has also been changed by someone else.',
+    exitConflictedMany: '%0% of them have also been changed by someone else.',
+    // changed, trashed or deleted underneath a window
+    noticeChangedTitle: 'Someone else changed this while you were editing it',
+    noticeChangedBody: 'Saving now replaces their version with yours.',
+    noticeTrashedTitle: 'Someone moved this to the recycle bin',
+    noticeTrashedBody:
+      'Items in the recycle bin are read-only, so this window will stop accepting changes as soon as it reloads. Copy anything you need now, or ask someone to restore it.',
+    noticeDeletedTitle: 'This no longer exists',
+    noticeDeletedBody: 'Someone deleted it permanently.',
+    noticeDeletedDirtyBody:
+      'Someone deleted it permanently. Your unsaved changes cannot be saved, because there is nothing left to save them to. Copy anything you need before you close this window.',
+    noticeKeepMine: 'Keep my changes',
+    // Short enough to sit beside "Keep my changes" without the banner reading as clutter. The full
+    // sentence is `noticeChangedBody`'s job, and repeating it on the button was a large part of why
+    // the bar looked busy.
+    noticeDiscardMine: 'Discard mine, load theirs',
+    noticeCloseWindow: 'Close window',
+    noticeKeepHeadline: 'Keep your changes?',
+    noticeKeepQuestion:
+      'When you save, the changes the other person made will be lost. This window will keep warning you until you save or discard.',
+    noticeKeepConfirm: 'Keep my changes',
+    noticeAcknowledged: 'Changed by someone else',
+    discardConflictedHeadline: 'Close this window?',
+    discardConflictedQuestion:
+      'Closing is the safe option here: your unsaved changes are discarded and the version someone else saved is kept.',
     // Background Jobs app
     backgroundJobsIntro:
       'Every scheduled job Umbraco runs behind your site: publishing, webhooks, cleanups, and anything a package added. Nothing here can be started or stopped, it is a read-only view of what the CMS is doing on its own.',

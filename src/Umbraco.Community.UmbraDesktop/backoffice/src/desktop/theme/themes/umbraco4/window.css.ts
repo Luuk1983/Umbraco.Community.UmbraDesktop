@@ -40,7 +40,9 @@ export default css`
     /* The 1px of white under the text that every raised 2009 surface carried. */
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
   }
-  .title umb-icon {
+  /* '.app-icon' and not '.title umb-icon': the severity marker is an 'umb-icon' in this same
+     caption now, and 15px is the app icon's size, not the marker's. */
+  .title .app-icon {
     font-size: 15px;
   }
   /* The base nudges the title down a pixel because Lato sits high in its line box. Verdana does
@@ -86,5 +88,11 @@ export default css`
   }
   .frame.active .title {
     color: ${unsafeCSS(U4_TEXT)};
+  }
+  /* A ruled strip on the panel ground, which is how this theme separates everything else. */
+  .notice {
+    background: var(--umbradesktop-notice-background, #f7f5f1);
+    color: var(--umbradesktop-notice-text, #2b2b2b);
+    border-bottom-width: 2px;
   }
 `;

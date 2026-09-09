@@ -31,7 +31,9 @@ export default css`
     /* Windows captions are not bold; the base sets 700 for the Umbraco theme's heavier bar. */
     font-weight: 400;
   }
-  .title umb-icon {
+  /* '.app-icon' and not '.title umb-icon': the severity marker is an 'umb-icon' in this same
+     caption now, and 16px is the app icon's size, not the marker's. */
+  .title .app-icon {
     font-size: 16px;
   }
   /* The base nudges the title down a pixel because Lato sits high in its line box. Segoe does
@@ -51,5 +53,19 @@ export default css`
   .ctrl {
     border-radius: 0;
     transition: background-color 90ms ease;
+  }
+  /* Windows 11's in-app info bar is a Mica-ish neutral sheet with the severity carried by the icon
+     beside the text, not a tinted band — the pale yellow wash this used to paint was the one thing
+     the base design moved away from, and repeating it here would have put it straight back. Kept
+     translucent, because every other surface in this theme is. */
+  .notice {
+    background: var(--umbradesktop-notice-background, rgba(249, 249, 249, 0.92));
+    color: var(--umbradesktop-notice-text, #1a1a1a);
+    border-bottom-width: 1px;
+  }
+  /* The buttons are 'uui-button's now, so their radius is reached through UUI's own custom property
+     rather than by selecting into a shadow root this sheet cannot see. */
+  .notice .notice-actions uui-button {
+    --uui-button-border-radius: 4px;
   }
 `;

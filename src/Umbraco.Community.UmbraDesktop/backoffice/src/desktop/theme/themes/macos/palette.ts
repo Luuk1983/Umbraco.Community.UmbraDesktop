@@ -31,6 +31,19 @@ export const MACOS_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", system
  */
 export const MACOS_ACCENT = '#0067cc';
 
+/**
+ * The same blue with the brightness Apple's own dark appearance uses, for a mark that carries no
+ * text.
+ *
+ * {@link MACOS_ACCENT} is darkened for one reason — so white *written on it* clears AA — and that
+ * reason does not apply to a dot. On the dark dock (`#1c1c20`) the darkened blue comes out at about
+ * 2.5:1, under the 3:1 a graphical object needs, so the unsaved marker would be a dim smudge on
+ * exactly the surface it exists to be noticed on. `#0a84ff` is Apple's dark-appearance accent and
+ * reads there. Windows 11 splits its accent the same way and for the same reason; see
+ * `W11_ACCENT_DARK`.
+ */
+export const MACOS_ACCENT_DARK = '#0a84ff';
+
 /** macOS in its light appearance. */
 export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-background': '#ffffff',
@@ -63,6 +76,14 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-taskbar-radius': '16px',
   '--umbradesktop-taskbar-background': 'rgba(255, 255, 255, 0.4)',
   '--umbradesktop-taskbar-background-opaque': '#e9e9ef',
+  // The unsaved-changes dot, in the accent rather than in the dock's text colour. This dock hides
+  // its labels, so the dot rides the tile's corner on top of the app icon — and a task button
+  // draws that icon in `taskbar-text`, which is what the dot used to inherit, so the two were the
+  // same colour and the dot could not be seen. Hue is what separates it now; it was a ring of the
+  // dock's own ground before, which at this size read as a bullseye. It reaches the caption's
+  // marker too, since both are this one token, and a blue dot in a macOS title bar is if anything
+  // more macOS than a grey one.
+  '--umbradesktop-notice-info-color': MACOS_ACCENT,
   '--umbradesktop-taskbar-backdrop': 'blur(20px) saturate(180%)',
   '--umbradesktop-taskbar-border-top': `${MACOS_TASKBAR_BORDER}px solid rgba(255, 255, 255, 0.55)`,
   '--umbradesktop-taskbar-shadow': '0 8px 22px rgba(0, 0, 0, 0.28)',
@@ -148,6 +169,9 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   '--umbradesktop-control-color': '#d0d0d2',
   '--umbradesktop-taskbar-background': 'rgba(28, 28, 32, 0.7)',
   '--umbradesktop-taskbar-background-opaque': '#1c1c20',
+  // See the light palette. The brighter half of the accent here, because this one has to read on
+  // the dark dock rather than carry white text; see {@link MACOS_ACCENT_DARK}.
+  '--umbradesktop-notice-info-color': MACOS_ACCENT_DARK,
   '--umbradesktop-taskbar-border-top': `${MACOS_TASKBAR_BORDER}px solid rgba(255, 255, 255, 0.18)`,
   '--umbradesktop-taskbar-text': '#e8e8ea',
   '--umbradesktop-taskbar-text-emphasis': '#ffffff',
