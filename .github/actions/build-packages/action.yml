@@ -1,0 +1,109 @@
+name: Build UmbraDesktop packages
+description: >
+  Restores, tests, builds and packs both shipped packages, then proves each one actually contains
+  its frontend. The single definition of "what ships and how", shared by CI and by the release.
+
+inputs:
+  output:
+    description: Directory the .nupkg and .snupkg files are written to.
+    required: false
+    default: ./artifacts
+
+runs:
+  using: composite
+  steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    # cache-dependency-path has to name both lock files: with one package.json per shipped
+    # package, the default single-file lookup would key the cache on the host alone and hand the
+    # add-on a cache that has nothing to do with it.
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: npm
+        cache-dependency-path: |
+          src/Umbraco.Community.UmbraDesktop/package-lock.json
+          src/Umbraco.Community.UmbraDesktop.Entertainment/package-lock.json
+
+    # Safe to key on the lock files because RestorePackagesWithLockFile is on repo-wide
+    # (src/Directory.Build.props), so every packages.lock.json is committed and exact. The three
+    # are named rather than globbed: a `**` glob would pull in the test instance's lock file, and
+    # its floating "17.*" dependencies would then throw this cache away for a change to a project
+    # that contributes nothing to either package.
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: nuget-${{ runner.os }}-${{ hashFiles('src/Umbraco.Community.UmbraDesktop/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Entertainment/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Tests/packages.lock.json') }}
+        restore-keys: nuget-${{ runner.os }}-
+
+    # Per project rather than by solution, and deliberately. The solution also holds the test
+    # instance, whose ten floating "17.*" dependencies (Umbraco itself plus every commercial
+    # package the catalogue is exercised against) add ~120 packages and can float to a version
+    # that no longer compiles. In a release that would fail the run after the tag is already
+    # public, for a reason unrelated to anything being shipped. CI builds the whole solution in a
+    # separate job instead, where that breakage is news rather than a blocked release.
+    - name: Restore
+      shell: bash
+      run: |
+        dotnet restore src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj
+        dotnet restore src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj
+        dotnet restore src/Umbraco.Community.UmbraDesktop.Entertainment/Umbraco.Community.UmbraDesktop.Entertainment.csproj
+
+    - name: Install frontend dependencies
+      shell: bash
+      run: |
+        (cd src/Umbraco.Community.UmbraDesktop && npm ci)
+        (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm ci)
+
+    - name: Test frontend
+      shell: bash
+      run: |
+        (cd src/Umbraco.Community.UmbraDesktop && npm test)
+        (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm test)
+
+    # Must run before dotnet build/pack: wwwroot/App_Plugins is gitignored, so a clean checkout
+    # would otherwise pack a package with no frontend in it at all.
+    - name: Build frontend
+      shell: bash
+      run: |
+        (cd src/Umbraco.Community.UmbraDesktop && npm run build)
+        (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm run build)
+
+    - name: Build
+      shell: bash
+      run: |
+        dotnet build src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-restore
+        dotnet build src/Umbraco.Community.UmbraDesktop.Entertainment/ --configuration Release --no-restore
+
+    # Named by project file, never by directory or solution: a path that matches no project makes
+    # `dotnet test` report success while running nothing.
+    - name: Test backend
+      shell: bash
+      run: dotnet test src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj --configuration Release --no-restore
+
+    # Both packages, every release, changed or not: they share a version off one tag, and matching
+    # versions are the compatibility answer instead of a matrix somebody has to maintain
+    # (design D13, docs/design/2026-09-06-desktop-apps-design.md §8.3).
+    - name: Pack
+      shell: bash
+      run: |
+        dotnet pack src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-build --output "${{ inputs.output }}"
+        dotnet pack src/Umbraco.Community.UmbraDesktop.Entertainment/ --configuration Release --no-build --output "${{ inputs.output }}"
+
+    # A package that installs cleanly and does nothing is this repository's worst failure mode, and
+    # it looks identical to success everywhere else. In the release workflow this is also the last
+    # point at which an empty package is still recoverable: after the push it is not, because a
+    # published version cannot be replaced, only unlisted and superseded.
+    - name: Verify each package ships its frontend
+      shell: bash
+      run: |
+        for pkg in "${{ inputs.output }}"/*.nupkg; do
+          count=$(unzip -l "$pkg" | grep -c "staticwebassets/App_Plugins/" || true)
+          echo "$pkg: $count static web assets"
+          [ "$count" -gt 0 ] || { echo "::error::$pkg ships no frontend"; exit 1; }
+        done

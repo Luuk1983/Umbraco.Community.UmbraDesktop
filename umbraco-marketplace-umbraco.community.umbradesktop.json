@@ -3,9 +3,11 @@
   "Title": "UmbraDesktop",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "An OS-style windowed desktop for the Umbraco backoffice. Open content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side. Knows Umbraco's commercial packages: Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get a proper app with the right name, icon and window chrome, and appear only if you have them. Includes a grouped app launcher with pinnable apps, a taskbar, per-user wallpapers, and five chrome themes: the Umbraco look, a retro Umbraco 4, macOS, Windows 11 and Windows 98. Themes restyle the desktop only, never the backoffice inside a window, and adding one of your own is a folder of CSS. Other packages can put apps of their own on the desktop too, which is how games and small tools get there: they open in a window of their own and are themed along with everything else. Your work is safe in it: a window holding unsaved changes marks itself, and closing it, reloading it or leaving the desktop asks before anything is discarded, in the backoffice's own words. It also warns you before you overwrite another editor's work, which the backoffice itself does not do. And it adds Background Jobs, a read-only view of every scheduled job Umbraco runs behind your site (publishing, webhooks, cleanups, and any a package added) with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else, and it installs as an ordinary Settings dashboard, so you get it whether or not you use the desktop.",
+  "Description": "An OS-style windowed desktop for the Umbraco backoffice. Open your sections as real windows and work in several of them side by side, instead of one thing at a time.",
   "PackageType": "Package",
-  "LicenseTypes": ["Free"],
+  "LicenseTypes": [
+    "Free"
+  ],
   "AuthorDetails": {
     "Name": "Luuk Peters",
     "Description": "Umbraco developer building packages that extend the CMS with enterprise-grade features.",
@@ -43,7 +45,15 @@
     "extensibility",
     "concurrency",
     "collaboration",
-    "overwrite protection"
+    "overwrite protection",
+    "theming",
+    "macos",
+    "windows 98",
+    "windows 11",
+    "umbraco 4",
+    "retro",
+    "dashboard",
+    "minesweeper"
   ],
   "Screenshots": [
     {
@@ -51,8 +61,12 @@
       "Caption": "Content and media open as separate windows, side by side, with the taskbar below."
     },
     {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/unsaved-changes-guard.png",
+      "Caption": "Your work, guarded three ways at once: a dot for unsaved changes, a warning when someone else saved over you, and an error when they binned it. Every marker is repeated on the taskbar, so it reaches a window you minimised an hour ago."
+    },
+    {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png",
-      "Caption": "The launcher: your pinned apps at the top, everything else grouped by what it does."
+      "Caption": "The launcher: your pinned apps at the top, everything else grouped by what it does, including the commercial packages you have installed and a Games group from the optional add-on."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-macos.png",
@@ -63,12 +77,23 @@
       "Caption": "The Windows 98 theme: grey chrome, navy title bars, and the launcher as a Start menu."
     },
     {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/choose-background.png",
+      "Caption": "Desktop settings: pick your chrome theme and your background, from the eight that ship or any image already in your Media Library. Both are remembered per user."
+    },
+    {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/background-jobs-viewer.png",
-      "Caption": "Background Jobs: every scheduled job Umbraco runs, grouped into distributed and recurring, with when each last ran and when it is due next."
+      "Caption": "Background Jobs: every scheduled job Umbraco runs behind your site, with how often each runs, when it last ran and when it is due next. Umbraco shows this nowhere else."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png",
       "Caption": "The way in: the desktop icon in the backoffice header, between Help and your avatar."
+    }
+  ],
+  "RelatedPackages": [
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop.Entertainment",
+      "GroupTitle": "Optional add-ons",
+      "Description": "Games for the desktop, starting with Minesweeper. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
     }
   ]
 }

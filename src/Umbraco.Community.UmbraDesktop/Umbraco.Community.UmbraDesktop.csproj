@@ -10,8 +10,10 @@
 	  <Product>Umbraco.Community.UmbraDesktop</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop</PackageId>
 	  <Title>UmbraDesktop</Title>
-	  <Description>An OS-style windowed desktop for the Umbraco backoffice. Launch content, media, settings and other sections as real draggable, resizable windows and work in several of them side by side — edit on the left while you watch the result on the right. Includes a grouped app launcher with pinnable favourites, a taskbar, and per-app window chrome, all styled to match the backoffice.</Description>
-	  <PackageTags>umbraco;backoffice;desktop;windows;multitasking;productivity;umbraco-marketplace</PackageTags>
+	  <Description>An OS-style windowed desktop for the Umbraco backoffice. Open your sections as real windows and work in several of them side by side, instead of one thing at a time.</Description>
+	  <!-- Semicolons here, but NuGet packs these as a whitespace-separated list: a tag containing a
+	       space silently becomes two tags. Hyphenate instead of spacing. -->
+	  <PackageTags>umbraco;backoffice;desktop;windows;multitasking;productivity;launcher;workspace;themes;theming;wallpapers;background-jobs;scheduled-tasks;dashboard;diagnostics;unsaved-changes;overwrite-protection;concurrency;umbraco-marketplace</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop</RootNamespace>
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>
@@ -108,7 +110,10 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	  <PackageReference Include="Umbraco.Cms.Api.Common" />
 	  <PackageReference Include="Umbraco.Cms.Api.Management" />
 	  <PackageReference Include="Umbraco.Cms.Core" />
-	  <PackageReference Include="Umbraco.JsonSchema.Extensions" />
+	  <!-- Build-time only: generates appsettings-schema.*.json for editor IntelliSense. Nothing
+	       reads it at runtime, so PrivateAssets keeps it out of the published dependency list —
+	       which also removes the unbounded ">= 0.4.3" floor a floating "0.*" would otherwise pack. -->
+	  <PackageReference Include="Umbraco.JsonSchema.Extensions" PrivateAssets="all" />
 	</ItemGroup>
 
 	<ItemGroup>

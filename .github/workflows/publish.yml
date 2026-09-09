@@ -18,46 +18,28 @@ jobs:
         with:
           fetch-depth: 0 # Full history needed for MinVer
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
+      # The same composite action CI runs, so what is released is built exactly the way it was
+      # tested on the pull request, and neither workflow can learn about a new package without the
+      # other learning about it too.
+      - uses: ./.github/actions/build-packages
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Restore dependencies
-        run: dotnet restore src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj
-
-      - name: Install frontend dependencies
-        working-directory: src/Umbraco.Community.UmbraDesktop
-        run: npm ci
-
-      - name: Test frontend
-        working-directory: src/Umbraco.Community.UmbraDesktop
-        run: npm test
-
-      - name: Build frontend
-        working-directory: src/Umbraco.Community.UmbraDesktop
-        run: npm run build
-
-      - name: Build
-        run: dotnet build src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-restore
-
-      - name: Pack
-        run: dotnet pack src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-build --output ./artifacts
-
+      # The nuget.org trusted-publishing policy trusts this repository, this workflow file and the
+      # production environment, with a `*` package glob. Renaming this file or dropping the
+      # environment above breaks publishing until the policy is edited to match.
       - name: Login to NuGet (trusted publishing)
         id: nuget-login
         uses: NuGet/login@v1
         with:
           user: ${{ secrets.NUGET_USER }}
 
+      # Globs both packages, and pushes each .snupkg alongside its .nupkg automatically.
+      # --skip-duplicate so a re-run after a partial failure pushes only what did not land.
       - name: Push to NuGet
-        run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
+      # generate_release_notes diffs against the previous tag, so a stable release that had a
+      # prerelease before it gets notes covering only what happened after that prerelease. Curate
+      # the body by hand in that case; see RELEASE.md.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

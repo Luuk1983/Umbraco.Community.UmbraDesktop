@@ -5,13 +5,39 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  # What ships. Kept identical to the release by sharing one composite action, because the way this
+  # goes wrong is a workflow that does not know about a package: the Entertainment add-on existed
+  # for a full release cycle before either workflow built it.
+  packages:
+    name: Packages
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Full history needed for MinVer
+
+      - uses: ./.github/actions/build-packages
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: ./artifacts/*.nupkg
+          retention-days: 7
+
+  # Everything else: the test instance and the C# test project, built as one solution. A separate
+  # job on purpose, and never merged into the one above. The test instance floats ten "17.*"
+  # dependencies (Umbraco itself plus every commercial package the catalogue is exercised against),
+  # so it can break without anyone touching it. Here that is news on a pull request; in the release
+  # workflow it would be a blocked release for a reason unrelated to anything being shipped.
+  # Running in parallel means it costs no wall-clock against the job that matters.
+  solution:
+    name: Solution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -22,33 +48,25 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            src/Umbraco.Community.UmbraDesktop/package-lock.json
+            src/Umbraco.Community.UmbraDesktop.Entertainment/package-lock.json
 
-      - name: Restore dependencies
-        run: dotnet restore src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj
-
-      - name: Install frontend dependencies
-        working-directory: src/Umbraco.Community.UmbraDesktop
-        run: npm ci
-
-      - name: Test frontend
-        working-directory: src/Umbraco.Community.UmbraDesktop
-        run: npm test
-
-      # Must run before dotnet build/pack: wwwroot/App_Plugins is gitignored, so a clean
-      # checkout would otherwise pack a package with no frontend in it at all.
-      - name: Build frontend
-        working-directory: src/Umbraco.Community.UmbraDesktop
-        run: npm run build
-
-      - name: Build
-        run: dotnet build src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-restore
-
-      - name: Pack
-        run: dotnet pack src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-build --output ./artifacts
-
-      - name: Upload package artifact
-        uses: actions/upload-artifact@v4
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
         with:
-          name: nuget-package
-          path: ./artifacts/*.nupkg
-          retention-days: 7
+          path: ~/.nuget/packages
+          key: nuget-solution-${{ runner.os }}-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: nuget-solution-${{ runner.os }}-
+
+      # The Razor SDK discovers wwwroot/App_Plugins as static web assets, and it is gitignored
+      # Vite output, so a clean checkout has to build the frontends before MSBuild sees them —
+      # true for a plain build, not only for a pack.
+      - name: Build frontends
+        run: |
+          (cd src/Umbraco.Community.UmbraDesktop && npm ci && npm run build)
+          (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm ci && npm run build)
+
+      - name: Build solution
+        run: dotnet build Umbraco.Community.UmbraDesktop.app.slnx --configuration Release

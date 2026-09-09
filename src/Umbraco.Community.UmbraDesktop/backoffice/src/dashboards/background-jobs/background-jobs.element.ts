@@ -41,9 +41,10 @@ const LEGEND_OUTCOMES = ['Succeeded', 'Failed', 'Ignored', 'NotObserved'];
  * <summary>
  * Read-only viewer listing every background job Umbraco has registered — both the
  * distributed (database-backed, cross-server) jobs and the recurring per-server jobs this
- * package observes itself. Polls the report endpoint every 5 seconds while the browser tab is
- * visible so the tables stay current without a manual refresh, though a refresh button is also
- * offered for an immediate pull.
+ * package observes itself. Polls the report endpoint while the browser tab is visible so the
+ * tables stay current on their own: every ten seconds by default, and one second or five if you
+ * pick a faster interval from the control above the tables. There is deliberately no manual
+ * refresh button — see the note on that control below.
  * </summary>
  * <remarks>
  * The two kinds are rendered as separate tables because they can answer different questions.

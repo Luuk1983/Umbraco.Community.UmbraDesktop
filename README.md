@@ -12,22 +12,30 @@ The Umbraco backoffice shows you one thing at a time. One section is active, one
 
 UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections and tools as floating windows you can move, resize and place next to each other: content beside media, or a settings editor beside the thing it affects.
 
+It also does something the backoffice does not do at all. When two people have the same page open, plain Umbraco lets the second save win silently: nobody is told, and the first person's work is gone. UmbraDesktop warns you before you overwrite someone, and it does it on the window, on its taskbar button and in every dialog that could throw work away. See [Overwrite protection](#overwrite-protection).
+
 ![The UmbraDesktop desktop: the content editor and the media library open as separate windows, side by side, with a taskbar along the bottom.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png)
+
+> **New: games on the desktop.** [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment)
+> is an optional add-on that puts Minesweeper in the launcher's Games group, in a window of its own
+> and themed along with everything else. Install it if you want it; the desktop is unchanged
+> without it. See [Games](#games).
 
 ## Features
 
 - Work side by side. Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth. This one wants room: see [A note on screen size](#a-note-on-screen-size).
 - Real windows. Drag, resize, minimise, maximise, and double-click a title bar to fill the desktop. Each window remembers its own place.
 - Never loses your work. A window holding unsaved changes shows a dot in its title bar and on its taskbar button, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
-- Warns before you overwrite someone. If somebody else saves, bins or deletes a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. The plain backoffice does not warn about this at all.
+- Warns before you overwrite someone. If somebody else saves or bins a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. Deletion is warned about even when you have nothing unsaved, because there is no version left to refresh to. The plain backoffice does not warn about this at all.
 - A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus Games once a package puts an app there. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
-- Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned. Your pins are remembered per user.
+- Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned. Your pins are remembered per user, in that browser.
 - A taskbar. Every open window gets a button: click to focus, click again to minimise.
-- Choose your wallpaper. Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user.
+- Choose your wallpaper. Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user, in that browser.
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.
 - Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice. Five ship: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98. Adding your own is a folder of CSS and one catalogue entry.
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
+- Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
 - Nothing new to learn. The windows contain the backoffice you already know, with the same trees, the same editors and the same shortcuts.
 
@@ -54,7 +62,9 @@ That single grant does two things: it makes the desktop reachable, and it reveal
 
 ### What each user sees
 
-UmbraDesktop grants no access of its own. Every app in the launcher is gated on the section it comes from, so a user only ever sees apps for sections they could already reach. Give an editor access to Content and Media and those are the apps they get.
+UmbraDesktop grants no access of its own. Every app that opens a piece of the backoffice is gated on the section it comes from, so a user only ever sees apps for sections they could already reach. Give an editor access to Content and Media and those are the apps they get.
+
+The exception is a self-contained app registered by a package, which has no backing section to be permitted to and so is gated by nothing beyond its own manifest conditions and reaching the desktop at all. Minesweeper is one: everyone who can open the desktop can open it. An app of that kind holds no backoffice data, so there is nothing behind it to leak; if you need one restricted, the condition belongs on its own manifest.
 
 ## How to use it
 
@@ -64,7 +74,7 @@ Click the desktop icon in the backoffice header, top right, between Help and you
 
 Most people are probably familiar with the concept of a desktop and will have no trouble using it. The launcher is where you open the apps:
 
-![The launcher: a search box, a Pinned row at the top, and the remaining apps grouped into Editing, Development, Synchronisation, Security, Advanced security, Diagnostics and System.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png)
+![The launcher: a search box, a Pinned row at the top, and the remaining apps grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI, System and Games.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png)
 
 From the launcher:
 
@@ -80,7 +90,7 @@ Several apps can be open at once, and some of them (the content editor and media
 
 ## A note on screen size
 
-The Umbraco backoffice was never built to be responsive, and it does not scale down gracefully. UmbraDesktop inherits that: the backoffice inside a window starts to break up once the window gets small, which is why catalogue entries carry a minimum window size and why you cannot shrink a window down to a tile.
+The Umbraco backoffice was never built to be responsive, and it does not scale down gracefully. UmbraDesktop inherits that: the backoffice inside a window starts to break up once the window gets small, which is why every window has a floor below which it will not shrink, and why you cannot pull one down to a tile. A catalogue entry can raise that floor for an app that needs more, and a few do, but the global minimum is what you meet most of the time.
 
 So how much you get out of it depends on the screen in front of you:
 
@@ -89,6 +99,58 @@ So how much you get out of it depends on the screen in front of you:
 - **On anything smaller**, treat it as a single-window desktop.
 
 Side by side is not the only reason to use it, though. Opening everything from one launcher, keeping several tools loaded at once, and switching between them from the taskbar without losing your place or waiting for a section to reload is just as useful on a laptop as it is on a 4K monitor.
+
+## Overwrite protection
+
+Open a page in two browsers, edit both, save both, and in a plain Umbraco backoffice the second
+save wins silently: nobody is told and the first person's work is gone with no trace in the UI.
+Umbraco broadcasts the change over SignalR and the backoffice uses that only to drop its cached
+copy.
+
+UmbraDesktop listens to the same signal and tells you. A window whose document changed while you
+were reading it refreshes itself in place, keeping your scroll position, the tab you were on and
+any split view. A window whose document changed while you had *unsaved changes* raises a banner in
+its own chrome and marks both its titlebar and its taskbar button with a warning icon, so it reaches
+you on a window you had minimized an hour ago. The icon is the same one Umbraco uses elsewhere, and
+it is a warning triangle or a circle-x rather than a coloured dot, so the severity survives a
+monochrome screen. You can keep your version, after confirming that saving loses the other person's
+change, or load theirs and lose yours.
+
+![Three content editor windows stacked on the desktop: one marked with a dot for unsaved changes, one showing the warning banner "Someone else changed this while you were editing it" with Keep my changes and Discard mine, load theirs, and one showing the error banner "Someone moved this to the recycle bin". The taskbar below carries the matching marker on all three buttons.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/unsaved-changes-guard.png)
+
+It knows the difference between somebody else's save and your own, including your own publishes,
+and it says something different when a document has been moved to the recycle bin, where the
+window turns read-only the moment it catches up with that, than when it has been deleted for good,
+where there is nothing left to save to.
+
+Every theme carries it in its own idiom, and no theme is allowed to remove it.
+
+## Background Jobs
+
+Umbraco runs a lot behind your site: scheduled publishing, webhook delivery, log and version
+cleanups, plus whatever the packages you installed added. It shows you none of it. Background Jobs
+is a read-only view of the lot, and it installs as an ordinary Settings dashboard, so you get it
+whether or not you use the desktop.
+
+![Background Jobs, open in a desktop window: the Distributed group listing fifteen jobs with how often each runs, when it last ran and when it is next due, and the control that sets how often the view refreshes itself.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/background-jobs-viewer.png)
+
+Jobs come in two kinds and the screen keeps them apart, because they can answer different
+questions:
+
+- **Distributed** jobs are shared across every server. One server claims each run and the schedule
+  lives in the database, so it survives a restart. Umbraco does not record how a run ended, so
+  there is no outcome to show for these.
+- **Recurring** jobs are run by each server for itself. Umbraco stores nothing about them, so what
+  you see has been observed since this server started, and a job that has not come round yet reads
+  "Not since restart" rather than "Never". These do carry an outcome: succeeded, failed, or skipped
+  because this server's role was not one the job runs on.
+
+Times are shown relative to now, with the exact moment on hover, and the view refreshes itself.
+Pick 1, 5 or 10 seconds from the control at the top right. Because the data is a snapshot, a run
+due within one refresh reads "Due now" rather than counting past zero: it may already have
+happened without this copy of the report knowing yet.
+
+Nothing here can be started, paused or cancelled. It is a viewer.
 
 ## Changing the theme
 
@@ -124,6 +186,8 @@ Open the launcher and click the cog in its footer to open Desktop settings. The 
 - Built-in images: the eight backgrounds that ship with the package, plus None, which restores the plain gradient.
 - Media library: any image already in your Media Library.
 
+![Desktop settings open over the desktop: a Theme section showing the themes as named colour swatches with Umbraco selected, above a Wallpaper section with the current image and buttons for Built-in images and Media library. The Choose a wallpaper tray is open beside it, listing the eight built-in backgrounds by name alongside None, which restores the plain gradient.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/choose-background.png)
+
 Your choice applies immediately and is remembered per user, in that browser.
 
 ### Using your own backgrounds
@@ -134,55 +198,21 @@ Umbraco resizes it for you: the desktop asks for a copy with no side longer than
 
 If you pick something that is not an image, the desktop tells you and leaves your current wallpaper alone.
 
-## Background Jobs
+## Games
 
-Umbraco runs a lot behind your site: scheduled publishing, webhook delivery, log and version
-cleanups, plus whatever the packages you installed added. It shows you none of it. Background Jobs
-is a read-only view of the lot, and it installs as an ordinary Settings dashboard, so you get it
-whether or not you use the desktop.
+Minesweeper, in a window, under whichever theme you picked. It ships in its own package rather than this one, because a desktop and a minesweeper are not the same product and nobody should have to take the second to get the first:
 
-![Background Jobs: the Distributed group listing ten jobs with how often each runs, when it last ran and when it is next due, above the Recurring group with its outcome column.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/background-jobs-viewer.png)
+```bash
+dotnet add package Umbraco.Community.UmbraDesktop.Entertainment
+```
 
-Jobs come in two kinds and the screen keeps them apart, because they can answer different
-questions:
+![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher's Games group highlighted in the Start menu and the game's own taskbar button below.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-minesweeper.png)
 
-- **Distributed** jobs are shared across every server. One server claims each run and the schedule
-  lives in the database, so it survives a restart. Umbraco does not record how a run ended, so
-  there is no outcome to show for these.
-- **Recurring** jobs are run by each server for itself. Umbraco stores nothing about them, so what
-  you see has been observed since this server started, and a job that has not come round yet reads
-  "Not since restart" rather than "Never". These do carry an outcome: succeeded, failed, or skipped
-  because this server's role was not one the job runs on.
+That is the whole installation. There is no section to grant and no dashboard to enable: the games appear in a Games group in the launcher for anyone who can already reach the desktop, and the group is not there at all if the package is not installed.
 
-Times are shown relative to now, with the exact moment on hover, and the view refreshes itself.
-Pick 1, 5 or 10 seconds from the control at the top right. Because the data is a snapshot, a run
-due within one refresh reads "Due now" rather than counting past zero: it may already have
-happened without this copy of the report knowing yet.
+The add-on is released from the same tag as this package and always carries the same version number, so matching versions are the compatibility answer. Its dependency on the desktop is a version range rather than an exact pin, so upgrading the desktop on its own is fine.
 
-Nothing here can be started, paused or cancelled. It is a viewer.
-
-## Overwrite protection
-
-Open a page in two browsers, edit both, save both, and in a plain Umbraco backoffice the second
-save wins silently: nobody is told and the first person's work is gone with no trace in the UI.
-Umbraco broadcasts the change over SignalR and the backoffice uses that only to drop its cached
-copy.
-
-UmbraDesktop listens to the same signal and tells you. A window whose document changed while you
-were reading it refreshes itself in place, keeping your scroll position, the tab you were on and
-any split view. A window whose document changed while you had *unsaved changes* raises a banner in
-its own chrome and marks both its titlebar and its taskbar button with a warning icon, so it reaches
-you on a window you had minimized an hour ago. The icon is the same one Umbraco uses elsewhere, and
-it is a warning triangle or a circle-x rather than a coloured dot, so the severity survives a
-monochrome screen. You can keep your version, after confirming that saving loses the other person's
-change, or load theirs and lose yours.
-
-It knows the difference between somebody else's save and your own, including your own publishes,
-and it says something different when a document has been moved to the recycle bin, where the
-window turns read-only the moment it catches up with that, than when it has been deleted for good,
-where there is nothing left to save to.
-
-Every theme carries it in its own idiom, and no theme is allowed to remove it.
+Nothing in that package is privileged. It reaches the desktop through the same public `umbraDesktopApp` manifest any package can register, which makes its source the worked example for [Custom and third-party apps](#custom-and-third-party-apps).
 
 ## Technical explanation
 
@@ -265,7 +295,7 @@ Beyond that there are two paths, and which one you take depends on what your app
 
 **Curated placement for a backoffice surface.** If your app *is* a backoffice page (a custom icon, a friendly name, a specific group, a chrome profile or window sizing for a section or dashboard), it needs an entry in `backoffice/src/desktop/catalogue/`, which means opening a pull request against this repository. That is deliberate rather than a gap: a deep link needs its URL checked and its chrome profile chosen, and getting either wrong ships a broken window whose blame lands on the desktop. The manifest type has no `url`, `section` or `chromeProfile` field, so the split is structural and not a rule anyone has to remember.
 
-A curated entry for a third-party package points at its extension by alias rather than by URL, so it resolves only where that package is registered and stays silently absent everywhere else. No flag is needed and none exists: any package can unregister any extension, so no entry is ever guaranteed to resolve. uSync ships this way — install it and a uSync app appears in the Synchronisation group, opening its dashboard without the Settings tree beside it.
+A curated entry for a third-party package points at its extension by alias rather than by URL, so it resolves only where that package is registered and stays silently absent everywhere else. No flag is needed and none exists: any package can unregister any extension, so no entry is ever guaranteed to resolve. uSync ships this way: install it and a uSync app appears in the Synchronisation group, opening its whole workspace without the Settings tree beside it. Not unconditionally, though, and that is the point of the mechanism. An install that runs uSync in its own section instead gates that entry out, and uSync turns up as an ordinary uncertified app in More.
 
 ## Documentation
 
