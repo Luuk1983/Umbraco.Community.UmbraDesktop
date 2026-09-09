@@ -15,7 +15,7 @@ src/Umbraco.Community.UmbraDesktop/
 docs/
   theming.md                    how to build a theme. The guide for contributors
   design/                       dated design docs, one per feature
-umbraco-marketplace.json        what the Umbraco Marketplace shows
+umbraco-marketplace-*.json      what the Umbraco Marketplace shows, one file per package
 ```
 
 ## Commands
@@ -58,14 +58,16 @@ items did not apply:
       source code. That means images are `![alt](url)` and cannot carry `width` or `height`, so
       size a screenshot by capturing it at the size you want it. Inline code spans containing
       tags, like the one describing an iframe, are fine
-- [ ] **`umbraco-marketplace.json`** names the feature in `Description` if it is something a
-      person would choose the package for. This is not a "check it is still accurate" step: the
-      Description is the summary the Umbraco Marketplace shows, it is the only thing most people
-      read before installing, and a headline feature missing from it is a feature nobody knows
-      exists. The picker reached five themes before this file mentioned theming at all. Add to `Tags`
-      too,
-      since that is how the feature gets found, and add a screenshot to `docs/screenshots/` plus
-      the `Screenshots` array when the feature changes what the package looks like
+- [ ] **`umbraco-marketplace-<lowercase package id>.json`** gets the feature in `Tags`, since that
+      is how it gets found, and a screenshot in `docs/screenshots/` plus the `Screenshots` array if
+      it changes what the package looks like. **`Description` is almost certainly not the place.**
+      It is a hook, not a summary: it is the blurb on the Marketplace overview *card*, where it
+      fades out after about two lines, and on the detail page it is the intro paragraph with the
+      full README rendered directly beneath it. So a feature named there is a feature described
+      twice, and every addition pushes the sentence that earns the click further out of sight.
+      Adding one line per feature took it to 2,100 characters before anyone looked at the rendered
+      card. Keep it to one or two sentences and let the README sell. Only rewrite it if the feature
+      changes what the package fundamentally *is*
 - [ ] **`docs/`** covers it. A user-facing feature belongs in the README; something a contributor
       would need to extend belongs in its own guide, as theming does; a decision worth its
       reasoning belongs in a dated `docs/design/` doc
@@ -74,8 +76,12 @@ items did not apply:
 
 Two files have confusingly similar names and opposite answers, so to be explicit:
 
-- **`umbraco-marketplace.json`** (repository root) is the marketplace listing. User-facing, and it
-  changes whenever the package gains something worth choosing it for. It is on the list above.
+- **`umbraco-marketplace-<lowercase package id>.json`** (repository root) is the marketplace
+  listing. There is one per shipped package, named for that package, because the Marketplace looks
+  the file up per package rather than per repository. User-facing, and its `Tags` and `Screenshots`
+  change with a feature while its `Description` mostly does not. It is on the list above.
+  `RELEASE.md` explains why both are suffixed rather than one being the plain
+  `umbraco-marketplace.json`.
 - **`backoffice/public/umbraco-package.json`** is the Umbraco extension manifest. It registers one
   bundle, and everything inside the desktop is wired up in TypeScript rather than as separate
   manifest entries, so it almost never changes for a feature.

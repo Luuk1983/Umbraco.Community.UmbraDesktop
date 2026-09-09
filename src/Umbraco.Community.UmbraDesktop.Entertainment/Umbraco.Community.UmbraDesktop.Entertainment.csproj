@@ -10,8 +10,8 @@
 	  <Product>Umbraco.Community.UmbraDesktop.Entertainment</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop.Entertainment</PackageId>
 	  <Title>UmbraDesktop Entertainment</Title>
-	  <Description>Games for UmbraDesktop. An optional add-on that puts self-contained games on the UmbraDesktop desktop: each one opens in a real window of its own, is themed along with the rest of the desktop, and needs no section, no URL and no permission behind it. Install it if you want the fun drawer; the desktop itself works without it.</Description>
-	  <PackageTags>umbraco;backoffice;desktop;games;entertainment;umbradesktop;umbraco-marketplace</PackageTags>
+	  <Description>Games for UmbraDesktop. An optional add-on that puts Minesweeper on the desktop, in a window of its own and themed along with the rest of it.</Description>
+	  <PackageTags>umbraco;backoffice;desktop;games;minesweeper;entertainment;umbradesktop;apps;umbraco-marketplace</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop.Entertainment</RootNamespace>
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>
@@ -25,6 +25,10 @@
 	       release and read as one product on the Marketplace. Naming a file that does not exist
 	       fails the pack, so this points at the host project's image and packs it by path below. -->
 	  <PackageIcon>Package-image_128_128.png</PackageIcon>
+	  <!-- Its own readme, not the host's: the root README.md is the desktop's page and would
+	       describe a product this package is only an add-on to. Without this the pack warns
+	       "missing a readme" and the nuget.org page shows nothing below the metadata. -->
+	  <PackageReadmeFile>README.md</PackageReadmeFile>
 	  <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
 
 	  <!-- Versioning: MinVer, from the same "v*" tags as the host, so both packages carry the same
@@ -94,6 +98,9 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
   <ItemGroup>
     <!-- Packs the host project's icon into this package's root, where PackageIcon expects it. -->
     <None Include="..\Umbraco.Community.UmbraDesktop\Package-image_128_128.png" Pack="true" PackagePath="\" />
+    <!-- Update, not Include: the SDK's default None glob already matches this file, and including
+         it a second time fails the pack with a duplicate-item error. -->
+    <None Update="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 	<ItemGroup>

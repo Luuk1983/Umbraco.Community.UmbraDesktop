@@ -1,0 +1,46 @@
+{
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "Title": "UmbraDesktop Entertainment",
+  "Category": "Editor Tools",
+  "AlternateCategory": "Developer Tools",
+  "Description": "Games for UmbraDesktop. An optional add-on that puts Minesweeper on the desktop, in a window of its own and themed along with the rest of it.",
+  "PackageType": "Package",
+  "LicenseTypes": [
+    "Free"
+  ],
+  "AuthorDetails": {
+    "Name": "Luuk Peters",
+    "Description": "Umbraco developer building packages that extend the CMS with enterprise-grade features.",
+    "Url": "https://github.com/Luuk1983",
+    "SyncContributorsFromRepository": true
+  },
+  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Entertainment/README.md",
+  "IssueTrackerUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues",
+  "Tags": [
+    "games",
+    "minesweeper",
+    "entertainment",
+    "umbradesktop",
+    "desktop",
+    "windows",
+    "backoffice",
+    "apps",
+    "fun",
+    "add-on",
+    "themes",
+    "launcher"
+  ],
+  "RelatedPackages": [
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop",
+      "GroupTitle": "Requires",
+      "Description": "The desktop itself. This package is an add-on to it and installs it as a dependency; the desktop works on its own without the games."
+    }
+  ],
+  "Screenshots": [
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-minesweeper.png",
+      "Caption": "Minesweeper in a window of its own, under the Windows 98 theme. It arrives in the launcher's Games group and gets a taskbar button like any other app."
+    }
+  ]
+}

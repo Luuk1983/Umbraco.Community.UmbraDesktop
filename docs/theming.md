@@ -583,7 +583,7 @@ And the part that is easiest to skip, because the code already works without it:
 
 - [ ] `README.md` lists your theme in **both** places it names them: the Features bullet and the
       Changing the theme section
-- [ ] `umbraco-marketplace.json`'s `Description` still describes what the package offers. Its
+- [ ] `umbraco-marketplace-umbraco.community.umbradesktop.json`'s `Description` still describes what the package offers. Its
       theme list is the one sentence users read before installing
 - [ ] This file gains whatever the build taught you that is not already in it. Every trap in §5
       and §6 is here because a theme hit it first, and the next author should not have to
