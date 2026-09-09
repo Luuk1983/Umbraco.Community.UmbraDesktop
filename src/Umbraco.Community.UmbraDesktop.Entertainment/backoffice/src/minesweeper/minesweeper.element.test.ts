@@ -159,6 +159,186 @@ it('draws two-tone bevels under the Windows 98 theme, read from CSS rather than 
 });
 
 /**
+ * Open against closed, which is the only thing a Minesweeper board actually has to say.
+ *
+ * This shipped broken and was reported as "the game is unplayable": under the Umbraco and
+ * Umbraco 4 themes a closed cell and an opened one rendered in the same colour. The cause was not
+ * a mistake in either palette but a wrong assumption in this app, which drew the two states as
+ * `surface-raised` against `surface-sunken` and took it on trust that a theme would put them far
+ * enough apart to see. Nothing in the contract promises that, and `docs/desktop-apps.md` §4 is
+ * explicit about which pairs *are* promised: text on the three surfaces, and `border` against all
+ * three at 3:1. The gap between two surfaces is not on the list — Umbraco's own surface family
+ * spans 1.07:1 at its widest — so an app that leans on it is relying on a number no theme ever
+ * agreed to supply.
+ *
+ * So the cases below are not the five shipped themes. They are the **worst palette the contract
+ * still allows**: all three surfaces exactly one colour, and `border` at exactly the 3:1 it
+ * guarantees and not a shade more. A test against copies of the five real palettes would pass on
+ * stale numbers the day a theme changed one, and would say nothing at all about the sixth theme.
+ * This one cannot go stale, because there is nothing in it to drift from.
+ */
+
+/** One theme's app tokens, as the desktop publishes them on the element. */
+type AppTokens = Readonly<Record<string, string>>;
+
+/**
+ * The flattest light theme the app token contract permits: one surface for all three roles.
+ *
+ * `#a3a3a3` is not a colour any theme ships. It is the exact 3:1 against white, so it is the
+ * *weakest* boundary colour a conforming theme could publish, and a case built on it proves the
+ * board works under every theme that clears the bar rather than only under the ones that clear it
+ * comfortably. The edges are set to nothing for the same reason: `edge-width` is documented as
+ * legitimately `0px` and `edge-light` as legitimately `transparent`, so a bevel is not something
+ * this app may count on either.
+ */
+const FLATTEST_LIGHT_THEME: AppTokens = {
+  '--umbradesktop-app-surface': '#ffffff',
+  '--umbradesktop-app-surface-raised': '#ffffff',
+  '--umbradesktop-app-surface-sunken': '#ffffff',
+  '--umbradesktop-app-border': '#a3a3a3',
+  '--umbradesktop-app-edge-light': 'transparent',
+  '--umbradesktop-app-edge-dark': '#ffffff',
+  '--umbradesktop-app-edge-width': '0px',
+  '--umbradesktop-app-text': '#000000',
+};
+
+/**
+ * The same, inverted: the flattest dark theme, where `#595959` is the exact 3:1 against black.
+ *
+ * Present as its own case rather than folded into the one above because the answer has to hold in
+ * both directions and the arithmetic is not symmetric — sRGB's transfer curve compresses the dark
+ * end, so the same mix buys a smaller ratio here. It is also the half that says what "grey closed,
+ * white open" means on a dark theme: not grey and not white, but the closed cell moved *away* from
+ * the well rather than toward black, which is the direction assertion below.
+ */
+const FLATTEST_DARK_THEME: AppTokens = {
+  '--umbradesktop-app-surface': '#000000',
+  '--umbradesktop-app-surface-raised': '#000000',
+  '--umbradesktop-app-surface-sunken': '#000000',
+  '--umbradesktop-app-border': '#595959',
+  '--umbradesktop-app-edge-light': 'transparent',
+  '--umbradesktop-app-edge-dark': '#000000',
+  '--umbradesktop-app-edge-width': '0px',
+  '--umbradesktop-app-text': '#ffffff',
+};
+
+/**
+ * Rasterise a CSS colour to the 8-bit channels a screen would show.
+ *
+ * Through a canvas rather than by parsing the string, and that is not belt and braces. A cell's
+ * ground is a `color-mix()`, and Chrome reports one back from `getComputedStyle` as
+ * `color(srgb 0.77 0.77 0.77)` while a plain token resolves to `rgb(255, 255, 255)`. Comparing
+ * those two as text, or with one regex that happens to fit both, is how a measurement quietly
+ * starts reading the wrong numbers. Painting each one and reading the pixel compares what a player
+ * sees, in the only units they see it in.
+ * @param colour Any CSS colour, in any notation the browser accepts.
+ * @returns The `[r, g, b]` channels in 0-255.
+ */
+function paint(colour: string): [number, number, number] {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const context = canvas.getContext('2d');
+  expect(context, 'a 2d canvas context, which every browser this runs in has').to.not.equal(null);
+  context!.fillStyle = colour;
+  context!.fillRect(0, 0, 1, 1);
+  const [r, g, b] = context!.getImageData(0, 0, 1, 1).data;
+  return [r, g, b];
+}
+
+/**
+ * Relative luminance per WCAG 2.1, mirroring the desktop's own `app-tokens.test.ts`.
+ * @param rgb The `[r, g, b]` channels in 0-255.
+ * @returns Relative luminance in 0-1.
+ */
+function luminance([r, g, b]: [number, number, number]): number {
+  const linear = [r, g, b].map((channel) => {
+    const scaled = channel / 255;
+    return scaled <= 0.03928 ? scaled / 12.92 : Math.pow((scaled + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+/**
+ * The WCAG contrast ratio between two painted colours.
+ * @param a One colour.
+ * @param b The other.
+ * @returns The ratio, from 1 (identical) to 21 (black on white).
+ */
+function contrast(a: string, b: string): number {
+  const pair = [luminance(paint(a)), luminance(paint(b))];
+  return (Math.max(...pair) + 0.05) / (Math.min(...pair) + 0.05);
+}
+
+/**
+ * The smallest fill step between an open cell and a closed one that counts as telling them apart.
+ *
+ * Measured rather than chosen. What shipped and was reported unplayable was **1.03:1** under both
+ * Umbraco themes. What shipped and nobody has ever remarked on is 1.28:1 under macOS and 1.30:1
+ * under Windows 11, and 1.84:1 under Windows 98, which is the original and the reference for what
+ * this is supposed to look like. The floor sits below all of those and well above the bug, because
+ * the number that has to hold is the one the *flattest permitted* theme produces — 1.16:1 on the
+ * dark case above, where sRGB's curve gives the least for the same mix — and a floor a real theme
+ * could not fail would not be testing anything.
+ *
+ * Deliberately not 3:1. WCAG 1.4.11 asks that of a control's *boundary*, which on this board is
+ * the grid ruling and is drawn in the one token that guarantees it. A fill step of 3:1 between two
+ * neighbouring cells would be a board of two violently different greys, which is not what any of
+ * the five themes looks like and not what the original did either.
+ */
+const CELL_STATE_FILL_STEP = 1.15;
+
+for (const [variant, tokens] of [
+  ['a light theme with one surface for all three roles', FLATTEST_LIGHT_THEME],
+  ['a dark theme with one surface for all three roles', FLATTEST_DARK_THEME],
+] as const) {
+  it(`tells an open cell from a closed one under ${variant}`, async () => {
+    const element = await game(placeAt(WALL));
+    element.setAttribute(
+      'style',
+      Object.entries(tokens)
+        .map(([token, value]) => `${token}: ${value}`)
+        .join('; '),
+    );
+    await settled(element);
+    cells(element)[SAFE_CORNER].click();
+    await settled(element);
+
+    const open = cells(element).find((cell) => cell.dataset.state === 'open');
+    const closed = cells(element).find((cell) => cell.dataset.state === 'closed');
+    expect(open, 'the click should have opened at least one cell').to.not.equal(undefined);
+    expect(closed, 'and the wall should have left at least one closed').to.not.equal(undefined);
+
+    const openFill = getComputedStyle(open!).backgroundColor;
+    const closedFill = getComputedStyle(closed!).backgroundColor;
+
+    expect(
+      contrast(openFill, closedFill),
+      `an opened cell and a closed one are ${openFill} and ${closedFill} here, which is the whole ` +
+        'state of the game and has to be visible under any theme that meets the contract, not only ' +
+        'under one that happens to put its raised and sunken surfaces far apart',
+    ).to.be.at.least(CELL_STATE_FILL_STEP);
+
+    // Which of the two is the darker one is not a matter of taste. Windows 98 is the original and
+    // the reference: a closed cell is grey material and an opened one is the white field beneath
+    // it. `border` is the only token whose direction is fixed by the contract — it must clear 3:1
+    // against every surface, so it is necessarily darker than a light theme's ground and lighter
+    // than a dark theme's — which makes "toward border" the one way to say "the material side"
+    // that also inverts correctly on a dark theme, where the closed cell has to come *up* off the
+    // field rather than down into it.
+    const ground = luminance(paint(openFill));
+    const material = luminance(paint(getComputedStyle(element).getPropertyValue('--umbradesktop-app-border')));
+    expect(
+      Math.sign(luminance(paint(closedFill)) - ground),
+      'a closed cell must sit on the same side of the open field as the theme\'s own boundary ' +
+        'colour: grey material over a white hole on a light theme, and the other way up on a dark ' +
+        'one. macOS and Windows 11 shipped it inverted — a white closed cell on a grey field — ' +
+        'because `surface-raised` is a control face and both of those themes make a control face ' +
+        'white, which is right for a button and backwards for a tile you have not lifted yet',
+    ).to.equal(Math.sign(material - ground));
+  });
+}
+
+/**
  * The board's geometry against the window it is given, which is where three reported bugs met.
  *
  * `meta.defaultSize` and `meta.minSize` are the app's **content** size: the host adds the chrome,
