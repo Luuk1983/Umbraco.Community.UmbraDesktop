@@ -181,6 +181,8 @@ taken at the moment it asks rather than a live feed, so what a conversation says
 it was said, and it is identity only and never your unsaved edits: reading a document is the agent's
 own job, and it can do that whether or not you have it open.
 
+![The Copilot chat open in a window on the left, with three tool calls listed in the transcript: get_content_by_route, describe_desktop and open_desktop_window. The Home document it opened sits in its own window on the right, and both windows have a button on the taskbar below.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/ai-copilot-chat.png)
+
 That last part deserves one caution. From 17.4 the agent writes on the server, so it can change a
 document you have open in front of you. That is the case [Overwrite protection](#overwrite-protection)
 above covers, and it covers the agent exactly as it covers a colleague.
