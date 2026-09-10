@@ -168,6 +168,8 @@ async function setup(
   const subscription = context.apps.subscribe((value) => (apps = value));
 
   return {
+    /** The context itself, for cases about its own accessors rather than its output. */
+    context,
     /** The desktop element the context is scoped to, so a test can take the desktop away. */
     host,
     registry,
@@ -903,6 +905,32 @@ describe('the shipped catalogue through the condition gate', () => {
       await settle();
       expect(harness.aliases(), 'search evaluates only the permission').to.contain('workflow-search');
       expect(harness.aliases()).to.not.contain('workflow-release-sets');
+    } finally {
+      harness.teardown();
+    }
+  });
+});
+
+describe('the app snapshot', () => {
+  it('reports the same apps the observable does', async () => {
+    // Added for the AI desk tool, which answers one question once and has no use for a
+    // subscription — the same reason the window manager grew `getWindows()`. Asserted against the
+    // observable rather than against a fixed list so the two cannot drift apart.
+    const harness = await setup(catalogue, [SETTINGS_SECTION, CONTENT_SECTION]);
+    try {
+      await settle();
+      expect(harness.context.getApps().map((app) => app.alias)).to.deep.equal(harness.aliases());
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  it('is empty rather than absent before anything resolves', async () => {
+    // A tool can be called while the desktop is still mounting, and "no apps yet" has to read as an
+    // empty desk rather than as a crash.
+    const harness = await setup(catalogue, []);
+    try {
+      expect(harness.context.getApps()).to.be.an('array');
     } finally {
       harness.teardown();
     }

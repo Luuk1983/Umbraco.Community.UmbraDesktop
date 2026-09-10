@@ -33,7 +33,30 @@
     <PackageVersion Include="Umbraco.Engage" Version="17.*" />
     <PackageVersion Include="Umbraco.UIBuilder" Version="17.*" />
     <PackageVersion Include="Umbraco.Automate" Version="17.*" />
-    <PackageVersion Include="Umbraco.AI" Version="17.*" />
+    <!-- Umbraco AI, pinned rather than floating, and in three parts. The desktop's AI integration
+         (backoffice/src/desktop/ai/) needs the Copilot Workspace, which is new in AI 17.4, and
+         `17.*` resolves to 17.3.1 because a floating range will not take a prerelease. The add-ons
+         version independently of AI core, so these numbers do not match each other and are not
+         meant to: both Agent and Copilot.Workspace declare `Umbraco.AI.Startup [17.4.0-rc.2,
+         17.999.999)`, which is what makes this exact set coherent.
+         Agent and Agent.UI are here because Copilot.Workspace depends on neither in NuGet and yet
+         its client imports from both at runtime. Each AI package contributes one backoffice
+         import-map entry, and the workspace's client imports three of them: `@umbraco-ai/core`
+         (Umbraco.AI), `@umbraco-ai/agent` (Agent) and `@umbraco-ai/agent-ui` (Agent.UI). Miss any
+         one and the section's module fails to resolve, so the chat never renders and the console
+         says `Failed to resolve module specifier`. It does *not* import `@umbraco-ai/agent-copilot`,
+         so the sidebar Copilot package is genuinely not needed.
+         Test-instance only, like the seven commercial packages above: the shipped package
+         references no AI package and must never depend on one. -->
+    <PackageVersion Include="Umbraco.AI" Version="17.4.0-rc.2" />
+    <PackageVersion Include="Umbraco.AI.Agent" Version="17.2.0-rc.2" />
+    <PackageVersion Include="Umbraco.AI.Agent.UI" Version="17.1.0-rc.2" />
+    <PackageVersion Include="Umbraco.AI.Agent.Copilot.Workspace" Version="17.0.0-rc.2" />
+    <!-- A model provider, so the chat in the test instance can actually answer. Any one would do;
+         Anthropic is simply the key we have. Stable rather than an RC because it depends only on
+         `Umbraco.AI.Core [17.3.0, 17.999.999)`, which 17.4.0-rc.2 satisfies. Needs an API key in
+         user secrets or the AI section to do anything. -->
+    <PackageVersion Include="Umbraco.AI.Anthropic" Version="17.1.0" />
     <!-- Test dependencies -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />

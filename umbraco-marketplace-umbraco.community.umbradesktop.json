@@ -43,6 +43,10 @@
     "umbraco ui builder",
     "umbraco automate",
     "umbraco ai",
+    "copilot",
+    "copilot workspace",
+    "ai agent",
+    "ai chat",
     "background jobs",
     "scheduled tasks",
     "diagnostics",
@@ -89,6 +93,10 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/background-jobs-viewer.png",
       "Caption": "Background Jobs: every scheduled job Umbraco runs behind your site, with how often each runs, when it last ran and when it is due next. Umbraco shows this nowhere else."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/ai-copilot-chat.png",
+      "Caption": "With Umbraco AI installed, its Copilot chat opens as a window and the agent can put a page on your desk beside it. Here it read the desk, found the homepage and opened it, and the conversation is still there to carry on with."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/header-entry-point.png",
