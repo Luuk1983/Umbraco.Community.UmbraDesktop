@@ -46,6 +46,41 @@ The `swatch` on your theme object is the three colours the settings picker paint
 them onto a design language that has no such words is a judgement call, and a swapped tuple would
 be invisible.
 
+### Two surfaces a theme does not reach
+
+Four sheets, four elements, and that is the whole of it: the desktop, the taskbar, the launcher and
+a window. Two things a user sees are deliberately outside that list and stay Umbraco-modern under
+every theme, Windows 98 included. Neither is an oversight, and "a theme may restyle, never remove"
+does not apply to them, because there is nothing of yours there to remove.
+
+**The settings panel.** It is a core modal — a `sidebar` opened through Umbraco's modal system —
+and it is chrome the backoffice owns rather than chrome this package draws. Themeing it would mean
+reimplementing the modal, and every picker it opens on top of it would still be core's.
+
+**The boot splash**, the cover that holds the screen while a desktop loads (see
+`desktop/boot/splash.ts`). This one is causal rather than a judgement: the splash goes up during the
+bundle module's own evaluation, before anything can say who is signed in, and the theme is one of
+the things it is waiting for the settings context to read. A themed splash could not paint until the
+moment it is no longer needed.
+
+A Windows 98 boot screen under the Windows 98 theme is an appealing idea, and it was costed rather
+than dismissed. It is possible: cache the resolved colours in a browser-level key next to the boot
+hint and have the splash read that synchronously. It was **declined on purpose**, twice over.
+
+The splash's defining property is that it depends on nothing — no token, no context, no network, no
+font — so there is nothing it can be blocked on and nothing that can make it fail. Every colour in
+it is a literal for that reason. Reading a cached value would trade that away for a decoration.
+
+And the cache would never stop being a workaround. The per-user settings are headed for server-side
+storage, which makes the theme knowable *later* than it is today, not sooner: a round trip instead of
+a synchronous read. So the hint could not be a stepping stone to doing it properly — it would be
+kept alive forever solely to colour a splash. The only version of this that would be both free and
+always right is a hint rendered into the page by the server, and the page is Umbraco's Razor view,
+which a package does not get to touch.
+
+If you find yourself wanting either of these surfaces to follow your theme, the honest answer is a
+different feature, not a token.
+
 ---
 
 ## 2. The two channels

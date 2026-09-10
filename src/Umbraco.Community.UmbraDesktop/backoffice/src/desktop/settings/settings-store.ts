@@ -23,6 +23,7 @@ export const UMBRADESKTOP_DEFAULT_SETTINGS: UmbraDesktopSettings = {
   wallpaper: { kind: 'builtin', id: UMBRADESKTOP_DEFAULT_WALLPAPER_ID },
   theme: UMBRADESKTOP_DEFAULT_THEME_ID,
   pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
+  bootIntoDesktop: false,
 };
 
 /**
@@ -68,6 +69,19 @@ function isPinnedList(value: unknown): value is string[] {
 }
 
 /**
+ * Whether a decoded value is a boot preference this version understands.
+ *
+ * Stricter than a truthiness check on purpose: only a real boolean counts, so a payload carrying
+ * `"yes"` or `1` takes the default rather than booting somebody into the desktop on the strength of
+ * a coercion.
+ * @param value The decoded `bootIntoDesktop` property.
+ * @returns True when the value is a usable preference.
+ */
+function isBootPreference(value: unknown): value is boolean {
+  return typeof value === 'boolean';
+}
+
+/**
  * Whether a decoded value is a theme id this version can store. An id naming a theme that no
  * longer exists still passes here — that is resolved against the catalogue when the theme is
  * applied, not when it is read, exactly as with wallpaper references.
@@ -89,6 +103,11 @@ function isThemeId(value: unknown): value is string {
  *
  * Within a payload this build *does* understand, each field recovers **independently**: a
  * wallpaper reference it cannot read does not cost the user their Favourites, and vice versa.
+ *
+ * That independence is also why the version stays at 1 as fields are added. A field absent from an
+ * older payload simply takes its default, so adding one needs no migration, while bumping the
+ * version would make every payload written by an earlier build unreadable and reset the wallpaper,
+ * theme and Favourites of every user who had one.
  * @param raw The raw string from storage, or `null` when nothing is stored.
  * @returns Valid settings, always safe to mutate.
  */
@@ -98,6 +117,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     wallpaper: { ...UMBRADESKTOP_DEFAULT_SETTINGS.wallpaper },
     theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
+    bootIntoDesktop: UMBRADESKTOP_DEFAULT_SETTINGS.bootIntoDesktop,
   });
 
   if (!raw) return fallback();
@@ -111,13 +131,20 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
 
   if (typeof decoded !== 'object' || decoded === null) return fallback();
 
-  const payload = decoded as { v?: unknown; wallpaper?: unknown; pinned?: unknown; theme?: unknown };
+  const payload = decoded as {
+    v?: unknown;
+    wallpaper?: unknown;
+    pinned?: unknown;
+    theme?: unknown;
+    bootIntoDesktop?: unknown;
+  };
   if (payload.v !== 1) return fallback();
 
   const settings = fallback();
   if (isWallpaperRef(payload.wallpaper)) settings.wallpaper = payload.wallpaper;
   if (isThemeId(payload.theme)) settings.theme = payload.theme;
   if (isPinnedList(payload.pinned)) settings.pinned = payload.pinned;
+  if (isBootPreference(payload.bootIntoDesktop)) settings.bootIntoDesktop = payload.bootIntoDesktop;
   return settings;
 }
 

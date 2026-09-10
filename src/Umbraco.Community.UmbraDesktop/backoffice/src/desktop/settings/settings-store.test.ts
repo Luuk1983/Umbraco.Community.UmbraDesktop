@@ -23,6 +23,7 @@ it('round-trips settings through serialise and parse', () => {
     wallpaper: { kind: 'media', unique: 'a-guid' },
     theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: ['content'],
+    bootIntoDesktop: true,
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -34,7 +35,15 @@ it('reads back each wallpaper kind unchanged', () => {
     { kind: 'media', unique: 'a-guid' },
   ] as const) {
     expect(
-      parseSettings(serialiseSettings({ v: 1, wallpaper, theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme, pinned: [] }))
+      parseSettings(
+        serialiseSettings({
+          v: 1,
+          wallpaper,
+          theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
+          pinned: [],
+          bootIntoDesktop: false,
+        }),
+      )
         .wallpaper,
     ).to.deep.equal(wallpaper);
   }
@@ -80,6 +89,7 @@ it('round-trips a pinned list', () => {
     wallpaper: { kind: 'none' },
     theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: ['media', 'content'],
+    bootIntoDesktop: false,
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -145,4 +155,28 @@ it('keeps a stored theme even when the wallpaper beside it is unreadable', () =>
 it('rejects an empty theme id, so corruption takes the default rather than an unmatchable value', () => {
   const settings = parseSettings(JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: [], theme: '' }));
   expect(settings.theme).to.equal(UMBRADESKTOP_DEFAULT_SETTINGS.theme);
+});
+
+it('defaults the boot preference off when nothing is stored', () => {
+  expect(parseSettings(null).bootIntoDesktop).to.equal(false);
+});
+
+it('keeps a stored boot preference', () => {
+  expect(parseSettings(JSON.stringify({ v: 1, bootIntoDesktop: true })).bootIntoDesktop).to.equal(true);
+});
+
+it('defaults the boot preference when a stored payload predates it', () => {
+  const settings = parseSettings(
+    JSON.stringify({ v: 1, wallpaper: { kind: 'builtin', id: 'golden-valley' }, pinned: ['content'], theme: 'win98' }),
+  );
+  expect(settings.bootIntoDesktop).to.equal(false);
+  // Why the payload version stays at 1: everything chosen before this field existed survives.
+  expect(settings.wallpaper).to.deep.equal({ kind: 'builtin', id: 'golden-valley' });
+  expect(settings.pinned).to.deep.equal(['content']);
+  expect(settings.theme).to.equal('win98');
+});
+
+it('ignores a boot preference that is not a boolean', () => {
+  expect(parseSettings(JSON.stringify({ v: 1, bootIntoDesktop: 'yes' })).bootIntoDesktop).to.equal(false);
+  expect(parseSettings(JSON.stringify({ v: 1, bootIntoDesktop: 1 })).bootIntoDesktop).to.equal(false);
 });

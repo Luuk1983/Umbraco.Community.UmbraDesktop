@@ -34,6 +34,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned. Your pins are remembered per user, in that browser.
 - A taskbar. Every open window gets a button: click to focus, click again to minimise.
 - Choose your wallpaper. Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user, in that browser.
+- Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, in that browser. See [Starting in the desktop](#starting-in-the-desktop).
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.
 - Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice. Five ship: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98. Adding your own is a folder of CSS and one catalogue entry.
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
@@ -86,8 +87,8 @@ From the launcher:
 - Use the taskbar at the bottom to switch between open windows.
 - The path under a section window's title bar says where that window is. Click any step to go back to it; the first step returns the window to whatever it opened at. If the window has unsaved changes it asks before leaving, the same way closing it does.
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
-- Choose Exit in the launcher's footer to return to the classic backoffice.
-- Open Desktop settings from the cog in the launcher's footer to change your wallpaper.
+- Choose Exit in the launcher's footer to return to the classic backoffice. If you start in the desktop, exiting keeps you in the classic backoffice until you close the tab.
+- Open Desktop settings from the cog in the launcher's footer, as a panel from the right, to change your theme or wallpaper or to start in the desktop. The desktop stays in view behind the panel, so you can see a change as you make it.
 
 Several apps can be open at once, and some of them (the content editor and media library, for instance) can be opened more than once, so you can compare two documents side by side.
 
@@ -238,6 +239,23 @@ There is nothing to configure and nothing to deploy. Upload the image to the Med
 Umbraco resizes it for you: the desktop asks for a copy with no side longer than 2560px, so a large upload never reaches the browser at full size and the resized copy is cached server-side. You do not need to optimise anything first.
 
 If you pick something that is not an image, the desktop tells you and leaves your current wallpaper alone.
+
+## Starting in the desktop
+
+If the desktop is where you work, you should not have to walk through the backoffice to reach it. Open Desktop settings, Startup, and turn on "Open the desktop when I sign in".
+
+It takes effect the next time you open the backoffice rather than there and then, which is why the panel says so under the toggle. From then on, going to `/umbraco` opens the desktop, behind a boot screen that stays up until your own desktop is ready — your theme, your wallpaper, no flash of the classic interface and no flash of somebody else's defaults.
+
+What it deliberately does not do is take over your links. A bookmark, a notification or a shared URL that points at a document still opens that document. Only the bare backoffice address changes where it lands.
+
+Two ways out:
+
+- Exit in the launcher's footer returns you to the classic backoffice, and you stay there until you close the tab. Exiting means "not now", so it does not turn the setting off.
+- `/umbraco?desktop=off` opens the classic backoffice once, whatever the setting says.
+
+That second one is worth knowing before you need it. The desktop hides the backoffice header while it is open, so if a future version of the desktop ever breaks on your setup, that address is how you get back to a normal backoffice and turn the setting off. The desktop also skips the startup jump by itself if the last attempt did not finish, so a bad boot does not repeat.
+
+The setting is stored per user, in that browser, alongside your theme and wallpaper. Signing in on another machine starts in the classic backoffice until you turn it on there too.
 
 ## Games
 
