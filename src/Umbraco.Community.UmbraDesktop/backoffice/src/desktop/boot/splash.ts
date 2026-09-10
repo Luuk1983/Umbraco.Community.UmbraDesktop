@@ -20,6 +20,19 @@ import { UMBRADESKTOP_SPLASH_TIMEOUT_MS } from './constants';
 export const UMBRADESKTOP_SPLASH_ELEMENT_ID = 'umbradesktop-boot-splash';
 
 /**
+ * The name on the boot screen.
+ *
+ * Deliberately **not** the package name. Everywhere else this is UmbraDesktop, because that is what
+ * it is: a windowed desktop inside the backoffice. But this one surface is a machine starting up,
+ * and it is the one place where calling it an operating system is earned rather than a stretch.
+ *
+ * Not localized: it is a product name, like Umbraco itself. Kept as a constant and asserted in
+ * `splash.test.ts` because it reads like a typo for the package name and would otherwise get
+ * helpfully corrected by the next person through here.
+ */
+export const UMBRADESKTOP_SPLASH_WORDMARK = 'UmbracOS';
+
+/**
  * Handle of the armed lift timeout.
  *
  * Module-level rather than kept on the element, so that lowering always disarms it: without this a
@@ -41,8 +54,19 @@ const UMBRACO_MARK = `<svg class="mark" xmlns="http://www.w3.org/2000/svg" fill=
 
 /**
  * The splash's own layout, as a `style` attribute so it depends on no stylesheet, no design token
- * and no custom element being defined yet. The colour is Umbraco's header blue, which is what the
- * backoffice paints its own chrome with.
+ * and no custom element being defined yet.
+ *
+ * Two centred layers rather than one corner gradient, chosen by eye against six alternatives. The
+ * first lifts the middle very slightly, so the screen points at the mark you are waiting for; the
+ * second settles the corners. Splitting it in two is what keeps it subtle — a single centred
+ * gradient strong enough to notice read as a spotlight, and the same colours divided between a lift
+ * and a vignette do the same job without any part of the screen looking lit.
+ *
+ * The colours are the ones the desktop already uses (`#0b1024` ground, `#26386f` highlight), written
+ * as literals rather than read from the theme tokens that hold them. That is the splash's defining
+ * property: it depends on nothing, so there is nothing for it to wait on and nothing that can make
+ * it fail. `background-color` first, so a browser that cannot parse the gradients still paints
+ * something opaque rather than letting the page show through.
  */
 const SPLASH_STYLE = [
   'position:fixed',
@@ -54,7 +78,10 @@ const SPLASH_STYLE = [
   'display:flex',
   'align-items:center',
   'justify-content:center',
-  'background:#1b264f',
+  'background-color:#0b1024',
+  'background-image:' +
+    'radial-gradient(60% 72% at 50% 46%, rgba(38, 56, 111, 0.3) 0%, transparent 70%),' +
+    'radial-gradient(80% 90% at 50% 48%, transparent 38%, rgba(3, 5, 14, 0.7) 100%)',
   'color:#fff',
 ].join(';');
 
@@ -69,34 +96,72 @@ const SPLASH_CSS = `
     display: flex;
     flex-direction: column;
     align-items: center;
+    /* Only the contents fade in, never the backdrop: the backdrop's whole job is to be opaque from
+       the first frame, and fading that would show the page it is there to hide. */
+    animation: umbradesktop-splash-in 220ms ease-out both;
+  }
+  /* The mark and the ring occupy the same box, so progress happens around the logo rather than
+     under it: one object doing both jobs, which is the shape a booting machine has. */
+  #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .ringwrap {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    display: grid;
+    place-items: center;
+  }
+  #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .ring {
+    position: absolute;
+    inset: 0;
+    width: 150px;
+    height: 150px;
+  }
+  #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .track {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.14);
+    stroke-width: 2;
+  }
+  #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .arc {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.92);
+    stroke-width: 2;
+    stroke-linecap: round;
+    /* A quarter of the circumference, near enough: 2πr with r=58 is about 364, and 90 of that reads
+       as an arc rather than as a dot or a nearly-closed ring. The gap value only has to exceed the
+       remainder, so it is not a number anything else depends on. */
+    stroke-dasharray: 90 360;
+    transform-origin: 75px 75px;
+    animation: umbradesktop-splash-spin 1.15s linear infinite;
   }
   #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .mark {
-    width: 96px;
-    height: 96px;
+    width: 72px;
+    height: 72px;
+    /* Lifts the mark off a dark ground the way an OS boot logo sits above its background. */
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.45));
   }
-  #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .pulse {
-    margin-top: 24px;
-    width: 120px;
-    height: 3px;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.2);
-    overflow: hidden;
+  #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .wordmark {
+    margin-top: 26px;
+    /* System stack, and no webfont: this paints before anything can promise a font is loaded, and
+       one arriving late would reflow the wordmark mid-boot. */
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.96);
   }
-  #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .pulse::after {
-    content: '';
-    display: block;
-    width: 40%;
-    height: 100%;
-    border-radius: 2px;
-    background: #fff;
-    animation: umbradesktop-splash-slide 1.1s ease-in-out infinite;
+  @keyframes umbradesktop-splash-spin {
+    to { transform: rotate(360deg); }
   }
-  @keyframes umbradesktop-splash-slide {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(350%); }
+  @keyframes umbradesktop-splash-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
   }
   @media (prefers-reduced-motion: reduce) {
-    #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .pulse { display: none; }
+    /* The arc goes and the track stays. A stopped arc would sit there as a fragment of a circle,
+       reading as progress that has stalled; the full ring reads as an ornament around the mark,
+       which says nothing rather than something wrong. */
+    #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .arc { display: none; }
+    #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .stack { animation: none; }
   }
 `;
 
@@ -116,7 +181,18 @@ export function raiseBootSplash(doc: Document = document, timeoutMs = UMBRADESKT
   splash.id = UMBRADESKTOP_SPLASH_ELEMENT_ID;
   splash.setAttribute('aria-hidden', 'true');
   splash.setAttribute('style', SPLASH_STYLE);
-  splash.innerHTML = `<style>${SPLASH_CSS}</style><div class="stack">${UMBRACO_MARK}<div class="pulse"></div></div>`;
+  splash.innerHTML =
+    `<style>${SPLASH_CSS}</style>` +
+    '<div class="stack">' +
+    '<div class="ringwrap">' +
+    '<svg class="ring" viewBox="0 0 150 150" aria-hidden="true">' +
+    '<circle class="track" cx="75" cy="75" r="58" />' +
+    '<circle class="arc" cx="75" cy="75" r="58" />' +
+    '</svg>' +
+    UMBRACO_MARK +
+    '</div>' +
+    `<div class="wordmark">${UMBRADESKTOP_SPLASH_WORDMARK}</div>` +
+    '</div>';
   doc.body.appendChild(splash);
 
   liftTimeout = window.setTimeout(() => lowerBootSplash(doc), timeoutMs);

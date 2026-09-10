@@ -207,6 +207,8 @@ If the desktop is where you work, you should not have to walk through the backof
 
 It takes effect the next time you open the backoffice rather than there and then, which is why the panel says so under the toggle. From then on, going to `/umbraco` opens the desktop, behind a boot screen that stays up until your own desktop is ready — your theme, your wallpaper, no flash of the classic interface and no flash of somebody else's defaults.
 
+That boot screen says UmbracOS, which is the one place this package gets to call itself an operating system.
+
 What it deliberately does not do is take over your links. A bookmark, a notification or a shared URL that points at a document still opens that document. Only the bare backoffice address changes where it lands.
 
 Two ways out:

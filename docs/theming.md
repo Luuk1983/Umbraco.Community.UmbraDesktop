@@ -63,8 +63,23 @@ bundle module's own evaluation, before anything can say who is signed in, and th
 the things it is waiting for the settings context to read. A themed splash could not paint until the
 moment it is no longer needed.
 
-If you find yourself wanting either of those to follow your theme, the honest answer is a different
-feature, not a token.
+A Windows 98 boot screen under the Windows 98 theme is an appealing idea, and it was costed rather
+than dismissed. It is possible: cache the resolved colours in a browser-level key next to the boot
+hint and have the splash read that synchronously. It was **declined on purpose**, twice over.
+
+The splash's defining property is that it depends on nothing — no token, no context, no network, no
+font — so there is nothing it can be blocked on and nothing that can make it fail. Every colour in
+it is a literal for that reason. Reading a cached value would trade that away for a decoration.
+
+And the cache would never stop being a workaround. The per-user settings are headed for server-side
+storage, which makes the theme knowable *later* than it is today, not sooner: a round trip instead of
+a synchronous read. So the hint could not be a stepping stone to doing it properly — it would be
+kept alive forever solely to colour a splash. The only version of this that would be both free and
+always right is a hint rendered into the page by the server, and the page is Umbraco's Razor view,
+which a package does not get to touch.
+
+If you find yourself wanting either of these surfaces to follow your theme, the honest answer is a
+different feature, not a token.
 
 ---
 
