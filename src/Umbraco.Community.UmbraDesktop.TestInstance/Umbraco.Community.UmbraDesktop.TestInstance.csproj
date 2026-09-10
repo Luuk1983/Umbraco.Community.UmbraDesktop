@@ -27,6 +27,10 @@
     <PackageReference Include="Umbraco.UIBuilder" />
     <PackageReference Include="Umbraco.Automate" />
     <PackageReference Include="Umbraco.AI" />
+    <PackageReference Include="Umbraco.AI.Agent" />
+    <PackageReference Include="Umbraco.AI.Agent.UI" />
+    <PackageReference Include="Umbraco.AI.Agent.Copilot.Workspace" />
+    <PackageReference Include="Umbraco.AI.Anthropic" />
     <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />
     <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Entertainment\Umbraco.Community.UmbraDesktop.Entertainment.csproj" />
     <!-- The Entertainment project depends on the host by version range rather than by project

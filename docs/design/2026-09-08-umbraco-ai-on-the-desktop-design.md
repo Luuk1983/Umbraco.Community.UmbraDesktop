@@ -28,7 +28,8 @@ that between them settle most of the design, and both are in §2.
 - The **Copilot Workspace** as an ordinary desktop app, launched from the taskbar (§4).
 - A frontend tool so the agent can **open, focus and arrange windows**, which turns an answer into
   work you can start (§5).
-- A request-context contributor that tells the agent **what is on the desk** (§6).
+- A way to tell the agent **what is on the desk** (§6). Specified here as a request-context
+  contributor; shipped as a tool, because the Workspace never runs contributors. See §6's banner.
 - The desktop **staying honest** when content changes underneath an open window, whoever changed
   it, including the dangerous case where the window also has unsaved changes (§7, §8).
 - **Seeing what changed**, so the warning in that dangerous case can be acted on rather than merely
@@ -248,6 +249,33 @@ Three notes that matter more than the schema:
 
 ## 6. What the desk tells the agent
 
+> **Superseded, on a point of fact.** This section specifies a `uaiRequestContextContributor`, and
+> one was built, and it never fired. **The Copilot Workspace does not invoke
+> `UaiRequestContextCollector` at all** — the only thing in Umbraco AI that does is the sidebar
+> Copilot, which §4 deliberately does not use. So the contributor was registered, correct, tested,
+> and dead. Verified by grepping every usage in the AI repo at `Umbraco.AI@18.4.0-rc.2`, and
+> confirmed live: the agent said it had no way to know what windows were open.
+>
+> What shipped instead is **three `uaiAgentFrontendTool`s**, which the Workspace does wire up:
+>
+> - `describe_desktop` — what this section describes, plus the names of the apps that can be opened,
+>   which turned out to matter as much: the agent knowing what the desktop *can do* is what makes
+>   "open the log viewer" work at all.
+> - `open_desktop_window` — §5, extended to take an app name as well as an entity, and a
+>   `newWindow` flag. §5's "reopening the same target focuses the existing window" is still the
+>   default; the flag exists because two windows on one document is a thing the desktop has always
+>   allowed and is how the overwrite warning gets demonstrated.
+> - `close_desktop_windows` — not in this design at all; see §13.
+>
+> What the change costs is D5's best property. Ambient context arrived on every message with no
+> thinking required; a tool has to be reached for, and the manifest's description carries the whole
+> burden of saying when. In practice Sonnet called it unprompted before a write and warned about an
+> open dirty document, which is the scenario D5 was written for. If Umbraco ever wires the collector
+> into the Workspace, this section becomes buildable as written and is the better answer.
+>
+> Everything below is kept because the *content* of the snapshot survived unchanged, and because the
+> reasoning about identity-not-content and snapshot-not-subscription is still exactly right.
+
 One `uaiRequestContextContributor`, which the collector runs once per message send:
 
 ```ts
@@ -421,8 +449,11 @@ one by hand rather than resolving the section. See R2.
 | --- | --- | --- |
 | Catalogue entry resolves to the section URL, is gated by its permission, and is absent when the section is | `catalogue/commercial.test.ts` (its existing pattern for AI-family entries) | pure, against a fake registry |
 | **A second launch of an `allowMultiple: false` app focuses the open window instead of stacking one** | `window-manager.test.ts` | pure, against the manager. Existing behaviour with no test today, and D16 now rests on it, so it gets one before the entry that depends on it |
-| Desk contributor: shape of the contributed item, front window, dirty flags, and empty when no desktop | `ai/desk.contributor.test.ts` | pure; it takes the window model, not the DOM |
-| Open-window tool: opens, focuses an already-open target rather than duplicating, refuses politely with no desktop | `ai/open-window.tool.test.ts` | via a seam on the manager, as `window-manager.test.ts` already does |
+| ~~Desk contributor: shape of the contributed item, front window, dirty flags, and empty when no desktop~~ **Superseded by §6.** The same assertions now cover the `describe_desktop` tool's body: window list, front window, dirty flags, app list, localised names, and nothing at all when there is no desktop | `ai/desk-snapshot.test.ts` | pure; it takes the window model, not the DOM |
+| Open-window tool: opens, focuses an already-open target rather than duplicating, refuses politely with no desktop, and opens a deliberate duplicate when asked | `ai/open-window.test.ts` | pure, over a plan the api applies — a seam on the manager turned out not to be needed |
+| **Close tool: never closes a window with unsaved changes, never closes the chat's own window** | `ai/close-windows.test.ts` | pure. Both rules verified by mutation: removing either one fails cases |
+| The frame can reach the desktop's contexts from inside a window, across two shadow boundaries | `host-desktop.test.ts` | a real same-origin iframe under a stand-in provider. Without `composed` it passes a flat test and fails on the real desktop |
+| Name matching: exact beats containment, ambiguity is refused, an empty name matches nothing | `ai/name-match.test.ts` | pure. Shared by the open and close tools |
 | Event matching: an event for an open node marks it, an event for an unrelated node does not, `Deleted` alarms whatever the dirty state | `stale-watcher.test.ts` | pure over the model plus a fake event subject |
 | **Self-save suppression** (R1) | same | the first test to write. A window's own save must not alarm it, including when the event arrives before the workspace goes clean |
 | Refresh in place calls the frame's `reload()` and never reloads the iframe | `stale-watcher.test.ts` | fake workspace context in the test document, as `dirty-watcher.test.ts` builds one |
@@ -547,6 +578,14 @@ confirm no gutter (D3) and a clean console.
   close to what a desk is. Attractive and entirely speculative.
 - **Voice, and image generation into Media.** Core ships speech-to-text and image-generation
   controllers, and the chat has a voice button. Neither client API has been read.
+
+**Arranging the desk was here, and half of it shipped.** This document had no close tool, and the
+brainstorm that added the desk tools deliberately deferred arranging altogether. Then the first
+thing asked of the working tools was "close all windows except yourself", which is better evidence
+than the deferral it overturned, so `close_desktop_windows` exists. What is still deferred is
+geometry: focus, minimise, maximise, move and tile. Closing earned its place because it answers a
+request people actually make and because it can be made incapable of losing work; moving windows
+around by description has neither property yet.
 
 ---
 

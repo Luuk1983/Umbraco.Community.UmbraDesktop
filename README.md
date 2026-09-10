@@ -30,6 +30,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Warns before you overwrite someone. If somebody else saves or bins a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. Deletion is warned about even when you have nothing unsaved, because there is no version left to refresh to. The plain backoffice does not warn about this at all.
 - A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus Games once a package puts an app there. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
+- Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned. Your pins are remembered per user, in that browser.
 - A taskbar. Every open window gets a button: click to focus, click again to minimise.
 - Choose your wallpaper. Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user, in that browser.
@@ -154,6 +155,44 @@ happened without this copy of the report knowing yet.
 
 Nothing here can be started, paused or cancelled. It is a viewer.
 
+## Umbraco AI
+
+If you have Umbraco AI, the desktop gives its agent two things the plain backoffice cannot.
+
+The **Copilot Workspace** opens as an ordinary app, from the launcher, in the AI group. It is
+Umbraco's own chat, with its conversation list, its projects and its attachments, in a window, so
+the chat sits beside the pages it is about instead of replacing them. One window rather than
+several: conversations are switched in the workspace's own sidebar, and switching aborts whatever
+the agent was doing regardless, which is what Umbraco's own section does too.
+
+**Answers can open as windows.** Ask where something is and the agent can put it on your desk in
+its own window, without leaving the conversation. In a single-page backoffice, following a link is a
+navigation and the chat resets; here both survive. If the item is already open somewhere, that
+window comes to the front instead of a second one opening onto the same document, unless you ask
+for another one on purpose. It opens the desktop's own apps too, so "open the log viewer" works as
+well as "open the pricing page".
+
+**And it can tidy up.** "Close everything" does what it says, with two things it will not do: a
+window holding unsaved changes is left open and named back to you, and the chat's own window stays.
+So there is no way for the agent to lose your work, and no dialog appears out of nowhere.
+
+**The agent can read your desk.** It can ask which windows are open, what each is showing, which is
+in front and which are holding unsaved changes, so "the page I have open" is a phrase that works. It
+is also how the agent knows which apps this desktop can open at all. What it reads is a snapshot
+taken at the moment it asks rather than a live feed, so what a conversation says stays true of when
+it was said, and it is identity only and never your unsaved edits: reading a document is the agent's
+own job, and it can do that whether or not you have it open.
+
+![The Copilot chat open in a window on the left, with three tool calls listed in the transcript: get_content_by_route, describe_desktop and open_desktop_window. The Home document it opened sits in its own window on the right, and both windows have a button on the taskbar below.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/ai-copilot-chat.png)
+
+That last part deserves one caution. From 17.4 the agent writes on the server, so it can change a
+document you have open in front of you. That is the case [Overwrite protection](#overwrite-protection)
+above covers, and it covers the agent exactly as it covers a colleague.
+
+Needs **Umbraco AI 17.4 or later**. Without the package, on an older version, or for a user without
+permission to the Copilot Workspace section, none of it appears: no launcher tile, no tool, and
+nothing added to the chat. UmbraDesktop does not depend on Umbraco AI and never requires it.
+
 ## Changing the theme
 
 Desktop settings has a Theme section above Wallpaper. Choosing a theme restyles the launcher,
@@ -263,7 +302,7 @@ appears only on installs that have that package, and nothing needs configuring e
 | Umbraco Engage | The Engage section, and Engage configuration | Marketing and sales, System |
 | Umbraco UI Builder | The UI Builder settings workspace | Development |
 | Umbraco Automate | The Automate section | Automation |
-| Umbraco AI | The AI section | AI |
+| Umbraco AI | The AI section, and the Copilot Workspace as its own chat window | AI |
 
 Most of these are a single app on purpose. Commerce, Engage and UI Builder navigate internally in
 ways that have no stable link to point a tile at — Commerce scopes everything to a store, Engage

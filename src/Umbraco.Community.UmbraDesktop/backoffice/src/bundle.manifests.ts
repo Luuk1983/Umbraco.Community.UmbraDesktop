@@ -5,6 +5,7 @@ import { manifests as desktop } from './desktop/manifest';
 import { manifests as desktopSettings } from './desktop/settings/manifest';
 import { manifests as headerApps } from './headerapps/manifest';
 import { manifests as desktopLocalization } from './desktop/localization/manifest';
+import { manifests as desktopAi } from './desktop/ai/manifest';
 
 // Job of the bundle is to collate all the manifests from different parts of the extension and load other manifests
 // We load this bundle from umbraco-package.json
@@ -16,4 +17,5 @@ export const manifests: Array<UmbExtensionManifest> = [
   ...desktopSettings,
   ...headerApps,
   ...desktopLocalization,
+  ...desktopAi,
 ];
