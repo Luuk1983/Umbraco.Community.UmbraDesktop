@@ -58,9 +58,9 @@ it('reads the escape flag off the query string', () => {
 });
 
 const boot = {
-  pathname: '/umbraco',
+  landingPathname: '/umbraco',
   backofficePath: BASE,
-  search: '',
+  landingSearch: '',
   preference: true,
   exited: false,
   markerPresent: false,
@@ -76,10 +76,19 @@ it('does not boot when the preference is off', () => {
 });
 
 it('never boots away from a deep link, because that link is somebody’s bookmark', () => {
-  expect(shouldBootIntoDesktop({ ...boot, pathname: '/umbraco/section/content' })).to.equal(false);
+  expect(shouldBootIntoDesktop({ ...boot, landingPathname: '/umbraco/section/content' })).to.equal(false);
   expect(
-    shouldBootIntoDesktop({ ...boot, pathname: '/umbraco/section/content/workspace/document/edit/123' }),
+    shouldBootIntoDesktop({ ...boot, landingPathname: '/umbraco/section/content/workspace/document/edit/123' }),
   ).to.equal(false);
+});
+
+it('judges the landing path, not wherever the router has since gone', () => {
+  // The regression this guards: the caller used to read `location.pathname` live, after awaiting the
+  // current user. By then core's router has redirected the root to the first allowed section, so a
+  // load that genuinely landed on the root looked like a deep link and the boot silently declined —
+  // after the splash had already gone up. A landing path of the root must boot, and the input is
+  // named for that so a live read looks wrong at the call site.
+  expect(shouldBootIntoDesktop({ ...boot, landingPathname: '/umbraco' })).to.equal(true);
 });
 
 it('does not boot a user who has no access to the desktop section', () => {
@@ -89,7 +98,7 @@ it('does not boot a user who has no access to the desktop section', () => {
 });
 
 it('does not boot when the URL says off', () => {
-  expect(shouldBootIntoDesktop({ ...boot, search: '?desktop=off' })).to.equal(false);
+  expect(shouldBootIntoDesktop({ ...boot, landingSearch: '?desktop=off' })).to.equal(false);
 });
 
 it('does not boot after the user has exited the desktop in this tab', () => {
@@ -101,9 +110,9 @@ it('does not boot when the previous attempt never reported a mounted desktop', (
 });
 
 const splash = {
-  pathname: '/umbraco',
+  landingPathname: '/umbraco',
   backofficePath: BASE,
-  search: '',
+  landingSearch: '',
   hint: true,
   exited: false,
   markerPresent: false,
@@ -116,15 +125,15 @@ it('raises the splash when this browser expects to boot into the desktop', () =>
 it('raises the splash when the desktop is opened directly by URL, hint or no hint', () => {
   // Not a boot at all: a fresh load of a desktop URL flashes the classic header and then a desktop
   // wearing the default theme, so it needs the same cover.
-  const pathname = '/umbraco/section/umbradesktop';
-  expect(shouldRaiseSplash({ ...splash, pathname, hint: false })).to.equal(true);
-  expect(shouldRaiseSplash({ ...splash, pathname, hint: false, exited: true })).to.equal(true);
-  expect(shouldRaiseSplash({ ...splash, pathname, hint: false, search: '?desktop=off' })).to.equal(true);
+  const landingPathname = '/umbraco/section/umbradesktop';
+  expect(shouldRaiseSplash({ ...splash, landingPathname, hint: false })).to.equal(true);
+  expect(shouldRaiseSplash({ ...splash, landingPathname, hint: false, exited: true })).to.equal(true);
+  expect(shouldRaiseSplash({ ...splash, landingPathname, hint: false, landingSearch: '?desktop=off' })).to.equal(true);
 });
 
 it('does not raise the splash on the root unless a boot is actually expected', () => {
   expect(shouldRaiseSplash({ ...splash, hint: false })).to.equal(false);
-  expect(shouldRaiseSplash({ ...splash, search: '?desktop=off' })).to.equal(false);
+  expect(shouldRaiseSplash({ ...splash, landingSearch: '?desktop=off' })).to.equal(false);
   expect(shouldRaiseSplash({ ...splash, exited: true })).to.equal(false);
   expect(shouldRaiseSplash({ ...splash, markerPresent: true })).to.equal(false);
 });
@@ -132,7 +141,7 @@ it('does not raise the splash on the root unless a boot is actually expected', (
 it('does not raise the splash anywhere else in the backoffice', () => {
   // In-app navigation into the desktop needs no cover: the user is already loaded and the settings
   // read is synchronous, so there is no gap, and a splash would just be noise.
-  expect(shouldRaiseSplash({ ...splash, pathname: '/umbraco/section/content' })).to.equal(false);
+  expect(shouldRaiseSplash({ ...splash, landingPathname: '/umbraco/section/content' })).to.equal(false);
 });
 
 it('agrees with the boot decision on every path it covers', () => {

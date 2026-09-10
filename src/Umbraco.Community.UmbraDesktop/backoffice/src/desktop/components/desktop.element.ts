@@ -4,6 +4,7 @@ import { findChromeRoot } from '../chrome-injector';
 import { clearBootAttempt } from '../boot/boot-storage';
 import { lowerBootSplash } from '../boot/splash';
 import { waitForWallpaper } from '../boot/wallpaper-ready';
+import { bootTrace } from '../boot/trace';
 import { applySectionTabHide } from '../../headerapps/section-tab-hide.js';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
@@ -111,10 +112,12 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    * desktop is genuinely on screen.
    */
   async #handOverFromSplash(): Promise<void> {
+    bootTrace('desktop mounted, settings resolved; waiting for the wallpaper');
     await this.updateComplete;
     await waitForWallpaper(this._wallpaper?.background.url ?? null);
     clearBootAttempt();
     lowerBootSplash();
+    bootTrace('splash lowered; the desktop has the screen');
   }
 
   /**

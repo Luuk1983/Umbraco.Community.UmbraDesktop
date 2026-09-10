@@ -20,17 +20,17 @@ import { UMBRADESKTOP_SPLASH_TIMEOUT_MS } from './constants';
 export const UMBRADESKTOP_SPLASH_ELEMENT_ID = 'umbradesktop-boot-splash';
 
 /**
- * The name on the boot screen.
+ * The name on the boot screen: the package's own.
  *
- * Deliberately **not** the package name. Everywhere else this is UmbraDesktop, because that is what
- * it is: a windowed desktop inside the backoffice. But this one surface is a machine starting up,
- * and it is the one place where calling it an operating system is earned rather than a stretch.
+ * It said UmbracOS for a while, which is a better joke and was built, looked at and then dropped.
+ * The boot screen is the first thing a user meets, and introducing the product there by a name that
+ * appears nowhere else — not the package, not the marketplace listing, not the docs — buys a smile
+ * at the cost of a moment's "wait, what did I install?". The desktop earns the operating-system
+ * feeling by behaving like one; the splash does not need to claim it in words.
  *
- * Not localized: it is a product name, like Umbraco itself. Kept as a constant and asserted in
- * `splash.test.ts` because it reads like a typo for the package name and would otherwise get
- * helpfully corrected by the next person through here.
+ * Not localized: it is a product name, like Umbraco itself.
  */
-export const UMBRADESKTOP_SPLASH_WORDMARK = 'UmbracOS';
+export const UMBRADESKTOP_SPLASH_WORDMARK = 'UmbraDesktop';
 
 /**
  * Handle of the armed lift timeout.

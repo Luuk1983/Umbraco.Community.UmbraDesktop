@@ -13,12 +13,23 @@ import { UMBRADESKTOP_BOOT_PARAM, UMBRADESKTOP_BOOT_PARAM_OFF } from './constant
 
 /** Everything the boot decision depends on, gathered by the caller so this stays pure. */
 export interface UmbraDesktopBootInputs {
-  /** `location.pathname`. */
-  pathname: string;
+  /**
+   * The path this page load **landed** on, captured before anything was awaited — not the path as
+   * it stands when the decision is finally made.
+   *
+   * Named for the distinction because getting it wrong is silent and cost a real bug. The decision
+   * runs after the current user resolves, and core's router redirects the backoffice root to the
+   * first allowed section a few hundred milliseconds into the load, which is usually sooner. Read
+   * live, `location.pathname` therefore says `/umbraco/section/content` by the time we look, the
+   * root test fails, and the boot declines — after the splash has already gone up, because that was
+   * decided at bundle-evaluation time when the path really was the root. Which is exactly what the
+   * user sees: a boot screen, and then Content.
+   */
+  landingPathname: string;
   /** The backoffice's base path, e.g. `/umbraco`. Configurable, so never assumed. */
   backofficePath: string;
-  /** `location.search`, including the leading `?`. */
-  search: string;
+  /** The query string this page load landed with, including the leading `?`. Captured, as above. */
+  landingSearch: string;
   /** The current user's stored preference. */
   preference: boolean;
   /** Whether the user has exited the desktop in this tab. */
@@ -35,12 +46,12 @@ export interface UmbraDesktopBootInputs {
  * consult, only this browser's mirrored hint.
  */
 export interface UmbraDesktopSplashInputs {
-  /** `location.pathname`. */
-  pathname: string;
+  /** The path this page load landed on. See {@link UmbraDesktopBootInputs.landingPathname}. */
+  landingPathname: string;
   /** The backoffice's base path. */
   backofficePath: string;
-  /** `location.search`, including the leading `?`. */
-  search: string;
+  /** The query string this page load landed with, including the leading `?`. */
+  landingSearch: string;
   /** This browser's mirrored preference. */
   hint: boolean;
   /** Whether the user has exited the desktop in this tab. */
@@ -135,8 +146,8 @@ export function isBootDisabledByUrl(search: string): boolean {
 export function shouldBootIntoDesktop(inputs: UmbraDesktopBootInputs): boolean {
   if (!inputs.preference) return false;
   if (!inputs.hasSectionAccess) return false;
-  if (!isBackofficeRoot(inputs.pathname, inputs.backofficePath)) return false;
-  if (isBootDisabledByUrl(inputs.search)) return false;
+  if (!isBackofficeRoot(inputs.landingPathname, inputs.backofficePath)) return false;
+  if (isBootDisabledByUrl(inputs.landingSearch)) return false;
   if (inputs.exited) return false;
   if (inputs.markerPresent) return false;
   return true;
@@ -158,10 +169,10 @@ export function shouldBootIntoDesktop(inputs: UmbraDesktopBootInputs): boolean {
  * @returns True when the splash should be raised.
  */
 export function shouldRaiseSplash(inputs: UmbraDesktopSplashInputs): boolean {
-  if (isDesktopSectionPath(inputs.pathname, inputs.backofficePath)) return true;
+  if (isDesktopSectionPath(inputs.landingPathname, inputs.backofficePath)) return true;
   if (!inputs.hint) return false;
-  if (!isBackofficeRoot(inputs.pathname, inputs.backofficePath)) return false;
-  if (isBootDisabledByUrl(inputs.search)) return false;
+  if (!isBackofficeRoot(inputs.landingPathname, inputs.backofficePath)) return false;
+  if (isBootDisabledByUrl(inputs.landingSearch)) return false;
   if (inputs.exited) return false;
   if (inputs.markerPresent) return false;
   return true;

@@ -3,7 +3,13 @@ import { hideSectionTab } from '../headerapps/section-tab-hide';
 import { UMB_AUTH_CONTEXT } from '@umbraco-cms/backoffice/auth';
 import { client } from '../api/client.gen.js';
 import { backofficePathFromBaseHref } from '../desktop/boot/backoffice-path';
-import { clearBootAttempt, hasBootAttempt, isBootSuppressed, markBootAttempt } from '../desktop/boot/boot-storage';
+import {
+    clearBootAttempt,
+    hasBootAttempt,
+    isBootSuppressed,
+    markBootAttempt,
+    readBootHint,
+} from '../desktop/boot/boot-storage';
 import {
     desktopSectionPath,
     isBackofficeRoot,
@@ -12,6 +18,9 @@ import {
 } from '../desktop/boot/boot-decision';
 
 import { lowerBootSplash } from '../desktop/boot/splash';
+import { waitForSectionRoute } from '../desktop/boot/router-ready';
+import { bootTrace } from '../desktop/boot/trace';
+import { bootLanding } from '../desktop/boot/landing';
 import { parseSettings, settingsStorageKey } from '../desktop/settings/settings-store';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import { UMB_SERVER_CONTEXT } from '@umbraco-cms/backoffice/server';
@@ -78,8 +87,18 @@ export const onUnload: UmbEntryPointOnUnload = (_host, _extensionRegistry) => {
  * @param host The entrypoint's host element, used to reach the backoffice contexts.
  */
 async function decideBoot(host: UmbElement): Promise<void> {
+    // Read from the record, never from `location`. By the time this runs the router has usually
+    // moved the URL off the root: this function arrives via a dynamic import of the entrypoint
+    // chunk, and on a throttled connection that fetch alone outlives core's redirect. Reading
+    // `location` here — even as the very first statement — reported `/umbraco/section/content` for a
+    // load that landed on the root, and declined a boot that should have happened. See `landing.ts`.
+    const { pathname: landingPathname, search: landingSearch } = bootLanding();
+
+    bootTrace('decision started', { landingPathname, landingSearch });
+
     const serverContext = await host.getContext(UMB_SERVER_CONTEXT);
     const backofficePath = serverContext?.getBackofficePath() ?? backofficePathFromBaseHref(document.baseURI);
+    bootTrace('server context resolved', { backofficePath, fromContext: !!serverContext });
 
     /**
      * Whether this load is on its way to the desktop, and must therefore keep its splash.
@@ -95,57 +114,80 @@ async function decideBoot(host: UmbElement): Promise<void> {
     try {
         // Nothing to decide anywhere but the root: a deeper path is somebody's link, and a setting
         // that swallowed those would break every bookmark anyone has saved.
-        if (!isBackofficeRoot(window.location.pathname, backofficePath)) return;
+        if (!isBackofficeRoot(landingPathname, backofficePath)) {
+            bootTrace('not the backoffice root, leaving this load alone');
+            return;
+        }
 
         const userContext = await host.getContext(UMB_CURRENT_USER_CONTEXT);
-        if (!userContext) return;
+        if (!userContext) {
+            bootTrace('no current-user context; giving up');
+            return;
+        }
+        bootTrace('current-user context resolved, waiting for the user');
         // Resolves only on a real user — `asPromise` skips undefined. If the user never arrives the
         // backoffice cannot render any section either, so hanging here costs nothing the user would
         // otherwise have had, and the splash lifts on its own timeout regardless.
         const user = await host.observe(userContext.currentUser).asPromise();
-        if (!user?.unique) return;
+        if (!user?.unique) {
+            bootTrace('user resolved without an id; giving up');
+            return;
+        }
+        bootTrace('user resolved', { unique: user.unique, allowedSections: user.allowedSections });
 
         const markerPresent = hasBootAttempt();
         // Spent whether or not it stops this boot, so one failed boot costs one skipped boot rather
         // than every boot from here on.
         if (markerPresent) clearBootAttempt();
 
-        const boot = shouldBootIntoDesktop({
-            pathname: window.location.pathname,
+        const inputs = {
+            landingPathname,
             backofficePath,
-            search: window.location.search,
+            landingSearch,
             preference: parseSettings(readStoredSettings(user.unique)).bootIntoDesktop,
             exited: isBootSuppressed(),
             markerPresent,
             hasSectionAccess: (user.allowedSections ?? []).includes(UMBRADESKTOP_SECTION_ALIAS),
-        });
-        if (!boot) return;
+        };
+        const boot = shouldBootIntoDesktop(inputs);
+        bootTrace(boot ? 'decided to boot' : 'decided not to boot', inputs);
 
+        if (!boot) {
+            // The one combination worth saying something about: this browser expected to boot, so a
+            // splash went up, and the authoritative decision then said no. That is either a stale
+            // hint (harmless, and self-correcting) or a bug — and as a bug it is invisible, because
+            // all the user sees is a boot screen lifting onto the classic backoffice. Two rounds of
+            // debugging went on guessing which input disagreed; now it says.
+            if (readBootHint()) {
+                // eslint-disable-next-line no-console
+                console.info('[UmbraDesktop] Boot into desktop declined. Inputs:', {
+                    ...inputs,
+                    userUnique: user.unique,
+                    allowedSections: user.allowedSections,
+                    storedSettings: readStoredSettings(user.unique),
+                });
+            }
+            return;
+        }
+
+        // Wait for the backoffice to have rendered a section before navigating. A navigation made
+        // before its router is listening is silently lost, and `router-ready.ts` explains both ways
+        // that goes wrong. The wait happens behind the splash, so all the user sees is a boot.
+        bootTrace('waiting for the backoffice to render a section');
+        await waitForSectionRoute();
+        bootTrace('section rendered, the router is listening', { pathNow: window.location.pathname });
+
+        // Marked after the wait, not before: a wait that never ends should leave nothing behind for
+        // the loop breaker to trip over on the next load.
         markBootAttempt();
         leaving = true;
 
-        // A full navigation, not a `pushState`, and this is the whole design decision of the boot.
-        //
-        // `pushState` is one page load instead of two and is how the desktop's own Exit navigates,
-        // so it was the obvious choice — but from the backoffice root it depends on core's router
-        // being ready to hear it, and two separate things there are outside our control.
-        // `RouterSlot.add` navigates only if the slot is already connected when its routes are
-        // assigned, and `umb-backoffice-main` assigns them to a slot Lit has not connected yet, so
-        // an event fired before that slot exists is spent on nobody. And the router's own redirect
-        // from the root to the first allowed section is delayed by `awaitStability`, so it can
-        // complete *after* ours and take the user to Content instead. Waiting for a section to
-        // render first was tried and is not a signal we can rely on: on a slow instance the root
-        // redirect sometimes does not complete at all, leaving a rendered header over an empty body
-        // and nothing to wait for.
-        //
-        // Replacing the document sidesteps all of it. The desktop URL becomes the initial URL, which
-        // is the same path a typed desktop URL takes and the one case that has never failed, because
-        // there is no race left: the URL is already right when the router starts.
-        //
-        // The cost is a second page load, behind the splash. `replace`, not `assign`, so the root we
-        // came from does not sit in the back history where Back would bounce the user through this
-        // same decision again.
-        window.location.replace(desktopSectionPath(backofficePath));
+        // `pushState`, inside this document, the same way the desktop's own Exit navigates. One page
+        // load and one splash. Replacing the document also works and was shipped briefly, but it
+        // costs a second load, which means a second splash with a flash of the classic backoffice
+        // between them — see the note in `router-ready.ts` before reaching for it again.
+        window.history.pushState(null, '', desktopSectionPath(backofficePath));
+        bootTrace('navigated to the desktop; it now owns the splash', { pathNow: window.location.pathname });
     } finally {
         // The splash must not outlive the decision, with two exceptions, both of which end in a
         // desktop taking the screen over: this load is navigating to one (`leaving`), or it already

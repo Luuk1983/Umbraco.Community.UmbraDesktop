@@ -63,13 +63,13 @@ it('leaves a whole ring rather than a frozen arc under reduced motion', () => {
   expect(reduced).to.match(/\.arc\s*\{[^}]*display:\s*none/);
 });
 
-it('boots under the name UmbracOS', () => {
-  // Not the package name, on purpose: this is the one surface that reads as an operating system
-  // starting up, so it is the one place the joke lands. Pinned in a test because it looks like a
-  // typo for UmbraDesktop and would otherwise get helpfully corrected.
+it('boots under the package name', () => {
+  // UmbracOS was built, seen on screen and then dropped: the boot screen is the first thing a user
+  // meets, and it introducing the product by a name that appears nowhere else — not the package,
+  // not the marketplace listing, not the docs — costs more than the joke earns.
   raiseBootSplash();
   const splash = document.getElementById(UMBRADESKTOP_SPLASH_ELEMENT_ID);
-  expect(splash?.textContent).to.contain('UmbracOS');
+  expect(splash?.textContent).to.contain('UmbraDesktop');
 });
 
 it('asks for no font it might have to wait for', () => {
