@@ -1,8 +1,24 @@
 name: CI
 
+# Every branch a change can land on, which is not only the trunk. This filter matches the **base**
+# of a pull request, so a branch missing from it gets no checks at all rather than failing ones —
+# and the omission is silent, because a pull request with nothing configured to run looks exactly
+# like one whose checks have not started yet. It cost v17.1.0 a last-minute fix merged into
+# `release/v17.1.0` unbuilt, with the publish workflow on the tag as the next thing to touch that
+# code. The branch that ships was the one branch without CI.
+#
+# `main` is listed literally as well as under `**/main` on purpose. `**` is documented to match
+# zero or more of any character, which leaves whether it matches an *empty* leading segment as an
+# edge case of GitHub's glob, and whether the trunk gets built is not a thing to settle on a
+# subtlety. `**/main` is for the versioned trunks that arrive when the next major ships and this
+# line continues as `v17/main`.
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - '**/main'
+      - 'release/**'
+      - 'hotfix/**'
 
 jobs:
   # What ships. Kept identical to the release by sharing one composite action, because the way this

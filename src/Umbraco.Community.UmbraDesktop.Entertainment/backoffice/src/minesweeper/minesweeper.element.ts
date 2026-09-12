@@ -54,6 +54,39 @@ const DIGIT_COLOURS = [
   '#404040',
 ] as const;
 
+/**
+ * How much of the theme's own boundary colour goes into a closed cell's face, as a percentage.
+ *
+ * This app's, for the same reason {@link MINE_GLYPH} is: which way up a board reads is
+ * Minesweeper's domain and not a theme's. Windows 98 is the original and settles it — a closed cell
+ * is grey material and an opened one is the white field underneath it — and every theme has to say
+ * the same thing, inverted on a dark one, or the board means nothing.
+ *
+ * No pair of tokens can say it. `surface-raised` against `surface-sunken` is the obvious reading
+ * and it is what shipped, and it was reported unplayable: `docs/desktop-apps.md` §4 promises text
+ * on the three surfaces and `border` against all three at 3:1, and says nothing whatever about the
+ * gap *between* two surfaces, because there is nothing to say — Umbraco's own surface family spans
+ * 1.07:1 at its widest. Both Umbraco themes accordingly drew the two states 1.03:1 apart, which is
+ * one colour, and macOS and Windows 11 drew them the wrong way up, which is not a palette bug
+ * either: `surface-raised` is a control face, a macOS control face is white, and white is right for
+ * a button and backwards for a tile nobody has lifted yet.
+ *
+ * So the face is derived instead: the well's own ground, pulled toward `--umbradesktop-app-border`.
+ * That token is the one whose contrast *and* direction the contract fixes, since 3:1 against every
+ * surface makes it necessarily darker than a light theme's ground and lighter than a dark theme's.
+ * An opened cell is then literally the well showing through, and a closed one is a tile of the
+ * theme's own material over it, under any theme, including a sixth.
+ *
+ * **25 is measured, not picked.** It is the smallest round figure that clears, on every shipped
+ * theme, the step macOS and Windows 11 already ship and nobody has ever remarked on: it lands the
+ * five between 1.28:1 and 1.84:1, and 1.16:1 on the flattest palette the contract still permits,
+ * against the 1.03:1 that was reported. And it checks against the reference from the other end —
+ * 25% of Windows 98's black into Windows 98's white is `#bfbfbf`, one 8-bit step from the
+ * `#c0c0c0` face that theme names for itself, so that theme's board is derived to the colour it
+ * would have hardcoded.
+ */
+const CLOSED_CELL_TINT_PERCENT = 25;
+
 /** Localisation area this package's dictionaries live under. */
 const AREA = 'umbraDesktopEntertainment';
 
@@ -331,6 +364,12 @@ export class MinesweeperElement extends UmbLitElement {
    * and gets chiselled squares, a theme whose controls are flat sets a hairline and a radius and
    * gets rounded tiles. The Windows 98 block at the end is the one place that is not enough, since
    * a real two-tone bevel is two colours per edge and no token pair can express that.
+   *
+   * The one thing here that is **not** a token read straight off is a closed cell's face, which is
+   * derived from two of them — see {@link CLOSED_CELL_TINT_PERCENT}. Reading it off
+   * `surface-raised` is what this did, and it is why the board came out unreadable under two themes
+   * and upside down under two more: which of a theme's surfaces is the darker one, and by how much,
+   * is not part of the contract and never was.
    */
   static override styles = css`
     :host {
@@ -462,6 +501,9 @@ export class MinesweeperElement extends UmbLitElement {
       font-family: var(--umbradesktop-app-font, inherit);
       font-weight: 700;
       color: var(--umbradesktop-app-text, var(--uui-color-text));
+      /* The control face, which is what a closed cell is *nearly* right to be and what an engine
+         without color-mix still gets. See the @supports block below for why nearly is not enough
+         and what replaces it. */
       background: var(--umbradesktop-app-surface-raised, var(--uui-color-surface-emphasis));
       /* The theme's own edge, exactly as published: the cell is one of the controls the
          edge-width/radius pair is meant to draw, and a theme that says its controls are flat and
@@ -481,11 +523,53 @@ export class MinesweeperElement extends UmbLitElement {
       cursor: pointer;
     }
 
+    /* A closed cell is a tile of the theme's own material laid over the well, which is the whole
+       of what {@link CLOSED_CELL_TINT_PERCENT} exists to say. Both states are derived from one
+       ground — the well's — so the open one is the well showing through and the closed one is that
+       same ground moved toward the theme's boundary colour, rather than two unrelated surface
+       tokens hoping to differ.
+
+       In an @supports block rather than inline, matching the pattern the desktop's own
+       desktop.element.ts uses for its scrim: the plain declaration above stands as the answer for
+       an engine without color-mix, and this upgrades it. Written as a separate block and not as
+       var(--token, color-mix(...)), which is the tempting shorthand and does not work — an
+       unknown function inside a var() fallback takes the whole declaration down with it on exactly
+       the engines the fallback was for.
+
+       It cannot silently paint nothing either, which is the other way this could have gone wrong.
+       color-mix takes colours, not gradients, and --umbradesktop-app-surface-* is documented as a
+       ground that may carry any background value — but the desktop's own app-tokens.test.ts
+       measures text contrast against all three surfaces and fails on any value it cannot parse as
+       an opaque colour, so "these three are flat colours" is an invariant with a test behind it
+       rather than a hope.
+
+       in srgb, and not in oklab, which is the better instinct and the worse answer. Perceptual
+       interpolation is the right tool for a gradient and the wrong one here, because mixing toward
+       a light colour in oklab barely moves a near-black ground and the dark themes are where this
+       step is already tightest: measured in Chrome, oklab at this same percentage gives 1.09:1 on
+       macOS dark against srgb's 1.35:1. */
+    @supports (background-color: color-mix(in srgb, red 50%, white)) {
+      .cell {
+        background: color-mix(
+          in srgb,
+          var(--umbradesktop-app-border, var(--uui-color-text-alt)) ${CLOSED_CELL_TINT_PERCENT}%,
+          var(--umbradesktop-app-surface-sunken, var(--uui-color-background))
+        );
+      }
+    }
+
     .cell[data-state='open'] {
+      /* The well's ground, undisturbed: an opened cell is a hole in the field rather than a
+         differently-coloured tile, so it matches the well's own padding around the board and the
+         revealed region reads as one continuous space.
+
+         This wins over the @supports block above on specificity rather than on order — (0,2,0)
+         against (0,1,0) — so an engine that supports color-mix and one that does not both paint an
+         opened cell with exactly this, and the two states can never collapse into each other. */
       background: var(--umbradesktop-app-surface-sunken, var(--uui-color-background));
       /* The border stays, and only the bevel goes: an opened cell is still part of a ruled grid,
-         and on the two themes whose raised and sunken surfaces are a 1.03:1 fill step apart the
-         ruling is most of what makes the board readable at all. */
+         and the ruling is what separates two opened neighbours, which now share a ground exactly
+         rather than approximately. */
       box-shadow: none;
       cursor: default;
     }
