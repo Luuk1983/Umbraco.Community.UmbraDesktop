@@ -196,9 +196,12 @@ nothing added to the chat. UmbraDesktop does not depend on Umbraco AI and never 
 
 ## Changing the theme
 
-Desktop settings has a Theme section above Wallpaper. Choosing a theme restyles the launcher,
-taskbar and window chrome, never the content inside a window, which stays the backoffice you
-already know. Five ship today:
+Desktop settings shows the theme you are on as a miniature of the desktop it paints. Click that row
+and a panel opens listing all five the same way — the window, the title bar buttons where that theme
+puts them, the taskbar — so you can see what you are choosing before you choose it. Picking one
+applies it straight away and the panel stays open, so you can click through them and watch the
+desktop behind change. Choosing a theme restyles the launcher, taskbar and window chrome, never the
+content inside a window, which stays the backoffice you already know. Five ship today:
 
 - **Umbraco**. The default, built from Umbraco's own design tokens.
 - **Umbraco 4**. The 2009 backoffice as desktop chrome: warm grey gradients, hairline panels,
@@ -223,10 +226,16 @@ they look the same under all three settings.
 
 ## Changing the wallpaper
 
-Open the launcher and click the cog in its footer to open Desktop settings. The Wallpaper section shows what you are using now, with two ways to change it:
+Open the launcher and click the cog in its footer to open Desktop settings. The Wallpaper row shows
+what you are using now; click it and the picker opens with everything you can choose from:
 
-- Built-in images: the eight backgrounds that ship with the package, plus None, which restores the plain gradient.
-- Media library: any image already in your Media Library.
+- Your own image, the first tile. Empty until you have picked one, it opens your Media Library; once
+  you have, it *is* that image, so the wallpaper you are using is always the one marked. Click it
+  again to pick another.
+- None, which restores the plain gradient, and the eight backgrounds that ship with the package.
+
+Picking one applies it straight away and the picker stays open, the same way the theme picker does,
+so you can try a few and watch the desktop change behind the panel.
 
 ![Desktop settings open over the desktop: a Theme section showing the themes as named colour swatches with Umbraco selected, above a Wallpaper section with the current image and buttons for Built-in images and Media library. The Choose a wallpaper tray is open beside it, listing the eight built-in backgrounds by name alongside None, which restores the plain gradient.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/choose-background.png)
 
@@ -234,7 +243,7 @@ Your choice applies immediately and is remembered per user, in that browser.
 
 ### Using your own backgrounds
 
-There is nothing to configure and nothing to deploy. Upload the image to the Media Library as you would any other, then pick it under Desktop settings, Media library.
+There is nothing to configure and nothing to deploy. Upload the image to the Media Library as you would any other, then open Desktop settings, click the Wallpaper row, and choose Media library in the picker.
 
 Umbraco resizes it for you: the desktop asks for a copy with no side longer than 2560px, so a large upload never reaches the browser at full size and the resized copy is cached server-side. You do not need to optimise anything first.
 

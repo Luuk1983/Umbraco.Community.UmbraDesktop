@@ -62,6 +62,13 @@ export default {
     themeDescription: 'Verandert het uiterlijk van het bureaublad, de taakbalk en de vensters. Je content blijft hetzelfde.',
     themeHighContrast:
       'De backoffice staat op hoog contrast. De vensterinhoud volgt dat; het bureaublad houdt het donkerste palet van dit thema aan.',
+    themePickerTitle: 'Kies een thema',
+    // één zin per thema, naast de voorvertoning in de kiezer: wat het *is*, niet wat het doet
+    themeAboutUmbraco: 'Het bureaublad zoals het standaard is, opgebouwd uit de kleuren en maatvoering van Umbraco zelf.',
+    themeAboutUmbraco4: 'De backoffice van 2009 als vensterrand: warmgrijze verlopen, haarfijne panelen en knoppen die indrukken.',
+    themeAboutMacos: 'Stoplichten links in elke titelbalk, een zwevend dock en een schermvullende, vervaagde launcher.',
+    themeAboutWin11: 'Een vlakke acryl-taakbalk met gecentreerde knoppen, afgeronde vensters en vierkante titelknoppen.',
+    themeAboutWin98: 'Overal grijs, dubbele randen, vierkante hoeken, een marineblauwe titelbalk en een Startmenu.',
     // desktop settings — the two groups the panel is divided into
     groupAppearance: 'Weergave',
     groupSettings: 'Instellingen',
@@ -74,7 +81,8 @@ export default {
     wallpaperNone: 'Geen (verloop)',
     wallpaperBuiltIn: 'Meegeleverde afbeelding',
     wallpaperFromMedia: 'Uit de Media-bibliotheek',
-    wallpaperBuiltInImages: 'Meegeleverde afbeeldingen',
+    wallpaperOwnImage: 'Je eigen afbeelding',
+    wallpaperOwnImageChange: 'Klik om een andere te kiezen',
     wallpaperMediaLibrary: 'Media-bibliotheek',
     wallpaperPickerTitle: 'Kies een achtergrond',
     wallpaperNotAnImage: 'Dit bestand kan niet als achtergrond worden gebruikt. Kies een afbeelding.',

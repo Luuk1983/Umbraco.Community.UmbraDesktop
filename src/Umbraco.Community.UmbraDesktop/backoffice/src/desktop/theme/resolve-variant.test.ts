@@ -6,7 +6,7 @@ import type { UmbraDesktopTheme } from './types';
 const dual: UmbraDesktopTheme = {
   id: 'dual',
   name: 'Dual',
-  swatch: { chrome: '#000', accent: '#111', surface: '#222' },
+  descriptionKey: 'umbraDesktop_themeAboutDual',
   palettes: {
     light: { '--umbradesktop-window-background': 'white' },
     dark: { '--umbradesktop-window-background': 'black' },

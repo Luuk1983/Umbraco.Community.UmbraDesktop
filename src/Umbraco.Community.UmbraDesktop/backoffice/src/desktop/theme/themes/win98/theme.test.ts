@@ -95,22 +95,6 @@ it('keeps its window controls at the titlebar\'s trailing end', function () {
   ).to.be.greaterThan(0);
 });
 
-it('paints a swatch the picker can tell apart from every other theme', function () {
-  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
-  const win98 = UMBRADESKTOP_WIN98_THEME.swatch;
-
-  for (const other of UMBRADESKTOP_THEMES.filter((theme) => theme.id !== 'win98')) {
-    const differences = (['chrome', 'accent', 'surface'] as const).filter(
-      (slot) => other.swatch[slot].toLowerCase() !== win98[slot].toLowerCase(),
-    );
-    expect(
-      differences.length,
-      `the Win98 swatch differs from "${other.id}" in only ${differences.length} of its three ` +
-        'colours — two previews that share two stripes are not distinguishable at picker size',
-    ).to.be.greaterThan(1);
-  }
-});
-
 it('restyles the launcher without removing any of its affordances', async function () {
   this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
   const css = await win98Css();

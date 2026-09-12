@@ -18,6 +18,20 @@ import {
 export const MACOS_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
 
 /**
+ * The three traffic lights, in the order macOS puts them. Named here rather than written into
+ * `window.css.ts`, because the settings picker's miniature of this theme paints the same three and
+ * a second copy of a colour is a second copy of a colour.
+ */
+export const MACOS_TRAFFIC_LIGHTS = {
+  /** Close, the leftmost. */
+  close: '#ff5f57',
+  /** Minimise, the middle one. */
+  minimize: '#febc2e',
+  /** Zoom, the rightmost. */
+  maximize: '#28c840',
+} as const;
+
+/**
  * The blue a macOS selection is filled with, in both appearances: light and dark deliberately
  * share one value, and naming it is how they visibly say so rather than agreeing by coincidence
  * across two literals.

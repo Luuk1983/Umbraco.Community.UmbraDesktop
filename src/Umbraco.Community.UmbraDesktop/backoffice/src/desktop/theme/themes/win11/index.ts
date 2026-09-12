@@ -34,9 +34,7 @@ import {
 export const UMBRADESKTOP_WIN11_THEME: UmbraDesktopTheme = {
   id: 'win11',
   name: 'Windows 11',
-  // Acrylic bar grey, the default Windows accent, and the white of a client area. A step apart
-  // from macOS's pale grey and red traffic light, which is the swatch it sits nearest.
-  swatch: { chrome: '#f3f3f3', accent: '#0078d4', surface: '#ffffff' },
+  descriptionKey: 'umbraDesktop_themeAboutWin11',
   // Both variants, unlike Win98 and Umbraco 4. Dark mode is not a variant of Windows 11's light
   // mode, it is half of what people recognise — and it is what gives the backoffice's
   // high-contrast setting a sensible palette to paint with, since design D13 picks a theme's
@@ -69,4 +67,5 @@ export const UMBRADESKTOP_WIN11_THEME: UmbraDesktopTheme = {
       window: window.default,
     };
   },
+  preview: async () => (await import('./preview.css.js')).default,
 };

@@ -1,5 +1,5 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
-import { MACOS_FONT } from './palette.js';
+import { MACOS_FONT, MACOS_TRAFFIC_LIGHTS } from './palette.js';
 import { MACOS_CONTROL_GAP, MACOS_LIGHT_SIZE, MACOS_RELOAD_MARGIN, MACOS_RELOAD_SIZE, MACOS_TITLEBAR_HEIGHT, MACOS_TITLEBAR_PADDING } from './metrics.js';
 
 /**
@@ -97,13 +97,13 @@ export default css`
     height: ${MACOS_TITLEBAR_HEIGHT}px;
   }
   .ctrl-close {
-    background: #ff5f57;
+    background: ${unsafeCSS(MACOS_TRAFFIC_LIGHTS.close)};
   }
   .ctrl-minimize {
-    background: #febc2e;
+    background: ${unsafeCSS(MACOS_TRAFFIC_LIGHTS.minimize)};
   }
   .ctrl-maximize {
-    background: #28c840;
+    background: ${unsafeCSS(MACOS_TRAFFIC_LIGHTS.maximize)};
   }
   .frame:not(.active) .ctrl-close,
   .frame:not(.active) .ctrl-minimize,

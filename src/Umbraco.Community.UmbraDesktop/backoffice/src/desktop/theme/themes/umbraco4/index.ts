@@ -34,10 +34,7 @@ import {
 export const UMBRADESKTOP_UMBRACO4_THEME: UmbraDesktopTheme = {
   id: 'umbraco4',
   name: 'Umbraco 4',
-  // Warm chrome grey, v4's link blue, and the white of a pane. Deliberately distant from the
-  // Umbraco theme's navy-and-coral, which is the swatch it is most likely to be confused with in
-  // a picker that now lists two Umbracos.
-  swatch: { chrome: '#eeece7', accent: '#1b5e9c', surface: '#ffffff' },
+  descriptionKey: 'umbraDesktop_themeAboutUmbraco4',
   // Light only, like Win98. v4's warm grey is not a light-mode choice with a dark counterpart, it
   // is the design — so the chrome is identical under the backoffice's light, dark and
   // high-contrast settings, high contrast being painted with a theme's darkest available palette
