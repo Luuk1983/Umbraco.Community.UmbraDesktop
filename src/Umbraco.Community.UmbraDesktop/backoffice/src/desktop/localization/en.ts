@@ -68,6 +68,13 @@ export default {
     themeDescription: 'Changes the look of the desktop, taskbar and windows. Your content stays the same.',
     themeHighContrast:
       "The backoffice is in high contrast. Window content follows it; the desktop keeps this theme's darkest palette.",
+    themePickerTitle: 'Choose a theme',
+    // one sentence per theme, shown beside its preview in the picker: what it *is*, not what it does
+    themeAboutUmbraco: "The desktop as it ships, built from Umbraco's own colours and spacing.",
+    themeAboutUmbraco4: 'The 2009 backoffice as desktop chrome: warm grey gradients, hairline panels and buttons that press in.',
+    themeAboutMacos: 'Traffic lights on the left of every title bar, a floating dock, and a fullscreen blurred launcher.',
+    themeAboutWin11: 'A flush acrylic taskbar with its buttons centred, rounded windows and square caption buttons.',
+    themeAboutWin98: 'Grey everywhere, double bevels, square corners, a navy title bar and a Start menu.',
     // desktop settings — the two groups the panel is divided into
     groupAppearance: 'Appearance',
     groupSettings: 'Settings',
@@ -80,7 +87,8 @@ export default {
     wallpaperNone: 'None (gradient)',
     wallpaperBuiltIn: 'Built-in image',
     wallpaperFromMedia: 'From the Media Library',
-    wallpaperBuiltInImages: 'Built-in images',
+    wallpaperOwnImage: 'Your own image',
+    wallpaperOwnImageChange: 'Click to pick another',
     wallpaperMediaLibrary: 'Media library',
     wallpaperPickerTitle: 'Choose a wallpaper',
     wallpaperNotAnImage: 'That file cannot be used as a wallpaper. Pick an image.',

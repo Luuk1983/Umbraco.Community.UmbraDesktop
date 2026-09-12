@@ -14,13 +14,14 @@ whole point: five themes that can each restructure the shell would be five shell
 
 ```
 theme/themes/<id>/
-  index.ts          the theme object: id, name, swatch, palettes, metrics, sheets
+  index.ts          the theme object: id, name, palettes, metrics, sheets, preview
   palette.ts        custom-property values, per variant
   metrics.ts        the numbers JavaScript needs, derived from the CSS constants
   desktop.css.ts    rules adopted into <umbradesktop-desktop>
   taskbar.css.ts    rules adopted into <umbradesktop-taskbar>
   launcher.css.ts   rules adopted into <umbradesktop-launcher>
   window.css.ts     rules adopted into <umbradesktop-window>
+  preview.css.ts    rules adopted into the settings picker's miniature (§1.1)
 ```
 
 Every file except `index.ts` is optional. The **Umbraco** theme is one `index.ts` with an empty
@@ -41,12 +42,47 @@ export const UMBRADESKTOP_THEMES: ReadonlyArray<UmbraDesktopTheme> = [
 ];
 ```
 
-The `swatch` on your theme object is the three colours the settings picker paints as a preview —
-`chrome`, `accent` and `surface`. They are named rather than a positional triple because mapping
-them onto a design language that has no such words is a judgement call, and a swapped tuple would
-be invisible.
+### 1.1 Your preview in the picker
 
-### Two surfaces a theme does not reach
+The settings panel shows the theme in use as one row — a miniature, its name, a chevron — and
+clicking that row opens a picker listing every theme the same way, each drawn as a miniature of the
+desktop that theme paints: one window with its titlebar and controls, the taskbar under it, on your
+desktop ground. **You get it
+for free.** It is rendered from your palette and your metrics, not stored as a picture, so it is
+right the day you write the palette and stays right when you change one.
+
+The one thing your theme owes it is a sentence. `descriptionKey` on your theme object names a
+localization key, and the picker shows that string beside your preview — what your theme *is*, in
+the terms someone choosing it would use. Add it to `localization/en.ts` and `nl.ts` alongside the
+others (`themeAbout<YourTheme>`). It is the only string a theme needs, and the picker is genuinely
+worse without it: a preview can show that two themes differ and cannot say why you would want one.
+
+It works by drawing the scene at desktop scale — 960 by 600 — and shrinking it with a transform, so
+a 40px titlebar is written as 40px and your numbers arrive unconverted. What it reads: the desktop
+ground and its image, the window's background, ring, radius and shadow, the titlebar's height,
+background, border and text, the control colour, and the taskbar's height, margin, radius,
+background, border and shadow. It also reads `leadingControlsWidth` and `trailingControlsWidth` from
+your metrics, which is how a macOS preview puts its controls on the left and everything else puts
+them on the right.
+
+What it cannot read is anything that lives in your sheets rather than in a value. If your theme's
+signature is a layout rule or a colour you set on a control — Windows 11's centred taskbar, macOS's
+traffic lights — add a `preview.css.ts` and point `preview` at it:
+
+```ts
+// theme/themes/<id>/index.ts
+preview: async () => (await import('./preview.css.js')).default,
+```
+
+Write it against the preview's class names, which are deliberately the chrome's own: `.frame`,
+`.titlebar`, `.title`, `.controls` (with `.leading` / `.trailing`), `.body`, `.taskbar`, `.start`
+and `.task`. Most themes need none — three of the five ship without one.
+
+Deliberately **not** a fifth entry in `sheets`. Those keys are the chrome components a sheet is
+adopted into by the theme *in force*; a picker paints five themes at once and none of them need be
+the active one.
+
+### 1.2 Two surfaces a theme does not reach
 
 Four sheets, four elements, and that is the whole of it: the desktop, the taskbar, the launcher and
 a window. Two things a user sees are deliberately outside that list and stay Umbraco-modern under
@@ -55,7 +91,9 @@ does not apply to them, because there is nothing of yours there to remove.
 
 **The settings panel.** It is a core modal — a `sidebar` opened through Umbraco's modal system —
 and it is chrome the backoffice owns rather than chrome this package draws. Themeing it would mean
-reimplementing the modal, and every picker it opens on top of it would still be core's.
+reimplementing the modal, and every picker it opens on top of it would still be core's. The one
+thing inside it that *is* yours is your preview (§1.1), which is your theme drawn small rather than
+the panel restyled.
 
 **The boot splash**, the cover that holds the screen while a desktop loads (see
 `desktop/boot/splash.ts`). This one is causal rather than a judgement: the splash goes up during the
@@ -635,7 +673,11 @@ has shipped a green test run and a red build, and the reverse.
 - [ ] Windows dragged hard against all four screen edges stay grabbable
 - [ ] Switching to your theme with windows open pulls stranded windows back into reach
 - [ ] The backoffice's light, dark and high-contrast settings all render something sane
-- [ ] Your theme's swatch is distinguishable from the others in the picker
+- [ ] Your theme has a `descriptionKey`, and the string behind it exists in every localization file
+- [ ] Your theme's preview is distinguishable from the others in the picker. `theme-preview.test.ts`
+      asserts that no two shipped themes render alike, so a theme too close to an existing one fails
+      there rather than in review — and if the difference lives in a sheet rather than a value, §1.1
+      is how you get it into the preview
 
 And the part that is easiest to skip, because the code already works without it:
 

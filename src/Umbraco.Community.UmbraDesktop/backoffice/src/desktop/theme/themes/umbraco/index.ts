@@ -18,7 +18,7 @@ import { UMBRADESKTOP_DEFAULT_METRICS } from '../../../constants';
 export const UMBRADESKTOP_UMBRACO_THEME: UmbraDesktopTheme = {
   id: 'umbraco',
   name: 'Umbraco',
-  swatch: { chrome: '#1b264f', accent: '#f5c1bc', surface: '#ffffff' },
+  descriptionKey: 'umbraDesktop_themeAboutUmbraco',
   palettes: { light: {} },
   metrics: UMBRADESKTOP_DEFAULT_METRICS,
 };

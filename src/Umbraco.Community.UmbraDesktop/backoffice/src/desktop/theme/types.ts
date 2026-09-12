@@ -364,32 +364,38 @@ export type UmbraDesktopSurface = keyof UmbraDesktopThemeSheets;
  */
 export type UmbraDesktopAdoptedSheets = Partial<Record<UmbraDesktopSurface, CSSStyleSheet>>;
 
-/**
- * The three colours the settings picker paints as a theme's preview. Named rather than a
- * positional triple: a theme author writing a Win98 or macOS palette has to map these onto a
- * design language that has no such words, and a swapped tuple would be invisible.
- */
-export interface UmbraDesktopSwatch {
-  /** The dominant colour of the chrome itself — the taskbar or dock. */
-  chrome: string;
-  /** The colour this theme marks the active or selected thing with. */
-  accent: string;
-  /** The colour a window's own surface is painted. */
-  surface: string;
-}
-
 /** A theme as shipped in the package. */
 export interface UmbraDesktopTheme {
   /** Stable id, persisted in settings. */
   id: string;
   /** Display name for the picker. Not localized — these are proper nouns, as with wallpapers. */
   name: string;
-  /** The colours the picker draws its preview from. */
-  swatch: UmbraDesktopSwatch;
+  /**
+   * Localization key for the sentence the picker shows under the name: what this theme *is*, in the
+   * terms someone choosing it would use.
+   *
+   * A key rather than the sentence, because unlike {@link name} this is prose and has to translate.
+   * It is the one string a theme owes the localization files, and the picker is unreadable without
+   * it — "Umbraco" against "Umbraco 4" is a question a preview alone cannot answer.
+   */
+  descriptionKey: string;
   /** Palettes by variant. `light` is mandatory; `dark` falls back to it when absent. */
   palettes: { light: UmbraDesktopPalette; dark?: UmbraDesktopPalette };
   /** Geometry JavaScript needs. */
   metrics: UmbraDesktopThemeMetrics;
   /** Lazily imported stylesheets. Omitted by a theme that needs none. */
   sheets?: () => Promise<UmbraDesktopThemeSheets>;
+  /**
+   * A lazily imported stylesheet for the settings picker's miniature of this theme, for the
+   * signature a token cannot carry: a Windows 98 bevel, a macOS traffic light. Optional, and a
+   * theme whose palette already says everything needs none.
+   *
+   * Deliberately not a fifth entry in {@link UmbraDesktopThemeSheets}. That type's keys *are*
+   * {@link UmbraDesktopSurface}, the chrome components a theme's rules are adopted into by the
+   * theme in force; the preview is neither chrome nor limited to the active theme, since the picker
+   * paints five themes at once. It writes against the preview element's own class names, which are
+   * the chrome's — `.frame`, `.titlebar`, `.controls`, `.taskbar` — so what an author already knows
+   * from writing the window and taskbar sheets still applies.
+   */
+  preview?: () => Promise<{ styleSheet?: CSSStyleSheet }>;
 }

@@ -1,16 +1,19 @@
 import type { UmbraDesktopWallpaperView } from '../wallpaper-view';
 import type { UmbraDesktopSettingsContext } from '../settings.context';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings.context-token';
-import { UMBRADESKTOP_WALLPAPER_PICKER_MODAL } from '../modal-tokens';
+import { UMBRADESKTOP_THEME_PICKER_MODAL, UMBRADESKTOP_WALLPAPER_PICKER_MODAL } from '../modal-tokens';
 import type { UmbraDesktopResolvedTheme } from '../../theme/resolve-variant';
 import { UMBRADESKTOP_THEME_CONTEXT } from '../../theme/theme.context-token';
 import { UMBRADESKTOP_THEMES } from '../../theme/themes/index';
+import { UMBRADESKTOP_BUILTIN_WALLPAPERS } from '../wallpapers.generated';
+import { wallpaperLabels } from '../wallpaper-labels';
+import { UMBRADESKTOP_PREVIEW_SCALE, UMBRADESKTOP_PREVIEW_SCENE } from '../../theme/preview/constants';
 import './wallpaper-picker-modal.element.js';
-import { css, customElement, html, state } from '@umbraco-cms/backoffice/external/lit';
+import './theme-picker-modal.element.js';
+import '../../theme/preview/theme-preview.element.js';
+import { css, customElement, html, nothing, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbModalBaseElement } from '@umbraco-cms/backoffice/modal';
 import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
-import { UMB_MEDIA_PICKER_MODAL } from '@umbraco-cms/backoffice/media';
-import { UMB_NOTIFICATION_CONTEXT } from '@umbraco-cms/backoffice/notification';
 
 /**
  * The Desktop settings panel, opened from the launcher footer as a sidebar from the right.
@@ -68,73 +71,80 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
     });
   }
 
-  /** Open the built-in picker and apply whatever comes back. */
-  async #pickBuiltIn() {
+  /**
+   * Open the wallpaper picker.
+   *
+   * Nothing comes back, for the same reason nothing comes back from the theme picker: both apply
+   * through the settings context this panel is already observing, so the row above updates while
+   * the picker is still open. Rejected rather than resolved when closed, which is why the rejection
+   * is swallowed.
+   */
+  #pickWallpaper = async () => {
     const current = this._wallpaper?.ref;
     if (!current) return;
-    const result = await umbOpenModal(this, UMBRADESKTOP_WALLPAPER_PICKER_MODAL, {
-      data: { current },
+    await umbOpenModal(this, UMBRADESKTOP_WALLPAPER_PICKER_MODAL, {
+      data: { current, currentThumbUrl: this._wallpaper?.thumbUrl },
     }).catch(() => undefined);
-    if (result) this.#settings?.setWallpaper(result.wallpaper);
-  }
+  };
 
   /**
-   * Open the core Media Library picker. This is how consumers add their own backgrounds: upload
-   * to Media, pick it here.
+   * One setting, as the panel states it: what you have, what it is, and a way in.
    *
-   * Folders and items the user cannot see are filtered out of the picker. Restricting the rest
-   * to images would mean resolving the site's folder and image media types up front, so instead
-   * the choice is validated on the way back: a file Umbraco cannot render as an image is
-   * reported and nothing is stored.
+   * Both settings under Appearance render through this, which is the point of it — they ask the
+   * same question and used to answer it in two different shapes, with two sizes of preview and two
+   * treatments of button. The whole row is the control, so there is no button to bolt on beside it.
+   *
+   * The chevron is not decoration. The pickers this opens have no OK and no Cancel: every click
+   * applies to the desktop behind and you leave by closing them, which makes each one a place you
+   * go and come back from rather than a dialog that ends. That is what a chevron says, and what a
+   * verb like "Change" would say wrongly. It is also the affordance the settings categories use one
+   * level up, so the whole surface reads as one grammar.
+   * @param preview The thing being chosen, drawn small.
+   * @param title What is in use.
+   * @param sub A line under it, or nothing.
+   * @param open What clicking the row opens.
+   * @returns The row template.
    */
-  async #pickMedia() {
-    const result = await umbOpenModal(this, UMB_MEDIA_PICKER_MODAL, {
-      data: {
-        multiple: false,
-        pickableFilter: (item) => !item.isFolder && !item.noAccess,
-      },
-    }).catch(() => undefined);
-
-    const unique = result?.selection?.[0];
-    if (!unique || !this.#settings) return;
-
-    if (!(await this.#settings.setMediaWallpaper(unique))) {
-      const notifications = await this.getContext(UMB_NOTIFICATION_CONTEXT);
-      notifications?.peek('warning', {
-        data: { message: this.localize.term('umbraDesktop_wallpaperNotAnImage') },
-      });
-    }
+  #renderRow(preview: unknown, title: string, sub: string | undefined, open: () => void) {
+    return html`
+      <button class="pick-row" type="button" @click=${open}>
+        ${preview}
+        <span class="text">
+          <span class="row-title">${title}</span>
+          ${sub ? html`<span class="row-sub">${sub}</span>` : nothing}
+        </span>
+        <span class="chev" aria-hidden="true">
+          <uui-icon name="icon-navigation-right"></uui-icon>
+        </span>
+      </button>
+    `;
   }
 
   /**
-   * The theme picker: one swatch per shipped theme, marking whichever the user chose. Selecting
-   * applies immediately and persists, matching the wallpaper section's no-Save behaviour.
+   * The theme in use, and the way to change it.
+   *
+   * The preview is painted in the variant actually in force, from `_theme` rather than from the
+   * backoffice's setting directly, so it agrees with the desktop behind the panel under high
+   * contrast too — where the variant is decided by the accessibility setting. The hint about that
+   * override stays here rather than moving into the picker, since this is where you read what is
+   * actually on.
    * @returns The Theme subsection template.
    */
   #renderThemes() {
     // The user's choice, not the theme in force — see "_chosenThemeId".
     const activeId = this._chosenThemeId ?? this._theme?.theme.id;
+    const current = UMBRADESKTOP_THEMES.find((theme) => theme.id === activeId);
     return html`
       <section class="subsection">
         <h4>${this.localize.term('umbraDesktop_theme')}</h4>
-        <p class="hint">${this.localize.term('umbraDesktop_themeDescription')}</p>
-        <div class="themes">
-          ${UMBRADESKTOP_THEMES.map(
-            (theme) => html`
-              <button
-                class="theme ${theme.id === activeId ? 'selected' : ''}"
-                aria-pressed=${theme.id === activeId}
-                @click=${() => this.#settings?.setTheme(theme.id)}>
-                <span class="swatch" aria-hidden="true">
-                  ${[theme.swatch.chrome, theme.swatch.accent, theme.swatch.surface].map(
-                    (colour) => html`<i style="background:${colour}"></i>`,
-                  )}
-                </span>
-                <span class="theme-name">${theme.name}</span>
-              </button>
-            `,
-          )}
-        </div>
+        ${this.#renderRow(
+          html`<umbradesktop-theme-preview
+            .theme=${current}
+            .variant=${this._theme?.variant ?? 'light'}></umbradesktop-theme-preview>`,
+          current?.name ?? '',
+          current ? this.localize.term(current.descriptionKey) : undefined,
+          this.#pickTheme,
+        )}
         ${this._theme?.highContrast
           ? html`<p class="hint warn">${this.localize.term('umbraDesktop_themeHighContrast')}</p>`
           : ''}
@@ -143,29 +153,38 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
   }
 
   /**
-   * The wallpaper subsection: what is in use now, and the two ways to change it.
+   * Open the theme picker.
+   *
+   * Nothing comes back and nothing needs to: the picker applies each choice through the same
+   * settings context this panel observes, so the row above updates while the picker is still open.
+   * Rejected rather than resolved when closed, like every other picker here, which is why the
+   * rejection is swallowed.
+   */
+  #pickTheme = async () => {
+    const current = this._chosenThemeId ?? this._theme?.theme.id;
+    if (!current) return;
+    await umbOpenModal(this, UMBRADESKTOP_THEME_PICKER_MODAL, { data: { current } }).catch(() => undefined);
+  };
+
+  /**
+   * The wallpaper in use, and the way to change it.
+   *
+   * One row where there were two buttons. Both sources now live inside the picker, which is where
+   * you are already choosing an image — and which is the only place that can show a Media Library
+   * wallpaper as the one in use, since it is not in the built-in grid.
    * @returns The Wallpaper subsection template.
    */
   #renderWallpaper() {
+    const labels = wallpaperLabels(this._wallpaper?.ref, UMBRADESKTOP_BUILTIN_WALLPAPERS);
     return html`
       <section class="subsection">
         <h4>${this.localize.term('umbraDesktop_wallpaper')}</h4>
-        <div class="wallpaper">
-          ${this.#renderPreview()}
-          <div class="controls">
-            <span class="current">${this.#currentLabel()}</span>
-            <div class="buttons">
-              <uui-button
-                look="secondary"
-                label=${this.localize.term('umbraDesktop_wallpaperBuiltInImages')}
-                @click=${this.#pickBuiltIn}></uui-button>
-              <uui-button
-                look="secondary"
-                label=${this.localize.term('umbraDesktop_wallpaperMediaLibrary')}
-                @click=${this.#pickMedia}></uui-button>
-            </div>
-          </div>
-        </div>
+        ${this.#renderRow(
+          this.#renderPreview(),
+          labels.title ?? (labels.titleKey ? this.localize.term(labels.titleKey) : ''),
+          labels.subKey ? this.localize.term(labels.subKey) : undefined,
+          this.#pickWallpaper,
+        )}
       </section>
     `;
   }
@@ -200,15 +219,6 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
     return thumbUrl
       ? html`<img class="preview" src=${thumbUrl} alt="" />`
       : html`<span class="preview gradient" aria-hidden="true"></span>`;
-  }
-
-  /** The name of the current wallpaper, for the caption beside its thumbnail. */
-  #currentLabel(): string {
-    const ref = this._wallpaper?.ref;
-    if (!ref) return '';
-    if (ref.kind === 'none') return this.localize.term('umbraDesktop_wallpaperNone');
-    if (ref.kind === 'media') return this.localize.term('umbraDesktop_wallpaperFromMedia');
-    return this.localize.term('umbraDesktop_wallpaperBuiltIn');
   }
 
   override render() {
@@ -259,20 +269,55 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
         color: var(--uui-color-text-alt, var(--uui-color-text));
         opacity: 0.6;
       }
-      .wallpaper {
+      /* One row shape for every setting that opens a picker. The negative margin lets the hover
+         fill reach past the box's own padding, so the row reads as the width of the panel the way a
+         list row does, rather than as a button that happens to be wide. */
+      .pick-row {
         display: flex;
-        align-items: flex-start;
-        gap: var(--uui-size-space-5);
-        /* Wraps because the panel is a small sidebar (500px): the 200px preview and the two
-           buttons beside it fit, but only just, and a longer localized button label should push
-           the controls under the preview rather than out of the panel. */
-        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--uui-size-space-4);
+        width: calc(100% + var(--uui-size-space-3) * 2);
+        margin: 0 calc(var(--uui-size-space-3) * -1);
+        padding: var(--uui-size-space-3);
+        border: 0;
+        border-radius: var(--uui-border-radius, 3px);
+        background: transparent;
+        color: inherit;
+        font-family: inherit;
+        text-align: left;
+        cursor: pointer;
       }
+      .pick-row:hover {
+        background: var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05));
+      }
+      .pick-row .text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .row-title {
+        font-weight: 700;
+      }
+      .row-sub {
+        color: var(--uui-color-text-alt, var(--uui-color-text));
+        font-size: var(--uui-type-small-size);
+      }
+      /* At the trailing edge, where a "there is more this way" marker belongs. */
+      .pick-row .chev {
+        margin-left: auto;
+        display: flex;
+        color: var(--uui-color-text-alt, var(--uui-color-text));
+      }
+      /* The same box as the theme preview beside it, ratio included: 16:10, what the theme
+         miniature is drawn at, with the image cover-cropped into it. Two settings of the same kind
+         showing two sizes of picture was most of what made this panel look assembled rather than
+         designed. */
       .preview {
         flex-shrink: 0;
         display: block;
-        width: 200px;
-        aspect-ratio: 16 / 9;
+        width: ${UMBRADESKTOP_PREVIEW_SCENE.w * UMBRADESKTOP_PREVIEW_SCALE}px;
+        aspect-ratio: ${UMBRADESKTOP_PREVIEW_SCENE.w} / ${UMBRADESKTOP_PREVIEW_SCENE.h};
         object-fit: cover;
         border: 1px solid var(--uui-color-border);
         border-radius: var(--uui-border-radius, 3px);
@@ -286,20 +331,6 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
           color-mix(in srgb, var(--uui-color-header-background, #1b264f) 50%, black) 70%
         );
       }
-      .controls {
-        display: flex;
-        flex-direction: column;
-        gap: var(--uui-size-space-3);
-      }
-      .current {
-        color: var(--uui-color-text-alt, var(--uui-color-text));
-        font-size: var(--uui-type-small-size);
-      }
-      .buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--uui-size-space-2);
-      }
       .hint {
         margin: 0 0 var(--uui-size-space-4);
         color: var(--uui-color-text-alt, var(--uui-color-text));
@@ -312,44 +343,14 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
       .hint.below {
         margin: var(--uui-size-space-3) 0 0;
       }
-      .themes {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--uui-size-space-3);
-      }
-      .theme {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: var(--uui-size-space-2);
-        padding: var(--uui-size-space-2);
-        border: 2px solid transparent;
-        border-radius: var(--uui-border-radius, 3px);
-        background: transparent;
-        color: var(--uui-color-text);
-        cursor: pointer;
-        font-family: inherit;
-      }
-      .theme:hover {
-        background: var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05));
-      }
-      .theme.selected {
-        border-color: var(--uui-color-selected, var(--uui-color-focus));
-      }
-      .swatch {
-        display: flex;
-        width: 96px;
-        height: 54px;
+      /* The preview sizes itself — see its own constants, which '.preview' above reads too so the
+         two boxes cannot drift apart — so all this adds is the frame, which is the panel's own
+         chrome rather than the theme's look. */
+      umbradesktop-theme-preview {
+        flex-shrink: 0;
         overflow: hidden;
         border: 1px solid var(--uui-color-border);
         border-radius: var(--uui-border-radius, 3px);
-      }
-      .swatch i {
-        flex: 1;
-        display: block;
-      }
-      .theme-name {
-        font-size: var(--uui-type-small-size);
       }
     `,
   ];

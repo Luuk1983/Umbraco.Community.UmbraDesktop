@@ -21,7 +21,7 @@ export const UMBRADESKTOP_THEMES: ReadonlyArray<UmbraDesktopTheme> = [
   // The two Umbracos first, modern then retro, then the operating-system pastiches, each pair
   // ordered modern before retro as well. Grouping by what a theme *is* beats the order they
   // happened to be written in, and it puts each pair a user is most likely to confuse side by
-  // side, where the difference between the swatches is doing the most work.
+  // side, where the difference between the previews is doing the most work.
   UMBRADESKTOP_UMBRACO_THEME,
   UMBRADESKTOP_UMBRACO4_THEME,
   UMBRADESKTOP_MACOS_THEME,

@@ -26,10 +26,7 @@ import {
 export const UMBRADESKTOP_WIN98_THEME: UmbraDesktopTheme = {
   id: 'win98',
   name: 'Windows 98',
-  // Button-face grey, the navy of an active caption, and the white of a client area. Two stripes
-  // apart from both shipped themes: Umbraco leads on navy and accents in coral, macOS leads on a
-  // much paler grey and accents in the red traffic light.
-  swatch: { chrome: '#c0c0c0', accent: '#000080', surface: '#ffffff' },
+  descriptionKey: 'umbraDesktop_themeAboutWin98',
   // Light only. Win98's grey is not a light-mode choice with a dark counterpart, it is the design,
   // so the chrome is identical under the backoffice's light, dark and high-contrast settings —
   // high contrast paints a theme with its darkest available palette, and this is the only one.

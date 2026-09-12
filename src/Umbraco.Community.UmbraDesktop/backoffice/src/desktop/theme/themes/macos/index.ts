@@ -17,7 +17,7 @@ import {
 export const UMBRADESKTOP_MACOS_THEME: UmbraDesktopTheme = {
   id: 'macos',
   name: 'macOS',
-  swatch: { chrome: '#e8e8ea', accent: '#ff5f57', surface: '#ffffff' },
+  descriptionKey: 'umbraDesktop_themeAboutMacos',
   palettes: { light: MACOS_LIGHT, dark: MACOS_DARK },
   metrics: {
     titlebarHeight: MACOS_CAPTION_KEEP_VISIBLE,
@@ -48,4 +48,5 @@ export const UMBRADESKTOP_MACOS_THEME: UmbraDesktopTheme = {
       window: window.default,
     };
   },
+  preview: async () => (await import('./preview.css.js')).default,
 };
