@@ -130,6 +130,14 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-background': WIN98_FACE,
   '--umbradesktop-window-border': 'none',
   '--umbradesktop-window-radius': '0',
+  // Where a dragged window would land. Windows 98 had no snapping, but it did have one way of
+  // saying "the window is going here": the move outline, a hollow rectangle in the desktop's own
+  // inverted grey that showed the destination and nothing else. So no translucent fill — this
+  // theme has no translucency anywhere — and a 3px outline in the shadow grey that reads over both
+  // the teal desktop and a wallpaper.
+  '--umbradesktop-snap-ghost-background': 'transparent',
+  '--umbradesktop-snap-ghost-border': `3px solid ${WIN98_SHADOW}`,
+  '--umbradesktop-snap-ghost-radius': '0',
   '--umbradesktop-titlebar-height': `${WIN98_TITLEBAR_HEIGHT}px`,
   '--umbradesktop-path-height': `${WIN98_PATH_HEIGHT}px`,
   // A sunken well on the face, as this theme draws every read-only field. The crumbs are the

@@ -25,6 +25,7 @@ It also does something the backoffice does not do at all. When two people have t
 
 - Work side by side. Open two or more tools at once and arrange them however you like. Edit on the left, watch the result on the right, without navigating back and forth. This one wants room: see [A note on screen size](#a-note-on-screen-size).
 - Real windows. Drag, resize, minimise, maximise, and double-click a title bar to fill the desktop. Each window remembers its own place.
+- Snap two windows side by side. Drag a window into the left or right edge and it takes that half of the desktop; drag it into the top edge and it fills the screen. An outline shows where it will land before you let go, and dragging it back off returns it to the size it was. The halves follow the desktop, so resizing the browser keeps them halves.
 - Always says where you are. A window that holds a whole section carries a path under its title bar, Media library / Campaigns / hero.jpg, and every step of the way back is one click. In the plain backoffice you climb back out of a tree by clicking the section name in the header, and a window has no header, so this is where that goes.
 - Never loses your work. A window holding unsaved changes shows a dot in its title bar and on its taskbar button, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
 - Warns before you overwrite someone. If somebody else saves or bins a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. Deletion is warned about even when you have nothing unsaved, because there is no version left to refresh to. The plain backoffice does not warn about this at all.
@@ -84,6 +85,7 @@ From the launcher:
 - Click an app to open it in a window.
 - Hover an app and click the pin to add it to Pinned, which sits at the top.
 - Drag a title bar to move a window, drag an edge or corner to resize, double-click the title bar to maximise.
+- Drag a window into the left or right edge of the desktop to snap it to that half, or into the top edge to maximise it. An outline appears while you are over an edge, showing where the window will go. Drag a snapped window away and it returns to the size it had before.
 - Use the taskbar at the bottom to switch between open windows.
 - The path under a section window's title bar says where that window is. Click any step to go back to it; the first step returns the window to whatever it opened at. If the window has unsaved changes it asks before leaving, the same way closing it does.
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
@@ -101,6 +103,8 @@ So how much you get out of it depends on the screen in front of you:
 - **On a wide screen**, roughly 1920px and up, two windows side by side are genuinely comfortable. This is where UmbraDesktop is at its best.
 - **On a laptop screen**, side by side works for the lighter, self-contained apps, but tree-heavy tools like the content editor want most of the width to themselves. Expect to work with one window in front most of the time.
 - **On anything smaller**, treat it as a single-window desktop.
+
+Snapping obeys the same floor. If half the desktop is narrower than a window is allowed to be, that window snaps to its own minimum instead, which on a narrow screen means the two halves overlap in the middle rather than one of them being squeezed into something you cannot work in. Clicking either window brings it to the front, so an overlap costs you a little of the window behind and nothing else.
 
 Side by side is not the only reason to use it, though. Opening everything from one launcher, keeping several tools loaded at once, and switching between them from the taskbar without losing your place or waiting for a section to reload is just as useful on a laptop as it is on a 4K monitor.
 

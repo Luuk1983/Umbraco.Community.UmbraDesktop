@@ -20,6 +20,10 @@ import {
   setWindowAcknowledged,
   setWindowRefreshing,
   conflictedWindows,
+  snapWindow,
+  unsnapWindow,
+  clearSnap,
+  resnapWindows,
 } from './window-model';
 import type { UmbraDesktopApp, UmbraDesktopWindow } from './types';
 
@@ -401,4 +405,88 @@ describe('server state', () => {
     const windows = setWindowServerState(two(), 'a', { changedElsewhere: true });
     expect(conflictedWindows(windows)).to.eql([]);
   });
+});
+
+describe('snapping', () => {
+  /** A desktop wide enough that half of it beats any minimum used here. */
+  const bounds = { w: 1000, h: 700 };
+  /** A minimum small enough never to be in force. */
+  const tiny = { w: 100, h: 100 };
+
+  it('remembers the rect a window was snapped from', () => {
+    const windows = [win('a', 1, { rect: { x: 40, y: 40, w: 800, h: 600 } })];
+    const next = snapWindow(windows, 'a', 'left', { x: 0, y: 0, w: 500, h: 700 });
+    expect(next[0].snapped).to.equal('left');
+    expect(next[0].rect).to.eql({ x: 0, y: 0, w: 500, h: 700 });
+    expect(next[0].restoreRect).to.eql({ x: 40, y: 40, w: 800, h: 600 });
+  });
+
+  it('keeps the original rect when a snapped window snaps to the other side', () => {
+    // Otherwise left, right, then drag-off restores the window to half the desktop, and the size
+    // it had before any of this ever happened is gone.
+    let windows = [win('a', 1, { rect: { x: 40, y: 40, w: 800, h: 600 } })];
+    windows = snapWindow(windows, 'a', 'left', { x: 0, y: 0, w: 500, h: 700 });
+    windows = snapWindow(windows, 'a', 'right', { x: 500, y: 0, w: 500, h: 700 });
+    expect(windows[0].restoreRect).to.eql({ x: 40, y: 40, w: 800, h: 600 });
+  });
+
+  it('restores the remembered size at the position a drag asks for', () => {
+    let windows = [win('a', 1, { rect: { x: 40, y: 40, w: 800, h: 600 } })];
+    windows = snapWindow(windows, 'a', 'left', { x: 0, y: 0, w: 500, h: 700 });
+    const next = unsnapWindow(windows, 'a', { x: 120, y: 0 });
+    expect(next[0].rect).to.eql({ x: 120, y: 0, w: 800, h: 600 });
+    expect(next[0].snapped).to.equal(undefined);
+    expect(next[0].restoreRect).to.equal(undefined);
+  });
+
+  it('leaves a window that was never snapped alone', () => {
+    const windows = [win('a', 1)];
+    expect(unsnapWindow(windows, 'a', { x: 5, y: 5 })).to.equal(windows);
+    expect(clearSnap(windows, 'a')).to.equal(windows);
+  });
+
+  it('drops the snap when a window is moved or resized out of it', () => {
+    let windows = [win('a', 1, { rect: { x: 40, y: 40, w: 800, h: 600 } })];
+    windows = snapWindow(windows, 'a', 'left', { x: 0, y: 0, w: 500, h: 700 });
+    const next = clearSnap(windows, 'a');
+    expect(next[0].snapped).to.equal(undefined);
+    expect(next[0].restoreRect).to.equal(undefined);
+    // The rect it was dragged or resized to is its own now; nothing snaps it back.
+    expect(next[0].rect).to.eql({ x: 0, y: 0, w: 500, h: 700 });
+  });
+
+  it('re-derives a snapped window against a resized desktop', () => {
+    let windows = [win('a', 1), win('b', 2)];
+    windows = snapWindow(windows, 'a', 'right', snapRectFor('right', bounds));
+    const next = resnapWindows(windows, { w: 600, h: 400 }, () => tiny);
+    expect(next[0].rect).to.eql({ x: 300, y: 0, w: 300, h: 400 });
+    expect(next[1], 'an unsnapped window is not geometry this pass owns').to.equal(windows[1]);
+  });
+
+  it('hands back the same list when no window is snapped', () => {
+    const windows = [win('a', 1)];
+    expect(resnapWindows(windows, bounds, () => tiny)).to.equal(windows);
+  });
+
+  it('hands back the same list when every snapped window is already where it belongs', () => {
+    // The bounds clamp runs this on every ResizeObserver callback, and a new array from each one
+    // would re-render every window on the desktop for a resize that moved nothing.
+    let windows = [win('a', 1)];
+    windows = snapWindow(windows, 'a', 'left', snapRectFor('left', bounds));
+    expect(resnapWindows(windows, bounds, () => tiny)).to.equal(windows);
+  });
+
+  /**
+   * The rect `snapRect` produces, restated here so the model tests do not import the geometry they
+   * are not testing.
+   * @param side Which half.
+   * @param b The desktop bounds.
+   * @returns The half rect.
+   */
+  function snapRectFor(side: 'left' | 'right', b: { w: number; h: number }) {
+    const half = Math.round(b.w / 2);
+    return side === 'left'
+      ? { x: 0, y: 0, w: half, h: b.h }
+      : { x: half, y: 0, w: b.w - half, h: b.h };
+  }
 });
