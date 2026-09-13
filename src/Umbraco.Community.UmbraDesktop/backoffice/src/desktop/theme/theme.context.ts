@@ -1,13 +1,17 @@
 import type { UmbraDesktopResolvedTheme } from './resolve-variant';
 import type { UmbraDesktopAdoptedSheets, UmbraDesktopThemeSheets, UmbraDesktopSurface } from './types';
-import { resolveTheme } from './resolve-variant.js';
+import type { UmbraDesktopBackofficeTheme } from './backoffice-themes';
+import { backofficeThemes } from './backoffice-themes.js';
+import { backofficeVariant, resolveTheme } from './resolve-variant.js';
 import { paletteCss } from './palette-css.js';
 import { UMBRADESKTOP_DEFAULT_THEME_ID, UMBRADESKTOP_THEMES } from './themes/index.js';
 import { UMBRADESKTOP_THEME_CONTEXT } from './theme.context-token.js';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
-import { UmbBasicState, UmbObjectState } from '@umbraco-cms/backoffice/observable-api';
+import { UmbArrayState, UmbBasicState, UmbObjectState, UmbStringState } from '@umbraco-cms/backoffice/observable-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
+import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
+import type { UmbThemeContext } from '@umbraco-cms/backoffice/themes';
 import { UMB_THEME_CONTEXT, UMB_THEME_LIGHT_ALIAS } from '@umbraco-cms/backoffice/themes';
 
 /**
@@ -69,6 +73,15 @@ export class UmbraDesktopThemeContext extends UmbContextBase {
    */
   #sheets = new UmbBasicState<UmbraDesktopAdoptedSheets>({});
 
+  /** The backoffice's own theme alias, backing {@link backofficeTheme}. */
+  #backofficeTheme = new UmbStringState(UMB_THEME_LIGHT_ALIAS);
+
+  /** The backoffice's registered themes, backing {@link backofficeThemes}. */
+  #backofficeThemes = new UmbArrayState<UmbraDesktopBackofficeTheme>([], (theme) => theme.alias);
+
+  /** Core's own theme context, once it has resolved — what {@link setBackofficeTheme} writes to. */
+  #umbTheme?: UmbThemeContext;
+
   /** The theme, variant and palette in force. */
   public readonly resolved = this.#resolved.asObservable();
 
@@ -84,6 +97,36 @@ export class UmbraDesktopThemeContext extends UmbContextBase {
    * unstyled chrome — the previous theme's sheets stay adopted until the new ones arrive.
    */
   public readonly sheets = this.#sheets.asObservable();
+
+  /**
+   * The backoffice's own theme — Umbraco's Light, Dark or High contrast — as its alias.
+   *
+   * A second observable onto the value this context already reads in order to pick a palette, so
+   * that the desktop's Appearance screen and Umbraco's current-user modal are two front ends onto
+   * one setting rather than two settings that have to be kept in step. Changed anywhere, it arrives
+   * here, because core's theme context is the only thing that owns it.
+   */
+  public readonly backofficeTheme = this.#backofficeTheme.asObservable();
+
+  /**
+   * Whether the backoffice itself is light or dark — high contrast counting as dark.
+   *
+   * Not the same as {@link resolved}'s `variant`, and the difference matters: that one is the
+   * palette the *chosen* theme ended up with, which is `light` for a theme that ships no dark
+   * palette even when the backoffice is dark. Anything painting a theme other than the chosen one —
+   * the theme picker's row of miniatures — needs the environment rather than that outcome. See
+   * `backofficeVariant`.
+   */
+  public readonly backofficeVariant = this.#backofficeTheme.asObservablePart((alias) => backofficeVariant(alias));
+
+  /**
+   * Every backoffice theme the extension registry holds, in the order to offer them.
+   *
+   * Read from the registry rather than named here, because a backoffice theme is an extension: a
+   * site that ships its own gets it in the picker for free, and one that removes a shipped theme
+   * does not leave us offering something that no longer exists.
+   */
+  public readonly backofficeThemes = this.#backofficeThemes.asObservable();
 
   /** The id the user chose, which may differ from what is in force under high contrast. */
   #chosenId = UMBRADESKTOP_DEFAULT_THEME_ID;
@@ -109,12 +152,36 @@ export class UmbraDesktopThemeContext extends UmbContextBase {
     });
 
     this.consumeContext(UMB_THEME_CONTEXT, (context) => {
+      this.#umbTheme = context ?? undefined;
       if (!context) return;
       this.observe(context.theme, (alias) => {
         this.#umbAlias = alias || UMB_THEME_LIGHT_ALIAS;
+        this.#backofficeTheme.setValue(this.#umbAlias);
         this.#apply();
       });
     });
+
+    // Not inside the block above: the registry is a module-level singleton, not a context, and the
+    // list is worth having whether or not core's theme context has resolved yet.
+    this.observe(umbExtensionsRegistry.byType('theme'), (manifests) => {
+      this.#backofficeThemes.setValue(backofficeThemes(manifests));
+    });
+  }
+
+  /**
+   * Set the backoffice's own theme.
+   *
+   * Straight through to core, which is the point: core writes the alias to `localStorage` and swaps
+   * the stylesheet on the document, so the setting survives a reload, reaches the content inside
+   * every window, and shows up in the current-user modal — none of which this package has to
+   * re-implement, and all of which it would get subtly wrong if it did.
+   *
+   * Nothing happens before core's theme context has resolved, which is a frame at boot and never
+   * again; the picker that calls this is several user actions past that point.
+   * @param alias The alias of the theme to apply.
+   */
+  public setBackofficeTheme(alias: string): void {
+    this.#umbTheme?.setThemeByAlias(alias);
   }
 
   /**

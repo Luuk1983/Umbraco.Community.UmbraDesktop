@@ -37,6 +37,33 @@ export interface UmbraDesktopResolvedTheme {
 }
 
 /**
+ * Which variant the **backoffice itself** is in, from its theme alias alone.
+ *
+ * Deliberately separate from {@link resolveTheme}'s `variant`, because the two answer different
+ * questions and confusing them is a bug that has already shipped once. `resolved.variant` says
+ * *which palette is being painted*, which for a theme that never wrote a dark one is `light` even
+ * in a dark backoffice — correct for the chrome, and wrong for anything reasoning about the
+ * environment. This says what the backoffice is set to, full stop.
+ *
+ * The caller that needs it is a row of previews of *other* themes: each preview falls back to its
+ * own theme's light palette by itself, so what it must be handed is the environment, not one
+ * theme's outcome. Handed the outcome, a picker painted every miniature light whenever the selected
+ * theme had no dark palette — invisible on four themes, which leave the window body on the
+ * backoffice's own token, and glaring on macOS, which states it.
+ *
+ * **High contrast counts as dark** here, for the same reason it does below: it is the darkest thing
+ * on offer, and a preview row under it should not be the one light thing on the screen.
+ * @param umbThemeAlias The alias from Umbraco's own theme context.
+ * @returns `dark` under the dark and high-contrast themes, `light` under anything else, an
+ * unregistered alias included.
+ */
+export function backofficeVariant(umbThemeAlias: string): UmbraDesktopVariant {
+  return umbThemeAlias === UMB_THEME_DARK_ALIAS || umbThemeAlias === UMB_THEME_HIGH_CONTRAST_ALIAS
+    ? 'dark'
+    : 'light';
+}
+
+/**
  * Decide which theme and variant to paint, from the user's stored choice and the backoffice's own
  * theme.
  *
@@ -65,9 +92,7 @@ export function resolveTheme(request: UmbraDesktopThemeRequest): UmbraDesktopRes
   // up in the catalogue: that keeps this robust even against an empty or broken catalogue.
   const theme = catalogue.find((entry) => entry.id === themeId) ?? UMBRADESKTOP_UMBRACO_THEME;
   const highContrast = umbThemeAlias === UMB_THEME_HIGH_CONTRAST_ALIAS;
-  // High contrast takes the darkest palette on offer, which is the closest a theme that has not
-  // been given a high-contrast palette of its own can get.
-  const wantsDark = highContrast || umbThemeAlias === UMB_THEME_DARK_ALIAS;
+  const wantsDark = backofficeVariant(umbThemeAlias) === 'dark';
   const dark = theme.palettes.dark;
 
   return wantsDark && dark

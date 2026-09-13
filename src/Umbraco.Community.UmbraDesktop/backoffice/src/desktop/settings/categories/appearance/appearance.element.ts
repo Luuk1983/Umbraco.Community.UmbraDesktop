@@ -1,13 +1,20 @@
 import type { UmbraDesktopWallpaperView } from '../../wallpaper-view';
 import type { UmbraDesktopSettingsContext } from '../../settings.context';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../../settings.context-token';
-import { UMBRADESKTOP_THEME_PICKER_MODAL, UMBRADESKTOP_WALLPAPER_PICKER_MODAL } from '../../modal-tokens';
+import {
+  UMBRADESKTOP_BACKOFFICE_THEME_PICKER_MODAL,
+  UMBRADESKTOP_THEME_PICKER_MODAL,
+  UMBRADESKTOP_WALLPAPER_PICKER_MODAL,
+} from '../../modal-tokens';
 import { UMBRADESKTOP_BUILTIN_WALLPAPERS } from '../../wallpapers.generated';
 import { wallpaperLabels } from '../../wallpaper-labels';
 import '../../components/settings-row.element.js';
 import '../../components/theme-picker-modal.element.js';
+import '../../components/backoffice-theme-picker-modal.element.js';
 import '../../components/wallpaper-picker-modal.element.js';
 import type { UmbraDesktopResolvedTheme } from '../../../theme/resolve-variant';
+import type { UmbraDesktopBackofficeTheme } from '../../../theme/backoffice-themes';
+import { backofficeThemeName } from '../../../theme/backoffice-themes';
 import { UMBRADESKTOP_THEME_CONTEXT } from '../../../theme/theme.context-token';
 import { UMBRADESKTOP_THEMES } from '../../../theme/themes/index';
 import { UMBRADESKTOP_PREVIEW_SCALE, UMBRADESKTOP_PREVIEW_SCENE } from '../../../theme/preview/constants';
@@ -17,14 +24,22 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
 
 /**
- * How the desktop looks: the theme it is painted in, and the wallpaper behind it.
+ * How the backoffice looks: the theme the desktop is painted in, the wallpaper behind it, and the
+ * backoffice's own colours.
  *
- * Two rows of one shape, each showing what you are using and opening a picker. Its own element
+ * Three rows of one shape, each showing what you are using and opening a picker. Its own element
  * rather than markup in the settings panel, so that the panel owns navigation and nothing else —
  * which is what makes a third category a folder rather than an edit to a growing file.
  *
- * Nothing here is saved: every change applies through the settings context the moment it is made,
- * which is also what lets the desktop behind the panel repaint as you choose.
+ * **The third row is not a fourth theme.** "Theme" means two things in this backoffice: ours
+ * restyles the chrome, Umbraco's own — Light, Dark, High contrast — restyles everything, the
+ * documents inside the windows included. Both used to be set in different places, which is the
+ * problem this screen solves; folding Umbraco's into the theme picker above would have solved it by
+ * claiming they are desktop skins, which is exactly what they are not.
+ *
+ * Nothing here is saved by this element: the first two apply through the settings context and the
+ * third through core's theme context, each the moment it is made, which is also what lets the
+ * desktop behind the panel repaint as you choose.
  */
 @customElement('umbradesktop-settings-appearance')
 export class UmbraDesktopSettingsAppearanceElement extends UmbLitElement {
@@ -48,6 +63,20 @@ export class UmbraDesktopSettingsAppearanceElement extends UmbLitElement {
   @state()
   private _chosenThemeId?: string;
 
+  /**
+   * The backoffice's own themes, as the registry holds them. Observed rather than named, so a site
+   * shipping its own theme gets it in the row and one dropping a shipped theme stops offering it.
+   */
+  @state()
+  private _backofficeThemes: ReadonlyArray<UmbraDesktopBackofficeTheme> = [];
+
+  /**
+   * The backoffice theme in force, as its alias. Not a setting of ours: it is core's, read here so
+   * that this row and the current-user modal are two windows onto one value.
+   */
+  @state()
+  private _backofficeTheme?: string;
+
   constructor() {
     super();
     this.consumeContext(UMBRADESKTOP_SETTINGS_CONTEXT, (context: UmbraDesktopSettingsContext | undefined) => {
@@ -59,6 +88,8 @@ export class UmbraDesktopSettingsAppearanceElement extends UmbLitElement {
     this.consumeContext(UMBRADESKTOP_THEME_CONTEXT, (context) => {
       if (!context) return;
       this.observe(context.resolved, (resolved) => (this._theme = resolved));
+      this.observe(context.backofficeThemes, (themes) => (this._backofficeThemes = themes));
+      this.observe(context.backofficeTheme, (alias) => (this._backofficeTheme = alias));
     });
   }
 
@@ -73,6 +104,18 @@ export class UmbraDesktopSettingsAppearanceElement extends UmbLitElement {
     const current = this._chosenThemeId ?? this._theme?.theme.id;
     if (!current) return;
     await umbOpenModal(this, UMBRADESKTOP_THEME_PICKER_MODAL, { data: { current } }).catch(() => undefined);
+  };
+
+  /**
+   * Open the picker onto the backoffice's own theme.
+   *
+   * Opens whatever the alias, including one nothing registers any more: the picker's job in that
+   * case is to offer the themes that do exist, which is exactly the way out of it.
+   */
+  #pickBackofficeTheme = async () => {
+    await umbOpenModal(this, UMBRADESKTOP_BACKOFFICE_THEME_PICKER_MODAL, {
+      data: { current: this._backofficeTheme ?? '' },
+    }).catch(() => undefined);
   };
 
   /** Open the wallpaper picker, which holds both sources and applies through the same context. */
@@ -90,6 +133,27 @@ export class UmbraDesktopSettingsAppearanceElement extends UmbLitElement {
     return thumbUrl
       ? html`<img slot="lead" class="preview" src=${thumbUrl} alt="" />`
       : html`<span slot="lead" class="preview gradient" aria-hidden="true"></span>`;
+  }
+
+  /**
+   * A page painted in the backoffice colours in force: a header bar and two lines of text on a
+   * surface, in the preview box the two rows above use.
+   *
+   * **It names no colours.** Every value comes from the `--uui-*` tokens the panel is already
+   * inheriting, and a backoffice theme works by redefining exactly those, so the swatch is the
+   * theme in force by construction rather than by a table of Light's white and Dark's near-black
+   * kept in step by hand. That is also what lets it be honest about a theme this package has never
+   * heard of: a site that registers its own gets a truthful swatch for free.
+   * @returns The swatch, for the row's lead slot.
+   */
+  #renderSchemePreview() {
+    return html`
+      <span slot="lead" class="preview scheme" aria-hidden="true">
+        <span class="bar"></span>
+        <span class="line"></span>
+        <span class="line short"></span>
+      </span>
+    `;
   }
 
   override render() {
@@ -110,9 +174,6 @@ export class UmbraDesktopSettingsAppearanceElement extends UmbLitElement {
             .theme=${theme}
             .variant=${this._theme?.variant ?? 'light'}></umbradesktop-theme-preview>
         </umbradesktop-settings-row>
-        ${this._theme?.highContrast
-          ? html`<p class="hint">${this.localize.term('umbraDesktop_themeHighContrast')}</p>`
-          : ''}
       </section>
       <section>
         <h4>${this.localize.term('umbraDesktop_wallpaper')}</h4>
@@ -122,6 +183,18 @@ export class UmbraDesktopSettingsAppearanceElement extends UmbLitElement {
           @click=${this.#pickWallpaper}>
           ${this.#renderWallpaperPreview()}
         </umbradesktop-settings-row>
+      </section>
+      <section>
+        <h4>${this.localize.term('umbraDesktop_backofficeTheme')}</h4>
+        <umbradesktop-settings-row
+          headline=${backofficeThemeName(this._backofficeThemes, this._backofficeTheme) ?? ''}
+          detail=${this.localize.term('umbraDesktop_backofficeThemeAbout')}
+          @click=${this.#pickBackofficeTheme}>
+          ${this.#renderSchemePreview()}
+        </umbradesktop-settings-row>
+        ${this._theme?.highContrast
+          ? html`<p class="hint">${this.localize.term('umbraDesktop_themeHighContrast')}</p>`
+          : ''}
       </section>
     `;
   }
@@ -181,6 +254,40 @@ export class UmbraDesktopSettingsAppearanceElement extends UmbLitElement {
           var(--uui-color-header-background, #1b264f),
           color-mix(in srgb, var(--uui-color-header-background, #1b264f) 50%, black) 70%
         );
+      }
+      /* A page in the colours in force, in the same box as the two previews above it. An icon sat
+         here first and read as a row that had not been finished: its neighbours each show what they
+         do, and between two pictures a glyph is the odd one out.
+
+         It is a *page* rather than a desktop on purpose. What these themes restyle is the document
+         inside each window, which is the one thing our own themes never touch, so a miniature of
+         our chrome would preview the wrong half of the screen. */
+      /* No padding, and the header bar runs to the edges: that keeps the swatch on the same box
+         model as the previews above — content-box, one constant, a 1px border outside it — so the
+         three lead boxes measure the same to the pixel and the three rows' text starts on one line.
+         Padding here would have made this one wider than its neighbours by exactly the padding. */
+      .scheme {
+        display: flex;
+        flex-direction: column;
+        background: var(--uui-color-surface, #fff);
+      }
+      .scheme .bar {
+        height: 16%;
+        background: var(--uui-color-header-background, var(--uui-color-text, #000));
+      }
+      .scheme .line {
+        height: 4px;
+        margin: 10px 12px 0;
+        border-radius: 1px;
+        /* The text colour at a fraction, rather than a grey: high contrast redefines the one and
+           would leave the other sitting there at its own fixed value, unreadable on the surface it
+           had just been given. */
+        background: var(--uui-color-text, #000);
+        opacity: 0.35;
+      }
+      .scheme .line.short {
+        margin-right: auto;
+        width: 45%;
       }
       umbradesktop-theme-preview {
         flex-shrink: 0;
