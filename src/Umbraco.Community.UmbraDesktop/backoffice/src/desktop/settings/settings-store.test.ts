@@ -24,6 +24,7 @@ it('round-trips settings through serialise and parse', () => {
     theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: ['content'],
     bootIntoDesktop: true,
+    taskbarFeatures: { 'ai-chat': false },
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -42,6 +43,7 @@ it('reads back each wallpaper kind unchanged', () => {
           theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
           pinned: [],
           bootIntoDesktop: false,
+          taskbarFeatures: {},
         }),
       )
         .wallpaper,
@@ -90,6 +92,7 @@ it('round-trips a pinned list', () => {
     theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: ['media', 'content'],
     bootIntoDesktop: false,
+    taskbarFeatures: {},
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -179,4 +182,47 @@ it('defaults the boot preference when a stored payload predates it', () => {
 it('ignores a boot preference that is not a boolean', () => {
   expect(parseSettings(JSON.stringify({ v: 1, bootIntoDesktop: 'yes' })).bootIntoDesktop).to.equal(false);
   expect(parseSettings(JSON.stringify({ v: 1, bootIntoDesktop: 1 })).bootIntoDesktop).to.equal(false);
+});
+
+it('defaults the taskbar features to an empty map, so every feature takes its own default', () => {
+  // Empty rather than pre-filled with every shipped feature's default. A payload that names each
+  // feature would freeze the shell's defaults into storage on first boot, and a feature added in a
+  // later release would then be indistinguishable from one the user had switched off.
+  expect(parseSettings(null).taskbarFeatures).to.deep.equal({});
+});
+
+it('keeps a stored taskbar feature choice', () => {
+  const settings = parseSettings(JSON.stringify({ v: 1, taskbarFeatures: { 'ai-chat': false } }));
+  expect(settings.taskbarFeatures).to.deep.equal({ 'ai-chat': false });
+});
+
+it('keeps a feature id it has never heard of, so downgrading does not discard an upgrade', () => {
+  // The map is read against the registry, which drops anything it cannot match. Discarding it here
+  // instead would mean running an older build once silently resets the newer build's features.
+  const settings = parseSettings(JSON.stringify({ v: 1, taskbarFeatures: { 'from-the-future': true } }));
+  expect(settings.taskbarFeatures).to.deep.equal({ 'from-the-future': true });
+});
+
+it('ignores a taskbar feature map that is not an object of booleans', () => {
+  expect(parseSettings(JSON.stringify({ v: 1, taskbarFeatures: ['ai-chat'] })).taskbarFeatures).to.deep.equal({});
+  expect(parseSettings(JSON.stringify({ v: 1, taskbarFeatures: { 'ai-chat': 'off' } })).taskbarFeatures).to.deep.equal(
+    {},
+  );
+  expect(parseSettings(JSON.stringify({ v: 1, taskbarFeatures: null })).taskbarFeatures).to.deep.equal({});
+});
+
+it('defaults the taskbar features when a stored payload predates them, keeping everything else', () => {
+  const settings = parseSettings(
+    JSON.stringify({ v: 1, wallpaper: { kind: 'none' }, pinned: ['content'], theme: 'win98', bootIntoDesktop: true }),
+  );
+  expect(settings.taskbarFeatures).to.deep.equal({});
+  expect(settings.pinned).to.deep.equal(['content']);
+  expect(settings.theme).to.equal('win98');
+  expect(settings.bootIntoDesktop).to.equal(true);
+});
+
+it('never returns the shared default feature map, so a caller cannot mutate it', () => {
+  const first = parseSettings(null);
+  first.taskbarFeatures['ai-chat'] = false;
+  expect(parseSettings(null).taskbarFeatures).to.deep.equal({});
 });

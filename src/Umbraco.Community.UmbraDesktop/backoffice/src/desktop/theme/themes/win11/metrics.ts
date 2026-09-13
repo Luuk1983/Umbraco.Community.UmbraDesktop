@@ -87,11 +87,30 @@ export const W11_TASKBAR_PADDING = 4;
 /** Side of a taskbar button. Square, because the bar shows icons without labels. */
 export const W11_TASK_SIZE = 40;
 
+/**
+ * Height of the rule between the fixed buttons and the open windows.
+ *
+ * Derived from the button rather than picked: a shade over half a tile, which is about the icon
+ * inside one, so the rule reads as tall as the things it separates without becoming a second edge
+ * on a bar that already has the screen's edge under it. Windows does not draw this separator at
+ * all — it has one list where this has two — so there is no original to match, only the tile.
+ */
+export const W11_TASKBAR_DIVIDER_HEIGHT = Math.round(W11_TASK_SIZE * 0.6);
+
 /** Width of the accent bar under the focused window's task button. */
 export const W11_TASK_MARKER_WIDTH = 16;
 
 /** Height of that bar, and its distance from the button's bottom edge. */
 export const W11_TASK_MARKER_HEIGHT = 3;
+
+/**
+ * Width of the shorter, quieter bar under a window button that is **not** the focused one.
+ *
+ * Windows draws the same two lengths: a stub for "there is a window here" and a longer accent for
+ * "and it is the one you are in". Half the accent, so the difference is unmistakable at a glance
+ * without the stub becoming a dot.
+ */
+export const W11_TASK_MARKER_WIDTH_INACTIVE = W11_TASK_MARKER_WIDTH / 2;
 
 /**
  * Draggable caption that must stay on screen, in px. The Umbraco theme's value, unchanged: a

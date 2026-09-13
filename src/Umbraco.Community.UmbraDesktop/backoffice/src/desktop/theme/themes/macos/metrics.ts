@@ -103,6 +103,33 @@ export const MACOS_CHROME_WIDTH = 0;
 export const MACOS_TASKBAR_HEIGHT = 48;
 
 /**
+ * Side of a dock tile, and the height of the separator drawn beside one.
+ *
+ * Roomier than a real dock draws it: the icon stays 24px and the remaining 18 is clearance, because
+ * the unsaved dot rides the tile's trailing corner and at 38 it had nowhere to sit that was not on
+ * top of the icon. See `taskbar.css.ts` for the rest of that.
+ *
+ * Nothing else takes its height from this. The separators take {@link MACOS_DOCK_ICON} instead —
+ * see there for why the difference matters.
+ */
+export const MACOS_DOCK_TILE = 42;
+
+/**
+ * The glyph inside a dock tile, and the height of the separators drawn between tiles.
+ *
+ * Well inside the tile, which is the point: the tile is 42 and this is 24, so the icons float in a
+ * roomy slot rather than filling it. A separator built to the *tile* is therefore taller than
+ * anything it separates and reads as a boxy full-height rule — which is what the dock looked like
+ * when the divider was first drawn that way. macOS draws a short, low-contrast line sitting clearly
+ * inside the icons, so the icon is the thing to match, not the slot it sits in.
+ *
+ * Both dock separators take it — the divider between the fixed buttons and the open windows, and
+ * the rule before the clock — so the dock cannot end up with two rules of different heights, which
+ * is a thing that reads as a rendering fault rather than as a choice.
+ */
+export const MACOS_DOCK_ICON = 24;
+
+/**
  * The dock's top hairline, in px. Feeds the palette's `--umbradesktop-taskbar-border-top`, in both
  * variants.
  *

@@ -17,7 +17,11 @@ it('puts General first', () => {
   // Where every settings surface that has a General puts it: it is the category you fall back to
   // when you are not sure which one holds the thing you want, and a fallback at the bottom is one
   // people scroll past twice.
-  expect(UMBRADESKTOP_SETTINGS_CATEGORIES.map((category) => category.id)).to.deep.equal(['general', 'appearance']);
+  expect(UMBRADESKTOP_SETTINGS_CATEGORIES.map((category) => category.id)).to.deep.equal([
+    'general',
+    'appearance',
+    'taskbar',
+  ]);
 });
 
 it('gives every category an icon and an element that exists', () => {
@@ -59,6 +63,6 @@ it('finds a category by id, and nothing for one that was never there', () => {
   // A deep link can name a category from a version that had it, or a typo. Either way the panel
   // shows the list rather than an empty screen.
   expect(findSettingsCategory('appearance')?.id).to.equal('appearance');
-  expect(findSettingsCategory('taskbar')).to.equal(undefined);
+  expect(findSettingsCategory('nothing-of-the-sort')).to.equal(undefined);
   expect(findSettingsCategory(undefined)).to.equal(undefined);
 });

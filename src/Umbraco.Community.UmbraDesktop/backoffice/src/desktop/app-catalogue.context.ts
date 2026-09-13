@@ -130,6 +130,28 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     return this.#apps.getValue();
   }
 
+  /**
+   * Whether a curated entry's `ref` is registered on this install, regardless of whether the
+   * current user may reach what it points at.
+   *
+   * The one question `apps` cannot answer. An app missing from that list has two quite different
+   * causes — the package is not installed, or this user may not reach its section — and a caller
+   * that has to *explain* the absence rather than merely handle it needs to tell them apart. The
+   * taskbar's AI chat feature is the caller: Desktop settings lists it whether or not it can be
+   * switched on, and the reason it gives sends the reader to a different colleague in each case.
+   *
+   * A snapshot rather than an observable, for the same reason `getApps` is one: every caller asks
+   * while recomputing something that is already observing `apps`, and both are written on the same
+   * pass, so a subscription would be state to hold for no extra answer. Refs the catalogue does not
+   * carry are unknown here and answer false, which is the safe direction — nothing is observing
+   * them, so nothing could ever make the answer true.
+   * @param ref The referenced manifest's alias.
+   * @returns True when a manifest with that alias is registered.
+   */
+  public isRefRegistered(ref: string): boolean {
+    return this.#manifests.get(ref) !== undefined;
+  }
+
   #groups = new UmbArrayState<UmbraDesktopLauncherGroup>([], (g) => g.group.alias);
   /** Grouped display list for the launcher. */
   public readonly groups = this.#groups.asObservable();

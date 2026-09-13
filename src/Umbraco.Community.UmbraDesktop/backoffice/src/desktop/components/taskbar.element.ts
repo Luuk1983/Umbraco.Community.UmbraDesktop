@@ -1,4 +1,4 @@
-import type { UmbraDesktopWindow } from '../types';
+import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
 import { taskActivation } from '../window-model';
 import { exitDialogContent } from '../exit-message.js';
@@ -6,6 +6,11 @@ import { suppressBootForSession } from '../boot/boot-storage.js';
 import { exitDesktopPath } from '../boot/boot-decision.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
+import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
+import type { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context';
+import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
+import { taskbarRowFeatures } from '../taskbar/features/index.js';
+import type { UmbraDesktopTaskbarFeatureContext } from '../taskbar/features/types';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import './launcher.element.js';
 import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
@@ -40,7 +45,27 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   @state()
   private _clock = '';
 
+  /** Every app this user may launch, for the feature row. Already gated by the catalogue. */
+  @state()
+  private _apps: ReadonlyArray<UmbraDesktopApp> = [];
+
+  /** The user's pinned aliases, in pin order — the launcher's list, observed rather than copied. */
+  @state()
+  private _pinned: ReadonlyArray<string> = [];
+
+  /** Which fixed features this user has switched on or off; anything absent takes its own default. */
+  @state()
+  private _features: Readonly<Record<string, boolean>> = {};
+
   #manager?: UmbraDesktopWindowManagerContext;
+
+  /**
+   * The app catalogue, kept for its 'isRefRegistered' probe rather than for its apps, which arrive
+   * through the observation above. A feature that has to explain its own absence needs to tell a
+   * missing package from a missing permission, and that is the only question 'apps' cannot answer.
+   */
+  #catalogue?: UmbraDesktopAppCatalogueContext;
+
   #timer?: number;
 
   constructor() {
@@ -50,6 +75,18 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
       if (ctx) this.observe(ctx.windows, (list) => (this._windows = list));
+    });
+    this.consumeContext(UMBRADESKTOP_APP_CATALOGUE_CONTEXT, (ctx) => {
+      this.#catalogue = ctx ?? undefined;
+      if (ctx) this.observe(ctx.apps, (apps) => (this._apps = apps));
+    });
+    this.consumeContext(UMBRADESKTOP_SETTINGS_CONTEXT, (ctx) => {
+      if (!ctx) return;
+      // Both observed rather than sampled, which is what makes a pin made in the launcher appear on
+      // the row while the launcher is still open, and a feature switched off in the settings panel
+      // close its space while the panel is still up.
+      this.observe(ctx.pinned, (pinned) => (this._pinned = pinned));
+      this.observe(ctx.taskbarFeatures, (features) => (this._features = features ?? {}));
     });
   }
 
@@ -228,6 +265,86 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       aria-hidden="true"></umb-icon>`;
   }
 
+  /**
+   * What the features are handed in order to answer for themselves and to draw.
+   *
+   * Assembled here rather than reached for by each feature, so a feature stays a folder of
+   * functions rather than an element with a lifecycle of its own. 'open' is passed straight through
+   * to the window manager and nothing wraps it: the second-click rule lives there, and a button on
+   * this row must hold no opinion about it.
+   * @returns The context for this render.
+   */
+  get #featureContext(): UmbraDesktopTaskbarFeatureContext {
+    return {
+      apps: this._apps,
+      pinned: this._pinned,
+      isRefRegistered: (ref) => this.#catalogue?.isRefRegistered(ref) ?? false,
+      open: (app) => this.#manager?.open(app),
+      localize: (value) => this.localize.string(value),
+    };
+  }
+
+  /**
+   * The row of fixed features, immediately right of the launcher button and before the open-window
+   * buttons.
+   *
+   * **This is not the system tray.** Windows separates the two and so does this: the launcher side
+   * launches things, while the notification area by the clock reports on things. Keeping them apart
+   * is what lets the row stay silent about windows — no running indicator, no modifier click, no
+   * context menu — because it never stands in for one.
+   *
+   * Rendered as nothing at all when it is empty, rather than as an empty box: the row has a gap and
+   * a margin, so a present-but-empty element would leave a hole beside the launcher button on a
+   * desktop where every feature is off.
+   * @returns The row's template, or nothing.
+   */
+  #renderFeatures() {
+    const context = this.#featureContext;
+    const elements = taskbarRowFeatures('launcher', this._features, context).flatMap((feature) =>
+      feature.render(context),
+    );
+    if (elements.length === 0) return nothing;
+    return html`<div class="features">${elements}</div>`;
+  }
+
+  /**
+   * Whether the two halves of the launching side both have something in them.
+   *
+   * Asked by re-rendering the features rather than caching the last answer, because both inputs are
+   * observed and a stale cache would leave the divider behind after the last window closed.
+   * @returns True when the fixed row and the window list are both non-empty.
+   */
+  get #needsDivider(): boolean {
+    if (this._windows.length === 0) return false;
+    const context = this.#featureContext;
+    return taskbarRowFeatures('launcher', this._features, context).some(
+      (feature) => feature.render(context).length > 0,
+    );
+  }
+
+  /**
+   * The line between the fixed row and the open-window buttons.
+   *
+   * The row and the window list draw the **same icon** for the same app — the duplicate the design
+   * accepts, because a window button carries a title and a row button never does. With nothing
+   * between them, a pinned Content button and an open Content window are two identical glyphs side
+   * by side with nothing saying they mean different things. That is precisely the seam Windows 11
+   * declines to draw and then has to explain with running indicators; drawing it is what lets this
+   * row stay silent about windows.
+   *
+   * Only when there is something on **both** sides. A divider with one list beside it is a line
+   * hanging off the end of something, which is why it goes as soon as the last window closes or the
+   * last feature is switched off.
+   *
+   * 'aria-hidden', and nothing else: the two lists are already told apart by anyone not looking at
+   * them, because every button in either one is named. A divider that announced itself would be one
+   * more thing to tab past for nothing.
+   * @returns The divider's template, or nothing.
+   */
+  #renderDivider() {
+    return this.#needsDivider ? html`<div class="divider" aria-hidden="true"></div>` : nothing;
+  }
+
   override render() {
     return html`
       ${this.#renderLauncher()}
@@ -240,6 +357,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
             @click=${this.#toggleLauncher}>
             <umb-icon name="icon-umbraco"></umb-icon>
           </button>
+          ${this.#renderFeatures()} ${this.#renderDivider()}
           <div class="running">
             ${repeat(
               this._windows,
@@ -258,7 +376,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
                 const label = worst ? `${name} — ${this.localize.term(notices[0].title)}` : name;
                 return html`
                   <button
-                    class="task ${w.active ? 'active' : ''}"
+                    class="task window ${w.active ? 'active' : ''}"
                     title=${label}
                     aria-label=${label}
                     @click=${() => this.#onTaskClick(w)}>
@@ -346,6 +464,80 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       .start.active {
         background: var(--umbradesktop-start-active-background, rgba(255, 255, 255, 0.16));
       }
+      /* The fixed features: everything the user reaches for constantly, one click away, in the
+         order the shell fixes rather than one the user arranges. It sits on the launching half of
+         the bar deliberately — beside the launcher button, not among the window buttons — which is
+         what removes the whole tail of complexity Windows carries here.
+
+         'flex: 0 1 auto' against '.running''s 'flex: 1' is the whole of "open window buttons
+         compress first". A flex item's shrink is weighted by its basis, and '.running' has a basis
+         of zero, so a bar that has run out of room takes every pixel from the window buttons before
+         this row loses one — and they are already clipped by their own 'overflow: hidden'. Only
+         once they are down to nothing does this row start to truncate, from its end, which is what
+         'min-width: 0' plus the clip below allow. There is deliberately no cap on the number of
+         pinned apps: a cap would fail earlier than the space does, and on a wider screen than
+         anyone actually has trouble with.
+
+         Its buttons carry '.task', the running-window button's own class, so all five themes style
+         them without a line of new CSS. They draw no '.task-label', which the two themes that hide
+         labels already assume and the three that show them read as an icon-only button. */
+      .features {
+        display: flex;
+        /* Centred, where '.running' is stretched in this sheet. The two look identical here, because
+           the base's '.task' is full bar height either way — but a theme whose tiles are a fixed
+           size shorter than the bar pins them to the top under 'stretch' and centres them under
+           'center', and every such theme has already said 'align-items: center' on '.running' for
+           exactly that reason. The macOS dock is 48px tall with 42px tiles, so the fixed row sat
+           6px above the window tiles beside it. Centring here rather than asking each theme to
+           restate it keeps the row's promise of costing a theme nothing. */
+        align-items: center;
+        height: 100%;
+        flex: 0 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        gap: var(--uui-size-space-1);
+        margin-left: var(--uui-size-space-1);
+      }
+      /* The line between the fixed row and the open windows, rendered whenever there is something
+         on both sides of it and **drawn by no theme by default**.
+
+         Off by default because in this sheet, and in the two other themes that keep their labels, a
+         window button carries its window's title and a row button never carries anything. That is
+         already the difference between the two lists, and a separator between a row of icons and a
+         row of titled buttons is a line drawn around a distinction the eye has made. It is the two
+         icon-only themes that need it: on the macOS dock a pinned Content button and an open
+         Content window are the same glyph twice with nothing between them.
+
+         So this rule is geometry and a colour, waiting for a theme to say 'display: block'. The
+         macOS dock does. Windows 11 answers the same question its own way, by marking every window
+         button rather than by separating the lists — see its sheet.
+
+         Drawn in the bar's own ink at low opacity rather than from a colour token, so a theme that
+         opts in lands correctly on a dark bar and on a light one without supplying a value: '.bar'
+         sets 'color' to the taskbar text colour and 'currentColor' inherits it here. */
+      .divider {
+        /* A token rather than a bare 'none', so a theme can turn the divider on from its palette
+           alone. Every other value here is a token for the same reason: a theme that wants the
+           macOS answer should not need a stylesheet to get it, only four values. */
+        display: var(--umbradesktop-taskbar-divider-display, none);
+        flex: none;
+        box-sizing: border-box;
+        align-self: center;
+        width: 1px;
+        height: var(--umbradesktop-taskbar-divider-height, 60%);
+        margin: 0 var(--uui-size-space-2);
+        background: var(--umbradesktop-taskbar-divider, currentColor);
+        opacity: var(--umbradesktop-taskbar-divider-opacity, 0.25);
+      }
+      /* The base pulls a task icon 2px left to balance the transparent padding inside an Umbraco
+         glyph against the wider gap before the label. There is no label here, so that pull is a
+         2px lean in a button whose only job is to centre one icon. Three classes deep so it
+         outranks the '.task .task-icon' rule it is correcting without depending on which of the two
+         a browser saw last. The four themes that restyle that rule all set this to 0 already, for
+         their own reasons, so none of them needs to know about this. */
+      .features .task .task-icon {
+        margin-left: 0;
+      }
       /* Running windows: compact horizontal taskbar buttons that keep the native tab
          language — icon + label, with the active window carrying the coral "current"
          underline (an inset box-shadow, so it never shifts layout). Buttons fill the full
@@ -361,6 +553,17 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         overflow: hidden;
         margin-left: var(--uui-size-space-1);
       }
+      /* '.window' marks a button that stands for an open window, which '.task' alone no longer does:
+         the fixed row's buttons are '.task' too, and they launch rather than switch. Nothing in this
+         sheet uses it — with labels on, the title is what tells the two apart — but a theme that
+         hides labels needs some way to say "this one is a window", and this is it. The Windows 11
+         theme draws its running marker through this selector, which is its whole answer to the
+         separator the macOS dock uses instead.
+
+         A class on the button rather than '.running .task': scoping geometry to '.running' is the
+         one thing that silently strands the feature row on the base's sizing, and
+         'theme/taskbar-features.test.ts' fails a theme that does it. A modifier stays true wherever
+         the button is rendered. */
       .task {
         position: relative;
         display: inline-flex;

@@ -2,6 +2,7 @@ import type { UmbraDesktopSettings, UmbraDesktopWallpaperRef } from './types';
 import type { UmbraDesktopWallpaperView } from './wallpaper-view';
 import { resolveWallpaper, wallpaperThumbUrl } from './wallpaper';
 import { togglePinned } from './pinned';
+import { withFeatureEnabled } from '../taskbar/features/enabled';
 import { UMBRADESKTOP_DEFAULT_SETTINGS, parseSettings, serialiseSettings, settingsStorageKey } from './settings-store';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from './settings.context-token';
 import {
@@ -45,6 +46,14 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
 
   /** Id of the user's chosen chrome theme. */
   public readonly theme = this.#settings.asObservablePart((settings) => settings.theme);
+
+  /**
+   * Which fixed taskbar features this user has switched on or off, keyed by feature id.
+   *
+   * Only the ones they have an opinion about; anything absent takes the feature's own default. Read
+   * through `isFeatureEnabled` rather than indexed directly, so that rule lives in one place.
+   */
+  public readonly taskbarFeatures = this.#settings.asObservablePart((settings) => settings.taskbarFeatures);
 
   /** Whether landing on the backoffice root should open the desktop. */
   public readonly bootIntoDesktop = this.#settings.asObservablePart((settings) => settings.bootIntoDesktop);
@@ -131,6 +140,18 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    */
   public togglePin(alias: string): void {
     this.#update({ pinned: togglePinned(this.#settings.getValue().pinned, alias) });
+  }
+
+  /**
+   * Switch a fixed taskbar feature on or off. Applies immediately and persists.
+   *
+   * The choice is recorded even when it matches the feature's default: an absence means "whatever
+   * the shell thinks", which is a different answer from "the user wants it on".
+   * @param id The feature id, from the taskbar feature registry.
+   * @param enabled Whether the feature should be on.
+   */
+  public setTaskbarFeature(id: string, enabled: boolean): void {
+    this.#update({ taskbarFeatures: withFeatureEnabled(this.#settings.getValue().taskbarFeatures, id, enabled) });
   }
 
   /**

@@ -23,6 +23,10 @@
     "productivity",
     "backoffice",
     "launcher",
+    "shortcuts",
+    "quick launch",
+    "pinned apps",
+    "taskbar",
     "side by side",
     "workspace",
     "unsaved changes",
@@ -68,7 +72,7 @@
   "Screenshots": [
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png",
-      "Caption": "Content and media open as separate windows, side by side, with the taskbar below."
+      "Caption": "Content, media and uSync open at once as separate windows, each with its own button on the taskbar, and the apps you pinned one click away beside the launcher button."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/unsaved-changes-guard.png",

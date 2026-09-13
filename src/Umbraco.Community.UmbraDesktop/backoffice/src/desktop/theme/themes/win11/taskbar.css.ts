@@ -3,7 +3,9 @@ import { W11_FONT } from './palette.js';
 import {
   W11_TASK_MARKER_HEIGHT,
   W11_TASK_MARKER_WIDTH,
+  W11_TASK_MARKER_WIDTH_INACTIVE,
   W11_TASK_SIZE,
+  W11_TASKBAR_DIVIDER_HEIGHT,
   W11_TASKBAR_HEIGHT,
   W11_TASKBAR_PADDING,
 } from './metrics.js';
@@ -62,6 +64,19 @@ export default css`
     position: relative;
     z-index: 1;
   }
+  /* A rule between the fixed buttons and the open windows, which Windows does not draw: there the
+     two lists are one list, so there is nothing to separate. Here they are separate, and the marker
+     below already says which is which — this is the second cue rather than the only one, and it is
+     here because two groups of identical square icons read as one long row without it.
+
+     Quieter than the macOS dock's, deliberately. That dock leans on its separator, having nothing
+     else; this bar has the running marker doing the work, so the rule only has to group. */
+  .divider {
+    display: block;
+    height: ${W11_TASKBAR_DIVIDER_HEIGHT}px;
+    margin: 0 ${W11_TASKBAR_PADDING * 2}px;
+    opacity: 0.35;
+  }
   .running {
     flex: none;
     gap: ${W11_TASKBAR_PADDING}px;
@@ -97,14 +112,49 @@ export default css`
   .task-label {
     display: none;
   }
-  /* The focused window is marked by a short accent bar under its icon, not by the base rule's
-     full-width inset underline. Drawn inside the button's own box, because the base clips
-     .running and a marker below the box would be cut off — the same constraint the macOS dot
-     works around. */
+  /* Two lists of identical icons sit on this bar — the fixed buttons and the open windows — and
+     this theme hides labels, so nothing tells them apart on their own. The macOS dock answers that
+     with a rule between them; Windows answers it by marking the windows, and this is that answer.
+
+     **Every window button carries a bar, and no fixed button does.** A stub for "there is a window
+     here", the longer accent below for "and it is the one you are in". So the mark means *window*,
+     which is what makes it the separator: a bare icon launches, a marked icon is something already
+     open.
+
+     One thing this deliberately does **not** copy from Windows. There the bar goes on the *pinned*
+     button, because there the pinned button is the window button — one per app — and the mark
+     explains the click, which returns you to the window. Here the two are separate buttons, a
+     second click on a fixed button opens a second window, and a mark on it would describe a click
+     it does not cause. On the button that really is the window it is simply true.
+
+     '.task.window' and not '.running .task': scoping to the window list is what silently strands
+     the fixed row on the base stylesheet's geometry, and 'theme/taskbar-features.test.ts' fails a
+     sheet that does it. The modifier is on the button, so it stays true wherever it is drawn. */
+  .task.window::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: ${W11_TASK_MARKER_HEIGHT}px;
+    width: ${W11_TASK_MARKER_WIDTH_INACTIVE}px;
+    height: ${W11_TASK_MARKER_HEIGHT}px;
+    margin-left: -${W11_TASK_MARKER_WIDTH_INACTIVE / 2}px;
+    border-radius: ${W11_TASK_MARKER_HEIGHT / 2}px;
+    /* The bar's own ink, dimmed: grey against the accent below, and it stays legible on the light
+       acrylic and the dark one without a second token to keep in step with the palette. */
+    background: currentColor;
+    opacity: 0.5;
+  }
+  /* Both markers are drawn inside the button's own box, because the base clips '.running' and
+     anything below the box would be cut off — the same constraint the macOS dot works around. The
+     position is on '.task' rather than on either marker rule, so a window button has a containing
+     block whether or not it is the focused one. */
+  .task.window,
   .task.active {
     box-shadow: none;
     position: relative;
   }
+  /* The focused window, in the accent and at twice the length. Later than the rule above and at
+     equal specificity, so it replaces the stub rather than drawing over it. */
   .task.active::after {
     content: '';
     position: absolute;
@@ -115,6 +165,7 @@ export default css`
     margin-left: -${W11_TASK_MARKER_WIDTH / 2}px;
     border-radius: ${W11_TASK_MARKER_HEIGHT / 2}px;
     background: var(--umbradesktop-task-active-marker, #0078d4);
+    opacity: 1;
   }
   /* An overlay on the tile, not the inline glyph after the label that the base draws — this
      taskbar hides the label (see '.task-label' above), so there is nothing for an inline glyph to
