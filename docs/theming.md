@@ -263,6 +263,23 @@ documents running Umbraco's own high-contrast stylesheet whatever chrome surroun
 D13). A theme with no dark palette therefore looks the same under all three backoffice themes.
 That is a fair trade, not a bug.
 
+**Two questions, two functions, and do not reach for the wrong one.** `resolveTheme().variant` is
+the palette *the chosen theme ended up with*, so it says `light` for a theme that never wrote a dark
+one, even in a dark backoffice — right for painting that theme's chrome, and wrong for anything
+asking what the backoffice is. `backofficeVariant(alias)` answers the second question, and is what
+code painting a theme *other* than the chosen one needs, since every such surface does its own
+light-fallback already. Getting this backwards is not loud: four of the five themes leave
+`--umbradesktop-window-body-background` on the backoffice's own token and look right either way. It
+shipped once and only macOS showed it, being the one theme that states that colour in both palettes.
+
+Which of the three is in force is Umbraco's setting, not this package's, and this package does not
+store a copy of it: `theme.context.ts` reads core's `UMB_THEME_CONTEXT`, and Desktop settings →
+Appearance → **Backoffice colours** writes back to the same context, which is also what the
+current-user modal writes to. So a theme can be tried under all three from one screen, and there is
+no second value to keep in step. The row lists whatever the extension registry holds under type
+`theme`, so a backoffice theme your own package registers shows up there without touching this
+repository.
+
 A palette is `Partial<Record<UmbraDesktopPaletteToken, string>>`, so **a typo is a compile error**,
 and it covers two token groups rather than one. The normative source is two lists in
 [`theme/types.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/types.ts):

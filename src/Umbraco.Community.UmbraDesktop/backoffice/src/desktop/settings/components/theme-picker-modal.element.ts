@@ -5,7 +5,7 @@ import { UMBRADESKTOP_THEMES } from '../../theme/themes/index';
 import { previewWallpaper } from '../../theme/theme-wallpaper';
 import type { UmbraDesktopWallpaperView } from '../wallpaper-view';
 import { UMBRADESKTOP_PREVIEW_PICKER_SCALE } from '../../theme/preview/constants';
-import type { UmbraDesktopResolvedTheme } from '../../theme/resolve-variant';
+import type { UmbraDesktopResolvedTheme, UmbraDesktopVariant } from '../../theme/resolve-variant';
 import { UMBRADESKTOP_THEME_CONTEXT } from '../../theme/theme.context-token';
 import '../../theme/preview/theme-preview.element.js';
 import { css, customElement, html, repeat, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
@@ -34,9 +34,23 @@ export class UmbraDesktopThemePickerModalElement extends UmbModalBaseElement<Umb
   @state()
   private _chosenThemeId?: string;
 
-  /** The variant in force, so every preview is painted in the same one the desktop is using. */
+  /** The theme in force, which is where this reads the *chosen* theme's id from. */
   @state()
   private _theme?: UmbraDesktopResolvedTheme;
+
+  /**
+   * Whether the backoffice is light or dark, which is what every miniature here is painted in.
+   *
+   * **Not** `_theme.variant`. That is the palette the *chosen* theme ended up with, and a theme
+   * that ships no dark palette — the Umbraco theme, which is the default — reports `light` for it
+   * in a dark backoffice. Painting the row from that made every preview light: invisible on the
+   * four themes that leave the window body on the backoffice's own token, and glaring on macOS,
+   * which is the one theme that states that colour, so the row showed one white tile among four
+   * dark ones. Each preview falls back to its own theme's light palette by itself, so what it wants
+   * from here is the environment.
+   */
+  @state()
+  private _variant: UmbraDesktopVariant = 'light';
 
   /**
    * Whether the wallpaper is following the theme. Observed rather than held locally because the
@@ -68,6 +82,7 @@ export class UmbraDesktopThemePickerModalElement extends UmbModalBaseElement<Umb
     this.consumeContext(UMBRADESKTOP_THEME_CONTEXT, (context) => {
       if (!context) return;
       this.observe(context.resolved, (resolved) => (this._theme = resolved));
+      this.observe(context.backofficeVariant, (variant) => (this._variant = variant));
     });
   }
 
@@ -119,7 +134,7 @@ export class UmbraDesktopThemePickerModalElement extends UmbModalBaseElement<Umb
                 @click=${() => this.#settings?.setTheme(theme.id)}>
                 <umbradesktop-theme-preview
                   .theme=${theme}
-                  .variant=${this._theme?.variant ?? 'light'}
+                  .variant=${this._variant}
                   .wallpaper=${previewWallpaper(theme, this.#currentThumb(), this._followsTheme)}></umbradesktop-theme-preview>
                 <span class="text">
                   <span class="name">${theme.name}</span>

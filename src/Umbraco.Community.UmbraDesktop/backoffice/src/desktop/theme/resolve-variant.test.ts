@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { resolveTheme } from './resolve-variant';
+import { backofficeVariant, resolveTheme } from './resolve-variant';
 import { UMBRADESKTOP_UMBRACO_THEME } from './themes/umbraco/index';
 import type { UmbraDesktopTheme } from './types';
 
@@ -93,4 +93,30 @@ it('treats an empty dark palette as a dark variant, not a missing one', () => {
   });
   expect(result.variant).to.equal('dark');
   expect(result.palette).to.equal(emptyDark.palettes.dark);
+});
+
+it('reads the backoffice as dark whether or not the chosen theme has a dark palette', () => {
+  // Distinct from `resolveTheme().variant`, which answers a different question: *which palette is
+  // being painted*, and so says "light" for a theme that never wrote a dark one. This says what the
+  // backoffice itself is set to, which is what a row of previews of *other* themes needs — each of
+  // those does its own fallback.
+  expect(backofficeVariant('umb-dark-theme')).to.equal('dark');
+  expect(backofficeVariant('umb-high-contrast-theme')).to.equal('dark');
+  expect(backofficeVariant('umb-light-theme')).to.equal('light');
+  // An alias from a theme nobody registers any more is not dark, which is also what core falls
+  // back to when it cannot load a theme's stylesheet.
+  expect(backofficeVariant('acme-gone')).to.equal('light');
+  expect(backofficeVariant('')).to.equal('light');
+});
+
+it('does not report a dark backoffice as light just because the theme has no dark palette', () => {
+  // The bug this pair exists for: with the Umbraco theme chosen — it ships no dark palette — the
+  // resolved variant is "light" in a dark backoffice, and the theme picker painted every miniature
+  // in it. Four themes leave the window body on the backoffice's own token and looked dark anyway;
+  // macOS is the one theme that states the body colour in both palettes, so it alone came out
+  // white, in a dark panel, next to four dark ones.
+  const resolved = resolveTheme({ themeId: 'light-only', umbThemeAlias: 'umb-dark-theme', catalogue });
+
+  expect(resolved.variant, 'the palette in force is still the light one').to.equal('light');
+  expect(backofficeVariant('umb-dark-theme'), 'but the backoffice is dark').to.equal('dark');
 });

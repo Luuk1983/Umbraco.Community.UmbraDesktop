@@ -92,8 +92,14 @@ export class UmbraDesktopSettingsRowElement extends UmbLitElement {
         color: var(--uui-color-text-alt, var(--uui-color-text));
         font-size: var(--uui-type-small-size);
       }
-      /* At the trailing edge, where a "there is more this way" marker belongs. */
+      /* At the trailing edge, where a "there is more this way" marker belongs.
+
+         'flex-shrink: 0' is not tidiness. A flex item shrinks by default, and this one has nothing
+         to give: beside a row whose detail wrapped to three lines the chevron came out at about
+         half the size it has beside a one-line row, so one screen showed two sizes of the same
+         marker. The text is the only thing here that should resize. */
       .chevron {
+        flex-shrink: 0;
         margin-left: auto;
         color: var(--uui-color-text-alt, var(--uui-color-text));
       }

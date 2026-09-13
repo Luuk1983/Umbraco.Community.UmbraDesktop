@@ -10,6 +10,10 @@ export const UMBRADESKTOP_WALLPAPER_PICKER_MODAL_ALIAS = 'Umbraco.Community.Umbr
 /** Alias of the theme picker modal. */
 export const UMBRADESKTOP_THEME_PICKER_MODAL_ALIAS = 'Umbraco.Community.UmbraDesktop.Modal.ThemePicker';
 
+/** Alias of the picker for the backoffice's own theme. */
+export const UMBRADESKTOP_BACKOFFICE_THEME_PICKER_MODAL_ALIAS =
+  'Umbraco.Community.UmbraDesktop.Modal.BackofficeThemePicker';
+
 /**
  * What the settings panel can be opened at.
  *
@@ -111,3 +115,29 @@ export const UMBRADESKTOP_THEME_PICKER_MODAL = new UmbModalToken<UmbraDesktopThe
     modal: { type: 'sidebar', size: 'small' },
   },
 );
+
+/** What the backoffice theme picker needs to know: which theme is in force when it opens. */
+export interface UmbraDesktopBackofficeThemePickerModalData {
+  /** Alias of the backoffice theme in use when the picker opened. */
+  current: string;
+}
+
+/**
+ * The picker onto the backoffice's *own* theme — Umbraco's Light, Dark and High contrast, the ones
+ * the current-user modal also sets. A separate surface from the theme picker above it for the same
+ * reason it is a separate row: these restyle the documents inside the windows, and this package's
+ * themes never touch those.
+ *
+ * `small` and a sidebar, matching the theme picker beside it. A backoffice theme repaints the whole
+ * screen — the panel this opens from included — so leaving as much of that in view as possible is
+ * worth more here than anywhere else in the panel.
+ *
+ * Returns nothing: picking applies immediately through the desktop's theme context, which hands it
+ * to core, so there is no value to hand back on close.
+ */
+export const UMBRADESKTOP_BACKOFFICE_THEME_PICKER_MODAL = new UmbModalToken<
+  UmbraDesktopBackofficeThemePickerModalData,
+  never
+>(UMBRADESKTOP_BACKOFFICE_THEME_PICKER_MODAL_ALIAS, {
+  modal: { type: 'sidebar', size: 'small' },
+});

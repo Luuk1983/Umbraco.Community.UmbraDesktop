@@ -1,6 +1,9 @@
 import { expect } from '@open-wc/testing';
 import './theme-picker-modal.element.js';
 import { UMBRADESKTOP_THEMES } from '../../theme/themes/index.js';
+import { UMBRADESKTOP_THEME_CONTEXT } from '../../theme/theme.context-token.js';
+import { UmbContextProvider } from '@umbraco-cms/backoffice/context-api';
+import { UmbObjectState, UmbStringState } from '@umbraco-cms/backoffice/observable-api';
 import {
   UMBRADESKTOP_PREVIEW_PICKER_SCALE,
   UMBRADESKTOP_PREVIEW_SCALE,
@@ -93,4 +96,38 @@ it('renders the toggle off until the settings context says otherwise', async () 
   // off rather than checked-by-accident, because checked-by-accident is a wallpaper being replaced.
   const toggle = element.shadowRoot!.querySelector('.follows uui-toggle') as HTMLInputElement;
   expect(toggle.hasAttribute('checked')).to.equal(false);
+});
+
+it('paints every miniature in the variant the backoffice is in, not the one the chosen theme got', async () => {
+  // These are two different questions and the picker was asking the wrong one. `resolved.variant`
+  // is the palette *the chosen theme* ended up with, so a theme that ships no dark palette — the
+  // Umbraco theme, the default — reports "light" in a dark backoffice, and every row here was
+  // painted from that. Four themes leave the window body on the backoffice's own token and looked
+  // dark regardless; macOS is the one that states the body colour in both its palettes, so it alone
+  // came out white, in a dark panel, beside four dark ones. Each preview already falls back to a
+  // theme's light palette by itself, so what a row must hand it is what the backoffice is.
+  const wrapper = document.createElement('div');
+  document.body.append(wrapper);
+  after(() => wrapper.remove());
+  new UmbContextProvider(wrapper, UMBRADESKTOP_THEME_CONTEXT, {
+    resolved: new UmbObjectState({
+      theme: UMBRADESKTOP_THEMES[0],
+      // The state the bug lived in: a dark backoffice, and a chosen theme with no dark palette.
+      variant: 'light',
+      palette: UMBRADESKTOP_THEMES[0].palettes.light,
+      highContrast: false,
+    }).asObservable(),
+    backofficeVariant: new UmbStringState('dark').asObservable(),
+    getHostElement: () => wrapper,
+  } as never).hostConnected();
+
+  const element = document.createElement('umbradesktop-theme-picker-modal');
+  element.data = { current: 'umbraco' };
+  wrapper.append(element);
+  await element.updateComplete;
+
+  const painted = [...element.shadowRoot!.querySelectorAll('.theme')].map(
+    (row) => (row.querySelector('umbradesktop-theme-preview') as { variant?: string }).variant,
+  );
+  expect(painted).to.deep.equal(UMBRADESKTOP_THEMES.map(() => 'dark'));
 });

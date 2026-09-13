@@ -70,6 +70,11 @@ export default {
       "The backoffice is in high contrast. Window content follows it; the desktop keeps this theme's darkest palette.",
     themePickerTitle: 'Choose a theme',
     wallpaperFollowsTheme: 'Match the wallpaper to the theme',
+    // desktop settings — the backoffice's own theme, which is Umbraco's setting rather than ours.
+    // Named for what it changes, because the row above it is already called Theme.
+    backofficeTheme: 'Backoffice colours',
+    backofficeThemeAbout: "Umbraco's own light, dark and high contrast. Applies to the whole backoffice, including what is inside every window.",
+    backofficeThemePickerTitle: 'Choose backoffice colours',
     // one sentence per theme, shown beside its preview in the picker: what it *is*, not what it does
     themeAboutUmbraco: "The desktop as it ships, built from Umbraco's own colours and spacing.",
     themeAboutUmbraco4: 'The 2009 backoffice as desktop chrome: warm grey gradients, hairline panels and buttons that press in.',
