@@ -108,6 +108,8 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   // Barely rounded. v4 was square everywhere except its tab corners, but a hard 0 next to the
   // macOS theme's 10px reads as a rendering fault rather than a choice.
   '--umbradesktop-window-radius': '3px',
+  // The snap ghost stands in for the window that is about to be there, so it takes the same corner.
+  '--umbradesktop-snap-ghost-radius': '3px',
   '--umbradesktop-window-shadow': '0 4px 14px rgba(28, 36, 48, 0.22)',
   '--umbradesktop-window-shadow-active': '0 6px 20px rgba(28, 36, 48, 0.32)',
   '--umbradesktop-titlebar-height': `${U4_TITLEBAR_HEIGHT}px`,

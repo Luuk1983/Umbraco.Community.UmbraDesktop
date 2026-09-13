@@ -73,8 +73,26 @@ export default {
     // desktop settings — de categorieën waarin het paneel is verdeeld, en de regel onder elke rij
     groupAppearance: 'Weergave',
     groupGeneral: 'Algemeen',
+    groupTaskbar: 'Taakbalk',
     groupAppearanceAbout: 'Het thema en de achtergrond achter je vensters',
     groupGeneralAbout: 'Hoe het bureaublad start en waar je terechtkomt als je inlogt',
+    groupTaskbarAbout: 'Wat de taakbalk naast de startknop bewaart',
+    // bureaubladinstellingen — taakbalk. De schakelaars staan gegroepeerd per kant van de balk,
+    // omdat een scherm dat begint met een kale "AI-chat"-schakelaar nergens zegt waar het over gaat.
+    taskbarRegionLauncher: 'Taakbalkonderdelen',
+    taskbarRegionLauncherAbout:
+      'Knoppen naast de startknop, in deze volgorde. Elke knop opent een app, net als de launcher. Wisselen tussen de vensters die al open staan blijft bij de knoppen verderop in de balk.',
+    taskbarRegionTray: 'Systeemvakpictogrammen',
+    taskbarRegionTrayAbout: 'Pictogrammen naast de klok, die iets melden in plaats van iets openen.',
+    // Eén schakelaar per onderdeel. De regel eronder vertelt wat het onderdeel op de taakbalk zet;
+    // een onderdeel dat hier niet aangezet kan worden, zegt daaronder waarom niet.
+    taskbarAiChat: 'AI-chat',
+    taskbarAiChatAbout: 'Zet vooraan op de taakbalk een knop voor de Copilot Workspace.',
+    taskbarAiChatNotInstalled: 'Umbraco AI is niet op deze site geïnstalleerd, dus er is geen chat om te openen.',
+    taskbarAiChatNoPermission: 'Je hebt geen toegang tot de AI-sectie, dus de chat kan hier niet worden geopend.',
+    taskbarPinnedApps: 'Vastgezette apps',
+    taskbarPinnedAppsAbout:
+      'Toont de apps die je in de launcher hebt vastgezet ook op de taakbalk, in dezelfde volgorde. Vastzetten en losmaken doe je in de launcher, zoals altijd.',
     settingsBack: 'Terug naar bureaubladinstellingen',
     // desktop settings — startup
     bootIntoDesktop: 'Open het bureaublad als ik inlog',

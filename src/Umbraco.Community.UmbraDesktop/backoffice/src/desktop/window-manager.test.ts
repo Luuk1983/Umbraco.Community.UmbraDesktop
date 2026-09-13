@@ -491,3 +491,138 @@ describe('single-window apps', () => {
     expect(windowsOf(ctx), 'multiples are still the default').to.have.lengthOf(2);
   });
 });
+
+describe('snapping', () => {
+  /** The desktop these cases snap into. Wide enough that half of it beats the 320px floor. */
+  const BOUNDS = { w: 1200, h: 800 };
+
+  /**
+   * A manager that has been told how big its desktop is, which is what every snap rect is derived
+   * from. Without it the manager has no bounds and nothing to snap into.
+   * @returns The manager under test.
+   */
+  function snappable(): ProbeManager {
+    const ctx = manager();
+    ctx.clampToBounds(BOUNDS);
+    return ctx;
+  }
+
+  /**
+   * The manager's current ghost rectangle.
+   * @param ctx The manager to read.
+   * @returns The preview rect, or undefined when no snap is on offer.
+   */
+  function previewOf(ctx: UmbraDesktopWindowManagerContext) {
+    let rect: { x: number; y: number; w: number; h: number } | undefined;
+    ctx.snapPreview.subscribe((value) => (rect = value)).unsubscribe();
+    return rect;
+  }
+
+  it('offers a half of the desktop while the pointer is at a side edge', () => {
+    const ctx = snappable();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+
+    ctx.previewSnap(id, { x: 0, y: 400 });
+
+    expect(previewOf(ctx)).to.eql({ x: 0, y: 0, w: 600, h: 800 });
+    expect(windowsOf(ctx)[0].snapped, 'a preview is an offer, not a snap').to.equal(undefined);
+  });
+
+  it('withdraws the offer when the pointer leaves the edge', () => {
+    const ctx = snappable();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+
+    ctx.previewSnap(id, { x: 0, y: 400 });
+    ctx.previewSnap(id, { x: 600, y: 400 });
+
+    expect(previewOf(ctx)).to.equal(undefined);
+  });
+
+  it('snaps on commit, and clears the ghost with it', () => {
+    const ctx = snappable();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+
+    ctx.previewSnap(id, { x: BOUNDS.w, y: 400 });
+    ctx.commitSnap(id);
+
+    const w = windowsOf(ctx)[0];
+    expect(w.snapped).to.equal('right');
+    expect(w.rect).to.eql({ x: 600, y: 0, w: 600, h: 800 });
+    expect(previewOf(ctx), 'the ghost has to go the moment the window takes its place').to.equal(
+      undefined,
+    );
+  });
+
+  it('commits nothing when the drag ended away from an edge', () => {
+    const ctx = snappable();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+    const before = windowsOf(ctx)[0].rect;
+
+    ctx.previewSnap(id, { x: 600, y: 400 });
+    ctx.commitSnap(id);
+
+    expect(windowsOf(ctx)[0].rect).to.eql(before);
+    expect(windowsOf(ctx)[0].snapped).to.equal(undefined);
+  });
+
+  it('maximizes for a top snap rather than inventing a second full-screen state', () => {
+    const ctx = snappable();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+
+    ctx.previewSnap(id, { x: 600, y: 0 });
+    expect(previewOf(ctx), 'the ghost fills the surface').to.eql({ x: 0, y: 0, w: 1200, h: 800 });
+
+    ctx.commitSnap(id);
+
+    const w = windowsOf(ctx)[0];
+    expect(w.state).to.equal('maximized');
+    expect(w.snapped, 'maximized already knows how to restore; a flag beside it would be a ' +
+      'second answer to the same question').to.equal(undefined);
+  });
+
+  it('re-derives a snapped window when the desktop changes size', () => {
+    const ctx = snappable();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+    ctx.previewSnap(id, { x: 0, y: 400 });
+    ctx.commitSnap(id);
+
+    ctx.clampToBounds({ w: 800, h: 600 });
+
+    expect(windowsOf(ctx)[0].rect).to.eql({ x: 0, y: 0, w: 400, h: 600 });
+  });
+
+  it('gives up the snap when the window is resized by hand', () => {
+    const ctx = snappable();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+    ctx.previewSnap(id, { x: 0, y: 400 });
+    ctx.commitSnap(id);
+
+    ctx.resize(id, { x: 0, y: 0, w: 700, h: 800 });
+    ctx.clampToBounds(BOUNDS);
+
+    expect(windowsOf(ctx)[0].snapped).to.equal(undefined);
+    expect(windowsOf(ctx)[0].rect.w, 'a re-derive after the resize would undo it').to.equal(700);
+  });
+
+  it('restores the pre-snap size where a drag put it', () => {
+    const ctx = snappable();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+    const before = windowsOf(ctx)[0].rect;
+    ctx.previewSnap(id, { x: 0, y: 400 });
+    ctx.commitSnap(id);
+
+    ctx.unsnapTo(id, 250, 0);
+
+    const w = windowsOf(ctx)[0];
+    expect(w.rect).to.eql({ x: 250, y: 0, w: before.w, h: before.h });
+    expect(w.snapped).to.equal(undefined);
+  });
+});

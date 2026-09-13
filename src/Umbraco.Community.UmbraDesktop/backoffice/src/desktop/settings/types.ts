@@ -20,8 +20,30 @@ export interface UmbraDesktopSettings {
   wallpaper: UmbraDesktopWallpaperRef;
   /** Id of the user's chosen chrome theme. */
   theme: string;
-  /** Aliases of the apps pinned to Favourites, in pin order. */
+  /**
+   * Aliases of the apps pinned to Favourites, in pin order.
+   *
+   * Read by two surfaces now rather than one: the launcher's Pinned hero, and the taskbar's pinned
+   * apps feature when it is switched on. Both go through `resolvePinned`, so neither has its own
+   * idea of what a pin means or which order they come in.
+   */
   pinned: string[];
+
+  /**
+   * Which fixed taskbar features this user has switched on or off, keyed by feature id.
+   *
+   * Holds **only** the features the user has an opinion about. One absent from the map takes the
+   * feature's own default, which is what lets a feature added in a later release arrive switched on
+   * for somebody whose payload predates it rather than reading as one they had switched off. See
+   * `taskbar/features/enabled.ts`.
+   *
+   * One property rather than a boolean per feature, so that adding a feature stays a folder plus
+   * one registry entry and never touches this file or the parser. Ids that no feature claims are
+   * kept rather than pruned: the registry drops what it cannot match when it reads the map, and
+   * discarding them here would mean running an older build once silently resets a newer build's
+   * features.
+   */
+  taskbarFeatures: Record<string, boolean>;
   /**
    * Whether landing on the backoffice root should open the desktop instead of the section the
    * backoffice would otherwise pick.

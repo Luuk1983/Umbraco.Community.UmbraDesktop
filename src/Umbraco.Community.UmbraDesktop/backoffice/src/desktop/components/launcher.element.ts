@@ -2,6 +2,7 @@ import type { UmbraDesktopApp, UmbraDesktopLauncherGroup } from '../types';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token.js';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
+import { resolvePinned } from '../settings/pinned.js';
 import type { UmbraDesktopSettingsContext } from '../settings/settings.context';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -65,11 +66,15 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     });
   }
 
-  /** The pinned apps, in pin order, resolved against the flat app list (missing ones dropped). */
+  /**
+   * The pinned apps, in pin order, resolved against the flat app list (missing ones dropped).
+   *
+   * The resolution itself is `resolvePinned`, shared with the taskbar's pinned apps feature: the
+   * same pin list is drawn in both places, and two copies of "which apps, in which order" is
+   * exactly the kind of pair that drifts.
+   */
   get #favourites(): UmbraDesktopApp[] {
-    return this._pinned
-      .map((alias) => this._apps.find((a) => a.alias === alias))
-      .filter((a): a is UmbraDesktopApp => !!a);
+    return resolvePinned(this._apps, this._pinned);
   }
 
   /** Launch an app and let the taskbar know so it can close the launcher. */

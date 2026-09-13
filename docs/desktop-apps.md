@@ -480,7 +480,10 @@ name a different group and land in More until one exists.
 Most of the launcher then works on your app for nothing. Its tile and its taskbar button come from
 being in the app list at all. Pinning does key off `alias`, which is why §2 makes such a point of
 that field being stable: a pin is stored as an alias and resolved with a lookup over the app list,
-and yours is in that list like any other. Window focus and z-order are not about your app in the
+and yours is in that list like any other. That one list is also what puts a pinned app on the
+taskbar's fixed row, beside the launcher button, so an app of yours that somebody pins lands there
+too with nothing to opt into — the row renders the same pin list the launcher does, resolved the
+same way. Window focus and z-order are not about your app in the
 first place, since they key off a window's own id rather than the alias, so they behave the same
 whatever is in the body.
 

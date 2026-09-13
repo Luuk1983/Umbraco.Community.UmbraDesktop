@@ -94,7 +94,7 @@ Nothing in CI can do these.
 
   | Shot | Notes |
   |---|---|
-  | `desktop-windows.png` | Two windows side by side. The opening image. |
+  | `desktop-windows.png` | Three overlapping windows, and the opening image. Retaken 2026-09-13 for the taskbar feature row, which appears on every shot with a taskbar in it; the rest of the set was left alone, since three small icons beside the launcher button is not worth reshooting eight frames for. The caption named two windows and had to be rewritten with the shot — check the alt text, this table and the marketplace `Caption` together, because all three describe the same frame. |
   | `unsaved-changes-guard.png` | Carries the whole guard story in one frame: the unsaved dot, the "someone else changed this" warning with both buttons, and the recycle-bin error, in three stacked windows with all three markers repeated on the taskbar. A separate overwrite-guard shot was planned and is not needed because this one covers it. Note the file arrived named `unsved-`, which would have 404ed silently on the Marketplace; check new filenames against the `ImageUrl` by eye, since nothing else will. |
   | `launcher.png` | All twelve groups, Background Jobs under Diagnostics, the commercial packages and the Games group. |
   | `theme-macos.png`, `theme-win98.png` | Two of the five themes, deliberately not all five. A theme shot sells the idea that the chrome restyles; the Description naming all five does the rest, and five near-identical launchers would pad the listing without adding to it. `theme-win98.png` shows an older launcher and is kept as it is: it is there to show the theme, and the content behind it is not the subject. |
