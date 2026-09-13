@@ -40,6 +40,9 @@ export const UMBRADESKTOP_UMBRACO4_THEME: UmbraDesktopTheme = {
   // high-contrast settings, high contrast being painted with a theme's darkest available palette
   // and this being the only one. See `palette.ts`.
   palettes: { light: U4_LIGHT },
+  // Retro Swoosh is the v4-era umbraco.com artwork, and it has been sitting in the package since
+  // the wallpapers shipped. No theme here gets a better match for free.
+  wallpaper: { kind: 'builtin', id: 'retro-swoosh' },
   metrics: {
     // See metrics.ts: every number below is derived from the constants the stylesheets and the
     // palette interpolate, rather than being a literal that can drift from what actually paints —

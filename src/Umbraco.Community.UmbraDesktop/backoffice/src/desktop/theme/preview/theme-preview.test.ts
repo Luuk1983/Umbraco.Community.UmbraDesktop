@@ -189,3 +189,33 @@ it('falls back to exactly what the chrome falls back to, so the Umbraco theme pr
       'falls back to, so that theme now previews as something it is not',
   ).to.deep.equal([]);
 });
+
+it('paints a wallpaper over the theme ground when given one', async () => {
+  const element = await fixture<UmbraDesktopThemePreviewElement>(
+    html`<umbradesktop-theme-preview
+      .theme=${UMBRADESKTOP_THEMES[0]}
+      .wallpaper=${{ url: '/wallpapers/first-light.thumb.avif', averageColour: '#873eab' }}></umbradesktop-theme-preview>`,
+  );
+  await element.updateComplete;
+  const scene = element.shadowRoot!.querySelector('.scene') as HTMLElement;
+
+  const painted = getComputedStyle(scene);
+  expect(painted.backgroundImage, 'the wallpaper did not beat the theme gradient').to.contain(
+    'first-light.thumb.avif',
+  );
+  // The mean colour sits underneath, exactly as the real desktop paints it, so the tile does not
+  // flash the theme's ground while the image decodes.
+  expect(painted.backgroundColor).to.equal('rgb(135, 62, 171)');
+  // Cover and centre stay in the stylesheet: every preview shares them, so only the URL is inline.
+  expect(painted.backgroundSize).to.equal('cover');
+});
+
+it("falls back to the theme's own ground when given no wallpaper", async () => {
+  const { scene } = await previewOf(UMBRADESKTOP_THEMES.find((theme) => theme.id === 'win98')!);
+
+  // Windows 98's flat teal, and the case a `none` match resolves to. A preview that reached for the
+  // default wallpaper here would paint an image over the one desktop that never had one.
+  const painted = getComputedStyle(scene);
+  expect(painted.backgroundImage).to.equal('none');
+  expect(painted.backgroundColor).to.equal('rgb(0, 128, 128)');
+});

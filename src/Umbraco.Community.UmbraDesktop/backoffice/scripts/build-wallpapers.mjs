@@ -9,6 +9,14 @@
  * `emptyOutDir: true` on the wwwroot plugin folder — anything placed there by hand is wiped on
  * the next build, whereas `public/` is copied into the output verbatim.
  *
+ * **`public/wallpapers/` is gitignored, and the PNGs in `wallpapers-src/` are not.** That split is
+ * the one thing to know before touching this file: the sources are the sources of truth and the
+ * AVIFs are derived, so committing the AVIFs only added binary churn nothing read back. Both
+ * `.github/workflows/ci.yml` and the publish workflow run the shared `build-packages` action, which
+ * runs `npm run build` — and therefore this script — before `dotnet build`/`pack`, so a clean
+ * checkout always encodes them before anything needs them. The generated *catalogue* is committed,
+ * because TypeScript imports it and `tsc` and an editor must work before anyone runs a build.
+ *
  * Encoding is idempotent: a source whose outputs are both newer than it is skipped, so a local
  * rebuild costs nothing. The check is mtime-based and git does not preserve mtimes, so a fresh
  * clone re-encodes everything once — harmless, since sharp is deterministic and the result is

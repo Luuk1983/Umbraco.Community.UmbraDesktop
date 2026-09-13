@@ -63,6 +63,7 @@ export default {
     themeHighContrast:
       'De backoffice staat op hoog contrast. De vensterinhoud volgt dat; het bureaublad houdt het donkerste palet van dit thema aan.',
     themePickerTitle: 'Kies een thema',
+    wallpaperFollowsTheme: 'Achtergrond bij het thema laten passen',
     // één zin per thema, naast de voorvertoning in de kiezer: wat het *is*, niet wat het doet
     themeAboutUmbraco: 'Het bureaublad zoals het standaard is, opgebouwd uit de kleuren en maatvoering van Umbraco zelf.',
     themeAboutUmbraco4: 'De backoffice van 2009 als vensterrand: warmgrijze verlopen, haarfijne panelen en knoppen die indrukken.',

@@ -32,6 +32,12 @@ export const UMBRADESKTOP_WIN98_THEME: UmbraDesktopTheme = {
   // high contrast paints a theme with its darkest available palette, and this is the only one.
   // See `palette.ts`.
   palettes: { light: WIN98_LIGHT },
+  // No image, and that is the authentic answer rather than a gap. Windows 98 shipped no wallpaper
+  // at all: a machine nobody had personalised showed flat `#008080` and nothing else, which is
+  // exactly what this theme's own desktop tokens already paint. So the match is the theme's ground,
+  // and `none` is what selects it — see `themeWallpaper`, where this is the case that clears an
+  // image rather than the one that leaves it alone.
+  wallpaper: { kind: 'none' },
   metrics: {
     // See metrics.ts: every number below is derived from the constants the stylesheets
     // interpolate, rather than being a literal that can drift from what actually paints — and

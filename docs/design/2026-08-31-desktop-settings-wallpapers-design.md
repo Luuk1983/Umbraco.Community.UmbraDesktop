@@ -46,6 +46,14 @@ nothing to bind to; §10 sets out the frontend testing approach instead.
 | D6 | The settings modal uses **standard `umb-body-layout` dialog chrome**, not custom window-style chrome | Focus trapping, Escape and scroll behaviour come free, and a dialog that looks like a desktop window but can't be dragged reads as broken. Revisit once the content settles. |
 | D7 | Wallpapers scale with **`cover`**, centred | `contain` letterboxes, `100% 100%` distorts. See §7. |
 | D8 | Source PNGs are **committed** to `wallpapers-src/` | ~11MB, in exchange for a build any contributor can reproduce. The alternative — committing only the AVIF output — puts the source of truth outside the repo. |
+
+> **Amended 2026-09-13** (issue #65, which added Cobalt Beacon and First Light). D8 stands, but its
+> other half did not: the encoded AVIFs in `public/wallpapers/` *were* committed alongside the
+> sources, and are now gitignored. They are build output from committed inputs, and both CI and
+> publish run `npm run build` through the shared `build-packages` action before `dotnet build`/`pack`
+> — the same reason `wwwroot/App_Plugins/` is already ignored. Committing them bought nothing and
+> cost ~180KB of binary churn per artwork change. The generated *catalogue* stays committed, because
+> TypeScript imports it and `tsc` and an editor have to work before anyone runs a build.
 | D9 | Built-in wallpaper names are **English-only**, not localized | They are proper nouns ("Aurora Flow"), the same way app names in a launcher aren't translated. Everything else in the feature is localized. |
 
 ---

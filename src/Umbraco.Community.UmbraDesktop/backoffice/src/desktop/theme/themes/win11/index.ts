@@ -40,6 +40,16 @@ export const UMBRADESKTOP_WIN11_THEME: UmbraDesktopTheme = {
   // high-contrast setting a sensible palette to paint with, since design D13 picks a theme's
   // darkest available one.
   palettes: { light: W11_LIGHT, dark: W11_DARK },
+  // Cobalt Beacon: light pouring out of the Umbraco mark across a dark field, which is the
+  // Windows 10 "Hero" idea rather than Windows 11's own Bloom. A deliberate mismatch of version.
+  // Hero is the more recognisable Windows image by some distance, and "light through the logo" is
+  // a lighting setup rather than anybody's artwork, so it rebrands cleanly where a folded fabric
+  // rose would only ever be a recolour of someone else's render.
+  //
+  // It is also the one wallpaper here in Windows' cobalt rather than Umbraco's indigo, on purpose:
+  // it is only ever seen under this theme's chrome, whose accent is that same blue, so matching
+  // the OS beats matching the other nine.
+  wallpaper: { kind: 'builtin', id: 'cobalt-beacon' },
   metrics: {
     // See metrics.ts: derived from the constants the palette and the sheets interpolate, and
     // measured against the rendered chrome in metrics.test.ts.

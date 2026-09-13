@@ -64,6 +64,9 @@
     "collaboration",
     "overwrite protection",
     "theming",
+    "theme wallpapers",
+    "matching wallpaper",
+    "desktop background",
     "macos",
     "windows 98",
     "windows 11",
@@ -75,7 +78,7 @@
   "Screenshots": [
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png",
-      "Caption": "Content, media and uSync open at once as separate windows, each with its own button on the taskbar, and the apps you pinned one click away beside the launcher button."
+      "Caption": "Several backoffice sections open at once as separate windows, each with its own button on the taskbar, and the apps you pinned one click away beside the launcher button."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/unsaved-changes-guard.png",
@@ -87,15 +90,19 @@
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-macos.png",
-      "Caption": "The macOS theme: traffic lights on every title bar, a floating dock, and the backoffice in dark mode."
+      "Caption": "The macOS theme: traffic lights on every title bar, a floating dock, and the wallpaper the theme brings with it."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-win98.png",
-      "Caption": "The Windows 98 theme: grey chrome, navy title bars, and the launcher as a Start menu."
+      "Caption": "The Windows 98 theme: grey chrome, navy title bars, the launcher as a Start menu, and the bare teal desktop it came with."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-wallpaper-match.png",
+      "Caption": "Let the wallpaper follow the theme: one toggle, and every theme brings its own background — down to Windows 98's bare teal, which is what a Windows 98 nobody had personalised actually looked like."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/choose-background.png",
-      "Caption": "Desktop settings: pick your chrome theme and your background, from the eight that ship or any image already in your Media Library. Both are remembered per user."
+      "Caption": "Desktop settings: pick your chrome theme and your background, from the set that ships with the package or any image already in your Media Library. Both are remembered per user."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/background-jobs-viewer.png",

@@ -364,6 +364,12 @@ FodyWeavers.xsd
 # Umbraco files
 **/wwwroot/App_Plugins/
 
+# Encoded wallpapers. Build output, not sources: scripts/build-wallpapers.mjs regenerates every
+# AVIF here from the committed PNGs in backoffice/wallpapers-src/, and the CI and publish
+# workflows both run `npm run build` before dotnet build/pack, so a clean checkout produces them.
+# Committing them was ~180KB of binary churn per artwork change that nothing ever read from git.
+**/backoffice/public/wallpapers/
+
 
 # Superpowers brainstorming mockups
 .superpowers/

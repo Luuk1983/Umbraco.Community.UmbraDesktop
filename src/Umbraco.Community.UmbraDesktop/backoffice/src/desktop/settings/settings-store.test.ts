@@ -25,6 +25,7 @@ it('round-trips settings through serialise and parse', () => {
     pinned: ['content'],
     bootIntoDesktop: true,
     taskbarFeatures: { 'ai-chat': false },
+    wallpaperFollowsTheme: true,
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -44,6 +45,7 @@ it('reads back each wallpaper kind unchanged', () => {
           pinned: [],
           bootIntoDesktop: false,
           taskbarFeatures: {},
+          wallpaperFollowsTheme: false,
         }),
       )
         .wallpaper,
@@ -93,6 +95,7 @@ it('round-trips a pinned list', () => {
     pinned: ['media', 'content'],
     bootIntoDesktop: false,
     taskbarFeatures: {},
+    wallpaperFollowsTheme: false,
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -221,8 +224,42 @@ it('defaults the taskbar features when a stored payload predates them, keeping e
   expect(settings.bootIntoDesktop).to.equal(true);
 });
 
+it('defaults the wallpaper-follows-theme preference off when nothing is stored', () => {
+  // Off by default because turning it on replaces a wallpaper the user may have chosen, and a
+  // setting that redecorates somebody's desktop on upgrade is not one that should arrive switched on.
+  expect(parseSettings(null).wallpaperFollowsTheme).to.equal(false);
+});
+
+it('keeps a stored wallpaper-follows-theme preference', () => {
+  expect(parseSettings(JSON.stringify({ v: 1, wallpaperFollowsTheme: true })).wallpaperFollowsTheme).to.equal(true);
+});
+
+it('defaults wallpaper-follows-theme when a stored payload predates it', () => {
+  const settings = parseSettings(
+    JSON.stringify({
+      v: 1,
+      wallpaper: { kind: 'builtin', id: 'golden-valley' },
+      pinned: ['content'],
+      theme: 'win98',
+      bootIntoDesktop: true,
+    }),
+  );
+  expect(settings.wallpaperFollowsTheme).to.equal(false);
+  // Again the reason the payload version stays at 1: a payload written before this field existed
+  // reads back with everything its author actually chose still intact.
+  expect(settings.wallpaper).to.deep.equal({ kind: 'builtin', id: 'golden-valley' });
+  expect(settings.pinned).to.deep.equal(['content']);
+  expect(settings.theme).to.equal('win98');
+  expect(settings.bootIntoDesktop).to.equal(true);
+});
+
 it('never returns the shared default feature map, so a caller cannot mutate it', () => {
   const first = parseSettings(null);
   first.taskbarFeatures['ai-chat'] = false;
   expect(parseSettings(null).taskbarFeatures).to.deep.equal({});
+});
+
+it('ignores a wallpaper-follows-theme preference that is not a boolean', () => {
+  expect(parseSettings(JSON.stringify({ v: 1, wallpaperFollowsTheme: 'yes' })).wallpaperFollowsTheme).to.equal(false);
+  expect(parseSettings(JSON.stringify({ v: 1, wallpaperFollowsTheme: 1 })).wallpaperFollowsTheme).to.equal(false);
 });

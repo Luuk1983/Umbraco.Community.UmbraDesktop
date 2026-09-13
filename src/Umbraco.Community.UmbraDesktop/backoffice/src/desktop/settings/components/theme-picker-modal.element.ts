@@ -2,6 +2,8 @@ import type { UmbraDesktopThemePickerModalData } from '../modal-tokens';
 import type { UmbraDesktopSettingsContext } from '../settings.context';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings.context-token';
 import { UMBRADESKTOP_THEMES } from '../../theme/themes/index';
+import { previewWallpaper } from '../../theme/theme-wallpaper';
+import type { UmbraDesktopWallpaperView } from '../wallpaper-view';
 import { UMBRADESKTOP_PREVIEW_PICKER_SCALE } from '../../theme/preview/constants';
 import type { UmbraDesktopResolvedTheme } from '../../theme/resolve-variant';
 import { UMBRADESKTOP_THEME_CONTEXT } from '../../theme/theme.context-token';
@@ -36,6 +38,21 @@ export class UmbraDesktopThemePickerModalElement extends UmbModalBaseElement<Umb
   @state()
   private _theme?: UmbraDesktopResolvedTheme;
 
+  /**
+   * Whether the wallpaper is following the theme. Observed rather than held locally because the
+   * wallpaper picker turns it off, so this can change while the picker is open and on screen.
+   */
+  @state()
+  private _followsTheme = false;
+
+  /**
+   * The wallpaper the desktop is painting now, resolved. Every tile falls back to it, and with the
+   * toggle off every tile *is* it — so the row reads as "your desktop, five ways" rather than five
+   * unrelated pictures.
+   */
+  @state()
+  private _current?: UmbraDesktopWallpaperView;
+
   #settings?: UmbraDesktopSettingsContext;
 
   constructor() {
@@ -44,12 +61,29 @@ export class UmbraDesktopThemePickerModalElement extends UmbModalBaseElement<Umb
       this.#settings = context ?? undefined;
       if (!context) return;
       this.observe(context.theme, (id) => (this._chosenThemeId = id));
+      this.observe(context.wallpaperFollowsTheme, (on) => (this._followsTheme = on));
+      this.observe(context.wallpaper, (view) => (this._current = view));
     });
 
     this.consumeContext(UMBRADESKTOP_THEME_CONTEXT, (context) => {
       if (!context) return;
       this.observe(context.resolved, (resolved) => (this._theme = resolved));
     });
+  }
+
+  /**
+   * The current wallpaper as a tile-sized background.
+   *
+   * The thumbnail rather than the full-size image, to match what `previewWallpaper` hands back for
+   * a theme's own wallpaper — a row where one tile loaded a 20KB thumbnail and its neighbour the
+   * full image would be paying for nothing visible.
+   * @returns The resolved current wallpaper, or an empty one before settings have loaded.
+   */
+  #currentThumb(): { url: string | null; averageColour: string | null } {
+    return {
+      url: this._current?.thumbUrl ?? null,
+      averageColour: this._current?.background.averageColour ?? null,
+    };
   }
 
   override connectedCallback() {
@@ -65,6 +99,15 @@ export class UmbraDesktopThemePickerModalElement extends UmbModalBaseElement<Umb
     return html`
       <umb-body-layout headline=${this.localize.term('umbraDesktop_themePickerTitle')}>
         <p class="hint">${this.localize.term('umbraDesktop_themeDescription')}</p>
+        <div class="follows">
+          <uui-toggle
+            label=${this.localize.term('umbraDesktop_wallpaperFollowsTheme')}
+            ?checked=${this._followsTheme}
+            @change=${(event: Event) =>
+              this.#settings?.setWallpaperFollowsTheme(
+                !!(event.target as HTMLInputElement | null)?.checked,
+              )}></uui-toggle>
+        </div>
         <div class="themes">
           ${repeat(
             UMBRADESKTOP_THEMES,
@@ -76,7 +119,8 @@ export class UmbraDesktopThemePickerModalElement extends UmbModalBaseElement<Umb
                 @click=${() => this.#settings?.setTheme(theme.id)}>
                 <umbradesktop-theme-preview
                   .theme=${theme}
-                  .variant=${this._theme?.variant ?? 'light'}></umbradesktop-theme-preview>
+                  .variant=${this._theme?.variant ?? 'light'}
+                  .wallpaper=${previewWallpaper(theme, this.#currentThumb(), this._followsTheme)}></umbradesktop-theme-preview>
                 <span class="text">
                   <span class="name">${theme.name}</span>
                   <span class="about">${this.localize.term(theme.descriptionKey)}</span>
@@ -107,6 +151,15 @@ export class UmbraDesktopThemePickerModalElement extends UmbModalBaseElement<Umb
         display: flex;
         flex-direction: column;
         gap: var(--uui-size-space-3);
+      }
+      /* Above the list, separated by a rule: it decides what every click below it will do, so it
+         belongs where you set it *before* flipping through themes rather than after. No sentence
+         under it — "Match the wallpaper to the theme" is already the whole behaviour, and a hint
+         restating a label is noise in a panel this narrow. */
+      .follows {
+        margin-bottom: var(--uui-size-space-4);
+        padding-bottom: var(--uui-size-space-4);
+        border-bottom: 1px solid var(--uui-color-border);
       }
       /* A row, not a tile: in a panel this narrow the width is there to be used, and it is what
          gives a theme's name a sentence beside it rather than a caption under it. */

@@ -14,14 +14,14 @@ whole point: five themes that can each restructure the shell would be five shell
 
 ```
 theme/themes/<id>/
-  index.ts          the theme object: id, name, palettes, metrics, sheets, preview
+  index.ts          the theme object: id, name, palettes, metrics, wallpaper, sheets, preview
   palette.ts        custom-property values, per variant
   metrics.ts        the numbers JavaScript needs, derived from the CSS constants
   desktop.css.ts    rules adopted into <umbradesktop-desktop>
   taskbar.css.ts    rules adopted into <umbradesktop-taskbar>
   launcher.css.ts   rules adopted into <umbradesktop-launcher>
   window.css.ts     rules adopted into <umbradesktop-window>
-  preview.css.ts    rules adopted into the settings picker's miniature (§1.1)
+  preview.css.ts    rules adopted into the settings picker's miniature (§1.2)
 ```
 
 Every file except `index.ts` is optional. The **Umbraco** theme is one `index.ts` with an empty
@@ -42,7 +42,43 @@ export const UMBRADESKTOP_THEMES: ReadonlyArray<UmbraDesktopTheme> = [
 ];
 ```
 
-### 1.1 Your preview in the picker
+### 1.1 The wallpaper that goes with your theme
+
+Your chrome is only half of what the user is looking at. The other half is the desktop behind it,
+and a user who has turned on **Match the wallpaper to the theme** in the picker is asking your theme
+to bring its own. One optional field says which:
+
+```ts
+// theme/themes/<id>/index.ts
+wallpaper: { kind: 'builtin', id: 'first-light' },
+```
+
+Two kinds are meaningful, and the difference between them matters:
+
+- `{ kind: 'builtin', id }` names one of the images the package ships. The id is a slug from
+  [`wallpapers.generated.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/settings/wallpapers.generated.ts),
+  which the build writes from the files in `backoffice/wallpapers-src/`.
+- `{ kind: 'none' }` says *your theme's own ground is the wallpaper* — your
+  `--umbradesktop-desktop-background-color` and `--umbradesktop-desktop-background-image`, with no
+  image over them. This is a real answer rather than an absence, and Windows 98 is why: a Windows 98
+  nobody had personalised showed flat teal and no bitmap at all, so its most authentic wallpaper is
+  the one it does not have. Choosing this **clears** whatever image was there.
+
+`kind: 'media'` points at one site's Media Library, which a theme shipped inside the package cannot
+know anything about. Never set it.
+
+**Omitting the field is also a choice**, and not a neutral one: a theme that declares nothing leaves
+whatever wallpaper the user had in place, so under a toggle they deliberately switched on, your
+theme is the one that appears to do nothing. Pick a match, even if the match is `none`. Every shipped
+theme declares one and `theme-wallpaper.test.ts` holds that, so an omission fails the suite rather
+than shipping quietly.
+
+One limitation to design around rather than fight: a theme declares **one** wallpaper, not a light
+one and a dark one, while your palettes may well have both. Prefer artwork that carries both
+variants — something mid-toned, or a dusk rather than a noon — because a bright image under your
+dark palette is what the user will actually get.
+
+### 1.2 Your preview in the picker
 
 The settings panel's Appearance category shows the theme in use as one row — a miniature, its name,
 a chevron — and clicking that row opens a picker listing every theme the same way, each drawn as a miniature of the
@@ -82,7 +118,7 @@ Deliberately **not** a fifth entry in `sheets`. Those keys are the chrome compon
 adopted into by the theme *in force*; a picker paints five themes at once and none of them need be
 the active one.
 
-### 1.2 The base is the Umbraco look, and yours probably is not
+### 1.3 The base is the Umbraco look, and yours probably is not
 
 Every chrome component's own CSS is the **Umbraco** design: its fallbacks are `--uui-*` values, and
 where it has an opinion of its own — how a group of things is labelled, say — that opinion is copied
@@ -99,7 +135,7 @@ the first one is Umbraco's.
 The reverse also holds, and is the more common mistake: if your theme is inheriting something
 because it is *fine*, look at whether the thing it is imitating would actually do that.
 
-### 1.3 Two surfaces a theme does not reach
+### 1.4 Two surfaces a theme does not reach
 
 Four sheets, four elements, and that is the whole of it: the desktop, the taskbar, the launcher and
 a window. Two things a user sees are deliberately outside that list and stay Umbraco-modern under
@@ -109,7 +145,7 @@ does not apply to them, because there is nothing of yours there to remove.
 **The settings panel.** It is a core modal — a `sidebar` opened through Umbraco's modal system —
 and it is chrome the backoffice owns rather than chrome this package draws. Themeing it would mean
 reimplementing the modal, and every picker it opens on top of it would still be core's. The one
-thing inside it that *is* yours is your preview (§1.1), which is your theme drawn small rather than
+thing inside it that *is* yours is your preview (§1.2), which is your theme drawn small rather than
 the panel restyled.
 
 **The boot splash**, the cover that holds the screen while a desktop loads (see
@@ -747,9 +783,12 @@ has shipped a green test run and a red build, and the reverse.
 - [ ] Switching to your theme with windows open pulls stranded windows back into reach
 - [ ] The backoffice's light, dark and high-contrast settings all render something sane
 - [ ] Your theme has a `descriptionKey`, and the string behind it exists in every localization file
+- [ ] Your theme declares a `wallpaper` (§1.1). `{ kind: 'none' }` counts and is the right answer for
+      a theme whose own ground is the point; leaving the field off is the one option that is wrong,
+      because it makes your theme the one that does nothing for a user who turned the toggle on
 - [ ] Your theme's preview is distinguishable from the others in the picker. `theme-preview.test.ts`
       asserts that no two shipped themes render alike, so a theme too close to an existing one fails
-      there rather than in review — and if the difference lives in a sheet rather than a value, §1.1
+      there rather than in review — and if the difference lives in a sheet rather than a value, §1.2
       is how you get it into the preview
 
 And the part that is easiest to skip, because the code already works without it:

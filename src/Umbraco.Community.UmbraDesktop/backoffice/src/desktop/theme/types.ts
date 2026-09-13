@@ -1,4 +1,5 @@
 import type { CSSResult } from '@umbraco-cms/backoffice/external/lit';
+import type { UmbraDesktopWallpaperRef } from '../settings/types';
 
 /**
  * Every custom property a theme may set on the **chrome** (the desktop, taskbar, launcher, window
@@ -388,6 +389,22 @@ export interface UmbraDesktopTheme {
   descriptionKey: string;
   /** Palettes by variant. `light` is mandatory; `dark` falls back to it when absent. */
   palettes: { light: UmbraDesktopPalette; dark?: UmbraDesktopPalette };
+  /**
+   * The wallpaper that goes with this theme, applied when the user has asked the wallpaper to
+   * follow the theme. Optional, and a theme declaring nothing leaves the wallpaper alone rather
+   * than clearing it — see {@link themeWallpaper}.
+   *
+   * The field lives on the theme so that the rule stays in one place: adding a theme is a folder
+   * and one index entry, and a mapping table kept anywhere else would be a second thing to
+   * remember. Every shipped theme declares one, and a test holds that.
+   *
+   * Only two of the three kinds are meaningful here. `{ kind: 'none' }` is a real answer, not an
+   * absence: it says this theme's own `--umbradesktop-desktop-background-*` ground *is* the
+   * matching wallpaper, which is why Windows 98's flat teal needs no artwork. `kind: 'media'`
+   * points at one site's Media Library, which a theme shipped inside the package cannot know
+   * anything about, so a theme must never set it.
+   */
+  wallpaper?: UmbraDesktopWallpaperRef;
   /** Geometry JavaScript needs. */
   metrics: UmbraDesktopThemeMetrics;
   /** Lazily imported stylesheets. Omitted by a theme that needs none. */
