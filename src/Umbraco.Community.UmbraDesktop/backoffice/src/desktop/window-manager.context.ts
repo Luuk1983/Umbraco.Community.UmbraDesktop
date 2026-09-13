@@ -15,10 +15,21 @@ import {
   setWindowAcknowledged,
   setWindowRefreshing,
   conflictedWindows,
+  snapWindow,
+  unsnapWindow,
+  clearSnap,
+  resnapWindows,
 } from './window-model';
-import { UMBRADESKTOP_DEFAULT_METRICS, UMBRADESKTOP_WINDOW_KEEP_VISIBLE } from './constants';
+import { snapRect, snapTargetAt } from './snap';
+import type { UmbraDesktopSnapTarget } from './snap';
+import {
+  UMBRADESKTOP_DEFAULT_METRICS,
+  UMBRADESKTOP_SNAP_EDGE,
+  UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
+  UMBRADESKTOP_WINDOW_MIN_SIZE,
+} from './constants';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-token';
-import { windowSizeForContent } from './window-chrome';
+import { minWindowSizeForContent, windowSizeForContent } from './window-chrome';
 import { windowShowsPath } from './path/crumbs.js';
 import type { UmbraDesktopThemeMetrics } from './theme/types';
 import type { UmbraDesktopKeepVisible } from './window-model';
@@ -26,7 +37,7 @@ import type { UmbraDesktopServerStatePatch } from './window-model';
 import type { UmbraDesktopWorkspaceSubject } from './dirty-watcher';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
 import { UMB_DISCARD_CHANGES_MODAL, umbConfirmModal, umbOpenModal } from '@umbraco-cms/backoffice/modal';
-import { UmbArrayState } from '@umbraco-cms/backoffice/observable-api';
+import { UmbArrayState, UmbObjectState } from '@umbraco-cms/backoffice/observable-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UmbLocalizationController } from '@umbraco-cms/backoffice/localization-api';
 
@@ -103,6 +114,28 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
 
   /** The last desktop size seen, so a theme change can re-clamp without waiting for a resize. */
   #bounds?: { w: number; h: number };
+
+  /**
+   * Where the window being dragged would land if it were released now, or undefined when no snap
+   * is on offer. The desktop draws this as a ghost.
+   *
+   * On the manager rather than in the window element, even though only a drag ever sets it, because
+   * the rectangle has to come from the same arithmetic the commit spends — a ghost that promised
+   * one rectangle and delivered another would be worse than no ghost — and because the element that
+   * has to *draw* it is the desktop, which is the dragged window's grandparent. One observable
+   * answers both.
+   */
+  #snapPreview = new UmbObjectState<Rect | undefined>(undefined);
+
+  /** Observable ghost rectangle; see {@link previewSnap}. */
+  public readonly snapPreview = this.#snapPreview.asObservable();
+
+  /**
+   * The snap the current drag is offering, kept beside the ghost so {@link commitSnap} applies the
+   * offer the user was actually looking at rather than recomputing one from a pointer position that
+   * has since moved. Cleared with the ghost.
+   */
+  #pendingSnap?: { id: string; target: UmbraDesktopSnapTarget };
 
   /**
    * The active theme's keep-visible margins. Read by the window element, which clamps live during
@@ -421,9 +454,19 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     if (await this.confirmDiscard(id)) this.close(id);
   }
 
-  /** Move a window to an absolute desktop position. */
+  /**
+   * Move a window to an absolute desktop position, which also ends any snap it was in.
+   *
+   * A dragged snapped window is un-snapped before the first move reaches here (the window element
+   * restores it under the pointer first), so the release is belt and braces rather than the path
+   * anything takes. It is what keeps the invariant simple: if `snapped` is set, `rect` is the
+   * desktop's arithmetic and nobody else's.
+   * @param id The window to move.
+   * @param x The new left, in px.
+   * @param y The new top, in px.
+   */
   public move(id: string, x: number, y: number): void {
-    this.#windows.setValue(moveWindow(this.#windows.getValue(), id, x, y));
+    this.#windows.setValue(clearSnap(moveWindow(this.#windows.getValue(), id, x, y), id));
   }
 
   /**
@@ -432,7 +475,9 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * @param rect The new rectangle.
    */
   public resize(id: string, rect: Rect): void {
-    this.#windows.setValue(setWindowRect(this.#windows.getValue(), id, rect));
+    // Resizing a snapped window ends the snap: the size is the user's now, and the next desktop
+    // resize must not re-derive it back to a half and undo them.
+    this.#windows.setValue(clearSnap(setWindowRect(this.#windows.getValue(), id, rect), id));
   }
 
   /**
@@ -462,7 +507,13 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   public clampToBounds(bounds: { w: number; h: number }): void {
     this.#bounds = bounds;
     const current = this.#windows.getValue();
-    const next = clampWindowsToBounds(current, bounds, this.#keep);
+    // Snapped windows first: a half of the old desktop is not a half of this one, and the clamp
+    // below should see the rectangles these windows are actually going to have.
+    const next = clampWindowsToBounds(
+      resnapWindows(current, bounds, (w) => this.#minWindowSize(w)),
+      bounds,
+      this.#keep,
+    );
     if (next !== current) this.#windows.setValue(next);
   }
 
@@ -491,6 +542,94 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   /** Set a window's state (normal / minimized / maximized). */
   public setState(id: string, state: UmbraDesktopWindowState): void {
     this.#windows.setValue(setWindowState(this.#windows.getValue(), id, state));
+  }
+
+  /**
+   * The smallest this window may be, chrome included, under the active theme.
+   *
+   * The same sum {@link open} spends to size a window and the window element spends to floor a
+   * resize, from the same terms — so the size a window snaps to and the size it may be dragged to
+   * cannot disagree about the path strip or about the chrome.
+   * @param w The window to measure.
+   * @returns The floor for that window.
+   */
+  #minWindowSize(w: UmbraDesktopWindow): { w: number; h: number } {
+    return minWindowSizeForContent(
+      w.app.minSize,
+      UMBRADESKTOP_WINDOW_MIN_SIZE,
+      this.#metrics,
+      windowShowsPath(w.app) ? this.#metrics.pathbarHeight : 0,
+    );
+  }
+
+  /**
+   * Offer — or withdraw — a snap for the window being dragged, given where its pointer is now.
+   *
+   * An offer and not a snap: nothing about the window changes, only the ghost. The drag keeps
+   * moving the window underneath, so letting go anywhere but an edge leaves it exactly where the
+   * pointer put it.
+   *
+   * Silently does nothing before the desktop has reported its size, which is a real moment rather
+   * than a defensive one — the surface is behind the settings hold on the first render — and a
+   * snap has nothing to be half of until then.
+   * @param id The window being dragged.
+   * @param pointer The pointer position, relative to the desktop surface's top-left corner.
+   */
+  public previewSnap(id: string, pointer: { x: number; y: number }): void {
+    const bounds = this.#bounds;
+    if (!bounds) return;
+    const target = snapTargetAt(pointer, bounds, UMBRADESKTOP_SNAP_EDGE);
+    const window = this.#windows.getValue().find((w) => w.id === id);
+    if (!target || !window) {
+      this.clearSnapPreview();
+      return;
+    }
+    this.#pendingSnap = { id, target };
+    this.#snapPreview.setValue(snapRect(target, bounds, this.#minWindowSize(window)));
+  }
+
+  /**
+   * Take whatever snap is currently on offer for `id`, and clear the ghost either way.
+   *
+   * A top snap maximizes rather than writing a full-surface rectangle into `rect`. Maximized
+   * already means this, already restores under a dragged pointer and already re-derives itself
+   * against the desktop for free, since it is laid out at 100% rather than in pixels; a second
+   * full-screen state beside it would be two answers to one question.
+   * @param id The window whose drag has ended.
+   */
+  public commitSnap(id: string): void {
+    const pending = this.#pendingSnap;
+    const bounds = this.#bounds;
+    this.clearSnapPreview();
+    if (!pending || pending.id !== id || !bounds) return;
+    if (pending.target === 'top') {
+      this.setState(id, 'maximized');
+      return;
+    }
+    const current = this.#windows.getValue();
+    const window = current.find((w) => w.id === id);
+    if (!window) return;
+    this.#windows.setValue(
+      snapWindow(current, id, pending.target, snapRect(pending.target, bounds, this.#minWindowSize(window))),
+    );
+  }
+
+  /** Withdraw any snap on offer, leaving the window alone. */
+  public clearSnapPreview(): void {
+    this.#pendingSnap = undefined;
+    if (this.#snapPreview.getValue()) this.#snapPreview.setValue(undefined);
+  }
+
+  /**
+   * Un-snap a window straight to a given position, in one update — the snapped counterpart of
+   * {@link restoreTo}, and it exists for the same reason: a state change followed by a move paints
+   * the window in the wrong place for a frame.
+   * @param id The window to release.
+   * @param x The position to restore it at.
+   * @param y The position to restore it at.
+   */
+  public unsnapTo(id: string, x: number, y: number): void {
+    this.#windows.setValue(unsnapWindow(this.#windows.getValue(), id, { x, y }));
   }
 }
 

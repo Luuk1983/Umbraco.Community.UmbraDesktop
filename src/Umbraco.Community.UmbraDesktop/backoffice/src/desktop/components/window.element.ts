@@ -492,14 +492,33 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     return { left: box.left, top: box.top, w: surface.clientWidth, h: surface.clientHeight };
   }
 
+  /**
+   * Take pointer capture, and carry on if the browser refuses.
+   *
+   * Capture is how a drag survives the pointer leaving the titlebar — and leaving it is the whole
+   * point, since every snap zone is somewhere else. But `setPointerCapture` throws for a pointer id
+   * the browser has no active pointer for, and thrown from the first line of a `pointerdown`
+   * handler that takes the rest of the handler with it: the drag would never start at all. The
+   * drag itself does not depend on capture; it depends on getting the moves, which it still gets
+   * for as long as the pointer is over the titlebar.
+   * @param e The pointer event whose target should take capture.
+   */
+  #capture(e: PointerEvent) {
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // No capture; the drag runs uncaptured rather than not at all.
+    }
+  }
+
   #onTitlePointerDown = (e: PointerEvent) => {
     if (!this.window) return;
     this.#startPointer = { x: e.clientX, y: e.clientY };
     this.#startSurface = this.#surfaceRect();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    if (this.window.state === 'maximized') {
-      // Arm the drag rather than starting it — a maximized window only un-maximizes once the
-      // pointer proves the intent by moving.
+    this.#capture(e);
+    if (this.window.state === 'maximized' || this.window.snapped) {
+      // Arm the drag rather than starting it — a window that fills a half or the whole desktop only
+      // gives that up once the pointer proves the intent by moving.
       this.#pendingRestore = true;
       return;
     }
@@ -508,9 +527,15 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   };
 
   /**
-   * Turn a drag on a maximized titlebar into a drag of the restored window, the way Windows and
-   * macOS do: past the movement threshold the window un-maximizes to its previous size, arriving
-   * under the pointer, and the drag carries on from there.
+   * Turn a drag on a maximized or snapped titlebar into a drag of the restored window, the way
+   * Windows and macOS do: past the movement threshold the window gives up the area it was filling
+   * and comes back to its previous size, arriving under the pointer, and the drag carries on from
+   * there.
+   *
+   * The two cases differ only in where the size being restored to is kept. A maximized window is
+   * laid out at 100% and never overwrote its `rect`, so `rect` is its own restore rectangle; a
+   * snapped one had to overwrite `rect` to be drawn as a half at all, and kept the original in
+   * `restoreRect`.
    * @param e The pointer move being handled.
    */
   #restoreUnderPointer(e: PointerEvent) {
@@ -521,13 +546,15 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
       Math.abs(e.clientY - this.#startPointer.y),
     );
     if (travelled < RESTORE_DRAG_THRESHOLD) return;
-    const pos = restoreDragPosition(e.clientX - this.#startSurface.left, this.#startSurface, w.rect);
+    const size = w.snapped ? (w.restoreRect ?? w.rect) : w.rect;
+    const pos = restoreDragPosition(e.clientX - this.#startSurface.left, this.#startSurface, size);
     this.#pendingRestore = false;
     this._dragging = true;
     // Re-anchor the drag to where the window now is, so the next move is a delta from here.
     this.#startPointer = { x: e.clientX, y: e.clientY };
     this.#startRect = pos;
-    this.#manager?.restoreTo(w.id, pos.x, pos.y);
+    if (w.snapped) this.#manager?.unsnapTo(w.id, pos.x, pos.y);
+    else this.#manager?.restoreTo(w.id, pos.x, pos.y);
   }
 
   #onTitlePointerMove = (e: PointerEvent) => {
@@ -547,12 +574,28 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
       this.#manager?.keep ?? UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
     );
     this.#manager?.move(this.window.id, x, y);
+    // Only once the drag has travelled: a window already parked against an edge sits inside that
+    // edge's snap zone, and offering to snap it there the instant its titlebar is touched would
+    // turn every click on such a window into a resize.
+    if (Math.max(Math.abs(dx), Math.abs(dy)) >= RESTORE_DRAG_THRESHOLD) {
+      this.#manager?.previewSnap(this.window.id, {
+        x: e.clientX - this.#startSurface.left,
+        y: e.clientY - this.#startSurface.top,
+      });
+    }
   };
 
   #onTitlePointerUp = (e: PointerEvent) => {
+    // Before the flags are cleared, because a snap is what this drag turned out to be asking for.
+    // `commitSnap` is a no-op when nothing was on offer, so an ordinary drag ends here untouched.
+    if (this.window) this.#manager?.commitSnap(this.window.id);
     this._dragging = false;
     this.#pendingRestore = false;
-    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    } catch {
+      // Nothing was captured — see `#capture`.
+    }
   };
 
   #onResizeDown = (e: PointerEvent, edges: UmbraDesktopResizeEdges) => {
@@ -563,7 +606,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.#resizeEdges = edges;
     this.#resizeStartPointer = { x: e.clientX, y: e.clientY };
     this.#resizeStartRect = { ...this.window.rect };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    this.#capture(e);
   };
 
   #onResizeMove = (e: PointerEvent) => {
@@ -580,7 +623,11 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
 
   #onResizeUp = (e: PointerEvent) => {
     this.#resizing = false;
-    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    } catch {
+      // Nothing was captured — see `#capture`.
+    }
   };
 
   #onFocus = () => {

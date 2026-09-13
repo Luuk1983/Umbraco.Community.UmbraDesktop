@@ -1,4 +1,4 @@
-import type { UmbraDesktopWindow } from '../types';
+import type { Rect, UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_SECTION_ALIAS } from '../constants';
 import { findChromeRoot } from '../chrome-injector';
 import { clearBootAttempt } from '../boot/boot-storage';
@@ -44,6 +44,13 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   @state()
   private _wallpaper?: UmbraDesktopWallpaperView;
 
+  /**
+   * Where the window currently being dragged would land if it were released now, or undefined when
+   * no snap is on offer. Drawn as a ghost over the surface.
+   */
+  @state()
+  private _snapPreview?: Rect;
+
   /** The active theme's palette, rendered as `style`-attribute declarations for the `.desktop` root. */
   @state()
   private _paletteCss = '';
@@ -77,6 +84,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     // Consumed once here, not per window: see the class doc on why.
     new UmbraDesktopServerEventController(this, this.#manager);
     this.observe(this.#manager.windows, (list) => (this._windows = list));
+    this.observe(this.#manager.snapPreview, (rect) => (this._snapPreview = rect));
     this.observe(this.#settings.wallpaper, (wallpaper) => (this._wallpaper = wallpaper));
     this.observe(this.#theme.paletteStyle, (style) => (this._paletteCss = style ?? ''));
     this.observe(this.#theme.metrics, (metrics) => this.#manager.setMetrics(metrics));
@@ -127,6 +135,19 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    */
   public get observedSurfaceForTest(): Element | undefined {
     return this.#observedSurface;
+  }
+
+  /**
+   * The window manager this desktop owns, for the tests that need to drive it.
+   *
+   * The manager is provided as a context, so a consumer inside the desktop reaches it the ordinary
+   * way and nothing in the package needs this. A test standing outside the subtree does not, and
+   * the ghost is the one piece of chrome whose whole state comes from the manager rather than from
+   * anything a test can click.
+   * @returns The manager.
+   */
+  public get managerForTest(): UmbraDesktopWindowManagerContext {
+    return this.#manager;
   }
 
   /**
@@ -217,6 +238,23 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     return `${colour}background-image:url("${background.url}");background-size:cover;background-position:center;background-repeat:no-repeat;`;
   }
 
+  /**
+   * The ghost showing where a dragged window would land, or nothing when no snap is on offer.
+   *
+   * Inline geometry rather than classes, because the rectangle is not one of three shapes: the
+   * halves move with the desktop's size, and a window whose own minimum beats half the desktop
+   * takes a wider one than its neighbour.
+   * @returns The ghost, or nothing.
+   */
+  #renderSnapGhost() {
+    const rect = this._snapPreview;
+    if (!rect) return '';
+    return html`<div
+      class="snap-ghost"
+      aria-hidden="true"
+      style="left:${rect.x}px; top:${rect.y}px; width:${rect.w}px; height:${rect.h}px;"></div>`;
+  }
+
   override render() {
     if (!this._settingsLoaded) {
       // A neutral hold: no palette, no wallpaper, no chrome. During a boot the splash is over this,
@@ -240,6 +278,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
             (w) => w.id,
             (w) => html`<umbradesktop-window .window=${w}></umbradesktop-window>`,
           )}
+          ${this.#renderSnapGhost()}
         </div>
         <umbradesktop-taskbar></umbradesktop-taskbar>
       </div>
@@ -341,6 +380,22 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         inset: 0;
         bottom: var(--umbradesktop-taskbar-reserve, 50px);
         overflow: hidden;
+      }
+      /* The ghost, over every window and under the taskbar — the z-index below is deliberately one
+         short of the taskbar's own, which is the highest thing on the desktop. A snap preview that
+         covered the taskbar would hide the very thing the window is being snapped alongside.
+
+         Sized and placed inline; everything here is only how it is painted, which is why all three
+         are tokens: a theme that draws its windows as Windows 98 bevels has no business showing a
+         translucent rounded rectangle. */
+      .snap-ghost {
+        position: absolute;
+        z-index: 999999;
+        box-sizing: border-box;
+        pointer-events: none;
+        background: var(--umbradesktop-snap-ghost-background, rgba(255, 255, 255, 0.2));
+        border: var(--umbradesktop-snap-ghost-border, 2px solid rgba(255, 255, 255, 0.6));
+        border-radius: var(--umbradesktop-snap-ghost-radius, 6px);
       }
       umbradesktop-taskbar {
         position: absolute;
