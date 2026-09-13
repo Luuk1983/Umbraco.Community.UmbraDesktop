@@ -20,5 +20,9 @@ export const UMBRADESKTOP_UMBRACO_THEME: UmbraDesktopTheme = {
   name: 'Umbraco',
   descriptionKey: 'umbraDesktop_themeAboutUmbraco',
   palettes: { light: {} },
+  // The default wallpaper, so that a user on the default theme who turns the toggle on sees
+  // nothing change. That is the right answer for a setting whose job is to make *later* theme
+  // changes carry, rather than to redecorate on the spot.
+  wallpaper: { kind: 'builtin', id: 'aurora-flow' },
   metrics: UMBRADESKTOP_DEFAULT_METRICS,
 };

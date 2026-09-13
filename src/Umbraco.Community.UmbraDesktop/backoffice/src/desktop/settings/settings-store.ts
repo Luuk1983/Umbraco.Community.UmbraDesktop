@@ -24,6 +24,7 @@ export const UMBRADESKTOP_DEFAULT_SETTINGS: UmbraDesktopSettings = {
   theme: UMBRADESKTOP_DEFAULT_THEME_ID,
   pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
   bootIntoDesktop: false,
+  wallpaperFollowsTheme: false,
 };
 
 /**
@@ -82,6 +83,19 @@ function isBootPreference(value: unknown): value is boolean {
 }
 
 /**
+ * Whether a decoded value is a wallpaper-follows-theme preference this version understands.
+ *
+ * Strict about the type for the same reason {@link isBootPreference} is: a coercion would let a
+ * payload carrying `"no"` switch the preference *on*, and this one takes a wallpaper the user chose
+ * and replaces it.
+ * @param value The decoded `wallpaperFollowsTheme` property.
+ * @returns True when the value is a usable preference.
+ */
+function isWallpaperFollowsTheme(value: unknown): value is boolean {
+  return typeof value === 'boolean';
+}
+
+/**
  * Whether a decoded value is a theme id this version can store. An id naming a theme that no
  * longer exists still passes here — that is resolved against the catalogue when the theme is
  * applied, not when it is read, exactly as with wallpaper references.
@@ -118,6 +132,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
     bootIntoDesktop: UMBRADESKTOP_DEFAULT_SETTINGS.bootIntoDesktop,
+    wallpaperFollowsTheme: UMBRADESKTOP_DEFAULT_SETTINGS.wallpaperFollowsTheme,
   });
 
   if (!raw) return fallback();
@@ -137,6 +152,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     pinned?: unknown;
     theme?: unknown;
     bootIntoDesktop?: unknown;
+    wallpaperFollowsTheme?: unknown;
   };
   if (payload.v !== 1) return fallback();
 
@@ -145,6 +161,9 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
   if (isThemeId(payload.theme)) settings.theme = payload.theme;
   if (isPinnedList(payload.pinned)) settings.pinned = payload.pinned;
   if (isBootPreference(payload.bootIntoDesktop)) settings.bootIntoDesktop = payload.bootIntoDesktop;
+  if (isWallpaperFollowsTheme(payload.wallpaperFollowsTheme)) {
+    settings.wallpaperFollowsTheme = payload.wallpaperFollowsTheme;
+  }
   return settings;
 }
 

@@ -19,6 +19,17 @@ export const UMBRADESKTOP_MACOS_THEME: UmbraDesktopTheme = {
   name: 'macOS',
   descriptionKey: 'umbraDesktop_themeAboutMacos',
   palettes: { light: MACOS_LIGHT, dark: MACOS_DARK },
+  // First Light is the illustrated-landscape idiom macOS ran from Big Sur through Sequoia, in
+  // Umbraco's violets. Deliberately not a copy of any one release's artwork: the genre ran five
+  // years and reads as "a Mac" rather than as a version, which is also what keeps it from dating
+  // the moment Apple ships the next default.
+  //
+  // One image serves both palettes, and this one is bright, so dark mode gets dark chrome on a
+  // light ground. macOS itself ships paired light and dark variants; a theme here declares one
+  // wallpaper, because widening the field to a pair is a change to the contract every theme
+  // implements and this is the only theme that would currently use it. Known and accepted: a user
+  // it bothers picks a wallpaper by hand, which turns the matching off anyway.
+  wallpaper: { kind: 'builtin', id: 'first-light' },
   metrics: {
     titlebarHeight: MACOS_CAPTION_KEEP_VISIBLE,
     // See metrics.ts: derived from the same constants window.css.ts renders its controls with,

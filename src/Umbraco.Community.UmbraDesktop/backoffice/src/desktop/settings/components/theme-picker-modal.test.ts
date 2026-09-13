@@ -68,3 +68,29 @@ it('draws its previews larger than the settings panel does', async () => {
   );
   expect(UMBRADESKTOP_PREVIEW_PICKER_SCALE).to.be.greaterThan(UMBRADESKTOP_PREVIEW_SCALE);
 });
+
+it('offers the wallpaper toggle above the theme list', async () => {
+  const { element } = await pickerOn('umbraco');
+
+  const follows = element.shadowRoot!.querySelector('.follows');
+  const themes = element.shadowRoot!.querySelector('.themes');
+  expect(follows, 'no wallpaper toggle in the theme picker').to.not.equal(null);
+  expect(follows!.querySelector('uui-toggle'), '.follows holds no toggle').to.not.equal(null);
+
+  // Above, not below, and the order is the point rather than decoration: it decides what every
+  // click in the list beneath it will do, so it has to be readable before you start flipping
+  // through themes. DOCUMENT_POSITION_FOLLOWING === the themes list comes after this node.
+  expect(
+    follows!.compareDocumentPosition(themes!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    'the toggle renders after the theme list',
+  ).to.not.equal(0);
+});
+
+it('renders the toggle off until the settings context says otherwise', async () => {
+  const { element } = await pickerOn('umbraco');
+
+  // No settings context in a bare test page, so this is the unconfigured case: it must render
+  // off rather than checked-by-accident, because checked-by-accident is a wallpaper being replaced.
+  const toggle = element.shadowRoot!.querySelector('.follows uui-toggle') as HTMLInputElement;
+  expect(toggle.hasAttribute('checked')).to.equal(false);
+});

@@ -74,7 +74,23 @@ Nothing in CI can do these.
   `main`. Nothing validates those URLs: a filename typo silently 404s on the live Marketplace, and
   a broken image is worse than a missing one, so an entry is added only after the file exists.
 
-  Settled 2026-09-09. Eight shots, and the set is considered complete:
+  Settled 2026-09-09. Nine entries below, ten files — `theme-wallpaper-match.png` was added
+  2026-09-13 with the theme-matched wallpapers, and is the only shot added since the set was called
+  complete. A feature earns a shot when a still frame explains it faster than the README sentence
+  does; most do not.
+
+  Note the ordering rule above cuts both ways. An entry must not reach `main` before its file, but
+  preparing the entry on the same branch as the feature is how the two arrive together — what must
+  never happen is a merge with one and not the other.
+
+  **Write every caption and alt text for the subject, not for the frame.** Name what the shot is
+  *demonstrating* and how it is arranged; never the windows that happen to be open, the number of
+  rows in a table, the group names in a list, the identifiers of another package's tool calls, or
+  whether the backoffice was in light or dark mode. All of those have already gone stale here: a
+  theme retake that opened different windows falsified two alt texts, a wallpaper added to the set
+  falsified a count, and the theme rows were still described as "named colour swatches" long after
+  they became miniatures. A description that survives a retake is worth more than one that is
+  precise about a screen nobody will capture the same way twice.
 
   | Shot | Notes |
   |---|---|
@@ -82,7 +98,8 @@ Nothing in CI can do these.
   | `unsaved-changes-guard.png` | Carries the whole guard story in one frame: the unsaved dot, the "someone else changed this" warning with both buttons, and the recycle-bin error, in three stacked windows with all three markers repeated on the taskbar. A separate overwrite-guard shot was planned and is not needed because this one covers it. Note the file arrived named `unsved-`, which would have 404ed silently on the Marketplace; check new filenames against the `ImageUrl` by eye, since nothing else will. |
   | `launcher.png` | All twelve groups, Background Jobs under Diagnostics, the commercial packages and the Games group. |
   | `theme-macos.png`, `theme-win98.png` | Two of the five themes, deliberately not all five. A theme shot sells the idea that the chrome restyles; the Description naming all five does the rest, and five near-identical launchers would pad the listing without adding to it. `theme-win98.png` shows an older launcher and is kept as it is: it is there to show the theme, and the content behind it is not the subject. |
-  | `choose-background.png` | Desktop settings with the wallpaper tray open. The one shot that proves any of this is *yours to change*: without it a reader can take the two theme shots for two screenshots of a product rather than a switch they flip, and the Media library button is the only place that capability appears in the gallery at all. Also the only shot that evidences the "eight backgrounds" claim, since the tray names all eight plus None. The theme row is clipped by the tray, so neither the caption nor the alt text claims all five are visible. |
+  | `choose-background.png` | Desktop settings with the wallpaper tray open. The one shot that proves any of this is *yours to change*: without it a reader can take the two theme shots for two screenshots of a product rather than a switch they flip, and the Media library button is the only place that capability appears in the gallery at all. Also the only shot that evidences the README's count of shipped backgrounds, since the tray names them all plus None. The theme row is clipped by the tray, so neither the caption nor the alt text claims all five are visible. **Retake when the tile count changes** — it was shot at eight and the package ships ten since Cobalt Beacon and First Light. The README's alt text deliberately names no number, so a stale shot never contradicts the prose, but it is still the shot that has to show them all. |
+  | `theme-wallpaper-match.png` | The theme picker with **Match the wallpaper to the theme** on, every preview carrying its own background. The one frame that explains the feature without a caption: Windows 98's bare teal sitting beside macOS's sunrise says what "each theme brings its own wallpaper" means faster than the sentence does. Take it with the toggle **on** — off, the five previews are identical backgrounds and the shot shows nothing. |
   | `background-jobs-viewer.png` | The Distributed table only. The Recurring one is below the fold and the view does not fit a screen at any framing worth having, so the caption does not claim the split and the explanation at the top of the shot carries the point. |
   | `entertainment-games-minesweeper.png` | The add-on's only shot, also used in both readmes. |
   | `header-entry-point.png` | Small and annotated on purpose. It answers one question, "where is the way in", and showing more screen would not answer it better. |

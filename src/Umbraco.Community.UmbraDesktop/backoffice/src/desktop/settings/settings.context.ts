@@ -10,6 +10,8 @@ import {
   mediaImagingRequest,
 } from './media-imaging';
 import { writeBootHint } from '../boot/boot-storage';
+import { themeWallpaper } from '../theme/theme-wallpaper';
+import { UMBRADESKTOP_THEMES } from '../theme/themes/index';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
 import { UmbBooleanState, UmbObjectState } from '@umbraco-cms/backoffice/observable-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
@@ -48,6 +50,11 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
 
   /** Whether landing on the backoffice root should open the desktop. */
   public readonly bootIntoDesktop = this.#settings.asObservablePart((settings) => settings.bootIntoDesktop);
+
+  /** Whether changing the theme also changes the wallpaper to that theme's match. */
+  public readonly wallpaperFollowsTheme = this.#settings.asObservablePart(
+    (settings) => settings.wallpaperFollowsTheme,
+  );
 
   /**
    * Whether this user's stored settings have been read and their wallpaper resolved.
@@ -90,12 +97,11 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    * @param wallpaper The wallpaper to use.
    */
   public setWallpaper(wallpaper: UmbraDesktopWallpaperRef): void {
-    this.#update({ wallpaper });
-    this.#view.setValue({
-      ref: wallpaper,
-      background: resolveWallpaper(wallpaper),
-      thumbUrl: wallpaperThumbUrl(wallpaper),
-    });
+    // Picking an image by hand takes the wallpaper off the theme's leash. Choosing one is about as
+    // explicit as a person gets, and the alternative is throwing that choice away the next time
+    // they try a theme. There is no separate control for it: the toggle simply comes back off, and
+    // turning it on again reapplies the current theme's match.
+    this.#paintWallpaper(wallpaper, { wallpaperFollowsTheme: false });
   }
 
   /**
@@ -116,7 +122,8 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
 
     if (!url) return false;
 
-    this.#update({ wallpaper: ref });
+    // Same rule as `setWallpaper`: a hand-picked image wins over the theme's match.
+    this.#update({ wallpaper: ref, wallpaperFollowsTheme: false });
     this.#view.setValue({
       ref,
       background: resolveWallpaper(ref, url),
@@ -136,10 +143,49 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   /**
    * Choose a chrome theme. Applies immediately and persists; the theme context observes this and
    * resolves it against the backoffice's light/dark setting.
+   *
+   * When the user has asked the wallpaper to follow the theme, this also swaps the wallpaper to the
+   * one the new theme declares. The rule lives here rather than in the picker on purpose: the
+   * toggle changes what *choosing a theme* means, and a picker that applied two settings per click
+   * would leave the same rule true in one place and not in the other — a theme chosen from anywhere
+   * else would quietly skip it.
+   *
+   * Both fields go through a single {@link #update}, so a theme change is one write and one state
+   * change rather than a wallpaper that lands a frame after the chrome.
    * @param id The theme id to use.
    */
   public setTheme(id: string): void {
-    this.#update({ theme: id });
+    const wallpaper = this.#settings.getValue().wallpaperFollowsTheme
+      ? themeWallpaper(id, UMBRADESKTOP_THEMES)
+      : undefined;
+
+    if (!wallpaper) {
+      this.#update({ theme: id });
+      return;
+    }
+    this.#paintWallpaper(wallpaper, { theme: id });
+  }
+
+  /**
+   * Turn "match the wallpaper to the theme" on or off.
+   *
+   * **Neither direction changes the wallpaper.** This stores a preference about what *choosing a
+   * theme* will do, and it does not choose one — so the desktop behind the panel stays exactly as
+   * it was, in both directions, and the wallpaper moves on the next theme click.
+   *
+   * An earlier version applied the current theme's match the moment this went on, reasoning that
+   * the toggle should never sit on with nothing having visibly happened. In use that read as the
+   * switch reaching past you and replacing the picture, which is startling in a way that a setting
+   * doing nothing yet is not. The preview tiles in the picker carry the "what will this do" job
+   * instead: with this on they show each theme's own wallpaper, so the answer is visible without
+   * anything being applied.
+   *
+   * Clicking the theme already in use is the deliberate way to apply the match without changing
+   * theme, which is why `setTheme` does not skip an unchanged id.
+   * @param enabled Whether the wallpaper should follow the theme.
+   */
+  public setWallpaperFollowsTheme(enabled: boolean): void {
+    this.#update({ wallpaperFollowsTheme: enabled });
   }
 
   /**
@@ -156,6 +202,28 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   public setBootIntoDesktop(enabled: boolean): void {
     this.#update({ bootIntoDesktop: enabled });
     writeBootHint(enabled);
+  }
+
+  /**
+   * Store a wallpaper and repaint it, optionally alongside other settings in the same write.
+   *
+   * Exists because a built-in wallpaper is applied from two directions — the user picking one, and
+   * the theme bringing its own — and only the first of those turns the follow-the-theme preference
+   * off. Sharing the store-and-repaint keeps the two paths from drifting, while the `also` argument
+   * is what lets a theme change persist both fields as one update.
+   *
+   * Built-ins only. A Media Library wallpaper needs its URLs resolved first, so `setMediaWallpaper`
+   * keeps its own path rather than resolving twice.
+   * @param wallpaper The wallpaper to store and paint.
+   * @param also Other settings to write in the same update.
+   */
+  #paintWallpaper(wallpaper: UmbraDesktopWallpaperRef, also: Partial<Omit<UmbraDesktopSettings, 'v'>> = {}): void {
+    this.#update({ wallpaper, ...also });
+    this.#view.setValue({
+      ref: wallpaper,
+      background: resolveWallpaper(wallpaper),
+      thumbUrl: wallpaperThumbUrl(wallpaper),
+    });
   }
 
   /**

@@ -36,6 +36,13 @@ export const UMBRADESKTOP_BUILTIN_WALLPAPERS: ReadonlyArray<UmbraDesktopBuiltInW
     averageColour: '#14184e',
   },
   {
+    id: 'cobalt-beacon',
+    name: 'Cobalt Beacon',
+    url: '/App_Plugins/Umbraco.Community.UmbraDesktop/wallpapers/cobalt-beacon.avif',
+    thumbUrl: '/App_Plugins/Umbraco.Community.UmbraDesktop/wallpapers/cobalt-beacon.thumb.avif',
+    averageColour: '#083d6f',
+  },
+  {
     id: 'dusk-horizon',
     name: 'Dusk Horizon',
     url: '/App_Plugins/Umbraco.Community.UmbraDesktop/wallpapers/dusk-horizon.avif',
@@ -48,6 +55,13 @@ export const UMBRADESKTOP_BUILTIN_WALLPAPERS: ReadonlyArray<UmbraDesktopBuiltInW
     url: '/App_Plugins/Umbraco.Community.UmbraDesktop/wallpapers/ember-glow.avif',
     thumbUrl: '/App_Plugins/Umbraco.Community.UmbraDesktop/wallpapers/ember-glow.thumb.avif',
     averageColour: '#241f20',
+  },
+  {
+    id: 'first-light',
+    name: 'First Light',
+    url: '/App_Plugins/Umbraco.Community.UmbraDesktop/wallpapers/first-light.avif',
+    thumbUrl: '/App_Plugins/Umbraco.Community.UmbraDesktop/wallpapers/first-light.thumb.avif',
+    averageColour: '#873eab',
   },
   {
     id: 'golden-valley',

@@ -14,7 +14,7 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 
 It also does something the backoffice does not do at all. When two people have the same page open, plain Umbraco lets the second save win silently: nobody is told, and the first person's work is gone. UmbraDesktop warns you before you overwrite someone, and it does it on the window, on its taskbar button and in every dialog that could throw work away. See [Overwrite protection](#overwrite-protection).
 
-![The UmbraDesktop desktop: the content editor and the media library open as separate windows, side by side, with a taskbar along the bottom.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png)
+![The UmbraDesktop desktop: two backoffice sections open as separate windows, side by side, with a taskbar along the bottom.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png)
 
 > **New: games on the desktop.** [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment)
 > is an optional add-on that puts Minesweeper in the launcher's Games group, in a window of its own
@@ -33,10 +33,11 @@ It also does something the backoffice does not do at all. When two people have t
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned. Your pins are remembered per user, in that browser.
 - A taskbar. Every open window gets a button: click to focus, click again to minimise.
-- Choose your wallpaper. Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user, in that browser.
+- Choose your wallpaper. Ten backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user, in that browser.
 - Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, in that browser. See [Starting in the desktop](#starting-in-the-desktop).
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.
 - Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice. Five ship: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98. Adding your own is a folder of CSS and one catalogue entry.
+- Let the wallpaper follow. Turn on one toggle in the theme picker and each theme brings its own background with it, so switching to Windows 98 gives you its bare teal and switching to macOS gives you a sunrise. Off by default, and choosing a wallpaper yourself turns it back off. See [Matching the wallpaper to the theme](#matching-the-wallpaper-to-the-theme).
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
 - Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
@@ -77,7 +78,7 @@ Click the desktop icon in the backoffice header, top right, between Help and you
 
 Most people are probably familiar with the concept of a desktop and will have no trouble using it. The launcher is where you open the apps:
 
-![The launcher: a search box, a Pinned row at the top, and the remaining apps grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI, System and Games.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png)
+![The launcher: a search box, a Pinned row at the top, and every other app grouped by what it does.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png)
 
 From the launcher:
 
@@ -120,7 +121,7 @@ it is a warning triangle or a circle-x rather than a coloured dot, so the severi
 monochrome screen. You can keep your version, after confirming that saving loses the other person's
 change, or load theirs and lose yours.
 
-![Three content editor windows stacked on the desktop: one marked with a dot for unsaved changes, one showing the warning banner "Someone else changed this while you were editing it" with Keep my changes and Discard mine, load theirs, and one showing the error banner "Someone moved this to the recycle bin". The taskbar below carries the matching marker on all three buttons.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/unsaved-changes-guard.png)
+![Three windows stacked on the desktop, each in a different state of the guard: one marked with a dot for unsaved changes, one showing the warning that someone else changed the same item with the choice to keep your version or load theirs, and one showing the error that it has been moved to the recycle bin. The taskbar below carries the matching marker on every button.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/unsaved-changes-guard.png)
 
 It knows the difference between somebody else's save and your own, including your own publishes,
 and it says something different when a document has been moved to the recycle bin, where the
@@ -136,7 +137,7 @@ cleanups, plus whatever the packages you installed added. It shows you none of i
 is a read-only view of the lot, and it installs as an ordinary Settings dashboard, so you get it
 whether or not you use the desktop.
 
-![Background Jobs, open in a desktop window: the Distributed group listing fifteen jobs with how often each runs, when it last ran and when it is next due, and the control that sets how often the view refreshes itself.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/background-jobs-viewer.png)
+![Background Jobs, open in a desktop window: a table of scheduled jobs with how often each runs, when it last ran and when it is next due, above the control that sets how often the view refreshes itself.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/background-jobs-viewer.png)
 
 Jobs come in two kinds and the screen keeps them apart, because they can answer different
 questions:
@@ -184,7 +185,7 @@ taken at the moment it asks rather than a live feed, so what a conversation says
 it was said, and it is identity only and never your unsaved edits: reading a document is the agent's
 own job, and it can do that whether or not you have it open.
 
-![The Copilot chat open in a window on the left, with three tool calls listed in the transcript: get_content_by_route, describe_desktop and open_desktop_window. The Home document it opened sits in its own window on the right, and both windows have a button on the taskbar below.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/ai-copilot-chat.png)
+![The Copilot chat open in a window on the left, its transcript listing the tool calls the agent made, with the document it opened in its own window on the right and a taskbar button for each.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/ai-copilot-chat.png)
 
 That last part deserves one caution. From 17.4 the agent writes on the server, so it can change a
 document you have open in front of you. That is the case [Overwrite protection](#overwrite-protection)
@@ -202,7 +203,9 @@ title bar buttons where that theme puts them, the taskbar — so you can see wha
 before you choose it. Picking one
 applies it straight away and the panel stays open, so you can click through them and watch the
 desktop behind change. Choosing a theme restyles the launcher, taskbar and window chrome, never the
-content inside a window, which stays the backoffice you already know. Five ship today:
+content inside a window, which stays the backoffice you already know. It leaves your wallpaper alone
+too, unless you ask it not to — see [Matching the wallpaper to the theme](#matching-the-wallpaper-to-the-theme).
+Five ship today:
 
 - **Umbraco**. The default, built from Umbraco's own design tokens.
 - **Umbraco 4**. The 2009 backoffice as desktop chrome: warm grey gradients, hairline panels,
@@ -215,15 +218,46 @@ content inside a window, which stays the backoffice you already know. Five ship 
 - **Windows 98**. Grey everywhere, double bevels, square corners, a navy title bar, and the
   launcher as a Start menu.
 
-![The macOS theme: the same content editor and media library windows, now with traffic lights at the left of each title bar, rounded corners, and a floating dock centred along the bottom of the screen.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-macos.png)
+![The macOS theme: traffic lights at the left of each title bar, rounded window corners, and a floating dock centred along the bottom, over the wallpaper this theme brings with it.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-macos.png)
 
-![The Windows 98 theme: the same two windows with grey frames and navy title bars, a Start menu open on the left listing the whole app catalogue by group, and a taskbar button for each open window.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-win98.png)
+![The Windows 98 theme: grey window frames with navy title bars, the launcher as a Start menu open in the corner listing the app catalogue by group, a taskbar button for each open window, and the bare teal desktop this theme brings with it.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-win98.png)
 
 Your choice applies immediately and is remembered per user, in that browser. Themes follow the
 backoffice's own Light and Dark settings; under High contrast a theme uses its darkest colours,
 while window content switches to Umbraco's real high-contrast styling. Umbraco 4 and Windows 98
 ship a single palette on purpose: their grey is the design rather than a light-mode choice, so
 they look the same under all three settings.
+
+## Matching the wallpaper to the theme
+
+Switching to Windows 98 gives you a Windows 98 desktop with an Umbraco wallpaper still sitting on
+it. The chrome changes and the thing behind it does not, which is the one part of the illusion a
+theme cannot fix on its own.
+
+Under the theme list there is a toggle for it. Turn it on and each theme brings its own background:
+
+| Theme | Wallpaper |
+| --- | --- |
+| Umbraco | Aurora Flow |
+| Umbraco 4 | Retro Swoosh, which is the v4-era artwork |
+| macOS | First Light |
+| Windows 11 | Cobalt Beacon |
+| Windows 98 | None, because a Windows 98 nobody had personalised showed bare teal and nothing else |
+
+It is off to begin with, and **turning it on changes nothing on screen**. It is a statement about
+what picking a theme will do, not an instruction to redecorate now, so your wallpaper moves on the
+next theme you click. What does change immediately is the previews: with the toggle on, each theme's
+miniature shows its own wallpaper, so you can see where a click will land before you make it. To
+apply the current theme's wallpaper without switching theme, click the theme you are already on.
+
+**Choosing a wallpaper yourself turns it back off** and keeps the wallpaper you chose, so the
+setting can never quietly discard a picture you picked.
+
+![The Choose a theme panel with Match the wallpaper to the theme switched on above the list, and every theme preview painted on the background that theme brings with it rather than on the one currently in use.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-wallpaper-match.png)
+
+One thing it does not do: a theme names one wallpaper, not a light one and a dark one. macOS pairs
+its own backgrounds that way, so under Dark the macOS theme gives you dark chrome over a bright
+background. Pick a wallpaper by hand if that bothers you.
 
 ## Changing the wallpaper
 
@@ -233,12 +267,12 @@ you are using now; click it and the picker opens with everything you can choose 
 - Your own image, the first tile. Empty until you have picked one, it opens your Media Library; once
   you have, it *is* that image, so the wallpaper you are using is always the one marked. Click it
   again to pick another.
-- None, which restores the plain gradient, and the eight backgrounds that ship with the package.
+- None, which restores the plain gradient, and the ten backgrounds that ship with the package.
 
 Picking one applies it straight away and the picker stays open, the same way the theme picker does,
 so you can try a few and watch the desktop change behind the panel.
 
-![Desktop settings open over the desktop: a Theme section showing the themes as named colour swatches with Umbraco selected, above a Wallpaper section with the current image and buttons for Built-in images and Media library. The Choose a wallpaper tray is open beside it, listing the eight built-in backgrounds by name alongside None, which restores the plain gradient.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/choose-background.png)
+![Desktop settings open over the desktop, showing the theme in use above the wallpaper in use, with the wallpaper picker open beside it: every background that ships with the package, named, alongside None for the plain gradient and a tile for choosing your own image from the Media Library.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/choose-background.png)
 
 Your choice applies immediately and is remembered per user, in that browser.
 

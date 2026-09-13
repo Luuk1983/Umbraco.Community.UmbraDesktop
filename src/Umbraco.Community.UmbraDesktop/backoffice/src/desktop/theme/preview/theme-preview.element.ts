@@ -7,6 +7,7 @@ import {
 import { paletteCss } from '../palette-css.js';
 import type { UmbraDesktopVariant } from '../resolve-variant.js';
 import type { UmbraDesktopPalette, UmbraDesktopTheme } from '../types.js';
+import type { UmbraDesktopResolvedWallpaper } from '../../settings/types.js';
 import {
   UMBRADESKTOP_TASKBAR_HEIGHT,
   UMBRADESKTOP_TITLEBAR_BORDER,
@@ -60,6 +61,20 @@ export class UmbraDesktopThemePreviewElement extends UmbLitElement {
    */
   @property({ type: String })
   public variant: UmbraDesktopVariant = 'light';
+
+  /**
+   * A wallpaper to paint behind the chrome, already resolved to a URL.
+   *
+   * Optional, and a preview given none paints the theme's own desktop ground — which is what the
+   * settings panel's single miniature wants, and what a `none` wallpaper resolves to anyway.
+   *
+   * Resolved by the caller rather than looked up here, because the two callers resolve it
+   * differently and neither computation belongs in a element that draws a picture: the picker asks
+   * `previewWallpaper` what each tile should end up with, and a Media Library wallpaper's URL only
+   * exists after an imaging round trip the settings context owns.
+   */
+  @property({ type: Object })
+  public wallpaper?: UmbraDesktopResolvedWallpaper;
 
   /**
    * The theme whose preview stylesheet is adopted right now, so a re-render for any other reason
@@ -156,11 +171,30 @@ export class UmbraDesktopThemePreviewElement extends UmbLitElement {
     </span>`;
   }
 
+  /**
+   * Inline background declarations for {@link wallpaper}, or an empty string when there is none.
+   *
+   * Inline rather than a class, because the URL is data. It overrides `.scene`'s own
+   * `background-image`, which is the theme's gradient ground and exactly what a wallpaper covers on
+   * the real desktop. `background-size` and `background-position` stay in the stylesheet, since
+   * those are the same for every preview.
+   *
+   * No scrim, unlike `desktop.element`. The real one is a 12% black wash to keep white windows
+   * separated from a busy photograph; at tile size there is nothing to rescue and a second layer
+   * would only be a pseudo-element to maintain.
+   * @returns A CSS declaration string, ending in `;`, or empty.
+   */
+  #wallpaperCss(): string {
+    const colour = this.wallpaper?.averageColour ? `background-color:${this.wallpaper.averageColour};` : '';
+    if (!this.wallpaper?.url) return colour;
+    return `${colour}background-image:url("${this.wallpaper.url}");`;
+  }
+
   override render() {
     if (!this.theme) return nothing;
     const metrics = this.theme.metrics;
     return html`
-      <div class="scene" style=${paletteCss(this.#palette())} aria-hidden="true">
+      <div class="scene" style="${paletteCss(this.#palette())}${this.#wallpaperCss()}" aria-hidden="true">
         <div class="frame">
           <div class="titlebar">
             ${this.#renderControls('leading', metrics.leadingControlsWidth)}

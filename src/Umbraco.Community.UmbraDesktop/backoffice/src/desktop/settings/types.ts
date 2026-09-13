@@ -33,6 +33,15 @@ export interface UmbraDesktopSettings {
    * provided by the desktop element and so does not exist yet at that point.
    */
   bootIntoDesktop: boolean;
+  /**
+   * Whether changing the theme should also change the wallpaper to the one that theme declares.
+   *
+   * Off by default. Switching it on is the user asking for their wallpaper to be managed, which is
+   * why choosing a wallpaper by hand switches it back off again: picking an image is about as
+   * explicit as a person gets, and the alternative is silently discarding that choice the next time
+   * they try a theme.
+   */
+  wallpaperFollowsTheme: boolean;
 }
 
 /** What the desktop element needs in order to paint a wallpaper. */
