@@ -188,6 +188,34 @@ export interface UmbraDesktopWindow {
   deleted?: boolean;
 
   /**
+   * Which half of the desktop this window is snapped to, if it is snapped to one.
+   *
+   * Deliberately a flag beside `state` rather than two more members of {@link
+   * UmbraDesktopWindowState}. A snapped window's real rectangle is written into {@link rect}, so it
+   * *is* an ordinary window as far as rendering, the drag clamp, minimize, the taskbar and the
+   * resize handles are concerned, and every one of those paths keeps working without learning a new
+   * state. What this adds is only the two things a plain rect cannot say: that the rectangle was
+   * derived from the desktop's size and must be re-derived when that changes, and that there is a
+   * size to give back when the window is dragged off (see {@link restoreRect}).
+   *
+   * Absent for a maximized window, which already has its own state and its own restore: `rect` is
+   * left untouched while maximized, so it is its own restore rectangle. A snap has to overwrite
+   * `rect` to be drawn at all, which is exactly why it needs somewhere else to remember.
+   */
+  snapped?: 'left' | 'right';
+
+  /**
+   * The rectangle this window had before it was snapped, and nothing else.
+   *
+   * Set with {@link snapped} and cleared with it: a snap that has been dragged off, moved or
+   * resized away is over, and a remembered size that outlived it would restore a window to
+   * somewhere it has not been for half an hour. A second snap while already snapped keeps the
+   * first one's value, since the rectangle worth restoring to is the one from before any of this
+   * started.
+   */
+  restoreRect?: Rect;
+
+  /**
    * Whether the editor has confirmed they mean to keep their own version over somebody else's.
    *
    * Quiets that notice's banner and nothing else: the marker and the taskbar badge stay, so an

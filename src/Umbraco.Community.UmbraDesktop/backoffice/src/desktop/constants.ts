@@ -244,3 +244,17 @@ export const UMBRADESKTOP_DEFAULT_METRICS: UmbraDesktopThemeMetrics = {
   pathbarHeight: UMBRADESKTOP_PATH_HEIGHT,
   taskbarReserve: UMBRADESKTOP_TASKBAR_HEIGHT,
 };
+
+/**
+ * How close to a desktop edge a dragged pointer must come before that edge offers a snap, in px.
+ *
+ * A band rather than the edge itself, because a pointer under momentum crosses the last pixel of a
+ * surface and keeps going: the zone is open-ended outwards (see `snapTargetAt`), and this is only
+ * how far *inside* the surface it reaches. Small on purpose — every pixel of it is a pixel where an
+ * ordinary drag along the edge starts offering to resize the window instead.
+ *
+ * Not a theme metric. Where the window controls sit changes what must stay grabbable, which is why
+ * `UMBRADESKTOP_WINDOW_KEEP_VISIBLE` is per-theme, but a snap zone is a property of the desktop's
+ * own edges and reads identically under all five.
+ */
+export const UMBRADESKTOP_SNAP_EDGE = 8;

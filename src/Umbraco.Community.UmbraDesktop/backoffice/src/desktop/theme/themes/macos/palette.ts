@@ -65,6 +65,8 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-body-background': '#ffffff',
   '--umbradesktop-window-border': `${MACOS_WINDOW_BORDER}px solid rgba(0, 0, 0, 0.16)`,
   '--umbradesktop-window-radius': '10px',
+  // The snap ghost stands in for the window that is about to be there, so it takes the same corner.
+  '--umbradesktop-snap-ghost-radius': '10px',
   '--umbradesktop-window-shadow': '0 8px 24px rgba(0, 0, 0, 0.22)',
   '--umbradesktop-window-shadow-active': '0 16px 40px rgba(0, 0, 0, 0.34)',
   '--umbradesktop-titlebar-height': `${MACOS_TITLEBAR_HEIGHT}px`,

@@ -234,6 +234,7 @@ prefix is for:
 | `start-*`, `task-*` | The buttons inside the bar: hover and active fills, and the running-window marker |
 | `launcher-*` | The panel: geometry, background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills |
 | `path-*` | The path strip under a section window's caption: its height, padding, background, bottom border, text and link colours, the hover fill behind a crumb, the separator's colour and the strip's font size |
+| `snap-ghost-*` | The outline showing where a window dragged into a desktop edge will land: its fill, its border shorthand and its corner radius. It stands in for the window that is about to be there, so the obvious value for the radius is your own `window-radius`, and Windows 98 shows what to do when your design has no translucency to lend it |
 | `notice-*` | The overwrite guard: the titlebar marker and taskbar badge colours at `info`/`warning`/`error`, the marker and badge sizes, and the banner's own background, text and leading-edge width |
 | `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent with the text that reads on it, and the UI font |
 

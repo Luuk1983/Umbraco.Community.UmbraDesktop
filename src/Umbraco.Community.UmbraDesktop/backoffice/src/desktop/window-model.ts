@@ -1,4 +1,5 @@
 import type { Rect, UmbraDesktopWindow, UmbraDesktopWindowState } from './types';
+import { snapRect } from './snap';
 
 const CASCADE_STEP = 28;
 const CASCADE_WRAP = 6;
@@ -386,4 +387,112 @@ export function conflictedWindows(
   windows: ReadonlyArray<UmbraDesktopWindow>,
 ): ReadonlyArray<UmbraDesktopWindow> {
   return windows.filter((w) => w.dirty === true && w.changedElsewhere === true);
+}
+
+/**
+ * Return a new list with `id` snapped to a half of the desktop.
+ *
+ * Remembers what the window looked like before, unless it was already snapped: left, then right,
+ * then dragged off must give back the rectangle from before the first snap, not half the desktop.
+ * See {@link UmbraDesktopWindow.snapped} for why this is a flag beside `state` rather than a state
+ * of its own. Pure.
+ * @param windows The current window list.
+ * @param id The window to snap.
+ * @param target Which half.
+ * @param rect The rectangle that half resolves to; see `snapRect`.
+ * @returns A new list.
+ */
+export function snapWindow(
+  windows: ReadonlyArray<UmbraDesktopWindow>,
+  id: string,
+  target: 'left' | 'right',
+  rect: Rect,
+): UmbraDesktopWindow[] {
+  return windows.map((w) =>
+    w.id === id ? { ...w, rect, snapped: target, restoreRect: w.snapped ? w.restoreRect : w.rect } : w,
+  );
+}
+
+/**
+ * Return a new list with `id` un-snapped: its remembered size, at the position given.
+ *
+ * The position comes from the caller because the one caller is a drag, which has a pointer to put
+ * the window under — the same arrangement {@link restoreDragPosition} serves for a maximized
+ * window, and for the same reason. A window that is not snapped is handed back untouched, and the
+ * list's identity with it. Pure.
+ * @param windows The current window list.
+ * @param id The window to un-snap.
+ * @param pos Where to put it.
+ * @returns A new list, or the input list when that window was not snapped.
+ */
+export function unsnapWindow(
+  windows: ReadonlyArray<UmbraDesktopWindow>,
+  id: string,
+  pos: { x: number; y: number },
+): UmbraDesktopWindow[] {
+  const target = windows.find((w) => w.id === id);
+  if (!target?.snapped) return windows as UmbraDesktopWindow[];
+  const size = target.restoreRect ?? target.rect;
+  return windows.map((w) =>
+    w.id === id
+      ? { ...w, rect: { x: pos.x, y: pos.y, w: size.w, h: size.h }, snapped: undefined, restoreRect: undefined }
+      : w,
+  );
+}
+
+/**
+ * Return a new list with `id`'s snap forgotten, keeping the rectangle it has.
+ *
+ * What a move or a resize does to a snapped window. The window stays exactly where the pointer
+ * left it — this is not a restore — but it stops being one of the rectangles the desktop re-derives
+ * on every bounds change, because it is now the user's own geometry and re-deriving it would undo
+ * the resize they just made. Hands back the same list when there was no snap, which is the common
+ * case: `move` runs on every pointer event of every drag. Pure.
+ * @param windows The current window list.
+ * @param id The window to release.
+ * @returns A new list, or the input list when that window was not snapped.
+ */
+export function clearSnap(
+  windows: ReadonlyArray<UmbraDesktopWindow>,
+  id: string,
+): UmbraDesktopWindow[] {
+  const target = windows.find((w) => w.id === id);
+  if (!target?.snapped) return windows as UmbraDesktopWindow[];
+  return windows.map((w) => (w.id === id ? { ...w, snapped: undefined, restoreRect: undefined } : w));
+}
+
+/**
+ * Re-derive every snapped window's rectangle against the desktop's current size.
+ *
+ * This is what makes a snap a snap rather than a rectangle that once looked like one: undock a
+ * monitor, open devtools or switch to a theme with a taller taskbar and the two halves are still
+ * two halves. Runs beside {@link clampWindowsToBounds} on the same signal, before it, so the
+ * clamp sees the rectangles the windows are actually going to have.
+ *
+ * `minOf` is a function rather than one size because the floor is per window: it depends on the app
+ * inside it and on whether that window draws a path strip. Returns the input list unchanged when
+ * every snapped window is already where it belongs — and when none is snapped at all — because the
+ * caller is a `ResizeObserver` and a new array from each callback re-renders every window on the
+ * desktop. Pure.
+ * @param windows The current window list.
+ * @param bounds The desktop surface size in px.
+ * @param minOf The smallest window size for a given window, chrome included.
+ * @returns A new list, or the input list when nothing moved.
+ */
+export function resnapWindows(
+  windows: ReadonlyArray<UmbraDesktopWindow>,
+  bounds: { w: number; h: number },
+  minOf: (w: UmbraDesktopWindow) => { w: number; h: number },
+): UmbraDesktopWindow[] {
+  let changed = false;
+  const next = windows.map((w) => {
+    if (!w.snapped) return w;
+    const rect = snapRect(w.snapped, bounds, minOf(w));
+    if (rect.x === w.rect.x && rect.y === w.rect.y && rect.w === w.rect.w && rect.h === w.rect.h) {
+      return w;
+    }
+    changed = true;
+    return { ...w, rect };
+  });
+  return changed ? next : (windows as UmbraDesktopWindow[]);
 }
