@@ -83,3 +83,27 @@ export function formatClock(
   const hour = resolved === 'h11' || resolved === 'h12' ? 'numeric' : '2-digit';
   return new Intl.DateTimeFormat(locale, { ...options, hour }).format(now);
 }
+
+/**
+ * How long until the next whole minute, in milliseconds.
+ *
+ * The taskbar clock shows hours and minutes, and it sits a few centimetres from the operating
+ * system's own clock. Two clocks that turn the minute over at different moments read as one of them
+ * being broken, and a fixed interval can never avoid that at any frequency: it turns over wherever
+ * it happens to be in its own cycle, which is up to that whole interval late.
+ *
+ * Measured from the moment it is handed rather than from when a timer meant to fire, so error never
+ * accumulates. A tab that was throttled in the background, a laptop that slept, a clock the user
+ * put right or a daylight-saving change all land the same way: the next wait is computed from what
+ * the clock says now, so one late tick costs one late minute rather than permanently shifting the
+ * phase.
+ *
+ * Never returns zero, which would re-arm a timer with no delay and spin. `% 60000` works on the
+ * epoch rather than on local time because every time zone offset is a whole number of minutes, so
+ * the epoch's minute boundaries and the wall clock's are the same instants.
+ * @param now The moment to measure from.
+ * @returns Milliseconds until the next minute boundary, from 1 to 60000.
+ */
+export function msUntilNextMinute(now: Date): number {
+  return 60000 - (now.getTime() % 60000) || 60000;
+}

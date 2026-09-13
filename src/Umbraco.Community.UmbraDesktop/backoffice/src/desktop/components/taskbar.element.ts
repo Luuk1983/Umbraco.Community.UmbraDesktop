@@ -2,7 +2,7 @@ import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
 import { taskActivation } from '../window-model';
 import { exitDialogContent } from '../exit-message.js';
-import { formatClock } from '../clock-format.js';
+import { formatClock, msUntilNextMinute } from '../clock-format.js';
 import { suppressBootForSession } from '../boot/boot-storage.js';
 import { exitDesktopPath } from '../boot/boot-decision.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
@@ -80,6 +80,11 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
    */
   #catalogue?: UmbraDesktopAppCatalogueContext;
 
+  /**
+   * The pending clock repaint, as a `setTimeout` handle rather than an interval: each tick schedules
+   * the next one for the moment the minute turns over. Replaced on every tick, and on every other
+   * route into {@link #tick}, so only one is ever live.
+   */
   #timer?: number;
 
   /** The backoffice culture the clock was last formatted with, so a change to it can be spotted. */
@@ -104,8 +109,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       // close its space while the panel is still up.
       this.observe(ctx.pinned, (pinned) => (this._pinned = pinned));
       this.observe(ctx.taskbarFeatures, (features) => (this._features = features ?? {}));
-      // Re-ticked rather than left to the interval. The clock ticks every 15 seconds, so without
-      // this the old format sits on screen for up to fifteen of them and the setting reads broken.
+      // Re-ticked rather than left to the timer, which now sleeps until the minute turns over: without
+      // this the old format could sit on screen for the best part of a minute and read as broken.
       this.observe(ctx.locale, (locale) => {
         this._locale = locale ?? { ...UMBRADESKTOP_DEFAULT_SETTINGS.locale };
         this.#tick();
@@ -116,25 +121,47 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.#tick();
-    this.#timer = window.setInterval(() => this.#tick(), 15000);
+    // Also on becoming visible, because a hidden tab's timers are throttled: a clock that had been
+    // in the background would otherwise show the minute it was last allowed to paint, which on this
+    // taskbar is a minute next to the operating system's own correct one.
+    document.addEventListener('visibilitychange', this.#onVisibilityChange);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    if (this.#timer) window.clearInterval(this.#timer);
+    if (this.#timer) window.clearTimeout(this.#timer);
+    document.removeEventListener('visibilitychange', this.#onVisibilityChange);
     this.#setLauncherOpen(false);
   }
 
+  /** Repaint the clock when the tab comes back, since its timer may have been throttled away. */
+  #onVisibilityChange = () => {
+    if (!document.hidden) this.#tick();
+  };
+
   /**
-   * The clock, formatted the way this user asked for it.
+   * The clock, formatted the way this user asked for it, and then scheduled again for the moment the
+   * minute turns over.
    *
-   * Called from four places rather than one: on connect, on the interval, when the locale preference
-   * changes, and when the backoffice culture changes under us. The last two are why this is not
-   * simply the interval's callback — a format that only caught up on the next tick reads as a
-   * setting that did not take.
+   * A self-rearming timeout rather than an interval, because this clock is read beside the operating
+   * system's own: an interval turns the minute over wherever it happens to be in its cycle, so the
+   * two would disagree for part of every minute. Re-armed from a fresh reading each time, so a
+   * throttled tab, a sleeping laptop or a clock change costs one late minute instead of shifting the
+   * phase for good. It is also 60 paints an hour where the old 15-second interval was 240, for a
+   * display that changes 60 times.
+   *
+   * Called from five places: on connect, on each turn of the minute, when the tab becomes visible,
+   * when the locale preference changes, and when the backoffice culture changes under us. The last
+   * two are why the timer does not own this — a format that only caught up on the next tick reads as
+   * a setting that did not take.
    */
   #tick() {
-    this._clock = formatClock(new Date(), this._locale, { backoffice: this.localize.lang() });
+    const now = new Date();
+    this._clock = formatClock(now, this._locale, { backoffice: this.localize.lang() });
+    // Replaced rather than stacked: every caller above lands here, and two live timers would paint
+    // the same clock twice a minute at two different offsets.
+    if (this.#timer) window.clearTimeout(this.#timer);
+    this.#timer = window.setTimeout(() => this.#tick(), msUntilNextMinute(now));
   }
 
   /**

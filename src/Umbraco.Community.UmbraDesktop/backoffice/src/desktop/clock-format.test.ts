@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { clockLocale, formatClock } from './clock-format.js';
+import { clockLocale, formatClock, msUntilNextMinute } from './clock-format.js';
 
 /**
  * The whole matrix, without a taskbar.
@@ -87,4 +87,31 @@ it('asks for the runtime default rather than a named locale for the browser', ()
   // undefined is what "use the runtime default" means to Intl, and it is what the old
   // toLocaleTimeString([]) meant too, so choosing this option changes nobody's clock.
   expect(clockLocale({ source: 'browser', hourCycle: 'auto' }, locales)).to.equal(undefined);
+});
+
+it('waits until the next whole minute, never zero and never more than one', () => {
+  // The taskbar sits beside the operating system's own clock, so the two have to turn over
+  // together. A fixed interval cannot do that at any frequency: it turns the minute over wherever
+  // it happens to be in its cycle.
+  expect(msUntilNextMinute(new Date(2026, 0, 5, 14, 30, 0, 0))).to.equal(60000);
+  expect(msUntilNextMinute(new Date(2026, 0, 5, 14, 30, 0, 1))).to.equal(59999);
+  expect(msUntilNextMinute(new Date(2026, 0, 5, 14, 30, 30, 0))).to.equal(30000);
+  expect(msUntilNextMinute(new Date(2026, 0, 5, 14, 30, 59, 999))).to.equal(1);
+});
+
+it('never asks for a wait of zero, which would busy-loop the timer', () => {
+  for (let second = 0; second < 60; second += 1) {
+    for (const ms of [0, 1, 500, 999]) {
+      const wait = msUntilNextMinute(new Date(2026, 0, 5, 14, 30, second, ms));
+      expect(wait, `${second}.${ms}`).to.be.greaterThan(0);
+      expect(wait, `${second}.${ms}`).to.be.at.most(60000);
+    }
+  }
+});
+
+it('measures from the moment it is given, so a late timer corrects itself', () => {
+  // A timer that fires late — a throttled background tab, a laptop waking up — re-arms from a
+  // fresh reading rather than from when it meant to fire, so the error does not accumulate.
+  const late = new Date(2026, 0, 5, 14, 31, 7, 250);
+  expect(msUntilNextMinute(late)).to.equal(52750);
 });
