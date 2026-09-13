@@ -111,7 +111,7 @@ it('opens straight at the category it was asked for', async () => {
 it('opens at the list when asked for a category it has never heard of', async () => {
   // A deep link from a version that had a category this one does not, or a typo in whatever wrote
   // it. Either way, a list is a recoverable place to land and an empty screen is not.
-  const view = await panel({ category: 'taskbar' });
+  const view = await panel({ category: 'nothing-of-the-sort' });
 
   expect(view.rowIds()).to.deep.equal(ids);
   expect(view.hasHeading()).to.equal(false);

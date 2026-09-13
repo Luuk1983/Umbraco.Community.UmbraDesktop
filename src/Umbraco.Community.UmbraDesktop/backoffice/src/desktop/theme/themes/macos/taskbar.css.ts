@@ -1,6 +1,6 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
-import { MACOS_FONT } from './palette.js';
-import { MACOS_TASKBAR_RESERVE } from './metrics.js';
+import { MACOS_DOCK_SEPARATOR, MACOS_FONT } from './palette.js';
+import { MACOS_DOCK_ICON, MACOS_DOCK_TILE, MACOS_TASKBAR_RESERVE } from './metrics.js';
 
 /**
  * A centred floating dock. The `.cluster` wrapper (start + running windows) is what makes centring
@@ -41,8 +41,8 @@ export default css`
      enough that the dot reads as a marker beside it rather than as something stuck on it. */
   .start,
   .task {
-    height: 42px;
-    min-width: 42px;
+    height: ${MACOS_DOCK_TILE}px;
+    min-width: ${MACOS_DOCK_TILE}px;
     padding: 0 6px;
     border-radius: 8px;
   }
@@ -50,7 +50,7 @@ export default css`
      now, and 24px is the dock tile's size, not the badge's. */
   .start umb-icon,
   .task .task-icon {
-    font-size: 24px;
+    font-size: ${MACOS_DOCK_ICON}px;
     margin-left: 0;
   }
   /* Nudged up (paint-only — this doesn't move the centred layout box) to open up the space the
@@ -85,9 +85,41 @@ export default css`
     border-radius: 50%;
     background: var(--umbradesktop-task-active-marker, #3c3c3e);
   }
+  /* The dock's own separator, which is what a real Dock puts between its applications and the
+     things that are not applications. Here it divides the fixed buttons from the open windows, and
+     this theme needs one where the three themes that keep their labels do not: a dock button and a
+     window button are the same glyph at the same size, so with nothing between them a pinned
+     Content and an open Content read as one list of six rather than two lists of three.
+
+     As tall as the icons, not as tall as the tiles. A tile is 42 and its glyph is 24, so a rule
+     built to the tile stands taller than everything it separates and turns the dock into a row of
+     boxes — which is exactly how it looked when it was first drawn that way. macOS draws this short
+     and low-contrast, sitting clearly inside the icons, so the icon is what it matches. */
+  .divider {
+    display: block;
+    height: ${MACOS_DOCK_ICON}px;
+    align-self: center;
+    margin: 0 4px;
+    opacity: 1;
+    background: ${unsafeCSS(MACOS_DOCK_SEPARATOR)};
+  }
+  /* The dock's second separator, which has to be its first one drawn twice. The base leaves the
+     clock an inline flex item sized by its own text, so this border came out at whatever the clock
+     happened to measure — near enough by luck, and wrong the moment the font changed. Giving the
+     clock an explicit height is what makes the border a stated size rather than a coincidence;
+     there is nothing else here to hang one on.
+
+     Worth knowing that there is no original to be accurate to: macOS has no clock in the Dock at
+     all, it lives in the menu bar. This separator is ours, so the only thing it owes anybody is to
+     be the same line as the divider. */
   .clock {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    box-sizing: border-box;
+    height: ${MACOS_DOCK_ICON}px;
     padding: 0 4px 0 10px;
-    border-left: 1px solid rgba(0, 0, 0, 0.16);
+    border-left: 1px solid ${unsafeCSS(MACOS_DOCK_SEPARATOR)};
     font-size: 11px;
     font-weight: 500;
     opacity: 1;

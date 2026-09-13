@@ -14,7 +14,7 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 
 It also does something the backoffice does not do at all. When two people have the same page open, plain Umbraco lets the second save win silently: nobody is told, and the first person's work is gone. UmbraDesktop warns you before you overwrite someone, and it does it on the window, on its taskbar button and in every dialog that could throw work away. See [Overwrite protection](#overwrite-protection).
 
-![The UmbraDesktop desktop: the content editor and the media library open as separate windows, side by side, with a taskbar along the bottom.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png)
+![The UmbraDesktop desktop: the content editor, the media library and uSync open at once as separate, overlapping windows. The taskbar along the bottom carries a titled button for each of them, and beside the launcher button a row of icons for the pinned apps.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png)
 
 > **New: games on the desktop.** [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment)
 > is an optional add-on that puts Minesweeper in the launcher's Games group, in a window of its own
@@ -32,8 +32,9 @@ It also does something the backoffice does not do at all. When two people have t
 - A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus Games once a package puts an app there. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
-- Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned. Your pins are remembered per user, in that browser.
+- Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are remembered per user, in that browser.
 - A taskbar. Every open window gets a button: click to focus, click again to minimise.
+- The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: the AI chat, then your pinned apps. Both are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
 - Choose your wallpaper. Eight backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user, in that browser.
 - Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, in that browser. See [Starting in the desktop](#starting-in-the-desktop).
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on.
@@ -86,11 +87,11 @@ From the launcher:
 - Hover an app and click the pin to add it to Pinned, which sits at the top.
 - Drag a title bar to move a window, drag an edge or corner to resize, double-click the title bar to maximise.
 - Drag a window into the left or right edge of the desktop to snap it to that half, or into the top edge to maximise it. An outline appears while you are over an edge, showing where the window will go. Drag a snapped window away and it returns to the size it had before.
-- Use the taskbar at the bottom to switch between open windows.
+- Use the taskbar at the bottom to switch between open windows. The icons to the left of them, beside the launcher button, are the fixed row: the AI chat and your pinned apps, one click from anywhere. See [On the taskbar](#on-the-taskbar).
 - The path under a section window's title bar says where that window is. Click any step to go back to it; the first step returns the window to whatever it opened at. If the window has unsaved changes it asks before leaving, the same way closing it does.
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
 - Choose Exit in the launcher's footer to return to the classic backoffice. If you start in the desktop, exiting keeps you in the classic backoffice until you close the tab.
-- Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Appearance for your theme and wallpaper — and the desktop stays in view behind it, so you can see a change as you make it.
+- Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Appearance for your theme and wallpaper, Taskbar for what sits beside the launcher button — and the desktop stays in view behind it, so you can see a change as you make it.
 
 Several apps can be open at once, and some of them (the content editor and media library, for instance) can be opened more than once, so you can compare two documents side by side.
 
@@ -197,6 +198,48 @@ above covers, and it covers the agent exactly as it covers a colleague.
 Needs **Umbraco AI 17.4 or later**. Without the package, on an older version, or for a user without
 permission to the Copilot Workspace section, none of it appears: no launcher tile, no tool, and
 nothing added to the chat. UmbraDesktop does not depend on Umbraco AI and never requires it.
+
+## On the taskbar
+
+The launcher is the right way in for thirty-five apps. It is the wrong way in for the one or two you
+use all day, where every launch is two clicks and a scan of a panel you had to open first.
+
+So the taskbar carries a fixed row immediately to the right of the launcher button, before the open
+window buttons. Two things sit in it, in that order:
+
+- **AI chat**, a single button that opens the Copilot Workspace. It is there if you have Umbraco AI
+  installed and can reach it, and it is simply absent if you cannot.
+- **Pinned apps**, your pins as icon-only buttons, in the order the launcher shows them.
+
+Both are on from the start, and each is one switch in Desktop settings, Taskbar. Switching one off
+closes its space and moves nothing else: the order is fixed, so a button you have learned the
+position of stays where it is.
+
+**Pinning does not change.** You pin in the launcher, exactly as before, and switching the row on
+simply draws that same list in a second place. There is no pin-to-where question to answer, because
+there is only one list, and nothing on the taskbar pins, unpins or reorders anything.
+
+**The row launches, it does not switch windows.** A button there does precisely what the app's tile
+in the launcher does, second click included: an app that allows several windows gives you another
+one, and the Copilot Workspace, which does not, comes to the front instead. Switching between the
+windows you already have is the job of the buttons on the other side of the bar, and they keep it.
+That is why nothing in the row needs a running indicator, a modifier click or a right-click menu.
+
+Switched on and showing nothing is a normal state, not a fault: that is Pinned apps before you have
+pinned anything, and AI chat on a site without the AI package. Desktop settings still lists both,
+with the switch disabled and the reason given, because settings is where you find out what the
+product can do.
+
+The row works under all five themes, taking each one's own button style, and it is not a system
+tray: it sits on the launching half of the bar, beside the launcher button, and everything in it
+opens something.
+
+Three of the themes need nothing else to keep the row and your open windows apart, because a window
+button there carries its window's title and a row button never carries anything. The two that show
+icons without labels say it another way. Both put a separator between the two groups, and Windows 11
+also marks each open window with a small bar under its icon, grey for open and its blue accent for
+the one you are in. So on those themes a bare icon launches something and a marked one is already
+open.
 
 ## Changing the theme
 

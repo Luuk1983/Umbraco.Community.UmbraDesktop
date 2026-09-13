@@ -59,6 +59,18 @@ export const MACOS_ACCENT = '#0067cc';
  */
 export const MACOS_ACCENT_DARK = '#0a84ff';
 
+/**
+ * The hairline the dock separates things with: the rule before the clock, and the rule between the
+ * fixed buttons and the open windows.
+ *
+ * One constant rather than the same literal twice, because the two are the same line and a dock
+ * with two slightly different separators in it looks like a rendering fault rather than a choice.
+ * Ink rather than a palette entry: it is painted over the dock's translucent pill, so it has to
+ * darken whatever shows through rather than be a colour of its own, and that reads correctly under
+ * both appearances.
+ */
+export const MACOS_DOCK_SEPARATOR = 'rgba(0, 0, 0, 0.16)';
+
 /** macOS in its light appearance. */
 export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-background': '#ffffff',

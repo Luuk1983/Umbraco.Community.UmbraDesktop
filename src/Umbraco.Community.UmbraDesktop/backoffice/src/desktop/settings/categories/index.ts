@@ -1,6 +1,7 @@
 import type { UmbraDesktopSettingsCategory } from './types';
 import { UMBRADESKTOP_APPEARANCE_CATEGORY } from './appearance/index.js';
 import { UMBRADESKTOP_GENERAL_CATEGORY } from './general/index.js';
+import { UMBRADESKTOP_TASKBAR_CATEGORY } from './taskbar/index.js';
 
 /**
  * Every category the settings panel shows, in the order it shows them.
@@ -8,10 +9,6 @@ import { UMBRADESKTOP_GENERAL_CATEGORY } from './general/index.js';
  * Curated rather than an extension point, the same way `theme/themes/index.ts` and the app catalogue
  * are: a category is a folder plus one entry here, and an empty category cannot exist because a
  * category *is* its folder.
- *
- * **Taskbar is deliberately absent.** It arrives with the first taskbar setting (#53, #42). A
- * category that opens onto nothing reads as a broken screen, and a placeholder would be worse than
- * the wait.
  */
 export const UMBRADESKTOP_SETTINGS_CATEGORIES: ReadonlyArray<UmbraDesktopSettingsCategory> = [
   // General first, the way every settings surface that has one puts it first: it is the category a
@@ -19,6 +16,10 @@ export const UMBRADESKTOP_SETTINGS_CATEGORIES: ReadonlyArray<UmbraDesktopSetting
   // at the bottom of a list is one people scroll past twice.
   UMBRADESKTOP_GENERAL_CATEGORY,
   UMBRADESKTOP_APPEARANCE_CATEGORY,
+  // Last of the three, and after Appearance rather than before it: Appearance is where the desktop
+  // as a whole is chosen, and this is one strip of it. Windows orders Personalisation's own pages
+  // the same way.
+  UMBRADESKTOP_TASKBAR_CATEGORY,
 ];
 
 /**

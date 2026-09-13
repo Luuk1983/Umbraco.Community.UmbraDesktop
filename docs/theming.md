@@ -554,6 +554,61 @@ opposite geometry. The app icon is `.app-icon` in the caption and `.task-icon` i
 guard's is `.notice-marker` and `.notice-badge`. This is not tidiness: the macOS theme hides the app
 icon in the caption entirely, and while both shared one selector that rule hid the marker with it.
 
+**Never scope a `.task` rule to `.running`.** The taskbar draws task buttons in two places now: the
+window list inside `.running`, and the fixed feature row inside `.features`, which sits between the
+start button and the window list and holds the AI chat button and the user's pinned apps. Both use
+the **same** `.task` class, and that is the whole reason a theme gets the feature row for free —
+your bevels, your dock tiles, your Windows 11 squares apply to it without a line of new CSS.
+
+Write `.task { … }`, then. A rule written as `.running .task` still styles your window buttons
+perfectly while quietly leaving the feature row on the base stylesheet's geometry, which is a bug
+that looks like a working theme: two flat buttons beside a row of bevelled ones on Win98.
+`theme/taskbar-features.test.ts` fails a sheet that does it, and also fails one that hides
+`.features` — *a theme may restyle, never remove* covers the row like everything else.
+
+The row's buttons carry no `.task-label`, deliberately: they are icon-only everywhere, because a
+launch button that never stands in for a window has no title to carry. If your theme shows labels,
+your `.task` padding and gap are what size an icon-only button, so check one — a rule tuned for
+`icon + label` can leave a lone icon sitting off-centre.
+
+**If you hide labels, you owe the bar a way to tell the two lists apart.** Both lists draw the same
+icon for the same app, so with labels on it is the title that separates them — a window button
+carries one and a row button never does. Hide labels and that is gone: a pinned Content button and
+an open Content window become the same glyph twice, adjacent, meaning different things. There are
+two answers and one ships in each icon-only theme.
+
+The first is a divider. The chrome renders a `.divider` between the two lists whenever there is
+something on both sides of it, and the base leaves it at `display: none` because the three themes
+with labels do not need it. Turn it on from your palette alone — `--umbradesktop-taskbar-divider-display`,
+plus `--umbradesktop-taskbar-divider`, `-height` and `-opacity` — or restyle the rule in your sheet,
+as the macOS dock does to match its own hairline.
+
+The second is to mark the windows instead, which is what Windows 11 does. A button standing for an
+open window carries `.window` as well as `.task`, so `.task.window` is every window button and a
+bare `.task` is a launch button; that theme draws a short grey bar under the first and its blue
+accent under the focused one, so a marked icon means *window* and an unmarked one means *launches*.
+Do not put such a mark on the fixed buttons themselves, the way Windows does: there a pinned button
+*is* the window button and the mark explains the click, while here a second click opens a second
+window, so the mark would describe a click it does not cause.
+
+`theme/taskbar-features.test.ts` fails a sheet that hides labels and does neither. It does not care
+which you pick, and both shipped themes ended up with both — the marker carries the meaning and the
+divider does the grouping.
+
+Two traps if you draw the divider, and the macOS dock walked into both.
+
+**Your theme probably already has a separator, and the two have to match.** The dock's rule before
+the clock is a `border-left`, and the base leaves the clock an inline item sized by its own text, so
+that border came out about 13px tall next to a 42px divider three buttons away. Two rules of
+different heights on one bar read as a rendering fault. Both now take their height from one
+constant, and `theme/themes/macos/taskbar.test.ts` measures the clock's.
+
+**Size it to the icons, not to the buttons.** Matching them at the *tile's* height was the first fix
+and it made the dock a row of boxes: the tile is 42px and the glyph inside it is 24px, so a rule
+built to the tile stands taller than everything it is separating. A separator belongs to the things
+either side of it, which are the icons. If your buttons fill their tiles the two numbers converge
+and it does not matter; if they float in a roomy slot, as a dock's do, it matters a lot.
+
 ---
 
 ## 6. Worked example: where a Windows 98 theme lands

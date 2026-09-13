@@ -78,8 +78,26 @@ export default {
     // desktop settings — the categories the panel is divided into, and the line under each
     groupAppearance: 'Appearance',
     groupGeneral: 'General',
+    groupTaskbar: 'Taskbar',
     groupAppearanceAbout: 'The theme and the wallpaper behind your windows',
     groupGeneralAbout: 'How the desktop starts, and where you land when you sign in',
+    groupTaskbarAbout: 'What the taskbar keeps beside the launcher button',
+    // desktop settings — taskbar. The switches are grouped by which end of the bar they are about,
+    // because a screen that opens on a bare "AI chat" switch never says what it is a setting for.
+    taskbarRegionLauncher: 'Taskbar items',
+    taskbarRegionLauncherAbout:
+      'Buttons beside the launcher button, in this order. Each one opens an app, the way the launcher does. Switching between the windows you already have stays with the buttons further along the bar.',
+    taskbarRegionTray: 'System tray icons',
+    taskbarRegionTrayAbout: 'Icons beside the clock, which report on things rather than open them.',
+    // One switch per feature. The line under it says what the feature puts on the taskbar, and a
+    // feature that cannot be switched on here says why underneath that.
+    taskbarAiChat: 'AI chat',
+    taskbarAiChatAbout: 'Puts a button for the Copilot Workspace at the start of the taskbar.',
+    taskbarAiChatNotInstalled: 'Umbraco AI is not installed on this site, so there is no chat to open.',
+    taskbarAiChatNoPermission: 'You do not have access to the AI section, so the chat cannot be opened from here.',
+    taskbarPinnedApps: 'Pinned apps',
+    taskbarPinnedAppsAbout:
+      'Shows the apps you pinned in the launcher on the taskbar too, in the same order. Pin and unpin in the launcher as you always have.',
     settingsBack: 'Back to Desktop settings',
     // desktop settings — startup
     bootIntoDesktop: 'Open the desktop when I sign in',

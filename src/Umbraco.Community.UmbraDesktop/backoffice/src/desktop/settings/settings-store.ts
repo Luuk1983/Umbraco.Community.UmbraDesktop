@@ -24,6 +24,7 @@ export const UMBRADESKTOP_DEFAULT_SETTINGS: UmbraDesktopSettings = {
   theme: UMBRADESKTOP_DEFAULT_THEME_ID,
   pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
   bootIntoDesktop: false,
+  taskbarFeatures: {},
 };
 
 /**
@@ -66,6 +67,23 @@ function isWallpaperRef(value: unknown): value is UmbraDesktopWallpaperRef {
  */
 function isPinnedList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
+/**
+ * Whether a decoded value is a map of taskbar feature choices.
+ *
+ * Strict about the *values* and deliberately permissive about the keys: an unknown id is kept,
+ * because the feature registry drops what it cannot match when it reads the map, and a build that
+ * pruned ids it had never heard of would silently reset a newer build's features the one time
+ * somebody rolled back. A non-boolean anywhere fails the whole map rather than that one key —
+ * anything other than a boolean here is corruption, not an older shape, so there is no partial
+ * reading worth preserving.
+ * @param value The decoded `taskbarFeatures` property.
+ * @returns True when the value is a usable map.
+ */
+function isFeatureMap(value: unknown): value is Record<string, boolean> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  return Object.values(value as Record<string, unknown>).every((entry) => typeof entry === 'boolean');
 }
 
 /**
@@ -118,6 +136,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
     bootIntoDesktop: UMBRADESKTOP_DEFAULT_SETTINGS.bootIntoDesktop,
+    taskbarFeatures: {},
   });
 
   if (!raw) return fallback();
@@ -137,6 +156,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     pinned?: unknown;
     theme?: unknown;
     bootIntoDesktop?: unknown;
+    taskbarFeatures?: unknown;
   };
   if (payload.v !== 1) return fallback();
 
@@ -145,6 +165,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
   if (isThemeId(payload.theme)) settings.theme = payload.theme;
   if (isPinnedList(payload.pinned)) settings.pinned = payload.pinned;
   if (isBootPreference(payload.bootIntoDesktop)) settings.bootIntoDesktop = payload.bootIntoDesktop;
+  if (isFeatureMap(payload.taskbarFeatures)) settings.taskbarFeatures = { ...payload.taskbarFeatures };
   return settings;
 }
 
