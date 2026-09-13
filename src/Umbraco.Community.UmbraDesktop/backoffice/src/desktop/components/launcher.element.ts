@@ -330,20 +330,24 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         /* Full-width hero, whatever the column layout below does. */
         grid-column: 1 / -1;
       }
+      /* A group heading, the way the backoffice writes one: core's 'uui-box' renders its headline as
+         <h5 class="uui-h5">, and 'uui-text.css' gives that '--uui-type-h5-size' at weight 400, in
+         the normal text colour, normal case. Restated rather than borrowed, because that stylesheet
+         is global to the backoffice document and cannot reach inside this shadow root.
+
+         It used to be a spaced-out uppercase micro-label at 60% opacity, which is a style this
+         package invented and Umbraco uses nowhere. Three of the five themes were already overriding
+         it — Win11 to sentence case, Win98 to a menu groove, Umbraco 4 to a grooved strip — which
+         is its own evidence: a base that every theme has to undo is not a base.
+
+         The colour is the launcher's own text token rather than '--uui-color-text', because this
+         panel sits over a wallpaper and each theme decides what reads on it. */
       .ch {
-        font-size: var(--uui-type-small-size);
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--uui-color-text-alt, var(--uui-color-text));
-        opacity: 0.6;
         margin: 0 0 var(--uui-size-space-3);
-      }
-      .fav .ch {
-        text-transform: none;
-        letter-spacing: 0;
-        font-size: calc(var(--uui-type-small-size) + 2px);
-        opacity: 1;
+        font-size: var(--uui-type-h5-size, 16px);
+        font-weight: 400;
+        line-height: inherit;
+        color: var(--umbradesktop-launcher-text, var(--uui-color-text));
       }
       /* Exactly three tiles per row, evenly filling the card width with symmetric padding —
          no ragged right edge. The full-width Pinned hero overrides this to fill its own width. */

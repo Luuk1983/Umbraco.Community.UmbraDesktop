@@ -1,235 +1,163 @@
-import type { UmbraDesktopWallpaperView } from '../wallpaper-view';
-import type { UmbraDesktopSettingsContext } from '../settings.context';
-import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings.context-token';
-import { UMBRADESKTOP_THEME_PICKER_MODAL, UMBRADESKTOP_WALLPAPER_PICKER_MODAL } from '../modal-tokens';
-import type { UmbraDesktopResolvedTheme } from '../../theme/resolve-variant';
-import { UMBRADESKTOP_THEME_CONTEXT } from '../../theme/theme.context-token';
-import { UMBRADESKTOP_THEMES } from '../../theme/themes/index';
-import { UMBRADESKTOP_BUILTIN_WALLPAPERS } from '../wallpapers.generated';
-import { wallpaperLabels } from '../wallpaper-labels';
-import { UMBRADESKTOP_PREVIEW_SCALE, UMBRADESKTOP_PREVIEW_SCENE } from '../../theme/preview/constants';
-import './wallpaper-picker-modal.element.js';
-import './theme-picker-modal.element.js';
-import '../../theme/preview/theme-preview.element.js';
+import type { UmbraDesktopSettingsModalData } from '../modal-tokens';
+import type { UmbraDesktopSettingsCategory } from '../categories/types';
+import { UMBRADESKTOP_SETTINGS_CATEGORIES, findSettingsCategory } from '../categories/index';
+import './settings-row.element.js';
 import { css, customElement, html, nothing, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbModalBaseElement } from '@umbraco-cms/backoffice/modal';
-import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
 
 /**
  * The Desktop settings panel, opened from the launcher footer as a sidebar from the right.
  *
- * Laid out as a list of sections so that adding another one means appending it, not restructuring
- * this element. Today there are three: Theme, Wallpaper and Startup.
+ * **Two levels.** Opening it shows a list of categories; picking one shows that category's
+ * settings. It was one screen with every setting on it, which stopped working at three settings:
+ * previews large enough to read took three rows and pushed Wallpaper off the bottom of a 500px
+ * sidebar, and a setting nobody scrolls to is a setting nobody finds.
  *
- * There is no Save: every change applies through the settings context the moment it is made, which
- * is also what lets the user watch the result on the desktop beside the panel. Startup is the one
- * setting that cannot show its result, since it is read while the backoffice boots — hence the hint
- * under it saying so.
+ * This element owns **navigation and nothing else** — it reads no setting at all. What a category
+ * contains is that category's own element (see `categories/`), which is what makes a third category
+ * a folder rather than an edit to a file that keeps growing.
+ *
+ * There is no Save at either level: every change applies through the settings context the moment it
+ * is made, which is also what lets the user watch the result on the desktop beside the panel.
  */
 @customElement('umbradesktop-settings-modal')
-export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
+export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraDesktopSettingsModalData, never> {
+  /** The category being shown, or undefined at the list. */
   @state()
-  private _wallpaper?: UmbraDesktopWallpaperView;
+  private _category?: UmbraDesktopSettingsCategory;
 
   /**
-   * The theme actually *in force* — what is painted right now, including the variant and whether
-   * high contrast has overridden the user's choice. Distinct from `_chosenThemeId` below, which is
-   * the user's *choice*: the two agree except under high contrast, where this reflects the forced
-   * theme while `_chosenThemeId` still reflects what the user picked.
+   * Where focus goes after the next render: the category heading on the way in, the row you came
+   * from on the way out. Cleared once it has been used, so an unrelated re-render — a summary
+   * changing while a picker is open — does not yank focus back.
    */
-  @state()
-  private _theme?: UmbraDesktopResolvedTheme;
+  #focusAfterRender?: 'heading' | string;
 
-  /**
-   * The theme the user *chose*, which is not always the one in force: high contrast overrides the
-   * choice without discarding it. The picker marks this one, so switching the backoffice to high
-   * contrast never looks like it silently reset the user's selection — the hint below explains the
-   * override instead.
-   */
-  @state()
-  private _chosenThemeId?: string;
-
-  /** Whether this user boots straight into the desktop. */
-  @state()
-  private _bootIntoDesktop = false;
-
-  #settings?: UmbraDesktopSettingsContext;
-
-  constructor() {
-    super();
-    this.consumeContext(UMBRADESKTOP_SETTINGS_CONTEXT, (context) => {
-      this.#settings = context ?? undefined;
-      if (!context) return;
-      this.observe(context.wallpaper, (wallpaper) => (this._wallpaper = wallpaper));
-      this.observe(context.theme, (id) => (this._chosenThemeId = id));
-      this.observe(context.bootIntoDesktop, (enabled) => (this._bootIntoDesktop = enabled === true));
-    });
-
-    this.consumeContext(UMBRADESKTOP_THEME_CONTEXT, (context) => {
-      if (!context) return;
-      this.observe(context.resolved, (resolved) => (this._theme = resolved));
-    });
+  override connectedCallback() {
+    super.connectedCallback();
+    // A caller can open the panel straight at a category — a right-click on the desktop meaning
+    // "change the wallpaper" should not make you walk the list. An id this version does not know
+    // lands on the list rather than on an empty screen, which is what a deep link from an older
+    // version or a typo would otherwise do.
+    this._category = findSettingsCategory(this.data?.category);
   }
 
   /**
-   * Open the wallpaper picker.
-   *
-   * Nothing comes back, for the same reason nothing comes back from the theme picker: both apply
-   * through the settings context this panel is already observing, so the row above updates while
-   * the picker is still open. Rejected rather than resolved when closed, which is why the rejection
-   * is swallowed.
+   * Go into a category.
+   * @param category The category to show.
    */
-  #pickWallpaper = async () => {
-    const current = this._wallpaper?.ref;
-    if (!current) return;
-    await umbOpenModal(this, UMBRADESKTOP_WALLPAPER_PICKER_MODAL, {
-      data: { current, currentThumbUrl: this._wallpaper?.thumbUrl },
-    }).catch(() => undefined);
-  };
-
-  /**
-   * One setting, as the panel states it: what you have, what it is, and a way in.
-   *
-   * Both settings under Appearance render through this, which is the point of it — they ask the
-   * same question and used to answer it in two different shapes, with two sizes of preview and two
-   * treatments of button. The whole row is the control, so there is no button to bolt on beside it.
-   *
-   * The chevron is not decoration. The pickers this opens have no OK and no Cancel: every click
-   * applies to the desktop behind and you leave by closing them, which makes each one a place you
-   * go and come back from rather than a dialog that ends. That is what a chevron says, and what a
-   * verb like "Change" would say wrongly. It is also the affordance the settings categories use one
-   * level up, so the whole surface reads as one grammar.
-   * @param preview The thing being chosen, drawn small.
-   * @param title What is in use.
-   * @param sub A line under it, or nothing.
-   * @param open What clicking the row opens.
-   * @returns The row template.
-   */
-  #renderRow(preview: unknown, title: string, sub: string | undefined, open: () => void) {
-    return html`
-      <button class="pick-row" type="button" @click=${open}>
-        ${preview}
-        <span class="text">
-          <span class="row-title">${title}</span>
-          ${sub ? html`<span class="row-sub">${sub}</span>` : nothing}
-        </span>
-        <span class="chev" aria-hidden="true">
-          <uui-icon name="icon-navigation-right"></uui-icon>
-        </span>
-      </button>
-    `;
+  #open(category: UmbraDesktopSettingsCategory) {
+    this._category = category;
+    this.#focusAfterRender = 'heading';
   }
 
   /**
-   * The theme in use, and the way to change it.
+   * Go back to the list, putting focus back on the row that was used to leave it.
    *
-   * The preview is painted in the variant actually in force, from `_theme` rather than from the
-   * backoffice's setting directly, so it agrees with the desktop behind the panel under high
-   * contrast too — where the variant is decided by the accessibility setting. The hint about that
-   * override stays here rather than moving into the picker, since this is where you read what is
-   * actually on.
-   * @returns The Theme subsection template.
+   * Back, rather than closing: Escape closes the whole panel from either level, because that is
+   * what every other backoffice sidebar does and an Escape that sometimes goes back and sometimes
+   * closes is worse than one that always closes. Nothing here intercepts it — the modal system's
+   * own dialog handles it.
    */
-  #renderThemes() {
-    // The user's choice, not the theme in force — see "_chosenThemeId".
-    const activeId = this._chosenThemeId ?? this._theme?.theme.id;
-    const current = UMBRADESKTOP_THEMES.find((theme) => theme.id === activeId);
+  #back() {
+    this.#focusAfterRender = this._category?.id;
+    this._category = undefined;
+  }
+
+  /**
+   * Move focus to wherever the last navigation said it should go.
+   *
+   * Without this, going into a category leaves focus on a button that is no longer on screen, and
+   * coming back leaves it on the back button that has just gone — which for anyone on a keyboard or
+   * a screen reader is the panel losing its place twice per visit.
+   */
+  protected override async updated() {
+    const target = this.#focusAfterRender;
+    if (!target) return;
+    this.#focusAfterRender = undefined;
+
+    const root = this.renderRoot as ShadowRoot;
+    if (target === 'heading') {
+      (root.querySelector('.heading') as HTMLElement | null)?.focus();
+      return;
+    }
+
+    const row = root.querySelector(`umbradesktop-settings-row[data-category="${target}"]`) as
+      | (HTMLElement & { updateComplete?: Promise<unknown> })
+      | null;
+    // The row has to have rendered before it can take focus. Its focus is delegated to the button
+    // in its shadow root (see the row element), and a host whose shadow root is still empty has
+    // nothing to delegate to — so focusing it right now silently does nothing, which is exactly
+    // what coming back from a category used to do. The heading above needs no such wait: it is in
+    // this element's own template and has been rendered by the time this runs.
+    await row?.updateComplete;
+    row?.focus();
+  }
+
+  /** The list of categories, which is what opening the panel shows. */
+  #renderList() {
     return html`
-      <section class="subsection">
-        <h4>${this.localize.term('umbraDesktop_theme')}</h4>
-        ${this.#renderRow(
-          html`<umbradesktop-theme-preview
-            .theme=${current}
-            .variant=${this._theme?.variant ?? 'light'}></umbradesktop-theme-preview>`,
-          current?.name ?? '',
-          current ? this.localize.term(current.descriptionKey) : undefined,
-          this.#pickTheme,
+      <div class="list">
+        ${UMBRADESKTOP_SETTINGS_CATEGORIES.map(
+          (category) => html`
+            <umbradesktop-settings-row
+              data-category=${category.id}
+              headline=${this.localize.term(category.labelKey)}
+              detail=${this.localize.term(category.descriptionKey)}
+              @click=${() => this.#open(category)}>
+              <uui-icon slot="lead" class="icon" name=${category.icon}></uui-icon>
+            </umbradesktop-settings-row>
+          `,
         )}
-        ${this._theme?.highContrast
-          ? html`<p class="hint warn">${this.localize.term('umbraDesktop_themeHighContrast')}</p>`
-          : ''}
-      </section>
+      </div>
     `;
   }
 
-  /**
-   * Open the theme picker.
-   *
-   * Nothing comes back and nothing needs to: the picker applies each choice through the same
-   * settings context this panel observes, so the row above updates while the picker is still open.
-   * Rejected rather than resolved when closed, like every other picker here, which is why the
-   * rejection is swallowed.
-   */
-  #pickTheme = async () => {
-    const current = this._chosenThemeId ?? this._theme?.theme.id;
-    if (!current) return;
-    await umbOpenModal(this, UMBRADESKTOP_THEME_PICKER_MODAL, { data: { current } }).catch(() => undefined);
-  };
+  /** One element per category, so going back and forth does not rebuild the screen each time. */
+  #screens = new Map<string, HTMLElement>();
 
   /**
-   * The wallpaper in use, and the way to change it.
+   * One category's screen, as an element made from its tag.
    *
-   * One row where there were two buttons. Both sources now live inside the picker, which is where
-   * you are already choosing an image — and which is the only place that can show a Media Library
-   * wallpaper as the one in use, since it is not in the built-in grid.
-   * @returns The Wallpaper subsection template.
+   * Built with `createElement` and rendered as a node rather than written as a tag in a template,
+   * because a template's tag name cannot come from data — that needs Lit's static-html, which the
+   * backoffice does not re-export, and importing it from `lit` directly would bundle a second copy
+   * of Lit beside the backoffice's own. A node in an expression needs neither.
+   *
+   * Kept per category rather than made fresh on each render: returning a new element every time
+   * would tear the screen down and rebuild it on every unrelated state change, losing scroll
+   * position and any context each screen has resolved.
+   * @param category The category to render.
+   * @returns The category's element.
    */
-  #renderWallpaper() {
-    const labels = wallpaperLabels(this._wallpaper?.ref, UMBRADESKTOP_BUILTIN_WALLPAPERS);
-    return html`
-      <section class="subsection">
-        <h4>${this.localize.term('umbraDesktop_wallpaper')}</h4>
-        ${this.#renderRow(
-          this.#renderPreview(),
-          labels.title ?? (labels.titleKey ? this.localize.term(labels.titleKey) : ''),
-          labels.subKey ? this.localize.term(labels.subKey) : undefined,
-          this.#pickWallpaper,
-        )}
-      </section>
-    `;
-  }
-
-  /**
-   * The startup setting: one toggle, and the sentence that stops it looking broken.
-   *
-   * No sub-heading of its own, unlike the two under Appearance: the toggle's own label says what it
-   * does, and a heading over a single switch would be a label for a label. Add one when a second
-   * setting arrives.
-   *
-   * The hint is load-bearing. The preference is read while the backoffice boots, so flipping it
-   * changes nothing on screen, and a toggle that appears to do nothing reads as a bug. It also
-   * names the escape hatch, because the desktop hides the backoffice header and somebody whose
-   * desktop breaks needs a way back that does not depend on the desktop.
-   * @returns The Settings group's contents.
-   */
-  #renderBoot() {
-    return html`
-      <uui-toggle
-        label=${this.localize.term('umbraDesktop_bootIntoDesktop')}
-        ?checked=${this._bootIntoDesktop}
-        @change=${(event: Event) =>
-          this.#settings?.setBootIntoDesktop(!!(event.target as HTMLInputElement | null)?.checked)}></uui-toggle>
-      <p class="hint below">${this.localize.term('umbraDesktop_bootDescription')}</p>
-    `;
-  }
-
-  /** The current wallpaper's preview, or the gradient swatch when none is set. */
-  #renderPreview() {
-    const thumbUrl = this._wallpaper?.thumbUrl;
-    return thumbUrl
-      ? html`<img class="preview" src=${thumbUrl} alt="" />`
-      : html`<span class="preview gradient" aria-hidden="true"></span>`;
+  #renderCategory(category: UmbraDesktopSettingsCategory): HTMLElement {
+    let screen = this.#screens.get(category.tag);
+    if (!screen) {
+      screen = document.createElement(category.tag);
+      this.#screens.set(category.tag, screen);
+    }
+    return screen;
   }
 
   override render() {
+    const category = this._category;
     return html`
-      <umb-body-layout headline=${this.localize.term('umbraDesktop_desktopSettings')}>
-        <div class="groups">
-          <uui-box headline=${this.localize.term('umbraDesktop_groupAppearance')}>
-            ${this.#renderThemes()} ${this.#renderWallpaper()}
-          </uui-box>
-          <uui-box headline=${this.localize.term('umbraDesktop_groupSettings')}> ${this.#renderBoot()} </uui-box>
-        </div>
+      <umb-body-layout headline=${category ? '' : this.localize.term('umbraDesktop_desktopSettings')}>
+        ${category
+          ? html`
+              <div slot="header" class="crumb">
+                <uui-button
+                  compact
+                  look="default"
+                  label=${this.localize.term('umbraDesktop_settingsBack')}
+                  @click=${this.#back}>
+                  <uui-icon name="icon-navigation-left"></uui-icon>
+                </uui-button>
+                <h3 class="heading" tabindex="-1">${this.localize.term(category.labelKey)}</h3>
+              </div>
+            `
+          : nothing}
+        ${category ? this.#renderCategory(category) : this.#renderList()}
         <uui-button
           slot="actions"
           look="primary"
@@ -241,116 +169,40 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement {
 
   static override styles = [
     css`
-      /* The groups need air between them: slotted into umb-body-layout they butt up against each
-         other, and two boxes touching read as one slab with a line through it. */
-      .groups {
+      .list {
         display: flex;
         flex-direction: column;
-        gap: var(--uui-size-space-5);
       }
-      /* One setting group inside a box. The divider rather than spacing alone, because in a 500px
-         panel the wallpaper preview sits directly under the theme swatches and the eye needs
-         telling where one ends. */
-      .subsection + .subsection {
-        margin-top: var(--uui-size-space-5);
-        padding-top: var(--uui-size-space-5);
-        border-top: 1px solid var(--uui-color-divider);
-      }
-      /* Subordinate to the box's own headline, which uui-box renders at h5 size — an h5-sized
-         subsection heading competes with the category above it and inverts the hierarchy. This is
-         the launcher's group-label treatment (see .ch in launcher.element), so the two surfaces
-         label a group of things the same way. */
-      .subsection h4 {
-        margin: 0 0 var(--uui-size-space-3);
-        font-size: var(--uui-type-small-size);
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
+      /* No rule between the rows, deliberately. One was tried: it is invisible in light mode, where
+         the divider token is a hair off the panel's own surface, and too heavy in dark mode, where
+         it is not. The height of the rows is what separates them. */
+      /* Sized to the row it labels rather than to the icon's own box, so a category row and a
+         setting row below it have their text starting at the same place. */
+      .icon {
+        flex-shrink: 0;
+        width: 24px;
+        font-size: 24px;
         color: var(--uui-color-text-alt, var(--uui-color-text));
-        opacity: 0.6;
       }
-      /* One row shape for every setting that opens a picker. The negative margin lets the hover
-         fill reach past the box's own padding, so the row reads as the width of the panel the way a
-         list row does, rather than as a button that happens to be wide. */
-      .pick-row {
+      /* The panel's own title while inside a category, standing in for umb-body-layout's headline
+         so that the back arrow can sit before it rather than after. */
+      .crumb {
         display: flex;
         align-items: center;
-        gap: var(--uui-size-space-4);
-        width: calc(100% + var(--uui-size-space-3) * 2);
-        margin: 0 calc(var(--uui-size-space-3) * -1);
-        padding: var(--uui-size-space-3);
-        border: 0;
-        border-radius: var(--uui-border-radius, 3px);
-        background: transparent;
-        color: inherit;
-        font-family: inherit;
-        text-align: left;
-        cursor: pointer;
+        gap: var(--uui-size-space-2);
       }
-      .pick-row:hover {
-        background: var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05));
+      .crumb h3 {
+        margin: 0;
+        font-size: var(--uui-type-h5-size, 1.2rem);
       }
-      .pick-row .text {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        min-width: 0;
+      /* Focusable so that going into a category moves focus somewhere meaningful, without adding a
+         tab stop for people who are not being sent here. */
+      .heading:focus {
+        outline: none;
       }
-      .row-title {
-        font-weight: 700;
-      }
-      .row-sub {
-        color: var(--uui-color-text-alt, var(--uui-color-text));
-        font-size: var(--uui-type-small-size);
-      }
-      /* At the trailing edge, where a "there is more this way" marker belongs. */
-      .pick-row .chev {
-        margin-left: auto;
-        display: flex;
-        color: var(--uui-color-text-alt, var(--uui-color-text));
-      }
-      /* The same box as the theme preview beside it, ratio included: 16:10, what the theme
-         miniature is drawn at, with the image cover-cropped into it. Two settings of the same kind
-         showing two sizes of picture was most of what made this panel look assembled rather than
-         designed. */
-      .preview {
-        flex-shrink: 0;
-        display: block;
-        width: ${UMBRADESKTOP_PREVIEW_SCENE.w * UMBRADESKTOP_PREVIEW_SCALE}px;
-        aspect-ratio: ${UMBRADESKTOP_PREVIEW_SCENE.w} / ${UMBRADESKTOP_PREVIEW_SCENE.h};
-        object-fit: cover;
-        border: 1px solid var(--uui-color-border);
-        border-radius: var(--uui-border-radius, 3px);
-      }
-      /* Mirrors the desktop's own gradient, so "None" previews what it actually does. */
-      .gradient {
-        background-color: #0e1329;
-        background-image: radial-gradient(
-          130% 130% at 25% 8%,
-          var(--uui-color-header-background, #1b264f),
-          color-mix(in srgb, var(--uui-color-header-background, #1b264f) 50%, black) 70%
-        );
-      }
-      .hint {
-        margin: 0 0 var(--uui-size-space-4);
-        color: var(--uui-color-text-alt, var(--uui-color-text));
-        font-size: var(--uui-type-small-size);
-      }
-      .hint.warn {
-        margin: var(--uui-size-space-4) 0 0;
-      }
-      /* A hint that explains the control above it rather than the one below. */
-      .hint.below {
-        margin: var(--uui-size-space-3) 0 0;
-      }
-      /* The preview sizes itself — see its own constants, which '.preview' above reads too so the
-         two boxes cannot drift apart — so all this adds is the frame, which is the panel's own
-         chrome rather than the theme's look. */
-      umbradesktop-theme-preview {
-        flex-shrink: 0;
-        overflow: hidden;
-        border: 1px solid var(--uui-color-border);
-        border-radius: var(--uui-border-radius, 3px);
+      .heading:focus-visible {
+        outline: 2px solid var(--uui-color-focus);
+        outline-offset: 2px;
       }
     `,
   ];

@@ -75,9 +75,12 @@ export default {
     themeAboutMacos: 'Traffic lights on the left of every title bar, a floating dock, and a fullscreen blurred launcher.',
     themeAboutWin11: 'A flush acrylic taskbar with its buttons centred, rounded windows and square caption buttons.',
     themeAboutWin98: 'Grey everywhere, double bevels, square corners, a navy title bar and a Start menu.',
-    // desktop settings — the two groups the panel is divided into
+    // desktop settings — the categories the panel is divided into, and the line under each
     groupAppearance: 'Appearance',
-    groupSettings: 'Settings',
+    groupGeneral: 'General',
+    groupAppearanceAbout: 'The theme and the wallpaper behind your windows',
+    groupGeneralAbout: 'How the desktop starts, and where you land when you sign in',
+    settingsBack: 'Back to Desktop settings',
     // desktop settings — startup
     bootIntoDesktop: 'Open the desktop when I sign in',
     bootDescription:

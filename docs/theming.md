@@ -44,8 +44,8 @@ export const UMBRADESKTOP_THEMES: ReadonlyArray<UmbraDesktopTheme> = [
 
 ### 1.1 Your preview in the picker
 
-The settings panel shows the theme in use as one row — a miniature, its name, a chevron — and
-clicking that row opens a picker listing every theme the same way, each drawn as a miniature of the
+The settings panel's Appearance category shows the theme in use as one row — a miniature, its name,
+a chevron — and clicking that row opens a picker listing every theme the same way, each drawn as a miniature of the
 desktop that theme paints: one window with its titlebar and controls, the taskbar under it, on your
 desktop ground. **You get it
 for free.** It is rendered from your palette and your metrics, not stored as a picture, so it is
@@ -82,7 +82,24 @@ Deliberately **not** a fifth entry in `sheets`. Those keys are the chrome compon
 adopted into by the theme *in force*; a picker paints five themes at once and none of them need be
 the active one.
 
-### 1.2 Two surfaces a theme does not reach
+### 1.2 The base is the Umbraco look, and yours probably is not
+
+Every chrome component's own CSS is the **Umbraco** design: its fallbacks are `--uui-*` values, and
+where it has an opinion of its own — how a group of things is labelled, say — that opinion is copied
+from the backoffice, because the identity theme is what it has to render as when a palette sets
+nothing.
+
+So if your theme imitates an operating system, expect to override rather than inherit wherever the
+two disagree, and prefer looking the part over matching the base. A launcher group heading is the
+worked example: the base renders it the way `uui-box` renders a headline, macOS renders it small,
+semibold and secondary the way Finder's sidebar does, Windows 11 renders it as Start's sentence-case
+label, and Windows 98 makes it a menu groove with the label sitting on it. Four answers, and only
+the first one is Umbraco's.
+
+The reverse also holds, and is the more common mistake: if your theme is inheriting something
+because it is *fine*, look at whether the thing it is imitating would actually do that.
+
+### 1.3 Two surfaces a theme does not reach
 
 Four sheets, four elements, and that is the whole of it: the desktop, the taskbar, the launcher and
 a window. Two things a user sees are deliberately outside that list and stay Umbraco-modern under
