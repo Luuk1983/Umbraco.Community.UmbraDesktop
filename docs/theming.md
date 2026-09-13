@@ -162,6 +162,16 @@ The splash's defining property is that it depends on nothing — no token, no co
 font — so there is nothing it can be blocked on and nothing that can make it fail. Every colour in
 it is a literal for that reason. Reading a cached value would trade that away for a decoration.
 
+To be exact about what "nothing" rules out, since `splash.ts` does have one import besides its own
+constants: it may import plain values, and may not import anything that *does* something. The mark
+and the ring geometry come from `desktop/loader-ring.ts`, which is deliberately import-free itself,
+so pulling it in adds a string and some arithmetic and no new way to fail. The same module draws the
+loader inside a window body, and that one *is* yours: it takes its colour from
+`--umbradesktop-window-loader-color` like any other chrome, and it is the same shape at a smaller
+size, so the boot and the wait look like one product. A custom element, a context token or an icon
+registry lookup
+would each be a thing to wait on, and none of those may appear here.
+
 And the cache would never stop being a workaround. The per-user settings are headed for server-side
 storage, which makes the theme knowable *later* than it is today, not sooner: a round trip instead of
 a synchronous read. So the hint could not be a stepping stone to doing it properly — it would be

@@ -75,6 +75,10 @@ export const MACOS_DOCK_SEPARATOR = 'rgba(0, 0, 0, 0.16)';
 export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-background': '#ffffff',
   '--umbradesktop-window-body-background': '#ffffff',
+  // Stated rather than inherited: this variant is only chosen when the backoffice is light, so
+  // the fallback would land on the same ink anyway — but the ground above is pinned, and a
+  // pinned ground with free ink is the pairing that broke Windows 98.
+  '--umbradesktop-window-loader-color': '#2c2c2e',
   '--umbradesktop-window-border': `${MACOS_WINDOW_BORDER}px solid rgba(0, 0, 0, 0.16)`,
   '--umbradesktop-window-radius': '10px',
   // The snap ghost stands in for the window that is about to be there, so it takes the same corner.
@@ -198,6 +202,7 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   ...MACOS_LIGHT,
   '--umbradesktop-window-background': '#2b2b2e',
   '--umbradesktop-window-body-background': '#242427',
+  '--umbradesktop-window-loader-color': '#f5f5f7',
   '--umbradesktop-window-border': `${MACOS_WINDOW_BORDER}px solid rgba(255, 255, 255, 0.12)`,
   '--umbradesktop-window-shadow': '0 8px 24px rgba(0, 0, 0, 0.45)',
   '--umbradesktop-window-shadow-active': '0 16px 40px rgba(0, 0, 0, 0.6)',

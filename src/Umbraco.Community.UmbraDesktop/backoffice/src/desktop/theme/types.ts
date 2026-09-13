@@ -15,6 +15,7 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-window-radius',
   '--umbradesktop-window-shadow',
   '--umbradesktop-window-shadow-active',
+  '--umbradesktop-window-loader-color',
   '--umbradesktop-titlebar-height',
   '--umbradesktop-titlebar-background',
   '--umbradesktop-titlebar-border-bottom',

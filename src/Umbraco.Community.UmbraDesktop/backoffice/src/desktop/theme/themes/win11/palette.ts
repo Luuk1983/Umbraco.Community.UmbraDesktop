@@ -55,6 +55,9 @@ const W11_LAUNCHER_BOTTOM = W11_TASKBAR_HEIGHT + W11_LAUNCHER_GAP;
  */
 export const W11_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-background': '#f3f3f3',
+  // Paired with the ground above, as on macOS: correct by the variant today, and stated so it
+  // stays correct without depending on that.
+  '--umbradesktop-window-loader-color': '#1a1a1a',
   '--umbradesktop-window-border': `${W11_WINDOW_BORDER}px solid rgba(0, 0, 0, 0.08)`,
   '--umbradesktop-window-radius': '8px',
   // The snap ghost stands in for the window that is about to be there, so it takes the same corner.
@@ -188,6 +191,7 @@ export const W11_LIGHT: UmbraDesktopPalette = {
 export const W11_DARK: UmbraDesktopPalette = {
   ...W11_LIGHT,
   '--umbradesktop-window-background': '#202020',
+  '--umbradesktop-window-loader-color': '#ffffff',
   '--umbradesktop-window-border': `${W11_WINDOW_BORDER}px solid rgba(255, 255, 255, 0.09)`,
   '--umbradesktop-window-shadow': '0 8px 20px rgba(0, 0, 0, 0.45)',
   '--umbradesktop-window-shadow-active': '0 16px 40px rgba(0, 0, 0, 0.6)',

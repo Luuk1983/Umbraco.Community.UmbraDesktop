@@ -343,6 +343,13 @@ it('renders an iframe body as an iframe, with no app host beside it', async () =
       win.root.querySelector('.loading'),
       'an iframe body keeps the overlay up until the chrome is stripped',
     ).to.not.equal(null);
+    // The overlay's contents, not just its presence. An opaque cover with nothing on it is
+    // indistinguishable from a window that failed to paint, and the mark is the whole point of
+    // covering it: the desktop says it is working, in its own voice, the way the boot screen does.
+    expect(
+      win.root.querySelector('.loading umbradesktop-loader'),
+      'and shows the desktop loader on it, not an empty cover',
+    ).to.not.equal(null);
   } finally {
     win.dispose();
   }
@@ -552,6 +559,14 @@ it('draws the path strip on a full-section iframe window and on no other', async
   );
   try {
     expect(section.root.querySelector('umbradesktop-window-path')).to.exist;
+    // And it is told the window is still fetching, so it holds its box without claiming a location.
+    // Asserted on the window rather than on the strip because the wiring is what breaks: the strip's
+    // own behaviour is pinned in `window-path.test.ts`, and a dropped '.busy' binding would leave
+    // that green while every section window opened on a house over a covered body.
+    expect(
+      (section.root.querySelector('umbradesktop-window-path') as { busy?: boolean }).busy,
+      'a window that is still loading should tell its path strip so',
+    ).to.equal(true);
   } finally {
     section.dispose();
   }

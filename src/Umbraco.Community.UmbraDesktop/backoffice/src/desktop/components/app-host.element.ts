@@ -1,4 +1,9 @@
 import { UMBRADESKTOP_APP_TOKEN_FALLBACKS } from '../theme/types.js';
+// Side-effect import: registering `<umbradesktop-loader>` is what makes the pending body in
+// `render` resolve to something. `window.element.ts` imports it too, but this element is also
+// mounted directly by its own test and by anything that reaches for an app host without a window
+// around it, so it carries its own.
+import './loader.element.js';
 import { UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS, UMBRADESKTOP_THEME_ATTRIBUTE } from '../constants.js';
 import { customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { loadManifestElement } from '@umbraco-cms/backoffice/extension-api';
@@ -472,9 +477,11 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
   /**
    * One of three bodies: the failure message, the in-flight spinner, or the app itself.
    *
-   * `uui-loader` is used unimported, as the iframe path in `window.element.ts` does: the element is
-   * defined by the backoffice the desktop is running inside, and importing it here would pull a
-   * second copy into this bundle.
+   * The spinner is the desktop's own `<umbradesktop-loader>`, the same one the iframe path in
+   * `window.element.ts` shows, so that waiting on a bundle and waiting on a booting backoffice look
+   * identical from outside. It is imported for its side effect above rather than used unregistered
+   * — unlike `uui-loader`, which the surrounding backoffice defines, this one is ours and nothing
+   * else in the bundle would pull it in for an element-only window.
    * @returns The body for the current state.
    */
   override render() {
@@ -483,7 +490,7 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
         ${this.localize.termOrDefault(APP_LOAD_FAILED_TOKEN, APP_LOAD_FAILED_FALLBACK)}
       </p>`;
     }
-    if (this._pending) return html`<div style=${PENDING_STYLE}><uui-loader></uui-loader></div>`;
+    if (this._pending) return html`<div style=${PENDING_STYLE}><umbradesktop-loader></umbradesktop-loader></div>`;
     return html`${this._app ?? nothing}`;
   }
 }

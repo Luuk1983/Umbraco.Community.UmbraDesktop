@@ -40,6 +40,11 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 // this line Vite tree-shakes it out and an element window paints an empty body — invisibly to both
 // gates, since `tsc` still type-checks the file and the host's own test imports it directly.
 import './app-host.element.js';
+// Side-effect import, on the same terms as the three above: registering `<umbradesktop-loader>` is
+// what makes the overlay in `render` resolve to something, and an unregistered custom element
+// paints nothing without complaining — which on this one would look exactly like a window that
+// loaded instantly, right up until a slow one showed a blank cover instead.
+import './loader.element.js';
 import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
 import { UMB_THEME_CONTEXT, UMB_THEME_LIGHT_ALIAS } from '@umbraco-cms/backoffice/themes';
 
@@ -836,6 +841,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
              and the thing warning about it. -->
         ${windowShowsPath(w.app)
           ? html`<umbradesktop-window-path
+              .busy=${this._loading}
               .crumbs=${this._crumbs}
               @umbradesktop-path-navigate=${this.#onCrumbNavigate}></umbradesktop-window-path>`
           : nothing}
@@ -853,7 +859,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
           ${!w.active
             ? html`<div class="focus-catcher" @pointerdown=${this.#onFocus}></div>`
             : ''}
-          ${this._loading ? html`<div class="loading"><uui-loader></uui-loader></div>` : ''}
+          ${this._loading ? html`<div class="loading"><umbradesktop-loader></umbradesktop-loader></div>` : ''}
         </div>
         ${w.state === 'normal'
           ? RESIZE_HANDLES.map(

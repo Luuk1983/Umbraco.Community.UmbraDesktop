@@ -44,6 +44,19 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
   public crumbs: ReadonlyArray<UmbraDesktopPathCrumb> = [];
 
   /**
+   * Whether the window behind the strip is still fetching its content.
+   *
+   * While it is, the only crumb that exists is the app's own root, so the strip drew a lone house
+   * over a covered body — a claim about where you are, made about somewhere that has not arrived.
+   *
+   * The window tells the strip rather than the strip working it out: the loading flag belongs to the
+   * window, which owns the iframe and its load event, and a strip watching that for itself would be
+   * the second thing in the package that has to know when a frame is done.
+   */
+  @property({ attribute: false })
+  public busy = false;
+
+  /**
    * Adopts the active theme's `window` stylesheet.
    *
    * Its own call rather than something inherited from `window.element`'s: custom properties cross a
@@ -77,6 +90,14 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
 
   override render() {
     if (this.crumbs.length === 0) return nothing;
+    // An empty bar rather than no bar. `.path-bar` carries an explicit height, so this is exactly
+    // the strip's themed height painted in the strip's own background: the crumbs appear in place
+    // when the content lands, instead of the body losing the strip's height under a frame that has
+    // already painted and reflowing the document inside it at the worst possible moment.
+    //
+    // A plain `div`, not the `nav`: a labelled navigation landmark holding nothing is worse than no
+    // landmark at all, since the label promises a path and hands back an empty region.
+    if (this.busy) return html`<div class="path-bar" aria-hidden="true"></div>`;
     return html`
       <nav class="path-bar" aria-label=${this.localize.term('umbraDesktop_pathLabel')}>
         ${this.crumbs.map((crumb, index) => {
