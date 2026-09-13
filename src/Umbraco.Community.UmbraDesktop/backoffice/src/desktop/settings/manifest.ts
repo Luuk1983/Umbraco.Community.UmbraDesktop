@@ -1,4 +1,5 @@
 import {
+  UMBRADESKTOP_BACKOFFICE_THEME_PICKER_MODAL_ALIAS,
   UMBRADESKTOP_SETTINGS_MODAL_ALIAS,
   UMBRADESKTOP_THEME_PICKER_MODAL_ALIAS,
   UMBRADESKTOP_WALLPAPER_PICKER_MODAL_ALIAS,
@@ -23,5 +24,11 @@ export const manifests: Array<UmbExtensionManifest> = [
     alias: UMBRADESKTOP_THEME_PICKER_MODAL_ALIAS,
     name: 'UmbraDesktop Theme Picker Modal',
     element: () => import('./components/theme-picker-modal.element.js'),
+  },
+  {
+    type: 'modal',
+    alias: UMBRADESKTOP_BACKOFFICE_THEME_PICKER_MODAL_ALIAS,
+    name: 'UmbraDesktop Backoffice Theme Picker Modal',
+    element: () => import('./components/backoffice-theme-picker-modal.element.js'),
   },
 ];

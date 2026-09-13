@@ -40,6 +40,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Speaks your language, and writes the time your way. The desktop follows your Umbraco backoffice language, so a Danish backoffice gets a Danish clock rather than whatever your browser happens to be set to, and you can change that language from Desktop settings without needing access to the Users section. If your culture and your habits disagree, one switch forces a 12 or 24 hour clock without giving up anything else about how your language writes a time. See [Language and region](#language-and-region).
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on. A window waiting for its content shows the Umbraco mark with a turning ring, the same animation the boot screen uses, so the wait belongs to the desktop rather than looking like the page has stalled.
 - Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice. Five ship: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98. Adding your own is a folder of CSS and one catalogue entry.
+- Light, dark and high contrast, in the same place. Umbraco's own colour schemes are normally set in the user menu, three clicks from the theme that sits beside them. Appearance now has a row for them too, listing whatever themes the backoffice has registered rather than a fixed three, so a site shipping its own gets it here for free. One setting, two ways in: change it here and the user menu agrees, and the other way round. See [The backoffice's own colours](#the-backoffices-own-colours).
 - Let the wallpaper follow. Turn on one toggle in the theme picker and each theme brings its own background with it, so switching to Windows 98 gives you its bare teal and switching to macOS gives you a sunrise. Off by default, and choosing a wallpaper yourself turns it back off. See [Matching the wallpaper to the theme](#matching-the-wallpaper-to-the-theme).
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
 - Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
@@ -94,7 +95,7 @@ From the launcher:
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
 - While a window is fetching its content, whether you have just opened it or just reloaded it, it shows the Umbraco mark with a ring turning around it. It covers the window until the content is ready, so you never see a half-drawn backoffice assembling itself.
 - Choose Exit in the launcher's footer to return to the classic backoffice. If you start in the desktop, exiting keeps you in the classic backoffice until you close the tab.
-- Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Language and region for the backoffice language and how times are written, Appearance for your theme and wallpaper, Taskbar for what sits beside the launcher button — and the desktop stays in view behind it, so you can see a change as you make it.
+- Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Language and region for the backoffice language and how times are written, Appearance for your theme, your wallpaper and the backoffice's own colours, Taskbar for what sits beside the launcher button — and the desktop stays in view behind it, so you can see a change as you make it.
 
 Several apps can be open at once, and some of them (the content editor and media library, for instance) can be opened more than once, so you can compare two documents side by side.
 
@@ -276,6 +277,27 @@ backoffice's own Light and Dark settings; under High contrast a theme uses its d
 while window content switches to Umbraco's real high-contrast styling. Umbraco 4 and Windows 98
 ship a single palette on purpose: their grey is the design rather than a light-mode choice, so
 they look the same under all three settings.
+
+## The backoffice's own colours
+
+"Theme" means two things here, and they used to be set in two different places. The one above is
+this package's: it restyles the chrome around your windows. Umbraco's own — Light, Dark and High
+contrast — restyles everything, the content inside every window included, and it lives in the user
+menu at the top of the backoffice.
+
+Appearance carries a third row for it, under Theme and Wallpaper, named **Backoffice colours** so
+that it does not read as a sixth desktop skin. It is not one: these change the documents inside the
+windows, which no theme in this package touches. Click the row and you get the list; picking one
+applies it straight away, to the whole backoffice, and the picker stays open.
+
+The row lists whatever the backoffice has registered rather than a fixed Light, Dark and High
+contrast, because a backoffice theme is an extension. A site that ships one of its own gets it in
+this row without doing anything, and one that removes a shipped theme stops being offered it.
+
+There is one setting behind the two front ends, not a copy each: set it here and the user menu
+agrees, set it there and this row updates while you are looking at it. The desktop repaints in the
+matching variant either way, as it always has, and the sentence explaining what high contrast does
+to the chrome now sits under this row rather than under the theme row that does not cause it.
 
 ## Matching the wallpaper to the theme
 
