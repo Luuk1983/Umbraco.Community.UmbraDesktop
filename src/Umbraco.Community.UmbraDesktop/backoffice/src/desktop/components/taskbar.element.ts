@@ -144,7 +144,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   /** Open the native current-user modal (profile, MFA, etc.). */
   #onProfile = () => this.#openFromLauncher(UMB_CURRENT_USER_MODAL);
 
-  /** Open the desktop settings dialog (wallpaper today, more later). */
+  /** Open the desktop settings panel, at its list of categories. */
   #onSettings = () => this.#openFromLauncher(UMBRADESKTOP_SETTINGS_MODAL);
 
   /**

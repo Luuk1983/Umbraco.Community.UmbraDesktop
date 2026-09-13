@@ -55,13 +55,21 @@ export default css`
   .cards {
     gap: 18px;
   }
-  /* The base rule paints group headings in --uui-color-text-alt at 0.6 opacity, which is a muted
-     dark grey — invisible on this panel. Near-full white with a shadow behind it, so the headings
-     survive both the darkest and the palest wallpaper the panel can end up over. */
+  /* Section headings the way macOS writes them, which is not the way the backoffice does.
+     The base rule is Umbraco's own group heading — h5 size at weight 400, in full text colour — and
+     that is right for the Umbraco skins and wrong here: a theme imitating an operating system
+     should look like that system, not like the panel it happens to be running in.
+
+     macOS labels a group of things small, semibold and in a secondary colour — Finder's sidebar
+     headers, Spotlight's result groups, the Control Centre's sections all read this way, and none of
+     them is uppercase or full-size. The shadow is this panel's own problem rather than the system's:
+     it is translucent over the wallpaper, so a heading needs separation from whatever is behind it. */
   .ch {
-    color: rgba(255, 255, 255, 0.92);
-    opacity: 1;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: rgba(255, 255, 255, 0.62);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   }
   /* Launchpad's icons are big because it shows one flat page of them. This launcher shows grouped
      cards with labels, so the same size just spent vertical space it did not have — enough to

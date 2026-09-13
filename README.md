@@ -88,7 +88,7 @@ From the launcher:
 - The path under a section window's title bar says where that window is. Click any step to go back to it; the first step returns the window to whatever it opened at. If the window has unsaved changes it asks before leaving, the same way closing it does.
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
 - Choose Exit in the launcher's footer to return to the classic backoffice. If you start in the desktop, exiting keeps you in the classic backoffice until you close the tab.
-- Open Desktop settings from the cog in the launcher's footer, as a panel from the right, to change your theme or wallpaper or to start in the desktop. The desktop stays in view behind the panel, so you can see a change as you make it.
+- Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Appearance for your theme and wallpaper — and the desktop stays in view behind it, so you can see a change as you make it.
 
 Several apps can be open at once, and some of them (the content editor and media library, for instance) can be opened more than once, so you can compare two documents side by side.
 
@@ -196,9 +196,10 @@ nothing added to the chat. UmbraDesktop does not depend on Umbraco AI and never 
 
 ## Changing the theme
 
-Desktop settings shows the theme you are on as a miniature of the desktop it paints. Click that row
-and a panel opens listing all five the same way — the window, the title bar buttons where that theme
-puts them, the taskbar — so you can see what you are choosing before you choose it. Picking one
+Open Desktop settings and pick Appearance. The Theme row shows the theme you are on as a miniature
+of the desktop it paints; click it and a panel opens listing all five the same way — the window, the
+title bar buttons where that theme puts them, the taskbar — so you can see what you are choosing
+before you choose it. Picking one
 applies it straight away and the panel stays open, so you can click through them and watch the
 desktop behind change. Choosing a theme restyles the launcher, taskbar and window chrome, never the
 content inside a window, which stays the backoffice you already know. Five ship today:
@@ -226,8 +227,8 @@ they look the same under all three settings.
 
 ## Changing the wallpaper
 
-Open the launcher and click the cog in its footer to open Desktop settings. The Wallpaper row shows
-what you are using now; click it and the picker opens with everything you can choose from:
+Open the launcher, click the cog in its footer, and pick Appearance. The Wallpaper row shows what
+you are using now; click it and the picker opens with everything you can choose from:
 
 - Your own image, the first tile. Empty until you have picked one, it opens your Media Library; once
   you have, it *is* that image, so the wallpaper you are using is always the one marked. Click it
@@ -243,7 +244,7 @@ Your choice applies immediately and is remembered per user, in that browser.
 
 ### Using your own backgrounds
 
-There is nothing to configure and nothing to deploy. Upload the image to the Media Library as you would any other, then open Desktop settings, click the Wallpaper row, and choose Media library in the picker.
+There is nothing to configure and nothing to deploy. Upload the image to the Media Library as you would any other, then open Desktop settings, Appearance, click the Wallpaper row, and pick the first tile.
 
 Umbraco resizes it for you: the desktop asks for a copy with no side longer than 2560px, so a large upload never reaches the browser at full size and the resized copy is cached server-side. You do not need to optimise anything first.
 
@@ -251,7 +252,7 @@ If you pick something that is not an image, the desktop tells you and leaves you
 
 ## Starting in the desktop
 
-If the desktop is where you work, you should not have to walk through the backoffice to reach it. Open Desktop settings, Startup, and turn on "Open the desktop when I sign in".
+If the desktop is where you work, you should not have to walk through the backoffice to reach it. Open Desktop settings, General, and turn on "Open the desktop when I sign in".
 
 It takes effect the next time you open the backoffice rather than there and then, which is why the panel says so under the toggle. From then on, going to `/umbraco` opens the desktop, behind a boot screen that stays up until your own desktop is ready — your theme, your wallpaper, no flash of the classic interface and no flash of somebody else's defaults.
 

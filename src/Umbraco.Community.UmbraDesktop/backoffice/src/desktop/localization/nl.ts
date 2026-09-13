@@ -69,9 +69,12 @@ export default {
     themeAboutMacos: 'Stoplichten links in elke titelbalk, een zwevend dock en een schermvullende, vervaagde launcher.',
     themeAboutWin11: 'Een vlakke acryl-taakbalk met gecentreerde knoppen, afgeronde vensters en vierkante titelknoppen.',
     themeAboutWin98: 'Overal grijs, dubbele randen, vierkante hoeken, een marineblauwe titelbalk en een Startmenu.',
-    // desktop settings — the two groups the panel is divided into
+    // desktop settings — de categorieën waarin het paneel is verdeeld, en de regel onder elke rij
     groupAppearance: 'Weergave',
-    groupSettings: 'Instellingen',
+    groupGeneral: 'Algemeen',
+    groupAppearanceAbout: 'Het thema en de achtergrond achter je vensters',
+    groupGeneralAbout: 'Hoe het bureaublad start en waar je terechtkomt als je inlogt',
+    settingsBack: 'Terug naar bureaubladinstellingen',
     // desktop settings — startup
     bootIntoDesktop: 'Open het bureaublad als ik inlog',
     bootDescription:
