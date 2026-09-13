@@ -10,6 +10,45 @@ export type UmbraDesktopWallpaperRef =
   | { kind: 'media'; unique: string };
 
 /**
+ * Where the desktop takes the culture it formats dates and times with.
+ *
+ * `backoffice` is the user's Umbraco language, which is what every date Umbraco itself renders
+ * already uses: `UmbLocalizationController.date()` formats with the backoffice culture. `browser`
+ * is the runtime default, which is what the clock read before this setting existed.
+ *
+ * Deliberately not called `system`. The browser ignores the OS regional format, which is the very
+ * setting a Windows user means when they say their system is on 24 hour, so an option with that
+ * name would send them to the one choice that keeps giving them AM/PM.
+ */
+export type UmbraDesktopLocaleSource = 'backoffice' | 'browser';
+
+/**
+ * The user's clock override. `auto` leaves the hour cycle to the culture; the other two force it
+ * while leaving the rest of the culture alone, so the separator and the meridiem stay native.
+ *
+ * `h12`/`h23` rather than `12`/`24` because they are the `Intl.DateTimeFormatOptions` values they
+ * are passed to unchanged, and a mapping table between the two would only be somewhere to make a
+ * mistake.
+ */
+export type UmbraDesktopClockCycle = 'auto' | 'h12' | 'h23';
+
+/**
+ * How the desktop formats dates and times: which culture, and whether the clock overrides that
+ * culture's hour cycle.
+ *
+ * Two fields rather than one list of four options, which is how every OS splits it — macOS and iOS
+ * pair a Region picker with a separate 24-hour toggle. A single list cannot express "my backoffice
+ * culture, but 24 hour", which is exactly what a Danish speaker on an untouched `en-US` install
+ * needs.
+ */
+export interface UmbraDesktopLocaleSettings {
+  /** Which culture to format with. */
+  source: UmbraDesktopLocaleSource;
+  /** Whether to override that culture's hour cycle. */
+  hourCycle: UmbraDesktopClockCycle;
+}
+
+/**
  * One user's desktop settings, as persisted. Versioned from the start so a future shape change
  * has somewhere to hang a migration rather than silently discarding preferences.
  */
@@ -64,6 +103,16 @@ export interface UmbraDesktopSettings {
    * they try a theme.
    */
   wallpaperFollowsTheme: boolean;
+
+  /**
+   * How the desktop formats dates and times.
+   *
+   * Defaults to the backoffice culture, so the shell agrees with the backoffice it wraps rather
+   * than with the browser. On a default install those two disagree: `DefaultUILanguage` is `en-US`,
+   * so Umbraco already prints AM/PM on every date it renders, while a clock reading the browser
+   * showed whatever the browser's language happened to be.
+   */
+  locale: UmbraDesktopLocaleSettings;
 }
 
 /** What the desktop element needs in order to paint a wallpaper. */

@@ -366,6 +366,14 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       }
       .tile {
         position: relative;
+        /* A grid item defaults to 'min-width: auto', so its column cannot be narrower than its
+           longest unbreakable word: one long app name turns 'repeat(3, 1fr)' into three unequal
+           columns, grows the grid past its card, paints the label over the group beside it and
+           gives the whole panel a horizontal scrollbar. Dutch found it — "Documenttype-
+           machtigingen" against "Document Type permissions" — but any language can, and so can an
+           English app somebody else registers. The label below is what makes this safe rather than
+           merely narrow: it can break a word, so nothing here has a width it must have. */
+        min-width: 0;
       }
       .launch {
         display: flex;
@@ -397,6 +405,16 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         -webkit-line-clamp: 2;
         overflow: hidden;
         max-width: 100%;
+        /* Break inside a word when there is nowhere else to break, rather than overflowing the
+           tile. Without this, 'min-width: 0' on the tile would only move the problem: the column
+           would shrink and the word would spill out of it, clipped mid-letter with no ellipsis.
+           'anywhere' rather than 'break-word' because only the former also shrinks the element's
+           min-content width, which is the half that keeps the column honest.
+           Hyphenation first where the browser can (the backoffice sets the document language, so
+           it knows the rules), so "Documenttype-machtigingen" breaks at a sensible point rather
+           than mid-syllable; the break is the fallback when it cannot. */
+        hyphens: auto;
+        overflow-wrap: anywhere;
         font-size: var(--uui-type-small-size);
         line-height: 1.2;
         /* Reserve two lines so every tile is the same height whether the name wraps or not. */

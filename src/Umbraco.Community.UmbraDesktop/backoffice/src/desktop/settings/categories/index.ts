@@ -1,6 +1,7 @@
 import type { UmbraDesktopSettingsCategory } from './types';
 import { UMBRADESKTOP_APPEARANCE_CATEGORY } from './appearance/index.js';
 import { UMBRADESKTOP_GENERAL_CATEGORY } from './general/index.js';
+import { UMBRADESKTOP_LANGUAGE_CATEGORY } from './language/index.js';
 import { UMBRADESKTOP_TASKBAR_CATEGORY } from './taskbar/index.js';
 
 /**
@@ -15,6 +16,10 @@ export const UMBRADESKTOP_SETTINGS_CATEGORIES: ReadonlyArray<UmbraDesktopSetting
   // reader falls back to when they are not sure which one holds the thing they want, and a fallback
   // at the bottom of a list is one people scroll past twice.
   UMBRADESKTOP_GENERAL_CATEGORY,
+  // Before Appearance: what the desktop says and how it writes things down is looked for sooner
+  // than what it looks like, and its first row reaches outside the desktop in a way nothing under
+  // Appearance does.
+  UMBRADESKTOP_LANGUAGE_CATEGORY,
   UMBRADESKTOP_APPEARANCE_CATEGORY,
   // Last of the three, and after Appearance rather than before it: Appearance is where the desktop
   // as a whole is chosen, and this is one strip of it. Windows orders Personalisation's own pages

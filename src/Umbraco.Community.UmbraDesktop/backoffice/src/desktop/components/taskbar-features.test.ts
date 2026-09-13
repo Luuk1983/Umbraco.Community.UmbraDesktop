@@ -6,6 +6,7 @@ import { UmbraDesktopWindowManagerContext } from '../window-manager.context.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token.js';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
+import { UMBRADESKTOP_DEFAULT_SETTINGS } from '../settings/settings-store.js';
 import { UMBRADESKTOP_AI_CHAT_APP_ALIAS } from '../taskbar/features/ai-chat/availability.js';
 import { UmbContextProvider } from '@umbraco-cms/backoffice/context-api';
 import { UmbElementControllerHost } from '@umbraco-cms/backoffice/controller-api';
@@ -80,6 +81,9 @@ describe('the taskbar feature row', () => {
     new UmbContextProvider(wrapper, UMBRADESKTOP_SETTINGS_CONTEXT, {
       pinned: pinned.asObservable(),
       taskbarFeatures: features.asObservable(),
+      // The clock reads this. A stub without it would exercise the taskbar's fallback rather than
+      // the path a real desktop takes, which is the opposite of what a partial stub is for.
+      locale: new UmbObjectState(UMBRADESKTOP_DEFAULT_SETTINGS.locale).asObservable(),
       getHostElement: () => wrapper,
     } as never).hostConnected();
 

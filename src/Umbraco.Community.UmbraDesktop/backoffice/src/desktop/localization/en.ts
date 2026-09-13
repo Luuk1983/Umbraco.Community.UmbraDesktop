@@ -84,9 +84,11 @@ export default {
     // desktop settings — the categories the panel is divided into, and the line under each
     groupAppearance: 'Appearance',
     groupGeneral: 'General',
+    groupLanguage: 'Language and region',
     groupTaskbar: 'Taskbar',
     groupAppearanceAbout: 'The theme and the wallpaper behind your windows',
     groupGeneralAbout: 'How the desktop starts, and where you land when you sign in',
+    groupLanguageAbout: 'The language the backoffice speaks, and how the desktop writes dates and times',
     groupTaskbarAbout: 'What the taskbar keeps beside the launcher button',
     // desktop settings — taskbar. The switches are grouped by which end of the bar they are about,
     // because a screen that opens on a bare "AI chat" switch never says what it is a setting for.
@@ -109,6 +111,30 @@ export default {
     bootIntoDesktop: 'Open the desktop when I sign in',
     bootDescription:
       'Takes effect the next time you open the backoffice, not right now. A link straight to a document still opens that document. Add ?desktop=off to the backoffice address to skip it once.',
+    // desktop settings — language and region. The first row is the odd one out and its hint says so:
+    // it changes the whole backoffice, and it is the only setting here that needs a reload.
+    backofficeLanguage: 'Backoffice language',
+    backofficeLanguageAbout:
+      "Changes the language of the whole backoffice, not just the desktop. You'll be asked to reload.",
+    regionalFormat: 'Regional format',
+    regionalFormatAbout:
+      'How the desktop writes dates and times. Your backoffice language and your browser can disagree about this.',
+    formatBackoffice: 'Match the backoffice language',
+    formatBrowser: 'Match my browser',
+    clock: 'Clock',
+    clockAuto: 'Automatic',
+    clock12: '12 hour',
+    clock24: '24 hour',
+    clockPreview: 'The taskbar will show',
+    // The reload the language change needs. It closes every open window, not only unsaved ones,
+    // because nothing here restores a session.
+    reloadHeadline: 'Reload the desktop?',
+    reloadSaved: 'Your language is saved. The desktop has to reload before it takes effect.',
+    reloadClosesOne: 'This closes your open window.',
+    reloadCloses: 'This closes your %0% open windows.',
+    reloadQuestion: 'Reload now?',
+    reloadConfirm: 'Reload now',
+    reloadLater: 'Later',
     // desktop settings — wallpaper
     wallpaper: 'Wallpaper',
     wallpaperNone: 'None (gradient)',

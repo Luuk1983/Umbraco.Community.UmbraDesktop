@@ -19,6 +19,7 @@ it('puts General first', () => {
   // people scroll past twice.
   expect(UMBRADESKTOP_SETTINGS_CATEGORIES.map((category) => category.id)).to.deep.equal([
     'general',
+    'language',
     'appearance',
     'taskbar',
   ]);

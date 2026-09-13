@@ -1,22 +1,20 @@
-/**
- * Whatever a localizer needs to look like for {@link exitDialogContent}. Umbraco's
- * `this.localize.term` matches it; a test can pass a plain function instead.
- */
-export type UmbraDesktopTerm = (key: string, ...args: unknown[]) => string;
+import { unsavedSentence } from './unsaved-message.js';
+import type { UmbraDesktopTerm } from './unsaved-message.js';
+
+export type { UmbraDesktopTerm };
 
 /**
- * The body of the Exit dialog: the question it has always asked, plus a sentence naming how much
- * unsaved work is about to go with it, plus a second sentence when some of that work is also about
- * to lose somebody else's.
+ * The body of the Exit dialog: the question it has always asked, preceded by the sentence naming
+ * how much unsaved work is about to go with it.
  *
- * The second sentence is not a nicety. Everywhere else on this desktop closing is what loses work,
- * so the Exit dialog is written to discourage it; for a window that has also changed on the server,
- * closing is the *safe* act and discarding is what keeps the other person's version. An editor
- * deciding whether to exit needs to know which of the two situations they are in, and the count is
- * the shortest way to say it. Design §9.
+ * The sentence itself moved to `unsaved-message.ts` once the reload dialog needed the same one
+ * about the same windows. What stays here is the order — warning first, question last, so the last
+ * thing read is the thing being answered — and the reason Exit asks at all: it unmounts the whole
+ * desktop with every open window in it, so it is the one route that can discard several windows'
+ * work at once. Design §9.
  *
- * Pure, and taking its localizer as an argument, so the singular and plural choices and the "say
- * nothing when there is nothing" cases can be checked without a booted backoffice.
+ * Pure, and taking its localizer as an argument, so the wording can be checked without a booted
+ * backoffice.
  * @param unsavedCount How many open windows are holding unsaved changes.
  * @param conflictedCount How many of those have also been changed by somebody else.
  * @param term The localizer, e.g. `this.localize.term` bound to the calling element.
@@ -28,19 +26,6 @@ export function exitDialogContent(
   term: UmbraDesktopTerm,
 ): string {
   const question = term('umbraDesktop_exitQuestion');
-  if (unsavedCount < 1) return question;
-  const warning =
-    unsavedCount === 1
-      ? term('umbraDesktop_exitUnsavedOne')
-      : term('umbraDesktop_exitUnsaved', unsavedCount);
-  if (conflictedCount < 1) return `${warning} ${question}`;
-  // "One of them" needs more than one to be one of, so a single unsaved window gets its own
-  // wording rather than a sentence that reads as a counting error.
-  const conflict =
-    unsavedCount === 1
-      ? term('umbraDesktop_exitConflictedSole')
-      : conflictedCount === 1
-        ? term('umbraDesktop_exitConflictedOne')
-        : term('umbraDesktop_exitConflictedMany', conflictedCount);
-  return `${warning} ${conflict} ${question}`;
+  const warning = unsavedSentence(unsavedCount, conflictedCount, term);
+  return warning ? `${warning} ${question}` : question;
 }

@@ -2,6 +2,7 @@ import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
 import { taskActivation } from '../window-model';
 import { exitDialogContent } from '../exit-message.js';
+import { formatClock, msUntilNextMinute } from '../clock-format.js';
 import { suppressBootForSession } from '../boot/boot-storage.js';
 import { exitDesktopPath } from '../boot/boot-decision.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
@@ -9,6 +10,8 @@ import type { UmbraDesktopWindowManagerContext } from '../window-manager.context
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
 import type { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
+import type { UmbraDesktopLocaleSettings } from '../settings/types';
+import { UMBRADESKTOP_DEFAULT_SETTINGS } from '../settings/settings-store.js';
 import { taskbarRowFeatures } from '../taskbar/features/index.js';
 import type { UmbraDesktopTaskbarFeatureContext } from '../taskbar/features/types';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -17,6 +20,7 @@ import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import { noticeIconName, windowNotices, worstSeverity } from '../notices/notices.js';
 import type { UmbraDesktopNoticeSeverity } from '../notices/types.js';
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
+import type { PropertyValues } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbConfirmModal, umbOpenModal } from '@umbraco-cms/backoffice/modal';
 import { UMB_SEARCH_MODAL } from '@umbraco-cms/backoffice/search';
@@ -45,6 +49,16 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   @state()
   private _clock = '';
 
+  /**
+   * How this user wants the clock formatted.
+   *
+   * Seeded from the payload's own default rather than a second copy of it, so the two cannot drift:
+   * the first tick happens before the settings context has resolved, and a taskbar disagreeing with
+   * the stored default about what "unset" means would show one format and then swap.
+   */
+  @state()
+  private _locale: UmbraDesktopLocaleSettings = { ...UMBRADESKTOP_DEFAULT_SETTINGS.locale };
+
   /** Every app this user may launch, for the feature row. Already gated by the catalogue. */
   @state()
   private _apps: ReadonlyArray<UmbraDesktopApp> = [];
@@ -66,7 +80,15 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
    */
   #catalogue?: UmbraDesktopAppCatalogueContext;
 
+  /**
+   * The pending clock repaint, as a `setTimeout` handle rather than an interval: each tick schedules
+   * the next one for the moment the minute turns over. Replaced on every tick, and on every other
+   * route into {@link #tick}, so only one is ever live.
+   */
   #timer?: number;
+
+  /** The backoffice culture the clock was last formatted with, so a change to it can be spotted. */
+  #culture?: string;
 
   constructor() {
     super();
@@ -87,23 +109,75 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       // close its space while the panel is still up.
       this.observe(ctx.pinned, (pinned) => (this._pinned = pinned));
       this.observe(ctx.taskbarFeatures, (features) => (this._features = features ?? {}));
+      // Re-ticked rather than left to the timer, which now sleeps until the minute turns over: without
+      // this the old format could sit on screen for the best part of a minute and read as broken.
+      this.observe(ctx.locale, (locale) => {
+        this._locale = locale ?? { ...UMBRADESKTOP_DEFAULT_SETTINGS.locale };
+        this.#tick();
+      });
     });
   }
 
   override connectedCallback() {
     super.connectedCallback();
     this.#tick();
-    this.#timer = window.setInterval(() => this.#tick(), 15000);
+    // Also on becoming visible, because a hidden tab's timers are throttled: a clock that had been
+    // in the background would otherwise show the minute it was last allowed to paint, which on this
+    // taskbar is a minute next to the operating system's own correct one.
+    document.addEventListener('visibilitychange', this.#onVisibilityChange);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    if (this.#timer) window.clearInterval(this.#timer);
+    if (this.#timer) window.clearTimeout(this.#timer);
+    document.removeEventListener('visibilitychange', this.#onVisibilityChange);
     this.#setLauncherOpen(false);
   }
 
+  /** Repaint the clock when the tab comes back, since its timer may have been throttled away. */
+  #onVisibilityChange = () => {
+    if (!document.hidden) this.#tick();
+  };
+
+  /**
+   * The clock, formatted the way this user asked for it, and then scheduled again for the moment the
+   * minute turns over.
+   *
+   * A self-rearming timeout rather than an interval, because this clock is read beside the operating
+   * system's own: an interval turns the minute over wherever it happens to be in its cycle, so the
+   * two would disagree for part of every minute. Re-armed from a fresh reading each time, so a
+   * throttled tab, a sleeping laptop or a clock change costs one late minute instead of shifting the
+   * phase for good. It is also 60 paints an hour where the old 15-second interval was 240, for a
+   * display that changes 60 times.
+   *
+   * Called from five places: on connect, on each turn of the minute, when the tab becomes visible,
+   * when the locale preference changes, and when the backoffice culture changes under us. The last
+   * two are why the timer does not own this — a format that only caught up on the next tick reads as
+   * a setting that did not take.
+   */
   #tick() {
-    this._clock = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    this._clock = formatClock(now, this._locale, { backoffice: this.localize.lang() });
+    // Replaced rather than stacked: every caller above lands here, and two live timers would paint
+    // the same clock twice a minute at two different offsets.
+    if (this.#timer) window.clearTimeout(this.#timer);
+    this.#timer = window.setTimeout(() => this.#tick(), msUntilNextMinute(now));
+  }
+
+  /**
+   * Re-tick when the backoffice culture changes under us.
+   *
+   * `UmbLocalizationController` re-renders its host on a language change rather than publishing it,
+   * so there is no observable to watch here: the render *is* the signal. Guarded on the culture
+   * having actually changed, or every unrelated render would reformat the clock.
+   * @param changed The changed properties, passed straight to Lit.
+   */
+  override updated(changed: PropertyValues) {
+    super.updated(changed);
+    const culture = this.localize.lang();
+    if (culture === this.#culture) return;
+    this.#culture = culture;
+    this.#tick();
   }
 
   #toggleLauncher() {

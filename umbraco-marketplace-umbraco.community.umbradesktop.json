@@ -78,7 +78,17 @@
     "umbraco 4",
     "retro",
     "dashboard",
-    "minesweeper"
+    "minesweeper",
+    "language",
+    "localization",
+    "translation",
+    "backoffice language",
+    "regional format",
+    "clock",
+    "24 hour clock",
+    "12 hour clock",
+    "time format",
+    "culture"
   ],
   "Screenshots": [
     {

@@ -78,9 +78,11 @@ export default {
     // desktop settings — de categorieën waarin het paneel is verdeeld, en de regel onder elke rij
     groupAppearance: 'Weergave',
     groupGeneral: 'Algemeen',
+    groupLanguage: 'Taal en regio',
     groupTaskbar: 'Taakbalk',
     groupAppearanceAbout: 'Het thema en de achtergrond achter je vensters',
     groupGeneralAbout: 'Hoe het bureaublad start en waar je terechtkomt als je inlogt',
+    groupLanguageAbout: 'De taal van de backoffice, en hoe het bureaublad datums en tijden schrijft',
     groupTaskbarAbout: 'Wat de taakbalk naast de startknop bewaart',
     // bureaubladinstellingen — taakbalk. De schakelaars staan gegroepeerd per kant van de balk,
     // omdat een scherm dat begint met een kale "AI-chat"-schakelaar nergens zegt waar het over gaat.
@@ -103,6 +105,30 @@ export default {
     bootIntoDesktop: 'Open het bureaublad als ik inlog',
     bootDescription:
       'Werkt vanaf de volgende keer dat je de backoffice opent, niet direct. Een link rechtstreeks naar een document opent nog steeds dat document. Zet ?desktop=off achter het backoffice-adres om het één keer over te slaan.',
+    // bureaubladinstellingen — taal en regio. De eerste rij is de vreemde eend en de regel eronder
+    // zegt dat ook: die verandert de hele backoffice en is de enige die opnieuw laden vraagt.
+    backofficeLanguage: 'Taal van de backoffice',
+    backofficeLanguageAbout:
+      'Verandert de taal van de hele backoffice, niet alleen van het bureaublad. Je wordt gevraagd opnieuw te laden.',
+    regionalFormat: 'Regionale notatie',
+    regionalFormatAbout:
+      'Hoe het bureaublad datums en tijden schrijft. Je backoffice-taal en je browser kunnen hierover van mening verschillen.',
+    formatBackoffice: 'Volg de taal van de backoffice',
+    formatBrowser: 'Volg mijn browser',
+    clock: 'Klok',
+    clockAuto: 'Automatisch',
+    clock12: '12 uur',
+    clock24: '24 uur',
+    clockPreview: 'De taakbalk toont',
+    // Het opnieuw laden dat de taalwijziging nodig heeft. Dat sluit elk open venster, niet alleen de
+    // vensters met niet-opgeslagen wijzigingen, want een sessie wordt hier nergens hersteld.
+    reloadHeadline: 'Bureaublad opnieuw laden?',
+    reloadSaved: 'Je taal is opgeslagen. Het bureaublad moet opnieuw laden voordat dit werkt.',
+    reloadClosesOne: 'Hiermee sluit je je openstaande venster.',
+    reloadCloses: 'Hiermee sluit je je %0% openstaande vensters.',
+    reloadQuestion: 'Nu opnieuw laden?',
+    reloadConfirm: 'Nu opnieuw laden',
+    reloadLater: 'Later',
     // desktop settings — wallpaper
     wallpaper: 'Achtergrond',
     wallpaperNone: 'Geen (verloop)',
