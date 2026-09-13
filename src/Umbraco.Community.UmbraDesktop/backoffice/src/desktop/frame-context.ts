@@ -84,6 +84,14 @@ export function requestContextFrom(
 
 /**
  * Watch a frame's document for providers of one context, handing each instance to `onInstance`.
+ *
+ * Provide events that name a different context are skipped without asking. That is a filter on top
+ * of the one the request already carries, not a replacement for it: the request's aliases are what
+ * make a provider answer, and they still are. This only avoids *sending* a request that is certain
+ * to be declined, which matters because a backoffice frame fires `umb:context-provide` once per
+ * provider that connects — dozens on a navigation, hundreds through a boot — and each request is a
+ * bubbling, composed event crossing every shadow boundary between the provider and the document.
+ * Two of these watchers run per window, so an unfiltered provide costs two full dispatches.
  * @param doc The frame's document.
  * @param contextAlias The context alias to watch for.
  * @param apiAlias The api alias to watch for.
@@ -97,6 +105,13 @@ export function watchProvidedContexts(
   onInstance: (instance: unknown) => boolean,
 ): () => void {
   const onProvide = (event: Event) => {
+    // Core's `UmbContextProvideEventImplementation` always sets `contextAlias`, so in the frame this
+    // is here to watch the field is present and a mismatch is conclusive. It is read defensively
+    // anyway: a provide event that names nothing cannot be ruled out, and treating "cannot tell" as
+    // "does not match" would silently stop the dirty watcher and the path strip for whatever fired
+    // it. Skipping only a *named* mismatch keeps the saving and cannot lose a provider.
+    const announced = (event as { contextAlias?: string }).contextAlias;
+    if (announced !== undefined && announced !== contextAlias) return;
     // The provider's own element, which is where its request listener is registered. Taken off the
     // composed path rather than from `event.target`, because `target` is retargeted to the shadow
     // host once the event crosses a boundary — and every real provider is inside one.

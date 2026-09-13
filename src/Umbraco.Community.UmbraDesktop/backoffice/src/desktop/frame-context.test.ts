@@ -31,10 +31,34 @@ function provider(contextAlias: string, apiAlias: string, instance: unknown): HT
 
 /**
  * Announce a provider the way `UmbContextProvider` does on connect.
+ *
+ * `contextAlias` is optional so a test can announce without one. Core's own
+ * `UmbContextProvideEventImplementation` always sets it, but the watcher treats a missing alias as
+ * "cannot tell, ask anyway" rather than as a mismatch, and that distinction needs a way to be
+ * exercised from here.
  * @param host The provider element.
+ * @param contextAlias The context alias to announce, or undefined to announce without one.
  */
-function announce(host: HTMLElement): void {
-  host.dispatchEvent(new Event('umb:context-provide', { bubbles: true, composed: true }));
+function announce(host: HTMLElement, contextAlias?: string): void {
+  const event = new Event('umb:context-provide', { bubbles: true, composed: true });
+  if (contextAlias !== undefined) Object.assign(event, { contextAlias });
+  host.dispatchEvent(event);
+}
+
+/**
+ * Count the context requests that reach an element.
+ *
+ * The point of the alias guard is not that a mismatched request goes unanswered — a provider
+ * already declines those — but that no request is *dispatched* at all, so nothing bubbles through
+ * the composed tree for a context nobody is watching. Only a counter on the dispatching end can
+ * tell those two apart.
+ * @param host The element requests would be dispatched from.
+ * @returns A function returning how many requests have been seen so far.
+ */
+function countRequests(host: HTMLElement): () => number {
+  let seen = 0;
+  host.addEventListener('umb:context-request', () => (seen += 1));
+  return () => seen;
 }
 
 it('splits a token into its context and api aliases, defaulting the api alias', () => {
@@ -54,7 +78,7 @@ it('hands over an instance the frame announces after watching started', () => {
 
   const instance = { id: 'structure' };
   const host = provider('UmbWorkspaceContext', 'UmbMenuStructure', instance);
-  announce(host);
+  announce(host, 'UmbWorkspaceContext');
 
   expect(seen).to.deep.equal([instance]);
   stop();
@@ -69,7 +93,7 @@ it('ignores a provider announcing a different api alias', () => {
   });
 
   const host = provider('UmbWorkspaceContext', 'default', { id: 'workspace' });
-  announce(host);
+  announce(host, 'UmbWorkspaceContext');
 
   expect(seen).to.deep.equal([]);
   stop();
@@ -93,7 +117,7 @@ it('reaches a provider nested inside a shadow root, which is where every real on
     const request = event as Event & { callback: (instance: unknown) => boolean };
     if (request.callback(instance)) event.stopPropagation();
   });
-  announce(host);
+  announce(host, 'UmbWorkspaceContext');
 
   expect(seen).to.deep.equal([instance]);
   stop();
@@ -109,8 +133,46 @@ it('stops handing over instances once stopped', () => {
   stop();
 
   const host = provider('UmbWorkspaceContext', 'UmbMenuStructure', { id: 'late' });
-  announce(host);
+  announce(host, 'UmbWorkspaceContext');
 
   expect(seen).to.deep.equal([]);
+  host.remove();
+});
+
+it('does not dispatch a request when the frame announces a context nobody here watches', () => {
+  const seen: unknown[] = [];
+  const stop = watchProvidedContexts(document, 'UmbWorkspaceContext', 'UmbMenuStructure', (instance) => {
+    seen.push(instance);
+    return true;
+  });
+
+  const host = provider('UmbNotificationContext', 'default', { id: 'notifications' });
+  const requests = countRequests(host);
+  announce(host, 'UmbNotificationContext');
+
+  // Nothing handed over, and — the point of the guard — nothing dispatched to find that out.
+  expect(seen).to.deep.equal([]);
+  expect(requests()).to.equal(0);
+  stop();
+  host.remove();
+});
+
+it('still asks when the frame announces without naming a context', () => {
+  const seen: unknown[] = [];
+  const stop = watchProvidedContexts(document, 'UmbWorkspaceContext', 'UmbMenuStructure', (instance) => {
+    seen.push(instance);
+    return true;
+  });
+
+  const instance = { id: 'unnamed' };
+  const host = provider('UmbWorkspaceContext', 'UmbMenuStructure', instance);
+  const requests = countRequests(host);
+  announce(host);
+
+  // A missing alias is "cannot tell", not "does not match": the guard only skips a provide event
+  // that names a different context, so anything announcing without one is still asked.
+  expect(seen).to.deep.equal([instance]);
+  expect(requests()).to.equal(1);
+  stop();
   host.remove();
 });
