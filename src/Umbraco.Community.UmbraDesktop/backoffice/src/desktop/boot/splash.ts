@@ -1,4 +1,15 @@
 import { UMBRADESKTOP_SPLASH_TIMEOUT_MS } from './constants';
+import {
+  UMBRADESKTOP_MARK_PATH,
+  UMBRADESKTOP_MARK_VIEWBOX,
+  UMBRADESKTOP_RING_DASHARRAY,
+  UMBRADESKTOP_RING_RADIUS,
+  UMBRADESKTOP_RING_SPIN_MS,
+  UMBRADESKTOP_RING_VIEWBOX,
+  UMBRADESKTOP_SPLASH_RING_SIZE,
+  ringMarkSize,
+  ringStrokeWidth,
+} from '../loader-ring';
 
 /**
  * The boot splash: one opaque cover, up before anything else can paint and down when the desktop
@@ -47,10 +58,10 @@ let liftTimeout: number | undefined;
  * `umb-icon` resolves through the icon registry, which fetches its dictionary, and a splash that
  * waits on a network request is not a splash. `umb-app-logo` is worse for the same reason — it
  * renders nothing until `UMB_SERVER_CONTEXT` arrives and then loads the logo from the management
- * API. Copied from core's `icon-umbraco` with `fill="currentColor"` intact, so the colour comes
- * from the splash's own text colour and nowhere else.
+ * API. The path comes from `../loader-ring`, which the window loader draws from too; `fill` is
+ * `currentColor` so the colour comes from the splash's own text colour and nowhere else.
  */
-const UMBRACO_MARK = `<svg class="mark" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 315.89 315.89" aria-hidden="true"><path d="M0 157.74a157.95 157.95 0 1 1 158 158.15A157.95 157.95 0 0 1 0 157.74m154.74 54.09a155.4 155.4 0 0 1-36.5-3.29 27.92 27.92 0 0 1-19.94-16q-5.35-12.34-5.21-38.1a243 243 0 0 1 1.69-26.84q1.55-13 3.09-21.46l1.07-5.59a2 2 0 0 0 0-.49 3.2 3.2 0 0 0-2.65-3.17l-20.37-3.22h-.44a3.19 3.19 0 0 0-3.11 2.48c-.35 1.31-.56 2.27-1.17 5.38-1.16 6-2.24 11.85-3.43 20.38a264 264 0 0 0-2.3 27.94 145 145 0 0 0 0 19.57q.72 25.94 8.9 41.42t27.72 22.3q19.53 6.81 54.43 6.66h2.91q34.94.15 54.41-6.66t27.71-22.3q8.17-15.53 8.91-41.42a145 145 0 0 0 0-19.57 267 267 0 0 0-2.3-27.94c-1.2-8.44-2.27-14.26-3.44-20.38-.61-3.11-.81-4.07-1.16-5.38a3.21 3.21 0 0 0-3.12-2.48h-.52l-20.38 3.18a3.2 3.2 0 0 0-2.68 3.17 4 4 0 0 0 0 .49l1.08 5.59q1.55 8.48 3.12 21.46a246 246 0 0 1 1.65 26.84q.27 25.69-5.21 38.07a27.9 27.9 0 0 1-19.76 16.07 155.2 155.2 0 0 1-36.48 3.29Z"/></svg>`;
+const UMBRACO_MARK = `<svg class="mark" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="${UMBRADESKTOP_MARK_VIEWBOX}" aria-hidden="true"><path d="${UMBRADESKTOP_MARK_PATH}"/></svg>`;
 
 /**
  * The splash's own layout, as a `style` attribute so it depends on no stylesheet, no design token
@@ -101,41 +112,42 @@ const SPLASH_CSS = `
     animation: umbradesktop-splash-in 220ms ease-out both;
   }
   /* The mark and the ring occupy the same box, so progress happens around the logo rather than
-     under it: one object doing both jobs, which is the shape a booting machine has. */
+     under it: one object doing both jobs, which is the shape a booting machine has. Every number
+     below comes from '../loader-ring', which the in-window loader draws from as well — see that
+     module for why a second, smaller copy of these literals was not the answer. */
   #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .ringwrap {
     position: relative;
-    width: 150px;
-    height: 150px;
+    width: ${UMBRADESKTOP_SPLASH_RING_SIZE}px;
+    height: ${UMBRADESKTOP_SPLASH_RING_SIZE}px;
     display: grid;
     place-items: center;
   }
   #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .ring {
     position: absolute;
     inset: 0;
-    width: 150px;
-    height: 150px;
+    width: ${UMBRADESKTOP_SPLASH_RING_SIZE}px;
+    height: ${UMBRADESKTOP_SPLASH_RING_SIZE}px;
   }
   #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .track {
     fill: none;
     stroke: rgba(255, 255, 255, 0.14);
-    stroke-width: 2;
+    stroke-width: ${ringStrokeWidth(UMBRADESKTOP_SPLASH_RING_SIZE)};
   }
   #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .arc {
     fill: none;
     stroke: rgba(255, 255, 255, 0.92);
-    stroke-width: 2;
+    stroke-width: ${ringStrokeWidth(UMBRADESKTOP_SPLASH_RING_SIZE)};
     stroke-linecap: round;
-    /* A quarter of the circumference, near enough: 2πr with r=58 is about 364, and 90 of that reads
-       as an arc rather than as a dot or a nearly-closed ring. The gap value only has to exceed the
-       remainder, so it is not a number anything else depends on. */
-    stroke-dasharray: 90 360;
-    transform-origin: 75px 75px;
-    animation: umbradesktop-splash-spin 1.15s linear infinite;
+    stroke-dasharray: ${UMBRADESKTOP_RING_DASHARRAY};
+    transform-origin: ${UMBRADESKTOP_RING_VIEWBOX / 2}px ${UMBRADESKTOP_RING_VIEWBOX / 2}px;
+    animation: umbradesktop-splash-spin ${UMBRADESKTOP_RING_SPIN_MS}ms linear infinite;
   }
   #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .mark {
-    width: 72px;
-    height: 72px;
-    /* Lifts the mark off a dark ground the way an OS boot logo sits above its background. */
+    width: ${ringMarkSize(UMBRADESKTOP_SPLASH_RING_SIZE)}px;
+    height: ${ringMarkSize(UMBRADESKTOP_SPLASH_RING_SIZE)}px;
+    /* Lifts the mark off a dark ground the way an OS boot logo sits above its background. The
+       in-window loader has no equivalent: it sits on the window's own body colour, which is not
+       reliably dark, and a drop shadow under a 30px mark on a white ground reads as a smudge. */
     filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.45));
   }
   #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .wordmark {
@@ -185,9 +197,9 @@ export function raiseBootSplash(doc: Document = document, timeoutMs = UMBRADESKT
     `<style>${SPLASH_CSS}</style>` +
     '<div class="stack">' +
     '<div class="ringwrap">' +
-    '<svg class="ring" viewBox="0 0 150 150" aria-hidden="true">' +
-    '<circle class="track" cx="75" cy="75" r="58" />' +
-    '<circle class="arc" cx="75" cy="75" r="58" />' +
+    `<svg class="ring" viewBox="0 0 ${UMBRADESKTOP_RING_VIEWBOX} ${UMBRADESKTOP_RING_VIEWBOX}" aria-hidden="true">` +
+    `<circle class="track" cx="${UMBRADESKTOP_RING_VIEWBOX / 2}" cy="${UMBRADESKTOP_RING_VIEWBOX / 2}" r="${UMBRADESKTOP_RING_RADIUS}" />` +
+    `<circle class="arc" cx="${UMBRADESKTOP_RING_VIEWBOX / 2}" cy="${UMBRADESKTOP_RING_VIEWBOX / 2}" r="${UMBRADESKTOP_RING_RADIUS}" />` +
     '</svg>' +
     UMBRACO_MARK +
     '</div>' +

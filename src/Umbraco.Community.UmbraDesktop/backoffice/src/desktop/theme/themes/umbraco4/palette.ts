@@ -104,6 +104,10 @@ export const U4_DESKTOP_IMAGE = 'linear-gradient(180deg, #dbe1e8 0%, #bcc6d3 100
  */
 export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-background': U4_PANEL,
+  // Pinned with the panel above it, for the reason Windows 98 pins it: v4's warm grey is the
+  // design rather than a light-mode choice, so it does not darken when the backoffice does, and
+  // a mark left to follow the backoffice would go white on it.
+  '--umbradesktop-window-loader-color': U4_TEXT,
   '--umbradesktop-window-border': `1px solid ${U4_EDGE_STRONG}`,
   // Barely rounded. v4 was square everywhere except its tab corners, but a hard 0 next to the
   // macOS theme's 10px reads as a rendering fault rather than a choice.

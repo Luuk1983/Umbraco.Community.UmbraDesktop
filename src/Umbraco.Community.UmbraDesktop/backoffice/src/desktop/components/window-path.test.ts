@@ -101,3 +101,49 @@ it('prefixes every class it renders, so a theme’s window sheet cannot restyle 
   for (const name of classes) expect(name, `class "${name}"`).to.match(/^path-/);
   dispose();
 });
+
+/**
+ * The strip is drawn while the window behind it is still loading, and during that window the only
+ * crumb that exists is the app's own root — so it showed a lone house floating over a covered
+ * window, saying where you are about somewhere that has not arrived. Suppress the crumbs.
+ *
+ * The bar itself stays. `.path-bar` carries an explicit `height`, so an empty one is exactly the
+ * strip's themed height with the strip's own background on it: the crumbs appear in place when the
+ * content lands, rather than the body shrinking by the strip's height under a frame that has
+ * already painted.
+ */
+it('keeps the bar but draws no crumbs while the window is busy', async () => {
+  const { element, root, dispose } = await mountPath([
+    { label: 'Content editor', href: '/umbraco/section/content', current: false, home: true },
+  ]);
+
+  expect(root.querySelector('.path-crumb-home'), 'the house is there when the window is idle').to.not.be.null;
+
+  element.busy = true;
+  await element.updateComplete;
+
+  expect(root.querySelector('.path-bar'), 'the bar keeps its box, so nothing moves when it fills').to.not.be.null;
+  expect(root.querySelectorAll('.path-crumb').length, 'and carries no crumbs').to.equal(0);
+  expect(root.querySelector('.path-current'), 'including the current one').to.be.null;
+
+  element.busy = false;
+  await element.updateComplete;
+  expect(root.querySelector('.path-crumb-home'), 'and the house comes back when the content lands').to.not.be.null;
+  dispose();
+});
+
+/**
+ * A busy strip is furniture, not navigation, and a screen reader landing on a labelled `nav` with
+ * nothing in it is worse than one that is not there: the label promises a path and delivers an
+ * empty region.
+ */
+it('does not offer an empty path as a navigation landmark', async () => {
+  const { element, root, dispose } = await mountPath([
+    { label: 'Content editor', href: '/umbraco/section/content', current: false, home: true },
+  ]);
+  element.busy = true;
+  await element.updateComplete;
+
+  expect(root.querySelector('nav'), 'the empty strip should not be a nav landmark').to.be.null;
+  dispose();
+});

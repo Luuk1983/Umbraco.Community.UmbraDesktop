@@ -259,18 +259,22 @@ it('reports a loader that resolves to nothing', async () => {
 
 /**
  * A loader is a dynamic import, so the window body is empty for a network hop before the app
- * arrives. The iframe path covers that gap with a `uui-loader`, and an element app has no reason
- * to be the one window kind that shows nothing while it loads.
+ * arrives. The iframe path covers that gap with `<umbradesktop-loader>`, and an element app has no
+ * reason to be the one window kind that shows nothing while it loads.
+ *
+ * Asserted on the desktop's own loader rather than on "something is there", because the two window
+ * kinds showing different waiting animations is exactly the seam this element exists to hide: a
+ * section window and a game window are the same window to the person looking at them.
  */
 it('shows a pending state while the loader is in flight', async () => {
   let land: (value: { element: CustomElementConstructor }) => void = () => {};
   const host = await fixture<UmbraDesktopAppHostElement>(html`<umbradesktop-app-host></umbradesktop-app-host>`);
   host.load = () => new Promise((resolve) => (land = resolve));
   await host.updateComplete;
-  expect(host.querySelector('uui-loader'), 'the gap before the app arrives should be covered').to.not.be.null;
+  expect(host.querySelector('umbradesktop-loader'), 'the gap before the app arrives should be covered').to.not.be.null;
   land({ element: TestAppElement });
   await host.mountComplete;
-  expect(host.querySelector('uui-loader'), 'and uncovered once it has').to.be.null;
+  expect(host.querySelector('umbradesktop-loader'), 'and uncovered once it has').to.be.null;
   expect(host.querySelector('umbradesktop-test-app')).to.not.be.null;
 });
 

@@ -128,6 +128,10 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   // The frame is grey; its raised bevel and the padding that reveals it live in `window.css.ts`,
   // where the two can be kept in step (see WIN98_FRAME_BORDER).
   '--umbradesktop-window-background': WIN98_FACE,
+  // The loading overlay paints the face above, and 1998's face is grey under the backoffice's
+  // dark setting as much as its light one, so the mark on it has to be pinned too. Left free it
+  // follows the backoffice and turns white on grey.
+  '--umbradesktop-window-loader-color': WIN98_TEXT,
   '--umbradesktop-window-border': 'none',
   '--umbradesktop-window-radius': '0',
   // Where a dragged window would land. Windows 98 had no snapping, but it did have one way of
