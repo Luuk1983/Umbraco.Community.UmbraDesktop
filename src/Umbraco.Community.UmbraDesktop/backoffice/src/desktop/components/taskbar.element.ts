@@ -2,6 +2,7 @@ import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
 import { taskActivation } from '../window-model';
 import { exitDialogContent } from '../exit-message.js';
+import { formatClock } from '../clock-format.js';
 import { suppressBootForSession } from '../boot/boot-storage.js';
 import { exitDesktopPath } from '../boot/boot-decision.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token';
@@ -9,6 +10,8 @@ import type { UmbraDesktopWindowManagerContext } from '../window-manager.context
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
 import type { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
+import type { UmbraDesktopLocaleSettings } from '../settings/types';
+import { UMBRADESKTOP_DEFAULT_SETTINGS } from '../settings/settings-store.js';
 import { taskbarRowFeatures } from '../taskbar/features/index.js';
 import type { UmbraDesktopTaskbarFeatureContext } from '../taskbar/features/types';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -17,6 +20,7 @@ import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import { noticeIconName, windowNotices, worstSeverity } from '../notices/notices.js';
 import type { UmbraDesktopNoticeSeverity } from '../notices/types.js';
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
+import type { PropertyValues } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbConfirmModal, umbOpenModal } from '@umbraco-cms/backoffice/modal';
 import { UMB_SEARCH_MODAL } from '@umbraco-cms/backoffice/search';
@@ -45,6 +49,16 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   @state()
   private _clock = '';
 
+  /**
+   * How this user wants the clock formatted.
+   *
+   * Seeded from the payload's own default rather than a second copy of it, so the two cannot drift:
+   * the first tick happens before the settings context has resolved, and a taskbar disagreeing with
+   * the stored default about what "unset" means would show one format and then swap.
+   */
+  @state()
+  private _locale: UmbraDesktopLocaleSettings = { ...UMBRADESKTOP_DEFAULT_SETTINGS.locale };
+
   /** Every app this user may launch, for the feature row. Already gated by the catalogue. */
   @state()
   private _apps: ReadonlyArray<UmbraDesktopApp> = [];
@@ -68,6 +82,9 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
 
   #timer?: number;
 
+  /** The backoffice culture the clock was last formatted with, so a change to it can be spotted. */
+  #culture?: string;
+
   constructor() {
     super();
     // Adopts the active theme's taskbar-surface stylesheet into this element's shadow root.
@@ -87,6 +104,12 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       // close its space while the panel is still up.
       this.observe(ctx.pinned, (pinned) => (this._pinned = pinned));
       this.observe(ctx.taskbarFeatures, (features) => (this._features = features ?? {}));
+      // Re-ticked rather than left to the interval. The clock ticks every 15 seconds, so without
+      // this the old format sits on screen for up to fifteen of them and the setting reads broken.
+      this.observe(ctx.locale, (locale) => {
+        this._locale = locale ?? { ...UMBRADESKTOP_DEFAULT_SETTINGS.locale };
+        this.#tick();
+      });
     });
   }
 
@@ -102,8 +125,32 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     this.#setLauncherOpen(false);
   }
 
+  /**
+   * The clock, formatted the way this user asked for it.
+   *
+   * Called from four places rather than one: on connect, on the interval, when the locale preference
+   * changes, and when the backoffice culture changes under us. The last two are why this is not
+   * simply the interval's callback — a format that only caught up on the next tick reads as a
+   * setting that did not take.
+   */
   #tick() {
-    this._clock = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    this._clock = formatClock(new Date(), this._locale, { backoffice: this.localize.lang() });
+  }
+
+  /**
+   * Re-tick when the backoffice culture changes under us.
+   *
+   * `UmbLocalizationController` re-renders its host on a language change rather than publishing it,
+   * so there is no observable to watch here: the render *is* the signal. Guarded on the culture
+   * having actually changed, or every unrelated render would reformat the clock.
+   * @param changed The changed properties, passed straight to Lit.
+   */
+  override updated(changed: PropertyValues) {
+    super.updated(changed);
+    const culture = this.localize.lang();
+    if (culture === this.#culture) return;
+    this.#culture = culture;
+    this.#tick();
   }
 
   #toggleLauncher() {

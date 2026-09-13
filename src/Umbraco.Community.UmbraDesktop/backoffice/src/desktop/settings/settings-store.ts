@@ -1,4 +1,4 @@
-import type { UmbraDesktopSettings, UmbraDesktopWallpaperRef } from './types';
+import type { UmbraDesktopLocaleSettings, UmbraDesktopSettings, UmbraDesktopWallpaperRef } from './types';
 import { UMBRADESKTOP_DEFAULT_WALLPAPER_ID } from './wallpapers.generated';
 import { UMBRADESKTOP_DEFAULT_THEME_ID } from '../theme/themes/index';
 
@@ -26,6 +26,7 @@ export const UMBRADESKTOP_DEFAULT_SETTINGS: UmbraDesktopSettings = {
   bootIntoDesktop: false,
   taskbarFeatures: {},
   wallpaperFollowsTheme: false,
+  locale: { source: 'backoffice', hourCycle: 'auto' },
 };
 
 /**
@@ -128,6 +129,29 @@ function isThemeId(value: unknown): value is string {
 }
 
 /**
+ * Read a stored locale preference, one field at a time.
+ *
+ * Unlike the guards above this returns a value rather than narrowing a type, because the two fields
+ * recover **independently**: a `source` written by a later build must not also cost the user their
+ * clock override. Anything that is not an object at all takes both defaults, since there is no
+ * half of it worth keeping.
+ * @param value The decoded `locale` property.
+ * @returns A usable locale preference, always safe to mutate.
+ */
+function readLocale(value: unknown): UmbraDesktopLocaleSettings {
+  const fallback = { ...UMBRADESKTOP_DEFAULT_SETTINGS.locale };
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return fallback;
+  const stored = value as { source?: unknown; hourCycle?: unknown };
+  return {
+    source: stored.source === 'backoffice' || stored.source === 'browser' ? stored.source : fallback.source,
+    hourCycle:
+      stored.hourCycle === 'auto' || stored.hourCycle === 'h12' || stored.hourCycle === 'h23'
+        ? stored.hourCycle
+        : fallback.hourCycle,
+  };
+}
+
+/**
  * Decode a stored payload into settings. Never throws, and never returns something partially
  * valid: anything unreadable — absent, malformed, or a version this build predates — yields a
  * fresh copy of the defaults. A silently reset preference is a far better failure than a blank
@@ -152,6 +176,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     bootIntoDesktop: UMBRADESKTOP_DEFAULT_SETTINGS.bootIntoDesktop,
     taskbarFeatures: {},
     wallpaperFollowsTheme: UMBRADESKTOP_DEFAULT_SETTINGS.wallpaperFollowsTheme,
+    locale: { ...UMBRADESKTOP_DEFAULT_SETTINGS.locale },
   });
 
   if (!raw) return fallback();
@@ -173,6 +198,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     bootIntoDesktop?: unknown;
     taskbarFeatures?: unknown;
     wallpaperFollowsTheme?: unknown;
+    locale?: unknown;
   };
   if (payload.v !== 1) return fallback();
 
@@ -185,6 +211,8 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
   if (isWallpaperFollowsTheme(payload.wallpaperFollowsTheme)) {
     settings.wallpaperFollowsTheme = payload.wallpaperFollowsTheme;
   }
+  // Assigned rather than guarded, because this one reads each field separately — see readLocale.
+  settings.locale = readLocale(payload.locale);
   return settings;
 }
 
