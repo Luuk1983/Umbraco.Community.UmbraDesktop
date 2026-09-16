@@ -67,6 +67,19 @@ export function connectionStateTone(status: string): UmbraDesktopConnectionTone 
 }
 
 /**
+ * Whether nobody has asked this instance yet.
+ *
+ * The row draws a spinner on the strength of this, which is why it is exactly one status rather than
+ * "anything without an answer": a failed check has an answer, and a spinner over it would read as a
+ * screen that is stuck instead of as a result.
+ * @param status The status as the server reported it.
+ * @returns True only while the row is waiting to be checked.
+ */
+export function isConnectionChecking(status: string): boolean {
+  return status === 'Checking';
+}
+
+/**
  * Whether a connection can actually be read from.
  * @param status The status as the server reported it.
  * @returns True only for a connection that is working.

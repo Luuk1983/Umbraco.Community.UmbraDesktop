@@ -1,5 +1,5 @@
 import { UmbraDesktopConnectionsRepository } from './connections.repository';
-import { connectionStateLabel, connectionStateTone } from './connection-state';
+import { connectionStateLabel, connectionStateTone, isConnectionChecking } from './connection-state';
 import type { DesktopConnectionStatusResponseModel } from '../../api/types.gen';
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -127,6 +127,9 @@ export class UmbraDesktopConnectionStatusElement extends UmbLitElement {
         </td>
         <td>
           <uui-tag color=${connectionStateTone(report.status)} look="secondary">
+            ${isConnectionChecking(report.status)
+              ? html`<uui-loader-circle class="checking"></uui-loader-circle>`
+              : nothing}
             ${this.localize.term(connectionStateLabel(report.status))}
           </uui-tag>
         </td>
@@ -282,6 +285,14 @@ export class UmbraDesktopConnectionStatusElement extends UmbLitElement {
 
       .empty {
         color: var(--uui-color-text-alt, #515054);
+      }
+
+      /* Sized to the tag's own text rather than to a fixed pixel count, so it stays level with the
+         word beside it under every theme's type scale. */
+      .checking {
+        margin-right: var(--uui-size-space-2, 6px);
+        font-size: 1em;
+        vertical-align: -0.1em;
       }
     `,
   ];

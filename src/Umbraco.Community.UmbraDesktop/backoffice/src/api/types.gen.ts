@@ -3560,10 +3560,12 @@ export type DeleteConnectionErrors = {
 
 export type DeleteConnectionResponses = {
     /**
-     * OK
+     * No Content
      */
-    200: unknown;
+    204: void;
 };
+
+export type DeleteConnectionResponse = DeleteConnectionResponses[keyof DeleteConnectionResponses];
 
 export type UpdateConnectionData = {
     body?: DesktopConnectionRequestModel;

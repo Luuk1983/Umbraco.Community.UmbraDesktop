@@ -1,5 +1,10 @@
 import { expect } from '@open-wc/testing';
-import { connectionStateLabel, connectionStateTone, isConnectionUsable } from './connection-state';
+import {
+  connectionStateLabel,
+  connectionStateTone,
+  isConnectionChecking,
+  isConnectionUsable,
+} from './connection-state';
 
 describe('connection state', () => {
   it('labels every status the server can report', () => {
@@ -38,6 +43,15 @@ describe('connection state', () => {
 
   it('treats an unknown status as a warning rather than as working', () => {
     expect(connectionStateTone('SomethingNewer')).to.equal('warning');
+  });
+
+  it('says a row is still being checked only while it is Checking', () => {
+    // The row shows a spinner on the strength of this, so a status that merely failed must not get
+    // one: a permanent spinner reads as a screen that is stuck rather than as an answer.
+    expect(isConnectionChecking('Checking')).to.equal(true);
+    expect(isConnectionChecking('Ok')).to.equal(false);
+    expect(isConnectionChecking('Unreachable')).to.equal(false);
+    expect(isConnectionChecking('SomethingNewer')).to.equal(false);
   });
 
   it('says a connection is usable only when it is Ok', () => {
