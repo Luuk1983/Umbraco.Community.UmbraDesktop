@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>B-static-link</title>
+    <!--
+      THE CONTROL. A plain static manifest link, the way every PWA tutorial writes it.
+
+      Run this first, always. Without a passing control a negative result from A, C or D proves
+      nothing about link injection and only proves the browser under test has no install pipeline —
+      which is not hypothetical. The same fixture in an embedded Chromium never fetched the manifest
+      on ANY page, control included, so that browser could not answer the question at all. Ten
+      seconds on this page is what tells you your instrument works.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script src="/probe.js"></script>
+  </head>
+  <body>
+    <h1>B: static link (control)</h1>
+    <p>Expect: manifest fetched, icon fetched, <code>beforeinstallprompt</code> fires.</p>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>D-late-inject</title>
+    <script src="/probe.js"></script>
+  </head>
+  <body>
+    <h1>D: link injected 5s after load</h1>
+    <p>Expect: same as A. This is the case that decides the feature.</p>
+    <script>
+      // THE CASE THAT MATTERS. A passing on its own would not settle anything: it injects during
+      // initial script evaluation, which is early enough that Chrome may simply not have looked yet.
+      //
+      // The real backoffice is nothing like that. Our bundle arrives behind a dynamic import, after
+      // authentication, hundreds of milliseconds into a load at best. So the question is not whether
+      // Chrome reads a link that beat it to the punch, but whether it RE-EVALUATES installability
+      // when the link turns up long after it has already made up its mind.
+      //
+      // Five seconds is chosen to be well past any plausible initial evaluation, so a pass here
+      // cannot be explained by lucky timing.
+      setTimeout(() => {
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = '/manifest.webmanifest';
+        document.head.appendChild(link);
+        window.__spike.injectedAt = performance.now();
+        console.log('SPIKE injected late at', window.__spike.injectedAt);
+      }, 5000);
+    </script>
+  </body>
+</html>

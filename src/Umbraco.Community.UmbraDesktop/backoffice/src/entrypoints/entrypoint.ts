@@ -17,6 +17,7 @@ import {
     shouldBootIntoDesktop,
 } from '../desktop/boot/boot-decision';
 
+import { upsertManifestLink } from '../desktop/manifest-link/manifest-link';
 import { lowerBootSplash } from '../desktop/boot/splash';
 import { waitForSectionRoute } from '../desktop/boot/router-ready';
 import { bootTrace } from '../desktop/boot/trace';
@@ -38,6 +39,13 @@ export const onInit: UmbEntryPointOnInit = (host, _extensionRegistry) => {
     // The desktop is entered via the top-right header-app launcher, so hide its now-redundant
     // section tab from the classic nav. No-op for users without desktop access (tab never shows).
     hideSectionTab(UMBRADESKTOP_SECTION_ALIAS);
+
+    // Declare the backoffice installable as an app. Unconditional, and deliberately gated on
+    // nothing: a manifest describes what this origin *is*, and the browser reads it whenever it
+    // likes. Gating it on desktop access or on the boot preference would make the install offer
+    // appear and disappear depending on who last used this browser, which is not a property a site
+    // should have. Everything it exposes — the site name and the icon — is public anyway.
+    upsertManifestLink();
 
     // Without this, every call to the package's own management API (e.g.
     // UmbraDesktopService.getBackgroundJobs()) returns 401 Unauthorized: the generated

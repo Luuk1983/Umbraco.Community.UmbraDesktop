@@ -88,6 +88,21 @@ export default {
     groupAppearanceAbout: 'The theme and the wallpaper behind your windows',
     groupGeneralAbout: 'How the desktop starts, and where you land when you sign in',
     groupTaskbarAbout: 'What the taskbar keeps beside the launcher button',
+    groupSite: 'Site',
+    groupSiteAbout: 'Settings that apply to everyone on this site, not just to you',
+    siteAppIcon: 'App icon',
+    siteAppIconAbout:
+      'The icon this site gets when someone installs the backoffice as an app. Everyone sees the same one.',
+    siteAppIconDefault: 'UmbraDesktop',
+    siteAppIconGuidance:
+      'A square PNG of at least 512×512. It is cropped to a square and shrunk to 32px on a taskbar, so keep it simple and avoid small text. Transparency is fine; the corners may be rounded or cut to a circle by the operating system, so keep anything important away from the edges.',
+    siteAppIconPreview: 'What it will look like',
+    siteAppIconCustom: 'Choose an image',
+    siteAppIconChoose: 'Choose an image…',
+    siteAppName: 'App name',
+    siteAppNameAbout:
+      "What the installed app is called. Leave empty to use this site's own name.",
+    siteLockedByConfiguration: 'Set in appsettings.json, so it cannot be changed here.',
     // desktop settings — taskbar. The switches are grouped by which end of the bar they are about,
     // because a screen that opens on a bare "AI chat" switch never says what it is a setting for.
     taskbarRegionLauncher: 'Taskbar items',

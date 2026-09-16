@@ -2,6 +2,7 @@ import type { UmbraDesktopSettingsCategory } from './types';
 import { UMBRADESKTOP_APPEARANCE_CATEGORY } from './appearance/index.js';
 import { UMBRADESKTOP_GENERAL_CATEGORY } from './general/index.js';
 import { UMBRADESKTOP_TASKBAR_CATEGORY } from './taskbar/index.js';
+import { UMBRADESKTOP_SITE_CATEGORY } from './site/index.js';
 
 /**
  * Every category the settings panel shows, in the order it shows them.
@@ -20,6 +21,9 @@ export const UMBRADESKTOP_SETTINGS_CATEGORIES: ReadonlyArray<UmbraDesktopSetting
   // as a whole is chosen, and this is one strip of it. Windows orders Personalisation's own pages
   // the same way.
   UMBRADESKTOP_TASKBAR_CATEGORY,
+  // Last, and not because it matters least: it is the only category here that is not about the
+  // reader's own desktop, so it sits after everything that is rather than interrupting them.
+  UMBRADESKTOP_SITE_CATEGORY,
 ];
 
 /**

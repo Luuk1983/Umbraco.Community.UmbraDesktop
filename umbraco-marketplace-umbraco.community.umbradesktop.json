@@ -78,7 +78,13 @@
     "umbraco 4",
     "retro",
     "dashboard",
-    "minesweeper"
+    "minesweeper",
+    "pwa",
+    "progressive-web-app",
+    "web-app-manifest",
+    "installable",
+    "standalone",
+    "app-icon"
   ],
   "Screenshots": [
     {
