@@ -631,6 +631,35 @@ export type DeleteUsersRequestModel = {
     userIds: Array<ReferenceByIdModel>;
 };
 
+export type DesktopConnectionRequestModel = {
+    name: string;
+    baseUrl: string;
+    colour: string;
+    clientId: string;
+    clientSecret?: string | null;
+};
+
+export type DesktopConnectionResponseModel = {
+    id: string;
+    name: string;
+    baseUrl: string;
+    colour: string;
+    clientId: string;
+    hasClientSecret: boolean;
+};
+
+export type DesktopConnectionStatusResponseModel = {
+    id: string;
+    name: string;
+    colour: string;
+    baseUrl: string;
+    status: string;
+    serverStatus?: string | null;
+    version?: string | null;
+    runtimeMode?: string | null;
+    isLocal: boolean;
+};
+
 export type DictionaryItemItemResponseModel = {
     id: string;
     flags: Array<FlagModel>;
@@ -2423,7 +2452,7 @@ export type RoleResponseModel = {
     isEveryone: boolean;
 };
 
-export type RuntimeLevelModel = 'Unknown' | 'Boot' | 'Install' | 'Upgrade' | 'Upgrading' | 'Run' | 'BootFailed';
+export type RuntimeLevelModel = 'BootFailed' | 'Unknown' | 'Boot' | 'Install' | 'Upgrade' | 'Upgrading' | 'Run';
 
 export type RuntimeModeModel = 'BackofficeDevelopment' | 'Development' | 'Production';
 
@@ -3206,7 +3235,7 @@ export type UserSettingsPresentationModel = {
     consentLevels: Array<ConsentLevelPresentationModel>;
 };
 
-export type UserStateModel = 'Active' | 'Disabled' | 'LockedOut' | 'Invited' | 'Inactive' | 'All';
+export type UserStateModel = 'All' | 'Active' | 'Disabled' | 'LockedOut' | 'Invited' | 'Inactive';
 
 export type UserTwoFactorProviderModel = {
     providerName: string;
@@ -3402,3 +3431,171 @@ export type GetBackgroundJobsResponses = {
 };
 
 export type GetBackgroundJobsResponse = GetBackgroundJobsResponses[keyof GetBackgroundJobsResponses];
+
+export type GetConnectionStatusesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/connection-status';
+};
+
+export type GetConnectionStatusesErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+};
+
+export type GetConnectionStatusesResponses = {
+    /**
+     * OK
+     */
+    200: Array<DesktopConnectionStatusResponseModel>;
+};
+
+export type GetConnectionStatusesResponse = GetConnectionStatusesResponses[keyof GetConnectionStatusesResponses];
+
+export type GetConnectionStatusData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/connection-status/{id}';
+};
+
+export type GetConnectionStatusErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * Not Found
+     */
+    404: unknown;
+};
+
+export type GetConnectionStatusResponses = {
+    /**
+     * OK
+     */
+    200: DesktopConnectionStatusResponseModel;
+};
+
+export type GetConnectionStatusResponse = GetConnectionStatusResponses[keyof GetConnectionStatusResponses];
+
+export type GetConnectionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/connections';
+};
+
+export type GetConnectionsErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type GetConnectionsResponses = {
+    /**
+     * OK
+     */
+    200: Array<DesktopConnectionResponseModel>;
+};
+
+export type GetConnectionsResponse = GetConnectionsResponses[keyof GetConnectionsResponses];
+
+export type CreateConnectionData = {
+    body?: DesktopConnectionRequestModel;
+    path?: never;
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/connections';
+};
+
+export type CreateConnectionErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type CreateConnectionResponses = {
+    /**
+     * OK
+     */
+    200: DesktopConnectionResponseModel;
+};
+
+export type CreateConnectionResponse = CreateConnectionResponses[keyof CreateConnectionResponses];
+
+export type DeleteConnectionData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/connections/{id}';
+};
+
+export type DeleteConnectionErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type DeleteConnectionResponses = {
+    /**
+     * No Content
+     */
+    204: void;
+};
+
+export type DeleteConnectionResponse = DeleteConnectionResponses[keyof DeleteConnectionResponses];
+
+export type UpdateConnectionData = {
+    body?: DesktopConnectionRequestModel;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/connections/{id}';
+};
+
+export type UpdateConnectionErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: unknown;
+};
+
+export type UpdateConnectionResponses = {
+    /**
+     * OK
+     */
+    200: DesktopConnectionResponseModel;
+};
+
+export type UpdateConnectionResponse = UpdateConnectionResponses[keyof UpdateConnectionResponses];

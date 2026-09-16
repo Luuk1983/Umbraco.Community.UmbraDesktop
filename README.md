@@ -402,6 +402,34 @@ The add-on is released from the same tag as this package and always carries the 
 
 Nothing in that package is privileged. It reaches the desktop through the same public `umbraDesktopApp` manifest any package can register, which makes its source the worked example for [Custom and third-party apps](#custom-and-third-party-apps).
 
+## Connecting other Umbraco instances (experimental)
+
+If you look after several unrelated Umbraco sites, the desktop can connect to them and report on
+them, so "which version is that client on, and is it up" stops meaning logging into eight
+backoffices.
+
+**This one is experimental**, and labelled as such wherever it appears. It works, and it only ever
+reads, but how connections are stored and what they can reach is still likely to change, so expect
+to redo some of the setup in a later version.
+
+It needs nothing installed on the other instance. You create an API user there, in the Users
+section, which is Umbraco's own feature for exactly this, and paste its client ID and secret into
+Desktop settings. For what ships today the API user needs no sections at all, and whoever owns that
+instance can revoke it whenever they like. Credentials are stored encrypted on the instance you add
+them to, so that should be one you own rather than a client's.
+
+Nothing appears until you add a connection, and what appears then is one app: Connection status,
+listing this instance along with every one you connected, with what each reports about itself.
+
+It is deliberately not the environments feature. Test, acceptance and production of one solution
+share content and keys, and moving or comparing things between them is uSync and Deploy's job;
+unrelated instances share nothing, so there is nothing to compare and the value is just seeing them
+all in one place.
+
+[`docs/connections.md`](docs/connections.md) is the guide: creating the API user step by step, what
+each field wants, what the five statuses mean and what to do about each, where credentials live and
+the honest limits of that, and what the feature deliberately does not do.
+
 ## Technical explanation
 
 ### Two kinds of window body
@@ -504,6 +532,12 @@ two channels a theme reaches the chrome through, the geometry it has to publish 
 be measured rather than typed, the traps that cost real time, worked examples from the five
 shipped themes, and a checklist to run before you open a PR. The system behind it is described in
 [`docs/design/2026-09-04-theming-system-design.md`](docs/design/2026-09-04-theming-system-design.md).
+
+Connecting other Umbraco instances is experimental, and
+[`docs/connections.md`](docs/connections.md) is its guide: creating the API user on the instance you
+want to read, what each field in Desktop settings wants, what the five connection statuses mean and
+who fixes each one, where the credentials are stored and the limits of that, and what the feature
+deliberately refuses to do.
 
 ## License
 

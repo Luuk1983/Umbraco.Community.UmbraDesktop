@@ -218,5 +218,67 @@ export default {
     backgroundJobsRetrying: 'Wordt automatisch opnieuw geprobeerd.',
     backgroundJobsRefreshFailed: 'De laatste verversing is mislukt. Het vorige resultaat wordt getoond.',
     backgroundJobsEmpty: 'Er zijn geen achtergrondtaken geregistreerd op deze server.',
+    // verbindingen met andere Umbraco-installaties. Bewust verbindingen en geen omgevingen: een
+    // omgeving betekent in Umbraco test, acceptatie en productie van een oplossing, en dat is een
+    // andere functie met eigen issues. Dit zijn losstaande installaties.
+    groupConnections: 'Verbindingen (experimenteel)',
+    groupConnectionsAbout: 'Andere Umbraco-installaties die dit bureaublad mag lezen',
+    groupExperimental: 'Experimenteel',
+    connectionsAbout:
+      'Voeg een Umbraco-installatie toe door er een API-gebruiker voor aan te maken. Op die installatie wordt niets geïnstalleerd, en het bureaublad leest er alleen uit.',
+    connectionsExperimental:
+      'Dit is experimenteel. Het werkt, maar hoe verbindingen worden ingesteld en wat ze mogen lezen verandert waarschijnlijk nog, dus houd er rekening mee dat je dit in een latere versie deels opnieuw moet doen.',
+    connectionClientIdAbout:
+      'Maak in de backoffice van de andere installatie een API-gebruiker aan, onder Gebruikers, en plak hier het client-ID. Daar wordt niets geïnstalleerd, en de eigenaar van die installatie kan de toegang op elk moment intrekken.',
+    connectionClientSecretAbout:
+      'Het geheim dat werd getoond toen die API-gebruiker werd aangemaakt. De statusapp heeft geen enkele sectie nodig, dus de kleinst mogelijke gebruikersgroep volstaat.',
+    connectionsEmpty: 'Er zijn nog geen installaties verbonden.',
+    connectionAdd: 'Installatie toevoegen',
+    connectionEditHeadline: 'Installatie bewerken',
+    connectionEdit: 'Bewerken',
+    connectionRemove: 'Verwijderen',
+    connectionRemoveHeadline: 'Installatie verwijderen',
+    connectionRemoveConfirm: '%0% en de opgeslagen inloggegevens verwijderen?',
+    connectionSave: 'Opslaan',
+    connectionCancel: 'Annuleren',
+    connectionName: 'Naam',
+    connectionNameAbout: 'Hoe jij deze installatie noemt. Meestal de naam van de klant.',
+    connectionUrl: 'Adres',
+    connectionUrlAbout: 'Het adres van de site, zonder pad. Bijvoorbeeld https://www.example.com',
+    connectionUrlInvalid:
+      'Dit is geen webadres dat het bureaublad kan gebruiken. Het moet beginnen met https:// of http://, en een poort kan niet hoger zijn dan 65535.',
+    connectionColour: 'Kleur',
+    connectionColourAbout: 'Hiermee herken je deze installatie in één oogopslag tussen de andere.',
+    connectionClientId: 'Client-ID',
+    connectionClientSecret: 'Clientgeheim',
+    connectionSecretStored: 'Er is een geheim opgeslagen. Laat dit leeg om het te behouden.',
+    connectionSecretMissing: 'Nog geen geheim opgeslagen, dus deze installatie kan niet gelezen worden.',
+    connectionSecretWriteOnly: 'Een opgeslagen geheim kan vervangen worden, maar nooit meer uitgelezen.',
+    // de vijf uitkomsten, geformuleerd als wat je eraan kunt doen in plaats van als foutcodes
+    connectionStateChecking: 'Bezig met controleren\u2026',
+    connectionStateOk: 'Verbonden',
+    connectionStateUnreachable: 'Niet bereikbaar',
+    connectionStateInvalidCredentials: 'Inloggegevens geweigerd',
+    connectionStateForbidden: 'Geen toegang',
+    connectionStateNotConfigured: 'Geen geheim ingesteld',
+    // statusapp
+    appConnectionStatus: 'Verbindingsstatus',
+    connectionStatusAbout: 'Elke installatie waarmee dit bureaublad verbonden is, en wat die over zichzelf meldt.',
+    connectionStatusConnection: 'Verbinding',
+    connectionStatusGroupLocal: 'Deze installatie',
+    connectionStatusGroupRemote: 'Verbonden installaties',
+    connectionStatusVersion: 'Umbraco-versie',
+    connectionStatusMode: 'Runtime-modus',
+    connectionStatusRuntime: 'Status',
+    connectionStatusUnknown: 'Onbekend',
+    connectionStatusManage: 'Verbindingen beheren',
+    connectionStatusRefresh: 'Verversen',
+    connectionStatusLoadFailed: 'De verbindingsstatus kon niet gelezen worden.',
+    // de toestemmingskaart, getoond in plaats van wat niet gelezen kon worden
+    permissionNeeded: 'Toestemming nodig',
+    permissionNeededRemote:
+      'De API-gebruiker op %0% mag dit niet lezen. Iemand met toegang tot die installatie kan de gebruiker in een groep zetten die de benodigde sectie heeft.',
+    permissionNeededLocal:
+      'Verbindingen beheren vereist toegang tot de sectie Instellingen hier. Vraag een beheerder van deze installatie.',
   },
 };

@@ -3,6 +3,7 @@ import { UMBRADESKTOP_APPEARANCE_CATEGORY } from './appearance/index.js';
 import { UMBRADESKTOP_GENERAL_CATEGORY } from './general/index.js';
 import { UMBRADESKTOP_LANGUAGE_CATEGORY } from './language/index.js';
 import { UMBRADESKTOP_TASKBAR_CATEGORY } from './taskbar/index.js';
+import { UMBRADESKTOP_CONNECTIONS_CATEGORY } from './connections/index.js';
 
 /**
  * Every category the settings panel shows, in the order it shows them.
@@ -25,6 +26,10 @@ export const UMBRADESKTOP_SETTINGS_CATEGORIES: ReadonlyArray<UmbraDesktopSetting
   // as a whole is chosen, and this is one strip of it. Windows orders Personalisation's own pages
   // the same way.
   UMBRADESKTOP_TASKBAR_CATEGORY,
+  // Last, and further from the others than they are from each other: everything above changes
+  // how this desktop looks or behaves, and this one holds credentials for somebody else's
+  // server. See its own file for why it is called Connections and not Environments.
+  UMBRADESKTOP_CONNECTIONS_CATEGORY,
 ];
 
 /**

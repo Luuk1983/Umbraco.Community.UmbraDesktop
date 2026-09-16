@@ -227,5 +227,67 @@ export default {
     backgroundJobsRetrying: 'Retrying automatically.',
     backgroundJobsRefreshFailed: 'The last refresh failed. Showing the previous result.',
     backgroundJobsEmpty: 'No background jobs are registered on this server.',
+    // connections to other Umbraco instances. Called connections and not environments on purpose:
+    // an environment in Umbraco means test, acceptance and production of one solution, which is a
+    // different feature with its own issues, and these are unrelated instances.
+    groupConnections: 'Connections (experimental)',
+    groupConnectionsAbout: 'Other Umbraco instances this desktop can read from',
+    groupExperimental: 'Experimental',
+    connectionsAbout:
+      'Add an Umbraco instance by giving it an API user. Nothing is installed on that instance, and the desktop only ever reads from it.',
+    connectionsExperimental:
+      'This is experimental. It works, but how connections are configured and what they can read is still likely to change, so expect to redo some of this in a later version.',
+    connectionClientIdAbout:
+      'Create an API user in the other instance’s backoffice, under Users, and paste its client ID here. Nothing is installed there, and whoever owns that instance can revoke it at any time.',
+    connectionClientSecretAbout:
+      'The secret shown when that API user was created. The status app needs no sections at all, so the smallest possible user group is enough.',
+    connectionsEmpty: 'No instances are connected yet.',
+    connectionAdd: 'Add an instance',
+    connectionEditHeadline: 'Edit instance',
+    connectionEdit: 'Edit',
+    connectionRemove: 'Remove',
+    connectionRemoveHeadline: 'Remove instance',
+    connectionRemoveConfirm: 'Remove %0% and the credentials stored for it?',
+    connectionSave: 'Save',
+    connectionCancel: 'Cancel',
+    connectionName: 'Name',
+    connectionNameAbout: 'What you call this instance. The client name, usually.',
+    connectionUrl: 'Address',
+    connectionUrlAbout: 'The site address, without a path. For example https://www.example.com',
+    connectionUrlInvalid:
+      'That is not a web address the desktop can use. It has to start with https:// or http://, and a port cannot be higher than 65535.',
+    connectionColour: 'Colour',
+    connectionColourAbout: 'Tells this instance apart from the others at a glance.',
+    connectionClientId: 'Client ID',
+    connectionClientSecret: 'Client secret',
+    connectionSecretStored: 'A secret is stored. Leave this blank to keep it.',
+    connectionSecretMissing: 'No secret stored yet, so this instance cannot be read.',
+    connectionSecretWriteOnly: 'Once saved, a secret can be replaced but never read back.',
+    // the five outcomes, worded as what to do about them rather than as error codes
+    connectionStateChecking: 'Checking\u2026',
+    connectionStateOk: 'Connected',
+    connectionStateUnreachable: 'Cannot be reached',
+    connectionStateInvalidCredentials: 'Credentials refused',
+    connectionStateForbidden: 'Not permitted',
+    connectionStateNotConfigured: 'No secret set',
+    // status app
+    appConnectionStatus: 'Connection status',
+    connectionStatusAbout: 'Every instance this desktop is connected to, and what it reports about itself.',
+    connectionStatusConnection: 'Connection',
+    connectionStatusGroupLocal: 'This instance',
+    connectionStatusGroupRemote: 'Connected instances',
+    connectionStatusVersion: 'Umbraco version',
+    connectionStatusMode: 'Runtime mode',
+    connectionStatusRuntime: 'State',
+    connectionStatusUnknown: 'Unknown',
+    connectionStatusManage: 'Manage connections',
+    connectionStatusRefresh: 'Refresh',
+    connectionStatusLoadFailed: 'Could not read the connection status.',
+    // the permission card, shown in place of whatever could not be read
+    permissionNeeded: 'Permission needed',
+    permissionNeededRemote:
+      "The API user on %0% may not read this. Someone with access to that instance can put it in a group that has the section it needs.",
+    permissionNeededLocal:
+      'Managing connections needs access to the Settings section here. Ask an administrator of this instance.',
   },
 };

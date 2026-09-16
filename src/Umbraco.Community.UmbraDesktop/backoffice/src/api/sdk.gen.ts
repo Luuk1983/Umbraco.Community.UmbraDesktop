@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetBackgroundJobsData, GetBackgroundJobsErrors, GetBackgroundJobsResponses } from './types.gen';
+import type { CreateConnectionData, CreateConnectionErrors, CreateConnectionResponses, DeleteConnectionData, DeleteConnectionErrors, DeleteConnectionResponses, GetBackgroundJobsData, GetBackgroundJobsErrors, GetBackgroundJobsResponses, GetConnectionsData, GetConnectionsErrors, GetConnectionsResponses, GetConnectionStatusData, GetConnectionStatusErrors, GetConnectionStatusesData, GetConnectionStatusesErrors, GetConnectionStatusesResponses, GetConnectionStatusResponses, UpdateConnectionData, UpdateConnectionErrors, UpdateConnectionResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -29,6 +29,92 @@ export class UmbraDesktopService {
             ],
             url: '/umbraco/management/api/v1/umbradesktop/background-jobs',
             ...options
+        });
+    }
+    
+    public static getConnectionStatuses<ThrowOnError extends boolean = false>(options?: Options<GetConnectionStatusesData, ThrowOnError>) {
+        return (options?.client ?? client).get<GetConnectionStatusesResponses, GetConnectionStatusesErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/connection-status',
+            ...options
+        });
+    }
+    
+    public static getConnectionStatus<ThrowOnError extends boolean = false>(options: Options<GetConnectionStatusData, ThrowOnError>) {
+        return (options.client ?? client).get<GetConnectionStatusResponses, GetConnectionStatusErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/connection-status/{id}',
+            ...options
+        });
+    }
+    
+    public static getConnections<ThrowOnError extends boolean = false>(options?: Options<GetConnectionsData, ThrowOnError>) {
+        return (options?.client ?? client).get<GetConnectionsResponses, GetConnectionsErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/connections',
+            ...options
+        });
+    }
+    
+    public static createConnection<ThrowOnError extends boolean = false>(options?: Options<CreateConnectionData, ThrowOnError>) {
+        return (options?.client ?? client).post<CreateConnectionResponses, CreateConnectionErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/connections',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers
+            }
+        });
+    }
+    
+    public static deleteConnection<ThrowOnError extends boolean = false>(options: Options<DeleteConnectionData, ThrowOnError>) {
+        return (options.client ?? client).delete<DeleteConnectionResponses, DeleteConnectionErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/connections/{id}',
+            ...options
+        });
+    }
+    
+    public static updateConnection<ThrowOnError extends boolean = false>(options: Options<UpdateConnectionData, ThrowOnError>) {
+        return (options.client ?? client).put<UpdateConnectionResponses, UpdateConnectionErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/connections/{id}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
         });
     }
 }
