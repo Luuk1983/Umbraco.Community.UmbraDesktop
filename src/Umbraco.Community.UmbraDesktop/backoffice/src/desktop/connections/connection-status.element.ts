@@ -1,8 +1,12 @@
 import { UmbraDesktopConnectionsRepository } from './connections.repository';
+import { observeConnectionsChanged } from './connections-changed';
+import { UMBRADESKTOP_CONNECTIONS_CATEGORY_ID } from './constants';
+import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens';
 import { connectionStateLabel, connectionStateTone, isConnectionChecking } from './connection-state';
 import type { DesktopConnectionStatusResponseModel } from '../../api/types.gen';
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
 
 /**
  * Every Umbraco instance this desktop is connected to, and what each reports about itself.
@@ -17,6 +21,10 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
  * Umbraco's own runtime level, and it is the one that comes from an endpoint needing no credentials
  * at all — so an instance stuck mid-upgrade says so, where everything authenticated would just time
  * out and read as the site being down.
+ *
+ * It follows the connections as they change: add one in settings and it appears here with its
+ * spinner, remove one and it is gone, without anybody pressing Refresh. Rows that already have an
+ * answer keep it, so adding a ninth client does not re-interrogate the other eight.
  *
  * Rows arrive in two stages, and the reason is the slowest client. Listing contacts nobody, so the
  * whole table is on screen immediately with each connection marked as being checked; then one
@@ -51,19 +59,53 @@ export class UmbraDesktopConnectionStatusElement extends UmbLitElement {
 
   #repository = new UmbraDesktopConnectionsRepository(this);
 
+  /** Stops following connection changes. Held so disconnect can call it. */
+  #stopListening?: () => void;
+
   /** Reads on first connect, because an app that opens empty and waits to be asked is a dead window. */
   override connectedCallback(): void {
     super.connectedCallback();
     void this.#load();
+
+    // Follows the same signal the launcher's gate does, so adding or removing a connection in
+    // settings is reflected here without anybody pressing Refresh - including when the settings
+    // panel was opened from this very window.
+    this.#stopListening = observeConnectionsChanged(() => void this.#load());
+  }
+
+  /** @inheritdoc */
+  override disconnectedCallback(): void {
+    this.#stopListening?.();
+    this.#stopListening = undefined;
+    super.disconnectedCallback();
   }
 
   /**
-   * Draws the table, then fills each connection in as it answers.
+   * Opens desktop settings at the Connections screen.
+   *
+   * Shown to everybody, including someone without Settings access on this instance, who lands on the
+   * permission card rather than on nothing. An affordance that disappears because of a permission is
+   * a bug here, and the destination is the right place to explain why it is refused.
+   */
+  async #manage(): Promise<void> {
+    await umbOpenModal(this, UMBRADESKTOP_SETTINGS_MODAL, {
+      data: { category: UMBRADESKTOP_CONNECTIONS_CATEGORY_ID },
+    }).catch(() => undefined);
+  }
+
+  /**
+   * Draws the table, then fills in every row that has no answer yet.
    *
    * The listing is instant because it contacts nobody. Each connection is then checked on its own, so
    * a client whose site is down costs its own row and nothing else.
+   *
+   * Answers already on screen are kept, which is what makes adding and removing a connection feel
+   * immediate: a removed row is gone the moment the list comes back, and an added one appears
+   * straight away with its spinner while the seven that were already fine stay as they were. Only
+   * Refresh re-asks everybody.
+   * @param recheckAll Whether to discard the answers already on screen and ask every instance again.
    */
-  async #load(): Promise<void> {
+  async #load(recheckAll = false): Promise<void> {
     this._loading = true;
     const rows = await this.#repository.getStatuses();
 
@@ -77,9 +119,23 @@ export class UmbraDesktopConnectionStatusElement extends UmbLitElement {
       return;
     }
 
-    this._reports = rows;
+    // Mapping over the *fresh* list is what removes a deleted connection: a row nobody listed any
+    // more simply has nothing to carry forward into.
+    const known = new Map(this._reports?.map((row) => [row.id, row]));
+    this._reports = rows.map((row) => {
+      if (recheckAll || row.isLocal) {
+        return row;
+      }
 
-    await Promise.all(rows.filter((row) => !row.isLocal).map((row) => this.#check(row.id)));
+      const previous = known.get(row.id);
+      return previous && !isConnectionChecking(previous.status) ? previous : row;
+    });
+
+    await Promise.all(
+      this._reports
+        .filter((row) => !row.isLocal && isConnectionChecking(row.status))
+        .map((row) => this.#check(row.id)),
+    );
 
     this._loading = false;
   }
@@ -192,12 +248,19 @@ export class UmbraDesktopConnectionStatusElement extends UmbLitElement {
     return html`
       <header>
         <p>${this.localize.term('umbraDesktop_connectionStatusAbout')}</p>
-        <uui-button
-          look="secondary"
-          .disabled=${this._loading}
-          label=${this.localize.term('umbraDesktop_connectionStatusRefresh')}
-          @click=${() => void this.#load()}
-        ></uui-button>
+        <div class="actions">
+          <uui-button
+            look="secondary"
+            label=${this.localize.term('umbraDesktop_connectionStatusManage')}
+            @click=${() => void this.#manage()}
+          ></uui-button>
+          <uui-button
+            look="secondary"
+            .disabled=${this._loading}
+            label=${this.localize.term('umbraDesktop_connectionStatusRefresh')}
+            @click=${() => void this.#load(true)}
+          ></uui-button>
+        </div>
       </header>
 
       ${this._failed
@@ -248,6 +311,12 @@ export class UmbraDesktopConnectionStatusElement extends UmbLitElement {
       header p {
         margin: 0;
         color: var(--uui-color-text-alt, #515054);
+      }
+
+      header .actions {
+        display: flex;
+        flex: 0 0 auto;
+        gap: var(--uui-size-space-3, 9px);
       }
 
       table {

@@ -271,6 +271,7 @@ export default {
     connectionStatusMode: 'Runtime-modus',
     connectionStatusRuntime: 'Status',
     connectionStatusUnknown: 'Onbekend',
+    connectionStatusManage: 'Verbindingen beheren',
     connectionStatusRefresh: 'Verversen',
     connectionStatusLoadFailed: 'De verbindingsstatus kon niet gelezen worden.',
     // de toestemmingskaart, getoond in plaats van wat niet gelezen kon worden

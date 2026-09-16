@@ -280,6 +280,7 @@ export default {
     connectionStatusMode: 'Runtime mode',
     connectionStatusRuntime: 'State',
     connectionStatusUnknown: 'Unknown',
+    connectionStatusManage: 'Manage connections',
     connectionStatusRefresh: 'Refresh',
     connectionStatusLoadFailed: 'Could not read the connection status.',
     // the permission card, shown in place of whatever could not be read

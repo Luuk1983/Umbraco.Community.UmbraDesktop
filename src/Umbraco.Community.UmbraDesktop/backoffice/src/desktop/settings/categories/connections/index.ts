@@ -1,4 +1,5 @@
 import type { UmbraDesktopSettingsCategory } from '../types';
+import { UMBRADESKTOP_CONNECTIONS_CATEGORY_ID } from '../../../connections/constants';
 import './connections.element.js';
 
 /**
@@ -15,7 +16,7 @@ import './connections.element.js';
  * somebody else's server.
  */
 export const UMBRADESKTOP_CONNECTIONS_CATEGORY: UmbraDesktopSettingsCategory = {
-  id: 'connections',
+  id: UMBRADESKTOP_CONNECTIONS_CATEGORY_ID,
   labelKey: 'umbraDesktop_groupConnections',
   descriptionKey: 'umbraDesktop_groupConnectionsAbout',
   // The same icon the Status app carries, so the screen that configures a thing and the app that
