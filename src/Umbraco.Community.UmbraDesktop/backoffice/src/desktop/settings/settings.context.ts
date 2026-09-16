@@ -1,4 +1,9 @@
-import type { UmbraDesktopSettings, UmbraDesktopWallpaperRef } from './types';
+import type {
+  UmbraDesktopClockCycle,
+  UmbraDesktopLocaleSource,
+  UmbraDesktopSettings,
+  UmbraDesktopWallpaperRef,
+} from './types';
 import type { UmbraDesktopWallpaperView } from './wallpaper-view';
 import { resolveWallpaper, wallpaperThumbUrl } from './wallpaper';
 import { togglePinned } from './pinned';
@@ -59,6 +64,14 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
 
   /** Whether landing on the backoffice root should open the desktop. */
   public readonly bootIntoDesktop = this.#settings.asObservablePart((settings) => settings.bootIntoDesktop);
+
+  /**
+   * How this user wants dates and times formatted: which culture, and any clock override.
+   *
+   * One observable for both fields rather than one each, because every reader needs both to format
+   * anything — a source without a cycle cannot answer what the time looks like.
+   */
+  public readonly locale = this.#settings.asObservablePart((settings) => settings.locale);
 
   /** Whether changing the theme also changes the wallpaper to that theme's match. */
   public readonly wallpaperFollowsTheme = this.#settings.asObservablePart(
@@ -223,6 +236,29 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   public setBootIntoDesktop(enabled: boolean): void {
     this.#update({ bootIntoDesktop: enabled });
     writeBootHint(enabled);
+  }
+
+  /**
+   * Choose which culture the desktop formats dates and times with. Applies immediately and persists.
+   *
+   * Takes effect on screen at once, unlike {@link setBootIntoDesktop}: the taskbar observes this and
+   * re-ticks rather than waiting up to fifteen seconds for its interval, which is the difference
+   * between a setting and a setting that looks broken.
+   * @param source The culture to follow.
+   */
+  public setLocaleSource(source: UmbraDesktopLocaleSource): void {
+    this.#update({ locale: { ...this.#settings.getValue().locale, source } });
+  }
+
+  /**
+   * Choose whether the clock overrides its culture's hour cycle. Applies immediately and persists.
+   *
+   * Separate from {@link setLocaleSource} because they are two independent choices: an override is
+   * meant to survive changing which culture it overrides.
+   * @param hourCycle The override, or `auto` to leave it to the culture.
+   */
+  public setClockHourCycle(hourCycle: UmbraDesktopClockCycle): void {
+    this.#update({ locale: { ...this.#settings.getValue().locale, hourCycle } });
   }
 
   /**

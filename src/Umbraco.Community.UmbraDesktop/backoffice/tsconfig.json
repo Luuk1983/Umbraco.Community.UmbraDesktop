@@ -4,7 +4,10 @@
 		"experimentalDecorators": true,
 		"useDefineForClassFields": false,
 		"module": "ESNext",
-		"lib": [ "ES2020", "DOM", "DOM.Iterable" ],
+		/* ES2021.Intl on top of ES2020 for one property: Intl.ResolvedDateTimeFormatOptions.hourCycle,
+		   which the clock reads back to decide whether to pad the hour. Declared there rather than in
+		   ES2020.Intl, which only adds hourCycle to the *options* you pass in. */
+		"lib": [ "ES2020", "ES2021.Intl", "DOM", "DOM.Iterable" ],
 		"skipLibCheck": true,
 		"types": [
 			"@umbraco-cms/backoffice/extension-types",

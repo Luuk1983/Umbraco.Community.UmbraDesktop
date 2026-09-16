@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { UmbraDesktopSettingsContext } from './settings.context';
-import type { UmbraDesktopWallpaperRef } from './types';
+import type { UmbraDesktopLocaleSettings, UmbraDesktopWallpaperRef } from './types';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
 /**
@@ -160,4 +160,37 @@ it('repaints the wallpaper the desktop reads, not just the stored preference', a
   let url: string | null = null;
   context.wallpaper.subscribe((view) => (url = view.background.url)).unsubscribe();
   expect(url).to.contain('cobalt-beacon');
+});
+
+/**
+ * The locale preference currently in force.
+ *
+ * Read by subscribing for the same reason `wallpaperOf` is: the context publishes through
+ * `UmbObjectState` and exposes no getter, and the state replays its current value synchronously to
+ * a new subscriber.
+ * @param context The context to read.
+ * @returns The stored locale preference.
+ */
+function localeOf(context: UmbraDesktopSettingsContext): UmbraDesktopLocaleSettings {
+  let locale!: UmbraDesktopLocaleSettings;
+  context.settings.subscribe((settings) => (locale = settings.locale)).unsubscribe();
+  return locale;
+}
+
+it('starts on the backoffice culture with an automatic clock', async () => {
+  const context = await contextOnHost();
+
+  expect(localeOf(context)).to.deep.equal({ source: 'backoffice', hourCycle: 'auto' });
+});
+
+it('changes the format source and the clock override independently', async () => {
+  // Two setters rather than one: they are two separate choices on one screen, and a combined setter
+  // would make every caller pass the field it is not changing.
+  const context = await contextOnHost();
+
+  context.setLocaleSource('browser');
+  expect(localeOf(context)).to.deep.equal({ source: 'browser', hourCycle: 'auto' });
+
+  context.setClockHourCycle('h23');
+  expect(localeOf(context)).to.deep.equal({ source: 'browser', hourCycle: 'h23' });
 });

@@ -14,9 +14,11 @@ it('declares a games group whose label is the existing loc token', () => {
   expect(games!.label).to.equal('#umbraDesktop_groupGames');
 });
 
-it('sorts games after every other curated group', () => {
+it('sorts games after every other finished group', () => {
   const games = groups.find((g) => g.alias === 'games')!;
-  const others = groups.filter((g) => g.alias !== 'games');
+  // Experimental is excluded rather than compared: it is a holding pen between the finished groups
+  // and the reserved "More", not a peer of them, and the assertion below is what pins it down.
+  const others = groups.filter((g) => g.alias !== 'games' && g.alias !== 'experimental');
   for (const group of others) {
     expect(
       games.weight!,
@@ -62,4 +64,20 @@ it('gives every group a weight, so none of them silently sort first', () => {
   for (const group of groups) {
     expect(group.weight, `${group.alias} must declare a weight`).to.not.be.undefined;
   }
+});
+
+/**
+ * Experimental sits between Games and the reserved "More".
+ *
+ * Both halves matter and neither is visible to the loop above. After Games, because an app that is
+ * still working out what it should be is further from what anybody came here for than a game is.
+ * Before "More", because "More" is the bucket for apps nobody curated at all, and a group this
+ * repository deliberately created should not sort behind it.
+ */
+it('sorts experimental after games and before the reserved More group', () => {
+  const games = groups.find((g) => g.alias === 'games')!;
+  const experimental = groups.find((g) => g.alias === 'experimental')!;
+
+  expect(experimental.weight!).to.be.greaterThan(games.weight!);
+  expect(experimental.weight!).to.be.lessThan(UMBRADESKTOP_MORE_GROUP_WEIGHT);
 });

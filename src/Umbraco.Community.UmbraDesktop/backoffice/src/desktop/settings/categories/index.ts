@@ -1,7 +1,9 @@
 import type { UmbraDesktopSettingsCategory } from './types';
 import { UMBRADESKTOP_APPEARANCE_CATEGORY } from './appearance/index.js';
 import { UMBRADESKTOP_GENERAL_CATEGORY } from './general/index.js';
+import { UMBRADESKTOP_LANGUAGE_CATEGORY } from './language/index.js';
 import { UMBRADESKTOP_TASKBAR_CATEGORY } from './taskbar/index.js';
+import { UMBRADESKTOP_CONNECTIONS_CATEGORY } from './connections/index.js';
 import { UMBRADESKTOP_SITE_CATEGORY } from './site/index.js';
 
 /**
@@ -16,13 +18,22 @@ export const UMBRADESKTOP_SETTINGS_CATEGORIES: ReadonlyArray<UmbraDesktopSetting
   // reader falls back to when they are not sure which one holds the thing they want, and a fallback
   // at the bottom of a list is one people scroll past twice.
   UMBRADESKTOP_GENERAL_CATEGORY,
+  // Before Appearance: what the desktop says and how it writes things down is looked for sooner
+  // than what it looks like, and its first row reaches outside the desktop in a way nothing under
+  // Appearance does.
+  UMBRADESKTOP_LANGUAGE_CATEGORY,
   UMBRADESKTOP_APPEARANCE_CATEGORY,
   // Last of the three, and after Appearance rather than before it: Appearance is where the desktop
   // as a whole is chosen, and this is one strip of it. Windows orders Personalisation's own pages
   // the same way.
   UMBRADESKTOP_TASKBAR_CATEGORY,
-  // Last, and not because it matters least: it is the only category here that is not about the
-  // reader's own desktop, so it sits after everything that is rather than interrupting them.
+  // Further from the others than they are from each other: everything above changes how this
+  // desktop looks or behaves, and this one holds credentials for somebody else's server. See its
+  // own file for why it is called Connections and not Environments.
+  UMBRADESKTOP_CONNECTIONS_CATEGORY,
+  // Last, and the only one that is not the reader's own. Everything above it — Connections
+  // included — is this person's desktop; everything in here changes what every user on the site
+  // gets, which is why it is gated on Settings-section access and says so on the screen.
   UMBRADESKTOP_SITE_CATEGORY,
 ];
 

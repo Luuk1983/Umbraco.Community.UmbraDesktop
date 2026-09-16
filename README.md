@@ -37,6 +37,7 @@ It also does something the backoffice does not do at all. When two people have t
 - The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: the AI chat, then your pinned apps. Both are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
 - Choose your wallpaper. Ten backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user, in that browser.
 - Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, in that browser. See [Starting in the desktop](#starting-in-the-desktop).
+- Speaks your language, and writes the time your way. The desktop follows your Umbraco backoffice language, so a Danish backoffice gets a Danish clock rather than whatever your browser happens to be set to, and you can change that language from Desktop settings without needing access to the Users section. If your culture and your habits disagree, one switch forces a 12 or 24 hour clock without giving up anything else about how your language writes a time. See [Language and region](#language-and-region).
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on. A window waiting for its content shows the Umbraco mark with a turning ring, the same animation the boot screen uses, so the wait belongs to the desktop rather than looking like the page has stalled.
 - Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice. Five ship: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98. Adding your own is a folder of CSS and one catalogue entry.
 - Light, dark and high contrast, in the same place. Umbraco's own colour schemes are normally set in the user menu, three clicks from the theme that sits beside them. Appearance now has a row for them too, listing whatever themes the backoffice has registered rather than a fixed three, so a site shipping its own gets it here for free. One setting, two ways in: change it here and the user menu agrees, and the other way round. See [The backoffice's own colours](#the-backoffices-own-colours).
@@ -95,7 +96,7 @@ From the launcher:
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
 - While a window is fetching its content, whether you have just opened it or just reloaded it, it shows the Umbraco mark with a ring turning around it. It covers the window until the content is ready, so you never see a half-drawn backoffice assembling itself.
 - Choose Exit in the launcher's footer to return to the classic backoffice. If you start in the desktop, exiting keeps you in the classic backoffice until you close the tab.
-- Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Appearance for your theme, your wallpaper and the backoffice's own colours, Taskbar for what sits beside the launcher button — and the desktop stays in view behind it, so you can see a change as you make it.
+- Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Language and region for the backoffice language and how times are written, Appearance for your theme, your wallpaper and the backoffice's own colours, Taskbar for what sits beside the launcher button — and the desktop stays in view behind it, so you can see a change as you make it.
 
 Several apps can be open at once, and some of them (the content editor and media library, for instance) can be opened more than once, so you can compare two documents side by side.
 
@@ -372,6 +373,20 @@ That second one is worth knowing before you need it. The desktop hides the backo
 
 The setting is stored per user, in that browser, alongside your theme and wallpaper. Signing in on another machine starts in the classic backoffice until you turn it on there too.
 
+## Language and region
+
+The desktop is the shell around a backoffice that is already translated, so it takes its cue from that backoffice rather than from your browser. Open Desktop settings, Language and region.
+
+**Backoffice language** is your own Umbraco language, the same setting that lives in your user profile. Changing it here changes it everywhere, not just on the desktop — and you do not need access to the Users section to change your own. The desktop hides the backoffice header, which is where that setting normally lives, so this is where it goes instead.
+
+It cannot take effect where it stands: every window is a frame with its own copy of the backoffice in it, so the desktop asks whether to reload once the change is saved. Saying Later costs nothing; the language is already stored and applies the next time you open the backoffice. Saying Reload now closes every window you have open, because the desktop does not restore a session, so the dialog says how many that is and whether any of them are unsaved.
+
+**Regional format** decides how the desktop writes dates and times. The default is to match your backoffice language, which is what the rest of the backoffice already does: Umbraco formats every date it shows — the Info tab, the audit trail, the log viewer — with that same language. Before this setting existed the clock alone read your browser instead, so on a default English install the backoffice said 8:59 PM while the clock beside it said 20:59. Matching the browser is still there if you prefer it.
+
+**Clock** forces 12 or 24 hour when your language and your habits disagree. Umbraco offers no British English, so an English backoffice is a 12 hour one whether you like it or not; this is how you get 24 hour without giving up anything else. It overrides only the hour, so Dutch still writes p.m. its own way, Danish keeps its dot, and Japanese and Korean keep their own markers in their own places. Left on Automatic, your language decides.
+
+Regional format and Clock are stored per user, in that browser, alongside your theme and wallpaper. The backoffice language is stored on your Umbraco user, so it follows you to any machine you sign in on.
+
 ## Installing the backoffice as an app
 
 Open the backoffice and use your browser's install action. Chrome and Edge offer it in the address bar; Firefox has it under its own menu. The installed app opens on the desktop with no browser chrome around it.
@@ -441,6 +456,34 @@ That is the whole installation. There is no section to grant and no dashboard to
 The add-on is released from the same tag as this package and always carries the same version number, so matching versions are the compatibility answer. Its dependency on the desktop is a version range rather than an exact pin, so upgrading the desktop on its own is fine.
 
 Nothing in that package is privileged. It reaches the desktop through the same public `umbraDesktopApp` manifest any package can register, which makes its source the worked example for [Custom and third-party apps](#custom-and-third-party-apps).
+
+## Connecting other Umbraco instances (experimental)
+
+If you look after several unrelated Umbraco sites, the desktop can connect to them and report on
+them, so "which version is that client on, and is it up" stops meaning logging into eight
+backoffices.
+
+**This one is experimental**, and labelled as such wherever it appears. It works, and it only ever
+reads, but how connections are stored and what they can reach is still likely to change, so expect
+to redo some of the setup in a later version.
+
+It needs nothing installed on the other instance. You create an API user there, in the Users
+section, which is Umbraco's own feature for exactly this, and paste its client ID and secret into
+Desktop settings. For what ships today the API user needs no sections at all, and whoever owns that
+instance can revoke it whenever they like. Credentials are stored encrypted on the instance you add
+them to, so that should be one you own rather than a client's.
+
+Nothing appears until you add a connection, and what appears then is one app: Connection status,
+listing this instance along with every one you connected, with what each reports about itself.
+
+It is deliberately not the environments feature. Test, acceptance and production of one solution
+share content and keys, and moving or comparing things between them is uSync and Deploy's job;
+unrelated instances share nothing, so there is nothing to compare and the value is just seeing them
+all in one place.
+
+[`docs/connections.md`](docs/connections.md) is the guide: creating the API user step by step, what
+each field wants, what the five statuses mean and what to do about each, where credentials live and
+the honest limits of that, and what the feature deliberately does not do.
 
 ## Technical explanation
 
@@ -544,6 +587,12 @@ two channels a theme reaches the chrome through, the geometry it has to publish 
 be measured rather than typed, the traps that cost real time, worked examples from the five
 shipped themes, and a checklist to run before you open a PR. The system behind it is described in
 [`docs/design/2026-09-04-theming-system-design.md`](docs/design/2026-09-04-theming-system-design.md).
+
+Connecting other Umbraco instances is experimental, and
+[`docs/connections.md`](docs/connections.md) is its guide: creating the API user on the instance you
+want to read, what each field in Desktop settings wants, what the five connection statuses mean and
+who fixes each one, where the credentials are stored and the limits of that, and what the feature
+deliberately refuses to do.
 
 Installing the backoffice as an app is described above. The reasoning behind it, including the
 browser behaviour it depends on and the fixture that proves it, is in

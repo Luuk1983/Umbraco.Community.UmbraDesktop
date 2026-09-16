@@ -18,13 +18,16 @@ it('puts General first and Site last', () => {
   // back to when you are not sure which one holds the thing you want, and a fallback at the bottom
   // is one people scroll past twice.
   //
-  // Site goes last, and not because it matters least. It is the only category that is not about the
-  // reader's own desktop — everything in it changes what every user on the site gets — so it sits
-  // after everything personal rather than interrupting it.
+  // Site goes last, after Connections, and not because it matters least. It is the only category
+  // that is not the reader's own — everything above it is this person's desktop, while everything
+  // in Site changes what every user gets — so it sits after everything personal rather than
+  // interrupting it.
   expect(UMBRADESKTOP_SETTINGS_CATEGORIES.map((category) => category.id)).to.deep.equal([
     'general',
+    'language',
     'appearance',
     'taskbar',
+    'connections',
     'site',
   ]);
 });

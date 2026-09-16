@@ -26,6 +26,7 @@ it('round-trips settings through serialise and parse', () => {
     bootIntoDesktop: true,
     taskbarFeatures: { 'ai-chat': false },
     wallpaperFollowsTheme: true,
+    locale: { source: 'browser', hourCycle: 'h23' },
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -46,6 +47,7 @@ it('reads back each wallpaper kind unchanged', () => {
           bootIntoDesktop: false,
           taskbarFeatures: {},
           wallpaperFollowsTheme: false,
+          locale: { source: 'backoffice', hourCycle: 'auto' },
         }),
       )
         .wallpaper,
@@ -96,6 +98,7 @@ it('round-trips a pinned list', () => {
     bootIntoDesktop: false,
     taskbarFeatures: {},
     wallpaperFollowsTheme: false,
+    locale: { source: 'backoffice', hourCycle: 'auto' },
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -262,4 +265,42 @@ it('never returns the shared default feature map, so a caller cannot mutate it',
 it('ignores a wallpaper-follows-theme preference that is not a boolean', () => {
   expect(parseSettings(JSON.stringify({ v: 1, wallpaperFollowsTheme: 'yes' })).wallpaperFollowsTheme).to.equal(false);
   expect(parseSettings(JSON.stringify({ v: 1, wallpaperFollowsTheme: 1 })).wallpaperFollowsTheme).to.equal(false);
+});
+
+it('defaults locale to the backoffice culture on an automatic clock', () => {
+  // The backoffice rather than the browser, because Umbraco itself formats every date it renders
+  // with the backoffice culture. A taskbar reading the browser was the one thing on screen
+  // answering to nobody.
+  expect(parseSettings(null).locale).to.deep.equal({ source: 'backoffice', hourCycle: 'auto' });
+});
+
+it('takes the locale default from a payload written before the field existed', () => {
+  const settings = parseSettings(JSON.stringify({ v: 1, theme: 'macos' }));
+  expect(settings.theme).to.equal('macos');
+  expect(settings.locale).to.deep.equal({ source: 'backoffice', hourCycle: 'auto' });
+});
+
+it('reads a stored locale back', () => {
+  const settings = parseSettings(JSON.stringify({ v: 1, locale: { source: 'browser', hourCycle: 'h23' } }));
+  expect(settings.locale).to.deep.equal({ source: 'browser', hourCycle: 'h23' });
+});
+
+it('recovers each locale field on its own', () => {
+  // A value written by a later build must not also cost the user the other field, the way the
+  // wallpaper and the theme recover separately at the top level.
+  const settings = parseSettings(JSON.stringify({ v: 1, locale: { source: 'nonsense', hourCycle: 'h12' } }));
+  expect(settings.locale).to.deep.equal({ source: 'backoffice', hourCycle: 'h12' });
+});
+
+it('takes both locale defaults when the field is not an object', () => {
+  expect(parseSettings(JSON.stringify({ v: 1, locale: 'h23' })).locale).to.deep.equal({
+    source: 'backoffice',
+    hourCycle: 'auto',
+  });
+});
+
+it('never returns the shared default locale, so a caller cannot mutate it', () => {
+  const first = parseSettings(null);
+  first.locale.hourCycle = 'h12';
+  expect(parseSettings(null).locale.hourCycle).to.equal('auto');
 });
