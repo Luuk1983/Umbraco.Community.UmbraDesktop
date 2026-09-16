@@ -22,6 +22,7 @@ it('puts General first', () => {
     'language',
     'appearance',
     'taskbar',
+    'connections',
   ]);
 });
 

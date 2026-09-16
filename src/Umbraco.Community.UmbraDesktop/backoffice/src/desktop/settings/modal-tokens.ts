@@ -10,6 +10,9 @@ export const UMBRADESKTOP_WALLPAPER_PICKER_MODAL_ALIAS = 'Umbraco.Community.Umbr
 /** Alias of the theme picker modal. */
 export const UMBRADESKTOP_THEME_PICKER_MODAL_ALIAS = 'Umbraco.Community.UmbraDesktop.Modal.ThemePicker';
 
+/** Alias of the editor for one connection to another Umbraco instance. */
+export const UMBRADESKTOP_CONNECTION_EDITOR_MODAL_ALIAS = 'Umbraco.Community.UmbraDesktop.Modal.ConnectionEditor';
+
 /** Alias of the picker for the backoffice's own theme. */
 export const UMBRADESKTOP_BACKOFFICE_THEME_PICKER_MODAL_ALIAS =
   'Umbraco.Community.UmbraDesktop.Modal.BackofficeThemePicker';
@@ -139,5 +142,69 @@ export const UMBRADESKTOP_BACKOFFICE_THEME_PICKER_MODAL = new UmbModalToken<
   UmbraDesktopBackofficeThemePickerModalData,
   never
 >(UMBRADESKTOP_BACKOFFICE_THEME_PICKER_MODAL_ALIAS, {
+  modal: { type: 'sidebar', size: 'small' },
+});
+
+/** What the connection editor needs to know: the connection being edited, if any. */
+export interface UmbraDesktopConnectionEditorModalData {
+  /**
+   * The connection to edit, or absent to add a new one.
+   *
+   * Carries no secret, because nothing in the browser ever has one. Whether a secret is stored is
+   * all the editor is told, and all it needs in order to say "leave this blank to keep it".
+   */
+  connection?: {
+    /** What the user calls this instance. */
+    name: string;
+    /** Origin of the remote instance. */
+    baseUrl: string;
+    /** Colour that tells this instance apart from the others. */
+    colour: string;
+    /** Client id of the API user on the remote instance. */
+    clientId: string;
+    /** Whether a secret is already stored for it. */
+    hasClientSecret: boolean;
+  };
+}
+
+/** What the connection editor hands back when it is submitted. */
+export interface UmbraDesktopConnectionEditorModalValue {
+  /** What the user calls this instance. */
+  name: string;
+  /** Origin of the remote instance. */
+  baseUrl: string;
+  /** Colour that tells this instance apart from the others. */
+  colour: string;
+  /** Client id of the API user on the remote instance. */
+  clientId: string;
+  /**
+   * The secret to store, or undefined to keep whichever is already stored.
+   *
+   * Undefined rather than empty, so that "I did not touch this box" and "I want no secret" stay
+   * distinguishable all the way to the server, which treats absence as unchanged.
+   */
+  clientSecret?: string;
+}
+
+/**
+ * The editor for one connection to another Umbraco instance.
+ *
+ * A modal rather than a screen pushed inside the settings panel, and that is the point of it: a form
+ * with five fields needs a footer that says Save and Cancel and means it. Pushed in place, the same
+ * two buttons sat at the bottom of a scrolling column where they read as the end of the content
+ * rather than as the decision, and nothing stopped a half-filled form being abandoned by clicking
+ * the back chevron.
+ *
+ * `small` and a sidebar, matching the theme picker rather than the wider wallpaper pickers: this is
+ * a column of text inputs, and the extra width would only stretch them.
+ *
+ * Returns the values rather than saving them. The panel that opened it owns the repository, the
+ * test-on-save and telling the rest of the desktop that connections changed; an editor that saved
+ * for itself would have to own all three or leave them half done.
+ */
+export const UMBRADESKTOP_CONNECTION_EDITOR_MODAL = new UmbModalToken<
+  UmbraDesktopConnectionEditorModalData,
+  UmbraDesktopConnectionEditorModalValue
+>(UMBRADESKTOP_CONNECTION_EDITOR_MODAL_ALIAS, {
   modal: { type: 'sidebar', size: 'small' },
 });

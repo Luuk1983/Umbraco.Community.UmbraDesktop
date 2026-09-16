@@ -27,4 +27,9 @@ export const groups: UmbraDesktopGroup[] = [
   // apps from the entertainment package: nothing in this repository puts an app here, which is why
   // the group can exist without either package knowing the other's release schedule.
   { alias: 'games', label: '#umbraDesktop_groupGames', weight: 60 },
+  // Where an app lands while it is still finding out what it should be. A promise to empty
+  // itself rather than a permanent home: an app here either graduates into a real group or is
+  // removed. Last of the real groups, immediately before the reserved "More", because it is the
+  // one group a reader should meet after everything that is finished.
+  { alias: 'experimental', label: '#umbraDesktop_groupExperimental', weight: 70 },
 ];
