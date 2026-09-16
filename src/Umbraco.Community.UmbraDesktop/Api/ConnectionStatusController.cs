@@ -29,19 +29,19 @@ namespace Umbraco.Community.UmbraDesktop.Api;
 public class ConnectionStatusController(DesktopConnectionStatusService statusService) : ManagementApiControllerBase
 {
     /// <summary>
-    /// Reports on every configured connection.
+    /// Lists the rows, without contacting any connected instance.
     /// </summary>
-    /// <param name="cancellationToken">Cancels the calls to the connected instances.</param>
-    /// <returns>One report per connection.</returns>
+    /// <remarks>
+    /// Answers immediately. The local instance is complete and every connection comes back as
+    /// <c>Checking</c>, for the client to fill in one at a time. That is what lets the screen appear
+    /// at once rather than waiting on the slowest of somebody else's servers.
+    /// </remarks>
+    /// <returns>One row per connection, plus the local instance.</returns>
     [HttpGet]
     [MapToApiVersion("1.0")]
     [ProducesResponseType(typeof(DesktopConnectionStatusResponseModel[]), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetConnectionStatuses(CancellationToken cancellationToken)
-    {
-        var reports = await statusService.GetAllAsync(cancellationToken);
-
-        return Ok(reports.Select(ToResponseModel).ToArray());
-    }
+    public IActionResult GetConnectionStatuses() =>
+        Ok(statusService.List().Select(ToResponseModel).ToArray());
 
     /// <summary>
     /// Reports on one connection, which is what the Connections screen uses to test a connection

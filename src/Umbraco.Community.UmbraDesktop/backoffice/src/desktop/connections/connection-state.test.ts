@@ -12,6 +12,7 @@ describe('connection state', () => {
     );
     expect(connectionStateLabel('Forbidden')).to.equal('umbraDesktop_connectionStateForbidden');
     expect(connectionStateLabel('NotConfigured')).to.equal('umbraDesktop_connectionStateNotConfigured');
+    expect(connectionStateLabel('Checking')).to.equal('umbraDesktop_connectionStateChecking');
   });
 
   it('falls back to unknown for a status it has never heard of', () => {
@@ -28,6 +29,11 @@ describe('connection state', () => {
     expect(connectionStateTone('InvalidCredentials')).to.equal('warning');
     expect(connectionStateTone('Forbidden')).to.equal('warning');
     expect(connectionStateTone('NotConfigured')).to.equal('warning');
+  });
+
+  it('gives a row nobody has checked yet a neutral tone', () => {
+    // Amber on the way to green would make every healthy screen flash a warning at itself.
+    expect(connectionStateTone('Checking')).to.equal('default');
   });
 
   it('treats an unknown status as a warning rather than as working', () => {

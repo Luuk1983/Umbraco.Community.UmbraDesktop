@@ -30,4 +30,14 @@ public enum DesktopConnectionStatus
 
     /// <summary>No client secret has been stored for this connection yet.</summary>
     NotConfigured,
+
+    /// <summary>
+    /// Nobody has asked this instance yet.
+    /// </summary>
+    /// <remarks>
+    /// The state a row is listed in before it is checked. Listing and checking are separate calls so
+    /// that a screen full of connections appears at once and fills in as answers arrive, rather than
+    /// staying blank until the slowest of somebody else's servers has replied.
+    /// </remarks>
+    Checking,
 }

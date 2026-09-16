@@ -99,7 +99,14 @@ public sealed class DesktopConnectionTokenProvider(
         string clientSecret,
         CancellationToken cancellationToken)
     {
-        using var client = httpClientFactory.CreateClient();
+        // The token exchange reaches a connection's address before any read does, so an address
+        // that will not parse is refused here first. Same reasoning as the read client.
+        if (DesktopConnectionUri.TryResolve(connection.BaseUrl, TokenEndpointPath, out var tokenEndpoint) is false)
+        {
+            return new DesktopConnectionTokenAttempt(DesktopConnectionStatus.Unreachable, null);
+        }
+
+        using var client = httpClientFactory.CreateClient(DesktopConnectionHttpClient.Name);
         using var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["grant_type"] = "client_credentials",
@@ -110,7 +117,7 @@ public sealed class DesktopConnectionTokenProvider(
         HttpResponseMessage response;
         try
         {
-            response = await client.PostAsync(TokenEndpoint(connection), content, cancellationToken);
+            response = await client.PostAsync(tokenEndpoint, content, cancellationToken);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
@@ -151,10 +158,4 @@ public sealed class DesktopConnectionTokenProvider(
             return new DesktopConnectionTokenAttempt(DesktopConnectionStatus.Ok, accessToken);
         }
     }
-
-    /// <summary>Builds the token endpoint URI for a connection.</summary>
-    /// <param name="connection">The connection whose origin to use.</param>
-    /// <returns>The absolute token endpoint URI.</returns>
-    private static Uri TokenEndpoint(DesktopConnection connection) =>
-        new($"{connection.BaseUrl.TrimEnd('/')}{TokenEndpointPath}");
 }

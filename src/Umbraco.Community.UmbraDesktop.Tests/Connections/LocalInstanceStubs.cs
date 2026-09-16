@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Configuration.Models;
@@ -38,6 +40,17 @@ internal static class LocalInstanceStubs
 
         return state;
     }
+
+    /// <summary>
+    /// A logger that discards everything.
+    /// </summary>
+    /// <remarks>
+    /// The status service logs when a connection cannot be read at all. No test here asserts on that,
+    /// and a substitute would only be a second thing to keep in step with the real signature.
+    /// </remarks>
+    /// <returns>A no-op logger.</returns>
+    public static ILogger<DesktopConnectionStatusService> Logger() =>
+        NullLogger<DesktopConnectionStatusService>.Instance;
 
     /// <summary>
     /// The one report in a set that is not the local instance.

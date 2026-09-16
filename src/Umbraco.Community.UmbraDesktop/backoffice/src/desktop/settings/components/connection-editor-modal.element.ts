@@ -2,7 +2,8 @@ import type {
   UmbraDesktopConnectionEditorModalData,
   UmbraDesktopConnectionEditorModalValue,
 } from '../modal-tokens';
-import { css, customElement, html, state } from '@umbraco-cms/backoffice/external/lit';
+import { isUsableConnectionAddress } from '../../connections/connection-address';
+import { css, customElement, html, nothing, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbModalBaseElement } from '@umbraco-cms/backoffice/modal';
 
 /** What a new connection starts as. The colour is Umbraco's own, so a row is never colourless. */
@@ -77,9 +78,21 @@ export class UmbraDesktopConnectionEditorModalElement extends UmbModalBaseElemen
   get #complete(): boolean {
     return (
       this._draft.name.trim() !== ''
-      && this._draft.baseUrl.trim() !== ''
+      && isUsableConnectionAddress(this._draft.baseUrl)
       && this._draft.clientId.trim() !== ''
     );
+  }
+
+  /**
+   * Whether what is typed in the address box is wrong, as opposed to not finished.
+   *
+   * The difference decides whether an error appears. Empty is "not filled in yet" and deserves
+   * nothing; something typed that will not parse deserves saying so, because the reason is rarely
+   * visible - `https://localhost:123456` looks exactly like an address until you count the digits in
+   * the port.
+   */
+  get #addressIsWrong(): boolean {
+    return this._draft.baseUrl.trim() !== '' && !isUsableConnectionAddress(this._draft.baseUrl);
   }
 
   /**
@@ -143,6 +156,9 @@ export class UmbraDesktopConnectionEditorModalElement extends UmbModalBaseElemen
             @input=${(event: Event) => this.#edit('baseUrl', (event.target as HTMLInputElement).value)}
           ></uui-input>
           <p class="hint">${this.localize.term('umbraDesktop_connectionUrlAbout')}</p>
+          ${this.#addressIsWrong
+            ? html`<p class="hint error">${this.localize.term('umbraDesktop_connectionUrlInvalid')}</p>`
+            : nothing}
         </section>
 
         <section>
@@ -231,6 +247,10 @@ export class UmbraDesktopConnectionEditorModalElement extends UmbModalBaseElemen
       /* Two hints under one control are a paragraph apart, not a whole field apart. */
       .hint + .hint {
         margin-top: var(--uui-size-space-2);
+      }
+
+      .hint.error {
+        color: var(--uui-color-danger-standalone, #d42054);
       }
 
       .experimental {

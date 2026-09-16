@@ -46,7 +46,12 @@ public class DesktopConnectionStatusServiceLocalTests
                 new FakeTimeProvider(new DateTimeOffset(2026, 9, 16, 12, 0, 0, TimeSpan.Zero))),
             factory);
 
-        return new DesktopConnectionStatusService(store, client, information, runtimeState);
+        return new DesktopConnectionStatusService(
+            store,
+            client,
+            information,
+            runtimeState,
+            LocalInstanceStubs.Logger());
     }
 
     /// <summary>
@@ -57,9 +62,9 @@ public class DesktopConnectionStatusServiceLocalTests
     /// no answer on a screen that only ever shows other people's servers.
     /// </remarks>
     [Fact]
-    public async Task GetAllAsync_ReportsTheLocalInstance_WithNoConnectionsConfigured()
+    public void List_ReportsTheLocalInstance_WithNoConnectionsConfigured()
     {
-        var report = Assert.Single(await Create().GetAllAsync(CancellationToken.None));
+        var report = Assert.Single(Create().List());
 
         Assert.True(report.IsLocal);
         Assert.Equal(DesktopConnectionStatus.Ok, report.Status);
@@ -67,11 +72,11 @@ public class DesktopConnectionStatusServiceLocalTests
 
     /// <summary>The local row carries the same three facts a remote row does, read straight from Umbraco.</summary>
     [Fact]
-    public async Task GetAllAsync_ReportsTheLocalVersionModeAndLevel()
+    public void List_ReportsTheLocalVersionModeAndLevel()
     {
         var service = Create(new SemVersion(17, 6, 2), RuntimeMode.BackofficeDevelopment, RuntimeLevel.Upgrade);
 
-        var report = Assert.Single(await service.GetAllAsync(CancellationToken.None));
+        var report = Assert.Single(service.List());
 
         Assert.Equal("17.6.2", report.Version);
         Assert.Equal("BackofficeDevelopment", report.RuntimeMode);
@@ -88,9 +93,9 @@ public class DesktopConnectionStatusServiceLocalTests
     /// why the row is flagged rather than identified by its values.
     /// </remarks>
     [Fact]
-    public async Task GetAllAsync_LeavesTheLocalNameAndAddressToTheClient()
+    public void List_LeavesTheLocalNameAndAddressToTheClient()
     {
-        var report = Assert.Single(await Create().GetAllAsync(CancellationToken.None));
+        var report = Assert.Single(Create().List());
 
         Assert.Equal(string.Empty, report.Name);
         Assert.Equal(string.Empty, report.BaseUrl);
@@ -104,9 +109,9 @@ public class DesktopConnectionStatusServiceLocalTests
     /// row on it and stops anything trying to edit or delete it.
     /// </remarks>
     [Fact]
-    public async Task GetAllAsync_PutsTheLocalInstanceFirst_AndGivesItNoId()
+    public void List_PutsTheLocalInstanceFirst_AndGivesItNoId()
     {
-        var reports = await Create().GetAllAsync(CancellationToken.None);
+        var reports = Create().List();
 
         Assert.Equal(Guid.Empty, reports[0].Id);
         Assert.True(reports[0].IsLocal);

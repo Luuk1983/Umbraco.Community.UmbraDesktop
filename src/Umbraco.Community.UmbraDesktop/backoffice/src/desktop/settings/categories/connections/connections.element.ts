@@ -9,7 +9,7 @@ import type {
 } from '../../../../api/types.gen';
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
-import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
+import { umbConfirmModal, umbOpenModal } from '@umbraco-cms/backoffice/modal';
 
 /**
  * Configures the Umbraco instances this desktop may read from.
@@ -108,11 +108,28 @@ export class UmbraDesktopSettingsConnectionsElement extends UmbLitElement {
 
   /**
    * Removes a connection after confirming, because its secret goes with it and cannot be recovered.
+   *
+   * Umbraco's own confirm modal rather than the browser's `confirm()`. This was a native confirm,
+   * which was the only one in this codebase and the only one anywhere in the backoffice - Umbraco
+   * has a modal for exactly this and uses it everywhere. Asking from inside a `<dialog>` that is
+   * already open in the top layer is the suspect for the button appearing to do nothing at all.
+   *
+   * Resolves on confirm and rejects on cancel, the same contract every other modal here has, which
+   * is why the rejection is turned into a plain false rather than handled.
    * @param connection The connection to remove.
    */
   async #remove(connection: DesktopConnectionResponseModel): Promise<void> {
-    const question = this.localize.term('umbraDesktop_connectionRemoveConfirm', connection.name);
-    if (!globalThis.confirm(question)) return;
+    const confirmed = await umbConfirmModal(this, {
+      headline: this.localize.term('umbraDesktop_connectionRemoveHeadline'),
+      content: this.localize.term('umbraDesktop_connectionRemoveConfirm', connection.name),
+      color: 'danger',
+      confirmLabel: this.localize.term('umbraDesktop_connectionRemove'),
+      cancelLabel: this.localize.term('umbraDesktop_connectionCancel'),
+    })
+      .then(() => true)
+      .catch(() => false);
+
+    if (!confirmed) return;
 
     if (await this.#repository.deleteConnection(connection.id)) {
       await this.#load();

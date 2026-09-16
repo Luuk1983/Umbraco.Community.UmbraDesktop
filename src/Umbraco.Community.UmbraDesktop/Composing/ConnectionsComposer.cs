@@ -14,10 +14,12 @@ public sealed class ConnectionsComposer : IComposer
     /// <inheritdoc />
     public void Compose(IUmbracoBuilder builder)
     {
-        // Needed by the token provider and the read client. Umbraco registers it already in most
-        // setups, and AddHttpClient is idempotent, so asking for it here removes the dependency on
-        // that staying true.
-        builder.Services.AddHttpClient();
+        // Named, for the timeout. HttpClient defaults to 100 seconds, and with two calls per
+        // connection a single unreachable host could hold the status screen for over three minutes
+        // before saying so - see DesktopConnectionHttpClient.
+        builder.Services.AddHttpClient(
+            DesktopConnectionHttpClient.Name,
+            client => client.Timeout = DesktopConnectionHttpClient.Timeout);
 
         // All singletons, and the token provider is the reason. Its cache is the only thing keeping
         // a status screen over eight connections from re-authenticating on every request, and a

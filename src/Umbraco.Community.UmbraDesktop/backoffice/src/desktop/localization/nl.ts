@@ -237,6 +237,7 @@ export default {
     connectionEditHeadline: 'Installatie bewerken',
     connectionEdit: 'Bewerken',
     connectionRemove: 'Verwijderen',
+    connectionRemoveHeadline: 'Installatie verwijderen',
     connectionRemoveConfirm: '%0% en de opgeslagen inloggegevens verwijderen?',
     connectionSave: 'Opslaan',
     connectionCancel: 'Annuleren',
@@ -244,6 +245,8 @@ export default {
     connectionNameAbout: 'Hoe jij deze installatie noemt. Meestal de naam van de klant.',
     connectionUrl: 'Adres',
     connectionUrlAbout: 'Het adres van de site, zonder pad. Bijvoorbeeld https://www.example.com',
+    connectionUrlInvalid:
+      'Dit is geen webadres dat het bureaublad kan gebruiken. Het moet beginnen met https:// of http://, en een poort kan niet hoger zijn dan 65535.',
     connectionColour: 'Kleur',
     connectionColourAbout: 'Hiermee herken je deze installatie in één oogopslag tussen de andere.',
     connectionClientId: 'Client-ID',
@@ -252,6 +255,7 @@ export default {
     connectionSecretMissing: 'Nog geen geheim opgeslagen, dus deze installatie kan niet gelezen worden.',
     connectionSecretWriteOnly: 'Een opgeslagen geheim kan vervangen worden, maar nooit meer uitgelezen.',
     // de vijf uitkomsten, geformuleerd als wat je eraan kunt doen in plaats van als foutcodes
+    connectionStateChecking: 'Bezig met controleren\u2026',
     connectionStateOk: 'Verbonden',
     connectionStateUnreachable: 'Niet bereikbaar',
     connectionStateInvalidCredentials: 'Inloggegevens geweigerd',

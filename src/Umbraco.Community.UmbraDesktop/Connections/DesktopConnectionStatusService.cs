@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Extensions;
@@ -54,11 +55,13 @@ public sealed record DesktopConnectionStatusReport(
 /// <param name="client">Makes the calls.</param>
 /// <param name="serverInformation">Reports this instance's own version and runtime mode.</param>
 /// <param name="runtimeState">Reports this instance's own runtime level.</param>
+/// <param name="logger">Records anything that stops one connection being read.</param>
 public sealed class DesktopConnectionStatusService(
     DesktopConnectionStore store,
     DesktopConnectionApiClient client,
     IServerInformationService serverInformation,
-    IRuntimeState runtimeState)
+    IRuntimeState runtimeState,
+    ILogger<DesktopConnectionStatusService> logger)
 {
     /// <summary>Path of the anonymous endpoint carrying Umbraco's runtime level.</summary>
     private const string StatusPath = "/umbraco/management/api/v1/server/status";
@@ -71,25 +74,36 @@ public sealed class DesktopConnectionStatusService(
     private const string InformationPath = "/umbraco/management/api/v1/server/information";
 
     /// <summary>
-    /// Reports on every configured connection.
+    /// Lists the rows without contacting anybody.
     /// </summary>
     /// <remarks>
-    /// The connections are asked at the same time rather than in turn: a desktop with eight clients
-    /// on it would otherwise wait for eight round trips end to end, and the slowest client would set
-    /// the speed of the screen.
+    /// <para>
+    /// The local instance is complete here, because it costs no network. Every configured connection
+    /// is listed as <see cref="DesktopConnectionStatus.Checking"/>, for the caller to fill in one at
+    /// a time through <see cref="GetAsync"/>.
+    /// </para>
+    /// <para>
+    /// Split from the checking on purpose. Contacting them all here was concurrent and still meant
+    /// the screen stayed blank until the slowest of somebody else's servers answered - one client
+    /// with a dead site held every other row hostage, the local one included. Listing first means the
+    /// screen is there immediately and fills in as answers arrive.
+    /// </para>
     /// </remarks>
-    /// <param name="cancellationToken">Cancels the calls.</param>
-    /// <returns>One report per connection, in the order the connections are stored.</returns>
-    public async Task<IReadOnlyList<DesktopConnectionStatusReport>> GetAllAsync(CancellationToken cancellationToken)
-    {
-        var remote = await Task.WhenAll(
-            store.GetAll().Select(connection => ReportAsync(connection, cancellationToken)));
-
-        // The local instance first, and always, even with nothing configured. It costs no network and
-        // it is the row everything else is read against: "what does a healthy one look like" has no
-        // answer on a screen showing only other people's servers.
-        return [LocalReport(), .. remote];
-    }
+    /// <returns>The local instance first, then one unchecked row per connection.</returns>
+    public IReadOnlyList<DesktopConnectionStatusReport> List() =>
+    [
+        LocalReport(),
+        .. store.GetAll().Select(connection => new DesktopConnectionStatusReport(
+            connection.Id,
+            connection.Name,
+            connection.Colour,
+            connection.BaseUrl,
+            DesktopConnectionStatus.Checking,
+            null,
+            null,
+            null,
+            IsLocal: false)),
+    ];
 
     /// <summary>
     /// Reports on one connection.
@@ -142,6 +156,43 @@ public sealed class DesktopConnectionStatusService(
     /// <param name="cancellationToken">Cancels the calls.</param>
     /// <returns>The report.</returns>
     private async Task<DesktopConnectionStatusReport> ReportAsync(
+        DesktopConnection connection,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ReportCoreAsync(connection, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Every row is gathered with Task.WhenAll, which propagates the first exception, so
+            // anything thrown here used to take down the entire screen: every other connection and
+            // the local instance, which needs no network at all. One unreachable-looking row is a
+            // far better answer than one error where the whole list should be.
+            //
+            // A catch-all rather than a list of types, deliberately. The known cause is fixed
+            // upstream by resolving the address rather than constructing it; this is here so the
+            // next thing nobody predicted costs one row instead of the screen.
+            logger.LogError(exception, "Could not read the status of connection {ConnectionName}.", connection.Name);
+
+            return new DesktopConnectionStatusReport(
+                connection.Id,
+                connection.Name,
+                connection.Colour,
+                connection.BaseUrl,
+                DesktopConnectionStatus.Unreachable,
+                null,
+                null,
+                null,
+                IsLocal: false);
+        }
+    }
+
+    /// <summary>Asks one instance about itself, without the guard around it.</summary>
+    /// <param name="connection">The instance to ask.</param>
+    /// <param name="cancellationToken">Cancels the calls.</param>
+    /// <returns>The report.</returns>
+    private async Task<DesktopConnectionStatusReport> ReportCoreAsync(
         DesktopConnection connection,
         CancellationToken cancellationToken)
     {

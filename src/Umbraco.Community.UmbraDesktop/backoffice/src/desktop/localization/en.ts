@@ -246,6 +246,7 @@ export default {
     connectionEditHeadline: 'Edit instance',
     connectionEdit: 'Edit',
     connectionRemove: 'Remove',
+    connectionRemoveHeadline: 'Remove instance',
     connectionRemoveConfirm: 'Remove %0% and the credentials stored for it?',
     connectionSave: 'Save',
     connectionCancel: 'Cancel',
@@ -253,6 +254,8 @@ export default {
     connectionNameAbout: 'What you call this instance. The client name, usually.',
     connectionUrl: 'Address',
     connectionUrlAbout: 'The site address, without a path. For example https://www.example.com',
+    connectionUrlInvalid:
+      'That is not a web address the desktop can use. It has to start with https:// or http://, and a port cannot be higher than 65535.',
     connectionColour: 'Colour',
     connectionColourAbout: 'Tells this instance apart from the others at a glance.',
     connectionClientId: 'Client ID',
@@ -261,6 +264,7 @@ export default {
     connectionSecretMissing: 'No secret stored yet, so this instance cannot be read.',
     connectionSecretWriteOnly: 'Once saved, a secret can be replaced but never read back.',
     // the five outcomes, worded as what to do about them rather than as error codes
+    connectionStateChecking: 'Checking\u2026',
     connectionStateOk: 'Connected',
     connectionStateUnreachable: 'Cannot be reached',
     connectionStateInvalidCredentials: 'Credentials refused',

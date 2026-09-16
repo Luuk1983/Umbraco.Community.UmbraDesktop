@@ -45,7 +45,8 @@ public class ConnectionStatusControllerTests
                 store,
                 client,
                 LocalInstanceStubs.ServerInformation(),
-                LocalInstanceStubs.RuntimeState()));
+                LocalInstanceStubs.RuntimeState(),
+                LocalInstanceStubs.Logger()));
     }
 
     /// <summary>
@@ -56,14 +57,30 @@ public class ConnectionStatusControllerTests
     /// the C# enum's declaration order, so reordering it would silently change what every row says.
     /// </remarks>
     [Fact]
-    public async Task GetConnectionStatuses_ReportsTheStatusByName()
+    public void GetConnectionStatuses_ReportsTheStatusByName()
     {
-        var result = await Create().GetConnectionStatuses(CancellationToken.None);
-
         var reports = Assert.IsType<DesktopConnectionStatusResponseModel[]>(
-            Assert.IsType<OkObjectResult>(result).Value);
+            Assert.IsType<OkObjectResult>(Create().GetConnectionStatuses()).Value);
+
         var remote = Assert.Single(reports, report => report.IsLocal is false);
-        Assert.Equal("InvalidCredentials", remote.Status);
-        Assert.Equal("Run", remote.ServerStatus);
+        Assert.Equal("Checking", remote.Status);
+    }
+
+    /// <summary>
+    /// Listing contacts nobody, which is the whole reason it is a separate call.
+    /// </summary>
+    /// <remarks>
+    /// The handler behind this controller throws on any request at all, so a listing that reached a
+    /// connected instance could not return. That is the assertion: the screen can be drawn before
+    /// anyone else's server has been asked anything.
+    /// </remarks>
+    [Fact]
+    public void GetConnectionStatuses_ContactsNobody()
+    {
+        var reports = Assert.IsType<DesktopConnectionStatusResponseModel[]>(
+            Assert.IsType<OkObjectResult>(Create().GetConnectionStatuses()).Value);
+
+        Assert.Equal(2, reports.Length);
+        Assert.Contains(reports, report => report.IsLocal);
     }
 }

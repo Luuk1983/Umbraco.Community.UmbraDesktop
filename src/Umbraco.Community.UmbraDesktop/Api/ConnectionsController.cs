@@ -88,16 +88,24 @@ public class ConnectionsController(DesktopConnectionStore store) : ManagementApi
     /// <summary>
     /// Removes a connection and the secret stored against it.
     /// </summary>
+    /// <remarks>
+    /// 204 rather than an empty 200, and the difference is not cosmetic. The generated TypeScript
+    /// client only skips parsing a body when the response is 204 or carries
+    /// <c>Content-Length: 0</c>, and Kestrel serves HTTP/2 over TLS, which has no content-length
+    /// header at all. An empty 200 therefore had the client parse an empty body as JSON and fail,
+    /// so the delete succeeded on the server and the browser was told it had not: Remove appeared
+    /// to do nothing.
+    /// </remarks>
     /// <param name="id">The connection's id.</param>
-    /// <returns>An empty 200.</returns>
+    /// <returns>An empty 204.</returns>
     [HttpDelete("{id:guid}")]
     [MapToApiVersion("1.0")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public IActionResult DeleteConnection(Guid id)
     {
         store.Delete(id);
 
-        return Ok();
+        return NoContent();
     }
 
     /// <summary>Maps a stored connection onto what the browser is allowed to see.</summary>

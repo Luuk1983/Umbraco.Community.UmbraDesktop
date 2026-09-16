@@ -126,8 +126,16 @@ public sealed class DesktopConnectionApiClient(
         string? accessToken,
         CancellationToken cancellationToken)
     {
-        using var client = httpClientFactory.CreateClient();
-        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"{connection.BaseUrl.TrimEnd('/')}{path}"));
+        // Resolved rather than constructed. `new Uri` throws on an address that will not parse,
+        // and an unparseable address is an ordinary typo rather than an exceptional condition: it
+        // belongs in the same bucket as a host that does not answer.
+        if (DesktopConnectionUri.TryResolve(connection.BaseUrl, path, out var uri) is false)
+        {
+            return new DesktopConnectionResponse(DesktopConnectionStatus.Unreachable, null);
+        }
+
+        using var client = httpClientFactory.CreateClient(DesktopConnectionHttpClient.Name);
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
         if (accessToken is not null)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);

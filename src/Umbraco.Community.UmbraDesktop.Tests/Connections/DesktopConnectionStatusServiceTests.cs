@@ -34,15 +34,17 @@ public class DesktopConnectionStatusServiceTests
     /// </summary>
     /// <param name="respond">Answers each request the service makes.</param>
     /// <param name="clientSecret">The secret to store for the connection, or <c>null</c> for none.</param>
+    /// <param name="baseUrl">The connection's address, so a test can give it a bad one.</param>
     /// <returns>The service under test and the connection it knows about.</returns>
     private static (DesktopConnectionStatusService Service, DesktopConnection Connection) Create(
         Func<HttpRequestMessage, HttpResponseMessage> respond,
-        string? clientSecret = "the-secret")
+        string? clientSecret = "the-secret",
+        string baseUrl = "https://client-a.example.com")
     {
         var connection = new DesktopConnection(
             Guid.Parse("33333333-3333-3333-3333-333333333333"),
             "Client A",
-            "https://client-a.example.com",
+            baseUrl,
             "#ff0000",
             "umbraco-back-office-desktop");
 
@@ -59,7 +61,8 @@ public class DesktopConnectionStatusServiceTests
                 store,
                 client,
                 LocalInstanceStubs.ServerInformation(),
-                LocalInstanceStubs.RuntimeState()),
+                LocalInstanceStubs.RuntimeState(),
+                LocalInstanceStubs.Logger()),
             connection);
     }
 
@@ -79,11 +82,12 @@ public class DesktopConnectionStatusServiceTests
 
     /// <summary>A healthy instance reports everything the row shows.</summary>
     [Fact]
-    public async Task GetAllAsync_ReportsVersionRuntimeModeAndServerStatus()
+    public async Task GetAsync_ReportsVersionRuntimeModeAndServerStatus()
     {
         var (service, connection) = Create(Healthy);
 
-        var report = LocalInstanceStubs.Remote(await service.GetAllAsync(CancellationToken.None));
+        var report = await service.GetAsync(connection.Id, CancellationToken.None);
+        Assert.NotNull(report);
 
         Assert.Equal(connection.Id, report.Id);
         Assert.Equal("Client A", report.Name);
@@ -95,11 +99,12 @@ public class DesktopConnectionStatusServiceTests
 
     /// <summary>An instance that cannot be reached at all says so, and carries no version.</summary>
     [Fact]
-    public async Task GetAllAsync_ReportsUnreachable_WhenNothingAnswers()
+    public async Task GetAsync_ReportsUnreachable_WhenNothingAnswers()
     {
-        var (service, _) = Create(_ => throw new HttpRequestException("no such host"));
+        var (service, connection) = Create(_ => throw new HttpRequestException("no such host"));
 
-        var report = LocalInstanceStubs.Remote(await service.GetAllAsync(CancellationToken.None));
+        var report = await service.GetAsync(connection.Id, CancellationToken.None);
+        Assert.NotNull(report);
 
         Assert.Equal(DesktopConnectionStatus.Unreachable, report.Status);
         Assert.Null(report.Version);
@@ -116,9 +121,9 @@ public class DesktopConnectionStatusServiceTests
     /// pasted with a trailing space.
     /// </remarks>
     [Fact]
-    public async Task GetAllAsync_ReportsInvalidCredentials_ButStillReportsServerStatus()
+    public async Task GetAsync_ReportsInvalidCredentials_ButStillReportsServerStatus()
     {
-        var (service, _) = Create(request => request.RequestUri!.AbsolutePath switch
+        var (service, connection) = Create(request => request.RequestUri!.AbsolutePath switch
         {
             var path when path.EndsWith("/security/back-office/token", StringComparison.Ordinal) =>
                 new HttpResponseMessage(HttpStatusCode.BadRequest)
@@ -129,7 +134,8 @@ public class DesktopConnectionStatusServiceTests
             _ => new HttpResponseMessage(HttpStatusCode.NotFound),
         });
 
-        var report = LocalInstanceStubs.Remote(await service.GetAllAsync(CancellationToken.None));
+        var report = await service.GetAsync(connection.Id, CancellationToken.None);
+        Assert.NotNull(report);
 
         Assert.Equal(DesktopConnectionStatus.InvalidCredentials, report.Status);
         Assert.Equal("Run", report.ServerStatus);
@@ -141,29 +147,52 @@ public class DesktopConnectionStatusServiceTests
     /// endpoint exists to cover: nothing authenticated answers, and "unreachable" would be a lie.
     /// </summary>
     [Fact]
-    public async Task GetAllAsync_ReportsTheRuntimeLevel_WhenTheInstanceIsNotRunning()
+    public async Task GetAsync_ReportsTheRuntimeLevel_WhenTheInstanceIsNotRunning()
     {
-        var (service, _) = Create(request => request.RequestUri!.AbsolutePath switch
+        var (service, connection) = Create(request => request.RequestUri!.AbsolutePath switch
         {
             StatusPath => Ok("""{"serverStatus":"Upgrade"}"""),
             _ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
         });
 
-        var report = LocalInstanceStubs.Remote(await service.GetAllAsync(CancellationToken.None));
+        var report = await service.GetAsync(connection.Id, CancellationToken.None);
+        Assert.NotNull(report);
 
         Assert.Equal("Upgrade", report.ServerStatus);
     }
 
     /// <summary>A connection with no secret yet is reported as unconfigured, not as broken.</summary>
     [Fact]
-    public async Task GetAllAsync_ReportsNotConfigured_WhenNoSecretIsStored()
+    public async Task GetAsync_ReportsNotConfigured_WhenNoSecretIsStored()
     {
-        var (service, _) = Create(Healthy, clientSecret: null);
+        var (service, connection) = Create(Healthy, clientSecret: null);
 
-        var report = LocalInstanceStubs.Remote(await service.GetAllAsync(CancellationToken.None));
+        var report = await service.GetAsync(connection.Id, CancellationToken.None);
+        Assert.NotNull(report);
 
         Assert.Equal(DesktopConnectionStatus.NotConfigured, report.Status);
         Assert.Equal("Run", report.ServerStatus);
+    }
+
+    /// <summary>
+    /// A connection whose address will not parse is reported as unreachable, not thrown about.
+    /// </summary>
+    /// <remarks>
+    /// This is the bug as it was actually seen. A single connection saved with
+    /// <c>https://localhost:123456</c> made the status endpoint throw, so every row disappeared
+    /// behind "could not read the connection status" - including the local instance, which needs no
+    /// network at all and could not possibly have been affected by it. Rows are fetched one at a
+    /// time now, which contains the blast radius as well, but the throw is fixed at the source.
+    /// </remarks>
+    [Fact]
+    public async Task GetAsync_ReportsUnreachable_WhenTheAddressWillNotParse()
+    {
+        var (service, connection) = Create(Healthy, baseUrl: "https://localhost:123456");
+
+        var report = await service.GetAsync(connection.Id, CancellationToken.None);
+
+        Assert.NotNull(report);
+        Assert.Equal(DesktopConnectionStatus.Unreachable, report.Status);
     }
 
     /// <summary>Asking about one connection reports on that connection.</summary>
@@ -183,7 +212,7 @@ public class DesktopConnectionStatusServiceTests
     [Fact]
     public async Task GetAsync_ReturnsNull_ForAnUnknownConnection()
     {
-        var (service, _) = Create(Healthy);
+        var (service, connection) = Create(Healthy);
 
         Assert.Null(await service.GetAsync(Guid.NewGuid(), CancellationToken.None));
     }

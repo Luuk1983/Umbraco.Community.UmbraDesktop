@@ -8,7 +8,7 @@
  */
 
 /** How loudly a status should present itself. Matches Umbraco's own UUI tone names. */
-export type UmbraDesktopConnectionTone = 'positive' | 'warning' | 'danger';
+export type UmbraDesktopConnectionTone = 'default' | 'positive' | 'warning' | 'danger';
 
 /**
  * The statuses the server reports, and the localisation token naming each one.
@@ -22,6 +22,7 @@ const LABELS: Readonly<Record<string, string>> = {
   InvalidCredentials: 'umbraDesktop_connectionStateInvalidCredentials',
   Forbidden: 'umbraDesktop_connectionStateForbidden',
   NotConfigured: 'umbraDesktop_connectionStateNotConfigured',
+  Checking: 'umbraDesktop_connectionStateChecking',
 };
 
 /**
@@ -38,6 +39,9 @@ const TONES: Readonly<Record<string, UmbraDesktopConnectionTone>> = {
   InvalidCredentials: 'warning',
   Forbidden: 'warning',
   NotConfigured: 'warning',
+  // Neither good news nor bad: nobody has asked yet. A warning colour here would have every row
+  // flash amber on the way to being fine.
+  Checking: 'default',
 };
 
 /**

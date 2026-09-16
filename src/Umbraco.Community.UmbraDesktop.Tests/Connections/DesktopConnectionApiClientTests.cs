@@ -191,6 +191,43 @@ public class DesktopConnectionApiClientTests
     }
 
     /// <summary>
+    /// A connection whose address will not parse is reported as unreachable rather than throwing.
+    /// </summary>
+    /// <remarks>
+    /// The address that found this was <c>https://localhost:123456</c>, which reads perfectly and is
+    /// rejected by every URL parser there is, because a port cannot exceed 65535. It used to throw
+    /// <c>UriFormatException</c> out of a <c>new Uri</c> that no catch filter covered.
+    /// </remarks>
+    [Fact]
+    public async Task GetAsync_ReportsUnreachable_WhenTheAddressWillNotParse()
+    {
+        var (client, handler) = Create(_ => Ok("{}"));
+
+        var response = await client.GetAsync(
+            Connection with { BaseUrl = "https://localhost:123456" },
+            InformationPath,
+            CancellationToken.None);
+
+        Assert.Equal(DesktopConnectionStatus.Unreachable, response.Status);
+        Assert.Empty(handler.Requests);
+    }
+
+    /// <summary>The unauthenticated fetch refuses an unparseable address just as quietly.</summary>
+    [Fact]
+    public async Task GetWithoutCredentialsAsync_ReportsUnreachable_WhenTheAddressWillNotParse()
+    {
+        var (client, handler) = Create(_ => Ok("{}"));
+
+        var response = await client.GetWithoutCredentialsAsync(
+            Connection with { BaseUrl = "https://localhost:123456" },
+            InformationPath,
+            CancellationToken.None);
+
+        Assert.Equal(DesktopConnectionStatus.Unreachable, response.Status);
+        Assert.Empty(handler.Requests);
+    }
+
+    /// <summary>
     /// Only management API paths may be fetched.
     /// </summary>
     /// <remarks>

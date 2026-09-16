@@ -197,6 +197,26 @@ public class DesktopConnectionTokenProviderTests
     }
 
     /// <summary>
+    /// A connection whose address will not parse is reported as unreachable rather than throwing.
+    /// </summary>
+    /// <remarks>
+    /// The same hole the read client had, and reached first: the token exchange happens before any
+    /// read, so an unparseable address threw here before the read client ever saw it.
+    /// </remarks>
+    [Fact]
+    public async Task GetAsync_ReportsUnreachable_WhenTheAddressWillNotParse()
+    {
+        var (provider, handler, _) = Create(_ => TokenResponse("token-1"));
+
+        var attempt = await provider.GetAsync(
+            Connection with { BaseUrl = "https://localhost:123456" },
+            CancellationToken.None);
+
+        Assert.Equal(DesktopConnectionStatus.Unreachable, attempt.Status);
+        Assert.Empty(handler.Requests);
+    }
+
+    /// <summary>
     /// Invalidating drops the cached token, which is how a call that came back 401 gets a fresh one
     /// before retrying instead of resending the token that was just refused.
     /// </summary>

@@ -107,14 +107,22 @@ public class ConnectionsControllerTests
         Assert.IsType<NotFoundResult>(controller.UpdateConnection(Guid.NewGuid(), Request()));
     }
 
-    /// <summary>Deleting removes the connection from the listing.</summary>
+    /// <summary>
+    /// Deleting removes the connection from the listing, and answers 204 rather than an empty 200.
+    /// </summary>
+    /// <remarks>
+    /// The status matters. The generated TypeScript client only skips parsing a body when the
+    /// response is 204 or says <c>Content-Length: 0</c>, and Kestrel serves HTTP/2 over TLS, which
+    /// has no content-length header. So an empty 200 had the client parse an empty body as JSON and
+    /// fail, which is why Remove appeared to do nothing at all.
+    /// </remarks>
     [Fact]
     public void DeleteConnection_RemovesIt()
     {
         var (controller, _) = Create();
         var created = Value<DesktopConnectionResponseModel>(controller.CreateConnection(Request()));
 
-        Assert.IsType<OkResult>(controller.DeleteConnection(created.Id));
+        Assert.IsType<NoContentResult>(controller.DeleteConnection(created.Id));
         Assert.Empty(Value<DesktopConnectionResponseModel[]>(controller.GetConnections()));
     }
 }

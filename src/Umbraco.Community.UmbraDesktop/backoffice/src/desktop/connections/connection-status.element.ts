@@ -18,6 +18,12 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
  * at all — so an instance stuck mid-upgrade says so, where everything authenticated would just time
  * out and read as the site being down.
  *
+ * Rows arrive in two stages, and the reason is the slowest client. Listing contacts nobody, so the
+ * whole table is on screen immediately with each connection marked as being checked; then one
+ * request per connection fills its row in. Asking for everything in one call was concurrent on the
+ * server and still left the screen blank until the last of somebody else's servers answered - one
+ * client with a dead site held every other row hostage, the local one included.
+ *
  * There is no refresh timer. Each row is two round trips to somebody else's server, so this is
  * seconds of work rather than milliseconds, and a screen that quietly re-ran it would spend a
  * client's bandwidth on a question nobody asked twice. The button is the whole of the refresh
@@ -51,19 +57,51 @@ export class UmbraDesktopConnectionStatusElement extends UmbLitElement {
     void this.#load();
   }
 
-  /** Reads every connection's status and replaces what is on screen. */
+  /**
+   * Draws the table, then fills each connection in as it answers.
+   *
+   * The listing is instant because it contacts nobody. Each connection is then checked on its own, so
+   * a client whose site is down costs its own row and nothing else.
+   */
   async #load(): Promise<void> {
     this._loading = true;
-    const reports = await this.#repository.getStatuses();
-    this._loading = false;
+    const rows = await this.#repository.getStatuses();
 
     // A failed read leaves the previous rows in place rather than blanking the screen: stale numbers
     // with a warning above them are more use than an empty table, and the same choice the background
     // jobs viewer makes for the same reason.
-    this._failed = reports === undefined;
-    if (reports) {
-      this._reports = reports;
+    this._failed = rows === undefined;
+
+    if (!rows) {
+      this._loading = false;
+      return;
     }
+
+    this._reports = rows;
+
+    await Promise.all(rows.filter((row) => !row.isLocal).map((row) => this.#check(row.id)));
+
+    this._loading = false;
+  }
+
+  /**
+   * Checks one connection and replaces its row.
+   *
+   * A row whose check fails is left saying it is being checked, and the banner above the table
+   * carries the failure instead. Marking it unreachable would be a lie of exactly the kind the
+   * server works to avoid: a request that fails here failed against *this* instance, and says
+   * nothing whatsoever about whether the client's site is up.
+   * @param id The connection's id.
+   */
+  async #check(id: string): Promise<void> {
+    const report = await this.#repository.getStatus(id);
+
+    if (!report) {
+      this._failed = true;
+      return;
+    }
+
+    this._reports = this._reports?.map((row) => (row.id === id ? report : row));
   }
 
   /**
