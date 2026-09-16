@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>C-href-set-later</title>
+    <!--
+      The workaround the stale advice recommends: the link element is present in the served HTML
+      from the start, carrying no href, and script only fills it in.
+
+      Never needed, because A and D both passed. Kept because it is the fallback if this ever
+      regresses, and because it is the variant that would force the link into Umbraco's own
+      backoffice HTML — which is precisely the C# change this spike was run to avoid.
+    -->
+    <link rel="manifest" id="manifest-link" />
+    <script src="/probe.js"></script>
+  </head>
+  <body>
+    <h1>C: href set by script on an existing link</h1>
+    <script>
+      document.getElementById('manifest-link').href = '/manifest.webmanifest';
+      window.__spike.injectedAt = performance.now();
+    </script>
+  </body>
+</html>

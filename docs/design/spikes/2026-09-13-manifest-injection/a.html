@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A-inject-whole-link</title>
+    <!-- No manifest link here on purpose. The script below is the only thing that creates one. -->
+    <script src="/probe.js"></script>
+  </head>
+  <body>
+    <h1>A: whole link element injected by script</h1>
+    <p>Expect: same as the control, if dynamic injection is honoured at all.</p>
+    <script>
+      // The case the stale advice says does not work: element created from nothing and appended,
+      // rather than a placeholder link already in the HTML having its href filled in (see c.html).
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = '/manifest.webmanifest';
+      document.head.appendChild(link);
+      window.__spike.injectedAt = performance.now();
+    </script>
+  </body>
+</html>

@@ -45,6 +45,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
 - Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
+- Install it as an app. The backoffice declares a web app manifest, so your browser can install or pin it. It opens straight on the desktop in its own window, with no address bar and no tabs, and carries your site's own name and icon rather than a generic browser tile. Both are settings, so an agency running ten sites gets ten distinguishable apps. See [Installing the backoffice as an app](#installing-the-backoffice-as-an-app).
 - Nothing new to learn. The windows contain the backoffice you already know, with the same trees, the same editors and the same shortcuts.
 
 ## Installation & configuration
@@ -386,6 +387,60 @@ It cannot take effect where it stands: every window is a frame with its own copy
 
 Regional format and Clock are stored per user, in that browser, alongside your theme and wallpaper. The backoffice language is stored on your Umbraco user, so it follows you to any machine you sign in on.
 
+## Installing the backoffice as an app
+
+Open the backoffice and use your browser's install action. Chrome and Edge offer it in the address bar; Firefox has it under its own menu. The installed app opens on the desktop with no browser chrome around it.
+
+It opens on the desktop whatever your **Start in the desktop** setting says. Pinning the backoffice is itself a way of saying that is what you want, so the setting is not consulted.
+
+Leaving the desktop stays inside the app. Exit takes you to Content in the same window rather than throwing you back into a browser tab.
+
+**Installing is not a second sign-in.** The app shares cookies and storage with the browser it was installed from, so it is the same session, not a second one. It is not a way to be signed into two environments at once.
+
+### The app's name and icon
+
+Both are site-wide, live in the desktop's own Settings under **Site**, and are visible only to users with access to the Settings section. Everything else in that dialog is your own preference; these two change what every user on the site gets.
+
+**Name.** Empty means the app takes your site's name, from `Umbraco:CMS:Hosting:SiteName`. If that is not set either, the app is called Umbraco. Type anything here to override both.
+
+**Icon.** Two choices:
+
+- **UmbraDesktop** — the mark shipped with the package: the Umbraco logo inside the desktop's own loading ring, so an installed backoffice looks like the thing it opens.
+- **Choose an image** — any image from your Media Library. Umbraco resizes it for you, so one upload covers every size a browser asks for. The picker uploads too: drop a file into it and the image is added to the library and selected in one go. The screen shows a preview of the result at roughly the size a taskbar uses.
+
+What to upload:
+
+- **Square, and at least 512×512.** Anything smaller gets stretched, and 512 is the largest size a browser asks for.
+- **PNG.** An `.ico` will not work — see the note below.
+- **Keep it simple.** The same image is shrunk to about 32 pixels on a taskbar, where small text and fine detail turn to mush.
+- **Nothing important near the edges.** The image is cropped square, and the operating system may round the corners or cut it to a circle.
+- Transparency is fine.
+
+Keep the image somewhere public. An icon inside a folder under public access restriction cannot be read by the browser machinery that installs the app, so the icon silently stops working while looking perfectly fine to you.
+
+There is no "use my favicon" option, and that is deliberate rather than an omission. Chrome will not accept an `.ico` as an app icon at all, and a manifest that offers one stops the backoffice being installable rather than falling back — so the option could not have worked on the format Umbraco actually ships.
+
+### Setting them from configuration instead
+
+Both can be pinned in `appsettings.json`, which is the better option when you want them consistent across environments. A value set here wins over the backoffice, and the matching control is shown but disabled, with a line saying why.
+
+```json
+{
+  "Umbraco": {
+    "Community": {
+      "UmbraDesktop": {
+        "AppName": "Contoso Admin",
+        "AppIcon": { "Mode": "Default" }
+      }
+    }
+  }
+}
+```
+
+`Mode` is `Default` or `Custom`; `Custom` also needs a `MediaKey`. The two pin independently, so setting the name in configuration leaves the icon editable in the backoffice.
+
+This matters most if you restore databases between environments. The backoffice setting lives in the database and travels with a restore, so staging recovered from production comes back wearing production's name. A configured value does not.
+
 ## Games
 
 Minesweeper, in a window, under whichever theme you picked. It ships in its own package rather than this one, because a desktop and a minesweeper are not the same product and nobody should have to take the second to get the first:
@@ -538,6 +593,10 @@ Connecting other Umbraco instances is experimental, and
 want to read, what each field in Desktop settings wants, what the five connection statuses mean and
 who fixes each one, where the credentials are stored and the limits of that, and what the feature
 deliberately refuses to do.
+
+Installing the backoffice as an app is described above. The reasoning behind it, including the
+browser behaviour it depends on and the fixture that proves it, is in
+[`docs/design/2026-09-13-web-app-manifest-design.md`](docs/design/2026-09-13-web-app-manifest-design.md).
 
 ## License
 

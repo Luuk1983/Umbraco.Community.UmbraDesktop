@@ -84,6 +84,21 @@ export default {
     groupGeneralAbout: 'Hoe het bureaublad start en waar je terechtkomt als je inlogt',
     groupLanguageAbout: 'De taal van de backoffice, en hoe het bureaublad datums en tijden schrijft',
     groupTaskbarAbout: 'Wat de taakbalk naast de startknop bewaart',
+    groupSite: 'Site',
+    groupSiteAbout: 'Instellingen die voor iedereen op deze site gelden, niet alleen voor jou',
+    siteAppIcon: 'App-pictogram',
+    siteAppIconAbout:
+      'Het pictogram dat deze site krijgt wanneer iemand de backoffice als app installeert. Iedereen ziet hetzelfde.',
+    siteAppIconDefault: 'UmbraDesktop',
+    siteAppIconGuidance:
+      'Een vierkante PNG van minstens 512×512. De afbeelding wordt vierkant bijgesneden en op een taakbalk tot 32px verkleind, dus houd hem eenvoudig en vermijd kleine tekst. Transparantie mag; het besturingssysteem kan de hoeken afronden of er een cirkel van maken, dus houd belangrijke details weg bij de randen.',
+    siteAppIconPreview: 'Hoe het eruit komt te zien',
+    siteAppIconCustom: 'Kies een afbeelding',
+    siteAppIconChoose: 'Kies een afbeelding…',
+    siteAppName: 'Appnaam',
+    siteAppNameAbout:
+      'Hoe de geïnstalleerde app heet. Laat leeg om de naam van deze site te gebruiken.',
+    siteLockedByConfiguration: 'Ingesteld in appsettings.json en hier dus niet te wijzigen.',
     // bureaubladinstellingen — taakbalk. De schakelaars staan gegroepeerd per kant van de balk,
     // omdat een scherm dat begint met een kale "AI-chat"-schakelaar nergens zegt waar het over gaat.
     taskbarRegionLauncher: 'Taakbalkonderdelen',

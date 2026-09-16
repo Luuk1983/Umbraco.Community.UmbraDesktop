@@ -13,16 +13,22 @@ import nl from '../../localization/nl.js';
 /** The terms one language actually ships, by key. */
 const terms = (set: unknown) => (set as Record<string, Record<string, string>>).umbraDesktop;
 
-it('puts General first', () => {
-  // Where every settings surface that has a General puts it: it is the category you fall back to
-  // when you are not sure which one holds the thing you want, and a fallback at the bottom is one
-  // people scroll past twice.
+it('puts General first and Site last', () => {
+  // General goes where every settings surface that has one puts it: it is the category you fall
+  // back to when you are not sure which one holds the thing you want, and a fallback at the bottom
+  // is one people scroll past twice.
+  //
+  // Site goes last, after Connections, and not because it matters least. It is the only category
+  // that is not the reader's own — everything above it is this person's desktop, while everything
+  // in Site changes what every user gets — so it sits after everything personal rather than
+  // interrupting it.
   expect(UMBRADESKTOP_SETTINGS_CATEGORIES.map((category) => category.id)).to.deep.equal([
     'general',
     'language',
     'appearance',
     'taskbar',
     'connections',
+    'site',
   ]);
 });
 

@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConnectionData, CreateConnectionErrors, CreateConnectionResponses, DeleteConnectionData, DeleteConnectionErrors, DeleteConnectionResponses, GetBackgroundJobsData, GetBackgroundJobsErrors, GetBackgroundJobsResponses, GetConnectionsData, GetConnectionsErrors, GetConnectionsResponses, GetConnectionStatusData, GetConnectionStatusErrors, GetConnectionStatusesData, GetConnectionStatusesErrors, GetConnectionStatusesResponses, GetConnectionStatusResponses, UpdateConnectionData, UpdateConnectionErrors, UpdateConnectionResponses } from './types.gen';
+import type { CreateConnectionData, CreateConnectionErrors, CreateConnectionResponses, DeleteConnectionData, DeleteConnectionErrors, DeleteConnectionResponses, GetAppIdentityData, GetAppIdentityErrors, GetAppIdentityResponses, GetBackgroundJobsData, GetBackgroundJobsErrors, GetBackgroundJobsResponses, GetConnectionsData, GetConnectionsErrors, GetConnectionsResponses, GetConnectionStatusData, GetConnectionStatusErrors, GetConnectionStatusesData, GetConnectionStatusesErrors, GetConnectionStatusesResponses, GetConnectionStatusResponses, SetAppIdentityData, SetAppIdentityErrors, SetAppIdentityResponses, UpdateConnectionData, UpdateConnectionErrors, UpdateConnectionResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -19,6 +19,36 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 export class UmbraDesktopService {
+    public static getAppIdentity<ThrowOnError extends boolean = false>(options?: Options<GetAppIdentityData, ThrowOnError>) {
+        return (options?.client ?? client).get<GetAppIdentityResponses, GetAppIdentityErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/app-identity',
+            ...options
+        });
+    }
+    
+    public static setAppIdentity<ThrowOnError extends boolean = false>(options?: Options<SetAppIdentityData, ThrowOnError>) {
+        return (options?.client ?? client).post<SetAppIdentityResponses, SetAppIdentityErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/app-identity',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers
+            }
+        });
+    }
+    
     public static getBackgroundJobs<ThrowOnError extends boolean = false>(options?: Options<GetBackgroundJobsData, ThrowOnError>) {
         return (options?.client ?? client).get<GetBackgroundJobsResponses, GetBackgroundJobsErrors, ThrowOnError>({
             security: [

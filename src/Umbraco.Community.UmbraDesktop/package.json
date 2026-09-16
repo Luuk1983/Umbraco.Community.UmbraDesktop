@@ -5,11 +5,13 @@
 	"type": "module",
 	"scripts": {
 		"wallpapers": "cd backoffice && node scripts/build-wallpapers.mjs",
-		"watch": "cd backoffice && node scripts/build-wallpapers.mjs && tsc && vite build --watch",
-		"build": "cd backoffice && node scripts/build-wallpapers.mjs && tsc && vite build",
+		"watch": "cd backoffice && node scripts/build-wallpapers.mjs && node scripts/build-appicons.mjs && tsc && vite build --watch",
+		"build": "cd backoffice && node scripts/build-wallpapers.mjs && node scripts/build-appicons.mjs && tsc && vite build",
 		"generate-client": "node backoffice/scripts/generate-openapi.js https://localhost:44356/umbraco/swagger/management/swagger.json",
 		"test": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve",
-		"test:watch": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve --watch"
+		"test:watch": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve --watch",
+		"appicons": "cd backoffice && node scripts/build-appicons.mjs",
+		"appicons:sheet": "cd backoffice && node scripts/appicon-sheet.mjs && node scripts/appicon-sheet.mjs --masked"
 	},
 	"dependencies": {
 		"lit": "^3.2.1"

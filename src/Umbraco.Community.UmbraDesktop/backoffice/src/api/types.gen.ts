@@ -33,6 +33,23 @@ export type AllowedMemberTypeModel = {
     icon?: string | null;
 };
 
+export type AppIconModeModel = 'Default' | 'Custom';
+
+export type AppIdentityRequestModel = {
+    mode: AppIconModeModel;
+    mediaKey?: string | null;
+    name?: string | null;
+};
+
+export type AppIdentityResponseModel = {
+    mode: AppIconModeModel;
+    mediaKey?: string | null;
+    name?: string | null;
+    iconLockedByConfiguration: boolean;
+    nameLockedByConfiguration: boolean;
+    previewUrl: string;
+};
+
 export type AuditLogResponseModel = {
     user: ReferenceByIdModel;
     timestamp: string;
@@ -3404,6 +3421,68 @@ export type UpgradeSettingsResponseModelWritable = {
     newVersion: string;
     oldVersion: string;
 };
+
+export type GetAppIdentityData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/app-identity';
+};
+
+export type GetAppIdentityErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type GetAppIdentityResponses = {
+    /**
+     * OK
+     */
+    200: AppIdentityResponseModel;
+};
+
+export type GetAppIdentityResponse = GetAppIdentityResponses[keyof GetAppIdentityResponses];
+
+export type SetAppIdentityData = {
+    body?: AppIdentityRequestModel;
+    path?: never;
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/app-identity';
+};
+
+export type SetAppIdentityErrors = {
+    /**
+     * Bad Request
+     */
+    400: unknown;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Conflict
+     */
+    409: unknown;
+};
+
+export type SetAppIdentityResponses = {
+    /**
+     * No Content
+     */
+    204: void;
+};
+
+export type SetAppIdentityResponse = SetAppIdentityResponses[keyof SetAppIdentityResponses];
 
 export type GetBackgroundJobsData = {
     body?: never;

@@ -88,7 +88,13 @@
     "24 hour clock",
     "12 hour clock",
     "time format",
-    "culture"
+    "culture",
+    "pwa",
+    "progressive-web-app",
+    "web-app-manifest",
+    "installable",
+    "standalone",
+    "app-icon"
   ],
   "Screenshots": [
     {

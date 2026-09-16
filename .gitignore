@@ -370,6 +370,15 @@ FodyWeavers.xsd
 # Committing them was ~180KB of binary churn per artwork change that nothing ever read from git.
 **/backoffice/public/wallpapers/
 
+# Rendered app icons. Build output like the wallpapers above: scripts/build-appicons.mjs regenerates
+# every PNG here from the committed SVGs in backoffice/appicons-src/.
+**/backoffice/public/appicons/
+
+# App icon contact sheets. A judging aid, not a source and not build output: scripts/appicon-sheet.mjs
+# regenerates them on demand so an icon can be looked at rather than assumed. They sit beside the
+# SVGs in appicons-src/ because that is where you want them when you are working on the drawing.
+**/backoffice/appicons-src/sheet*.png
+
 
 # Superpowers brainstorming mockups
 .superpowers/
