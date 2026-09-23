@@ -21,6 +21,7 @@
 /** Umbraco's context-api event names. Not exported by the package, and stable across v14+. */
 const CONTEXT_REQUEST_EVENT = 'umb:context-request';
 const CONTEXT_PROVIDE_EVENT = 'umb:context-provide';
+const CONTEXT_UNPROVIDED_EVENT = 'umb:context-unprovided';
 
 /**
  * The shape `UmbContextProvider` reads off a request event.
@@ -120,4 +121,43 @@ export function watchProvidedContexts(
   };
   doc.addEventListener(CONTEXT_PROVIDE_EVENT, onProvide);
   return () => doc.removeEventListener(CONTEXT_PROVIDE_EVENT, onProvide);
+}
+
+/**
+ * Watch a frame's document for a provider of one of these contexts *going away*, handing the
+ * instance it was providing to `onInstance`.
+ *
+ * The other half of {@link watchProvidedContexts}, and needed for the same reason: a consumer that
+ * only ever hears about contexts appearing keeps whatever it learned from the last one for ever. A
+ * window routed to a section root has no workspace at all, so nothing new is provided and there is
+ * no later event to correct the record — the dirty watcher would stay marked and the path strip
+ * would keep the last document's ancestry.
+ *
+ * **The instance, not the alias, is what identifies what went away.** `umb:context-unprovided`
+ * carries the context alias but not the api alias, and the two contexts the path strip reads are
+ * registered under the same context alias — `UmbWorkspaceContext#UmbMenuStructure` and
+ * `UmbWorkspaceContext#default` — so the alias narrows the listening and settles nothing. Callers
+ * match on the instance they were handed, which is conclusive and needs no aliases at all.
+ *
+ * Several aliases rather than one because a caller watching two contexts under the same alias would
+ * otherwise register two listeners and be told about every withdrawal twice.
+ * @param doc The frame's document.
+ * @param contextAliases The context aliases worth listening for; anything else is ignored unheard.
+ * @param onInstance Called with the instance each matching provider was providing.
+ * @returns A function that stops watching.
+ */
+export function watchUnprovidedContexts(
+  doc: Document,
+  contextAliases: ReadonlyArray<string>,
+  onInstance: (instance: unknown) => void,
+): () => void {
+  const onUnprovided = (event: Event) => {
+    const announced = (event as { contextAlias?: string }).contextAlias;
+    // Read defensively, exactly as the provide watch reads it: treating "cannot tell" as "does not
+    // match" would silently drop a withdrawal, and a withdrawal dropped is state kept for ever.
+    if (announced !== undefined && !contextAliases.includes(announced)) return;
+    onInstance((event as { instance?: unknown }).instance);
+  };
+  doc.addEventListener(CONTEXT_UNPROVIDED_EVENT, onUnprovided);
+  return () => doc.removeEventListener(CONTEXT_UNPROVIDED_EVENT, onUnprovided);
 }

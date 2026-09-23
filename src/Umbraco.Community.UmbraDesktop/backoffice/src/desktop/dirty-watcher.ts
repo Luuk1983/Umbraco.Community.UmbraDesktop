@@ -1,6 +1,6 @@
 import { UMB_SUBMITTABLE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/workspace';
 import { jsonStringComparison } from '@umbraco-cms/backoffice/observable-api';
-import { aliasesOf, watchProvidedContexts } from './frame-context.js';
+import { aliasesOf, watchProvidedContexts, watchUnprovidedContexts } from './frame-context.js';
 
 /**
  * Watches a window's frame for unsaved changes, so the desktop can mark the window and can ask
@@ -19,22 +19,6 @@ import { aliasesOf, watchProvidedContexts } from './frame-context.js';
  * `apiAlias` is protected — and the two have to be taken from one place or they can disagree.
  */
 const [WORKSPACE_CONTEXT_ALIAS, WORKSPACE_API_ALIAS] = aliasesOf(UMB_SUBMITTABLE_WORKSPACE_CONTEXT);
-
-/**
- * The one context event this module still names for itself.
- *
- * Its siblings — request and provide — moved to `frame-context.ts` when the path strip needed the
- * same dance. This one stayed, because dropping a workspace when its provider goes away is this
- * module's own bookkeeping and not something a second consumer would want: the path watcher holds
- * no per-workspace state to drop.
- */
-const CONTEXT_UNPROVIDED_EVENT = 'umb:context-unprovided';
-
-/** The shape a provide/unprovide event carries; `instance` is present on unprovide only. */
-interface ContextProvideEventLike {
-  contextAlias?: string;
-  instance?: unknown;
-}
 
 /** Only what this module needs of an Umbraco observable. */
 interface Subscribable<T> {
@@ -295,23 +279,22 @@ export function watchWorkspaceDirtyState(
     },
   );
 
-  const onUnprovided = (e: Event) => {
-    const event = e as ContextProvideEventLike;
-    if (event.contextAlias !== WORKSPACE_CONTEXT_ALIAS) return;
-    const key = event.instance as object | undefined;
+  // Dropping a workspace when its provider goes away is what makes navigating inside a window go
+  // clean rather than leaving the mark behind. The instance is what identifies it — see
+  // `watchUnprovidedContexts` — and an instance this module never tracked simply misses the map.
+  const stopUnprovided = watchUnprovidedContexts(doc, [WORKSPACE_CONTEXT_ALIAS], (instance) => {
+    const key = instance as object | undefined;
     const entry = key ? tracked.get(key) : undefined;
     if (!entry || !key) return;
     entry.release();
     tracked.delete(key);
     publish();
-  };
-
-  doc.addEventListener(CONTEXT_UNPROVIDED_EVENT, onUnprovided);
+  });
 
   return () => {
     stopped = true;
     stopWatching();
-    doc.removeEventListener(CONTEXT_UNPROVIDED_EVENT, onUnprovided);
+    stopUnprovided();
     for (const entry of tracked.values()) entry.release();
     tracked.clear();
   };
