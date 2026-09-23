@@ -1,7 +1,7 @@
 import { UMB_APP_LANGUAGE_CONTEXT } from '@umbraco-cms/backoffice/language';
 import { UMB_MENU_STRUCTURE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/menu';
 import { UMB_SUBMITTABLE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/workspace';
-import { aliasesOf, watchProvidedContexts, watchUnprovidedContexts } from '../frame-context.js';
+import { aliasesOf, watchProvidedContexts, watchUnprovidedContext } from '../frame-context.js';
 import type {
   UmbraDesktopAppLanguage,
   UmbraDesktopStructureItem,
@@ -223,7 +223,9 @@ function dropTracked(stack: TrackedContext[], instance: unknown): boolean {
  * comes from a workspace, and a window routed to its own root — which is what clicking the home
  * crumb does — has no workspace at all. Nothing is provided there, so without listening for the
  * withdrawal there is no second event to correct the record and the strip keeps naming the document
- * the window has just left.
+ * the window has just left. That withdrawal is heard on each provider's own element and nowhere
+ * else; {@link watchUnprovidedContext} is where the reason is written down, and it is the one thing
+ * in this file most likely to be "simplified" back into a bug.
  *
  * **A stack of contexts rather than one, per kind.** The common case is one at a time, because
  * `router-slot` clears its old page before it appends the new one, so an ordinary navigation
@@ -282,7 +284,7 @@ export function watchFramePath(
     doc,
     STRUCTURE_CONTEXT_ALIAS,
     STRUCTURE_API_ALIAS,
-    (instance) => {
+    (instance, provider) => {
       if (!isStructureContext(instance)) return false;
       // Stacked before subscribing, as `dirty-watcher.ts` registers its entry before subscribing and
       // for the same reason: an Umbraco observable emits its current value the moment it is
@@ -294,7 +296,13 @@ export function watchFramePath(
         entry.items = items.map((item) => flattenItem(item, instance));
         refresh();
       });
-      entry.release = () => subscription.unsubscribe();
+      const stopWithdrawal = watchUnprovidedContext(provider, instance, () => {
+        if (dropTracked(structures, instance)) refresh();
+      });
+      entry.release = () => {
+        subscription.unsubscribe();
+        stopWithdrawal();
+      };
       return true;
     },
   );
@@ -303,7 +311,7 @@ export function watchFramePath(
     doc,
     WORKSPACE_CONTEXT_ALIAS,
     WORKSPACE_API_ALIAS,
-    (instance) => {
+    (instance, provider) => {
       if (!isNamedWorkspace(instance)) return false;
       const entry: TrackedWorkspace = { instance, release: () => {} };
       workspaces.push(entry);
@@ -324,8 +332,12 @@ export function watchFramePath(
           }),
         );
       }
+      const stopWithdrawal = watchUnprovidedContext(provider, instance, () => {
+        if (dropTracked(workspaces, instance)) refresh();
+      });
       entry.release = () => {
         for (const subscription of subscriptions) subscription.unsubscribe();
+        stopWithdrawal();
       };
       return true;
     },
@@ -351,31 +363,11 @@ export function watchFramePath(
     },
   );
 
-  /**
-   * Forget whichever context has just gone away.
-   *
-   * Matched on the instance rather than on the alias the event carries, because that alias settles
-   * nothing here: both contexts this watches are registered under `UmbWorkspaceContext` and differ
-   * only by an api alias the withdrawal does not report. The instance is conclusive, and one it has
-   * never tracked simply misses both stacks.
-   */
-  const stopUnprovided = watchUnprovidedContexts(
-    doc,
-    // De-duplicated because the two aliases are in fact the same string today, and one listener
-    // registered twice would be told twice about every withdrawal.
-    [...new Set([STRUCTURE_CONTEXT_ALIAS, WORKSPACE_CONTEXT_ALIAS])],
-    (instance) => {
-      const dropped = dropTracked(structures, instance) || dropTracked(workspaces, instance);
-      if (dropped) refresh();
-    },
-  );
-
   return () => {
     stopped = true;
     stopStructure();
     stopWorkspace();
     stopLanguage();
-    stopUnprovided();
     for (const entry of [...structures, ...workspaces]) entry.release();
     structures.length = 0;
     workspaces.length = 0;

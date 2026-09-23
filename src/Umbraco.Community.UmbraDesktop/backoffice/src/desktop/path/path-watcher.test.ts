@@ -55,6 +55,21 @@ function fakeState<T>(initial: T) {
  * only by their api alias, so the provider matches on both — which is exactly what makes the
  * unprovide event ambiguous in the real frame, since that event carries the context alias and not
  * the api one. See the instance check in `path-watcher.ts`.
+ *
+ * **Two ways to withdraw, because core has two and they are not equivalent.** Both end in
+ * `UmbContextProvider.hostDisconnected()` dispatching `umb:context-unprovided` from the provider's
+ * own element, but what the rest of the document can hear differs:
+ *
+ * - `destroyAttached()` is what `router-slot` does to the page element it owns: `destroy()` first,
+ *   which walks the controllers while the element is still in the document, then `removeChild`. The
+ *   event bubbles to the document like any other.
+ * - `detach()` is what happens to every provider *below* that page element, and to anything a modal
+ *   takes away: the subtree is removed and `disconnectedCallback` runs afterwards, so the event is
+ *   dispatched from an element that is no longer in the document. **It reaches the provider's own
+ *   ancestors inside the detached tree and stops there — a document listener never hears it.**
+ *
+ * Measured against the real `UmbContextProviderController` and `UmbLitElement` rather than assumed;
+ * the second case is why the path strip kept a stale path after the first attempt at this fix.
  * @param contextAlias The context alias this provider answers for.
  * @param apiAlias The api alias this provider answers for.
  * @param instance The context instance to hand out.
@@ -93,7 +108,14 @@ function mountProvider(contextAlias: string, apiAlias: string, instance: unknown
 
   return {
     provide: () => announce('umb:context-provide'),
-    unprovide: () => announce('umb:context-unprovided', { instance }),
+    destroyAttached: () => {
+      announce('umb:context-unprovided', { instance });
+      host.remove();
+    },
+    detach: () => {
+      host.remove();
+      announce('umb:context-unprovided', { instance });
+    },
     dispose: () => host.remove(),
   };
 }
@@ -161,10 +183,15 @@ it('reports the ancestry the frame publishes, with core’s synthetic root left 
   ]);
 });
 
-it('empties the path when the structure context is unprovided, as clicking home does', () => {
+it('empties the path when the workspace is torn down detached, as clicking home does', () => {
   // Issue: the home crumb routes the window to its launch URL, which is a section root — and a
   // section root has no workspace, so no new structure is ever provided. Without this, the strip
   // kept showing the path of the document the window had just left.
+  //
+  // `detach()` and not `destroyAttached()`, because that is what the frame actually does to these
+  // two contexts: they are provided by `umb-workspace`, which sits below the page element
+  // `router-slot` owns, so it is removed with the subtree and announces its withdrawal from
+  // outside the document. A document-level listener hears nothing at all. See `mountProvider`.
   const reported = watch();
   const structure = fakeStructure([structureItem('a1', 'People')]);
   const workspace = fakeWorkspace('Lee Kelleher');
@@ -176,12 +203,26 @@ it('empties the path when the structure context is unprovided, as clicking home 
   workspaceProvider.provide();
   expect(reported[reported.length - 1].structure).to.have.lengthOf(1);
 
-  structureProvider.unprovide();
-  workspaceProvider.unprovide();
+  structureProvider.detach();
+  workspaceProvider.detach();
 
   const last = reported[reported.length - 1];
   expect(last.structure, 'the window is at its root and has no ancestry to show').to.deep.equal([]);
   expect(last.currentName, 'and nothing to name').to.equal(undefined);
+});
+
+it('empties the path when the workspace is destroyed still attached', () => {
+  // The other of core's two teardown orders, kept as its own test because the two are not the same
+  // event as far as the rest of the document is concerned and only one of them used to work.
+  const reported = watch();
+  const structure = fakeStructure([structureItem('a1', 'People')]);
+  const provider = mountProvider(STRUCTURE_ALIAS, STRUCTURE_API, structure.instance);
+  teardown.push(provider.dispose);
+
+  provider.provide();
+  provider.destroyAttached();
+
+  expect(reported[reported.length - 1].structure).to.deep.equal([]);
 });
 
 it('drops a workspace’s name without dropping the ancestry beside it', () => {
@@ -197,7 +238,7 @@ it('drops a workspace’s name without dropping the ancestry beside it', () => {
 
   structureProvider.provide();
   workspaceProvider.provide();
-  workspaceProvider.unprovide();
+  workspaceProvider.detach();
 
   const last = reported[reported.length - 1];
   expect(last.currentName).to.equal(undefined);
@@ -217,7 +258,7 @@ it('keeps the incoming path when the outgoing context is unprovided after it', (
 
   leavingProvider.provide();
   arrivingProvider.provide();
-  leavingProvider.unprovide();
+  leavingProvider.detach();
 
   expect(reported[reported.length - 1].structure.map((item) => item.unique)).to.deep.equal([
     'b2',
@@ -253,7 +294,7 @@ it('falls back to the context underneath when the innermost one goes away', () =
 
   outerProvider.provide();
   innerProvider.provide();
-  innerProvider.unprovide();
+  innerProvider.detach();
 
   expect(reported[reported.length - 1].structure.map((item) => item.unique)).to.deep.equal(['a1']);
 });
@@ -272,6 +313,6 @@ it('lets go of every subscription when it is stopped', () => {
   stop();
 
   expect(structure.state.subscriberCount, 'and unsubscribed').to.equal(0);
-  provider.unprovide();
+  provider.detach();
   expect(reported.length, 'a stopped watcher reports nothing').to.equal(reportedBeforeStopping);
 });

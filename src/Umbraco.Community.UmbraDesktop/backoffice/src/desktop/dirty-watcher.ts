@@ -1,6 +1,6 @@
 import { UMB_SUBMITTABLE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/workspace';
 import { jsonStringComparison } from '@umbraco-cms/backoffice/observable-api';
-import { aliasesOf, watchProvidedContexts, watchUnprovidedContexts } from './frame-context.js';
+import { aliasesOf, watchProvidedContexts, watchUnprovidedContext } from './frame-context.js';
 
 /**
  * Watches a window's frame for unsaved changes, so the desktop can mark the window and can ask
@@ -202,8 +202,12 @@ export function watchWorkspaceDirtyState(
     onChange({ dirty, subjects });
   };
 
-  /** Subscribe to a workspace's halves and its identity, and keep its entry up to date. */
-  const track = (workspace: ComparableWorkspace) => {
+  /**
+   * Subscribe to a workspace's halves and its identity, and keep its entry up to date.
+   * @param workspace The workspace context to track.
+   * @param provider The element it was provided from, which is where it will announce going away.
+   */
+  const track = (workspace: ComparableWorkspace, provider: EventTarget) => {
     const key = workspace as unknown as object;
     if (stopped || tracked.has(key)) return;
     let persisted: unknown;
@@ -260,8 +264,19 @@ export function watchWorkspaceDirtyState(
         evaluate();
       }),
     ];
+    // Dropping a workspace when its provider goes away is what makes navigating inside a window go
+    // clean rather than leaving the mark behind. Heard on the provider's own element, because that
+    // is the only place it can be heard at all — `watchUnprovidedContext` explains why at length.
+    const stopWithdrawal = watchUnprovidedContext(provider, workspace, () => {
+      const entry = tracked.get(key);
+      if (!entry) return;
+      entry.release();
+      tracked.delete(key);
+      publish();
+    });
     entry.release = () => {
       for (const sub of subs) sub?.unsubscribe();
+      stopWithdrawal();
     };
   };
 
@@ -272,29 +287,16 @@ export function watchWorkspaceDirtyState(
     doc,
     WORKSPACE_CONTEXT_ALIAS,
     WORKSPACE_API_ALIAS,
-    (instance) => {
+    (instance, provider) => {
       if (!isComparableWorkspace(instance)) return false;
-      track(instance);
+      track(instance, provider);
       return true;
     },
   );
 
-  // Dropping a workspace when its provider goes away is what makes navigating inside a window go
-  // clean rather than leaving the mark behind. The instance is what identifies it — see
-  // `watchUnprovidedContexts` — and an instance this module never tracked simply misses the map.
-  const stopUnprovided = watchUnprovidedContexts(doc, [WORKSPACE_CONTEXT_ALIAS], (instance) => {
-    const key = instance as object | undefined;
-    const entry = key ? tracked.get(key) : undefined;
-    if (!entry || !key) return;
-    entry.release();
-    tracked.delete(key);
-    publish();
-  });
-
   return () => {
     stopped = true;
     stopWatching();
-    stopUnprovided();
     for (const entry of tracked.values()) entry.release();
     tracked.clear();
   };
