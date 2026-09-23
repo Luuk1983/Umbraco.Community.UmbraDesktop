@@ -299,6 +299,27 @@ it('falls back to the context underneath when the innermost one goes away', () =
   expect(reported[reported.length - 1].structure.map((item) => item.unique)).to.deep.equal(['a1']);
 });
 
+it('survives one context being announced twice from the same element', () => {
+  // Not a contrived case, it is the normal one. Both contexts the strip reads are provided from
+  // `umb-workspace`, so that element fires `umb:context-provide` twice — once per provider, both
+  // naming `UmbWorkspaceContext`. Each of this module's two watches asks on both of them and gets
+  // its own instance handed back each time, so it accepts the same instance twice and tracks it
+  // twice. What must not happen is a leftover entry surviving the withdrawal and pinning the strip
+  // to a path the window has left, which is the original bug wearing a different hat.
+  const reported = watch();
+  const structure = fakeStructure([structureItem('a1', 'People')]);
+  const provider = mountProvider(STRUCTURE_ALIAS, STRUCTURE_API, structure.instance);
+  teardown.push(provider.dispose);
+
+  provider.provide();
+  provider.provide();
+  expect(reported[reported.length - 1].structure).to.have.lengthOf(1);
+
+  provider.detach();
+
+  expect(reported[reported.length - 1].structure, 'every copy of it is gone').to.deep.equal([]);
+});
+
 it('lets go of every subscription when it is stopped', () => {
   const reported: UmbraDesktopFramePath[] = [];
   const stop = watchFramePath(document, (path) => reported.push(path));
