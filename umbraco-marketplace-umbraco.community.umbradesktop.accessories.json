@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop Accessories",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "The small tools for UmbraDesktop. An optional add-on that puts Notepad, Paint, Sticky Notes, Calculator, Clock and a screen saver on the desktop, each in a window of its own and themed along with the rest of it.",
+  "Description": "The small tools for UmbraDesktop. An optional add-on that puts Notepad, Paint, Sticky Notes, Calculator and the rest of Windows' Accessories on the desktop, each in a window of its own and themed along with the rest of it.",
   "PackageType": "Package",
   "LicenseTypes": [
     "Free"
@@ -26,6 +26,12 @@
     "clock",
     "screensaver",
     "screen saver",
+    "character map",
+    "special characters",
+    "disk cleanup",
+    "recycle bin",
+    "empty recycle bin",
+    "system information",
     "media library",
     "umbradesktop",
     "desktop",

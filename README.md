@@ -21,7 +21,7 @@ It also does something the backoffice does not do at all. When two people have t
 > and themed along with everything else. Install it if you want it; the desktop is unchanged
 > without it. See [Games](#games).
 >
-> **New: Notepad, Paint, Sticky Notes, Calculator, Clock and a screen saver.** [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories)
+> **New: Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, a screen saver, Disk Cleanup and System Information.** [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories)
 > is a second optional add-on that fills the launcher's Accessories group with the small tools
 > Windows kept under Start > Programs > Accessories, each in a window of its own. See
 > [Accessories](#accessories).
@@ -48,7 +48,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Light, dark and high contrast, in the same place. Umbraco's own colour schemes are normally set in the user menu, three clicks from the theme that sits beside them. Appearance now has a row for them too, listing whatever themes the backoffice has registered rather than a fixed three, so a site shipping its own gets it here for free. One setting, two ways in: change it here and the user menu agrees, and the other way round. See [The backoffice's own colours](#the-backoffices-own-colours).
 - Let the wallpaper follow. Turn on one toggle in the theme picker and each theme brings its own background with it, so switching to Windows 98 gives you its bare teal and switching to macOS gives you a sunrise. Off by default, and choosing a wallpaper yourself turns it back off. See [Matching the wallpaper to the theme](#matching-the-wallpaper-to-the-theme).
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
-- Small tools, if you want them. The optional Accessories add-on above puts Notepad, Paint, Sticky Notes, Calculator, Clock and Screen Saver in the launcher, each in a window that follows the theme. Sticky Notes is one board shared by everyone who uses the desktop. Notepad and Paint edit files in the media library: open a text file or an image, change it, and save it back. Screen Saver brings back Starfield, Mystify and a flight of Umbraco logos for when the desktop is left alone. See [Accessories](#accessories).
+- Small tools, if you want them. The optional Accessories add-on above puts Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information in the launcher, each in a window that follows the theme. Sticky Notes is one board shared by everyone who uses the desktop. Notepad and Paint edit files in the media library: open a text file or an image, change it, and save it back. Screen Saver brings back Starfield, Mystify and a flight of Umbraco logos for when the desktop is left alone. Disk Cleanup empties the content and media recycle bins together, after asking, and System Information says which Umbraco, which desktop and which theme you are running, the way System Properties did. See [Accessories](#accessories).
 - Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
 - Install it as an app. The backoffice declares a web app manifest, so your browser can install or pin it. It opens straight on the desktop in its own window, with no address bar and no tabs, and carries your site's own name and icon rather than a generic browser tile. Both are settings, so an agency running ten sites gets ten distinguishable apps. See [Installing the backoffice as an app](#installing-the-backoffice-as-an-app).
@@ -449,7 +449,7 @@ This matters most if you restore databases between environments. The backoffice 
 
 ## Accessories
 
-Notepad, Paint, Sticky Notes, Calculator, Clock and Screen Saver, the small tools Windows kept under Start > Programs > Accessories (and, for the screen saver, under Display), each in a window of its own and themed along with the rest of the desktop. Like the games, they ship in their own package:
+Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information, the small tools Windows kept under Start > Programs > Accessories and its System Tools (and, for the screen saver, under Display), each in a window of its own and themed along with the rest of the desktop. Like the games, they ship in their own package:
 
 ```bash
 dotnet add package Umbraco.Community.UmbraDesktop.Accessories
@@ -461,8 +461,11 @@ That is the whole installation. They appear in an Accessories group in the launc
 - **Paint.** Pencil, brush, eraser and fill, MS Paint's own twenty-eight colours (left click paints one, right click the other), and Undo, on a new picture or on an image opened from the media library.
 - **Sticky Notes.** One board of notes shared by everyone who uses the desktop, so a note one person writes is on everyone else's screen within about fifteen seconds, or as soon as they click back into the window. Each note says who last wrote it and when. Anyone can edit or delete any note; delete asks first. See [Sticky Notes](#sticky-notes).
 - **Calculator.** The Windows Standard calculator without its scientific row, from the keypad or the keyboard. It works left to right as a pocket calculator does, and shows `0.3` for `0.1 + 0.2`.
+- **Character Map.** Every character a keyboard does not have, in a grid by group: accented letters, dashes and quotes, currency, arrows, maths, box drawing and symbols. Click one for its Unicode name and its Windows Alt keystroke, double-click to add it to the characters to copy, and **Copy**. Or search by name, "right arrow", or by code, "U+2192".
 - **Clock.** An analogue face with the time and date under it, in your backoffice language.
 - **Screen Saver.** Starfield, Mystify, or Umbraco logos flying at you, when the desktop has been left alone. See [Screen saver](#screen-saver).
+- **Disk Cleanup.** Empties the content recycle bin and the media recycle bin, one or both at once, for good. Nothing is ticked when it opens, and it always asks first. See [Disk Cleanup](#disk-cleanup).
+- **System Information.** Windows 98's System Properties for the site: the Umbraco version, the desktop's version and theme, who you are signed in as, and the browser and machine you are on. **Details** has the rest: the server's own report (operating system, .NET, database), every installed package with its version, and your display, memory and processors. **Copy all** puts the lot on the clipboard for a support request.
 
 ### Notepad and Paint work on the media library
 
@@ -484,6 +487,14 @@ Unsaved work gets the same protection as an unsaved page: the window shows the u
 - **Flying Umbraco**, the Umbraco logo in place of the flying windows.
 
 It is off until you choose one, and choosing **(None)** switches it off again. Once on, it starts when the desktop has been left alone for the wait, from 1 to 30 minutes, and any key, click, scroll or real movement of the mouse brings the desktop back. A nudge of a few pixels does not, so a knocked desk leaves it running. Typing in a window counts as being there, a content editor included. It only runs over the desktop, never over the classic backoffice, and not in a tab you cannot see. Your choice is stored per user, in that browser, like your theme.
+
+### Disk Cleanup
+
+**Disk Cleanup** frees space on the server by emptying the recycle bins: **Content recycle bin** and **Media recycle bin**, each with how many items it holds. Emptying one deletes those items for good, for everyone, with everything under them, and for media their files too. Nothing can be restored afterwards, so it is built to be hard to do by accident:
+
+- Nothing is ticked when the window opens, and **Clean up** does nothing until something is.
+- **Clean up** counts the ticked bins again, in case somebody has deleted something since the window opened, and then asks, in the backoffice's red confirmation dialog, naming each bin and how many items it holds. Only **Delete permanently** goes ahead.
+- It uses Umbraco's own Empty Recycle Bin, so Umbraco decides who may, exactly as in the Content and Media sections. A bin you cannot reach shows **No access** and cannot be ticked, and if Umbraco refuses to empty one you can see (a Writer, say, who may not delete), the window says so and leaves it alone.
 
 ### Sticky Notes
 

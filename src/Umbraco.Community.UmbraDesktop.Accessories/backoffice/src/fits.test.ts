@@ -1,11 +1,14 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { manifests } from './bundle.manifests.js';
 import './calculator/calculator.element.js';
+import './character-map/character-map.element.js';
 import './clock/clock.element.js';
+import './disk-cleanup/disk-cleanup.element.js';
 import './notepad/notepad.element.js';
 import './paint/paint.element.js';
 import './screensaver/screensaver-panel.element.js';
 import './sticky-notes/sticky-notes.element.js';
+import './system-info/system-info.element.js';
 
 /**
  * Every app, measured in a real browser at both sizes its manifest declares, under every theme id
@@ -31,6 +34,9 @@ const TAGS: Record<string, string> = {
   Clock: 'umbradesktop-clock',
   StickyNotes: 'umbradesktop-sticky-notes',
   ScreenSaver: 'umbradesktop-screensaver-panel',
+  CharacterMap: 'umbradesktop-character-map',
+  DiskCleanup: 'umbradesktop-disk-cleanup',
+  SystemInfo: 'umbradesktop-system-info',
 };
 
 /** The published theme ids (`docs/desktop-apps.md` §5), plus no theme at all. */

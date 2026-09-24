@@ -41,7 +41,7 @@ dotnet test src/Umbraco.Community.UmbraDesktop.Accessories.Tests/Umbraco.Communi
 ```
 
 Anything that talks to a server wants a real backoffice as well. The TestInstance only boots on
-Windows; `docs/design/2026-09-24-accessories-design.md` §8 is how to run one on Linux and drive it
+Windows; `docs/design/2026-09-24-accessories-design.md` §9 is how to run one on Linux and drive it
 from a script, and it found three bugs in Sticky Notes that every test had passed.
 
 ## Conventions
