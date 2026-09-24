@@ -150,6 +150,7 @@ export default {
     taskbarFullscreenBrowserF11: 'Your browser is in full screen. Press F11 to leave it.',
     taskbarFullscreenBrowserMac: 'Your browser is in full screen. Press Control-Command-F to leave it.',
     taskbarFullscreenBrowserChromeOs: 'Your browser is in full screen. Press the full screen key to leave it.',
+    settingsCategoryLoadFailed: 'This category could not be loaded.',
     settingsBack: 'Back to Desktop settings',
     // desktop settings — startup
     bootIntoDesktop: 'Open the desktop when I sign in',

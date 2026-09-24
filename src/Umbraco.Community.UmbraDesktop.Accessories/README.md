@@ -12,16 +12,18 @@ Install the accessories package and the launcher grows an Accessories group. Ope
 
 ## What's in it
 
-- **Notepad.** A plain-text page with word wrap, and the caret's line and column in a status bar. Open reads a text file from your machine, Save downloads the page back under the name it was opened with, and Ctrl+S, Ctrl+O and Ctrl+N do what they do everywhere else.
-- **Paint.** Pencil, brush, eraser and fill, in MS Paint's own twenty-eight colours: left click paints the foreground and right click the background. Undo with Ctrl+Z, and Save as PNG.
+- **Notepad.** A plain-text page with word wrap, and the caret's line and column in a status bar. Open reads a text file from your machine, Save writes it back under the name it was opened with, and Ctrl+S, Ctrl+O and Ctrl+N do what they do everywhere else.
+- **Paint.** Pencil, brush, eraser and fill, in MS Paint's own twenty-eight colours: left click paints the foreground and right click the background. Undo with Ctrl+Z, and Save as PNG with Ctrl+S.
 - **Calculator.** The Windows Standard calculator without its scientific row. Works from the keypad or the keyboard, left to right the way a pocket calculator does, and shows `0.3` for `0.1 + 0.2`.
 - **Clock.** An analogue face with the time and the date under it, in your backoffice language.
 
 ## Where your work goes
 
-Nowhere but your own machine. Open uses your browser's file picker and Save is a download, so nothing is stored in Umbraco, nothing is uploaded and there is no permission to set up.
+Wherever you choose in **Desktop settings > Accessories**: your own machine as a download, or the media library as a media item (a text file from Notepad, an image from Paint), in a folder you pick. Save and Ctrl+S go there, and each app has a second button for the other place, so both are always one click away. The choice is per user, in that browser, and starts on your own machine.
 
-The flip side is that a Notepad or Paint window's work lasts as long as the window does. New and Open ask before throwing unsaved work away. Closing the window does not ask, because the desktop's close guard can only be told about unsaved changes by a window holding a backoffice page, and these are not.
+A save to the media library behaves like dragging the file into the Media section: the extension picks the media type, the folder has to allow it, and you need access to both. A refusal comes back in the backoffice's own words and leaves your work unsaved in the window. Saving the same document again updates the media item it created instead of adding another.
+
+Until it is saved, a Notepad or Paint window's work lasts as long as the window does. New and Open ask before throwing unsaved work away. Closing the window does not ask, because the desktop's close guard can only be told about unsaved changes by a window holding a backoffice page, and these are not.
 
 ## Installation
 

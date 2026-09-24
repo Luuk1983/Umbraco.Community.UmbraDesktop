@@ -83,6 +83,25 @@ const apps: Array<UmbExtensionManifest> = [
 ];
 
 /**
+ * The Accessories category of Desktop settings: where Notepad's and Paint's Save goes.
+ *
+ * A `umbraDesktopSettingsCategory`, which the host lists among its own personal settings, so the
+ * choice is made where every other desktop setting is made, and the category exists only while this
+ * package is installed. No `weight`, because it is this package's only category.
+ */
+const settingsCategory: UmbExtensionManifest = {
+  type: 'umbraDesktopSettingsCategory',
+  alias: `${ALIAS}.Settings`,
+  name: 'Accessories settings',
+  element: () => import('./settings/accessories-settings.element.js'),
+  meta: {
+    label: `#${AREA}_settingsCategory`,
+    description: `#${AREA}_settingsCategoryAbout`,
+    icon: 'icon-notepad',
+  },
+};
+
+/**
  * The bundle Umbraco loads for this package, and the only entry point it has.
  *
  * `UmbExtensionManifest` is a global type from `@umbraco-cms/backoffice/extension-types`, wired up in
@@ -90,4 +109,4 @@ const apps: Array<UmbExtensionManifest> = [
  * `umbradesktop-app.d.ts` in this folder, a copy of the Entertainment package's, for the reason given
  * there.
  */
-export const manifests: Array<UmbExtensionManifest> = [...apps, ...localizationManifests];
+export const manifests: Array<UmbExtensionManifest> = [...apps, settingsCategory, ...localizationManifests];

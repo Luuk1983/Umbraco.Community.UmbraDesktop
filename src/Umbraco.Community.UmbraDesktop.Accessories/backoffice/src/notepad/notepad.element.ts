@@ -1,6 +1,13 @@
 import { accessoryStyles } from '../shared/styles.js';
 import { AREA } from '../shared/area.js';
 import { downloadBlob } from '../shared/download.js';
+import { announceSave } from '../shared/announce-save.js';
+import { createMediaSaver } from '../shared/media-save.js';
+import type { MediaSaver } from '../shared/media-save.js';
+import { otherDestination, saveFile } from '../shared/save-file.js';
+import { UmbraDesktopAccessoriesSaveSettingsController } from '../settings/save-settings.source.js';
+import type { AccessoriesSaveSettingsSource } from '../settings/save-settings.source.js';
+import type { AccessoriesSaveDestination } from '../settings/save-settings.js';
 import { NOTEPAD_BAR_HEIGHT_PX, NOTEPAD_PADDING_PX } from './constants.js';
 import { caretPosition, textFileName } from './text.js';
 import { css, customElement, html, property, query, state } from '@umbraco-cms/backoffice/external/lit';
@@ -11,11 +18,13 @@ import { UMB_DISCARD_CHANGES_MODAL, umbOpenModal } from '@umbraco-cms/backoffice
  * Notepad, as a self-contained UmbraDesktop app: a plain-text page, a toolbar with New, Open, Save
  * and Word wrap, and a status bar with the caret's line and column.
  *
- * **Files go through the browser, not the server.** Open reads a file the person picks with the
- * browser's own file dialog, and Save hands the text back as a download. Nothing is stored in
- * Umbraco and nothing leaves the machine, so there is no C# surface, no permission to decide and no
- * media library entry to clean up. It also means a Notepad window's text lives only as long as the
- * window does, the same as a note in a real Notepad that was never saved.
+ * **Save goes where Desktop settings say**: a download to this computer by default, or a media item
+ * in the media library, and the toolbar always has a second button for the other one. Open reads a
+ * file the person picks with the browser's own file dialog. Nothing about this needs a C# surface:
+ * a download never reaches the server, and a media save goes through the backoffice's own media
+ * repositories, with the permissions the person already has (see `shared/media-save.ts`). Until it
+ * is saved, a Notepad window's text lives only as long as the window does, the same as a note in a
+ * real Notepad.
  *
  * That last part has one sharp edge, and it is the host's rather than this app's: the desktop's
  * close guard asks before closing a window with unsaved changes, but only an iframe window can tell
@@ -46,9 +55,36 @@ export class NotepadElement extends UmbLitElement {
     }
   };
 
+  /**
+   * Where Save goes. The stored per-user Desktop setting unless a test says otherwise, read when the
+   * element connects.
+   */
+  @property({ attribute: false })
+  saveSettings?: AccessoriesSaveSettingsSource;
+
+  /** How a file reaches the media library. The backoffice's media repositories unless a test says otherwise. */
+  @property({ attribute: false })
+  saveToMedia?: MediaSaver;
+
   /** The document. */
   @state()
   private _text = '';
+
+  /**
+   * The media item this document was last saved as, so the next save to the media library
+   * overwrites it rather than adding a copy. Forgotten by New and Open, which start a new document.
+   */
+  #mediaUnique?: string;
+
+  /** The settings in use: the ones given, or the stored ones. */
+  #settings?: AccessoriesSaveSettingsSource;
+
+  /** Stops listening to the settings. */
+  #unsubscribe?: () => void;
+
+  /** Bumped when the settings change, so the toolbar's labels follow them. */
+  @state()
+  private _settingsRevision = 0;
 
   /** The file the document came from, if it came from one. Decides the name it saves under. */
   @state()
@@ -79,11 +115,14 @@ export class NotepadElement extends UmbLitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('keydown', this.#onKeyDown);
+    this.#settings ??= this.saveSettings ?? new UmbraDesktopAccessoriesSaveSettingsController(this);
+    this.#unsubscribe = this.#settings.subscribe(() => this._settingsRevision++);
   }
 
   /** Stop listening. The whole of teardown: there is no timer here. */
   override disconnectedCallback(): void {
     this.removeEventListener('keydown', this.#onKeyDown);
+    this.#unsubscribe?.();
     super.disconnectedCallback();
   }
 
@@ -136,12 +175,51 @@ export class NotepadElement extends UmbLitElement {
     this.#load(await file.text(), file.name);
   }
 
-  /** Hand the page to the person as a text file, and count it saved. */
-  async save(): Promise<void> {
+  /** Where Save and Ctrl+S go, as Desktop settings say. */
+  get #destination(): AccessoriesSaveDestination {
+    return this.#settings?.value.destination ?? 'computer';
+  }
+
+  /** Save the page where Desktop settings say. What Save and Ctrl+S do. */
+  save(): Promise<void> {
+    return this.saveTo(this.#destination);
+  }
+
+  /**
+   * Save the page as a text file to one destination, and count it saved if that worked.
+   *
+   * The text that was saved is what "saved" is measured against, not the text when the save
+   * finished: a media save takes a round trip, and typing during it must still read as unsaved.
+   * @param destination This computer, or the media library.
+   */
+  async saveTo(destination: AccessoriesSaveDestination): Promise<void> {
     const name = textFileName(this._fileName, this.#term('notepadUntitled', 'Untitled'));
-    await this.download(new Blob([this._text], { type: 'text/plain;charset=utf-8' }), name);
+    const text = this._text;
+    const file = new File([text], name, { type: 'text/plain;charset=utf-8' });
+    const outcome = await saveFile(file, destination, {
+      download: this.download,
+      saveToMedia: this.saveToMedia ?? createMediaSaver(this),
+      settings: this.#settings!.value,
+      existing: this.#mediaUnique,
+    });
+    void announceSave(this, outcome, name);
+    if (!outcome.ok) return;
+    if (outcome.mediaUnique) this.#mediaUnique = outcome.mediaUnique;
     this._fileName = name;
-    this._savedText = this._text;
+    this._savedText = text;
+  }
+
+  /**
+   * A save button's label.
+   * @param destination Where the button saves to.
+   * @param primary Whether it is the main Save button, which is just "Save".
+   * @returns The label.
+   */
+  #saveLabel(destination: AccessoriesSaveDestination, primary: boolean): string {
+    if (primary) return this.#term('notepadSave', 'Save');
+    return destination === 'media'
+      ? this.#term('saveToMedia', 'Save to media library')
+      : this.#term('download', 'Download');
   }
 
   /**
@@ -154,6 +232,7 @@ export class NotepadElement extends UmbLitElement {
     this._savedText = text;
     this._fileName = fileName;
     this._caret = 0;
+    this.#mediaUnique = undefined;
   }
 
   /**
@@ -188,10 +267,23 @@ export class NotepadElement extends UmbLitElement {
   }
 
   /**
+   * What the Save button's tooltip says, so the destination Desktop settings chose is visible
+   * without opening them.
+   * @param destination Where Save goes.
+   * @returns The tooltip.
+   */
+  #saveTitle(destination: AccessoriesSaveDestination): string {
+    return destination === 'media'
+      ? this.#term('saveTitleMedia', 'Save to the media library (Ctrl+S)')
+      : this.#term('saveTitleComputer', 'Save to this computer (Ctrl+S)');
+  }
+
+  /**
    * The whole window body.
    * @returns The toolbar, the page and the status bar.
    */
   override render() {
+    void this._settingsRevision;
     const position = caretPosition(this._text, this._caret);
     const name = textFileName(this._fileName, this.#term('notepadUntitled', 'Untitled'));
     return html`
@@ -202,8 +294,20 @@ export class NotepadElement extends UmbLitElement {
         <button class="control" data-action="open" @click=${() => this._picker.click()}>
           ${this.#term('notepadOpen', 'Open…')}
         </button>
-        <button class="control" data-action="save" @click=${() => this.save()}>
-          ${this.#term('notepadSave', 'Save')}
+        <button
+          class="control"
+          data-action="save"
+          title=${this.#saveTitle(this.#destination)}
+          @click=${() => this.save()}
+        >
+          ${this.#saveLabel(this.#destination, true)}
+        </button>
+        <button
+          class="control"
+          data-action="save-other"
+          @click=${() => this.saveTo(otherDestination(this.#destination))}
+        >
+          ${this.#saveLabel(otherDestination(this.#destination), false)}
         </button>
         <button
           class="control"

@@ -142,6 +142,7 @@ export default {
     taskbarFullscreenBrowserF11: 'Je browser staat op volledig scherm. Druk op F11 om het te verlaten.',
     taskbarFullscreenBrowserMac: 'Je browser staat op volledig scherm. Druk op Control-Command-F om het te verlaten.',
     taskbarFullscreenBrowserChromeOs: 'Je browser staat op volledig scherm. Druk op de toets voor volledig scherm om het te verlaten.',
+    settingsCategoryLoadFailed: 'Deze categorie kon niet worden geladen.',
     settingsBack: 'Terug naar bureaubladinstellingen',
     // desktop settings — startup
     bootIntoDesktop: 'Open het bureaublad als ik inlog',
