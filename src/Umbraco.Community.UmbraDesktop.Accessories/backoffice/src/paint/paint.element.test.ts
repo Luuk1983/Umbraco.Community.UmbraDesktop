@@ -2,18 +2,29 @@ import { expect, fixture, html } from '@open-wc/testing';
 import './paint.element.js';
 import { PAINT_CANVAS_SIZE } from './constants.js';
 import type { PaintElement } from './paint.element.js';
+import { fixedSaveSettings } from '../settings/save-settings.source.js';
+import type { AccessoriesSaveSettings } from '../settings/save-settings.js';
 
 /** What the element handed the outside world, recorded rather than performed. */
 interface Recorded {
   downloads: Array<{ name: string; blob: Blob }>;
+  /** Every save to the media library: file name, type, folder, and the item it was asked to overwrite. */
+  media: Array<[string, string, string | null, string | undefined]>;
 }
 
 /** A mounted Paint whose downloads are recorded and whose discard question answers yes. */
-async function paint(): Promise<{ element: PaintElement; recorded: Recorded }> {
-  const recorded: Recorded = { downloads: [] };
+async function paint(
+  settings: AccessoriesSaveSettings = { destination: 'computer', folder: null },
+): Promise<{ element: PaintElement; recorded: Recorded }> {
+  const recorded: Recorded = { downloads: [], media: [] };
   const element = await fixture<PaintElement>(html`<umbradesktop-paint
     .download=${(blob: Blob, name: string) => recorded.downloads.push({ name, blob })}
     .confirmDiscard=${async () => true}
+    .saveSettings=${fixedSaveSettings(settings)}
+    .saveToMedia=${async (file: File, folder: string | null, existing?: string) => {
+      recorded.media.push([file.name, file.type, folder, existing]);
+      return { ok: true, unique: 'picture-1' };
+    }}
   ></umbradesktop-paint>`);
   return { element, recorded };
 }
@@ -151,4 +162,40 @@ it('saves the picture as a PNG', async () => {
   expect(recorded.downloads.length).to.equal(1);
   expect(recorded.downloads[0].name).to.match(/\.png$/);
   expect(recorded.downloads[0].blob.type).to.equal('image/png');
+});
+
+/** Wait for `condition`, since a PNG is encoded asynchronously before it can be saved anywhere. */
+async function until(condition: () => boolean): Promise<void> {
+  for (let tries = 0; tries < 40 && !condition(); tries++) await new Promise((resolve) => setTimeout(resolve, 25));
+}
+
+it('saves a PNG to the media library when Desktop settings say so, overwriting it next time', async () => {
+  const { element, recorded } = await paint({ destination: 'media', folder: { unique: 'folder-1', name: 'Pictures' } });
+  await click(element, '[data-action="save"]');
+  await until(() => recorded.media.length === 1);
+  await drag(element, [[5, 5]]);
+  await click(element, '[data-action="save"]');
+  await until(() => recorded.media.length === 2);
+  expect(recorded.media).to.deep.equal([
+    ['Untitled.png', 'image/png', 'folder-1', undefined],
+    ['Untitled.png', 'image/png', 'folder-1', 'picture-1'],
+  ]);
+  expect(recorded.downloads).to.deep.equal([]);
+});
+
+it('offers the other destination on its own button', async () => {
+  const { element, recorded } = await paint();
+  await click(element, '[data-action="save-other"]');
+  await until(() => recorded.media.length === 1);
+  expect(recorded.media.length, 'Save downloads, so the second button saves to media').to.equal(1);
+});
+
+it('starts a new media item for a new picture', async () => {
+  const { element, recorded } = await paint({ destination: 'media', folder: null });
+  await click(element, '[data-action="save"]');
+  await until(() => recorded.media.length === 1);
+  await click(element, '[data-action="new"]');
+  await click(element, '[data-action="save"]');
+  await until(() => recorded.media.length === 2);
+  expect(recorded.media[1][3]).to.equal(undefined);
 });

@@ -1,6 +1,7 @@
 import { expect } from '@open-wc/testing';
 import './settings-modal.element.js';
 import { UMBRADESKTOP_SETTINGS_CATEGORIES } from '../categories/index.js';
+import { UmbExtensionRegistry } from '@umbraco-cms/backoffice/extension-api';
 
 /**
  * The panel's own job is navigation: show the categories, go into one, come back, and put focus
@@ -37,8 +38,11 @@ const settle = async (element: { updateComplete: Promise<unknown> }) => {
  * @param data The modal data, for the deep-link cases.
  * @returns The element and queries over what it rendered.
  */
-async function panel(data?: { category?: string }) {
+async function panel(data?: { category?: string }, registry?: UmbExtensionRegistry<UmbExtensionManifest>) {
   const element = document.createElement('umbradesktop-settings-modal');
+  // Always a registry of the test's own, empty unless the case fills it, so nothing another test
+  // file registered on the backoffice's global one can add a row here.
+  element.registry = registry ?? new UmbExtensionRegistry<UmbExtensionManifest>();
   if (data) element.data = data;
   document.body.append(element);
   after(() => element.remove());
@@ -57,6 +61,10 @@ async function panel(data?: { category?: string }) {
     clickBack: () => (root.querySelector('.crumb uui-button') as HTMLElement | null)?.click(),
     hasHeading: () => !!root.querySelector('.heading'),
     showing: (tag: string) => !!root.querySelector(tag),
+    headline: (id: string) =>
+      root.querySelector(`umbradesktop-settings-row[data-category="${id}"]`)?.getAttribute('headline') ?? null,
+    detail: (id: string) =>
+      root.querySelector(`umbradesktop-settings-row[data-category="${id}"]`)?.getAttribute('detail') ?? null,
     focused: () => {
       const active = root.activeElement as HTMLElement | null;
       return active?.dataset?.category ?? active?.className ?? null;
@@ -129,4 +137,99 @@ it('moves focus to the category heading on the way in, and back to its row on th
   view.clickBack();
   await settle(view.element);
   expect(view.focused(), 'focus returns to the row you came from').to.equal('appearance');
+});
+
+/**
+ * Another package's settings, through `umbraDesktopSettingsCategory`.
+ *
+ * The desktop's own categories stay curated; this is the one way in for a package that adds apps
+ * and has settings for them. Its row sits with the reader's own settings, after Taskbar, and before
+ * Connections and Site, which are about other servers and other people.
+ */
+describe('registered categories', () => {
+  /** A category element the tests can find by tag. */
+  class RegisteredScreen extends HTMLElement {}
+  if (!customElements.get('test-registered-settings')) customElements.define('test-registered-settings', RegisteredScreen);
+
+  /**
+   * A registry holding the given categories.
+   * @param categories Alias, label and weight for each.
+   */
+  function registryWith(...categories: Array<{ alias: string; label: string; weight?: number }>) {
+    const registry = new UmbExtensionRegistry<UmbExtensionManifest>();
+    for (const { alias, label, weight } of categories) {
+      registry.register({
+        type: 'umbraDesktopSettingsCategory',
+        alias,
+        name: label,
+        weight,
+        element: RegisteredScreen,
+        meta: { label, description: `About ${label}`, icon: 'icon-notepad' },
+      });
+    }
+    return registry;
+  }
+
+  /**
+   * Wait until the panel has rendered a row for `alias`. Registered categories arrive through
+   * condition evaluation, which is asynchronous and takes longer than one macrotask the first time
+   * the registry is read, so a fixed `settle()` is a race.
+   * @param view The mounted panel.
+   * @param alias The row to wait for.
+   */
+  async function rowFor(view: Awaited<ReturnType<typeof panel>>, alias: string): Promise<void> {
+    for (let tries = 0; tries < 50 && !view.rowIds().includes(alias); tries++) await settle(view.element);
+  }
+
+  /**
+   * Wait until the panel is showing the registered element, which loads after the row is picked.
+   * @param view The mounted panel.
+   */
+  async function screenShown(view: Awaited<ReturnType<typeof panel>>): Promise<void> {
+    for (let tries = 0; tries < 50 && !view.showing('test-registered-settings'); tries++) await settle(view.element);
+  }
+
+  /** The curated ids with `extra` spliced in after Taskbar. */
+  const withRegistered = (...extra: string[]) => {
+    const at = ids.indexOf('taskbar') + 1;
+    return [...ids.slice(0, at), ...extra, ...ids.slice(at)];
+  };
+
+  it('adds a row for a registered category, after the reader’s own categories', async () => {
+    const view = await panel(undefined, registryWith({ alias: 'My.Settings', label: 'Accessories' }));
+    await rowFor(view, 'My.Settings');
+
+    expect(view.rowIds()).to.deep.equal(withRegistered('My.Settings'));
+    expect(view.headline('My.Settings')).to.equal('Accessories');
+    expect(view.detail('My.Settings')).to.equal('About Accessories');
+  });
+
+  it('orders registered categories by weight, higher first, as Umbraco does', async () => {
+    const view = await panel(
+      undefined,
+      registryWith({ alias: 'Low', label: 'Low', weight: 1 }, { alias: 'High', label: 'High', weight: 100 }),
+    );
+    await rowFor(view, 'Low');
+    await rowFor(view, 'High');
+
+    expect(view.rowIds()).to.deep.equal(withRegistered('High', 'Low'));
+  });
+
+  it('shows the registering package’s own element when its row is picked', async () => {
+    const view = await panel(undefined, registryWith({ alias: 'My.Settings', label: 'Accessories' }));
+    await rowFor(view, 'My.Settings');
+
+    view.clickRow('My.Settings');
+    await screenShown(view);
+
+    expect(view.showing('test-registered-settings')).to.equal(true);
+    expect(view.hasHeading()).to.equal(true);
+  });
+
+  it('opens straight at a registered category it was asked for by alias', async () => {
+    const view = await panel({ category: 'My.Settings' }, registryWith({ alias: 'My.Settings', label: 'Accessories' }));
+    await screenShown(view);
+
+    expect(view.showing('test-registered-settings')).to.equal(true);
+  });
 });

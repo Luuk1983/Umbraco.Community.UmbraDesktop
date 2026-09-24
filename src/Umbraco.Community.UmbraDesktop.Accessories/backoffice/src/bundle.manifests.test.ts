@@ -89,3 +89,22 @@ it('asks for each app’s derived content size, leaving the chrome to the host',
 it('lets every app open more than one window', () => {
   for (const app of apps) expect(app.meta.allowMultiple, app.alias).to.not.equal(false);
 });
+
+/**
+ * The Accessories category of Desktop settings, registered into the host's panel rather than shown
+ * in a panel of its own. Its words are this package's, so both must be tokens the dictionary ships.
+ */
+it('registers a Desktop settings category, named from this package’s dictionary', () => {
+  const categories = manifests.filter((manifest) => manifest.type === 'umbraDesktopSettingsCategory') as unknown as Array<{
+    element?: unknown;
+    meta: { label: string; description: string; icon?: string };
+  }>;
+  expect(categories.length).to.equal(1);
+  const [category] = categories;
+  expect(typeof category.element, 'a lazy element loader').to.equal('function');
+  const area = (en as Record<string, Record<string, string>>).umbraDesktopAccessories;
+  for (const token of [category.meta.label, category.meta.description]) {
+    const [, key] = /^#umbraDesktopAccessories_(\w+)$/.exec(token) ?? [];
+    expect(area[key], `${token} is in en.ts`).to.be.a('string');
+  }
+});

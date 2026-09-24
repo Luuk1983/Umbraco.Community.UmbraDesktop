@@ -116,6 +116,7 @@ export default {
     taskbarPinnedApps: 'Vastgezette apps',
     taskbarPinnedAppsAbout:
       'Toont de apps die je in de launcher hebt vastgezet ook op de taakbalk, in dezelfde volgorde. Vastzetten en losmaken doe je in de launcher, zoals altijd.',
+    settingsCategoryLoadFailed: 'Deze categorie kon niet worden geladen.',
     settingsBack: 'Terug naar bureaubladinstellingen',
     // desktop settings — startup
     bootIntoDesktop: 'Open het bureaublad als ik inlog',

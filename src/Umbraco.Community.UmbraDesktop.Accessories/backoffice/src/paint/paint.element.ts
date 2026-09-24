@@ -1,6 +1,13 @@
 import { accessoryStyles } from '../shared/styles.js';
 import { AREA } from '../shared/area.js';
 import { downloadBlob } from '../shared/download.js';
+import { announceSave } from '../shared/announce-save.js';
+import { createMediaSaver } from '../shared/media-save.js';
+import type { MediaSaver } from '../shared/media-save.js';
+import { otherDestination, saveFile } from '../shared/save-file.js';
+import { UmbraDesktopAccessoriesSaveSettingsController } from '../settings/save-settings.source.js';
+import type { AccessoriesSaveSettingsSource } from '../settings/save-settings.source.js';
+import type { AccessoriesSaveDestination } from '../settings/save-settings.js';
 import {
   PAINT_BRUSH_SIZES,
   PAINT_CANVAS_SIZE,
@@ -43,7 +50,8 @@ const TOOLS: Record<PaintTool, { term: string; fallback: string; icon: string }>
  * and so what makes the bucket fill cleanly up to a line (see that module). The element owns one
  * `ImageData`, changes it through those functions, and puts it back on the canvas after each change.
  *
- * Saving is a download, as it is in Notepad: nothing reaches the server or the media library.
+ * Saving works as it does in Notepad: Save goes where Desktop settings say, a PNG download by
+ * default or an Image in the media library, and a second button saves to the other one.
  */
 @customElement('umbradesktop-paint')
 export class PaintElement extends UmbLitElement {
@@ -73,6 +81,30 @@ export class PaintElement extends UmbLitElement {
   @state()
   private _size: number = PAINT_BRUSH_SIZES[1];
 
+  /** Where Save goes. The stored per-user Desktop setting unless a test says otherwise. */
+  @property({ attribute: false })
+  saveSettings?: AccessoriesSaveSettingsSource;
+
+  /** How a picture reaches the media library. The backoffice's media repositories unless a test says otherwise. */
+  @property({ attribute: false })
+  saveToMedia?: MediaSaver;
+
+  /** Bumped when the settings change, so the save buttons follow them. */
+  @state()
+  private _settingsRevision = 0;
+
+  /** The settings in use: the ones given, or the stored ones. */
+  #settings?: AccessoriesSaveSettingsSource;
+
+  /** Stops listening to the settings. */
+  #unsubscribe?: () => void;
+
+  /**
+   * The media item this picture was last saved as, so the next save overwrites it. Forgotten by New,
+   * which starts a new picture.
+   */
+  #mediaUnique?: string;
+
   /** What the left button paints. */
   @state()
   private _foreground = '#000000';
@@ -101,15 +133,18 @@ export class PaintElement extends UmbLitElement {
   /** The stroke in progress: its last point and its colour. Undefined between strokes. */
   #stroke?: { x: number; y: number; colour: string };
 
-  /** Listen for Ctrl+Z. */
+  /** Listen for Ctrl+Z and Ctrl+S, and to the save settings. */
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('keydown', this.#onKeyDown);
+    this.#settings ??= this.saveSettings ?? new UmbraDesktopAccessoriesSaveSettingsController(this);
+    this.#unsubscribe = this.#settings.subscribe(() => this._settingsRevision++);
   }
 
   /** Stop listening. The whole of teardown: there is no timer here. */
   override disconnectedCallback(): void {
     this.removeEventListener('keydown', this.#onKeyDown);
+    this.#unsubscribe?.();
     super.disconnectedCallback();
   }
 
@@ -132,6 +167,7 @@ export class PaintElement extends UmbLitElement {
     this.#history = [];
     this._undoDepth = 0;
     this.#dirty = false;
+    this.#mediaUnique = undefined;
   }
 
   /** Put the pixels back on the canvas after a change. */
@@ -162,23 +198,47 @@ export class PaintElement extends UmbLitElement {
     this.#blank();
   }
 
-  /** Hand the picture to the person as a PNG. */
-  async save(): Promise<void> {
+  /** Where Save and Ctrl+S go, as Desktop settings say. */
+  get #destination(): AccessoriesSaveDestination {
+    return this.#settings?.value.destination ?? 'computer';
+  }
+
+  /** Save the picture where Desktop settings say. What Save and Ctrl+S do. */
+  save(): Promise<void> {
+    return this.saveTo(this.#destination);
+  }
+
+  /**
+   * Save the picture as a PNG to one destination.
+   * @param destination This computer, or the media library.
+   */
+  async saveTo(destination: AccessoriesSaveDestination): Promise<void> {
     const blob = await new Promise<Blob | null>((resolve) => this._canvas.toBlob(resolve, 'image/png'));
     if (!blob) return;
-    await this.download(blob, `${this.#term('paintUntitled', 'Untitled')}.png`);
+    const name = `${this.#term('paintUntitled', 'Untitled')}.png`;
+    const outcome = await saveFile(new File([blob], name, { type: 'image/png' }), destination, {
+      download: this.download,
+      saveToMedia: this.saveToMedia ?? createMediaSaver(this),
+      settings: this.#settings!.value,
+      existing: this.#mediaUnique,
+    });
+    void announceSave(this, outcome, name);
+    if (!outcome.ok) return;
+    if (outcome.mediaUnique) this.#mediaUnique = outcome.mediaUnique;
     this.#dirty = false;
   }
 
   /**
-   * Ctrl+Z (or Cmd+Z) is Undo, claimed so the browser does not try to undo something of its own.
+   * Ctrl+Z (or Cmd+Z) is Undo and Ctrl+S is Save, each claimed so the browser does not act on it too.
    * @param event The keydown.
    */
   #onKeyDown = (event: KeyboardEvent): void => {
     if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
-    if (event.key.toLowerCase() !== 'z') return;
+    const key = event.key.toLowerCase();
+    if (key !== 'z' && key !== 's') return;
     event.preventDefault();
-    this.undo();
+    if (key === 'z') this.undo();
+    else void this.save();
   };
 
   /**
@@ -278,10 +338,39 @@ export class PaintElement extends UmbLitElement {
   }
 
   /**
+   * One of the file actions at the right of the toolbar: an icon with its name as label and tooltip.
+   *
+   * Icons rather than words, unlike Notepad's toolbar, because Paint's is one row that already holds
+   * four tools and three brush sizes, and four more words would push it past the window's minimum
+   * width. The name is still there for a screen reader and on hover.
+   * @param action The `data-action`, for tests and styling.
+   * @param icon The Umbraco icon.
+   * @param label What the action is called.
+   * @param run What it does.
+   * @param disabled Whether it is unavailable.
+   * @returns The button.
+   */
+  #renderAction(action: string, icon: string, label: string, run: () => unknown, disabled = false) {
+    return html`<button
+      class="control tool"
+      data-action=${action}
+      title=${label}
+      aria-label=${label}
+      ?disabled=${disabled}
+      @click=${run}
+    >
+      <umb-icon name=${icon}></umb-icon>
+    </button>`;
+  }
+
+  /**
    * The whole window body.
    * @returns The toolbar, the picture in its well, and the palette.
    */
   override render() {
+    void this._settingsRevision;
+    const destination = this.#destination;
+    const other = otherDestination(destination);
     const sized = this._tool === 'brush' || this._tool === 'eraser';
     return html`
       <div class="toolbar">
@@ -313,15 +402,22 @@ export class PaintElement extends UmbLitElement {
           </button>`,
         )}
         <span class="spacer"></span>
-        <button class="control" data-action="undo" ?disabled=${this._undoDepth === 0} @click=${() => this.undo()}>
-          ${this.#term('paintUndo', 'Undo')}
-        </button>
-        <button class="control" data-action="new" @click=${() => this.newPicture()}>
-          ${this.#term('paintNew', 'New')}
-        </button>
-        <button class="control" data-action="save" @click=${() => this.save()}>
-          ${this.#term('paintSave', 'Save')}
-        </button>
+        ${this.#renderAction('undo', 'icon-undo', this.#term('paintUndo', 'Undo'), () => this.undo(), this._undoDepth === 0)}
+        ${this.#renderAction('new', 'icon-page-add', this.#term('paintNew', 'New'), () => this.newPicture())}
+        ${this.#renderAction(
+          'save',
+          'icon-save',
+          destination === 'media'
+            ? this.#term('saveTitleMedia', 'Save to the media library (Ctrl+S)')
+            : this.#term('saveTitleComputer', 'Save to this computer (Ctrl+S)'),
+          () => this.save(),
+        )}
+        ${this.#renderAction(
+          'save-other',
+          other === 'media' ? 'icon-umb-media' : 'icon-download-alt',
+          other === 'media' ? this.#term('saveToMedia', 'Save to media library') : this.#term('download', 'Download'),
+          () => this.saveTo(other),
+        )}
       </div>
       <div class="well sunken">
         <canvas

@@ -1,9 +1,48 @@
 import type { UmbraDesktopSettingsModalData } from '../modal-tokens';
 import type { UmbraDesktopSettingsCategory } from '../categories/types';
+import type { ManifestUmbraDesktopSettingsCategory } from '../settings-category.extension';
 import { UMBRADESKTOP_SETTINGS_CATEGORIES, findSettingsCategory } from '../categories/index';
 import './settings-row.element.js';
-import { css, customElement, html, nothing, state } from '@umbraco-cms/backoffice/external/lit';
+import { css, customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
+import {
+  UmbExtensionsManifestInitializer,
+  createExtensionElement,
+  type UmbExtensionRegistry,
+} from '@umbraco-cms/backoffice/extension-api';
+import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
 import { UmbModalBaseElement } from '@umbraco-cms/backoffice/modal';
+
+/**
+ * The curated category registered categories are listed after.
+ *
+ * After Taskbar, which is the last of the reader's own: a package's settings for the apps it put on
+ * this desktop are this person's settings too. Before Connections and Site, which are about other
+ * servers and every other user, and which a package's row should not separate from the rest of the
+ * list's personal settings.
+ */
+const REGISTERED_AFTER = 'taskbar';
+
+/**
+ * One row of the panel, whichever list it came from.
+ *
+ * Two kinds because the two differ in what they know: a curated category names localisation keys
+ * and a tag this bundle has defined, while a registered one names strings in another package's
+ * dictionary and an element that has to be loaded.
+ */
+type PanelCategory =
+  | { kind: 'curated'; id: string; category: UmbraDesktopSettingsCategory }
+  | { kind: 'registered'; id: string; manifest: ManifestUmbraDesktopSettingsCategory };
+
+/**
+ * A curated category as a row.
+ * @param category The curated category.
+ * @returns Its row.
+ */
+const curated = (category: UmbraDesktopSettingsCategory): PanelCategory => ({
+  kind: 'curated',
+  id: category.id,
+  category,
+});
 
 /**
  * The Desktop settings panel, opened from the launcher footer as a sidebar from the right.
@@ -22,9 +61,27 @@ import { UmbModalBaseElement } from '@umbraco-cms/backoffice/modal';
  */
 @customElement('umbradesktop-settings-modal')
 export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraDesktopSettingsModalData, never> {
+  /**
+   * Where registered categories come from. The backoffice's registry unless a test says otherwise,
+   * the same seam `app-catalogue.context.ts` has. Read once, when the panel connects.
+   */
+  @property({ attribute: false })
+  registry: UmbExtensionRegistry<UmbExtensionManifest> = umbExtensionsRegistry;
+
   /** The category being shown, or undefined at the list. */
   @state()
-  private _category?: UmbraDesktopSettingsCategory;
+  private _category?: PanelCategory;
+
+  /** Categories other packages registered, whose conditions are met, higher weight first. */
+  @state()
+  private _registered: ReadonlyArray<ManifestUmbraDesktopSettingsCategory> = [];
+
+  /**
+   * A deep link naming a category that has not registered yet. Registered categories arrive after
+   * the panel connects, so a deep link to one cannot be answered in `connectedCallback`; it is kept
+   * here and answered when they do.
+   */
+  #pendingCategory?: string;
 
   /**
    * Where focus goes after the next render: the category heading on the way in, the row you came
@@ -39,14 +96,76 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraD
     // "change the wallpaper" should not make you walk the list. An id this version does not know
     // lands on the list rather than on an empty screen, which is what a deep link from an older
     // version or a typo would otherwise do.
-    this._category = findSettingsCategory(this.data?.category);
+    const found = findSettingsCategory(this.data?.category);
+    this._category = found ? curated(found) : undefined;
+    if (!found) this.#pendingCategory = this.data?.category;
+
+    // `UmbExtensionsManifestInitializer` rather than `byType`, for the reason the registered apps use
+    // it: `byType` never evaluates a manifest's `conditions`, and a row whose author said it should
+    // not be there would appear anyway.
+    new UmbExtensionsManifestInitializer(
+      this,
+      this.registry,
+      'umbraDesktopSettingsCategory',
+      null,
+      (permitted) => {
+        this._registered = permitted
+          .map((controller) => controller.manifest as ManifestUmbraDesktopSettingsCategory)
+          .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
+        const pending = this._registered.find((manifest) => manifest.alias === this.#pendingCategory);
+        if (pending && !this._category) {
+          this.#pendingCategory = undefined;
+          this.#open(this.#registered(pending));
+        }
+      },
+      'observeRegisteredSettingsCategories',
+    );
+  }
+
+  /**
+   * A registered category as a row.
+   * @param manifest Its manifest.
+   * @returns Its row.
+   */
+  #registered(manifest: ManifestUmbraDesktopSettingsCategory): PanelCategory {
+    return { kind: 'registered', id: manifest.alias, manifest };
+  }
+
+  /** Every row, in the order the list shows them: curated, with the registered ones spliced in. */
+  #rows(): PanelCategory[] {
+    const rows = UMBRADESKTOP_SETTINGS_CATEGORIES.map(curated);
+    const at = rows.findIndex((row) => row.id === REGISTERED_AFTER) + 1;
+    rows.splice(at, 0, ...this._registered.map((manifest) => this.#registered(manifest)));
+    return rows;
+  }
+
+  /**
+   * A row's name, from whichever dictionary owns it.
+   * @param row The row.
+   * @returns The localised name.
+   */
+  #label(row: PanelCategory): string {
+    return row.kind === 'curated'
+      ? this.localize.term(row.category.labelKey)
+      : this.localize.string(row.manifest.meta.label);
+  }
+
+  /**
+   * A row's description, from whichever dictionary owns it.
+   * @param row The row.
+   * @returns The localised description.
+   */
+  #description(row: PanelCategory): string {
+    return row.kind === 'curated'
+      ? this.localize.term(row.category.descriptionKey)
+      : this.localize.string(row.manifest.meta.description);
   }
 
   /**
    * Go into a category.
    * @param category The category to show.
    */
-  #open(category: UmbraDesktopSettingsCategory) {
+  #open(category: PanelCategory) {
     this._category = category;
     this.#focusAfterRender = 'heading';
   }
@@ -98,14 +217,17 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraD
   #renderList() {
     return html`
       <div class="list">
-        ${UMBRADESKTOP_SETTINGS_CATEGORIES.map(
-          (category) => html`
+        ${this.#rows().map(
+          (row) => html`
             <umbradesktop-settings-row
-              data-category=${category.id}
-              headline=${this.localize.term(category.labelKey)}
-              detail=${this.localize.term(category.descriptionKey)}
-              @click=${() => this.#open(category)}>
-              <uui-icon slot="lead" class="icon" name=${category.icon}></uui-icon>
+              data-category=${row.id}
+              headline=${this.#label(row)}
+              detail=${this.#description(row)}
+              @click=${() => this.#open(row)}>
+              <uui-icon
+                slot="lead"
+                class="icon"
+                name=${row.kind === 'curated' ? row.category.icon : (row.manifest.meta.icon ?? 'icon-settings')}></uui-icon>
             </umbradesktop-settings-row>
           `,
         )}
@@ -130,13 +252,52 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraD
    * @param category The category to render.
    * @returns The category's element.
    */
-  #renderCategory(category: UmbraDesktopSettingsCategory): HTMLElement {
-    let screen = this.#screens.get(category.tag);
+  #renderCategory(category: PanelCategory) {
+    if (category.kind === 'registered') return this.#renderRegistered(category.manifest);
+    const { tag } = category.category;
+    let screen = this.#screens.get(tag);
     if (!screen) {
-      screen = document.createElement(category.tag);
-      this.#screens.set(category.tag, screen);
+      screen = document.createElement(tag);
+      this.#screens.set(tag, screen);
     }
     return screen;
+  }
+
+  /** Registered categories' elements as they load, by alias, so each is loaded once per panel. */
+  #loading = new Map<string, Promise<void>>();
+
+  /** Registered categories whose element could not be loaded. */
+  #failed = new Set<string>();
+
+  /**
+   * A registered category's screen: its element once loaded, nothing while it loads, and a line
+   * saying so if it cannot be. Loaded with Umbraco's own `createExtensionElement`, so every form
+   * `element` may take anywhere else in Umbraco works here too.
+   * @param manifest The category's manifest.
+   * @returns The screen.
+   */
+  #renderRegistered(manifest: ManifestUmbraDesktopSettingsCategory) {
+    const screen = this.#screens.get(manifest.alias);
+    if (screen) return screen;
+    if (this.#failed.has(manifest.alias)) {
+      return html`<p>${this.localize.term('umbraDesktop_settingsCategoryLoadFailed')}</p>`;
+    }
+    if (!this.#loading.has(manifest.alias)) {
+      this.#loading.set(
+        manifest.alias,
+        createExtensionElement(manifest)
+          .then((element) => {
+            if (element) this.#screens.set(manifest.alias, element);
+            else this.#failed.add(manifest.alias);
+          })
+          .catch((error) => {
+            console.error(`[UmbraDesktop] Settings category "${manifest.alias}" could not be loaded.`, error);
+            this.#failed.add(manifest.alias);
+          })
+          .finally(() => this.requestUpdate()),
+      );
+    }
+    return nothing;
   }
 
   override render() {
@@ -153,7 +314,7 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraD
                   @click=${this.#back}>
                   <uui-icon name="icon-navigation-left"></uui-icon>
                 </uui-button>
-                <h3 class="heading" tabindex="-1">${this.localize.term(category.labelKey)}</h3>
+                <h3 class="heading" tabindex="-1">${this.#label(category)}</h3>
               </div>
             `
           : nothing}

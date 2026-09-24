@@ -499,6 +499,41 @@ findable through it, and no curated one is either. Nothing about registering an 
 searchable. Your app is launched from its tile, or from a pin, and that is worth knowing before you
 name it something only a search box would ever have found.
 
+### 6.1 Settings of your own: `umbraDesktopSettingsCategory`
+
+If your apps have settings, they belong in the desktop's own settings panel rather than in a panel
+of yours, and a second manifest type puts them there:
+
+```ts
+{
+  type: 'umbraDesktopSettingsCategory',
+  alias: 'My.Tools.Settings',
+  name: 'My tools settings',
+  element: () => import('./my-tools-settings.element.js'),
+  weight: 100,                                   // higher first, among registered categories only
+  meta: {
+    label: '#myTools_settings',                  // the row's name and the screen's heading
+    description: '#myTools_settingsAbout',       // the line under it: what the category is *for*
+    icon: 'icon-settings',                       // falls back to icon-settings
+  },
+}
+```
+
+The host draws the row, the heading and the way back; everything under the heading is your
+element, including where its values are kept. The host reads none of them. `label` and
+`description` go through `localize.string`, so a `#token` from your own dictionary and a literal
+both work, as `meta.label` does for an app. `element` takes every form it takes anywhere else in
+Umbraco, and `conditions` are honoured: a category whose conditions are unmet has no row.
+
+Registered categories sit together after the desktop's own personal categories (after Taskbar) and
+before Connections and Site, which are about other servers and every other user. `weight` orders
+them among themselves and never moves one past a curated category. The panel can also be opened
+straight at yours by passing its alias as the settings modal's `category`.
+
+There is no Save button on any settings screen here, so apply a change the moment it is made, and
+have your apps pick it up without being reopened. The Accessories package's category, which sets
+where Notepad and Paint save, is the worked example: `settings/` in that package.
+
 ---
 
 ## 7. Lifecycle: what happens to your element

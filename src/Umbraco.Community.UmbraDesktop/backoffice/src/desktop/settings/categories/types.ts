@@ -1,8 +1,10 @@
 /**
  * One category in the settings panel: a row in the list, and the screen behind it.
  *
- * Curated rather than an extension point, the same way the themes and the app catalogue are: adding
- * a category means adding a folder and one entry in `index.ts`. There is no "registered but empty"
+ * Curated, the same way the themes and the app catalogue are: adding one of the desktop's own
+ * categories means adding a folder and one entry in `index.ts`. Another package's settings arrive by
+ * a different route, a `umbraDesktopSettingsCategory` manifest (`../settings-category.extension.ts`),
+ * because this list cannot name a package this repository does not know about. There is no "registered but empty"
  * state to design for, because a category *is* its folder — which is what keeps an empty category,
  * the thing that reads as a broken screen, from being possible at all.
  */

@@ -7,11 +7,12 @@ import { UMBRADESKTOP_CONNECTIONS_CATEGORY } from './connections/index.js';
 import { UMBRADESKTOP_SITE_CATEGORY } from './site/index.js';
 
 /**
- * Every category the settings panel shows, in the order it shows them.
+ * The desktop's own settings categories, in the order the panel shows them.
  *
- * Curated rather than an extension point, the same way `theme/themes/index.ts` and the app catalogue
- * are: a category is a folder plus one entry here, and an empty category cannot exist because a
- * category *is* its folder.
+ * Curated, the same way `theme/themes/index.ts` and the app catalogue are: a category is a folder
+ * plus one entry here, and an empty category cannot exist because a category *is* its folder.
+ * Categories other packages register (`umbraDesktopSettingsCategory`) are not in this list; the
+ * panel splices them in after Taskbar.
  */
 export const UMBRADESKTOP_SETTINGS_CATEGORIES: ReadonlyArray<UmbraDesktopSettingsCategory> = [
   // General first, the way every settings surface that has one puts it first: it is the category a
