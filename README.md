@@ -17,7 +17,7 @@ It also does something the backoffice does not do at all. When two people have t
 ![The UmbraDesktop desktop: several backoffice sections open at once as separate, overlapping windows. The taskbar along the bottom carries a titled button for each of them, and beside the launcher button a row of icons for the pinned apps.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png)
 
 > **New: games on the desktop.** [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment)
-> is an optional add-on that puts Minesweeper in the launcher's Games group, in a window of its own
+> is an optional add-on that puts Minesweeper and Snake in the launcher's Games group, each in a window of its own
 > and themed along with everything else. Install it if you want it; the desktop is unchanged
 > without it. See [Games](#games).
 
@@ -73,7 +73,7 @@ That single grant does two things: it makes the desktop reachable, and it reveal
 
 UmbraDesktop grants no access of its own. Every app that opens a piece of the backoffice is gated on the section it comes from, so a user only ever sees apps for sections they could already reach. Give an editor access to Content and Media and those are the apps they get.
 
-The exception is a self-contained app registered by a package, which has no backing section to be permitted to and so is gated by nothing beyond its own manifest conditions and reaching the desktop at all. Minesweeper is one: everyone who can open the desktop can open it. An app of that kind holds no backoffice data, so there is nothing behind it to leak; if you need one restricted, the condition belongs on its own manifest.
+The exception is a self-contained app registered by a package, which has no backing section to be permitted to and so is gated by nothing beyond its own manifest conditions and reaching the desktop at all. Minesweeper and Snake are two: everyone who can open the desktop can open them. An app of that kind holds no backoffice data, so there is nothing behind it to leak; if you need one restricted, the condition belongs on its own manifest.
 
 ## How to use it
 
@@ -443,13 +443,15 @@ This matters most if you restore databases between environments. The backoffice 
 
 ## Games
 
-Minesweeper, in a window, under whichever theme you picked. It ships in its own package rather than this one, because a desktop and a minesweeper are not the same product and nobody should have to take the second to get the first:
+Minesweeper and Snake, each in a window, under whichever theme you picked. They ship in their own package rather than this one, because a desktop and a minesweeper are not the same product and nobody should have to take the second to get the first:
 
 ```bash
 dotnet add package Umbraco.Community.UmbraDesktop.Entertainment
 ```
 
-![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher's Games group highlighted in the Start menu and the game's own taskbar button below.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-minesweeper.png)
+![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher open down to its Games group, which lists Minesweeper and Snake, and the game's own taskbar button below.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-minesweeper.png)
+
+![Snake open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with its score, New game button and best score above the board, and the launcher open down to its Games group, which lists Minesweeper and Snake.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-snake.png)
 
 That is the whole installation. There is no section to grant and no dashboard to enable: the games appear in a Games group in the launcher for anyone who can already reach the desktop, and the group is not there at all if the package is not installed.
 

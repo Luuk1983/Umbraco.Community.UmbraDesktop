@@ -7,8 +7,8 @@
 
 A desktop app is one custom element in a window. You register it with an extension manifest, the
 desktop opens it, themes it and closes it, and your package never depends on anything here beyond
-the manifest type. Minesweeper is the first one; a calculator, a colour picker or a notepad would
-work the same way.
+the manifest type. Minesweeper was the first one and Snake the second, both in the Entertainment package; a
+calculator, a colour picker or a notepad would work the same way.
 
 ---
 
@@ -517,6 +517,14 @@ and restart your app.
 **Minimizing does not unmount, so a game keeps running and keeps its board.** That is usually what
 you want. If your app should idle out of sight, watch your own visibility: the desktop hides the
 window's frame rather than telling you about it.
+
+A real-time game is the case where it is not what you want. Minesweeper's clock ticking on while
+minimised is fair, since the board waits for the player, but Snake's snake does not: left running,
+it hits a wall unseen and the player restores the window to a finished game. Snake's answer is to
+pause whenever its playfield loses focus. That covers minimising, because minimising takes focus
+with it, and it also covers the player clicking into another window, which a visibility check would
+not catch. If your app takes keyboard input, the same pattern is the natural fit: make one element
+focusable, focus it in `firstUpdated`, and treat `focusout` as "the player has looked away".
 
 Teardown is the browser's own. `disconnectedCallback` is the whole contract: cancel your
 `requestAnimationFrame` there, clear your intervals, drop your listeners. There is no desktop signal
