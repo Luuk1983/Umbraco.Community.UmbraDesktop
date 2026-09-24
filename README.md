@@ -102,7 +102,7 @@ From the launcher:
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
 - While a window is fetching its content, whether you have just opened it or just reloaded it, it shows the Umbraco mark with a ring turning around it. It covers the window until the content is ready, so you never see a half-drawn backoffice assembling itself.
 - Choose Exit in the launcher's footer to return to the classic backoffice. If you start in the desktop, exiting keeps you in the classic backoffice until you close the tab.
-- Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Language and region for the backoffice language and how times are written, Appearance for your theme, your wallpaper and the backoffice's own colours, Taskbar for what sits beside the launcher button, and Accessories for which media folder new Notepad and Paint files go into, and the screen saver, if you have that add-on — and the desktop stays in view behind it, so you can see a change as you make it.
+- Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Language and region for the backoffice language and how times are written, Appearance for your theme, your wallpaper and the backoffice's own colours, Taskbar for what sits beside the launcher button, and Accessories for which media folder new Notepad and Paint files go into if you have that add-on — and the desktop stays in view behind it, so you can see a change as you make it.
 
 Several apps can be open at once, and some of them (the content editor and media library, for instance) can be opened more than once, so you can compare two documents side by side.
 
@@ -480,7 +480,7 @@ Unsaved work gets the same protection as an unsaved page: the window shows the u
 
 ### Screen saver
 
-**Screen Saver** is Windows 98's Screen Saver tab in a window: a little monitor running the one you have chosen, a list to choose from, **Wait** so many minutes, and **Preview** to see it full screen. The same screen is in **Desktop settings > Accessories**. There are three:
+**Screen Saver** is Windows 98's Screen Saver tab in a window: a little monitor running the one you have chosen, a list to choose from, **Wait** so many minutes, and **Preview** to see it full screen. There are three:
 
 - **Starfield**, flying through space.
 - **Mystify**, two shapes bouncing off the edges of the screen, trailing echoes and slowly changing colour.

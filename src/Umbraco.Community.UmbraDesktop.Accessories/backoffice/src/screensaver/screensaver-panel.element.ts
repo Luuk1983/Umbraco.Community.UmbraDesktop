@@ -34,10 +34,9 @@ const SAVER_NAMES: Record<AccessoriesScreensaverId, [key: string, english: strin
  * running the chosen saver, the list of savers with (None) at the top, "Wait _ minutes", and a
  * Preview button that runs it full screen.
  *
- * The same element is the screen saver part of Desktop settings > Accessories, because a person
- * looking for it will look in both places, and two screens for one setting are two screens that can
- * come to disagree. Like every other setting on the desktop there is no OK or Apply: a choice applies
- * the moment it is made, and the idle watcher follows it without being told.
+ * This window is the only place the screen saver is set; Desktop settings > Accessories holds the
+ * save folder alone. Like every other setting on the desktop there is no OK or Apply: a choice
+ * applies the moment it is made, and the idle watcher follows it without being told.
  *
  * (None) switches the screensaver off and keeps the saver that was chosen, so switching it back on
  * later is one choice rather than two.
@@ -45,8 +44,8 @@ const SAVER_NAMES: Record<AccessoriesScreensaverId, [key: string, english: strin
 @customElement('umbradesktop-screensaver-panel')
 export class ScreensaverPanelElement extends UmbLitElement {
   /**
-   * Where the settings are read from and written to. The stored per-user settings unless a test,
-   * or the settings screen that embeds this one, says otherwise.
+   * Where the settings are read from and written to. The stored per-user settings unless a test
+   * says otherwise.
    */
   @property({ attribute: false })
   source?: AccessoriesSettingsSource;

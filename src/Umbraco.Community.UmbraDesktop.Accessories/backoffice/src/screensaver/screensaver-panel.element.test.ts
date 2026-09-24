@@ -6,8 +6,7 @@ import { fixedSettings } from '../settings/settings.source.js';
 import type { AccessoriesScreensaverSettings } from '../settings/settings.js';
 
 /**
- * The Screen Saver window, which is also the screen saver part of Desktop settings > Accessories:
- * Windows 98's Screen Saver tab, with a monitor that runs the chosen saver, a list with (None) at the
+ * The Screen Saver window: Windows 98's Screen Saver tab, with a monitor that runs the chosen saver, a list with (None) at the
  * top, a wait in minutes and a Preview button.
  */
 
