@@ -18,6 +18,7 @@ export default {
     paint: 'Paint',
     calculator: 'Calculator',
     clock: 'Clock',
+    screensaver: 'Screen Saver',
     // Notepad.
     notepadNew: 'New',
     notepadOpen: 'Open…',
@@ -74,12 +75,23 @@ export default {
     paintTooLarge: '%0% is too large for Paint, which opens pictures up to %1% pixels across.',
     // The Accessories category of Desktop settings.
     settingsCategory: 'Accessories',
-    settingsCategoryAbout: 'Where new Notepad and Paint files are saved',
+    settingsCategoryAbout: 'Where new Notepad and Paint files are saved, and the screen saver',
     settingsSaveTo: 'Save new files to',
     settingsSaveToAbout: 'Where Notepad and Paint put a file the first time it is saved. A file opened from the media library is saved back where it is.',
     settingsMediaRoot: 'Media library root',
     settingsChooseFolder: 'Choose folder…',
     settingsUseRoot: 'Use the root',
+    settingsScreensaver: 'Screen saver',
+    // Screen Saver, in Windows 98's words where it had them.
+    screensaverChoose: 'Screen saver',
+    screensaverNone: '(None)',
+    screensaverStarfield: 'Starfield',
+    screensaverMystify: 'Mystify',
+    screensaverFlying: 'Flying Umbraco',
+    screensaverPreview: 'Preview',
+    screensaverWait: 'Wait',
+    screensaverMinutes: 'minutes',
+    screensaverAbout: 'Starts when the desktop has been left alone for the wait. Any key, click or real movement of the mouse brings it back.',
     // Calculator. The key names are what a screen reader says for a key whose face is a symbol,
     // and they follow the Windows calculator's own wording.
     calculatorAdd: 'Plus',

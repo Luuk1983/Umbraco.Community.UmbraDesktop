@@ -6,8 +6,8 @@ import { createMediaOpener } from '../shared/media-open.js';
 import type { MediaOpener } from '../shared/media-open.js';
 import { createMediaSaver } from '../shared/media-save.js';
 import type { MediaSaver } from '../shared/media-save.js';
-import { UmbraDesktopAccessoriesSaveSettingsController } from '../settings/save-settings.source.js';
-import type { AccessoriesSaveSettingsSource } from '../settings/save-settings.source.js';
+import { UmbraDesktopAccessoriesSettingsController } from '../settings/settings.source.js';
+import type { AccessoriesSettingsSource } from '../settings/settings.source.js';
 import { NOTEPAD_BAR_HEIGHT_PX, NOTEPAD_PADDING_PX } from './constants.js';
 import { caretPosition } from './text.js';
 import { css, customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
@@ -52,7 +52,7 @@ export class NotepadElement extends UmbLitElement {
 
   /** Which folder a new document is saved into. The stored per-user Desktop setting unless a test says otherwise. */
   @property({ attribute: false })
-  saveSettings?: AccessoriesSaveSettingsSource;
+  saveSettings?: AccessoriesSettingsSource;
 
   /** How a file reaches the media library. The backoffice's media repositories unless a test says otherwise. */
   @property({ attribute: false })
@@ -97,7 +97,7 @@ export class NotepadElement extends UmbLitElement {
   private _caret = 0;
 
   /** The settings in use: the ones given, or the stored ones. */
-  #settings?: AccessoriesSaveSettingsSource;
+  #settings?: AccessoriesSettingsSource;
 
   /** Whether there is text, or a name, that has not been saved. */
   get dirty(): boolean {
@@ -108,7 +108,7 @@ export class NotepadElement extends UmbLitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('keydown', this.#onKeyDown);
-    this.#settings ??= this.saveSettings ?? new UmbraDesktopAccessoriesSaveSettingsController(this);
+    this.#settings ??= this.saveSettings ?? new UmbraDesktopAccessoriesSettingsController(this);
   }
 
   /** Stop listening. The whole of teardown: there is no timer here. */

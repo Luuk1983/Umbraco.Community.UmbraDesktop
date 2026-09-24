@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './notepad.element.js';
 import type { NotepadElement } from './notepad.element.js';
-import { fixedSaveSettings } from '../settings/save-settings.source.js';
-import type { AccessoriesSaveSettings } from '../settings/save-settings.js';
+import { fixedSettings } from '../settings/settings.source.js';
+import type { AccessoriesSettings } from '../settings/settings.js';
 import type { MediaOpenResult } from '../shared/media-open.js';
 import type { MediaSaveRequest, MediaSaveResult } from '../shared/media-save.js';
 
@@ -31,7 +31,7 @@ interface Fakes {
   /** What the discard question answers. */
   discard?: boolean;
   /** Desktop settings. */
-  settings?: AccessoriesSaveSettings;
+  settings?: Partial<AccessoriesSettings>;
 }
 
 /**
@@ -47,7 +47,7 @@ async function notepad(fakes: Fakes = {}): Promise<{ element: NotepadElement; re
       recorded.confirms++;
       return fakes.discard ?? true;
     }}
-    .saveSettings=${fixedSaveSettings(fakes.settings ?? { folder: { unique: 'folder-1', name: 'Notes' } })}
+    .saveSettings=${fixedSettings(fakes.settings ?? { folder: { unique: 'folder-1', name: 'Notes' } })}
     .saveToMedia=${async (request: MediaSaveRequest) => {
       recorded.saves.push(request);
       return answers.length > 1 ? answers.shift()! : answers[0];

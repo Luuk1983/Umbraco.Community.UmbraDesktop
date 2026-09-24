@@ -2,7 +2,7 @@
 
 # UmbraDesktop Accessories
 
-An optional add-on for UmbraDesktop that puts the small tools on the desktop: Notepad, Paint, Sticky Notes, Calculator and Clock, the ones Windows kept under Start > Programs > Accessories.
+An optional add-on for UmbraDesktop that puts the small tools on the desktop: Notepad, Paint, Sticky Notes, Calculator, Clock and a screen saver, the ones Windows kept under Start > Programs > Accessories.
 
 [![NuGet](https://img.shields.io/nuget/v/Umbraco.Community.UmbraDesktop.Accessories)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories) [![NuGet Downloads](https://img.shields.io/nuget/dt/Umbraco.Community.UmbraDesktop.Accessories)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories) [![License](https://img.shields.io/github/license/Luuk1983/Umbraco.Community.UmbraDesktop)](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/LICENSE)
 
@@ -17,6 +17,7 @@ Install the accessories package and the launcher grows an Accessories group. Ope
 - **Sticky Notes.** One board shared by everyone who uses the desktop. A note one person writes shows up for everyone else within about fifteen seconds, or as soon as they click back into the window, and says who last wrote it. Anyone can edit or delete any note. When two people edit the same note at once, the second is shown the first's version and chooses **Use theirs** or **Keep mine**, so nobody's words are silently overwritten.
 - **Calculator.** The Windows Standard calculator without its scientific row. Works from the keypad or the keyboard, left to right the way a pocket calculator does, and shows `0.3` for `0.1 + 0.2`.
 - **Clock.** An analogue face with the time and the date under it, in your backoffice language.
+- **Screen Saver.** Starfield, Mystify, or Umbraco logos flying at you, when the desktop has been left alone for 1 to 30 minutes. Windows 98's Screen Saver tab in a window, with a live preview monitor and a **Preview** button, and the same screen in **Desktop settings > Accessories**. Off until you choose one. Any key, click or real movement of the mouse brings the desktop back, and typing in any window counts as being there.
 
 ## Where your work goes
 
@@ -27,6 +28,8 @@ Notepad and Paint work on the media library. Open shows Umbraco's own media pick
 A new document or picture is saved into the folder you choose in **Desktop settings > Accessories**, the media library's root until you do. Saving behaves like dragging the file into the Media section: the extension picks the media type, the folder has to allow it, and you need access to both. A refusal shows in the window's status bar and leaves your work unsaved.
 
 Unsaved work is protected the way an unsaved page is: the window shows the unsaved dot, and closing it, or leaving the desktop, asks first. New and Open ask too.
+
+The screen saver's settings, like the folder, are stored per user in that browser.
 
 ## Installation
 
@@ -48,7 +51,7 @@ This package and UmbraDesktop are released together from the same tag and always
 
 ## Writing your own
 
-Nothing in here is privileged. The `umbraDesktopApp` extension manifest that puts these tools in windows is public API that any package can register, and this package uses no other route in. If you want your own app on the desktop, [`docs/desktop-apps.md`](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/desktop-apps.md) is the guide, and the source of this package is a worked example.
+Nothing in here is privileged. The `umbraDesktopApp` extension manifest that puts these tools in windows and the `umbraDesktopSettingsCategory` one that adds the Accessories settings are public API that any package can register, and the screen saver's idle watcher is an ordinary Umbraco `backofficeEntryPoint`. If you want your own app on the desktop, [`docs/desktop-apps.md`](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/desktop-apps.md) is the guide, and the source of this package is a worked example.
 
 ## License
 

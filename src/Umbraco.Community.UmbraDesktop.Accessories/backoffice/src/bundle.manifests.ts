@@ -1,6 +1,7 @@
 import { CALCULATOR_CONTENT_SIZE, CALCULATOR_MIN_CONTENT_SIZE } from './calculator/constants.js';
 import { CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE } from './clock/constants.js';
 import { NOTEPAD_CONTENT_SIZE, NOTEPAD_MIN_CONTENT_SIZE } from './notepad/constants.js';
+import { SCREENSAVER_WINDOW } from './screensaver/constants.js';
 import { PAINT_CONTENT_SIZE, PAINT_MIN_CONTENT_SIZE } from './paint/constants.js';
 import { STICKY_NOTES_CONTENT_SIZE, STICKY_NOTES_MIN_CONTENT_SIZE } from './sticky-notes/constants.js';
 import { AREA } from './shared/area.js';
@@ -16,9 +17,9 @@ const ALIAS = 'Umbraco.Community.UmbraDesktop.Accessories';
 /**
  * One accessory's manifest.
  *
- * The four differ only in what they are called, where they sort and how big they are, so they are
- * built by one function rather than written out four times. Every field is the Entertainment
- * package's reasoning for Minesweeper, applied four times: `element` and never `js`, because the
+ * The accessories differ only in what they are called, where they sort and how big they are, so they are
+ * built by one function rather than written out once each. Every field is the Entertainment
+ * package's reasoning for Minesweeper, applied to each: `element` and never `js`, because the
  * desktop reads only `element`; an explicit `weight`, because unset is a position rather than an
  * absence; the host's `accessories` group, which this package names and the host owns; sizes that are
  * the app's content box, derived by its own `constants.ts`, with the chrome left to the host; and no
@@ -91,10 +92,21 @@ const apps: Array<UmbExtensionManifest> = [
     CALCULATOR_MIN_CONTENT_SIZE,
   ),
   accessory('Clock', 700, 'icon-time', () => import('./clock/clock.element.js'), CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE),
+  // Last, as Windows kept it apart from the tools, under Display. The saver itself runs from the
+  // entry point below; this window only chooses and previews it.
+  accessory(
+    'ScreenSaver',
+    600,
+    'icon-display',
+    () => import('./screensaver/screensaver-panel.element.js'),
+    SCREENSAVER_WINDOW.content,
+    SCREENSAVER_WINDOW.min,
+  ),
 ];
 
 /**
- * The Accessories category of Desktop settings: where Notepad's and Paint's Save goes.
+ * The Accessories category of Desktop settings: where Notepad's and Paint's Save goes, and the
+ * screensaver.
  *
  * A `umbraDesktopSettingsCategory`, which the host lists among its own personal settings, so the
  * choice is made where every other desktop setting is made, and the category exists only while this
@@ -113,6 +125,18 @@ const settingsCategory: UmbExtensionManifest = {
 };
 
 /**
+ * Starts the screensaver's idle watcher. An entry point because the screensaver has to come on with
+ * every window closed, including its own; `screensaver/entrypoint.ts` says why it costs next to
+ * nothing while switched off.
+ */
+const screensaverEntryPoint: UmbExtensionManifest = {
+  type: 'backofficeEntryPoint',
+  alias: `${ALIAS}.Screensaver`,
+  name: 'Accessories screensaver',
+  js: () => import('./screensaver/entrypoint.js'),
+};
+
+/**
  * The bundle Umbraco loads for this package, and the only entry point it has.
  *
  * `UmbExtensionManifest` is a global type from `@umbraco-cms/backoffice/extension-types`, wired up in
@@ -120,4 +144,4 @@ const settingsCategory: UmbExtensionManifest = {
  * `umbradesktop-app.d.ts` in this folder, a copy of the Entertainment package's, for the reason given
  * there.
  */
-export const manifests: Array<UmbExtensionManifest> = [...apps, settingsCategory, ...localizationManifests];
+export const manifests: Array<UmbExtensionManifest> = [...apps, settingsCategory, screensaverEntryPoint, ...localizationManifests];

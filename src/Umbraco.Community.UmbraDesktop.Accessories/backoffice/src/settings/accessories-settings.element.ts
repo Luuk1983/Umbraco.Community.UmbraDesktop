@@ -1,7 +1,8 @@
+import '../screensaver/screensaver-panel.element.js';
 import { AREA } from '../shared/area.js';
-import { UmbraDesktopAccessoriesSaveSettingsController } from './save-settings.source.js';
-import type { AccessoriesSaveSettingsSource } from './save-settings.source.js';
-import type { AccessoriesMediaFolder } from './save-settings.js';
+import { UmbraDesktopAccessoriesSettingsController } from './settings.source.js';
+import type { AccessoriesSettingsSource } from './settings.source.js';
+import type { AccessoriesMediaFolder } from './settings.js';
 import { css, customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UMB_MEDIA_TREE_PICKER_MODAL, UmbMediaItemRepository } from '@umbraco-cms/backoffice/media';
@@ -9,7 +10,11 @@ import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
 
 /**
  * The Accessories category of Desktop settings: which media folder a new Notepad or Paint file is
- * saved into. A file opened from the media library is saved back where it lives.
+ * saved into, and the screen saver. A file opened from the media library is saved back where it
+ * lives.
+ *
+ * The screen saver part is the Screen Saver window's own element, over the same settings, so the two
+ * places it can be set cannot come to look or behave differently.
  *
  * Registered into the host's settings panel as a `umbraDesktopSettingsCategory`, so it sits beside
  * the desktop's own settings rather than in a panel of its own, and only exists when this package is
@@ -25,7 +30,7 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
    * says otherwise.
    */
   @property({ attribute: false })
-  source?: AccessoriesSaveSettingsSource;
+  source?: AccessoriesSettingsSource;
 
   /**
    * Ask for a media folder. Umbraco's media tree picker, folders only, unless a test says otherwise.
@@ -39,7 +44,7 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
   private _revision = 0;
 
   /** The source in use: the one given, or the stored settings. */
-  #source?: AccessoriesSaveSettingsSource;
+  #source?: AccessoriesSettingsSource;
 
   /** Stops listening to the source. */
   #unsubscribe?: () => void;
@@ -47,7 +52,7 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
   /** Settle on a source and listen to it. */
   override connectedCallback(): void {
     super.connectedCallback();
-    this.#source ??= this.source ?? new UmbraDesktopAccessoriesSaveSettingsController(this);
+    this.#source ??= this.source ?? new UmbraDesktopAccessoriesSettingsController(this);
     this.#unsubscribe = this.#source.subscribe(() => this._revision++);
   }
 
@@ -126,7 +131,7 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
 
   /**
    * The screen.
-   * @returns The folder new files are saved into.
+   * @returns The folder new files are saved into, and the screen saver.
    */
   override render() {
     void this._revision;
@@ -141,6 +146,10 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
           )}
         </p>
         ${this.#renderFolder(folder)}
+      </section>
+      <section>
+        <h4>${this.#term('settingsScreensaver', 'Screen saver')}</h4>
+        <umbradesktop-screensaver-panel .source=${this.#source}></umbradesktop-screensaver-panel>
       </section>
     `;
   }
@@ -173,6 +182,16 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
       flex-wrap: wrap;
       align-items: center;
       gap: var(--uui-size-space-3);
+    }
+
+    section + section {
+      margin-top: var(--uui-size-space-6);
+    }
+
+    /* The panel is a window's body elsewhere, with the window's surface; here it sits on the panel's. */
+    umbradesktop-screensaver-panel {
+      background: none;
+      padding: 0;
     }
 
     .folder-name {
