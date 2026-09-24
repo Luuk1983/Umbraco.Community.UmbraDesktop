@@ -12,8 +12,8 @@ Install the accessories package and the launcher grows an Accessories group. Ope
 
 ## What's in it
 
-- **Notepad.** A plain-text page with word wrap, and the caret's line and column in a status bar. Open reads a text file from your machine, Save writes it back under the name it was opened with, and Ctrl+S, Ctrl+O and Ctrl+N do what they do everywhere else.
-- **Paint.** Pencil, brush, eraser and fill, in MS Paint's own twenty-eight colours: left click paints the foreground and right click the background. Undo with Ctrl+Z, and Save as PNG with Ctrl+S.
+- **Notepad.** A plain-text editor for text files in the media library, with word wrap and the caret's line and column in a status bar. Ctrl+S, Ctrl+O and Ctrl+N do what they do everywhere else.
+- **Paint.** Pencil, brush, eraser and fill, in MS Paint's own twenty-eight colours: left click paints the foreground and right click the background. Undo with Ctrl+Z. Works on a new picture or on an image opened from the media library.
 - **Sticky Notes.** One board shared by everyone who uses the desktop. A note one person writes shows up for everyone else within about fifteen seconds, or as soon as they click back into the window, and says who last wrote it. Anyone can edit or delete any note. When two people edit the same note at once, the second is shown the first's version and chooses **Use theirs** or **Keep mine**, so nobody's words are silently overwritten.
 - **Calculator.** The Windows Standard calculator without its scientific row. Works from the keypad or the keyboard, left to right the way a pocket calculator does, and shows `0.3` for `0.1 + 0.2`.
 - **Clock.** An analogue face with the time and the date under it, in your backoffice language.
@@ -22,9 +22,9 @@ Install the accessories package and the launcher grows an Accessories group. Ope
 
 Sticky Notes live in the Umbraco database (its key-value store), readable and writable only by users with the Desktop section. Up to 100 notes of 2,000 characters each.
 
-Notepad and Paint save wherever you choose in **Desktop settings > Accessories**: your own machine as a download, or the media library as a media item (a text file from Notepad, an image from Paint), in a folder you pick. Save and Ctrl+S go there, and each app has a second button for the other place, so both are always one click away. The choice is per user, in that browser, and starts on your own machine.
+Notepad and Paint work on the media library. Open shows Umbraco's own media picker (with its Upload button, which is how a file on your computer gets in), Save writes the file back over the same media item, and the name in the status bar is the media item's name. Notepad opens text files, SVG included; Paint opens pictures up to 4,096 pixels across and saves each in the format it came in, and refuses an SVG rather than flattening it.
 
-A save to the media library behaves like dragging the file into the Media section: the extension picks the media type, the folder has to allow it, and you need access to both. A refusal comes back in the backoffice's own words and leaves your work unsaved in the window. Saving the same document again updates the media item it created instead of adding another.
+A new document or picture is saved into the folder you choose in **Desktop settings > Accessories**, the media library's root until you do. Saving behaves like dragging the file into the Media section: the extension picks the media type, the folder has to allow it, and you need access to both. A refusal shows in the window's status bar and leaves your work unsaved.
 
 Unsaved work is protected the way an unsaved page is: the window shows the unsaved dot, and closing it, or leaving the desktop, asks first. New and Open ask too.
 

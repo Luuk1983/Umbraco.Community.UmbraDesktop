@@ -4,11 +4,11 @@
  */
 
 /**
- * The picture's size in pixels.
+ * A new picture's size in pixels. An image opened from the media library keeps its own size instead.
  *
- * Fixed, as MS Paint's default canvas was, rather than following the window: a picture that changed
- * size whenever its window did would crop or pad what someone had drawn. A window larger than this
- * centres it; a smaller one scrolls it.
+ * Not following the window, as MS Paint's canvas never did: a picture that changed size whenever its
+ * window did would crop or pad what someone had drawn. A window larger than the picture centres it;
+ * a smaller one scrolls it.
  */
 export const PAINT_CANVAS_SIZE = { w: 480, h: 300 } as const;
 
@@ -33,8 +33,33 @@ export const PAINT_PALETTE_COLUMNS = 14;
 /** Brush sizes on offer, in pixels. The pencil is always 1, which is what makes it a pencil. */
 export const PAINT_BRUSH_SIZES = [2, 4, 8] as const;
 
-/** How many strokes Undo can take back. Each is a copy of the picture, so this is its memory cost. */
+/**
+ * The largest edge of an image Paint will open, in px. Past this a canvas starts to fail in some
+ * browsers and a single copy of the pixels is tens of megabytes; an image that large is a photograph
+ * to be edited elsewhere, and Paint says so rather than opening it badly.
+ */
+export const PAINT_MAX_IMAGE_EDGE_PX = 4096;
+
+/** How many strokes Undo can take back at most. */
 export const PAINT_UNDO_DEPTH = 20;
+
+/**
+ * The memory Undo may use, in bytes. Every undo step is a whole copy of the picture, four bytes a
+ * pixel, so the step count is derived from this and the picture's size rather than fixed.
+ */
+export const PAINT_UNDO_BUDGET_BYTES = 256 * 1024 * 1024;
+
+/**
+ * How many undo steps a picture of this size gets: {@link PAINT_UNDO_DEPTH} for a sketch, fewer for a
+ * large photograph, never none.
+ * @param width The picture's width.
+ * @param height Its height.
+ * @returns The number of steps.
+ */
+export function undoDepthFor(width: number, height: number): number {
+  const perStep = width * height * 4;
+  return Math.max(1, Math.min(PAINT_UNDO_DEPTH, Math.floor(PAINT_UNDO_BUDGET_BYTES / perStep)));
+}
 
 /** One palette swatch's edge, in px. */
 export const PAINT_SWATCH_PX = 18;
@@ -42,7 +67,10 @@ export const PAINT_SWATCH_PX = 18;
 /** Height of the toolbar, in px. */
 export const PAINT_TOOLBAR_HEIGHT_PX = 32;
 
-/** The app's own padding, and the space between its three rows, in px. */
+/** Height of the status bar under the palette: the picture's name, its size, and messages. */
+export const PAINT_STATUS_HEIGHT_PX = 24;
+
+/** The app's own padding, and the space between its rows, in px. */
 export const PAINT_PADDING_PX = 6;
 
 /** Padding inside the well round the picture, in px. */
@@ -52,8 +80,8 @@ export const PAINT_WELL_PADDING_PX = 4;
 const PALETTE_HEIGHT_PX = PAINT_SWATCH_PX * 2 + 2;
 
 /**
- * The content box Paint opens at: the whole picture in its well, the toolbar above and the palette
- * below, padded. The chrome is the host's to add.
+ * The content box Paint opens at: a new picture whole in its well, the toolbar above, the palette
+ * and the status bar below, padded. The chrome is the host's to add.
  */
 export const PAINT_CONTENT_SIZE = {
   w: PAINT_CANVAS_SIZE.w + PAINT_WELL_PADDING_PX * 2 + PAINT_PADDING_PX * 2,
@@ -62,7 +90,8 @@ export const PAINT_CONTENT_SIZE = {
     PAINT_CANVAS_SIZE.h +
     PAINT_WELL_PADDING_PX * 2 +
     PALETTE_HEIGHT_PX +
-    PAINT_PADDING_PX * 4,
+    PAINT_STATUS_HEIGHT_PX +
+    PAINT_PADDING_PX * 5,
 } as const;
 
 /**
@@ -71,5 +100,5 @@ export const PAINT_CONTENT_SIZE = {
  */
 export const PAINT_MIN_CONTENT_SIZE = {
   w: PAINT_SWATCH_PX * PAINT_PALETTE_COLUMNS + 2 * (PAINT_PALETTE_COLUMNS - 1) + PAINT_SWATCH_PX * 3 + PAINT_PADDING_PX * 4,
-  h: PAINT_TOOLBAR_HEIGHT_PX + 120 + PALETTE_HEIGHT_PX + PAINT_PADDING_PX * 4,
+  h: PAINT_TOOLBAR_HEIGHT_PX + 120 + PALETTE_HEIGHT_PX + PAINT_STATUS_HEIGHT_PX + PAINT_PADDING_PX * 5,
 } as const;

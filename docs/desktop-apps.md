@@ -532,7 +532,8 @@ straight at yours by passing its alias as the settings modal's `category`.
 
 There is no Save button on any settings screen here, so apply a change the moment it is made, and
 have your apps pick it up without being reopened. The Accessories package's category, which sets
-where Notepad and Paint save, is the worked example: `settings/` in that package.
+which media folder new Notepad and Paint files are saved into, is the worked example: `settings/`
+in that package.
 
 ---
 

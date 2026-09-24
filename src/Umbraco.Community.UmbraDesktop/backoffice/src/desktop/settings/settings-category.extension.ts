@@ -34,7 +34,7 @@ export interface MetaUmbraDesktopSettingsCategory {
  * this desktop's is a folder and one entry there. This type exists for the other case, a package
  * that adds apps to the desktop and has settings of its own for them, which the curated list cannot
  * hold without this repository knowing about that package. The Accessories add-on is the first: its
- * "Save to" choice for Notepad and Paint is a desktop setting to the person using it, so it belongs
+ * folder for new Notepad and Paint files is a desktop setting to the person using it, so it belongs
  * in the desktop's settings panel rather than in a panel of its own.
  *
  * What the host owns is the row, the navigation and the heading. What the package owns is the

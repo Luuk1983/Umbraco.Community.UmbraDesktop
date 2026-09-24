@@ -18,14 +18,27 @@ export type MediaSaveResult =
       message?: string;
     };
 
+/** What to save, and where. */
+export interface MediaSaveRequest {
+  /** The file, whose name carries the extension the media type is chosen by. */
+  file: File;
+  /** The media item's name: what the person called the document, which need not be the file name. */
+  name: string;
+  /** The folder a new item is created in, or null for the media library root. */
+  folder: string | null;
+  /**
+   * The media item this document came from or was last saved as, to overwrite rather than
+   * duplicate. The folder is ignored for it: an opened file is saved back where it lives.
+   */
+  existing?: string;
+}
+
 /**
  * Save a file as a media item.
- * @param file The file, named as the media item should be.
- * @param folder The folder to create it in, or null for the media library root.
- * @param existing A media item this document was saved as before, to overwrite rather than duplicate.
+ * @param request What to save, and where.
  * @returns How it went.
  */
-export type MediaSaver = (file: File, folder: string | null, existing?: string) => Promise<MediaSaveResult>;
+export type MediaSaver = (request: MediaSaveRequest) => Promise<MediaSaveResult>;
 
 /**
  * The real media saver, working through the backoffice's own repositories rather than calling the
@@ -49,12 +62,12 @@ export type MediaSaver = (file: File, folder: string | null, existing?: string) 
  * @returns A {@link MediaSaver}.
  */
 export function createMediaSaver(host: UmbControllerHost): MediaSaver {
-  return async (file, folder, existing) => {
+  return async ({ file, name, folder, existing }) => {
     if (existing) {
-      const replaced = await replaceFile(host, existing, file);
+      const replaced = await replaceFile(host, existing, file, name);
       if (replaced) return replaced;
     }
-    return createItem(host, file, folder);
+    return createItem(host, file, name, folder);
   };
 }
 
@@ -73,10 +86,16 @@ async function upload(host: UmbControllerHost, file: File): Promise<string | und
  * Create a new media item from a file.
  * @param host The saving element.
  * @param file The file.
+ * @param name The media item's name.
  * @param folder The parent folder, or null for the root.
  * @returns How it went.
  */
-async function createItem(host: UmbControllerHost, file: File, folder: string | null): Promise<MediaSaveResult> {
+async function createItem(
+  host: UmbControllerHost,
+  file: File,
+  name: string,
+  folder: string | null,
+): Promise<MediaSaveResult> {
   const localize = new UmbLocalizationController(host);
   const extension = /\.([^.]+)$/.exec(file.name)?.[1]?.toLowerCase() ?? '';
   const structure = new UmbMediaTypeStructureRepository(host);
@@ -104,7 +123,7 @@ async function createItem(host: UmbControllerHost, file: File, folder: string | 
   const { data: scaffold } = await media.createScaffold({
     unique,
     mediaType: { unique: mediaType.unique, collection: null },
-    variants: [{ culture: null, segment: null, createDate: null, updateDate: null, flags: [], name: file.name }],
+    variants: [{ culture: null, segment: null, createDate: null, updateDate: null, flags: [], name }],
     values: [
       {
         editorAlias: '',
@@ -122,13 +141,19 @@ async function createItem(host: UmbControllerHost, file: File, folder: string | 
 }
 
 /**
- * Overwrite the file of an existing media item.
+ * Overwrite the file of an existing media item, and rename it if the document was renamed.
  * @param host The saving element.
  * @param unique The item to overwrite.
  * @param file The new file.
+ * @param name The item's name now.
  * @returns How it went, or null when the item is gone and a new one should be created instead.
  */
-async function replaceFile(host: UmbControllerHost, unique: string, file: File): Promise<MediaSaveResult | null> {
+async function replaceFile(
+  host: UmbControllerHost,
+  unique: string,
+  file: File,
+  name: string,
+): Promise<MediaSaveResult | null> {
   const repository = new UmbMediaDetailRepository(host);
   const { data } = await repository.requestByUnique(unique);
   if (!data || data.isTrashed) return null;
@@ -145,6 +170,8 @@ async function replaceFile(host: UmbControllerHost, unique: string, file: File):
       ? { ...value, value: { ...((value.value as object | null) ?? {}), temporaryFileId } }
       : value,
   );
-  const { error } = await repository.save({ ...data, values });
+  // Media is invariant, so the one variant carries the name.
+  const variants = data.variants.map((variant) => ({ ...variant, name }));
+  const { error } = await repository.save({ ...data, values, variants });
   return error ? { ok: false, message: error.message } : { ok: true, unique };
 }

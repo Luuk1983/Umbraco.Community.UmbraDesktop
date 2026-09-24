@@ -1,13 +1,13 @@
 /**
- * Where Notepad and Paint save by default, and how that choice is stored.
+ * Which media folder a new Notepad or Paint file is saved into, and how that choice is stored.
  *
  * Pure functions over strings, with no storage and no DOM, for the reason the host's own
  * `settings-store.ts` gives: the fallback for every kind of unreadable payload is then a table a test
  * can walk, rather than something only a broken browser profile would ever exercise.
+ *
+ * A file opened from the media library is saved back where it lives; this folder only decides where
+ * a new one goes.
  */
-
-/** Where Save sends a file: a download to this computer, or a media item in Umbraco. */
-export type AccessoriesSaveDestination = 'computer' | 'media';
 
 /** A media folder, remembered with its name so the settings screen can show it without a request. */
 export interface AccessoriesMediaFolder {
@@ -19,21 +19,12 @@ export interface AccessoriesMediaFolder {
 
 /** The whole of the Accessories package's settings. */
 export interface AccessoriesSaveSettings {
-  /** Where Save and Ctrl+S send a file. The other destination is always one click away. */
-  destination: AccessoriesSaveDestination;
-  /** The media folder to save into, or null for the root of the media library. */
+  /** The folder new files are saved into, or null for the root of the media library. */
   folder: AccessoriesMediaFolder | null;
 }
 
-/**
- * What a user gets before choosing anything, and whenever the stored payload is unreadable.
- *
- * This computer, because it is the destination that always works: it needs no access to the Media
- * section, no media type that accepts `.txt`, and no server at all. Somebody who wants their notes in
- * the media library says so once, in Desktop settings.
- */
+/** What a user gets before choosing anything, and whenever the stored payload is unreadable. */
 export const UMBRADESKTOP_ACCESSORIES_DEFAULT_SAVE_SETTINGS: AccessoriesSaveSettings = Object.freeze({
-  destination: 'computer',
   folder: null,
 });
 
@@ -62,11 +53,11 @@ function isFolder(value: unknown): value is AccessoriesMediaFolder {
 }
 
 /**
- * Read stored settings, falling back field by field.
+ * Read stored settings.
  *
- * A destination it does not recognise falls back to the whole default. A folder it cannot read falls
- * back to the root while keeping the destination, because "save to the media library" is the choice
- * the person made and the root is a safe place to honour it.
+ * A payload from the previous version also carries a `destination` (this computer or the media
+ * library) from when saving could go either way. The folder still means what it meant and is kept;
+ * the destination is dropped, since the media library is now the only place.
  * @param raw The stored string, or null when nothing is stored.
  * @returns Settings that are always usable.
  */
@@ -79,9 +70,8 @@ export function parseSaveSettings(raw: string | null): AccessoriesSaveSettings {
     return UMBRADESKTOP_ACCESSORIES_DEFAULT_SAVE_SETTINGS;
   }
   if (typeof decoded !== 'object' || decoded === null) return UMBRADESKTOP_ACCESSORIES_DEFAULT_SAVE_SETTINGS;
-  const { destination, folder } = decoded as { destination?: unknown; folder?: unknown };
-  if (destination !== 'computer' && destination !== 'media') return UMBRADESKTOP_ACCESSORIES_DEFAULT_SAVE_SETTINGS;
-  return { destination, folder: isFolder(folder) ? { unique: folder.unique, name: folder.name } : null };
+  const { folder } = decoded as { folder?: unknown };
+  return isFolder(folder) ? { folder: { unique: folder.unique, name: folder.name } } : UMBRADESKTOP_ACCESSORIES_DEFAULT_SAVE_SETTINGS;
 }
 
 /**

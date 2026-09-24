@@ -1,35 +1,41 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './paint.element.js';
-import { PAINT_CANVAS_SIZE } from './constants.js';
+import { PAINT_CANVAS_SIZE, PAINT_MAX_IMAGE_EDGE_PX } from './constants.js';
 import type { PaintElement } from './paint.element.js';
 import { fixedSaveSettings } from '../settings/save-settings.source.js';
-import type { AccessoriesSaveSettings } from '../settings/save-settings.js';
+import type { MediaOpenResult } from '../shared/media-open.js';
+import type { MediaSaveRequest } from '../shared/media-save.js';
 
-/** What the element handed the outside world, recorded rather than performed. */
+/**
+ * Paint as a media library image editor: open an image from the media library, draw on it, save it
+ * back; or draw a new picture and save it into the folder Desktop settings name. The media library is
+ * faked; a running backoffice is what proves the real one.
+ */
+
+/** Everything the element asked of the media library, recorded. */
 interface Recorded {
-  downloads: Array<{ name: string; blob: Blob }>;
-  /** Every save to the media library: file name, type, folder, and the item it was asked to overwrite. */
-  media: Array<[string, string, string | null, string | undefined]>;
+  /** Every save, as asked for. */
+  saves: MediaSaveRequest[];
 }
 
-/** A mounted Paint whose downloads are recorded and whose discard question answers yes. */
-async function paint(
-  settings: AccessoriesSaveSettings = { destination: 'computer', folder: null },
-): Promise<{ element: PaintElement; recorded: Recorded }> {
-  const recorded: Recorded = { downloads: [], media: [] };
+/**
+ * A mounted Paint over a fake media library whose Open finds `opened`.
+ * @param opened What Open finds.
+ */
+async function paint(opened?: MediaOpenResult): Promise<{ element: PaintElement; recorded: Recorded }> {
+  const recorded: Recorded = { saves: [] };
   const element = await fixture<PaintElement>(html`<umbradesktop-paint
-    .download=${(blob: Blob, name: string) => recorded.downloads.push({ name, blob })}
     .confirmDiscard=${async () => true}
-    .saveSettings=${fixedSaveSettings(settings)}
-    .saveToMedia=${async (file: File, folder: string | null, existing?: string) => {
-      recorded.media.push([file.name, file.type, folder, existing]);
-      return { ok: true, unique: 'picture-1' };
+    .saveSettings=${fixedSaveSettings({ folder: { unique: 'folder-1', name: 'Pictures' } })}
+    .saveToMedia=${async (request: MediaSaveRequest) => {
+      recorded.saves.push(request);
+      return { ok: true, unique: request.existing ?? 'picture-1' };
     }}
+    .openFromMedia=${async () => opened ?? { status: 'cancelled' }}
   ></umbradesktop-paint>`);
   return { element, recorded };
 }
 
-/** The picture. */
 function canvas(element: PaintElement): HTMLCanvasElement {
   return element.shadowRoot!.querySelector('canvas')!;
 }
@@ -69,11 +75,40 @@ async function drag(element: PaintElement, points: Array<[number, number]>, butt
   await element.updateComplete;
 }
 
-/** Click a control by a data attribute. */
+/** Click a control by a data attribute, and let what it started (decoding, encoding) finish. */
 async function click(element: PaintElement, selector: string): Promise<void> {
   element.shadowRoot!.querySelector<HTMLElement>(selector)!.click();
-  await element.updateComplete;
-  await new Promise((resolve) => setTimeout(resolve));
+  for (let i = 0; i < 5; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await element.updateComplete;
+  }
+}
+
+/** Wait for `condition`, since images are decoded and encoded asynchronously. */
+async function until(condition: () => boolean): Promise<void> {
+  for (let tries = 0; tries < 40 && !condition(); tries++) await new Promise((resolve) => setTimeout(resolve, 25));
+}
+
+/**
+ * An image in the media library, as the opener returns it: `w` by `h` of solid red.
+ * @param type The image's type.
+ * @param name Its media item's name.
+ * @param extension Its file's extension.
+ */
+async function redImage(w: number, h: number, type = 'image/png', name = 'Logo', extension = 'png'): Promise<MediaOpenResult> {
+  const source = document.createElement('canvas');
+  source.width = w;
+  source.height = h;
+  const context = source.getContext('2d')!;
+  context.fillStyle = '#ff0000';
+  context.fillRect(0, 0, w, h);
+  const blob = await new Promise<Blob>((resolve) => source.toBlob((made) => resolve(made!), type));
+  return { status: 'opened', unique: 'existing-1', name, blob, extension };
+}
+
+/** The status line's message. */
+function notice(element: PaintElement): string {
+  return (element.shadowRoot!.querySelector('.notice')?.textContent ?? '').trim();
 }
 
 const WHITE = [255, 255, 255, 255];
@@ -145,72 +180,109 @@ it('takes a stroke back with Undo, and with Ctrl+Z', async () => {
   expect(event.defaultPrevented).to.equal(true);
 });
 
-it('starts a new picture', async () => {
+it('starts a new picture, at the default size', async () => {
   const { element } = await paint();
   await drag(element, [[5, 5]]);
   await click(element, '[data-action="new"]');
   expect(pixel(element, 5, 5)).to.deep.equal(WHITE);
+  expect([canvas(element).width, canvas(element).height]).to.deep.equal([PAINT_CANVAS_SIZE.w, PAINT_CANVAS_SIZE.h]);
 });
 
-it('saves the picture as a PNG', async () => {
+
+/** There is one place a picture goes now: the media library. */
+it('has no way to save to this computer', async () => {
+  const { element } = await paint();
+  expect(element.shadowRoot!.querySelector('[data-action="save-other"]')).to.equal(null);
+});
+
+it('saves a new picture as a PNG into the folder Desktop settings name, overwriting it next time', async () => {
   const { element, recorded } = await paint();
+  const name = element.shadowRoot!.querySelector<HTMLInputElement>('[data-field="name"]')!;
+  name.value = 'Sketch';
+  name.dispatchEvent(new Event('input', { bubbles: true }));
   await click(element, '[data-action="save"]');
-  // toBlob is asynchronous, so give it a moment.
-  for (let tries = 0; tries < 20 && !recorded.downloads.length; tries++) {
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-  expect(recorded.downloads.length).to.equal(1);
-  expect(recorded.downloads[0].name).to.match(/\.png$/);
-  expect(recorded.downloads[0].blob.type).to.equal('image/png');
-});
-
-/** Wait for `condition`, since a PNG is encoded asynchronously before it can be saved anywhere. */
-async function until(condition: () => boolean): Promise<void> {
-  for (let tries = 0; tries < 40 && !condition(); tries++) await new Promise((resolve) => setTimeout(resolve, 25));
-}
-
-it('saves a PNG to the media library when Desktop settings say so, overwriting it next time', async () => {
-  const { element, recorded } = await paint({ destination: 'media', folder: { unique: 'folder-1', name: 'Pictures' } });
-  await click(element, '[data-action="save"]');
-  await until(() => recorded.media.length === 1);
+  await until(() => recorded.saves.length === 1);
   await drag(element, [[5, 5]]);
   await click(element, '[data-action="save"]');
-  await until(() => recorded.media.length === 2);
-  expect(recorded.media).to.deep.equal([
-    ['Untitled.png', 'image/png', 'folder-1', undefined],
-    ['Untitled.png', 'image/png', 'folder-1', 'picture-1'],
+  await until(() => recorded.saves.length === 2);
+  expect(recorded.saves.map((save) => [save.name, save.file.name, save.file.type, save.folder, save.existing])).to.deep.equal([
+    ['Sketch', 'Sketch.png', 'image/png', 'folder-1', undefined],
+    ['Sketch', 'Sketch.png', 'image/png', 'folder-1', 'picture-1'],
   ]);
-  expect(recorded.downloads).to.deep.equal([]);
-});
-
-it('offers the other destination on its own button', async () => {
-  const { element, recorded } = await paint();
-  await click(element, '[data-action="save-other"]');
-  await until(() => recorded.media.length === 1);
-  expect(recorded.media.length, 'Save downloads, so the second button saves to media').to.equal(1);
+  expect(element.hasAttribute('data-umbradesktop-dirty')).to.equal(false);
 });
 
 it('starts a new media item for a new picture', async () => {
-  const { element, recorded } = await paint({ destination: 'media', folder: null });
+  const { element, recorded } = await paint();
   await click(element, '[data-action="save"]');
-  await until(() => recorded.media.length === 1);
+  await until(() => recorded.saves.length === 1);
   await click(element, '[data-action="new"]');
   await click(element, '[data-action="save"]');
-  await until(() => recorded.media.length === 2);
-  expect(recorded.media[1][3]).to.equal(undefined);
+  await until(() => recorded.saves.length === 2);
+  expect(recorded.saves[1].existing).to.equal(undefined);
 });
 
-/** The desktop's published unsaved-work attribute, which its close button asks about. */
-it('marks itself unsaved after a stroke, and clean after a save or a new picture', async () => {
-  const { element, recorded } = await paint();
-  expect(element.hasAttribute('data-umbradesktop-dirty'), 'a blank picture').to.equal(false);
-  await drag(element, [[5, 5]]);
-  expect(element.hasAttribute('data-umbradesktop-dirty'), 'after a stroke').to.equal(true);
-  await click(element, '[data-action="save"]');
-  await until(() => recorded.downloads.length === 1);
-  await element.updateComplete;
-  expect(element.hasAttribute('data-umbradesktop-dirty'), 'after saving').to.equal(false);
-  await drag(element, [[9, 9]]);
-  await click(element, '[data-action="new"]');
-  expect(element.hasAttribute('data-umbradesktop-dirty'), 'after starting again').to.equal(false);
+describe('opening an image from the media library', () => {
+  it('opens it at its own size, named after its media item', async () => {
+    const { element } = await paint(await redImage(30, 20));
+    await click(element, '[data-action="open"]');
+    await until(() => canvas(element).width === 30);
+    expect([canvas(element).width, canvas(element).height]).to.deep.equal([30, 20]);
+    expect(pixel(element, 29, 19)).to.deep.equal(RED);
+    expect(element.shadowRoot!.querySelector<HTMLInputElement>('[data-field="name"]')!.value).to.equal('Logo');
+    expect(element.shadowRoot!.querySelector('.dimensions')?.textContent).to.contain('30').and.contain('20');
+  });
+
+  it('draws on the opened image and saves it back over its own media item', async () => {
+    const { element, recorded } = await paint(await redImage(30, 20));
+    await click(element, '[data-action="open"]');
+    await until(() => canvas(element).width === 30);
+    await drag(element, [[2, 2]]);
+    expect(pixel(element, 2, 2)).to.deep.equal(BLACK);
+    await click(element, '[data-action="save"]');
+    await until(() => recorded.saves.length === 1);
+    const [save] = recorded.saves;
+    expect([save.existing, save.name, save.file.name, save.file.type]).to.deep.equal(['existing-1', 'Logo', 'Logo.png', 'image/png']);
+  });
+
+  /** A photograph stays a JPEG, so saving it back does not swap its format or balloon its size. */
+  it('saves a JPEG back as a JPEG', async () => {
+    const { element, recorded } = await paint(await redImage(12, 12, 'image/jpeg', 'Photo', 'jpg'));
+    await click(element, '[data-action="open"]');
+    await until(() => canvas(element).width === 12);
+    await click(element, '[data-action="save"]');
+    await until(() => recorded.saves.length === 1);
+    expect([recorded.saves[0].file.name, recorded.saves[0].file.type]).to.deep.equal(['Photo.jpg', 'image/jpeg']);
+  });
+
+  it('refuses an SVG, which it could only flatten, and says so', async () => {
+    const svg: MediaOpenResult = {
+      status: 'opened',
+      unique: 'svg-1',
+      name: 'Icon',
+      blob: new Blob(['<svg xmlns="http://www.w3.org/2000/svg"/>'], { type: 'image/svg+xml' }),
+      extension: 'svg',
+    };
+    const { element } = await paint(svg);
+    await click(element, '[data-action="open"]');
+    expect(notice(element)).to.contain('Icon');
+    expect(canvas(element).width).to.equal(PAINT_CANVAS_SIZE.w);
+  });
+
+  it('refuses an image too large to edit, and says so', async () => {
+    const { element } = await paint(await redImage(PAINT_MAX_IMAGE_EDGE_PX + 1, 1, 'image/png', 'Poster'));
+    await click(element, '[data-action="open"]');
+    await until(() => notice(element) !== '');
+    expect(notice(element)).to.contain('Poster');
+    expect(canvas(element).width).to.equal(PAINT_CANVAS_SIZE.w);
+  });
+
+  it('takes an opened image’s first stroke back with Undo', async () => {
+    const { element } = await paint(await redImage(30, 20));
+    await click(element, '[data-action="open"]');
+    await until(() => canvas(element).width === 30);
+    await drag(element, [[2, 2]]);
+    await click(element, '[data-action="undo"]');
+    expect(pixel(element, 2, 2)).to.deep.equal(RED);
+  });
 });

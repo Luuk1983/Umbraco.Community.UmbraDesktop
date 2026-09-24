@@ -7,37 +7,33 @@ import {
 } from './save-settings.js';
 
 /**
- * Where Notepad and Paint save by default, as pure functions over the stored string, so the fallback
- * for every kind of bad payload is testable without storage.
+ * Which media folder a new Notepad or Paint file is saved into, as pure functions over the stored
+ * string, so the fallback for every kind of bad payload is testable without storage.
  */
 
-it('saves to this computer until someone chooses otherwise', () => {
+it('saves new files to the media library root until someone chooses a folder', () => {
   expect(parseSaveSettings(null)).to.deep.equal(UMBRADESKTOP_ACCESSORIES_DEFAULT_SAVE_SETTINGS);
-  expect(UMBRADESKTOP_ACCESSORIES_DEFAULT_SAVE_SETTINGS.destination).to.equal('computer');
+  expect(UMBRADESKTOP_ACCESSORIES_DEFAULT_SAVE_SETTINGS.folder).to.equal(null);
 });
 
-it('round-trips a media library choice with its folder', () => {
-  const settings = { destination: 'media', folder: { unique: 'abc', name: 'Notes' } } as const;
+it('round-trips a chosen folder', () => {
+  const settings = { folder: { unique: 'abc', name: 'Notes' } };
   expect(parseSaveSettings(serializeSaveSettings(settings))).to.deep.equal(settings);
 });
 
-it('treats a missing folder as the media library root', () => {
-  expect(parseSaveSettings(JSON.stringify({ destination: 'media' }))).to.deep.equal({
-    destination: 'media',
-    folder: null,
+/**
+ * The previous version stored a destination beside the folder. The folder is still what it means,
+ * so it is kept; the destination no longer exists and is dropped.
+ */
+it('keeps the folder from a setting saved by the previous version', () => {
+  expect(parseSaveSettings(JSON.stringify({ destination: 'computer', folder: { unique: 'f', name: 'Old' } }))).to.deep.equal({
+    folder: { unique: 'f', name: 'Old' },
   });
 });
 
-/**
- * A payload this version cannot read falls back to the default rather than throwing: a settings
- * store that throws takes Notepad's Save button down with it, and saving to the computer is the one
- * destination that always works.
- */
-it('falls back to the default for anything it cannot read', () => {
-  for (const raw of ['not json', '42', '{"destination":"cloud"}', '{"destination":"media","folder":{"unique":7}}']) {
-    const parsed = parseSaveSettings(raw);
-    if (raw.includes('"media"')) expect(parsed, raw).to.deep.equal({ destination: 'media', folder: null });
-    else expect(parsed, raw).to.deep.equal(UMBRADESKTOP_ACCESSORIES_DEFAULT_SAVE_SETTINGS);
+it('falls back to the root for anything it cannot read', () => {
+  for (const raw of ['not json', '42', '{"folder":{"unique":7}}', '{"folder":"notes"}']) {
+    expect(parseSaveSettings(raw), raw).to.deep.equal(UMBRADESKTOP_ACCESSORIES_DEFAULT_SAVE_SETTINGS);
   }
 });
 
