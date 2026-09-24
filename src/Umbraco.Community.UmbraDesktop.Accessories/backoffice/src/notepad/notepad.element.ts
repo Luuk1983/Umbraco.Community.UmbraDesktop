@@ -1,44 +1,40 @@
 import { accessoryStyles } from '../shared/styles.js';
 import { AREA } from '../shared/area.js';
-import { downloadBlob } from '../shared/download.js';
-import { announceSave } from '../shared/announce-save.js';
 import { UNSAVED_ATTRIBUTE } from '../shared/unsaved.js';
+import { fileNameFor, isTextFile } from '../shared/media-files.js';
+import { createMediaOpener } from '../shared/media-open.js';
+import type { MediaOpener } from '../shared/media-open.js';
 import { createMediaSaver } from '../shared/media-save.js';
 import type { MediaSaver } from '../shared/media-save.js';
-import { otherDestination, saveFile } from '../shared/save-file.js';
 import { UmbraDesktopAccessoriesSaveSettingsController } from '../settings/save-settings.source.js';
 import type { AccessoriesSaveSettingsSource } from '../settings/save-settings.source.js';
-import type { AccessoriesSaveDestination } from '../settings/save-settings.js';
 import { NOTEPAD_BAR_HEIGHT_PX, NOTEPAD_PADDING_PX } from './constants.js';
-import { caretPosition, textFileName } from './text.js';
-import { css, customElement, html, property, query, state } from '@umbraco-cms/backoffice/external/lit';
+import { caretPosition } from './text.js';
+import { css, customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UMB_DISCARD_CHANGES_MODAL, umbOpenModal } from '@umbraco-cms/backoffice/modal';
 
+/** The extension a new document is saved with. */
+const NEW_DOCUMENT_EXTENSION = 'txt';
+
 /**
- * Notepad, as a self-contained UmbraDesktop app: a plain-text page, a toolbar with New, Open, Save
- * and Word wrap, and a status bar with the caret's line and column.
+ * Notepad, as a self-contained UmbraDesktop app: a text editor over the media library.
  *
- * **Save goes where Desktop settings say**: a download to this computer by default, or a media item
- * in the media library, and the toolbar always has a second button for the other one. Open reads a
- * file the person picks with the browser's own file dialog. Nothing about this needs a C# surface:
- * a download never reaches the server, and a media save goes through the backoffice's own media
- * repositories, with the permissions the person already has (see `shared/media-save.ts`). Until it
- * is saved, a Notepad window's text lives only as long as the window does, the same as a note in a
- * real Notepad.
+ * **Every file lives in the media library.** Open picks a file there with Umbraco's own media picker,
+ * Save writes it back over the same media item, and a new document is saved into the folder Desktop
+ * settings name, under the name typed in the status bar. There is no download and no local file
+ * dialog: a document here is site content, where everyone who works on the site can find it, and
+ * the media library already has the permissions, the folders and the recycle bin for it.
+ *
+ * Nothing about this needs a C# surface of its own: opening and saving go through the backoffice's
+ * media picker and repositories, with the permissions the person already has
+ * (`shared/media-open.ts`, `shared/media-save.ts`).
  *
  * Unsaved text is reported to the desktop with {@link UNSAVED_ATTRIBUTE}, so the window shows the
  * unsaved marker and its close button asks first. New and Open, which are this app's own, ask too.
  */
 @customElement('umbradesktop-notepad')
 export class NotepadElement extends UmbLitElement {
-  /**
-   * How a saved file reaches the person. A browser download unless a test says otherwise, since a
-   * real one cannot be observed from a test and would litter the runner's download folder.
-   */
-  @property({ attribute: false })
-  download: (blob: Blob, name: string) => void | Promise<void> = downloadBlob;
-
   /**
    * Ask whether unsaved text may be thrown away. Umbraco's own discard-changes dialog unless a test
    * says otherwise: the same token a workspace opens when you navigate away from unsaved work, so
@@ -54,10 +50,7 @@ export class NotepadElement extends UmbLitElement {
     }
   };
 
-  /**
-   * Where Save goes. The stored per-user Desktop setting unless a test says otherwise, read when the
-   * element connects.
-   */
+  /** Which folder a new document is saved into. The stored per-user Desktop setting unless a test says otherwise. */
   @property({ attribute: false })
   saveSettings?: AccessoriesSaveSettingsSource;
 
@@ -65,33 +58,35 @@ export class NotepadElement extends UmbLitElement {
   @property({ attribute: false })
   saveToMedia?: MediaSaver;
 
+  /** How a file is picked from the media library and read. Umbraco's media picker unless a test says otherwise. */
+  @property({ attribute: false })
+  openFromMedia?: MediaOpener;
+
   /** The document. */
   @state()
   private _text = '';
 
-  /**
-   * The media item this document was last saved as, so the next save to the media library
-   * overwrites it rather than adding a copy. Forgotten by New and Open, which start a new document.
-   */
-  #mediaUnique?: string;
-
-  /** The settings in use: the ones given, or the stored ones. */
-  #settings?: AccessoriesSaveSettingsSource;
-
-  /** Stops listening to the settings. */
-  #unsubscribe?: () => void;
-
-  /** Bumped when the settings change, so the toolbar's labels follow them. */
-  @state()
-  private _settingsRevision = 0;
-
-  /** The file the document came from, if it came from one. Decides the name it saves under. */
-  @state()
-  private _fileName?: string;
-
   /** The text as it was last saved or opened, which is what "unsaved" is measured against. */
   @state()
   private _savedText = '';
+
+  /** What the document is called, as typed in the status bar. Empty means untitled. */
+  @state()
+  private _name = '';
+
+  /** The name as it was last saved or opened. A rename is unsaved until it is saved. */
+  @state()
+  private _savedName = '';
+
+  /** The extension the document is saved with: its own, for a file that was opened. */
+  #extension = NEW_DOCUMENT_EXTENSION;
+
+  /** The media item this document came from or was last saved as, which the next save overwrites. */
+  #mediaUnique?: string;
+
+  /** The last thing worth telling the person: a save, or why an open or a save did not happen. */
+  @state()
+  private _notice = '';
 
   /** Whether long lines wrap at the window's edge. On by default, as it is in Windows 11. */
   @state()
@@ -101,27 +96,24 @@ export class NotepadElement extends UmbLitElement {
   @state()
   private _caret = 0;
 
-  /** The hidden file picker behind Open. */
-  @query('input[type="file"]')
-  private _picker!: HTMLInputElement;
+  /** The settings in use: the ones given, or the stored ones. */
+  #settings?: AccessoriesSaveSettingsSource;
 
-  /** Whether there is text that has not been saved. */
+  /** Whether there is text, or a name, that has not been saved. */
   get dirty(): boolean {
-    return this._text !== this._savedText;
+    return this._text !== this._savedText || this._name !== this._savedName;
   }
 
-  /** Listen for the keyboard shortcuts. */
+  /** Listen for the keyboard shortcuts, and settle on the settings. */
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('keydown', this.#onKeyDown);
     this.#settings ??= this.saveSettings ?? new UmbraDesktopAccessoriesSaveSettingsController(this);
-    this.#unsubscribe = this.#settings.subscribe(() => this._settingsRevision++);
   }
 
   /** Stop listening. The whole of teardown: there is no timer here. */
   override disconnectedCallback(): void {
     this.removeEventListener('keydown', this.#onKeyDown);
-    this.#unsubscribe?.();
     super.disconnectedCallback();
   }
 
@@ -141,16 +133,14 @@ export class NotepadElement extends UmbLitElement {
    */
   #onKeyDown = (event: KeyboardEvent): void => {
     if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
-    const action = { s: () => this.save(), o: () => this._picker?.click(), n: () => this.newDocument() }[
-      event.key.toLowerCase()
-    ];
+    const action = { s: () => this.save(), o: () => this.open(), n: () => this.newDocument() }[event.key.toLowerCase()];
     if (!action) return;
     event.preventDefault();
     void action();
   };
 
   /**
-   * Ask before throwing away unsaved text, and only then. Asking over a page that is already saved
+   * Ask before throwing away unsaved work, and only then. Asking over a page that is already saved
    * or empty is a dialog with one sensible answer, and those train people to click through the one
    * that matters.
    * @returns True when there is nothing to lose or the person said it may go.
@@ -159,79 +149,78 @@ export class NotepadElement extends UmbLitElement {
     return !this.dirty || (await this.confirmDiscard());
   }
 
-  /** Start an empty, untitled document. */
+  /** Start an empty, untitled document, which a save will create as a new media item. */
   async newDocument(): Promise<void> {
     if (!(await this.#mayDiscard())) return;
-    this.#load('', undefined);
+    this.#load('', '', NEW_DOCUMENT_EXTENSION, undefined);
   }
 
   /**
-   * Open a file into the page.
-   * @param file The file the person picked.
-   */
-  async openFile(file: File): Promise<void> {
-    if (!(await this.#mayDiscard())) return;
-    this.#load(await file.text(), file.name);
-  }
-
-  /** Where Save and Ctrl+S go, as Desktop settings say. */
-  get #destination(): AccessoriesSaveDestination {
-    return this.#settings?.value.destination ?? 'computer';
-  }
-
-  /** Save the page where Desktop settings say. What Save and Ctrl+S do. */
-  save(): Promise<void> {
-    return this.saveTo(this.#destination);
-  }
-
-  /**
-   * Save the page as a text file to one destination, and count it saved if that worked.
+   * Open a text file from the media library.
    *
-   * The text that was saved is what "saved" is measured against, not the text when the save
-   * finished: a media save takes a round trip, and typing during it must still read as unsaved.
-   * @param destination This computer, or the media library.
+   * The media picker offers every file, since the media library does not know which are text; one
+   * that is not is refused here, with its name, rather than opened as a screen of noise. SVG counts
+   * as text, and opens.
    */
-  async saveTo(destination: AccessoriesSaveDestination): Promise<void> {
-    const name = textFileName(this._fileName, this.#term('notepadUntitled', 'Untitled'));
+  async open(): Promise<void> {
+    if (!(await this.#mayDiscard())) return;
+    const opener = this.openFromMedia ?? createMediaOpener(this);
+    const result = await opener();
+    if (result.status === 'cancelled') return;
+    if (result.status === 'failed') {
+      this._notice = this.#term('openFailed', `${result.name ?? ''} could not be read.`, result.name ?? '');
+      return;
+    }
+    if (!isTextFile(result.extension, result.blob.type)) {
+      this._notice = this.#term('notepadNotText', `Notepad opens text files, and ${result.name} is not one.`, result.name);
+      return;
+    }
+    this.#load(await result.blob.text(), result.name, result.extension || NEW_DOCUMENT_EXTENSION, result.unique);
+  }
+
+  /**
+   * Save the document to the media library: over the item it came from, or as a new item in the
+   * folder Desktop settings name.
+   *
+   * The text and name that were saved are what "saved" is measured against, not the text when the
+   * save finished: a save takes a round trip, and typing during it must still read as unsaved.
+   */
+  async save(): Promise<void> {
+    const untitled = this.#term('notepadUntitled', 'Untitled');
     const text = this._text;
-    const file = new File([text], name, { type: 'text/plain;charset=utf-8' });
-    const outcome = await saveFile(file, destination, {
-      download: this.download,
-      saveToMedia: this.saveToMedia ?? createMediaSaver(this),
-      settings: this.#settings!.value,
+    const name = this._name;
+    const result = await (this.saveToMedia ?? createMediaSaver(this))({
+      file: new File([text], fileNameFor(name, untitled, this.#extension), { type: 'text/plain;charset=utf-8' }),
+      name: name.trim() || untitled,
+      folder: this.#settings?.value.folder?.unique ?? null,
       existing: this.#mediaUnique,
     });
-    void announceSave(this, outcome, name);
-    if (!outcome.ok) return;
-    if (outcome.mediaUnique) this.#mediaUnique = outcome.mediaUnique;
-    this._fileName = name;
+    if (!result.ok) {
+      this._notice = this.#term('saveFailed', `Not saved. ${result.message ?? ''}`, result.message ?? '');
+      return;
+    }
+    this.#mediaUnique = result.unique;
     this._savedText = text;
-  }
-
-  /**
-   * A save button's label.
-   * @param destination Where the button saves to.
-   * @param primary Whether it is the main Save button, which is just "Save".
-   * @returns The label.
-   */
-  #saveLabel(destination: AccessoriesSaveDestination, primary: boolean): string {
-    if (primary) return this.#term('notepadSave', 'Save');
-    return destination === 'media'
-      ? this.#term('saveToMedia', 'Save to media library')
-      : this.#term('download', 'Download');
+    this._savedName = name;
+    this._notice = this.#term('savedToMedia', 'Saved to the media library.');
   }
 
   /**
    * Replace the document and count it saved, with the caret at the start.
    * @param text The new text.
-   * @param fileName Where it came from.
+   * @param name What it is called.
+   * @param extension The extension it saves with.
+   * @param unique The media item it came from, if any.
    */
-  #load(text: string, fileName: string | undefined): void {
+  #load(text: string, name: string, extension: string, unique: string | undefined): void {
     this._text = text;
     this._savedText = text;
-    this._fileName = fileName;
+    this._name = name;
+    this._savedName = name;
+    this.#extension = extension;
+    this.#mediaUnique = unique;
     this._caret = 0;
-    this.#mediaUnique = undefined;
+    this._notice = '';
   }
 
   /**
@@ -245,36 +234,14 @@ export class NotepadElement extends UmbLitElement {
   }
 
   /**
-   * A file the picker produced. The picker is reset so picking the same file twice still fires.
-   * @param event The picker's change event.
-   */
-  async #onPicked(event: Event): Promise<void> {
-    const picker = event.target as HTMLInputElement;
-    const file = picker.files?.[0];
-    picker.value = '';
-    if (file) await this.openFile(file);
-  }
-
-  /**
    * One word from this package's dictionary.
    * @param key The key inside the area.
    * @param fallback The English, shown if the dictionary has not loaded.
+   * @param args Values for `%0%`-style placeholders.
    * @returns The localised string.
    */
-  #term(key: string, fallback: string): string {
-    return this.localize.termOrDefault(`${AREA}_${key}`, fallback);
-  }
-
-  /**
-   * What the Save button's tooltip says, so the destination Desktop settings chose is visible
-   * without opening them.
-   * @param destination Where Save goes.
-   * @returns The tooltip.
-   */
-  #saveTitle(destination: AccessoriesSaveDestination): string {
-    return destination === 'media'
-      ? this.#term('saveTitleMedia', 'Save to the media library (Ctrl+S)')
-      : this.#term('saveTitleComputer', 'Save to this computer (Ctrl+S)');
+  #term(key: string, fallback: string, ...args: unknown[]): string {
+    return this.localize.termOrDefault(`${AREA}_${key}`, fallback, ...args);
   }
 
   /**
@@ -282,31 +249,18 @@ export class NotepadElement extends UmbLitElement {
    * @returns The toolbar, the page and the status bar.
    */
   override render() {
-    void this._settingsRevision;
     const position = caretPosition(this._text, this._caret);
-    const name = textFileName(this._fileName, this.#term('notepadUntitled', 'Untitled'));
+    const untitled = this.#term('notepadUntitled', 'Untitled');
     return html`
       <div class="toolbar">
         <button class="control" data-action="new" @click=${() => this.newDocument()}>
           ${this.#term('notepadNew', 'New')}
         </button>
-        <button class="control" data-action="open" @click=${() => this._picker.click()}>
+        <button class="control" data-action="open" title=${this.#term('openTitle', 'Open from the media library (Ctrl+O)')} @click=${() => this.open()}>
           ${this.#term('notepadOpen', 'Open…')}
         </button>
-        <button
-          class="control"
-          data-action="save"
-          title=${this.#saveTitle(this.#destination)}
-          @click=${() => this.save()}
-        >
-          ${this.#saveLabel(this.#destination, true)}
-        </button>
-        <button
-          class="control"
-          data-action="save-other"
-          @click=${() => this.saveTo(otherDestination(this.#destination))}
-        >
-          ${this.#saveLabel(otherDestination(this.#destination), false)}
+        <button class="control" data-action="save" title=${this.#term('saveTitle', 'Save to the media library (Ctrl+S)')} @click=${() => this.save()}>
+          ${this.#term('notepadSave', 'Save')}
         </button>
         <button
           class="control"
@@ -316,13 +270,12 @@ export class NotepadElement extends UmbLitElement {
         >
           ${this.#term('notepadWordWrap', 'Word wrap')}
         </button>
-        <input type="file" accept="text/*,.txt,.md,.csv,.json,.xml,.html,.css,.js" hidden @change=${this.#onPicked} />
       </div>
       <textarea
         class="page sunken"
         spellcheck="false"
         wrap=${this._wrap ? 'soft' : 'off'}
-        aria-label=${name}
+        aria-label=${this._name || untitled}
         .value=${this._text}
         @input=${this.#onPage}
         @keyup=${this.#onPage}
@@ -330,12 +283,19 @@ export class NotepadElement extends UmbLitElement {
         @select=${this.#onPage}
       ></textarea>
       <div class="status muted">
-        <span class="name">${this.dirty ? '• ' : ''}${name}</span>
+        <input
+          class="name sunken"
+          data-field="name"
+          .value=${this._name}
+          placeholder=${untitled}
+          aria-label=${this.#term('documentName', 'Name')}
+          @input=${(event: Event) => (this._name = (event.target as HTMLInputElement).value)}
+        />
+        ${this._notice ? html`<span class="notice" role="status">${this._notice}</span>` : nothing}
         <span class="position">
           ${this.#term('notepadLine', 'Ln')} ${position.line}, ${this.#term('notepadColumn', 'Col')}
           ${position.column}
         </span>
-        <span class="length">${this.localize.number(this._text.length)} ${this.#term('notepadCharacters', 'characters')}</span>
       </div>
     `;
   }
@@ -376,7 +336,8 @@ export class NotepadElement extends UmbLitElement {
         tab-size: 4;
       }
 
-      .page:focus-visible {
+      .page:focus-visible,
+      .name:focus-visible {
         outline: 2px solid var(--umbradesktop-app-accent, var(--uui-color-selected));
         outline-offset: 0;
       }
@@ -384,18 +345,35 @@ export class NotepadElement extends UmbLitElement {
       .status {
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 12px;
         min-height: ${NOTEPAD_BAR_HEIGHT_PX - 8}px;
-        padding: 0 4px;
+        padding: 0 2px;
         font-size: 0.85em;
         white-space: nowrap;
         overflow: hidden;
       }
 
+      /* The document's name, which is the media item's name. A field rather than a label because a
+         new document has to be named somewhere, and here it is always in view. */
       .name {
+        flex: 0 1 14em;
+        min-width: 6em;
+        height: ${NOTEPAD_BAR_HEIGHT_PX - 10}px;
+        padding: 0 6px;
+        border: none;
+        color: var(--umbradesktop-app-text, var(--uui-color-text));
+        font: inherit;
+      }
+
+      .notice {
         flex: 1;
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      .position {
+        margin-left: auto;
       }
     `,
   ];

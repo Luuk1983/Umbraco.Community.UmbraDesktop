@@ -1,14 +1,15 @@
 import { AREA } from '../shared/area.js';
 import { UmbraDesktopAccessoriesSaveSettingsController } from './save-settings.source.js';
 import type { AccessoriesSaveSettingsSource } from './save-settings.source.js';
-import type { AccessoriesMediaFolder, AccessoriesSaveDestination } from './save-settings.js';
+import type { AccessoriesMediaFolder } from './save-settings.js';
 import { css, customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UMB_MEDIA_TREE_PICKER_MODAL, UmbMediaItemRepository } from '@umbraco-cms/backoffice/media';
 import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
 
 /**
- * The Accessories category of Desktop settings: where Notepad's and Paint's Save goes.
+ * The Accessories category of Desktop settings: which media folder a new Notepad or Paint file is
+ * saved into. A file opened from the media library is saved back where it lives.
  *
  * Registered into the host's settings panel as a `umbraDesktopSettingsCategory`, so it sits beside
  * the desktop's own settings rather than in a panel of its own, and only exists when this package is
@@ -84,16 +85,6 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
     return { unique, name: data?.[0]?.name ?? unique };
   }
 
-  /**
-   * The destination radio changed.
-   * @param event The radio group's change event.
-   */
-  #onDestination(event: Event): void {
-    const destination = (event.target as HTMLElement & { value: string }).value as AccessoriesSaveDestination;
-    if (destination !== 'computer' && destination !== 'media') return;
-    this.#source!.set({ ...this.#source!.value, destination });
-  }
-
   /** Choose a folder, keeping the current one if the picker is cancelled. */
   async #chooseFolder(): Promise<void> {
     const folder = await this.pickFolder();
@@ -106,7 +97,7 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
   }
 
   /**
-   * The folder row, shown only while Save goes to the media library.
+   * The folder row.
    * @param folder The chosen folder, or null for the root.
    * @returns The row.
    */
@@ -135,34 +126,21 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
 
   /**
    * The screen.
-   * @returns The destination choice, and the folder when it applies.
+   * @returns The folder new files are saved into.
    */
   override render() {
     void this._revision;
-    const { destination, folder } = this.#source?.value ?? { destination: 'computer', folder: null };
+    const folder = this.#source?.value.folder ?? null;
     return html`
       <section>
-        <h4>${this.#term('settingsSaveTo', 'Save Notepad and Paint files to')}</h4>
+        <h4>${this.#term('settingsSaveTo', 'Save new files to')}</h4>
         <p class="about">
           ${this.#term(
             'settingsSaveToAbout',
-            'What Save and Ctrl+S do. Each app keeps a button for the other place, so both are always one click away.',
+            'Where Notepad and Paint put a file the first time it is saved. A file opened from the media library is saved back where it is.',
           )}
         </p>
-        <uui-radio-group data-setting="destination" .value=${destination} @change=${this.#onDestination}>
-          <uui-radio value="computer" label=${this.#term('settingsComputer', 'This computer')}></uui-radio>
-          <p class="hint">
-            ${this.#term('settingsComputerAbout', 'Downloads the file, the way your browser saves anything.')}
-          </p>
-          <uui-radio value="media" label=${this.#term('settingsMedia', 'Media library')}></uui-radio>
-          <p class="hint">
-            ${this.#term(
-              'settingsMediaAbout',
-              'Saves the file as a media item. Saving the same document again updates that item rather than adding another.',
-            )}
-          </p>
-        </uui-radio-group>
-        ${destination === 'media' ? this.#renderFolder(folder) : nothing}
+        ${this.#renderFolder(folder)}
       </section>
     `;
   }
@@ -190,18 +168,11 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
       font-size: var(--uui-type-small-size);
     }
 
-    .hint {
-      margin: var(--uui-size-space-1) 0 var(--uui-size-space-4) var(--uui-size-space-6);
-      color: var(--uui-color-text-alt, var(--uui-color-text));
-      font-size: var(--uui-type-small-size);
-    }
-
     .folder {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: var(--uui-size-space-3);
-      margin-left: var(--uui-size-space-6);
     }
 
     .folder-name {

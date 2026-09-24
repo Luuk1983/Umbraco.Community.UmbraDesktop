@@ -5,10 +5,8 @@ import type { AccessoriesMediaFolder } from './save-settings.js';
 import type { UmbraDesktopAccessoriesSettingsElement } from './accessories-settings.element.js';
 
 /**
- * The Accessories category of Desktop settings: where Notepad and Paint save.
- *
- * Driven through the settings source rather than storage, so each case says what the screen does to
- * the setting and nothing about where the setting is kept.
+ * The Accessories category of Desktop settings: which media folder new Notepad and Paint files are
+ * saved into. Driven through the settings source rather than storage.
  */
 
 /**
@@ -25,12 +23,6 @@ async function screen(picked?: AccessoriesMediaFolder) {
   return {
     source,
     element,
-    choose: async (destination: string) => {
-      const group = root.querySelector<HTMLElement & { value: string }>('[data-setting="destination"]')!;
-      group.value = destination;
-      group.dispatchEvent(new Event('change', { bubbles: true }));
-      await element.updateComplete;
-    },
     click: async (action: string) => {
       root.querySelector<HTMLElement>(`[data-action="${action}"]`)!.click();
       await new Promise((resolve) => setTimeout(resolve));
@@ -41,22 +33,14 @@ async function screen(picked?: AccessoriesMediaFolder) {
   };
 }
 
-it('starts on saving to this computer', async () => {
+it('starts at the media library root, with nothing to go back to', async () => {
   const view = await screen();
-  expect(view.source.value.destination).to.equal('computer');
-  expect(view.has('[data-action="pick-folder"]'), 'no folder to choose for a download').to.equal(false);
-});
-
-it('switches Save to the media library, at its root until a folder is chosen', async () => {
-  const view = await screen();
-  await view.choose('media');
-  expect(view.source.value).to.deep.equal({ destination: 'media', folder: null });
   expect(view.text('.folder-name')).to.equal('Media library root');
+  expect(view.has('[data-action="use-root"]')).to.equal(false);
 });
 
 it('saves into the folder chosen, and shows it by name', async () => {
   const view = await screen({ unique: 'f-1', name: 'Notes' });
-  await view.choose('media');
   await view.click('pick-folder');
   expect(view.source.value.folder).to.deep.equal({ unique: 'f-1', name: 'Notes' });
   expect(view.text('.folder-name')).to.equal('Notes');
@@ -64,24 +48,19 @@ it('saves into the folder chosen, and shows it by name', async () => {
 
 it('leaves the folder alone when the picker is cancelled', async () => {
   const view = await screen(undefined);
-  await view.choose('media');
   await view.click('pick-folder');
   expect(view.source.value.folder).to.equal(null);
 });
 
 it('goes back to the root on request', async () => {
   const view = await screen({ unique: 'f-1', name: 'Notes' });
-  await view.choose('media');
   await view.click('pick-folder');
   await view.click('use-root');
   expect(view.source.value.folder).to.equal(null);
 });
 
-/** Switching back to this computer keeps the folder, so switching again does not lose it. */
-it('remembers the folder across a switch back to this computer', async () => {
-  const view = await screen({ unique: 'f-1', name: 'Notes' });
-  await view.choose('media');
-  await view.click('pick-folder');
-  await view.choose('computer');
-  expect(view.source.value).to.deep.equal({ destination: 'computer', folder: { unique: 'f-1', name: 'Notes' } });
+/** There is no longer a choice of where to save: the media library is the only place. */
+it('offers no choice of destination', async () => {
+  const view = await screen();
+  expect(view.has('[data-setting="destination"]')).to.equal(false);
 });

@@ -42,20 +42,35 @@ ordinary reuse rather than that.
 
 | App | Pure module | Decisions worth their reasoning |
 |---|---|---|
-| Notepad | `text.ts`: caret line/column, save name | Open uses the browser's file picker. Save goes to a download or the media library, per §4, with no C# surface either way. An opened file saves back under its own name. |
+| Notepad | `text.ts`: caret line/column | Opens and saves text files in the media library, per §4. |
 | Paint | `raster.ts`: Bresenham lines, square stamps, scanline flood fill | Pixels are set directly rather than stroked by the canvas, because canvas strokes are antialiased and a fill that stops at "not the clicked colour" then leaves a halo round every line. MS Paint never antialiased, which is why its bucket worked. The paper stays white under every theme: it is the document, not the chrome. |
 | Sticky Notes | `board.ts`: folding the server's board into the window's copy | The only app with a server behind it; see §5. |
 | Calculator | `engine.ts`: an immutable state machine | Immediate execution, as the Windows calculator does in Standard mode, not precedence. Results are rounded to 15 significant digits, which removes the float noise (`0.1 + 0.2` shows `0.3`) and nothing a person typed. Percent is "of the running total" after an operator, as in Windows. |
 | Clock | `hands.ts`: hand angles, time to the next second | Ticks on the real second boundary rather than a free-running 1000ms interval, so it turns over with the taskbar clock. Time and date go through `this.localize.date`, so they follow the backoffice culture. |
 
-## 4. Saving to the media library
+## 4. Notepad and Paint work on the media library
 
-Notepad and Paint save either to the person's machine (a download) or to the media library (a
-media item), chosen in **Desktop settings > Accessories** along with a media folder. That choice is
-what Save and Ctrl+S do, and each app keeps a second button for the other destination. Defaults to
-the machine, because it is the one destination that always works.
+**Every file lives in the media library** (decided with the repository owner, 2026-09-24, replacing
+a first version that saved to the person's machine by default). Open shows Umbraco's own
+`UMB_MEDIA_PICKER_MODAL`, the picker a media property uses, so it browses, searches and uploads the
+way the rest of the backoffice does; a file on someone's computer gets in through its Upload button.
+Save writes the file back over the media item it came from, and renames that item if the name in the
+status bar changed. A new document or picture is saved into a folder chosen in **Desktop settings >
+Accessories**, the root until one is. There is no download and no local file dialog: a document
+here is site content, and the media library already has the folders, permissions and recycle bin
+for it.
 
-**The setting lives in the desktop's own settings panel**, which needed a way in. The panel was
+- **Which files.** `shared/media-files.ts` decides, as pure functions. Notepad takes text by
+  extension or by `text/*`, SVG included, since SVG is a drawing written as text. Paint takes raster
+  images and refuses SVG, which it could only flatten, destroying the original on save.
+- **Paint keeps a picture's format and size.** An opened image is drawn at its own size, up to
+  4,096 px on an edge, and saved in its own format where a canvas can write that format (PNG, JPEG,
+  WebP), so a photograph stays a JPEG; GIF and BMP save as PNG. Undo keeps whole copies of the
+  picture, so its depth comes from a 256 MB budget rather than a fixed twenty.
+- **Messages go in the window.** Why an open or a save did not happen, and that a save did, show in
+  the app's status bar rather than as a toast, since that is where the person is looking.
+
+**The folder setting lives in the desktop's own settings panel**, which needed a way in. The panel was
 curated only, and a curated list cannot name a package this repository does not know about, so the
 host gained a second public manifest type, `umbraDesktopSettingsCategory`, modelled on
 `umbraDesktopApp`: the host draws the row, heading and navigation, the registering package owns the
@@ -77,10 +92,11 @@ exports, so `shared/media-save.ts` repeats its steps with the public pieces it i
 save of the same document overwrites the item it created (a temporary file, `umbracoFile` pointed at
 it, and a save) unless that item is gone or trashed, in which case it creates a new one.
 
-**Verified against a running Umbraco 17.7** (see §7 for how): Notepad's first save created
-`Untitled.txt` as a File, a second save updated that item (one item, and its file read back with
-the new text), and Paint's save created `Untitled.png` as an Image, with the backoffice's own
-"Saved to the media library" notification.
+**Verified against a running Umbraco 17.7** (see §7 for how): Notepad created `Untitled.txt` as a
+File and a second save updated that item; then, through the real media picker, Notepad opened it,
+an edit and a rename were saved back (one item, renamed, its file read back with the new text), and
+Paint opened `Untitled.png` at its own 480 × 300, drew on it and saved it back (the saved file read
+back with the new pixels).
 
 ## 5. Sticky Notes: one board for everyone
 
@@ -182,5 +198,8 @@ question as the one above: the host would have to publish the setting to apps.
   Wrap either in `try`/`catch` and return a boolean, as the host's own `_askToDiscard` does.
 - **`aria-label` on an element whose text is the content hides the content.** A `<time>` labelled
   "Time" is read as "Time", not as the time, so the digital clock carries no label at all.
-- **An app test that records a download must record it synchronously.** Awaiting `blob.text()` in
-  the fake downloader races the assertion; store the blob and read it in the test.
+- **An app test that records a saved file must record it synchronously.** Awaiting `blob.text()`
+  in the fake races the assertion; store the file and read it in the test.
+- **An inactive window swallows the first click** to bring itself forward, as the desktop design
+  intends. A script driving two windows must press buttons directly (`el.click()` in the page), or
+  its first click in the window behind does nothing.
