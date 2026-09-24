@@ -158,9 +158,13 @@ but the text.
 **The window is Windows 98's Screen Saver tab**, control for control: a monitor running the chosen
 saver as a live preview, a list with **(None)** at the top, **Wait _ minutes**, and **Preview**.
 (None) is how it is switched off, as it was in Windows, rather than a checkbox beside the list; it
-keeps the saver that was chosen, so switching back on is one choice. The same element
-(`screensaver-panel.element.ts`) is also the screen saver part of Desktop settings > Accessories,
-over the same settings, so the two places it can be set cannot drift apart.
+keeps the saver that was chosen, so switching back on is one choice.
+
+**Set in its window only.** It was first also embedded in Desktop settings > Accessories, since
+Windows kept it under Display Properties rather than Accessories. That was taken out on review: two
+places for one setting read as untidy, and the Accessories tile is where anyone who wants a screen
+saver goes. The setting is still stored beside the save folder, in the package's one settings
+record; only the screen is gone from the panel.
 
 **Off by default.** Something that covers the whole backoffice unasked would read as a fault the
 first time it happened after an upgrade.

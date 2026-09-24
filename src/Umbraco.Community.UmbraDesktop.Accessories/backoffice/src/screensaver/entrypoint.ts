@@ -14,7 +14,7 @@ let watcher: ScreensaverWatcher | undefined;
  * second, which does nothing until the setting is on and the desktop is showing.
  *
  * The settings controller hangs off the backoffice's own host, so it is there for as long as the
- * backoffice is, and it follows changes made in the Screen Saver window or the settings panel.
+ * backoffice is, and it follows changes made in the Screen Saver window.
  * @param host The backoffice's root element.
  */
 export const onInit: UmbEntryPointOnInit = (host) => {

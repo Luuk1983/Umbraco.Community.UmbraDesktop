@@ -65,9 +65,11 @@ it('offers no choice of destination', async () => {
   expect(view.has('[data-setting="destination"]')).to.equal(false);
 });
 
-/** The screen saver is set here too, by the Screen Saver window's own screen over the same settings. */
-it('holds the Screen Saver window’s screen, over the same settings', async () => {
+/**
+ * The screen saver is set in its own window in the launcher's Accessories group, and only there:
+ * two places for one setting was one too many.
+ */
+it('leaves the screen saver to its own window', async () => {
   const view = await screen();
-  const panel = view.element.shadowRoot!.querySelector('umbradesktop-screensaver-panel');
-  expect(panel?.source).to.equal(view.source);
+  expect(view.has('umbradesktop-screensaver-panel')).to.equal(false);
 });

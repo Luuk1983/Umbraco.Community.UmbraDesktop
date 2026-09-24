@@ -1,4 +1,3 @@
-import '../screensaver/screensaver-panel.element.js';
 import { AREA } from '../shared/area.js';
 import { UmbraDesktopAccessoriesSettingsController } from './settings.source.js';
 import type { AccessoriesSettingsSource } from './settings.source.js';
@@ -10,11 +9,10 @@ import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
 
 /**
  * The Accessories category of Desktop settings: which media folder a new Notepad or Paint file is
- * saved into, and the screen saver. A file opened from the media library is saved back where it
- * lives.
+ * saved into. A file opened from the media library is saved back where it lives.
  *
- * The screen saver part is the Screen Saver window's own element, over the same settings, so the two
- * places it can be set cannot come to look or behave differently.
+ * The screen saver is not here, though it is stored in the same settings: it is set in its own
+ * Screen Saver window in the launcher, and one place for one setting is the right number.
  *
  * Registered into the host's settings panel as a `umbraDesktopSettingsCategory`, so it sits beside
  * the desktop's own settings rather than in a panel of its own, and only exists when this package is
@@ -131,7 +129,7 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
 
   /**
    * The screen.
-   * @returns The folder new files are saved into, and the screen saver.
+   * @returns The folder new files are saved into.
    */
   override render() {
     void this._revision;
@@ -146,10 +144,6 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
           )}
         </p>
         ${this.#renderFolder(folder)}
-      </section>
-      <section>
-        <h4>${this.#term('settingsScreensaver', 'Screen saver')}</h4>
-        <umbradesktop-screensaver-panel .source=${this.#source}></umbradesktop-screensaver-panel>
       </section>
     `;
   }
@@ -182,16 +176,6 @@ export class UmbraDesktopAccessoriesSettingsElement extends UmbLitElement {
       flex-wrap: wrap;
       align-items: center;
       gap: var(--uui-size-space-3);
-    }
-
-    section + section {
-      margin-top: var(--uui-size-space-6);
-    }
-
-    /* The panel is a window's body elsewhere, with the window's surface; here it sits on the panel's. */
-    umbradesktop-screensaver-panel {
-      background: none;
-      padding: 0;
     }
 
     .folder-name {

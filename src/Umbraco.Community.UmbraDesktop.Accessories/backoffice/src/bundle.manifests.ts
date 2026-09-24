@@ -137,8 +137,7 @@ const apps: Array<UmbExtensionManifest> = [
 ];
 
 /**
- * The Accessories category of Desktop settings: where Notepad's and Paint's Save goes, and the
- * screensaver.
+ * The Accessories category of Desktop settings: where Notepad's and Paint's Save goes.
  *
  * A `umbraDesktopSettingsCategory`, which the host lists among its own personal settings, so the
  * choice is made where every other desktop setting is made, and the category exists only while this
