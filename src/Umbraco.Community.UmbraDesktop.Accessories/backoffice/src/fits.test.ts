@@ -4,6 +4,7 @@ import './calculator/calculator.element.js';
 import './clock/clock.element.js';
 import './notepad/notepad.element.js';
 import './paint/paint.element.js';
+import './screensaver/screensaver-panel.element.js';
 import './sticky-notes/sticky-notes.element.js';
 
 /**
@@ -29,6 +30,7 @@ const TAGS: Record<string, string> = {
   Calculator: 'umbradesktop-calculator',
   Clock: 'umbradesktop-clock',
   StickyNotes: 'umbradesktop-sticky-notes',
+  ScreenSaver: 'umbradesktop-screensaver-panel',
 };
 
 /** The published theme ids (`docs/desktop-apps.md` §5), plus no theme at all. */

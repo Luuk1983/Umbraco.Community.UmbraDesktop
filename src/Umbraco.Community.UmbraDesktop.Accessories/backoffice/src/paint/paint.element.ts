@@ -6,8 +6,8 @@ import { createMediaOpener } from '../shared/media-open.js';
 import type { MediaOpener } from '../shared/media-open.js';
 import { createMediaSaver } from '../shared/media-save.js';
 import type { MediaSaver } from '../shared/media-save.js';
-import { UmbraDesktopAccessoriesSaveSettingsController } from '../settings/save-settings.source.js';
-import type { AccessoriesSaveSettingsSource } from '../settings/save-settings.source.js';
+import { UmbraDesktopAccessoriesSettingsController } from '../settings/settings.source.js';
+import type { AccessoriesSettingsSource } from '../settings/settings.source.js';
 import {
   PAINT_BRUSH_SIZES,
   PAINT_CANVAS_SIZE,
@@ -88,7 +88,7 @@ export class PaintElement extends UmbLitElement {
 
   /** Which folder a new picture is saved into. The stored per-user Desktop setting unless a test says otherwise. */
   @property({ attribute: false })
-  saveSettings?: AccessoriesSaveSettingsSource;
+  saveSettings?: AccessoriesSettingsSource;
 
   /** How a picture reaches the media library. The backoffice's media repositories unless a test says otherwise. */
   @property({ attribute: false })
@@ -99,7 +99,7 @@ export class PaintElement extends UmbLitElement {
   openFromMedia?: MediaOpener;
 
   /** The settings in use: the ones given, or the stored ones. */
-  #settings?: AccessoriesSaveSettingsSource;
+  #settings?: AccessoriesSettingsSource;
 
   /** The picture's size in pixels: the default for new paper, the image's own for an opened one. */
   @state()
@@ -182,7 +182,7 @@ export class PaintElement extends UmbLitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('keydown', this.#onKeyDown);
-    this.#settings ??= this.saveSettings ?? new UmbraDesktopAccessoriesSaveSettingsController(this);
+    this.#settings ??= this.saveSettings ?? new UmbraDesktopAccessoriesSettingsController(this);
   }
 
   /** Stop listening. The whole of teardown: there is no timer here. */

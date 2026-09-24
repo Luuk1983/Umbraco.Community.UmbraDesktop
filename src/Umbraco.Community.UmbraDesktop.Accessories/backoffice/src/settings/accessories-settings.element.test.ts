@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './accessories-settings.element.js';
-import { fixedSaveSettings } from './save-settings.source.js';
-import type { AccessoriesMediaFolder } from './save-settings.js';
+import { fixedSettings } from './settings.source.js';
+import type { AccessoriesMediaFolder } from './settings.js';
 import type { UmbraDesktopAccessoriesSettingsElement } from './accessories-settings.element.js';
 
 /**
@@ -14,7 +14,7 @@ import type { UmbraDesktopAccessoriesSettingsElement } from './accessories-setti
  * @param picked What the folder picker returns.
  */
 async function screen(picked?: AccessoriesMediaFolder) {
-  const source = fixedSaveSettings();
+  const source = fixedSettings();
   const element = await fixture<UmbraDesktopAccessoriesSettingsElement>(html`<umbradesktop-accessories-settings
     .source=${source}
     .pickFolder=${async () => picked}
@@ -63,4 +63,11 @@ it('goes back to the root on request', async () => {
 it('offers no choice of destination', async () => {
   const view = await screen();
   expect(view.has('[data-setting="destination"]')).to.equal(false);
+});
+
+/** The screen saver is set here too, by the Screen Saver window's own screen over the same settings. */
+it('holds the Screen Saver window’s screen, over the same settings', async () => {
+  const view = await screen();
+  const panel = view.element.shadowRoot!.querySelector('umbradesktop-screensaver-panel');
+  expect(panel?.source).to.equal(view.source);
 });

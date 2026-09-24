@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import './paint.element.js';
 import { PAINT_CANVAS_SIZE, PAINT_MAX_IMAGE_EDGE_PX } from './constants.js';
 import type { PaintElement } from './paint.element.js';
-import { fixedSaveSettings } from '../settings/save-settings.source.js';
+import { fixedSettings } from '../settings/settings.source.js';
 import type { MediaOpenResult } from '../shared/media-open.js';
 import type { MediaSaveRequest } from '../shared/media-save.js';
 
@@ -26,7 +26,7 @@ async function paint(opened?: MediaOpenResult): Promise<{ element: PaintElement;
   const recorded: Recorded = { saves: [] };
   const element = await fixture<PaintElement>(html`<umbradesktop-paint
     .confirmDiscard=${async () => true}
-    .saveSettings=${fixedSaveSettings({ folder: { unique: 'folder-1', name: 'Pictures' } })}
+    .saveSettings=${fixedSettings({ folder: { unique: 'folder-1', name: 'Pictures' } })}
     .saveToMedia=${async (request: MediaSaveRequest) => {
       recorded.saves.push(request);
       return { ok: true, unique: request.existing ?? 'picture-1' };

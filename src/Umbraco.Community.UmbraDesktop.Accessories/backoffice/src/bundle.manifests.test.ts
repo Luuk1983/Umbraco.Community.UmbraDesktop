@@ -4,8 +4,12 @@ import { CALCULATOR_CONTENT_SIZE, CALCULATOR_MIN_CONTENT_SIZE } from './calculat
 import { CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE } from './clock/constants.js';
 import { NOTEPAD_CONTENT_SIZE, NOTEPAD_MIN_CONTENT_SIZE } from './notepad/constants.js';
 import { PAINT_CONTENT_SIZE, PAINT_MIN_CONTENT_SIZE } from './paint/constants.js';
+import { SCREENSAVER_WINDOW } from './screensaver/constants.js';
 import { STICKY_NOTES_CONTENT_SIZE, STICKY_NOTES_MIN_CONTENT_SIZE } from './sticky-notes/constants.js';
 import en from './localization/en.js';
+// Loaded here rather than only through the manifest's loader, because it pulls in the backoffice's
+// module graph, which takes longer than a test is allowed.
+import * as screensaverEntryPoint from './screensaver/entrypoint.js';
 
 /**
  * What the manifests promise the desktop, asserted where it can be read without a desktop. Only the
@@ -37,6 +41,7 @@ const EXPECTED = [
   ['StickyNotes', STICKY_NOTES_CONTENT_SIZE, STICKY_NOTES_MIN_CONTENT_SIZE],
   ['Calculator', CALCULATOR_CONTENT_SIZE, CALCULATOR_MIN_CONTENT_SIZE],
   ['Clock', CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE],
+  ['ScreenSaver', SCREENSAVER_WINDOW.content, SCREENSAVER_WINDOW.min],
 ] as const;
 
 it('registers every accessory, in launcher order', () => {
@@ -109,4 +114,17 @@ it('registers a Desktop settings category, named from this package’s dictionar
     const [, key] = /^#umbraDesktopAccessories_(\w+)$/.exec(token) ?? [];
     expect(area[key], `${token} is in en.ts`).to.be.a('string');
   }
+});
+
+/**
+ * The screensaver has to come on with every window closed, including its own, so something outside
+ * the windows starts its watcher: a `backofficeEntryPoint`, whose field *is* `js`.
+ */
+it('starts the screensaver from an entry point', async () => {
+  const entry = manifests.find((manifest) => manifest.type === 'backofficeEntryPoint') as unknown as {
+    js: () => Promise<Record<string, unknown>>;
+  };
+  const module = await entry.js();
+  expect(module.onInit).to.equal(screensaverEntryPoint.onInit);
+  expect([typeof module.onInit, typeof module.onUnload]).to.deep.equal(['function', 'function']);
 });

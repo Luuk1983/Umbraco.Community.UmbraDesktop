@@ -11,7 +11,7 @@ Three packages, from **one tag**, always at the **same version**:
 |---|---|
 | `Umbraco.Community.UmbraDesktop` | The desktop. The product. |
 | `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games add-on. Minesweeper today. |
-| `Umbraco.Community.UmbraDesktop.Accessories` | Optional tools add-on. Notepad, Paint, Sticky Notes, Calculator and Clock. The only package besides the host with server-side code (the Sticky Notes API), and the only add-on with a C# test project of its own. |
+| `Umbraco.Community.UmbraDesktop.Accessories` | Optional tools add-on. Notepad, Paint, Sticky Notes, Calculator, Clock and Screen Saver. The only package besides the host with server-side code (the Sticky Notes API), and the only add-on with a C# test project of its own. |
 
 Lockstep is a decision, not an accident: design D13 in
 [`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md)

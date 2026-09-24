@@ -1,8 +1,9 @@
-# Accessories: Notepad, Paint, Sticky Notes, Calculator and Clock
+# Accessories: Notepad, Paint, Sticky Notes, Calculator, Clock and Screen Saver
 
 > A third package, `Umbraco.Community.UmbraDesktop.Accessories`, built exactly as Entertainment is,
 > holding the small tools Windows kept under Start > Programs > Accessories. It uses nothing but the
-> public `umbraDesktopApp` manifest, plus one new launcher group in the host.
+> public `umbraDesktopApp` manifest, plus one new launcher group in the host. The screen saver adds
+> an ordinary Umbraco `backofficeEntryPoint`, and nothing in the host.
 
 ## 1. Why a separate package
 
@@ -46,6 +47,7 @@ ordinary reuse rather than that.
 | Paint | `raster.ts`: Bresenham lines, square stamps, scanline flood fill | Pixels are set directly rather than stroked by the canvas, because canvas strokes are antialiased and a fill that stops at "not the clicked colour" then leaves a halo round every line. MS Paint never antialiased, which is why its bucket worked. The paper stays white under every theme: it is the document, not the chrome. |
 | Sticky Notes | `board.ts`: folding the server's board into the window's copy | The only app with a server behind it; see §5. |
 | Calculator | `engine.ts`: an immutable state machine | Immediate execution, as the Windows calculator does in Standard mode, not precedence. Results are rounded to 15 significant digits, which removes the float noise (`0.1 + 0.2` shows `0.3`) and nothing a person typed. Percent is "of the running total" after an operator, as in Windows. |
+| Screen Saver | `savers.ts`: each saver's state and drawing | See §6. |
 | Clock | `hands.ts`: hand angles, time to the next second | Ticks on the real second boundary rather than a free-running 1000ms interval, so it turns over with the taskbar clock. Time and date go through `this.localize.date`, so they follow the backoffice culture. |
 
 ## 4. Notepad and Paint work on the media library
@@ -92,7 +94,7 @@ exports, so `shared/media-save.ts` repeats its steps with the public pieces it i
 save of the same document overwrites the item it created (a temporary file, `umbracoFile` pointed at
 it, and a save) unless that item is gone or trashed, in which case it creates a new one.
 
-**Verified against a running Umbraco 17.7** (see §7 for how): Notepad created `Untitled.txt` as a
+**Verified against a running Umbraco 17.7** (see §8 for how): Notepad created `Untitled.txt` as a
 File and a second save updated that item; then, through the real media picker, Notepad opened it,
 an edit and a rename were saved back (one item, renamed, its file read back with the new text), and
 Paint opened `Untitled.png` at its own 480 × 300, drew on it and saved it back (the saved file read
@@ -126,7 +128,7 @@ changes reach other people within about fifteen seconds rather than instantly.
   referencing only the add-on so they run against the host as a consumer gets it. CI runs them in
   the shared build action beside the host's.
 
-Running it for real, with two users in two browser sessions (§7), found three bugs every test had
+Running it for real, with two users in two browser sessions (§8), found three bugs every test had
 passed:
 
 1. **The backoffice's HTTP client throws on an error status.** Its types describe an `{ error }`
@@ -148,7 +150,47 @@ of the content; and the note's footer shrank to 5px as a flex item besides. What
 `grid-auto-rows: min-content`, a `min-height` on the note, and `flex-shrink: 0` on everything in it
 but the text.
 
-## 6. Known gaps
+## 6. The screen saver
+
+**The window is Windows 98's Screen Saver tab**, control for control: a monitor running the chosen
+saver as a live preview, a list with **(None)** at the top, **Wait _ minutes**, and **Preview**.
+(None) is how it is switched off, as it was in Windows, rather than a checkbox beside the list; it
+keeps the saver that was chosen, so switching back on is one choice. The same element
+(`screensaver-panel.element.ts`) is also the screen saver part of Desktop settings > Accessories,
+over the same settings, so the two places it can be set cannot drift apart.
+
+**Off by default.** Something that covers the whole backoffice unasked would read as a fault the
+first time it happened after an upgrade.
+
+**Three savers**, in `savers.ts` as pure factories over a canvas size and a random source, so
+tests seed them: Starfield, Mystify (two four-cornered shapes with trails and a slow hue drift), and
+Flying Umbraco, the Umbraco mark in place of Flying Windows. Each step takes the time since the last
+frame, capped at 100ms, so a tab back from the background does not fling every star past the viewer
+at once.
+
+**Who starts it: a `backofficeEntryPoint`**, because it has to come on with every window closed,
+its own included. The entry point starts one `ScreensaverWatcher`, which checks once a second and
+does nothing while the setting is off. It starts the saver only when the setting is on, the page is
+showing the desktop (by its path, `/section/umbradesktop`), the tab is visible, and nobody has done
+anything for the wait.
+
+**Listening inside the windows.** Most windows are backoffice pages in same-origin iframes, and an
+event inside one never reaches the page around it. A watcher listening only to the page would start
+the screen saver over someone busy typing in a content editor. So every five seconds the watcher
+looks through the desktop's shadow roots for iframes whose current document it has not heard from,
+and listens there too (a frame that navigates has a new document). Activity heard in a frame also
+ends a running screen saver, which cannot hear it from where it is.
+
+**What wakes it.** Any key, click, scroll or touch, and a pointer movement of more than 8px from
+where it first saw the pointer, so a knocked desk leaves it running, as Windows did. A click that
+wakes it is swallowed, so it does not also press whatever was underneath. On start it takes focus,
+so a key pressed to wake it does not type a letter into the field that had focus.
+
+**Verified live** against the harness (§8): it came on after the one-minute wait, a 3px nudge left
+it running, a real movement ended it, keydowns inside a Content window's iframe kept it off for 80
+seconds, it came on 56 seconds after they stopped, and one more keydown in that iframe ended it.
+
+## 7. Known gaps
 
 **Closed: closing a Notepad or Paint window now asks about unsaved work.** The host's close guard
 reads a window's `dirty` flag, which only the iframe dirty watch used to set. The app contract now
@@ -164,7 +206,7 @@ separate package cannot import, so Clock uses the culture's own hour cycle. The 
 question as the one above: the host would have to publish the setting to apps.
 
 
-## 7. What the build taught
+## 8. What the build taught
 
 - **A real backoffice can run on Linux, and it finds what tests do not.** The TestInstance wants
   SQL Server LocalDB and carries Umbraco Engage, which refuses SQLite, so it cannot boot outside
@@ -203,3 +245,16 @@ question as the one above: the host would have to publish the setting to apps.
 - **An inactive window swallows the first click** to bring itself forward, as the desktop design
   intends. A script driving two windows must press buttons directly (`el.click()` in the page), or
   its first click in the window behind does nothing.
+- **The test runner's pages are not all in the foreground.** It runs several test files at once,
+  and Chrome treats some of those pages as hidden: no animation frames at all, and
+  `document.visibilityState === 'hidden'`. Every screensaver test passed alone and eight failed in
+  the full run. Anything that waits on `requestAnimationFrame` or checks visibility takes the
+  frame source or the visibility check as an injectable property, and the tests drive it by hand.
+  That includes open-wc's `fixture()` for a plain (non-Lit) element, which waits for a frame; build
+  such an element with `document.createElement` instead.
+- **Importing anything that pulls in the backoffice's module graph takes about 8 seconds** the first
+  time in the test runner, longer than the 5-second test timeout. A test that reaches such a module
+  through a manifest's lazy loader times out; import the module statically at the top of the test
+  file as well, so it loads before the timer starts.
+- **Not every activity event has a `view`.** `input` is a plain `Event`, so the watcher tells which
+  window activity came from by which listener fired, one per window, not by reading the event.
