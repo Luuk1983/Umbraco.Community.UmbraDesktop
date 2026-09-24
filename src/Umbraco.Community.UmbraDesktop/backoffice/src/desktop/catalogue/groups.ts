@@ -23,6 +23,12 @@ export const groups: UmbraDesktopGroup[] = [
   { alias: 'automation', label: '#umbraDesktop_groupAutomation', weight: 43 },
   { alias: 'ai', label: '#umbraDesktop_groupAi', weight: 45 },
   { alias: 'system', label: '#umbraDesktop_groupSystem', weight: 50 },
+  // Accessories: Notepad, Paint, Calculator, Clock. Owned here and populated elsewhere, on the same
+  // contract as Games below: the Accessories package names this alias from its own manifests and
+  // nothing in this repository puts an app in it. The name is Windows' own, where Start > Programs >
+  // Accessories held the small tools and Games was a folder inside it, so the two sit side by side
+  // with the tools first: a tool is closer to what an editor came for than a game is.
+  { alias: 'accessories', label: '#umbraDesktop_groupAccessories', weight: 55 },
   // Games, last of the real groups and before the reserved "More". Populated entirely by registered
   // apps from the entertainment package: nothing in this repository puts an app here, which is why
   // the group can exist without either package knowing the other's release schedule.

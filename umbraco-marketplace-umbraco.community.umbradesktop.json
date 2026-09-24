@@ -79,6 +79,10 @@
     "retro",
     "dashboard",
     "minesweeper",
+    "accessories",
+    "notepad",
+    "paint",
+    "calculator",
     "language",
     "localization",
     "translation",
@@ -143,6 +147,11 @@
       "PackageId": "Umbraco.Community.UmbraDesktop.Entertainment",
       "GroupTitle": "Optional add-ons",
       "Description": "Games for the desktop, starting with Minesweeper. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
+    },
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop.Accessories",
+      "GroupTitle": "Optional add-ons",
+      "Description": "Notepad, Paint, Calculator and Clock for the desktop. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
     }
   ]
 }

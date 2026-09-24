@@ -5,29 +5,32 @@ Repo-specific facts a generic checklist cannot know. Read this first, then work 
 
 ## What ships
 
-Two packages, from **one tag**, always at the **same version**:
+Three packages, from **one tag**, always at the **same version**:
 
 | Package | What it is |
 |---|---|
 | `Umbraco.Community.UmbraDesktop` | The desktop. The product. |
 | `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games add-on. Minesweeper today. |
+| `Umbraco.Community.UmbraDesktop.Accessories` | Optional tools add-on. Notepad, Paint, Calculator and Clock. |
 
 Lockstep is a decision, not an accident: design D13 in
 [`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md)
-§8.3. Both publish on **every** release, changed or not — a gap in Entertainment's version history
+§8.3, and Accessories follows it unchanged
+([`docs/design/2026-09-24-accessories-design.md`](docs/design/2026-09-24-accessories-design.md)).
+All three publish on **every** release, changed or not — a gap in an add-on's version history
 reads like a broken pipeline, where a version with no changes reads like Umbraco. The one place
-lockstep must not leak is the dependency: Entertainment depends on the host by **range**
+lockstep must not leak is the dependency: each add-on depends on the host by **range**
 (`[17.0.0,18.0.0)` in `src/Directory.Packages.props`), never as a `ProjectReference`, or every host
-release forces an Entertainment release and breaks anyone who upgraded the host in between.
+release forces an add-on release and breaks anyone who upgraded the host in between.
 
 `Umbraco.Community.UmbraDesktop.TestInstance` and `.Tests` are never published.
 
 ## Versioning
 
 MinVer, from `v*` tags on this repository. `MinVerAutoIncrement=minor`,
-`MinVerMinimumMajorMinor=17.0`, and all three settings are **repeated verbatim in both csproj
-files** — there is no shared props file to inherit them from, and dropping `MinVerTagPrefix` from
-the add-on makes MinVer ignore every `v`-prefixed tag and version it `17.0.0-alpha.0` while the host
+`MinVerMinimumMajorMinor=17.0`, and all three settings are **repeated verbatim in every csproj
+file** — there is no shared props file to inherit them from, and dropping `MinVerTagPrefix` from
+an add-on makes MinVer ignore every `v`-prefixed tag and version it `17.0.0-alpha.0` while the host
 says `17.0.0`.
 
 **The package major tracks the Umbraco major**, so the first release was `v17.0.0`, not `v1.0.0`.
@@ -39,8 +42,8 @@ A release supporting Umbraco 18 starts at `v18.0.0`.
 2. Update the README, `umbraco-marketplace*.json` and `docs/` first — see the Definition of done in
    [`CLAUDE.md`](CLAUDE.md). The Marketplace description is the only thing most people read.
 3. Tag `main`: `git tag v17.1.0 && git push origin v17.1.0`.
-4. `.github/workflows/publish.yml` does the rest: both frontends, both test suites, the C# tests,
-   both packs, a payload check, NuGet trusted publishing, and a GitHub release.
+4. `.github/workflows/publish.yml` does the rest: every frontend, every test suite, the C# tests,
+   every pack, a payload check, NuGet trusted publishing, and a GitHub release.
 
 ### Release notes
 
@@ -102,6 +105,11 @@ Nothing in CI can do these.
   | `theme-wallpaper-match.png` | The theme picker with **Match the wallpaper to the theme** on, every preview carrying its own background. The one frame that explains the feature without a caption: Windows 98's bare teal sitting beside macOS's sunrise says what "each theme brings its own wallpaper" means faster than the sentence does. Take it with the toggle **on** — off, the five previews are identical backgrounds and the shot shows nothing. |
   | `background-jobs-viewer.png` | The Distributed table only. The Recurring one is below the fold and the view does not fit a screen at any framing worth having, so the caption does not claim the split and the explanation at the top of the shot carries the point. |
   | `entertainment-games-minesweeper.png` | The add-on's only shot, also used in both readmes. |
+
+  **Accessories has no shot yet**, and its listing and both readmes deliberately reference none, per
+  the ordering rule above. When one is taken, the obvious frame is the four tools open side by side
+  under one theme with the launcher's Accessories group visible; add it to the add-on's
+  `Screenshots`, its README and the root README's Accessories section together.
   | `header-entry-point.png` | Small and annotated on purpose. It answers one question, "where is the way in", and showing more screen would not answer it better. |
 
 ## Traps this repository has actually hit
@@ -143,7 +151,8 @@ at the **project URL** — for a GitHub project URL, the root of the default bra
 serving several packages suffixes the file with the **lowercased package ID**:
 
 - `umbraco-marketplace-umbraco.community.umbradesktop.json` — the host.
-- `umbraco-marketplace-umbraco.community.umbradesktop.entertainment.json` — the add-on.
+- `umbraco-marketplace-umbraco.community.umbradesktop.entertainment.json` — the games add-on.
+- `umbraco-marketplace-umbraco.community.umbradesktop.accessories.json` — the tools add-on.
 
 **Both are suffixed, deliberately.** An unsuffixed `umbraco-marketplace.json` is observed to keep
 serving the package that has no suffixed file of its own, and the host shipped that way for
@@ -166,9 +175,9 @@ The two are cross-linked with `RelatedPackages` rather than merged with `IsSubPa
 is a separate thing you choose, not a variant of the desktop.
 
 **Listing requires a dependency on an Umbraco package**, and version detection requires one on
-`Umbraco.Cms.*` — direct or **transitive**. Entertainment has no direct Umbraco dependency at all;
+`Umbraco.Cms.*` — direct or **transitive**. Neither add-on has a direct Umbraco dependency at all;
 it reaches `Umbraco.Cms.Core` transitively through the host. That is documented as sufficient but
-has not been observed for this package yet, so **check the Entertainment listing appears and shows
+has not been observed for these packages yet, so **check each add-on's listing appears and shows
 v17 after its first stable release**. If it does not, a direct `Umbraco.Cms.Core` reference is the
 fix.
 

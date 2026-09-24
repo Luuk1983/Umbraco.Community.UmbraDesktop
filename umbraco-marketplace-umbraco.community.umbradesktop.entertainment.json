@@ -35,6 +35,11 @@
       "PackageId": "Umbraco.Community.UmbraDesktop",
       "GroupTitle": "Requires",
       "Description": "The desktop itself. This package is an add-on to it and installs it as a dependency; the desktop works on its own without the games."
+    },
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop.Accessories",
+      "GroupTitle": "Optional add-ons",
+      "Description": "Notepad, Paint, Calculator and Clock for the desktop. Independent of this package: install either, both or neither."
     }
   ],
   "Screenshots": [

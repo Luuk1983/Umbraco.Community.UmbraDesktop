@@ -7,8 +7,8 @@
 
 A desktop app is one custom element in a window. You register it with an extension manifest, the
 desktop opens it, themes it and closes it, and your package never depends on anything here beyond
-the manifest type. Minesweeper is the first one; a calculator, a colour picker or a notepad would
-work the same way.
+the manifest type. Minesweeper was the first one, and the Accessories package's Notepad, Paint,
+Calculator and Clock work the same way.
 
 ---
 
@@ -461,7 +461,7 @@ never the other way round. A sixth theme must not be able to break your app.
 
 ---
 
-## 6. Groups, and the `games` contract
+## 6. Groups, and the `games` and `accessories` contract
 
 `meta.group` is a launcher group alias. The host owns the list, and an app naming a group that does
 not exist falls into the reserved More group, which is the same thing that happens to any uncurated
@@ -476,6 +476,11 @@ a contract between two packages:
 So the host can ship a Games group with no games in it, your package can ship games without the host
 knowing which, and neither release has to wait for the other. If you want a different heading,
 name a different group and land in More until one exists.
+
+`accessories` works the same way, for small self-contained tools rather than games: the host owns
+the alias, the label and its localisation, and it sorts after System and just before Games, which is
+where Windows put Start > Programs > Accessories. The Accessories package fills it, and a tool of
+your own may name it too.
 
 Most of the launcher then works on your app for nothing. Its tile and its taskbar button come from
 being in the app list at all. Pinning does key off `alias`, which is why §2 makes such a point of
