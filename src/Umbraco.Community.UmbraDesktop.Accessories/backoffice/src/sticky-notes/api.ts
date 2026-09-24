@@ -1,4 +1,5 @@
 import { umbHttpClient } from '@umbraco-cms/backoffice/http-client';
+import { attempt, SECURITY, statusOf } from '../shared/http.js';
 
 /**
  * The Sticky Notes API, as the window sees it.
@@ -76,39 +77,6 @@ export interface StickyNotesApi {
 
 /** Where the controller is routed. */
 const URL = '/umbraco/management/api/v1/umbradesktop/accessories/sticky-notes';
-
-/** Tells `umbHttpClient` to send the backoffice's bearer token, as its own documentation asks. */
-const SECURITY = [{ type: 'http', scheme: 'bearer' }] as const;
-
-/**
- * The status an error carries, whichever shape it arrived in.
- * @param error What the call threw or returned as its error.
- * @returns The HTTP status, if there is one.
- */
-function statusOf(error: unknown): number | undefined {
-  const status = (error as { status?: unknown } | null)?.status;
-  return typeof status === 'number' ? status : undefined;
-}
-
-/**
- * Run one call, turning a thrown error into a returned one.
- *
- * **The backoffice's HTTP client throws on every error status in a running backoffice**, whatever its
- * types say about an `{ error }` result: its response interceptors turn the response into a problem
- * details object and the call rejects with it. Found by running this against a real Umbraco, where a
- * 409 threw and the conflict dialog never appeared. So every call goes through here, and the rest of
- * this file reads one shape.
- * @param call The request.
- * @returns The data, or the error.
- */
-async function attempt<T>(call: () => Promise<{ data?: unknown; error?: unknown }>): Promise<{ data?: T; error?: unknown }> {
-  try {
-    const { data, error } = await call();
-    return error ? { error } : { data: data as T };
-  } catch (error) {
-    return { error: error ?? { status: undefined } };
-  }
-}
 
 /**
  * The real API, over the backoffice's HTTP client.

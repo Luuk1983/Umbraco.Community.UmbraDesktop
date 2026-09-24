@@ -1,4 +1,4 @@
-# Accessories: Notepad, Paint, Sticky Notes, Calculator, Clock and Screen Saver
+# Accessories: Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information
 
 > A third package, `Umbraco.Community.UmbraDesktop.Accessories`, built exactly as Entertainment is,
 > holding the small tools Windows kept under Start > Programs > Accessories. It uses nothing but the
@@ -45,9 +45,12 @@ ordinary reuse rather than that.
 |---|---|---|
 | Notepad | `text.ts`: caret line/column | Opens and saves text files in the media library, per §4. |
 | Paint | `raster.ts`: Bresenham lines, square stamps, scanline flood fill | Pixels are set directly rather than stroked by the canvas, because canvas strokes are antialiased and a fill that stops at "not the clicked colour" then leaves a halo round every line. MS Paint never antialiased, which is why its bucket worked. The paper stays white under every theme: it is the document, not the chrome. |
-| Sticky Notes | `board.ts`: folding the server's board into the window's copy | The only app with a server behind it; see §5. |
+| Sticky Notes | `board.ts`: folding the server's board into the window's copy | The only app with a server of this package's behind it; see §5. |
 | Calculator | `engine.ts`: an immutable state machine | Immediate execution, as the Windows calculator does in Standard mode, not precedence. Results are rounded to 15 significant digits, which removes the float noise (`0.1 + 0.2` shows `0.3`) and nothing a person typed. Percent is "of the running total" after an operator, as in Windows. |
 | Screen Saver | `savers.ts`: each saver's state and drawing | See §6. |
+| Disk Cleanup | `recycle-bins.ts`: counting and emptying the two bins | See §7. |
+| System Information | `facts.ts`: each fact in the old wording | See §7. |
+| Character Map | `characters.ts`: groups, names, search, Alt keystrokes | See §7. |
 | Clock | `hands.ts`: hand angles, time to the next second | Ticks on the real second boundary rather than a free-running 1000ms interval, so it turns over with the taskbar clock. Time and date go through `this.localize.date`, so they follow the backoffice culture. |
 
 ## 4. Notepad and Paint work on the media library
@@ -94,7 +97,7 @@ exports, so `shared/media-save.ts` repeats its steps with the public pieces it i
 save of the same document overwrites the item it created (a temporary file, `umbracoFile` pointed at
 it, and a save) unless that item is gone or trashed, in which case it creates a new one.
 
-**Verified against a running Umbraco 17.7** (see §8 for how): Notepad created `Untitled.txt` as a
+**Verified against a running Umbraco 17.7** (see §9 for how): Notepad created `Untitled.txt` as a
 File and a second save updated that item; then, through the real media picker, Notepad opened it,
 an edit and a rename were saved back (one item, renamed, its file read back with the new text), and
 Paint opened `Untitled.png` at its own 480 × 300, drew on it and saved it back (the saved file read
@@ -128,7 +131,7 @@ changes reach other people within about fifteen seconds rather than instantly.
   referencing only the add-on so they run against the host as a consumer gets it. CI runs them in
   the shared build action beside the host's.
 
-Running it for real, with two users in two browser sessions (§8), found three bugs every test had
+Running it for real, with two users in two browser sessions (§9), found three bugs every test had
 passed:
 
 1. **The backoffice's HTTP client throws on an error status.** Its types describe an `{ error }`
@@ -186,11 +189,64 @@ where it first saw the pointer, so a knocked desk leaves it running, as Windows 
 wakes it is swallowed, so it does not also press whatever was underneath. On start it takes focus,
 so a key pressed to wake it does not type a letter into the field that had focus.
 
-**Verified live** against the harness (§8): it came on after the one-minute wait, a 3px nudge left
+**Verified live** against the harness (§9): it came on after the one-minute wait, a 3px nudge left
 it running, a real movement ended it, keydowns inside a Content window's iframe kept it off for 80
 seconds, it came on 56 seconds after they stopped, and one more keydown in that iframe ended it.
 
-## 7. Known gaps
+## 7. Windows 98's System Tools: Character Map, Disk Cleanup and System Information
+
+**Character Map** is the Windows one with the advanced view's search built in: a font, a group, a
+grid, the chosen character popped out larger with its name and code in the status bar, and
+"Characters to copy" with Select and Copy. The status bar also gives Windows' own keystroke,
+`Alt+0233`, from the Windows-1252 code page, so the euro is `Alt+0128` rather than 8364, which is
+what Windows actually typed. **A browser cannot name a character**, so the names come from a table
+generated once from Python's copy of the Unicode Character Database by
+`backoffice/scripts/character-map-data.py` and committed; nothing in the build runs it. Eighteen
+groups, 2,485 characters, about 24KB gzipped, loaded only with the window. Emoji are left out: every
+device has a picker for those, and they would triple the table.
+
+**Disk Cleanup** empties the content and media recycle bins, which is the most destructive thing on
+the desktop, so the design is about not doing it by accident:
+
+- Nothing is ticked when it opens. Windows ticked some of its categories by default; here deleting
+  starts with a choice, not with a default.
+- **Clean up** counts the ticked bins again before asking, because somebody may have deleted
+  something since the window opened, and the question should name what is there now.
+- The question is Umbraco's own confirmation dialog in its danger colour, naming each bin and its
+  count, with "Delete permanently" rather than OK.
+- It calls Umbraco's own endpoints (`DELETE /recycle-bin/document` and `/recycle-bin/media`, the
+  ones the Empty Recycle Bin action uses), so this package grants and bypasses nothing. A bin that
+  cannot be counted for want of access cannot be ticked. A bin that can be counted but not emptied,
+  which is a Writer's content bin (no delete permission), is refused by Umbraco when it is tried, and
+  the window says so in full.
+- The two bins are emptied one after the other, so a refusal for the first is reported and the
+  second still runs.
+
+The count is of the items at the top of each bin, as its tree shows them, not of everything inside
+them. The window and the question both say "and everything inside", rather than walk the tree to add
+it up.
+
+**System Information** is two of Windows 98's windows in one. **General** is System Properties'
+General tab, group for group: *System* (Umbraco's release, the desktop's version, the theme),
+*Registered to* (the signed-in user, where Windows put the licence holder) and *Computer* (the site,
+the browser and OS, processors and memory). **Details** is msinfo32's tree: Umbraco, Desktop, Server,
+Computer, Installed packages. Server is Umbraco's own troubleshooting report, the one Help > System
+information shows; installed packages come from the manifest endpoint; the theme is the
+`data-umbradesktop-theme` attribute the desktop already stamps on every app, read as a fact rather
+than a style hook. **Nothing is guessed.** No OS version, because browsers report every Windows since
+10 as NT 10.0 and froze macOS at 10.15. Memory as the browser rounds it, capped at "8 GB or more".
+Graphics only where WebGL names it. A missing fact says it was not reported rather than inventing
+one. **Copy all** writes the report as text in bracketed sections, for pasting into a support
+request.
+
+**Verified live** against the harness (§9): Disk Cleanup showed 2 and 2 items, a Cancel left both
+bins full, Delete permanently emptied both; as a Writer given the Desktop section, the media bin
+showed No access and could not be ticked, and emptying the content bin was refused by Umbraco and
+said so. Character Map put "é→" on the real clipboard. System Information reported Umbraco
+17.7.0+d64a209, both packages' versions, the theme, the server's report (shown to the Writer too:
+Umbraco does not restrict it) and the machine.
+
+## 8. Known gaps
 
 **Closed: closing a Notepad or Paint window now asks about unsaved work.** The host's close guard
 reads a window's `dirty` flag, which only the iframe dirty watch used to set. The app contract now
@@ -206,7 +262,7 @@ separate package cannot import, so Clock uses the culture's own hour cycle. The 
 question as the one above: the host would have to publish the setting to apps.
 
 
-## 8. What the build taught
+## 9. What the build taught
 
 - **A real backoffice can run on Linux, and it finds what tests do not.** The TestInstance wants
   SQL Server LocalDB and carries Umbraco Engage, which refuses SQLite, so it cannot boot outside
@@ -258,3 +314,14 @@ question as the one above: the host would have to publish the setting to apps.
   file as well, so it loads before the timer starts.
 - **Not every activity event has a `view`.** `input` is a plain `Event`, so the watcher tells which
   window activity came from by which listener fired, one per window, not by reading the event.
+- **`@umbraco-cms/backoffice/sysinfo` cannot be imported in the test runner.** Its repository imports
+  a `package.json` as a module, which the dev server cannot serve, so the whole test file fails to
+  load with "Failed to fetch dynamically imported module" and no other clue. System Information calls
+  the same two server endpoints itself instead. When a test file will not even import, look for a
+  JSON import in what it pulls in.
+- **`localize.termOrDefault` fills `%0%` into a dictionary entry but not into the fallback.** In a
+  test, where no dictionary is registered, "%0% items" renders as that. Disk Cleanup and System
+  Information fill the fallback themselves.
+- **A refusal cut off by an ellipsis is one nobody can act on.** Disk Cleanup's status first sat on
+  one line beside the buttons, and the live run as a Writer showed "You do not have access to empty
+  the conte…". Messages that explain a refusal get room to wrap.

@@ -1,8 +1,11 @@
 import { CALCULATOR_CONTENT_SIZE, CALCULATOR_MIN_CONTENT_SIZE } from './calculator/constants.js';
+import { CHARACTER_MAP_CONTENT_SIZE, CHARACTER_MAP_MIN_CONTENT_SIZE } from './character-map/constants.js';
 import { CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE } from './clock/constants.js';
+import { DISK_CLEANUP_CONTENT_SIZE, DISK_CLEANUP_MIN_CONTENT_SIZE } from './disk-cleanup/constants.js';
 import { NOTEPAD_CONTENT_SIZE, NOTEPAD_MIN_CONTENT_SIZE } from './notepad/constants.js';
 import { SCREENSAVER_WINDOW } from './screensaver/constants.js';
 import { PAINT_CONTENT_SIZE, PAINT_MIN_CONTENT_SIZE } from './paint/constants.js';
+import { SYSTEM_INFO_CONTENT_SIZE, SYSTEM_INFO_MIN_CONTENT_SIZE } from './system-info/constants.js';
 import { STICKY_NOTES_CONTENT_SIZE, STICKY_NOTES_MIN_CONTENT_SIZE } from './sticky-notes/constants.js';
 import { AREA } from './shared/area.js';
 import { manifests as localizationManifests } from './localization/manifest.js';
@@ -59,9 +62,10 @@ function accessory(
 }
 
 /**
- * The accessories, in the order Windows 98's Accessories menu put the ones it had: the two you
- * make something in first, then the two you look something up in. A hundred apart, as Minesweeper
- * leaves room for Solitaire, so a fifth tool lands between two of these without renumbering.
+ * The accessories, in the order Windows 98's Accessories menu put the ones it had: the ones you
+ * make something in first, then the ones you look something up in, then its System Tools. Spaced
+ * apart, as Minesweeper leaves room for Solitaire, so a new tool lands between two of these without
+ * renumbering.
  */
 const apps: Array<UmbExtensionManifest> = [
   accessory(
@@ -91,6 +95,15 @@ const apps: Array<UmbExtensionManifest> = [
     CALCULATOR_CONTENT_SIZE,
     CALCULATOR_MIN_CONTENT_SIZE,
   ),
+  // For writing, like the tools above it: the characters a keyboard does not have.
+  accessory(
+    'CharacterMap',
+    750,
+    'icon-omega',
+    () => import('./character-map/character-map.element.js'),
+    CHARACTER_MAP_CONTENT_SIZE,
+    CHARACTER_MAP_MIN_CONTENT_SIZE,
+  ),
   accessory('Clock', 700, 'icon-time', () => import('./clock/clock.element.js'), CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE),
   // Last, as Windows kept it apart from the tools, under Display. The saver itself runs from the
   // entry point below; this window only chooses and previews it.
@@ -101,6 +114,25 @@ const apps: Array<UmbExtensionManifest> = [
     () => import('./screensaver/screensaver-panel.element.js'),
     SCREENSAVER_WINDOW.content,
     SCREENSAVER_WINDOW.min,
+  ),
+  // Windows 98's System Tools, last: the two that look after the site rather than make anything.
+  // Disk Cleanup empties the recycle bins through Umbraco's own endpoints, so Umbraco decides who
+  // may; System Information reads the endpoints Help > System information reads.
+  accessory(
+    'DiskCleanup',
+    500,
+    'icon-trash-empty',
+    () => import('./disk-cleanup/disk-cleanup.element.js'),
+    DISK_CLEANUP_CONTENT_SIZE,
+    DISK_CLEANUP_MIN_CONTENT_SIZE,
+  ),
+  accessory(
+    'SystemInfo',
+    400,
+    'icon-info',
+    () => import('./system-info/system-info.element.js'),
+    SYSTEM_INFO_CONTENT_SIZE,
+    SYSTEM_INFO_MIN_CONTENT_SIZE,
   ),
 ];
 

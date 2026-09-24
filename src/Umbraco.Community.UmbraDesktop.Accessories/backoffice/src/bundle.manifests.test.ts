@@ -1,10 +1,13 @@
 import { expect } from '@open-wc/testing';
 import { manifests } from './bundle.manifests.js';
 import { CALCULATOR_CONTENT_SIZE, CALCULATOR_MIN_CONTENT_SIZE } from './calculator/constants.js';
+import { CHARACTER_MAP_CONTENT_SIZE, CHARACTER_MAP_MIN_CONTENT_SIZE } from './character-map/constants.js';
 import { CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE } from './clock/constants.js';
+import { DISK_CLEANUP_CONTENT_SIZE, DISK_CLEANUP_MIN_CONTENT_SIZE } from './disk-cleanup/constants.js';
 import { NOTEPAD_CONTENT_SIZE, NOTEPAD_MIN_CONTENT_SIZE } from './notepad/constants.js';
 import { PAINT_CONTENT_SIZE, PAINT_MIN_CONTENT_SIZE } from './paint/constants.js';
 import { SCREENSAVER_WINDOW } from './screensaver/constants.js';
+import { SYSTEM_INFO_CONTENT_SIZE, SYSTEM_INFO_MIN_CONTENT_SIZE } from './system-info/constants.js';
 import { STICKY_NOTES_CONTENT_SIZE, STICKY_NOTES_MIN_CONTENT_SIZE } from './sticky-notes/constants.js';
 import en from './localization/en.js';
 // Loaded here rather than only through the manifest's loader, because it pulls in the backoffice's
@@ -40,8 +43,11 @@ const EXPECTED = [
   ['Paint', PAINT_CONTENT_SIZE, PAINT_MIN_CONTENT_SIZE],
   ['StickyNotes', STICKY_NOTES_CONTENT_SIZE, STICKY_NOTES_MIN_CONTENT_SIZE],
   ['Calculator', CALCULATOR_CONTENT_SIZE, CALCULATOR_MIN_CONTENT_SIZE],
+  ['CharacterMap', CHARACTER_MAP_CONTENT_SIZE, CHARACTER_MAP_MIN_CONTENT_SIZE],
   ['Clock', CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE],
   ['ScreenSaver', SCREENSAVER_WINDOW.content, SCREENSAVER_WINDOW.min],
+  ['DiskCleanup', DISK_CLEANUP_CONTENT_SIZE, DISK_CLEANUP_MIN_CONTENT_SIZE],
+  ['SystemInfo', SYSTEM_INFO_CONTENT_SIZE, SYSTEM_INFO_MIN_CONTENT_SIZE],
 ] as const;
 
 it('registers every accessory, in launcher order', () => {
