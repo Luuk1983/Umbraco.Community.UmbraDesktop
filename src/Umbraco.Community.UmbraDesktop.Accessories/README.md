@@ -23,7 +23,7 @@ Wherever you choose in **Desktop settings > Accessories**: your own machine as a
 
 A save to the media library behaves like dragging the file into the Media section: the extension picks the media type, the folder has to allow it, and you need access to both. A refusal comes back in the backoffice's own words and leaves your work unsaved in the window. Saving the same document again updates the media item it created instead of adding another.
 
-Until it is saved, a Notepad or Paint window's work lasts as long as the window does. New and Open ask before throwing unsaved work away. Closing the window does not ask, because the desktop's close guard can only be told about unsaved changes by a window holding a backoffice page, and these are not.
+Unsaved work is protected the way an unsaved page is: the window shows the unsaved dot, and closing it, or leaving the desktop, asks first. New and Open ask too.
 
 ## Installation
 

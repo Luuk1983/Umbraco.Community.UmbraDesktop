@@ -2,6 +2,7 @@ import { accessoryStyles } from '../shared/styles.js';
 import { AREA } from '../shared/area.js';
 import { downloadBlob } from '../shared/download.js';
 import { announceSave } from '../shared/announce-save.js';
+import { UNSAVED_ATTRIBUTE } from '../shared/unsaved.js';
 import { createMediaSaver } from '../shared/media-save.js';
 import type { MediaSaver } from '../shared/media-save.js';
 import { otherDestination, saveFile } from '../shared/save-file.js';
@@ -120,6 +121,16 @@ export class PaintElement extends UmbLitElement {
   /** Whether anything has been drawn since the picture was last saved or started. */
   #dirty = false;
 
+  /**
+   * Record whether there are unsaved strokes, and tell the desktop with {@link UNSAVED_ATTRIBUTE},
+   * which is what makes the window's close button ask before throwing the picture away.
+   * @param dirty Whether anything is unsaved.
+   */
+  #setDirty(dirty: boolean): void {
+    this.#dirty = dirty;
+    this.toggleAttribute(UNSAVED_ATTRIBUTE, dirty);
+  }
+
   /** The picture. */
   @query('canvas')
   private _canvas!: HTMLCanvasElement;
@@ -166,7 +177,7 @@ export class PaintElement extends UmbLitElement {
     this.#image = context.getImageData(0, 0, PAINT_CANVAS_SIZE.w, PAINT_CANVAS_SIZE.h);
     this.#history = [];
     this._undoDepth = 0;
-    this.#dirty = false;
+    this.#setDirty(false);
     this.#mediaUnique = undefined;
   }
 
@@ -225,7 +236,7 @@ export class PaintElement extends UmbLitElement {
     void announceSave(this, outcome, name);
     if (!outcome.ok) return;
     if (outcome.mediaUnique) this.#mediaUnique = outcome.mediaUnique;
-    this.#dirty = false;
+    this.#setDirty(false);
   }
 
   /**
@@ -272,7 +283,7 @@ export class PaintElement extends UmbLitElement {
     const { x, y } = this.#pointAt(event);
     const colour = this._tool === 'eraser' || event.button === 2 ? this._background : this._foreground;
     this.#remember();
-    this.#dirty = true;
+    this.#setDirty(true);
     if (this._tool === 'fill') {
       floodFill(this.#image, x, y, parseColour(colour));
       this.#paint();
