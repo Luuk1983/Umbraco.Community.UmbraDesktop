@@ -1,7 +1,7 @@
 import { css } from '@umbraco-cms/backoffice/external/lit';
 
 /**
- * The surfaces all four accessories are built from, written once.
+ * The surfaces every accessory is built from, written once.
  *
  * Each app is one custom element in its own window, and they share no state and no shell (the
  * desktop-apps design's §11 is explicit that a shared frame around several apps would make them one

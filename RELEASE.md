@@ -11,7 +11,7 @@ Three packages, from **one tag**, always at the **same version**:
 |---|---|
 | `Umbraco.Community.UmbraDesktop` | The desktop. The product. |
 | `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games add-on. Minesweeper today. |
-| `Umbraco.Community.UmbraDesktop.Accessories` | Optional tools add-on. Notepad, Paint, Calculator and Clock. |
+| `Umbraco.Community.UmbraDesktop.Accessories` | Optional tools add-on. Notepad, Paint, Sticky Notes, Calculator and Clock. The only package besides the host with server-side code (the Sticky Notes API), and the only add-on with a C# test project of its own. |
 
 Lockstep is a decision, not an accident: design D13 in
 [`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md)
@@ -175,11 +175,12 @@ The two are cross-linked with `RelatedPackages` rather than merged with `IsSubPa
 is a separate thing you choose, not a variant of the desktop.
 
 **Listing requires a dependency on an Umbraco package**, and version detection requires one on
-`Umbraco.Cms.*` — direct or **transitive**. Neither add-on has a direct Umbraco dependency at all;
+`Umbraco.Cms.*` — direct or **transitive**. Entertainment has no direct Umbraco dependency at all;
 it reaches `Umbraco.Cms.Core` transitively through the host. That is documented as sufficient but
-has not been observed for these packages yet, so **check each add-on's listing appears and shows
-v17 after its first stable release**. If it does not, a direct `Umbraco.Cms.Core` reference is the
-fix.
+has not been observed for that package yet, so **check its listing appears and shows v17 after its
+first stable release**. If it does not, a direct `Umbraco.Cms.Core` reference is the fix.
+Accessories references `Umbraco.Cms.Api.Management` and `Umbraco.Cms.Api.Common` directly, for its
+Sticky Notes API, so it meets the rule either way.
 
 Note *stable*, not *first publish*: the Marketplace appears to track only stable versions, so a
 package whose only published version is a prerelease has nothing for it to list. `17.1.0-rc.1`

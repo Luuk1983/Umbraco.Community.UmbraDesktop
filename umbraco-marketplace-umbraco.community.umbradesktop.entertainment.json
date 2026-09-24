@@ -39,7 +39,7 @@
     {
       "PackageId": "Umbraco.Community.UmbraDesktop.Accessories",
       "GroupTitle": "Optional add-ons",
-      "Description": "Notepad, Paint, Calculator and Clock for the desktop. Independent of this package: install either, both or neither."
+      "Description": "Notepad, Paint, Sticky Notes, Calculator and Clock for the desktop. Independent of this package: install either, both or neither."
     }
   ],
   "Screenshots": [

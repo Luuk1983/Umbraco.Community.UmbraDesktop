@@ -4,6 +4,7 @@ import { CALCULATOR_CONTENT_SIZE, CALCULATOR_MIN_CONTENT_SIZE } from './calculat
 import { CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE } from './clock/constants.js';
 import { NOTEPAD_CONTENT_SIZE, NOTEPAD_MIN_CONTENT_SIZE } from './notepad/constants.js';
 import { PAINT_CONTENT_SIZE, PAINT_MIN_CONTENT_SIZE } from './paint/constants.js';
+import { STICKY_NOTES_CONTENT_SIZE, STICKY_NOTES_MIN_CONTENT_SIZE } from './sticky-notes/constants.js';
 import en from './localization/en.js';
 
 /**
@@ -33,11 +34,12 @@ const apps = manifests.filter((manifest) => manifest.type === 'umbraDesktopApp')
 const EXPECTED = [
   ['Notepad', NOTEPAD_CONTENT_SIZE, NOTEPAD_MIN_CONTENT_SIZE],
   ['Paint', PAINT_CONTENT_SIZE, PAINT_MIN_CONTENT_SIZE],
+  ['StickyNotes', STICKY_NOTES_CONTENT_SIZE, STICKY_NOTES_MIN_CONTENT_SIZE],
   ['Calculator', CALCULATOR_CONTENT_SIZE, CALCULATOR_MIN_CONTENT_SIZE],
   ['Clock', CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE],
 ] as const;
 
-it('registers the four accessories, in launcher order', () => {
+it('registers every accessory, in launcher order', () => {
   const byWeight = [...apps].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
   expect(byWeight.map((app) => app.alias)).to.deep.equal(
     EXPECTED.map(([name]) => `Umbraco.Community.UmbraDesktop.Accessories.${name}`),

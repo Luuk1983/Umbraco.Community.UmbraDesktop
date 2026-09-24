@@ -82,6 +82,7 @@
     "accessories",
     "notepad",
     "paint",
+    "sticky notes",
     "calculator",
     "language",
     "localization",
@@ -151,7 +152,7 @@
     {
       "PackageId": "Umbraco.Community.UmbraDesktop.Accessories",
       "GroupTitle": "Optional add-ons",
-      "Description": "Notepad, Paint, Calculator and Clock for the desktop. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
+      "Description": "Notepad, Paint, Sticky Notes, Calculator and Clock for the desktop. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
     }
   ]
 }

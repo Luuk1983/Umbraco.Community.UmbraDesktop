@@ -10,8 +10,8 @@
 	  <Product>Umbraco.Community.UmbraDesktop.Accessories</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop.Accessories</PackageId>
 	  <Title>UmbraDesktop Accessories</Title>
-	  <Description>The small tools for UmbraDesktop. An optional add-on that puts Notepad, Paint, Calculator and Clock on the desktop, each in a window of its own and themed along with the rest of it.</Description>
-	  <PackageTags>umbraco;backoffice;desktop;accessories;notepad;paint;calculator;clock;umbradesktop;apps;umbraco-marketplace</PackageTags>
+	  <Description>The small tools for UmbraDesktop. An optional add-on that puts Notepad, Paint, Sticky Notes, Calculator and Clock on the desktop, each in a window of its own and themed along with the rest of it.</Description>
+	  <PackageTags>umbraco;backoffice;desktop;accessories;notepad;paint;sticky-notes;calculator;clock;umbradesktop;apps;umbraco-marketplace</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop.Accessories</RootNamespace>
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>
@@ -110,6 +110,13 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	       exact version built alongside it, which would force an Accessories release for every
 	       host release and break anyone who upgraded the host in between (design D13). -->
 	  <PackageReference Include="Umbraco.Community.UmbraDesktop" />
+	  <!-- The Sticky Notes API (StickyNotes/) is a management API controller, the only server-side
+	       code in this package. Referenced directly rather than reached through the host, because the
+	       host's range resolves to its lowest version for this package's own restore, and 17.0.0 of
+	       the host does not bring Umbraco's management API with it. Same central ranges as the host's
+	       own references, so the two can never ask for different Umbraco versions. -->
+	  <PackageReference Include="Umbraco.Cms.Api.Common" />
+	  <PackageReference Include="Umbraco.Cms.Api.Management" />
 	</ItemGroup>
 
 </Project>

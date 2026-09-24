@@ -8,7 +8,7 @@
 A desktop app is one custom element in a window. You register it with an extension manifest, the
 desktop opens it, themes it and closes it, and your package never depends on anything here beyond
 the manifest type. Minesweeper was the first one, and the Accessories package's Notepad, Paint,
-Calculator and Clock work the same way.
+Sticky Notes, Calculator and Clock work the same way.
 
 ---
 

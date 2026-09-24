@@ -21,7 +21,7 @@ It also does something the backoffice does not do at all. When two people have t
 > and themed along with everything else. Install it if you want it; the desktop is unchanged
 > without it. See [Games](#games).
 >
-> **New: Notepad, Paint, Calculator and Clock.** [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories)
+> **New: Notepad, Paint, Sticky Notes, Calculator and Clock.** [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories)
 > is a second optional add-on that fills the launcher's Accessories group with the small tools
 > Windows kept under Start > Programs > Accessories, each in a window of its own. See
 > [Accessories](#accessories).
@@ -48,7 +48,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Light, dark and high contrast, in the same place. Umbraco's own colour schemes are normally set in the user menu, three clicks from the theme that sits beside them. Appearance now has a row for them too, listing whatever themes the backoffice has registered rather than a fixed three, so a site shipping its own gets it here for free. One setting, two ways in: change it here and the user menu agrees, and the other way round. See [The backoffice's own colours](#the-backoffices-own-colours).
 - Let the wallpaper follow. Turn on one toggle in the theme picker and each theme brings its own background with it, so switching to Windows 98 gives you its bare teal and switching to macOS gives you a sunrise. Off by default, and choosing a wallpaper yourself turns it back off. See [Matching the wallpaper to the theme](#matching-the-wallpaper-to-the-theme).
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
-- Small tools, if you want them. The optional Accessories add-on above puts Notepad, Paint, Calculator and Clock in the launcher, each in a window that follows the theme. Notepad and Paint save to your own machine or straight into the media library, whichever you choose in Desktop settings, with the other always one click away. See [Accessories](#accessories).
+- Small tools, if you want them. The optional Accessories add-on above puts Notepad, Paint, Sticky Notes, Calculator and Clock in the launcher, each in a window that follows the theme. Sticky Notes is one board shared by everyone who uses the desktop. Notepad and Paint save to your own machine or straight into the media library, whichever you choose in Desktop settings, with the other always one click away. See [Accessories](#accessories).
 - Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
 - Install it as an app. The backoffice declares a web app manifest, so your browser can install or pin it. It opens straight on the desktop in its own window, with no address bar and no tabs, and carries your site's own name and icon rather than a generic browser tile. Both are settings, so an agency running ten sites gets ten distinguishable apps. See [Installing the backoffice as an app](#installing-the-backoffice-as-an-app).
@@ -449,7 +449,7 @@ This matters most if you restore databases between environments. The backoffice 
 
 ## Accessories
 
-Notepad, Paint, Calculator and Clock, the small tools Windows kept under Start > Programs > Accessories, each in a window of its own and themed along with the rest of the desktop. Like the games, they ship in their own package:
+Notepad, Paint, Sticky Notes, Calculator and Clock, the small tools Windows kept under Start > Programs > Accessories, each in a window of its own and themed along with the rest of the desktop. Like the games, they ship in their own package:
 
 ```bash
 dotnet add package Umbraco.Community.UmbraDesktop.Accessories
@@ -459,6 +459,7 @@ That is the whole installation. They appear in an Accessories group in the launc
 
 - **Notepad.** A plain-text page with word wrap and the caret's line and column in a status bar. Open reads a text file from your machine, and Save writes it back under the name it was opened with.
 - **Paint.** Pencil, brush, eraser and fill, MS Paint's own twenty-eight colours (left click paints one, right click the other), Undo, and Save as PNG.
+- **Sticky Notes.** One board of notes shared by everyone who uses the desktop, so a note one person writes is on everyone else's screen within about fifteen seconds, or as soon as they click back into the window. Each note says who last wrote it and when. Anyone can edit or delete any note; delete asks first. See [Sticky Notes](#sticky-notes).
 - **Calculator.** The Windows Standard calculator without its scientific row, from the keypad or the keyboard. It works left to right as a pocket calculator does, and shows `0.3` for `0.1 + 0.2`.
 - **Clock.** An analogue face with the time and date under it, in your backoffice language.
 
@@ -469,6 +470,12 @@ To your own machine as a download, or into the media library as a media item: a 
 Saving to the media library works the way dragging a file into the Media section does: the file's extension decides the media type, the folder has to allow that type, and you need access to the Media section and to that folder. If any of that says no, the save is refused with the backoffice's own message and your work stays unsaved in the window. Saving the same document again updates the item it created rather than adding another one.
 
 Unsaved work gets the same protection as an unsaved page: the window shows the unsaved dot, and closing it, or leaving the desktop, asks first. New and Open ask too.
+
+### Sticky Notes
+
+The notes are stored in the Umbraco database, in its key-value store, so they belong to the site: everyone with access to the Desktop section sees the same board, and nobody else can read it, even through the API. A note saves itself shortly after you stop typing. The board has room for 100 notes of up to 2,000 characters each.
+
+When two people edit the same note at once, nobody's words are thrown away. The first save wins; the second person's window keeps their text, says who changed the note meanwhile, and offers **Use theirs** or **Keep mine**. A note that someone deletes while you are writing in it is offered back the same way, with **Put it back** or **Discard**. Until either is settled the window shows the unsaved dot, so closing it asks first.
 
 The add-on is released from the same tag as this package and always carries the same version number, the same arrangement as Entertainment below.
 

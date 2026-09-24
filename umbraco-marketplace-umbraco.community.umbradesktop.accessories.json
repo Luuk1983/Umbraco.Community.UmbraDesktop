@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop Accessories",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "The small tools for UmbraDesktop. An optional add-on that puts Notepad, Paint, Calculator and Clock on the desktop, each in a window of its own and themed along with the rest of it.",
+  "Description": "The small tools for UmbraDesktop. An optional add-on that puts Notepad, Paint, Sticky Notes, Calculator and Clock on the desktop, each in a window of its own and themed along with the rest of it.",
   "PackageType": "Package",
   "LicenseTypes": [
     "Free"
@@ -20,6 +20,8 @@
     "accessories",
     "notepad",
     "paint",
+    "sticky notes",
+    "shared notes",
     "calculator",
     "clock",
     "media library",
