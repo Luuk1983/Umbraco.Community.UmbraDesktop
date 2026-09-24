@@ -355,6 +355,20 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     });
   }
 
+  /**
+   * A registered app said whether it holds unsaved work, through the attribute its host watches.
+   *
+   * The app-window half of what {@link #startDirtyWatch} does for an iframe, and it lands on the
+   * same `setDirty`, which is the point: the titlebar marker, the taskbar marker and the close guard
+   * need no idea which kind of window they are guarding. No subjects to report, since an app's work
+   * is not a document the server can change underneath it.
+   * @param event The host's report.
+   */
+  #onAppDirty = (event: CustomEvent<{ dirty: boolean }>) => {
+    const id = this.window?.id;
+    if (id) this.#manager?.setDirty(id, event.detail.dirty);
+  };
+
   #startDirtyWatch(iframe: HTMLIFrameElement) {
     this.#stopDirtyWatch?.();
     this.#stopDirtyWatch = undefined;
@@ -719,7 +733,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         class="body"
         data-umbradesktop-theme=${this._chromeThemeId || nothing}
         .alias=${w.app.alias}
-        .load=${w.app.content.element}></umbradesktop-app-host>`;
+        .load=${w.app.content.element}
+        @umbradesktop-app-dirty=${this.#onAppDirty}></umbradesktop-app-host>`;
     }
     return html`<iframe class="body" src=${w.app.content.url} @load=${this.#onIframeLoad}></iframe>`;
   }

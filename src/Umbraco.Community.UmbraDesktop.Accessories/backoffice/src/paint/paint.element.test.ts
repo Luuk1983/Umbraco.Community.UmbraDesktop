@@ -199,3 +199,18 @@ it('starts a new media item for a new picture', async () => {
   await until(() => recorded.media.length === 2);
   expect(recorded.media[1][3]).to.equal(undefined);
 });
+
+/** The desktop's published unsaved-work attribute, which its close button asks about. */
+it('marks itself unsaved after a stroke, and clean after a save or a new picture', async () => {
+  const { element, recorded } = await paint();
+  expect(element.hasAttribute('data-umbradesktop-dirty'), 'a blank picture').to.equal(false);
+  await drag(element, [[5, 5]]);
+  expect(element.hasAttribute('data-umbradesktop-dirty'), 'after a stroke').to.equal(true);
+  await click(element, '[data-action="save"]');
+  await until(() => recorded.downloads.length === 1);
+  await element.updateComplete;
+  expect(element.hasAttribute('data-umbradesktop-dirty'), 'after saving').to.equal(false);
+  await drag(element, [[9, 9]]);
+  await click(element, '[data-action="new"]');
+  expect(element.hasAttribute('data-umbradesktop-dirty'), 'after starting again').to.equal(false);
+});

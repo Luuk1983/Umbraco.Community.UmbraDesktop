@@ -140,11 +140,17 @@ it('does not ask again once the work is saved', async () => {
   expect(recorded.confirms).to.equal(0);
 });
 
-it('marks unsaved work', async () => {
+/**
+ * `data-umbradesktop-dirty` is the desktop's published attribute for unsaved work in an app window:
+ * the host watches it and the close button asks before throwing that work away.
+ */
+it('marks unsaved work with the desktop’s own attribute, and clears it on save', async () => {
   const { element } = await notepad();
-  expect(element.hasAttribute('data-dirty')).to.equal(false);
+  expect(element.hasAttribute('data-umbradesktop-dirty')).to.equal(false);
   await write(element, 'draft');
-  expect(element.hasAttribute('data-dirty')).to.equal(true);
+  expect(element.hasAttribute('data-umbradesktop-dirty')).to.equal(true);
+  await click(element, 'save');
+  expect(element.hasAttribute('data-umbradesktop-dirty')).to.equal(false);
 });
 
 it('wraps long lines until word wrap is switched off', async () => {

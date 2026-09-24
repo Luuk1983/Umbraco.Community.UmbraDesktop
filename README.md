@@ -468,7 +468,7 @@ To your own machine as a download, or into the media library as a media item: a 
 
 Saving to the media library works the way dragging a file into the Media section does: the file's extension decides the media type, the folder has to allow that type, and you need access to the Media section and to that folder. If any of that says no, the save is refused with the backoffice's own message and your work stays unsaved in the window. Saving the same document again updates the item it created rather than adding another one.
 
-Until it is saved, a Notepad or Paint window's work lasts as long as the window does. New and Open ask before throwing unsaved work away, but closing the window does not, because the desktop can only ask that question of a window holding a backoffice page.
+Unsaved work gets the same protection as an unsaved page: the window shows the unsaved dot, and closing it, or leaving the desktop, asks first. New and Open ask too.
 
 The add-on is released from the same tag as this package and always carries the same version number, the same arrangement as Entertainment below.
 

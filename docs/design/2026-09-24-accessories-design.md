@@ -83,13 +83,14 @@ a folder, and a second save of the same document, which is the overwrite.
 
 ## 5. Known gaps
 
-**Closing a Notepad or Paint window does not ask about unsaved work.** The host's close guard
-(`window-manager.context.ts`, `confirmDiscard`) reads a window's `dirty` flag, and only the iframe
-chrome injector sets it. An app element has no way to report it, because the manifest contract has
-no such channel. New and Open ask (with Umbraco's own `UMB_DISCARD_CHANGES_MODAL`, the same wording
-a workspace uses), but the titlebar's close button does not. Fixing it means adding a way for an app
-element to tell the host it is dirty, for example a documented event or attribute, which is a
-change to the public app contract and belongs in its own design rather than in this package.
+**Closed: closing a Notepad or Paint window now asks about unsaved work.** The host's close guard
+reads a window's `dirty` flag, which only the iframe dirty watch used to set. The app contract now
+has a channel for it: an app puts `data-umbradesktop-dirty` on its own element while it holds
+unsaved work, `<umbradesktop-app-host>` watches that one attribute with a `MutationObserver`, and
+the window passes it to the same `setDirty` the iframe path uses. So the titlebar marker, the
+taskbar marker, the close guard and the leave-the-desktop prompt all cover app windows with no
+app-specific code in any of them. An attribute rather than an event, because it needs nothing
+imported from the host and can be read at any moment. Documented in `docs/desktop-apps.md` §7.
 
 **Clock does not follow the desktop's 12/24-hour setting.** That setting lives in a host context a
 separate package cannot import, so Clock uses the culture's own hour cycle. The same contract

@@ -2,6 +2,7 @@ import { accessoryStyles } from '../shared/styles.js';
 import { AREA } from '../shared/area.js';
 import { downloadBlob } from '../shared/download.js';
 import { announceSave } from '../shared/announce-save.js';
+import { UNSAVED_ATTRIBUTE } from '../shared/unsaved.js';
 import { createMediaSaver } from '../shared/media-save.js';
 import type { MediaSaver } from '../shared/media-save.js';
 import { otherDestination, saveFile } from '../shared/save-file.js';
@@ -26,10 +27,8 @@ import { UMB_DISCARD_CHANGES_MODAL, umbOpenModal } from '@umbraco-cms/backoffice
  * is saved, a Notepad window's text lives only as long as the window does, the same as a note in a
  * real Notepad.
  *
- * That last part has one sharp edge, and it is the host's rather than this app's: the desktop's
- * close guard asks before closing a window with unsaved changes, but only an iframe window can tell
- * it that it has any. An app window has no way to report it, so closing a Notepad window over
- * unsaved text closes it. New and Open, which are this app's own, do ask.
+ * Unsaved text is reported to the desktop with {@link UNSAVED_ATTRIBUTE}, so the window shows the
+ * unsaved marker and its close button asks first. New and Open, which are this app's own, ask too.
  */
 @customElement('umbradesktop-notepad')
 export class NotepadElement extends UmbLitElement {
@@ -127,11 +126,11 @@ export class NotepadElement extends UmbLitElement {
   }
 
   /**
-   * Mirror the unsaved state onto the host as `data-dirty`, where a stylesheet or a test can see it
-   * without reaching into the shadow root.
+   * Mirror the unsaved state onto the host as the desktop's unsaved-work attribute, which is what
+   * makes the window's close button ask before throwing the text away.
    */
   override updated(): void {
-    this.toggleAttribute('data-dirty', this.dirty);
+    this.toggleAttribute(UNSAVED_ATTRIBUTE, this.dirty);
   }
 
   /**

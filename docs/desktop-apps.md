@@ -562,6 +562,22 @@ Teardown is the browser's own. `disconnectedCallback` is the whole contract: can
 `requestAnimationFrame` there, clear your intervals, drop your listeners. There is no desktop signal
 to subscribe to and none is needed.
 
+**Tell the desktop about unsaved work with one attribute.** While your app holds work that closing
+the window would lose, put `data-umbradesktop-dirty` on your own element, and take it off once the
+work is saved or discarded:
+
+```ts
+this.toggleAttribute('data-umbradesktop-dirty', this.hasUnsavedWork);
+```
+
+That is the whole contract, and it buys everything a backoffice page gets: the unsaved dot on the
+titlebar and the taskbar button, a question before the close button throws the work away, and a
+count in the prompt before someone leaves the desktop. Presence is what counts, and the value is
+ignored. Write it wherever your state changes (Lit's `updated()` is a good place), and never set it
+for state that is not lost on close, such as a game in progress: a question nobody needed trains
+people to click through the one that matters. Notepad and Paint in the Accessories package are the
+worked examples.
+
 **There is no reload or restart control on an app window.** The titlebar draws three buttons —
 minimize, maximize, close — where an iframe window draws four. Reload exists for the iframe kind
 because re-fetching a booting backoffice in place, with the window keeping the route the user
@@ -703,6 +719,8 @@ booting second backoffice inside an iframe and there is not one here. Your eleme
 - [ ] Your `alias` is namespaced and final: it is what pins a favourite
 - [ ] `meta.label` is a localisation token and your package ships the dictionary for it
 - [ ] `disconnectedCallback` cancels every timer, frame and listener your app started
+- [ ] If closing your window can lose work, your element carries `data-umbradesktop-dirty` while it
+      would (§7), and only then
 - [ ] Minimizing your window and restoring it leaves your app's state intact
 - [ ] Switching theme mid-use recolours your app without resetting it
 - [ ] `meta.defaultSize` and `meta.minSize` are **your content box** with no titlebar allowance
