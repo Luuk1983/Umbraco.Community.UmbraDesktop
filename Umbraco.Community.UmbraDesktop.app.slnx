@@ -5,6 +5,7 @@
     <File Path="RELEASE.md" />
     <File Path="umbraco-marketplace-umbraco.community.umbradesktop.json" />
     <File Path="umbraco-marketplace-umbraco.community.umbradesktop.entertainment.json" />
+    <File Path="umbraco-marketplace-umbraco.community.umbradesktop.accessories.json" />
   </Folder>
   <Folder Name="/Solution files/.github/">
     <File Path=".github/copilot-instructions.md" />
@@ -13,4 +14,5 @@
   <Project Path="src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj" />
   <Project Path="src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj" />
   <Project Path="src/Umbraco.Community.UmbraDesktop.Entertainment/Umbraco.Community.UmbraDesktop.Entertainment.csproj" />
+  <Project Path="src/Umbraco.Community.UmbraDesktop.Accessories/Umbraco.Community.UmbraDesktop.Accessories.csproj" />
 </Solution>

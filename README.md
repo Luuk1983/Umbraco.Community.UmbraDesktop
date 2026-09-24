@@ -20,6 +20,11 @@ It also does something the backoffice does not do at all. When two people have t
 > is an optional add-on that puts Minesweeper and Snake in the launcher's Games group, each in a window of its own
 > and themed along with everything else. Install it if you want it; the desktop is unchanged
 > without it. See [Games](#games).
+>
+> **New: Notepad, Paint, Calculator and Clock.** [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories)
+> is a second optional add-on that fills the launcher's Accessories group with the small tools
+> Windows kept under Start > Programs > Accessories, each in a window of its own. See
+> [Accessories](#accessories).
 
 ## Features
 
@@ -30,7 +35,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Never loses your work. A window holding unsaved changes shows a dot in its title bar and on its taskbar button, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
 - Warns before you overwrite someone. If somebody else saves or bins a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. Deletion is warned about even when you have nothing unsaved, because there is no version left to refresh to. The plain backoffice does not warn about this at all.
 - See the page while you edit it. Press Preview in a document window's path and the rendered page opens beside the editor, inside the same window, and reloads every time you save. It works for headless sites too, using the same preview URL as Save and preview. Pop it out into a window of its own and it stays grouped with its document on the taskbar. See [Live preview](#live-preview).
-- A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus any heading a package brings along, such as the Entertainment add-on's Games. Empty groups never show.
+- A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus any heading a package brings along, such as the Accessories add-on's Accessories and the Entertainment add-on's Games. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are stored on your Umbraco account, so they follow you to any browser you sign in on.
@@ -47,6 +52,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Your desk follows you. Wallpaper, theme, pins, taskbar switches and language are stored on your Umbraco account rather than in one browser, so signing in from another machine, another browser or a private window gives you the desktop you set up, and clearing site data does not lose it. Settings you already had are moved across once, the first time you open the desktop after updating, behind a screen that tells you it is happening rather than doing it behind your back. See [Your settings follow you](#your-settings-follow-you).
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
 - Tiles your packages bring themselves. A package with backoffice screens of its own can give them proper tiles, the right window and a heading of its own in the launcher, from its own release. A package that reuses the alias of the desktop's own tile for them replaces it, pins included, so the package that owns the screens decides how they open. See [Custom and third-party apps](#custom-and-third-party-apps).
+- Small tools, if you want them. The optional Accessories add-on above puts Notepad, Paint, Calculator and Clock in the launcher, each in a window that follows the theme. Text and pictures are opened from and saved to your own machine, never the server. See [Accessories](#accessories).
 - Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
 - Install it as an app. The backoffice declares a web app manifest, so your browser can install or pin it. It opens straight on the desktop in its own window, with no address bar and no tabs, and carries your site's own name and icon rather than a generic browser tile. Both are settings, so an agency running ten sites gets ten distinguishable apps. See [Installing the backoffice as an app](#installing-the-backoffice-as-an-app).
@@ -564,6 +570,25 @@ It is white with a dark edge around the letters, so it reads on any wallpaper, d
 
 If you copy databases between environments, set the name in configuration. The switches, and a name set in the backoffice, live in the database, so a copy carries them along: copy staging to production and production says Staging. `AppName` in `appsettings.json` stays with each environment, as [Setting them from configuration instead](#setting-them-from-configuration-instead) describes. The domain line cannot be wrong, because it comes from the browser.
 
+## Accessories
+
+Notepad, Paint, Calculator and Clock, the small tools Windows kept under Start > Programs > Accessories, each in a window of its own and themed along with the rest of the desktop. Like the games, they ship in their own package:
+
+```bash
+dotnet add package Umbraco.Community.UmbraDesktop.Accessories
+```
+
+That is the whole installation. They appear in an Accessories group in the launcher for anyone who can already reach the desktop, and the group is not there at all if the package is not installed.
+
+- **Notepad.** A plain-text page with word wrap and the caret's line and column in a status bar. Open reads a text file from your machine and Save downloads the page back to it, under the name it was opened with.
+- **Paint.** Pencil, brush, eraser and fill, MS Paint's own twenty-eight colours (left click paints one, right click the other), Undo, and Save as PNG.
+- **Calculator.** The Windows Standard calculator without its scientific row, from the keypad or the keyboard. It works left to right as a pocket calculator does, and shows `0.3` for `0.1 + 0.2`.
+- **Clock.** An analogue face with the time and date under it, in your backoffice language.
+
+Nothing is stored in Umbraco and nothing is uploaded: Open uses your browser's file picker and Save is a download. That also means a Notepad or Paint window's work lasts as long as the window does. New and Open ask before throwing unsaved work away, but closing the window does not, because the desktop can only ask that question of a window holding a backoffice page.
+
+The add-on is released from the same tag as this package and always carries the same version number, the same arrangement as Entertainment below.
+
 ## Games
 
 Minesweeper and Snake, each in a window, under whichever theme you picked. They ship in their own package rather than this one, because a desktop and a minesweeper are not the same product and nobody should have to take the second to get the first:
@@ -691,7 +716,7 @@ If your package registers a section, it appears in the launcher automatically fo
 
 Beyond that there are two paths, and which one you take depends on what your app points at rather than on who wrote it.
 
-**A self-contained app you register yourself.** If your app is its own custom element, with no backoffice route behind it, register a `umbraDesktopApp` extension manifest and you are done. It gets a launcher tile, a group, a window, pinning, a taskbar button and the active theme's colours, and your package never talks to this repository. There is nothing for anyone here to verify: an element in a box cannot point at the wrong URL or pick the wrong chrome profile. This is how games and small tools get onto the desktop. [`docs/desktop-apps.md`](docs/desktop-apps.md) is the guide.
+**A self-contained app you register yourself.** If your app is its own custom element, with no backoffice route behind it, register a `umbraDesktopApp` extension manifest and you are done. It gets a launcher tile, a group, a window, pinning, a taskbar button and the active theme's colours, and your package never talks to this repository. There is nothing for anyone here to verify: an element in a box cannot point at the wrong URL or pick the wrong chrome profile. This is how games and small tools get onto the desktop, and the Accessories and Entertainment add-ons are two worked examples. [`docs/desktop-apps.md`](docs/desktop-apps.md) is the guide.
 
 **Tiles for your own backoffice screens.** If your app *is* a backoffice page, a section, dashboard or workspace your package registers, register a `umbraDesktopCatalogue` manifest with an entry for it: a name, an icon, a group, a chrome profile and window sizing, resolved exactly like the desktop's own entries. The same manifest can define launcher groups of your own. It ships with your package, so nothing waits on a release of this one. If the desktop already has an entry for your screens, reuse its alias and yours is used instead, pins included. [`docs/package-catalogues.md`](docs/package-catalogues.md) is the guide.
 

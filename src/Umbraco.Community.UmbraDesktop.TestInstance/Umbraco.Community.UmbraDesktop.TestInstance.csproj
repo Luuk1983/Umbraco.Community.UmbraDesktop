@@ -33,7 +33,8 @@
     <PackageReference Include="Umbraco.AI.Anthropic" />
     <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />
     <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Entertainment\Umbraco.Community.UmbraDesktop.Entertainment.csproj" />
-    <!-- The Entertainment project depends on the host by version range rather than by project
+    <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Accessories\Umbraco.Community.UmbraDesktop.Accessories.csproj" />
+    <!-- The Entertainment and Accessories projects depend on the host by version range rather than by project
          (design D13), so restore pulls the published host package in behind it. Here the host is
          also a ProjectReference, and two copies of the same App_Plugins assets make the static web
          assets manifest fail with "Sequence contains more than one element". Excluding the

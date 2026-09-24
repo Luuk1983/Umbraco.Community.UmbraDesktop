@@ -7,8 +7,8 @@
 
 A desktop app is one custom element in a window. You register it with an extension manifest, the
 desktop opens it, themes it and closes it, and your package never depends on anything here beyond
-the manifest type. Minesweeper was the first one and Snake the second, both in the Entertainment package; a
-calculator, a colour picker or a notepad would work the same way.
+the manifest type. Minesweeper was the first one and Snake the second, both in the Entertainment
+package, and the Accessories package's Notepad, Paint, Calculator and Clock work the same way.
 
 ---
 
@@ -473,6 +473,10 @@ catalogue. The Entertainment add-on does exactly that for Games, so its games an
 together and the desktop knows nothing about either. An app naming a group nobody defines lands in
 the reserved More group, which is honest rather than a failure. [package-catalogues.md](package-catalogues.md)
 §4 lists the desktop's groups and their weights, for placing one of your own among them.
+
+The Accessories add-on does the same for its Accessories group, at 55: after System and just before
+Games, which is where Windows put Start > Programs > Accessories. A tool of your own may name
+`accessories` too, and lands under More wherever that package is not installed.
 
 Most of the launcher then works on your app for nothing. Its tile and its taskbar button come from
 being in the app list at all. Pinning does key off `alias`, which is why §2 makes such a point of

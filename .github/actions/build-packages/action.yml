@@ -1,6 +1,6 @@
 name: Build UmbraDesktop packages
 description: >
-  Restores, tests, builds and packs both shipped packages, then proves each one actually contains
+  Restores, tests, builds and packs every shipped package, then proves each one actually contains
   its frontend. The single definition of "what ships and how", shared by CI and by the release.
 
 inputs:
@@ -17,9 +17,9 @@ runs:
       with:
         dotnet-version: '10.0.x'
 
-    # cache-dependency-path has to name both lock files: with one package.json per shipped
+    # cache-dependency-path has to name every lock file: with one package.json per shipped
     # package, the default single-file lookup would key the cache on the host alone and hand the
-    # add-on a cache that has nothing to do with it.
+    # add-ons a cache that has nothing to do with them.
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -28,9 +28,10 @@ runs:
         cache-dependency-path: |
           src/Umbraco.Community.UmbraDesktop/package-lock.json
           src/Umbraco.Community.UmbraDesktop.Entertainment/package-lock.json
+          src/Umbraco.Community.UmbraDesktop.Accessories/package-lock.json
 
     # Safe to key on the lock files because RestorePackagesWithLockFile is on repo-wide
-    # (src/Directory.Build.props), so every packages.lock.json is committed and exact. The three
+    # (src/Directory.Build.props), so every packages.lock.json is committed and exact. They
     # are named rather than globbed: a `**` glob would pull in the test instance's lock file, and
     # its floating "17.*" dependencies would then throw this cache away for a change to a project
     # that contributes nothing to either package.
@@ -38,7 +39,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: nuget-${{ runner.os }}-${{ hashFiles('src/Umbraco.Community.UmbraDesktop/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Entertainment/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Tests/packages.lock.json') }}
+        key: nuget-${{ runner.os }}-${{ hashFiles('src/Umbraco.Community.UmbraDesktop/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Entertainment/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Tests/packages.lock.json') }}
         restore-keys: nuget-${{ runner.os }}-
 
     # Per project rather than by solution, and deliberately. The solution also holds the test
@@ -53,18 +54,21 @@ runs:
         dotnet restore src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Entertainment/Umbraco.Community.UmbraDesktop.Entertainment.csproj
+        dotnet restore src/Umbraco.Community.UmbraDesktop.Accessories/Umbraco.Community.UmbraDesktop.Accessories.csproj
 
     - name: Install frontend dependencies
       shell: bash
       run: |
         (cd src/Umbraco.Community.UmbraDesktop && npm ci)
         (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm ci)
+        (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm ci)
 
     - name: Test frontend
       shell: bash
       run: |
         (cd src/Umbraco.Community.UmbraDesktop && npm test)
         (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm test)
+        (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm test)
 
     # Must run before dotnet build/pack: wwwroot/App_Plugins is gitignored, so a clean checkout
     # would otherwise pack a package with no frontend in it at all.
@@ -73,12 +77,14 @@ runs:
       run: |
         (cd src/Umbraco.Community.UmbraDesktop && npm run build)
         (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm run build)
+        (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm run build)
 
     - name: Build
       shell: bash
       run: |
         dotnet build src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-restore
         dotnet build src/Umbraco.Community.UmbraDesktop.Entertainment/ --configuration Release --no-restore
+        dotnet build src/Umbraco.Community.UmbraDesktop.Accessories/ --configuration Release --no-restore
 
     # Named by project file, never by directory or solution: a path that matches no project makes
     # `dotnet test` report success while running nothing.
@@ -86,7 +92,7 @@ runs:
       shell: bash
       run: dotnet test src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj --configuration Release --no-restore
 
-    # Both packages, every release, changed or not: they share a version off one tag, and matching
+    # Every package, every release, changed or not: they share a version off one tag, and matching
     # versions are the compatibility answer instead of a matrix somebody has to maintain
     # (design D13, docs/design/2026-09-06-desktop-apps-design.md §8.3).
     - name: Pack
@@ -94,6 +100,7 @@ runs:
       run: |
         dotnet pack src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-build --output "${{ inputs.output }}"
         dotnet pack src/Umbraco.Community.UmbraDesktop.Entertainment/ --configuration Release --no-build --output "${{ inputs.output }}"
+        dotnet pack src/Umbraco.Community.UmbraDesktop.Accessories/ --configuration Release --no-build --output "${{ inputs.output }}"
 
     # A package that installs cleanly and does nothing is this repository's worst failure mode, and
     # it looks identical to success everywhere else. In the release workflow this is also the last
