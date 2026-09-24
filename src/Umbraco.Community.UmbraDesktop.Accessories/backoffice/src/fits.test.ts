@@ -4,6 +4,7 @@ import './calculator/calculator.element.js';
 import './clock/clock.element.js';
 import './notepad/notepad.element.js';
 import './paint/paint.element.js';
+import './sticky-notes/sticky-notes.element.js';
 
 /**
  * Every app, measured in a real browser at both sizes its manifest declares, under every theme id
@@ -27,6 +28,7 @@ const TAGS: Record<string, string> = {
   Paint: 'umbradesktop-paint',
   Calculator: 'umbradesktop-calculator',
   Clock: 'umbradesktop-clock',
+  StickyNotes: 'umbradesktop-sticky-notes',
 };
 
 /** The published theme ids (`docs/desktop-apps.md` §5), plus no theme at all. */

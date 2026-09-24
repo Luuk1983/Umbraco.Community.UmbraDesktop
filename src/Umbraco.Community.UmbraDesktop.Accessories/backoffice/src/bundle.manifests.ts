@@ -2,6 +2,7 @@ import { CALCULATOR_CONTENT_SIZE, CALCULATOR_MIN_CONTENT_SIZE } from './calculat
 import { CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE } from './clock/constants.js';
 import { NOTEPAD_CONTENT_SIZE, NOTEPAD_MIN_CONTENT_SIZE } from './notepad/constants.js';
 import { PAINT_CONTENT_SIZE, PAINT_MIN_CONTENT_SIZE } from './paint/constants.js';
+import { STICKY_NOTES_CONTENT_SIZE, STICKY_NOTES_MIN_CONTENT_SIZE } from './sticky-notes/constants.js';
 import { AREA } from './shared/area.js';
 import { manifests as localizationManifests } from './localization/manifest.js';
 
@@ -57,7 +58,7 @@ function accessory(
 }
 
 /**
- * The four accessories, in the order Windows 98's Accessories menu put the ones it had: the two you
+ * The accessories, in the order Windows 98's Accessories menu put the ones it had: the two you
  * make something in first, then the two you look something up in. A hundred apart, as Minesweeper
  * leaves room for Solitaire, so a fifth tool lands between two of these without renumbering.
  */
@@ -71,6 +72,16 @@ const apps: Array<UmbExtensionManifest> = [
     NOTEPAD_MIN_CONTENT_SIZE,
   ),
   accessory('Paint', 900, 'icon-palette', () => import('./paint/paint.element.js'), PAINT_CONTENT_SIZE, PAINT_MIN_CONTENT_SIZE),
+  // After the two you make something in, before the two you look something up in: a note is
+  // something you write. The only app here with a server behind it (StickyNotes/ in this package).
+  accessory(
+    'StickyNotes',
+    850,
+    'icon-post-it',
+    () => import('./sticky-notes/sticky-notes.element.js'),
+    STICKY_NOTES_CONTENT_SIZE,
+    STICKY_NOTES_MIN_CONTENT_SIZE,
+  ),
   accessory(
     'Calculator',
     800,

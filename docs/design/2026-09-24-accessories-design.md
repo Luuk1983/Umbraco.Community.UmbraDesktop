@@ -1,4 +1,4 @@
-# Accessories: Notepad, Paint, Calculator and Clock
+# Accessories: Notepad, Paint, Sticky Notes, Calculator and Clock
 
 > A third package, `Umbraco.Community.UmbraDesktop.Accessories`, built exactly as Entertainment is,
 > holding the small tools Windows kept under Start > Programs > Accessories. It uses nothing but the
@@ -32,7 +32,7 @@ a tool is closer to what an editor came for than a game is.
 
 Dutch is "Bureau-accessoires", the name the Dutch Windows 95 and 98 used.
 
-## 3. The four apps
+## 3. The apps
 
 Each is one custom element, as the seam requires, with its rules in a pure module beside it so they
 test without a DOM, and its sizes derived in its own `constants.ts` so the manifest can read them
@@ -44,6 +44,7 @@ ordinary reuse rather than that.
 |---|---|---|
 | Notepad | `text.ts`: caret line/column, save name | Open uses the browser's file picker. Save goes to a download or the media library, per §4, with no C# surface either way. An opened file saves back under its own name. |
 | Paint | `raster.ts`: Bresenham lines, square stamps, scanline flood fill | Pixels are set directly rather than stroked by the canvas, because canvas strokes are antialiased and a fill that stops at "not the clicked colour" then leaves a halo round every line. MS Paint never antialiased, which is why its bucket worked. The paper stays white under every theme: it is the document, not the chrome. |
+| Sticky Notes | `board.ts`: folding the server's board into the window's copy | The only app with a server behind it; see §5. |
 | Calculator | `engine.ts`: an immutable state machine | Immediate execution, as the Windows calculator does in Standard mode, not precedence. Results are rounded to 15 significant digits, which removes the float noise (`0.1 + 0.2` shows `0.3`) and nothing a person typed. Percent is "of the running total" after an operator, as in Windows. |
 | Clock | `hands.ts`: hand angles, time to the next second | Ticks on the real second boundary rather than a free-running 1000ms interval, so it turns over with the taskbar clock. Time and date go through `this.localize.date`, so they follow the backoffice culture. |
 
@@ -76,12 +77,62 @@ exports, so `shared/media-save.ts` repeats its steps with the public pieces it i
 save of the same document overwrites the item it created (a temporary file, `umbracoFile` pointed at
 it, and a save) unless that item is gone or trashed, in which case it creates a new one.
 
-**Not verified against a running Umbraco.** Everything above the media repositories is tested with
-a fake saver; the saver itself calls real backoffice classes that need a booted backoffice and a
-server, and this was built where neither was available. The two paths to try first are a create in
-a folder, and a second save of the same document, which is the overwrite.
+**Verified against a running Umbraco 17.7** (see §7 for how): Notepad's first save created
+`Untitled.txt` as a File, a second save updated that item (one item, and its file read back with
+the new text), and Paint's save created `Untitled.png` as an Image, with the backoffice's own
+"Saved to the media library" notification.
 
-## 5. Known gaps
+## 5. Sticky Notes: one board for everyone
+
+Sticky Notes is the one app here with a server behind it, and the package's first C#. Decided with
+the repository owner: one shared board, no private notes, anyone may edit or delete any note, and
+changes reach other people within about fifteen seconds rather than instantly.
+
+- **Storage:** one JSON document in Umbraco's key-value store (`StickyNotes/StickyNoteStore.cs`),
+  as the host keeps its connections. No table, no migration, and it travels with a database backup.
+  Capped at 100 notes of 2,000 characters, so the row stays small; the caps are sent with the board,
+  so the window never holds a copy of either number.
+- **API:** `StickyNotesController`, a management API controller under
+  `umbradesktop/accessories/sticky-notes`. Any backoffice user reaches the route, and every action
+  checks the Desktop section itself, because Umbraco has no policy for a package's own section;
+  without that check any backoffice account could read the board.
+- **No lost updates.** Every note has a version. An edit names the version it was made against, and
+  one against an older version is refused with 409 and the note as it now stands. The window keeps
+  its own text on screen and offers "Use theirs" or "Keep mine". A note deleted elsewhere while it
+  had unsaved text here is offered back ("Put it back" or "Discard"). While either is unsettled, and
+  while text is waiting to save, the window carries `data-umbradesktop-dirty`, so closing asks.
+- **Refresh:** every fifteen seconds, and whenever the window is focused or clicked, skipping one
+  within three seconds of the last. A refresh never overwrites text somebody is still typing; the
+  rules for folding the server's board into the window's copy are `board.ts`, and are tested.
+- **Load-balanced sites:** the store's write lock is per process, so two servers can race on the
+  same row and the later write wins that race. The version check still catches the common case.
+- **C# tests** are a project of their own, `Umbraco.Community.UmbraDesktop.Accessories.Tests`,
+  referencing only the add-on so they run against the host as a consumer gets it. CI runs them in
+  the shared build action beside the host's.
+
+Running it for real, with two users in two browser sessions (§7), found three bugs every test had
+passed:
+
+1. **The backoffice's HTTP client throws on an error status.** Its types describe an `{ error }`
+   result; a running backoffice rejects the call instead. The window read a 409 as a thrown error
+   and never showed the conflict choice. `api.ts` now catches, and `api.test.ts` stubs the client to
+   throw, as the real one does.
+2. **It also replaces any error body that is not problem details.** A 409 carrying the bare note
+   reached the window as `{ status: 409, title: "Conflict" }`, the other person's text gone. The
+   409 is now problem details with the note in a `note` extension. Any management API in this
+   repository that returns data on an error status needs the same shape.
+3. **Clicking a window does not focus it.** The refresh listened for `focusin`, and clicking a
+   window's background or a byline moves no focus, so the second person never saw the first's note
+   until they clicked into a text box. It now refreshes on `pointerdown` too.
+
+And one layout bug, fixed on the third attempt: a note with the conflict panel spilled over the row
+below. `grid-auto-rows: minmax(170px, auto)` only grows into spare space, which a small window has
+none of; `auto` with a `min-height` on the note takes the `min-height` as the row's minimum instead
+of the content; and the note's footer shrank to 5px as a flex item besides. What works is
+`grid-auto-rows: min-content`, a `min-height` on the note, and `flex-shrink: 0` on everything in it
+but the text.
+
+## 6. Known gaps
 
 **Closed: closing a Notepad or Paint window now asks about unsaved work.** The host's close guard
 reads a window's `dirty` flag, which only the iframe dirty watch used to set. The app contract now
@@ -96,11 +147,21 @@ imported from the host and can be read at any moment. Documented in `docs/deskto
 separate package cannot import, so Clock uses the culture's own hour cycle. The same contract
 question as the one above: the host would have to publish the setting to apps.
 
-**`packages.lock.json` was not generated for this project** in the session that created it, because
-no .NET SDK could be installed there. `RestorePackagesWithLockFile` is on repo-wide, so the first
-`dotnet restore` writes it. Commit it then, as the other two projects' are.
 
-## 6. What the build taught
+## 7. What the build taught
+
+- **A real backoffice can run on Linux, and it finds what tests do not.** The TestInstance wants
+  SQL Server LocalDB and carries Umbraco Engage, which refuses SQLite, so it cannot boot outside
+  Windows. A throwaway site in a scratch folder can: a `Microsoft.NET.Sdk.Web` project with
+  `Umbraco.Cms` (same version as the TestInstance), `ProjectReference`s to the host and the add-on,
+  the host package with `ExcludeAssets="all"` as in the TestInstance, the TestInstance's
+  `Program.cs` minus `UseHttpsRedirection`, and an `appsettings.json` with a SQLite connection
+  string (`Microsoft.Data.Sqlite`) and an unattended install. Drive it with `puppeteer-core` from
+  any package's `node_modules`, pointed at the preinstalled Chromium with `--no-sandbox`. Two
+  things to know: the unattended admin does not have the Desktop section (grant it through the
+  user-group API), and rebuilding a frontend renames its hashed chunks, so the site must be rebuilt
+  and restarted too or the app window fails to load. In a cloud container the .NET SDK comes from
+  Ubuntu's archive (`apt-get update && apt-get install dotnet-sdk-10.0`) when dot.net is blocked.
 
 - **Measure every app at its declared sizes, under every theme id.** `fits.test.ts` mounts each
   one in a box exactly its `defaultSize` and its `minSize` and asserts nothing overflows. Its first
