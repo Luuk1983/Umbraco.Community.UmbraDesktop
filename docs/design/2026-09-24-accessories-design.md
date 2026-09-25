@@ -276,9 +276,12 @@ taskbar marker, the close guard and the leave-the-desktop prompt all cover app w
 app-specific code in any of them. An attribute rather than an event, because it needs nothing
 imported from the host and can be read at any moment. Documented in `docs/desktop-apps.md` §7.
 
-**Clock does not follow the desktop's 12/24-hour setting.** That setting lives in a host context a
-separate package cannot import, so Clock uses the culture's own hour cycle. The same contract
-question as the one above: the host would have to publish the setting to apps.
+**Closed: Clock follows the desktop's regional format and 12/24-hour setting.** The host now
+publishes them: its settings context has a public `formatDateTime(date, options)` with the taskbar
+clock's rules, and a `locale` observable that emits when either setting changes, both documented
+with the context's alias in `docs/desktop-apps.md` §7.1. Clock declares that shape and a token with
+the same alias (nothing is imported from the host), formats its time and date through it, and falls
+back to `this.localize.date` where there is no desktop around it, as in its own tests.
 
 
 ## 9. What the build taught
@@ -295,6 +298,13 @@ question as the one above: the host would have to publish the setting to apps.
   user-group API), and rebuilding a frontend renames its hashed chunks, so the site must be rebuilt
   and restarted too or the app window fails to load. In a cloud container the .NET SDK comes from
   Ubuntu's archive (`apt-get update && apt-get install dotnet-sdk-10.0`) when dot.net is blocked.
+
+- **Run the web tests one file at a time.** Concurrently, web-test-runner puts files in background
+  tabs, where Chrome runs no animation frames and throttles timers. `fits.test.ts` waits on a frame,
+  so with the default concurrency it never finished, the run hung past any `testsFinishTimeout`,
+  and its 108 cases had quietly not been running while the rest reported green. The config sets
+  `concurrency: 1`, and the whole suite takes about 25 seconds. The same trap caught a test built
+  with open-wc's `fixture()` on a plain `div`, which waits for a frame when the element is not Lit.
 
 - **Measure every app at its declared sizes, under every theme id.** `fits.test.ts` mounts each
   one in a box exactly its `defaultSize` and its `minSize` and asserts nothing overflows. Its first
