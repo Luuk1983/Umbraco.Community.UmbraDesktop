@@ -292,21 +292,27 @@ it('shows a pending state while the loader is in flight', async () => {
  * @returns Whatever `run` resolved to, once the real `setTimeout` is back in place.
  */
 async function withCollapsedLoadTimeout<T>(run: () => Promise<T>): Promise<T> {
-  const realSetTimeout = window.setTimeout;
+  // Typed here rather than taken from `window.setTimeout`'s declaration, which is the browser's
+  // until a test imports something that brings Node's types in (web-test-runner's commands do),
+  // and then is Node's, returning a Timeout: the stand-in below has to type-check under both.
+  type BrowserSetTimeout = (handler: TimerHandler, delay?: number, ...args: unknown[]) => number;
+  const original = window.setTimeout;
+  const realSetTimeout = original.bind(window) as unknown as BrowserSetTimeout;
   let scheduled = false;
-  window.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
+  const standIn: BrowserSetTimeout = (handler, delay, ...args) => {
     if (delay === UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS) {
       scheduled = true;
       delay = 0;
     }
-    return realSetTimeout.call(window, handler, delay, ...args);
-  }) as typeof window.setTimeout;
+    return realSetTimeout(handler, delay, ...args);
+  };
+  window.setTimeout = standIn as unknown as typeof window.setTimeout;
   try {
     const result = await run();
     expect(scheduled, 'the host should schedule the shared body-load timeout, not a number of its own').to.be.true;
     return result;
   } finally {
-    window.setTimeout = realSetTimeout;
+    window.setTimeout = original;
   }
 }
 
