@@ -536,6 +536,33 @@ needs a "start over" — and a game does — **offer it yourself, inside your ow
 name it in your own words and put it where the player expects. Minesweeper's is the "New game"
 button in its status row.
 
+### 7.1 Keyboard focus follows the active window
+
+The desktop gives your app the keyboard whenever its window becomes active, as an operating system
+does, by every route: opened from the launcher, clicked back on (the first click is enough; it
+lands on the window's focus catcher), brought forward by its titlebar, or restored from its taskbar
+button, which would otherwise keep focus and take the next Space or Enter as another press.
+
+| When your window becomes active | What gets focus |
+|---|---|
+| Something inside your app had focus before | That element again: your playfield, text box or button, however deep in your shadow root |
+| Nothing has yet, as when the window has just opened | Your app element itself, after it has loaded, if it is focusable |
+| Focus is already somewhere inside your app | Nothing changes |
+
+Clicking the window's own chrome (its titlebar, its edges, a resize handle) no longer takes focus
+out of your app, so an app that pauses when it loses focus is not paused by someone moving its
+window. A click inside your app is left entirely to you.
+
+So, if your app takes keyboard input:
+
+- **Make something focusable**, and if a particular element should have the keyboard when the window
+  first opens, **focus it yourself** when you first render (`firstUpdated` in Lit). The desktop only
+  falls back to your app element, which does nothing if it is not focusable.
+- **Pausing on `focusout` is safe**, and is the natural way for a game to stop when the player looks
+  away: the way back gives focus to the same element, so "press a key to carry on" works on the
+  first press.
+- Iframe windows are unaffected: a backoffice window's focus is its frame's own.
+
 ---
 
 ## 8. Traps

@@ -639,6 +639,122 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (this.window) this.#manager?.focus(this.window.id);
   };
 
+  /**
+   * The element inside the app that last had keyboard focus: the playfield, the text box, the
+   * button. Given back when the window is activated again, the way an operating system window
+   * remembers its focused control, rather than whatever the app would focus first.
+   */
+  #lastFocus?: HTMLElement;
+
+  /** Whether the window was active and shown at the last update, to see it become so. */
+  #wasActive = false;
+
+  /**
+   * Remember what inside the app took focus. The first node of the composed path, so a control
+   * inside the app's own shadow root is remembered rather than the app element around it.
+   * @param event The focusin, from anywhere in the window's body.
+   */
+  #onBodyFocusIn = (event: FocusEvent) => {
+    const target = event.composedPath()[0];
+    if (target instanceof HTMLElement && this.#appHost?.contains(this.#hostOf(target))) this.#lastFocus = target;
+  };
+
+  /**
+   * Keep a click on the window's own chrome from taking focus out of the app.
+   *
+   * A mousedown's default moves focus to the nearest focusable ancestor of what was pressed, and
+   * nothing in the titlebar, the frame's edges or the resize handles is one, so pressing any of
+   * them put focus on the page body: an app that pauses when it loses focus paused on a resize, and
+   * one that takes the keyboard lost it until it was clicked again. Preventing the default leaves
+   * focus where it was. A press inside the app itself is the app's business and is left alone, and
+   * so is every press in an iframe window, whose focus is its frame's own.
+   * @param event The mousedown, anywhere on the frame.
+   */
+  #onFrameMouseDown = (event: MouseEvent) => {
+    if (this.window?.app.content.kind !== 'element') return;
+    if (this.#appHost && event.composedPath().includes(this.#appHost)) return;
+    event.preventDefault();
+  };
+
+  /**
+   * A press on the focus catcher of an inactive element window: activate it, and stop the press
+   * from moving focus. Prevented at pointerdown rather than mousedown, because activating removes
+   * the catcher, and the mousedown that follows would land on whatever is underneath it, inside the
+   * app, where a press on anything not focusable moves focus to the page body.
+   * @param event The pointerdown on the catcher.
+   */
+  #onCatcherPointerDown = (event: PointerEvent) => {
+    if (this.window?.app.content.kind === 'element') event.preventDefault();
+    this.#onFocus();
+  };
+
+  /** The app host in the body, for an element window once it has rendered. */
+  get #appHost(): HTMLElement | undefined {
+    return this.shadowRoot?.querySelector<HTMLElement>('umbradesktop-app-host') ?? undefined;
+  }
+
+  /**
+   * The outermost element in this document's light tree that holds `node`, walking out of any
+   * shadow roots on the way: for a control inside an app's shadow root, the app element itself.
+   * @param node The node to place.
+   * @returns The element to test containment against.
+   */
+  #hostOf(node: Node): Node {
+    let current = node;
+    for (let root = current.getRootNode(); root instanceof ShadowRoot && root !== this.shadowRoot; root = current.getRootNode()) {
+      current = root.host;
+    }
+    return current;
+  }
+
+  /**
+   * Whether keyboard focus is already somewhere inside this window's app.
+   * @param host The app host.
+   * @returns True when the focused element, however deep in shadow roots, is in the app.
+   */
+  #focusIsInside(host: HTMLElement): boolean {
+    for (let active = document.activeElement; active; active = active.shadowRoot?.activeElement ?? null) {
+      if (host.contains(active)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Give the app keyboard focus now that its window is active, unless it already has it.
+   *
+   * To the control that last had focus in it, or to the app element itself when nothing has yet,
+   * which is the case for an app that has just opened. An app element that is not focusable simply
+   * does not take it, and an app that focuses something of its own when it first renders has done
+   * so by the time this runs, so it is left alone. After the app has mounted, because a window that
+   * has just opened is active before its app has loaded.
+   *
+   * This is what lets a keyboard app come back to where it was by every route into its window: a
+   * click on its body (through the focus catcher), on its titlebar, or on its taskbar button, where
+   * focus would otherwise stay on the button and the next Space would press it again.
+   */
+  async #giveAppFocus(): Promise<void> {
+    const host = this.#appHost as (HTMLElement & { mountComplete?: Promise<void> }) | undefined;
+    if (!host) return;
+    await host.mountComplete;
+    if (!this.window?.active || this.window.state === 'minimized' || this.#focusIsInside(host)) return;
+    const remembered = this.#lastFocus?.isConnected && host.contains(this.#hostOf(this.#lastFocus)) ? this.#lastFocus : undefined;
+    (remembered ?? (host.firstElementChild as HTMLElement | null))?.focus({ preventScroll: true });
+  }
+
+  /**
+   * Hand the app the keyboard whenever its window becomes active and shown: opened, clicked,
+   * brought forward from the taskbar or restored. Element windows only; an iframe window's focus is
+   * its frame's.
+   * @param changed The properties this update is for.
+   */
+  override updated(changed: Map<string, unknown>) {
+    super.updated(changed);
+    const w = this.window;
+    const active = !!w && w.app.content.kind === 'element' && w.active && w.state !== 'minimized';
+    if (active && !this.#wasActive) void this.#giveAppFocus();
+    this.#wasActive = active;
+  }
+
   /** Double-clicking the titlebar toggles maximize/restore, as on Windows/GNOME/KDE. */
   #onTitleDblClick = () => {
     if (!this.window) return;
@@ -747,7 +863,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         class="frame ${w.active ? 'active' : ''}"
         style=${style}
         ?hidden=${w.state === 'minimized'}
-        @pointerdown=${this.#onFocus}>
+        @pointerdown=${this.#onFocus}
+        @mousedown=${this.#onFrameMouseDown}>
         <div
           class="titlebar"
           @pointerdown=${this.#onTitlePointerDown}
@@ -846,7 +963,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
               @umbradesktop-path-navigate=${this.#onCrumbNavigate}></umbradesktop-window-path>`
           : nothing}
         <umbradesktop-window-notices .window=${w}></umbradesktop-window-notices>
-        <div class="bodywrap">
+        <div class="bodywrap" @focusin=${this.#onBodyFocusIn}>
           ${this.#renderBody(w)}
           <!-- Kept for both body kinds, deliberately. It exists because an inactive iframe
                swallows the pointer event that should have focused its window, so the catcher takes
@@ -857,7 +974,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
                the user was not looking at is the worse outcome. 'window-body.test.ts' pins it so
                the catcher cannot quietly become iframe-only. -->
           ${!w.active
-            ? html`<div class="focus-catcher" @pointerdown=${this.#onFocus}></div>`
+            ? html`<div class="focus-catcher" @pointerdown=${this.#onCatcherPointerDown}></div>`
             : ''}
           ${this._loading ? html`<div class="loading"><umbradesktop-loader></umbradesktop-loader></div>` : ''}
         </div>
