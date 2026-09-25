@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { clockLocale, formatClock, msUntilNextMinute } from './clock-format.js';
+import { clockLocale, formatClock, formatDateTime, msUntilNextMinute } from './clock-format.js';
 
 /**
  * The whole matrix, without a taskbar.
@@ -114,4 +114,39 @@ it('measures from the moment it is given, so a late timer corrects itself', () =
   // fresh reading rather than from when it meant to fire, so the error does not accumulate.
   const late = new Date(2026, 0, 5, 14, 31, 7, 250);
   expect(msUntilNextMinute(late)).to.equal(52750);
+});
+
+/**
+ * The same rules for any time or date an app shows, not only the taskbar's hours and minutes: this
+ * is what the settings context publishes to apps (see `docs/desktop-apps.md`), so a clock app with
+ * seconds reads exactly as the taskbar does.
+ */
+describe('formatDateTime', () => {
+  const withSeconds: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
+
+  it('applies the hour override to a time with seconds', () => {
+    expect(formatDateTime(afternoon, { source: 'backoffice', hourCycle: 'h23' }, locales, withSeconds)).to.equal('14:30:00');
+    expect(formatDateTime(afternoon, { source: 'backoffice', hourCycle: 'h12' }, locales, withSeconds)).to.equal('2:30:00 PM');
+  });
+
+  it('pads a 24-hour hour and not a 12-hour one, as the taskbar does', () => {
+    const early = new Date(2026, 0, 5, 9, 5, 7);
+    expect(formatDateTime(early, { source: 'backoffice', hourCycle: 'h23' }, locales, withSeconds)).to.equal('09:05:07');
+    expect(formatDateTime(early, { source: 'backoffice', hourCycle: 'h12' }, locales, withSeconds)).to.equal('9:05:07 AM');
+  });
+
+  it('leaves a date with no time in it to the culture', () => {
+    const dateOnly: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+    expect(formatDateTime(afternoon, { source: 'backoffice', hourCycle: 'h23' }, locales, dateOnly)).to.equal(
+      'Monday, January 5, 2026',
+    );
+  });
+
+  it('is what formatClock is, for hours and minutes', () => {
+    for (const hourCycle of ['auto', 'h12', 'h23'] as const) {
+      expect(formatClock(midnight, { source: 'backoffice', hourCycle }, locales)).to.equal(
+        formatDateTime(midnight, { source: 'backoffice', hourCycle }, locales, { hour: 'numeric', minute: '2-digit' }),
+      );
+    }
+  });
 });

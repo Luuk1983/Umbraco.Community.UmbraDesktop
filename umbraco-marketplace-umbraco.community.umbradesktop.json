@@ -78,6 +78,11 @@
     "umbraco 4",
     "retro",
     "dashboard",
+    "accessories",
+    "notepad",
+    "paint",
+    "sticky notes",
+    "calculator",
     "minesweeper",
     "language",
     "localization",
@@ -139,6 +144,11 @@
     }
   ],
   "RelatedPackages": [
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop.Accessories",
+      "GroupTitle": "Optional add-ons",
+      "Description": "Notepad, Paint, Sticky Notes, Calculator, Disk Cleanup and the rest of Windows' Accessories for the desktop. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
+    },
     {
       "PackageId": "Umbraco.Community.UmbraDesktop.Entertainment",
       "GroupTitle": "Optional add-ons",

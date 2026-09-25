@@ -47,6 +47,7 @@ export default {
     groupAutomation: 'Automatisering',
     groupAi: 'AI',
     groupSystem: 'Systeem',
+    groupAccessories: 'Bureau-accessoires',
     groupGames: 'Spellen',
     groupMore: 'Meer',
     launchDesktop: 'Bureaublad openen',

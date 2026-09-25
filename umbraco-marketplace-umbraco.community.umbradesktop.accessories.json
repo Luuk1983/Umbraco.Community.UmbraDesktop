@@ -1,0 +1,58 @@
+{
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "Title": "UmbraDesktop Accessories",
+  "Category": "Editor Tools",
+  "AlternateCategory": "Developer Tools",
+  "Description": "The small tools for UmbraDesktop. An optional add-on that puts Notepad, Paint, Sticky Notes, Calculator and the rest of Windows' Accessories on the desktop, each in a window of its own and themed along with the rest of it.",
+  "PackageType": "Package",
+  "LicenseTypes": [
+    "Free"
+  ],
+  "AuthorDetails": {
+    "Name": "Luuk Peters",
+    "Description": "Umbraco developer building packages that extend the CMS with enterprise-grade features.",
+    "Url": "https://github.com/Luuk1983",
+    "SyncContributorsFromRepository": true
+  },
+  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Accessories/README.md",
+  "IssueTrackerUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues",
+  "Tags": [
+    "accessories",
+    "notepad",
+    "paint",
+    "sticky notes",
+    "shared notes",
+    "calculator",
+    "clock",
+    "screensaver",
+    "screen saver",
+    "character map",
+    "special characters",
+    "disk cleanup",
+    "recycle bin",
+    "empty recycle bin",
+    "system information",
+    "media library",
+    "umbradesktop",
+    "desktop",
+    "windows",
+    "backoffice",
+    "apps",
+    "tools",
+    "add-on",
+    "themes",
+    "launcher"
+  ],
+  "RelatedPackages": [
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop",
+      "GroupTitle": "Requires",
+      "Description": "The desktop itself. This package is an add-on to it and installs it as a dependency; the desktop works on its own without the accessories."
+    },
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop.Entertainment",
+      "GroupTitle": "Optional add-ons",
+      "Description": "Games for the desktop, starting with Minesweeper. Independent of this package: install either, both or neither."
+    }
+  ]
+}

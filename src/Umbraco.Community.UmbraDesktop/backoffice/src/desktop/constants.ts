@@ -35,6 +35,30 @@ export const UMBRADESKTOP_SECTION_PATHNAME = 'umbradesktop';
 export const UMBRADESKTOP_THEME_ATTRIBUTE = 'data-umbradesktop-theme';
 
 /**
+ * The attribute a registered app puts on its **own element** while it holds unsaved work, and
+ * removes once that work is saved or thrown away.
+ *
+ * The app-window counterpart of the dirty watch an iframe window runs on the workspace inside it.
+ * An app has no workspace for the desktop to watch, so it says so itself, and from there it is the
+ * same flag: the titlebar marker, the taskbar marker, the close guard and the leave-the-desktop
+ * prompt all read it, with no app-specific code in any of them.
+ *
+ * An attribute rather than an event or a context, because it is the one channel that needs nothing
+ * imported from this package, the same reason the theme id reaches an app as an attribute: a
+ * `toggleAttribute` is all an app writes, and the state is readable at any moment rather than only
+ * when a change happens to be heard. Presence is what counts; the value is ignored. Published in
+ * `docs/desktop-apps.md` §7.
+ */
+export const UMBRADESKTOP_DIRTY_ATTRIBUTE = 'data-umbradesktop-dirty';
+
+/**
+ * The event `<umbradesktop-app-host>` fires when its app's {@link UMBRADESKTOP_DIRTY_ATTRIBUTE}
+ * changes, and once whenever an app is mounted. Internal: it is how the host tells the window that
+ * holds it, and no app listens for it.
+ */
+export const UMBRADESKTOP_APP_DIRTY_EVENT = 'umbradesktop-app-dirty';
+
+/**
  * Height of the taskbar/panel in pixels.
  *
  * The chrome no longer reads this directly — it takes its height from

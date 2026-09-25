@@ -1,0 +1,361 @@
+# Accessories: Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information
+
+> A third package, `Umbraco.Community.UmbraDesktop.Accessories`, built exactly as Entertainment is,
+> holding the small tools Windows kept under Start > Programs > Accessories. It uses nothing but the
+> public `umbraDesktopApp` manifest, plus one new launcher group in the host. The screen saver adds
+> an ordinary Umbraco `backofficeEntryPoint`, and nothing in the host.
+
+## 1. Why a separate package
+
+[The desktop-apps design](2026-09-06-desktop-apps-design.md) §8.1 settled this before anyone built
+a tool: "a tool is not entertainment. A calculator, a notepad or a colour picker would be lying under
+this package id ... Windows filed those under Accessories, a level up. If the desktop wants them,
+they want their own package." This is that package.
+
+Everything about its layout, versioning and release is Entertainment's, unchanged:
+
+- Razor SDK project, a Vite-built bundle under `App_Plugins/Umbraco.Community.UmbraDesktop.Accessories`,
+  and `umbraco-package.json` stamped with the MinVer version at build time.
+- Lockstep on one tag (D13): same `v*` tags, same version, published on every release. The host
+  dependency is the same `[17.0.0,18.0.0)` range from `src/Directory.Packages.props`, never a
+  `ProjectReference`.
+- Its own Marketplace listing, `umbraco-marketplace-umbraco.community.umbradesktop.accessories.json`,
+  cross-linked with `RelatedPackages` to the host and to Entertainment.
+- Built, tested and packed by the shared `build-packages` action, so CI and the release cannot
+  disagree about it, and referenced by the TestInstance beside the other two.
+
+## 2. The `accessories` group
+
+The host gains one group, `accessories`, with the same contract as `games`: the host owns the alias,
+the label and its localisation, and nothing in the host puts an app in it. Weight 55, after System
+(50) and before Games (60). That is where Windows put it, with Games a folder inside Accessories, and
+a tool is closer to what an editor came for than a game is.
+
+Dutch is "Bureau-accessoires", the name the Dutch Windows 95 and 98 used.
+
+## 3. The apps
+
+Each is one custom element, as the seam requires, with its rules in a pure module beside it so they
+test without a DOM, and its sizes derived in its own `constants.ts` so the manifest can read them
+without importing the element. They share one stylesheet (`shared/styles.ts`) and nothing else:
+§11 of the apps design warns against a shell several apps live in, and a shared stylesheet is
+ordinary reuse rather than that.
+
+| App | Pure module | Decisions worth their reasoning |
+|---|---|---|
+| Notepad | `text.ts`: caret line/column | Opens and saves text files in the media library, per §4. |
+| Paint | `raster.ts`: Bresenham lines, square stamps, scanline flood fill | Pixels are set directly rather than stroked by the canvas, because canvas strokes are antialiased and a fill that stops at "not the clicked colour" then leaves a halo round every line. MS Paint never antialiased, which is why its bucket worked. The paper stays white under every theme: it is the document, not the chrome. |
+| Sticky Notes | `board.ts`: folding the server's board into the window's copy | The only app with a server of this package's behind it; see §5. |
+| Calculator | `engine.ts`: an immutable state machine | Immediate execution, as the Windows calculator does in Standard mode, not precedence. Results are rounded to 15 significant digits, which removes the float noise (`0.1 + 0.2` shows `0.3`) and nothing a person typed. Percent is "of the running total" after an operator, as in Windows. |
+| Screen Saver | `savers.ts`: each saver's state and drawing | See §6. |
+| Disk Cleanup | `recycle-bins.ts`: counting and emptying the two bins | See §7. |
+| System Information | `facts.ts`: each fact in the old wording | See §7. |
+| Character Map | `characters.ts`: groups, names, search, Alt keystrokes | See §7. |
+| Clock | `hands.ts`: hand angles, time to the next second | Ticks on the real second boundary rather than a free-running 1000ms interval, so it turns over with the taskbar clock. Time and date go through `this.localize.date`, so they follow the backoffice culture. |
+
+## 4. Notepad and Paint work on the media library
+
+**Every file lives in the media library** (decided with the repository owner, 2026-09-24, replacing
+a first version that saved to the person's machine by default). Open shows Umbraco's own
+`UMB_MEDIA_PICKER_MODAL`, the picker a media property uses, so it browses, searches and uploads the
+way the rest of the backoffice does; a file on someone's computer gets in through its Upload button.
+Save writes the file back over the media item it came from, and renames that item if the name in the
+status bar changed. The first save of a new document or picture asks which folder, as Save As did
+(below). There is no download and no local file dialog: a document
+here is site content, and the media library already has the folders, permissions and recycle bin
+for it.
+
+- **Which files.** `shared/media-files.ts` decides, as pure functions. Notepad takes text by
+  extension or by `text/*`, SVG included, since SVG is a drawing written as text. Paint takes raster
+  images and refuses SVG, which it could only flatten, destroying the original on save.
+- **Paint keeps a picture's format and size.** An opened image is drawn at its own size, up to
+  4,096 px on an edge, and saved in its own format where a canvas can write that format (PNG, JPEG,
+  WebP), so a photograph stays a JPEG; GIF and BMP save as PNG. Undo keeps whole copies of the
+  picture, so its depth comes from a 256 MB budget rather than a fixed twenty.
+- **Messages go in the window.** Why an open or a save did not happen, and that a save did, show in
+  the app's status bar rather than as a toast, since that is where the person is looking.
+
+**Where a new file goes: first a setting, then Save As.** It began as a folder in the desktop's own
+settings panel, which needed a way in. The panel was curated only, and a curated list cannot name a package this repository does not know about, so the
+host gained a second public manifest type, `umbraDesktopSettingsCategory`, modelled on
+`umbraDesktopApp`: the host draws the row, heading and navigation, the registering package owns the
+element and its values, and `conditions` are honoured through `UmbExtensionsManifestInitializer`.
+Registered categories sit after Taskbar and before Connections and Site. The alternative, an
+Accessories category built into the host, would have shipped a row that does nothing without the
+add-on and coupled the host to the add-on's storage.
+
+Review then asked whether new files could simply go to the root. Not quite: an editor whose media
+start node is a folder cannot reach the root, and for them every save would have failed. So the
+setting was replaced by **Save As**: the first save of a new file opens Umbraco's media tree picker,
+folders only, with the root showing (`hideTreeRoot: false`, its key is null) and selected, so
+Choose saves to the root and anyone kept out of it sees their own folders instead. Only the root and folders can be picked; files show greyed out. The last choice
+is remembered for the session and shared across windows (`shared/save-location.ts`), not stored,
+because a folder remembered across sessions can have been moved or deleted. Cancelling saves
+nothing. This is also simply what Notepad and Paint always did. A save folder stored by an earlier
+version is ignored when read.
+
+**The settings category was removed from this package, and the host's extension point moved to a
+pull request of its own** (decided with the repository owner, 2026-09-25): with nothing here using
+it, it is a host feature for other packages rather than part of Accessories. Its reasoning is in
+`2026-09-25-settings-category-extension-design.md`, which arrives with that pull request. This one
+leaves the host's settings panel exactly as `main` has it.
+
+The package's settings (now the screensaver alone) are stored per user in `localStorage`, the same
+scope as every other desktop setting, under the add-on's own key. Controllers in open windows hear a
+change through a `window` event, because `storage` events only reach other documents.
+
+**A media save goes through the backoffice's own repositories**, never a hand-built Management API
+call, so authentication, permissions and error messages are the backoffice's. A new item follows the
+steps the Media section's drag-and-drop takes: media types that accept the extension, intersected
+with what the folder allows, preferring a type that names the extension; then a temporary file and a
+create. The drag-and-drop class itself (`UmbMediaDropzoneManager`) is not in the backoffice's public
+exports, so `shared/media-save.ts` repeats its steps with the public pieces it is built from. A second
+save of the same document overwrites the item it created (a temporary file, `umbracoFile` pointed at
+it, and a save) unless that item is gone or trashed, in which case it creates a new one.
+
+**Verified against a running Umbraco 17.7** (see §9 for how): Notepad created `Untitled.txt` as a
+File and a second save updated that item; then, through the real media picker, Notepad opened it,
+an edit and a rename were saved back (one item, renamed, its file read back with the new text), and
+Paint opened `Untitled.png` at its own 480 × 300, drew on it and saved it back (the saved file read
+back with the new pixels).
+
+## 5. Sticky Notes: one board for everyone
+
+Sticky Notes is the one app here with a server behind it, and the package's first C#. Decided with
+the repository owner: one shared board, no private notes, anyone may edit or delete any note, and
+changes reach other people within about fifteen seconds rather than instantly.
+
+- **Storage:** one JSON document in Umbraco's key-value store (`StickyNotes/StickyNoteStore.cs`),
+  as the host keeps its connections. No table, no migration, and it travels with a database backup.
+  Capped at 100 notes of 2,000 characters, so the row stays small; the caps are sent with the board,
+  so the window never holds a copy of either number.
+- **API:** `StickyNotesController`, a management API controller under
+  `umbradesktop/accessories/sticky-notes`. Any backoffice user reaches the route, and every action
+  checks the Desktop section itself, because Umbraco has no policy for a package's own section;
+  without that check any backoffice account could read the board.
+- **No lost updates.** Every note has a version. An edit names the version it was made against, and
+  one against an older version is refused with 409 and the note as it now stands. The window keeps
+  its own text on screen and offers "Use theirs" or "Keep mine". A note deleted elsewhere while it
+  had unsaved text here is offered back ("Put it back" or "Discard"). While either is unsettled, and
+  while text is waiting to save, the window carries `data-umbradesktop-dirty`, so closing asks.
+- **Refresh:** every fifteen seconds, and whenever the window is focused or clicked, skipping one
+  within three seconds of the last. A refresh never overwrites text somebody is still typing; the
+  rules for folding the server's board into the window's copy are `board.ts`, and are tested.
+- **Load-balanced sites:** the store's write lock is per process, so two servers can race on the
+  same row and the later write wins that race. The version check still catches the common case.
+- **C# tests** are a project of their own, `Umbraco.Community.UmbraDesktop.Accessories.Tests`,
+  referencing only the add-on so they run against the host as a consumer gets it. CI runs them in
+  the shared build action beside the host's.
+
+Running it for real, with two users in two browser sessions (§9), found three bugs every test had
+passed:
+
+1. **The backoffice's HTTP client throws on an error status.** Its types describe an `{ error }`
+   result; a running backoffice rejects the call instead. The window read a 409 as a thrown error
+   and never showed the conflict choice. `api.ts` now catches, and `api.test.ts` stubs the client to
+   throw, as the real one does.
+2. **It also replaces any error body that is not problem details.** A 409 carrying the bare note
+   reached the window as `{ status: 409, title: "Conflict" }`, the other person's text gone. The
+   409 is now problem details with the note in a `note` extension. Any management API in this
+   repository that returns data on an error status needs the same shape.
+3. **Clicking a window does not focus it.** The refresh listened for `focusin`, and clicking a
+   window's background or a byline moves no focus, so the second person never saw the first's note
+   until they clicked into a text box. It now refreshes on `pointerdown` too.
+
+And one layout bug, fixed on the third attempt: a note with the conflict panel spilled over the row
+below. `grid-auto-rows: minmax(170px, auto)` only grows into spare space, which a small window has
+none of; `auto` with a `min-height` on the note takes the `min-height` as the row's minimum instead
+of the content; and the note's footer shrank to 5px as a flex item besides. What works is
+`grid-auto-rows: min-content`, a `min-height` on the note, and `flex-shrink: 0` on everything in it
+but the text.
+
+## 6. The screen saver
+
+**The window is Windows 98's Screen Saver tab**, control for control: a monitor running the chosen
+saver as a live preview, a list with **(None)** at the top, **Wait _ minutes**, and **Preview**.
+(None) is how it is switched off, as it was in Windows, rather than a checkbox beside the list; it
+keeps the saver that was chosen, so switching back on is one choice.
+
+**Set in its window only.** It was first also embedded in Desktop settings > Accessories, since
+Windows kept it under Display Properties rather than Accessories. That was taken out on review: two
+places for one setting read as untidy, and the Accessories tile is where anyone who wants a screen
+saver goes. (The panel itself went later, with the save folder: §4.)
+
+**Off by default.** Something that covers the whole backoffice unasked would read as a fault the
+first time it happened after an upgrade.
+
+**Three savers**, in `savers.ts` as pure factories over a canvas size and a random source, so
+tests seed them: Starfield, Mystify (two four-cornered shapes with trails and a slow hue drift), and
+Flying Umbraco, the Umbraco mark in place of Flying Windows. Each step takes the time since the last
+frame, capped at 100ms, so a tab back from the background does not fling every star past the viewer
+at once.
+
+**Who starts it: a `backofficeEntryPoint`**, because it has to come on with every window closed,
+its own included. The entry point starts one `ScreensaverWatcher`, which checks once a second and
+does nothing while the setting is off. It starts the saver only when the setting is on, the page is
+showing the desktop (by its path, `/section/umbradesktop`), the tab is visible, and nobody has done
+anything for the wait.
+
+**Listening inside the windows.** Most windows are backoffice pages in same-origin iframes, and an
+event inside one never reaches the page around it. A watcher listening only to the page would start
+the screen saver over someone busy typing in a content editor. So every five seconds the watcher
+looks through the desktop's shadow roots for iframes whose current document it has not heard from,
+and listens there too (a frame that navigates has a new document). Activity heard in a frame also
+ends a running screen saver, which cannot hear it from where it is.
+
+**What wakes it.** Any key, click, scroll or touch, and a pointer movement of more than 8px from
+where it first saw the pointer, so a knocked desk leaves it running, as Windows did. A click that
+wakes it is swallowed, so it does not also press whatever was underneath. On start it takes focus,
+so a key pressed to wake it does not type a letter into the field that had focus.
+
+**Verified live** against the harness (§9): it came on after the one-minute wait, a 3px nudge left
+it running, a real movement ended it, keydowns inside a Content window's iframe kept it off for 80
+seconds, it came on 56 seconds after they stopped, and one more keydown in that iframe ended it.
+
+## 7. Windows 98's System Tools: Character Map, Disk Cleanup and System Information
+
+**Character Map** is the Windows one with the advanced view's search built in: a font, a group, a
+grid, the chosen character popped out larger with its name and code in the status bar, and
+"Characters to copy" with Select and Copy. The status bar also gives Windows' own keystroke,
+`Alt+0233`, from the Windows-1252 code page, so the euro is `Alt+0128` rather than 8364, which is
+what Windows actually typed. **A browser cannot name a character**, so the names come from a table
+generated once from Python's copy of the Unicode Character Database by
+`backoffice/scripts/character-map-data.py` and committed; nothing in the build runs it. Eighteen
+groups, 2,485 characters, about 24KB gzipped, loaded only with the window. Emoji are left out: every
+device has a picker for those, and they would triple the table.
+
+**Disk Cleanup** empties the content and media recycle bins, which is the most destructive thing on
+the desktop, so the design is about not doing it by accident:
+
+- Nothing is ticked when it opens. Windows ticked some of its categories by default; here deleting
+  starts with a choice, not with a default.
+- **Clean up** counts the ticked bins again before asking, because somebody may have deleted
+  something since the window opened, and the question should name what is there now.
+- The question is Umbraco's own confirmation dialog in its danger colour, naming each bin and its
+  count, with "Delete permanently" rather than OK.
+- It calls Umbraco's own endpoints (`DELETE /recycle-bin/document` and `/recycle-bin/media`, the
+  ones the Empty Recycle Bin action uses), so this package grants and bypasses nothing. A bin that
+  cannot be counted for want of access cannot be ticked. A bin that can be counted but not emptied,
+  which is a Writer's content bin (no delete permission), is refused by Umbraco when it is tried, and
+  the window says so in full.
+- The two bins are emptied one after the other, so a refusal for the first is reported and the
+  second still runs.
+
+The count is of the items at the top of each bin, as its tree shows them, not of everything inside
+them. The window and the question both say "and everything inside", rather than walk the tree to add
+it up.
+
+**System Information** is two of Windows 98's windows in one. **General** is System Properties'
+General tab, group for group: *System* (Umbraco's release, the desktop's version, the theme),
+*Registered to* (the signed-in user, where Windows put the licence holder) and *Computer* (the site,
+the browser and OS, processors and memory). **Details** is msinfo32's tree: Umbraco, Desktop, Server,
+Computer, Installed packages. Server is Umbraco's own troubleshooting report, the one Help > System
+information shows; installed packages come from the manifest endpoint; the theme is the
+`data-umbradesktop-theme` attribute the desktop already stamps on every app, read as a fact rather
+than a style hook. **Nothing is guessed.** No OS version, because browsers report every Windows since
+10 as NT 10.0 and froze macOS at 10.15. Memory as the browser rounds it, capped at "8 GB or more".
+Graphics only where WebGL names it. A missing fact says it was not reported rather than inventing
+one. **Copy all** writes the report as text in bracketed sections, for pasting into a support
+request.
+
+**Verified live** against the harness (§9): Disk Cleanup showed 2 and 2 items, a Cancel left both
+bins full, Delete permanently emptied both; as a Writer given the Desktop section, the media bin
+showed No access and could not be ticked, and emptying the content bin was refused by Umbraco and
+said so. Character Map put "é→" on the real clipboard. System Information reported Umbraco
+17.7.0+d64a209, both packages' versions, the theme, the server's report (shown to the Writer too:
+Umbraco does not restrict it) and the machine.
+
+## 8. Known gaps
+
+**Closed: closing a Notepad or Paint window now asks about unsaved work.** The host's close guard
+reads a window's `dirty` flag, which only the iframe dirty watch used to set. The app contract now
+has a channel for it: an app puts `data-umbradesktop-dirty` on its own element while it holds
+unsaved work, `<umbradesktop-app-host>` watches that one attribute with a `MutationObserver`, and
+the window passes it to the same `setDirty` the iframe path uses. So the titlebar marker, the
+taskbar marker, the close guard and the leave-the-desktop prompt all cover app windows with no
+app-specific code in any of them. An attribute rather than an event, because it needs nothing
+imported from the host and can be read at any moment. Documented in `docs/desktop-apps.md` §7.
+
+**Closed: Clock follows the desktop's regional format and 12/24-hour setting.** The host now
+publishes them: its settings context has a public `formatDateTime(date, options)` with the taskbar
+clock's rules, and a `locale` observable that emits when either setting changes, both documented
+with the context's alias in `docs/desktop-apps.md` §7.1. Clock declares that shape and a token with
+the same alias (nothing is imported from the host), formats its time and date through it, and falls
+back to `this.localize.date` where there is no desktop around it, as in its own tests.
+
+
+## 9. What the build taught
+
+- **A real backoffice can run on Linux, and it finds what tests do not.** The TestInstance wants
+  SQL Server LocalDB and carries Umbraco Engage, which refuses SQLite, so it cannot boot outside
+  Windows. A throwaway site in a scratch folder can: a `Microsoft.NET.Sdk.Web` project with
+  `Umbraco.Cms` (same version as the TestInstance), `ProjectReference`s to the host and the add-on,
+  the host package with `ExcludeAssets="all"` as in the TestInstance, the TestInstance's
+  `Program.cs` minus `UseHttpsRedirection`, and an `appsettings.json` with a SQLite connection
+  string (`Microsoft.Data.Sqlite`) and an unattended install. Drive it with `puppeteer-core` from
+  any package's `node_modules`, pointed at the preinstalled Chromium with `--no-sandbox`. Two
+  things to know: the unattended admin does not have the Desktop section (grant it through the
+  user-group API), and rebuilding a frontend renames its hashed chunks, so the site must be rebuilt
+  and restarted too or the app window fails to load. In a cloud container the .NET SDK comes from
+  Ubuntu's archive (`apt-get update && apt-get install dotnet-sdk-10.0`) when dot.net is blocked.
+
+- **Run the web tests one file at a time.** Concurrently, web-test-runner puts files in background
+  tabs, where Chrome runs no animation frames and throttles timers. `fits.test.ts` waits on a frame,
+  so with the default concurrency it never finished, the run hung past any `testsFinishTimeout`,
+  and its 108 cases had quietly not been running while the rest reported green. The config sets
+  `concurrency: 1`, and the whole suite takes about 25 seconds. The same trap caught a test built
+  with open-wc's `fixture()` on a plain `div`, which waits for a frame when the element is not Lit.
+
+- **Measure every app at its declared sizes, under every theme id.** `fits.test.ts` mounts each
+  one in a box exactly its `defaultSize` and its `minSize` and asserts nothing overflows. Its first
+  run found Clock 40px too tall at its minimum under all six cases, with every other test green: an
+  in-flow SVG with a `viewBox` sizes itself from its width, so the face asked for a square as wide as
+  the window. The face's SVG is now out of flow. The derived sizes were right; the layout ignored
+  them.
+- **Check an icon alias exists before shipping it.** `icon-eraser` reads like it should exist and
+  does not, and the desktop falls back to `icon-box` without a word, so a wrong alias is a quietly
+  wrong tile rather than an error. The full list is the keys of
+  `@umbraco-cms/backoffice/dist-cms/packages/core/icon-registry/icons.js`; grep it.
+- **Not everything the backoffice uses is exported.** `UmbMediaDropzoneManager` is exactly the
+  class a media save wants and is not in `@umbraco-cms/backoffice/media`'s exports; `tsc` says so
+  with TS2305. Check the `exports` map in the package's `package.json`, not the `dist-cms` tree.
+- **Registered settings categories arrive asynchronously.** A test that settles one macrotask and
+  then counts rows races the condition evaluation; wait for the row instead.
+- **`umbConfirmModal` rejects on cancel rather than resolving false**, and so does `umbOpenModal`.
+  Wrap either in `try`/`catch` and return a boolean, as the host's own `_askToDiscard` does.
+- **`aria-label` on an element whose text is the content hides the content.** A `<time>` labelled
+  "Time" is read as "Time", not as the time, so the digital clock carries no label at all.
+- **An app test that records a saved file must record it synchronously.** Awaiting `blob.text()`
+  in the fake races the assertion; store the file and read it in the test.
+- **An inactive window swallows the first click** to bring itself forward, as the desktop design
+  intends. A script driving two windows must press buttons directly (`el.click()` in the page), or
+  its first click in the window behind does nothing.
+- **The test runner's pages are not all in the foreground.** It runs several test files at once,
+  and Chrome treats some of those pages as hidden: no animation frames at all, and
+  `document.visibilityState === 'hidden'`. Every screensaver test passed alone and eight failed in
+  the full run. Anything that waits on `requestAnimationFrame` or checks visibility takes the
+  frame source or the visibility check as an injectable property, and the tests drive it by hand.
+  That includes open-wc's `fixture()` for a plain (non-Lit) element, which waits for a frame; build
+  such an element with `document.createElement` instead.
+- **Importing anything that pulls in the backoffice's module graph takes about 8 seconds** the first
+  time in the test runner, longer than the 5-second test timeout. A test that reaches such a module
+  through a manifest's lazy loader times out; import the module statically at the top of the test
+  file as well, so it loads before the timer starts.
+- **Not every activity event has a `view`.** `input` is a plain `Event`, so the watcher tells which
+  window activity came from by which listener fired, one per window, not by reading the event.
+- **`@umbraco-cms/backoffice/sysinfo` cannot be imported in the test runner.** Its repository imports
+  a `package.json` as a module, which the dev server cannot serve, so the whole test file fails to
+  load with "Failed to fetch dynamically imported module" and no other clue. System Information calls
+  the same two server endpoints itself instead. When a test file will not even import, look for a
+  JSON import in what it pulls in.
+- **`localize.termOrDefault` fills `%0%` into a dictionary entry but not into the fallback.** In a
+  test, where no dictionary is registered, "%0% items" renders as that. Disk Cleanup and System
+  Information fill the fallback themselves.
+- **A refusal cut off by an ellipsis is one nobody can act on.** Disk Cleanup's status first sat on
+  one line beside the buttons, and the live run as a Writer showed "You do not have access to empty
+  the conte…". Messages that explain a refusal get room to wrap.
+- **The media tree picker's `foldersOnly` still lists files, and Umbraco sets `isFolder` on no media
+  item**, not even the built-in Folder. A folder is told apart by its media type having a
+  `collection` (the built-in Folder and every list-view type do), or by already having children;
+  `isSaveFolder` in `shared/save-location.ts` is that rule, passed as the picker's
+  `pickableFilter`. The root is an item of its own with a null key once `hideTreeRoot` is false.

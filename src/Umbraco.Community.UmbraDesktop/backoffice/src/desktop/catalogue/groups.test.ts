@@ -81,3 +81,30 @@ it('sorts experimental after games and before the reserved More group', () => {
   expect(experimental.weight!).to.be.greaterThan(games.weight!);
   expect(experimental.weight!).to.be.lessThan(UMBRADESKTOP_MORE_GROUP_WEIGHT);
 });
+
+/**
+ * `accessories` is the second group the host owns and leaves empty, on the same contract as
+ * `games`: the Accessories package names this alias from its own manifests (Notepad, Paint,
+ * Calculator, Clock), and nothing here knows which tools exist.
+ */
+it('declares an accessories group whose label is a loc token', () => {
+  const accessories = groups.find((g) => g.alias === 'accessories');
+  expect(accessories, 'the accessories group must exist for registered tools to land in').to.not.be
+    .undefined;
+  expect(accessories!.label).to.equal('#umbraDesktop_groupAccessories');
+});
+
+/**
+ * After System and directly before Games, which is where Windows filed both: Start > Programs >
+ * Accessories held the small tools, and Games was a folder inside it. A tool is closer to what an
+ * editor came for than a game is, so it sorts first of the two, and it is further from it than the
+ * administrative plumbing System holds.
+ */
+it('sorts accessories after system and before games', () => {
+  const accessories = groups.find((g) => g.alias === 'accessories')!;
+  const system = groups.find((g) => g.alias === 'system')!;
+  const games = groups.find((g) => g.alias === 'games')!;
+
+  expect(accessories.weight!).to.be.greaterThan(system.weight!);
+  expect(accessories.weight!).to.be.lessThan(games.weight!);
+});

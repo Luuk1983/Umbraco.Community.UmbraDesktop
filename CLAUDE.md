@@ -31,6 +31,19 @@ npm test        # web-test-runner in a real Chrome
 transpiles through esbuild and does **not** type-check, while `tsc` never renders anything. Both a
 green test run over a broken build and the reverse have shipped here.
 
+The same two commands apply in each add-on's folder (`src/Umbraco.Community.UmbraDesktop.*`). The C#
+has a test project for the host and one for each add-on with server code, each named
+`<project>.Tests`, and each is run by its project file, because `dotnet test` on a folder reports
+green while running nothing. `.github/actions/build-packages/action.yml` is the list; for example:
+
+```bash
+dotnet test src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj
+```
+
+Anything that talks to a server wants a real backoffice as well. The TestInstance only boots on
+Windows; `docs/design/2026-09-24-accessories-design.md` §9 is how to run one on Linux and drive it
+from a script, and it found three bugs in Sticky Notes that every test had passed.
+
 ## Conventions
 
 - **JSDoc on everything**, including private members. Say why the code exists, not what its name

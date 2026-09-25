@@ -74,14 +74,38 @@ export function formatClock(
   settings: UmbraDesktopLocaleSettings,
   locales: UmbraDesktopClockLocales,
 ): string {
+  return formatDateTime(now, settings, locales, { hour: 'numeric', minute: '2-digit' });
+}
+
+/**
+ * Format any date or time the way this user has asked for it: {@link formatClock}'s rules for any
+ * set of `Intl` options, which is what the settings context publishes to apps.
+ *
+ * The culture is the user's choice, backoffice or browser, as for the clock. The hour cycle is
+ * applied only when `options` asks for an hour, since a date with no time in it has no hour to
+ * override, and the hour's padding is derived from the cycle that resolved, for the reason
+ * {@link formatClock} gives. Any `hour` in `options` is replaced by that derived one.
+ * @param now The moment to format.
+ * @param settings The user's locale preference.
+ * @param locales The cultures currently known.
+ * @param options What to show, as `Intl.DateTimeFormat` options.
+ * @returns The formatted date or time.
+ */
+export function formatDateTime(
+  now: Date,
+  settings: UmbraDesktopLocaleSettings,
+  locales: UmbraDesktopClockLocales,
+  options: Intl.DateTimeFormatOptions,
+): string {
   const locale = clockLocale(settings, locales);
-  const options: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
-  if (settings.hourCycle !== 'auto') options.hourCycle = settings.hourCycle;
+  if (options.hour === undefined) return new Intl.DateTimeFormat(locale, options).format(now);
+  const withCycle: Intl.DateTimeFormatOptions = { ...options, hour: 'numeric' };
+  if (settings.hourCycle !== 'auto') withCycle.hourCycle = settings.hourCycle;
   // Asked rather than assumed: 'auto' means the culture decides, and a fixed cycle still has to be
   // read back because h11 and h12 pad differently from h23 and h24.
-  const resolved = new Intl.DateTimeFormat(locale, options).resolvedOptions().hourCycle;
+  const resolved = new Intl.DateTimeFormat(locale, withCycle).resolvedOptions().hourCycle;
   const hour = resolved === 'h11' || resolved === 'h12' ? 'numeric' : '2-digit';
-  return new Intl.DateTimeFormat(locale, { ...options, hour }).format(now);
+  return new Intl.DateTimeFormat(locale, { ...withCycle, hour }).format(now);
 }
 
 /**

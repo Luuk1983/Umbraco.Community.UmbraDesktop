@@ -20,6 +20,11 @@ It also does something the backoffice does not do at all. When two people have t
 > is an optional add-on that puts Minesweeper in the launcher's Games group, in a window of its own
 > and themed along with everything else. Install it if you want it; the desktop is unchanged
 > without it. See [Games](#games).
+>
+> **New: Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, a screen saver, Disk Cleanup and System Information.** [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories)
+> is a second optional add-on that fills the launcher's Accessories group with the small tools
+> Windows kept under Start > Programs > Accessories, each in a window of its own. See
+> [Accessories](#accessories).
 
 ## Features
 
@@ -29,7 +34,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Always says where you are. A window that holds a whole section carries a path under its title bar, Media library / Campaigns / hero.jpg, and every step of the way back is one click. In the plain backoffice you climb back out of a tree by clicking the section name in the header, and a window has no header, so this is where that goes.
 - Never loses your work. A window holding unsaved changes shows a dot in its title bar and on its taskbar button, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
 - Warns before you overwrite someone. If somebody else saves or bins a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. Deletion is warned about even when you have nothing unsaved, because there is no version left to refresh to. The plain backoffice does not warn about this at all.
-- A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus Games once a package puts an app there. Empty groups never show.
+- A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus Accessories and Games once a package puts an app there. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are remembered per user, in that browser.
@@ -43,6 +48,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Light, dark and high contrast, in the same place. Umbraco's own colour schemes are normally set in the user menu, three clicks from the theme that sits beside them. Appearance now has a row for them too, listing whatever themes the backoffice has registered rather than a fixed three, so a site shipping its own gets it here for free. One setting, two ways in: change it here and the user menu agrees, and the other way round. See [The backoffice's own colours](#the-backoffices-own-colours).
 - Let the wallpaper follow. Turn on one toggle in the theme picker and each theme brings its own background with it, so switching to Windows 98 gives you its bare teal and switching to macOS gives you a sunrise. Off by default, and choosing a wallpaper yourself turns it back off. See [Matching the wallpaper to the theme](#matching-the-wallpaper-to-the-theme).
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
+- Small tools, if you want them. The optional Accessories add-on above puts Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information in the launcher, each in a window that follows the theme. Sticky Notes is one board shared by everyone who uses the desktop. Notepad and Paint edit files in the media library: open a text file or an image, change it, and save it back. Screen Saver brings back Starfield, Mystify and a flight of Umbraco logos for when the desktop is left alone. Disk Cleanup empties the content and media recycle bins together, after asking, and System Information says which Umbraco, which desktop and which theme you are running, the way System Properties did. See [Accessories](#accessories).
 - Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
 - Install it as an app. The backoffice declares a web app manifest, so your browser can install or pin it. It opens straight on the desktop in its own window, with no address bar and no tabs, and carries your site's own name and icon rather than a generic browser tile. Both are settings, so an agency running ten sites gets ten distinguishable apps. See [Installing the backoffice as an app](#installing-the-backoffice-as-an-app).
@@ -96,7 +102,7 @@ From the launcher:
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
 - While a window is fetching its content, whether you have just opened it or just reloaded it, it shows the Umbraco mark with a ring turning around it. It covers the window until the content is ready, so you never see a half-drawn backoffice assembling itself.
 - Choose Exit in the launcher's footer to return to the classic backoffice. If you start in the desktop, exiting keeps you in the classic backoffice until you close the tab.
-- Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Language and region for the backoffice language and how times are written, Appearance for your theme, your wallpaper and the backoffice's own colours, Taskbar for what sits beside the launcher button — and the desktop stays in view behind it, so you can see a change as you make it.
+- Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Language and region for the backoffice language and how times are written, Appearance for your theme, your wallpaper and the backoffice's own colours, and Taskbar for what sits beside the launcher button — and the desktop stays in view behind it, so you can see a change as you make it.
 
 Several apps can be open at once, and some of them (the content editor and media library, for instance) can be opened more than once, so you can compare two documents side by side.
 
@@ -385,6 +391,8 @@ It cannot take effect where it stands: every window is a frame with its own copy
 
 **Clock** forces 12 or 24 hour when your language and your habits disagree. Umbraco offers no British English, so an English backoffice is a 12 hour one whether you like it or not; this is how you get 24 hour without giving up anything else. It overrides only the hour, so Dutch still writes p.m. its own way, Danish keeps its dot, and Japanese and Korean keep their own markers in their own places. Left on Automatic, your language decides.
 
+Both settings apply to apps as well as the taskbar: the Accessories Clock follows them, and any app can, through the desktop's settings context ([`docs/desktop-apps.md`](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/desktop-apps.md) §7.1).
+
 Regional format and Clock are stored per user, in that browser, alongside your theme and wallpaper. The backoffice language is stored on your Umbraco user, so it follows you to any machine you sign in on.
 
 ## Installing the backoffice as an app
@@ -440,6 +448,63 @@ Both can be pinned in `appsettings.json`, which is the better option when you wa
 `Mode` is `Default` or `Custom`; `Custom` also needs a `MediaKey`. The two pin independently, so setting the name in configuration leaves the icon editable in the backoffice.
 
 This matters most if you restore databases between environments. The backoffice setting lives in the database and travels with a restore, so staging recovered from production comes back wearing production's name. A configured value does not.
+
+## Accessories
+
+Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information, the small tools Windows kept under Start > Programs > Accessories and its System Tools (and, for the screen saver, under Display), each in a window of its own and themed along with the rest of the desktop. Like the games, they ship in their own package:
+
+```bash
+dotnet add package Umbraco.Community.UmbraDesktop.Accessories
+```
+
+That is the whole installation. They appear in an Accessories group in the launcher for anyone who can already reach the desktop, and the group is not there at all if the package is not installed.
+
+- **Notepad.** A plain-text editor for text files in the media library, with word wrap and the caret's line and column in a status bar. Open picks a file from the media library, Save writes it back.
+- **Paint.** Pencil, brush, eraser and fill, MS Paint's own twenty-eight colours (left click paints one, right click the other), and Undo, on a new picture or on an image opened from the media library. Drag the handles on the picture's edges to make it bigger or smaller, as in MS Paint.
+- **Sticky Notes.** One board of notes shared by everyone who uses the desktop, so a note one person writes is on everyone else's screen within about fifteen seconds, or as soon as they click back into the window. Each note says who last wrote it and when. Anyone can edit or delete any note; delete asks first. See [Sticky Notes](#sticky-notes).
+- **Calculator.** The Windows Standard calculator without its scientific row, from the keypad or the keyboard. It works left to right as a pocket calculator does, and shows `0.3` for `0.1 + 0.2`.
+- **Character Map.** Every character a keyboard does not have, in a grid by group: accented letters, dashes and quotes, currency, arrows, maths, box drawing and symbols. Click one for its Unicode name and its Windows Alt keystroke, double-click to add it to the characters to copy, and **Copy**. Or search by name, "right arrow", or by code, "U+2192".
+- **Clock.** An analogue face with the time and date under it, written the same way as the taskbar clock: your Regional format and Clock settings apply to both.
+- **Screen Saver.** Starfield, Mystify, or Umbraco logos flying at you, when the desktop has been left alone. See [Screen saver](#screen-saver).
+- **Disk Cleanup.** Empties the content recycle bin and the media recycle bin, one or both at once, for good. Nothing is ticked when it opens, and it always asks first. See [Disk Cleanup](#disk-cleanup).
+- **System Information.** Windows 98's System Properties for the site: the Umbraco version, the desktop's version and theme, who you are signed in as, and the browser and machine you are on. **Details** has the rest: the server's own report (operating system, .NET, database), every installed package with its version, and your display, memory and processors. **Copy all** puts the lot on the clipboard for a support request.
+
+### Notepad and Paint work on the media library
+
+Every file Notepad and Paint open or save lives in the media library. **Open** shows Umbraco's own media picker, the one a media property uses, with its folders, search and Upload button, so a file on your computer gets in by uploading it there. Edit it, and **Save** writes it back over the same media item. The name in the status bar is the media item's name, so changing it and saving renames the item.
+
+- **Notepad** opens text files: `.txt`, Markdown, CSV, JSON, XML, HTML, CSS, JavaScript and SVG among them. It says so if you pick something that is not text.
+- **Paint** opens pictures up to 4,096 pixels across, at their own size, and saves them in the format they came in: a JPEG stays a JPEG. It refuses an SVG, which it could only flatten into pixels and would destroy by saving.
+
+The first time you save a new document or picture, Notepad and Paint ask where, as Save As always did: Umbraco's folder picker opens with the root of the media library chosen, so pressing **Choose** saves it there, or you pick a folder. The next Save As opens where you went last. After that first save, **Save** writes back over the same item without asking, and cancelling the picker saves nothing. The file takes the name you type in the status bar. Saving works the way dragging a file into the Media section does: the file's extension decides the media type, the folder has to allow that type, and you need access to the Media section and to that folder. If any of that says no, the reason appears in the window's status bar and your work stays unsaved.
+
+Unsaved work gets the same protection as an unsaved page: the window shows the unsaved dot, and closing it, or leaving the desktop, asks first. New and Open ask too.
+
+### Screen saver
+
+**Screen Saver** is Windows 98's Screen Saver tab in a window: a little monitor running the one you have chosen, a list to choose from, **Wait** so many minutes, and **Preview** to see it full screen. There are three:
+
+- **Starfield**, flying through space.
+- **Mystify**, two shapes bouncing off the edges of the screen, trailing echoes and slowly changing colour.
+- **Flying Umbraco**, the Umbraco logo in place of the flying windows.
+
+It is off until you choose one, and choosing **(None)** switches it off again. Once on, it starts when the desktop has been left alone for the wait, from 1 to 30 minutes, and any key, click, scroll or real movement of the mouse brings the desktop back. A nudge of a few pixels does not, so a knocked desk leaves it running. Typing in a window counts as being there, a content editor included. It only runs over the desktop, never over the classic backoffice, and not in a tab you cannot see. Your choice is stored per user, in that browser, like your theme.
+
+### Disk Cleanup
+
+**Disk Cleanup** frees space on the server by emptying the recycle bins: **Content recycle bin** and **Media recycle bin**, each with how many items it holds. Emptying one deletes those items for good, for everyone, with everything under them, and for media their files too. Nothing can be restored afterwards, so it is built to be hard to do by accident:
+
+- Nothing is ticked when the window opens, and **Clean up** does nothing until something is.
+- **Clean up** counts the ticked bins again, in case somebody has deleted something since the window opened, and then asks, in the backoffice's red confirmation dialog, naming each bin and how many items it holds. Only **Delete permanently** goes ahead.
+- It uses Umbraco's own Empty Recycle Bin, so Umbraco decides who may, exactly as in the Content and Media sections. A bin you cannot reach shows **No access** and cannot be ticked, and if Umbraco refuses to empty one you can see (a Writer, say, who may not delete), the window says so and leaves it alone.
+
+### Sticky Notes
+
+The notes are stored in the Umbraco database, in its key-value store, so they belong to the site: everyone with access to the Desktop section sees the same board, and nobody else can read it, even through the API. A note saves itself shortly after you stop typing. The board has room for 100 notes of up to 2,000 characters each.
+
+When two people edit the same note at once, nobody's words are thrown away. The first save wins; the second person's window keeps their text, says who changed the note meanwhile, and offers **Use theirs** or **Keep mine**. A note that someone deletes while you are writing in it is offered back the same way, with **Put it back** or **Discard**. Until either is settled the window shows the unsaved dot, so closing it asks first.
+
+The add-on is released from the same tag as this package and always carries the same version number, the same arrangement as Entertainment below.
 
 ## Games
 
@@ -562,7 +627,7 @@ If your package registers a section, it appears in the launcher automatically fo
 
 Beyond that there are two paths, and which one you take depends on what your app points at rather than on who wrote it.
 
-**A self-contained app you register yourself.** If your app is its own custom element, with no backoffice route behind it, register a `umbraDesktopApp` extension manifest and you are done. It gets a launcher tile, a group, a window, pinning, a taskbar button and the active theme's colours, and your package never talks to this repository. There is nothing for anyone here to verify: an element in a box cannot point at the wrong URL or pick the wrong chrome profile. This is how games and small tools get onto the desktop. [`docs/desktop-apps.md`](docs/desktop-apps.md) is the guide.
+**A self-contained app you register yourself.** If your app is its own custom element, with no backoffice route behind it, register a `umbraDesktopApp` extension manifest and you are done. It gets a launcher tile, a group, a window, pinning, a taskbar button and the active theme's colours, and your package never talks to this repository. There is nothing for anyone here to verify: an element in a box cannot point at the wrong URL or pick the wrong chrome profile. This is how games and small tools get onto the desktop, and the Accessories and Entertainment add-ons are two worked examples. [`docs/desktop-apps.md`](docs/desktop-apps.md) is the guide.
 
 **Curated placement for a backoffice surface.** If your app *is* a backoffice page (a custom icon, a friendly name, a specific group, a chrome profile or window sizing for a section or dashboard), it needs an entry in `backoffice/src/desktop/catalogue/`, which means opening a pull request against this repository. That is deliberate rather than a gap: a deep link needs its URL checked and its chrome profile chosen, and getting either wrong ships a broken window whose blame lands on the desktop. The manifest type has no `url`, `section` or `chromeProfile` field, so the split is structural and not a rule anyone has to remember.
 

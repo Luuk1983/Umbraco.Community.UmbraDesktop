@@ -10,6 +10,9 @@ desktop opens it, themes it and closes it, and your package never depends on any
 the manifest type. Minesweeper is the first one; a calculator, a colour picker or a notepad would
 work the same way.
 
+The Accessories package is the fullest example: Notepad, Paint, Sticky Notes, Calculator, Character
+Map, Clock, Screen Saver, Disk Cleanup and System Information are each one of these.
+
 ---
 
 ## 1. Is your app registerable, or does it belong in the catalogue?
@@ -461,7 +464,7 @@ never the other way round. A sixth theme must not be able to break your app.
 
 ---
 
-## 6. Groups, and the `games` contract
+## 6. Groups, and the `games` and `accessories` contract
 
 `meta.group` is a launcher group alias. The host owns the list, and an app naming a group that does
 not exist falls into the reserved More group, which is the same thing that happens to any uncurated
@@ -476,6 +479,11 @@ a contract between two packages:
 So the host can ship a Games group with no games in it, your package can ship games without the host
 knowing which, and neither release has to wait for the other. If you want a different heading,
 name a different group and land in More until one exists.
+
+`accessories` works the same way, for small self-contained tools rather than games: the host owns
+the alias, the label and its localisation, and it sorts after System and just before Games, which is
+where Windows put Start > Programs > Accessories. The Accessories package fills it, and a tool of
+your own may name it too.
 
 Most of the launcher then works on your app for nothing. Its tile and its taskbar button come from
 being in the app list at all. Pinning does key off `alias`, which is why §2 makes such a point of
@@ -522,6 +530,22 @@ Teardown is the browser's own. `disconnectedCallback` is the whole contract: can
 `requestAnimationFrame` there, clear your intervals, drop your listeners. There is no desktop signal
 to subscribe to and none is needed.
 
+**Tell the desktop about unsaved work with one attribute.** While your app holds work that closing
+the window would lose, put `data-umbradesktop-dirty` on your own element, and take it off once the
+work is saved or discarded:
+
+```ts
+this.toggleAttribute('data-umbradesktop-dirty', this.hasUnsavedWork);
+```
+
+That is the whole contract, and it buys everything a backoffice page gets: the unsaved dot on the
+titlebar and the taskbar button, a question before the close button throws the work away, and a
+count in the prompt before someone leaves the desktop. Presence is what counts, and the value is
+ignored. Write it wherever your state changes (Lit's `updated()` is a good place), and never set it
+for state that is not lost on close, such as a game in progress: a question nobody needed trains
+people to click through the one that matters. Notepad and Paint in the Accessories package are the
+worked examples.
+
 **There is no reload or restart control on an app window.** The titlebar draws three buttons —
 minimize, maximize, close — where an iframe window draws four. Reload exists for the iframe kind
 because re-fetching a booting backoffice in place, with the window keeping the route the user
@@ -535,6 +559,51 @@ So your app's lifetime is opened-to-closed and nothing in the chrome interrupts 
 needs a "start over" — and a game does — **offer it yourself, inside your own body**, where you can
 name it in your own words and put it where the player expects. Minesweeper's is the "New game"
 button in its status row.
+
+### 7.1 Formatting dates and times like the desktop
+
+The taskbar clock follows two of the user's desktop settings: which culture formats times (the
+backoffice's or the browser's) and whether to force a 12 or 24 hour clock. An app that shows a time
+should follow the same two, or the user who asked for 24 hour sees "2:30 PM" in your window and
+"14:30" a few centimetres below it. `this.localize.date` does not know about either setting.
+
+The desktop publishes them through the context it provides to everything inside it, apps included.
+**This is public API**: the alias, the two members below and their behaviour are kept stable.
+
+| | |
+|---|---|
+| Context alias | `'UmbraDesktopSettingsContext'` |
+| `formatDateTime(date, options)` | Formats `date` with `Intl.DateTimeFormat` options, exactly as the taskbar clock does: the user's culture, their hour override when `options` asks for an hour, and the hour padded to suit the cycle. Returns a string |
+| `locale` | An observable that emits whenever either setting changes. Observe it and redraw; its value is the desktop's own and not something to read |
+
+As with the manifest type (§2), nothing is imported from the host. Declare the shape you use and a
+token with the same alias, and consume it:
+
+```ts
+import { UmbContextToken } from '@umbraco-cms/backoffice/context-api';
+import type { UmbContextMinimal } from '@umbraco-cms/backoffice/context-api';
+import type { Observable } from '@umbraco-cms/backoffice/external/rxjs';
+
+// UmbContextMinimal, because UmbContextToken requires it; the desktop's context is one.
+interface DesktopDateTime extends UmbContextMinimal {
+  formatDateTime(date: Date, options: Intl.DateTimeFormatOptions): string;
+  readonly locale: Observable<unknown>;
+}
+
+const DESKTOP_SETTINGS = new UmbContextToken<DesktopDateTime>('UmbraDesktopSettingsContext');
+
+// In your element:
+this.consumeContext(DESKTOP_SETTINGS, (desktop) => {
+  this.#desktop = desktop;
+  if (desktop) this.observe(desktop.locale, () => this.requestUpdate());
+});
+// …and when rendering, falling back to the backoffice's own formatting:
+const time = this.#desktop?.formatDateTime(now, options) ?? this.localize.date(now, options);
+```
+
+**Keep the fallback.** The context is absent in your own tests, and would be under a desktop older
+than this contract, and an app that renders nothing there is worse than one that follows the
+backoffice culture alone. The Accessories Clock is the worked example.
 
 ---
 
@@ -663,6 +732,8 @@ booting second backoffice inside an iframe and there is not one here. Your eleme
 - [ ] Your `alias` is namespaced and final: it is what pins a favourite
 - [ ] `meta.label` is a localisation token and your package ships the dictionary for it
 - [ ] `disconnectedCallback` cancels every timer, frame and listener your app started
+- [ ] If closing your window can lose work, your element carries `data-umbradesktop-dirty` while it
+      would (§7), and only then
 - [ ] Minimizing your window and restoring it leaves your app's state intact
 - [ ] Switching theme mid-use recolours your app without resetting it
 - [ ] `meta.defaultSize` and `meta.minSize` are **your content box** with no titlebar allowance
