@@ -17,6 +17,8 @@ Install the entertainment package and the launcher grows a Games group. Open a g
 - **Minesweeper.** The real one: left-click to reveal, right-click to flag, flood fill on an empty square, a mine counter and a timer. Three difficulties.
 - **Snake.** The classic: steer with the arrow keys or WASD, eat the food to grow longer, and don't hit the walls or your own tail. Ten points per piece of food, the snake speeds up as it grows, and your best score is remembered in your browser. Space pauses, and the game pauses by itself when its window loses focus, so minimising it doesn't get you killed.
 
+Both open in a fixed-size window, the way Minesweeper did on Windows: you can move and minimise it, but not resize or maximise it.
+
 ![Snake open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with its score, New game button and best score above the board, and the launcher open down to its Games group, which lists Minesweeper and Snake.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-snake.png)
 
 That is the whole list for now. Solitaire is the obvious next one and is not in this release.

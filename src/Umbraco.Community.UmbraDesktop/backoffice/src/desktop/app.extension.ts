@@ -41,6 +41,16 @@ export interface MetaUmbraDesktopApp {
   minSize?: { w: number; h: number };
   /** Whether more than one window of this app may be open at once. Default: allowed. */
   allowMultiple?: boolean;
+  /**
+   * Whether the user may resize or maximize the window. Default: allowed.
+   *
+   * `false` keeps the window at `defaultSize` for its whole life, the way Minesweeper's window was
+   * fixed on every Windows up to XP: no resize handles, no snapping to an edge, and no maximize
+   * button, which is left out rather than greyed as Windows does. It still moves, minimizes and
+   * closes. Meant for an
+   * app whose content does not reflow, where a bigger window is only a bigger empty margin.
+   */
+  resizable?: boolean;
 }
 
 /**

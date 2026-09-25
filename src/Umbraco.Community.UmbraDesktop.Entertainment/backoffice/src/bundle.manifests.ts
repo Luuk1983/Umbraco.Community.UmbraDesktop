@@ -59,6 +59,9 @@ const minesweeper: UmbExtensionManifest = {
     // the game is shared between two instances (every mutable thing is a field on the element, and
     // `rules.ts` is pure), so there is nothing to protect by saying no.
     allowMultiple: true,
+    // Fixed, as it was on every Windows up to XP: a 9x9 grid does not reflow, so resizing or
+    // maximizing only ever put empty space around it. The window still moves and minimizes.
+    resizable: false,
   },
 };
 
@@ -85,6 +88,8 @@ const snake: UmbExtensionManifest = {
     defaultSize: SNAKE_CONTENT_SIZE,
     minSize: SNAKE_MIN_CONTENT_SIZE,
     allowMultiple: true,
+    // Fixed for the same reason as Minesweeper: the board is a set number of pixels.
+    resizable: false,
   },
 };
 

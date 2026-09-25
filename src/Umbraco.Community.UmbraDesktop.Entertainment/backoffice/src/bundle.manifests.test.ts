@@ -80,3 +80,13 @@ it("asks for Snake's content size, leaving the chrome to the host", () => {
   expect(meta?.defaultSize).to.deep.equal(SNAKE_CONTENT_SIZE);
   expect(meta?.minSize).to.deep.equal(SNAKE_MIN_CONTENT_SIZE);
 });
+
+/**
+ * Both games keep their windows the size they open at, as Minesweeper did on every Windows up to
+ * XP. Neither board reflows, so a bigger window was only ever a bigger empty margin around it.
+ */
+it('opens every game in a window that cannot be resized or maximized', () => {
+  for (const app of apps) {
+    expect((app as { meta?: { resizable?: boolean } }).meta?.resizable, app.alias).to.equal(false);
+  }
+});

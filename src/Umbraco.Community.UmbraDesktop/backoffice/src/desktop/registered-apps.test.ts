@@ -198,3 +198,11 @@ it('keeps a manifest whose element is a class constructor', () => {
 it('drops a manifest whose element is an empty string', () => {
   expect(normaliseRegisteredApps([manifest({ element: '' })]).apps).to.deep.equal([]);
 });
+
+/** `resizable` comes through as written, and an unset one stays unset so the default applies. */
+it('carries resizable through from the manifest', () => {
+  const [fixed] = normaliseRegisteredApps([manifest({ meta: { label: 'x', resizable: false } })]).apps;
+  expect(fixed.resizable).to.equal(false);
+  const [unset] = normaliseRegisteredApps([manifest()]).apps;
+  expect(unset.resizable, 'unset is not an opinion, so it must not become one').to.be.undefined;
+});
