@@ -10,7 +10,7 @@ Three packages, from **one tag**, always at the **same version**:
 | Package | What it is |
 |---|---|
 | `Umbraco.Community.UmbraDesktop` | The desktop. The product. |
-| `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games add-on. Minesweeper today. |
+| `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games add-on. |
 | `Umbraco.Community.UmbraDesktop.Accessories` | Optional tools add-on. Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information. The only package besides the host with server-side code (the Sticky Notes API), and the only add-on with a C# test project of its own. |
 
 Lockstep is a decision, not an accident: design D13 in
@@ -106,12 +106,12 @@ Nothing in CI can do these.
   | `background-jobs-viewer.png` | The Distributed table only. The Recurring one is below the fold and the view does not fit a screen at any framing worth having, so the caption does not claim the split and the explanation at the top of the shot carries the point. |
   | `entertainment-games-minesweeper.png` | The add-on's first shot, also used in both readmes. Retaken with Snake so the Games group lists both games; the alt text names them, so retake it again when a game is added. |
   | `entertainment-games-snake.png` | Snake's shot, framed to match Minesweeper's: Windows 98, the Games group open in the launcher. Also in both readmes. Take it **before** the first key press, so the start message is showing in the middle of the board and the snake is sitting a quarter of the way down above it, since that is the one moment the board says how to play. |
+  | `header-entry-point.png` | Small and annotated on purpose. It answers one question, "where is the way in", and showing more screen would not answer it better. |
 
   **Accessories has no shot yet**, and its listing and both readmes deliberately reference none, per
-  the ordering rule above. When one is taken, the obvious frame is the four tools open side by side
-  under one theme with the launcher's Accessories group visible; add it to the add-on's
+  the ordering rule above. When one is taken, the obvious frame is a few of its tools open side by
+  side under one theme with the launcher's Accessories group visible; add it to the add-on's
   `Screenshots`, its README and the root README's Accessories section together.
-  | `header-entry-point.png` | Small and annotated on purpose. It answers one question, "where is the way in", and showing more screen would not answer it better. |
 
 ## Traps this repository has actually hit
 

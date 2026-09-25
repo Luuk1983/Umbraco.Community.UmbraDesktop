@@ -96,9 +96,9 @@ version is ignored when read.
 
 **The settings category was removed from this package, and the host's extension point moved to a
 pull request of its own** (decided with the repository owner, 2026-09-25): with nothing here using
-it, it is a host feature for other packages rather than part of Accessories. Branch
-`feature/settings-category-extension`, design doc `2026-09-25-settings-category-extension-design.md`
-there. This branch leaves the host's settings panel exactly as `main` has it.
+it, it is a host feature for other packages rather than part of Accessories. Its reasoning is in
+`2026-09-25-settings-category-extension-design.md`, which arrives with that pull request. This one
+leaves the host's settings panel exactly as `main` has it.
 
 The package's settings (now the screensaver alone) are stored per user in `localStorage`, the same
 scope as every other desktop setting, under the add-on's own key. Controllers in open windows hear a
