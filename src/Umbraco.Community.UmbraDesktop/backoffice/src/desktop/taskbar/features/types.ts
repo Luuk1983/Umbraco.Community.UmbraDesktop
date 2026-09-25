@@ -84,6 +84,12 @@ export interface UmbraDesktopTaskbarFeatureContext {
    * @returns The string to show.
    */
   localize(value: string): string;
+  /** Whether the page is full screen right now, as the browser reports it. */
+  fullscreen: boolean;
+  /** Whether the browser allows this page to go full screen at all. */
+  canFullscreen: boolean;
+  /** Take the page full screen, or bring it back when it already is. */
+  toggleFullscreen(): void;
 }
 
 /**

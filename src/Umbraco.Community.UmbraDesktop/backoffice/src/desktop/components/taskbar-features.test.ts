@@ -101,7 +101,9 @@ describe('the taskbar feature row', () => {
     for (const open of manager.getWindows()) manager.close(open.id);
     apps.setValue([CHAT, CONTENT, MEDIA]);
     pinned.setValue(['content', 'media']);
-    features.setValue({});
+    // Full screen off for the cases about the chat and the pins, which are about those two and
+    // should not have to account for a third button; its own cases switch it back on.
+    features.setValue({ fullscreen: false });
     await taskbar.updateComplete;
   });
 
@@ -155,11 +157,11 @@ describe('the taskbar feature row', () => {
 
   it('closes a switched-off feature space without moving the others', async function () {
     this.timeout(MOUNT_TIMEOUT_MS);
-    features.setValue({ 'pinned-apps': false });
+    features.setValue({ fullscreen: false, 'pinned-apps': false });
     await taskbar.updateComplete;
     expect(icons()).to.deep.equal(['icon-chat']);
 
-    features.setValue({ 'ai-chat': false });
+    features.setValue({ fullscreen: false, 'ai-chat': false });
     await taskbar.updateComplete;
     // The pinned apps keep their own order and do not slide into the chat's slot, because the
     // shell's order is fixed rather than computed from what happens to be on.
@@ -168,7 +170,7 @@ describe('the taskbar feature row', () => {
 
   it('takes no space at all when every feature is off', async function () {
     this.timeout(MOUNT_TIMEOUT_MS);
-    features.setValue({ 'ai-chat': false, 'pinned-apps': false });
+    features.setValue({ fullscreen: false, 'ai-chat': false, 'pinned-apps': false });
     await taskbar.updateComplete;
     expect(taskbar.renderRoot.querySelector('.features'), 'an empty row should not be in the DOM').to.equal(null);
   });
@@ -227,7 +229,7 @@ describe('the taskbar feature row', () => {
 
     it('stays away when the row itself is empty', async function () {
       this.timeout(MOUNT_TIMEOUT_MS);
-      features.setValue({ 'ai-chat': false, 'pinned-apps': false });
+      features.setValue({ fullscreen: false, 'ai-chat': false, 'pinned-apps': false });
       manager.open(CONTENT);
       await taskbar.updateComplete;
       expect(divider(), 'a divider with nothing before it is a line hanging off the start button').to.equal(null);
@@ -258,5 +260,107 @@ describe('the taskbar feature row', () => {
     pinned.setValue(['content', 'gone', 'media']);
     await taskbar.updateComplete;
     expect(icons()).to.deep.equal(['icon-chat', 'icon-document', 'icon-picture']);
+  });
+});
+
+/**
+ * The full screen button: after the pinned apps, and following the browser's own full screen state,
+ * so leaving with Esc turns it back into "Full screen" as surely as clicking it does.
+ *
+ * The browser's full screen is stood in for: a test cannot really take the page full screen, so
+ * `requestFullscreen` and `exitFullscreen` are recorded, and `document.fullscreenElement` plus a
+ * `fullscreenchange` event play the browser's part.
+ */
+describe('the full screen button', () => {
+  let wrapper: HTMLElement;
+  let host: UmbElementControllerHost;
+  let taskbar: UmbraDesktopTaskbarElement;
+  const asked: string[] = [];
+  let restore: Array<() => void> = [];
+
+  before(async function () {
+    this.timeout(MOUNT_TIMEOUT_MS);
+    wrapper = document.createElement('div');
+    document.body.appendChild(wrapper);
+    host = new UmbElementControllerHost(wrapper);
+    const manager = new UmbraDesktopWindowManagerContext(host);
+    new UmbContextProvider(wrapper, UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, manager).hostConnected();
+    new UmbContextProvider(wrapper, UMBRADESKTOP_APP_CATALOGUE_CONTEXT, {
+      apps: new UmbArrayState<UmbraDesktopApp>([CONTENT], (a) => a.alias).asObservable(),
+      groups: new UmbArrayState<never>([], (g) => g).asObservable(),
+      isRefRegistered: () => true,
+      getHostElement: () => wrapper,
+    } as never).hostConnected();
+    new UmbContextProvider(wrapper, UMBRADESKTOP_SETTINGS_CONTEXT, {
+      pinned: new UmbArrayState<string>(['content'], (a) => a).asObservable(),
+      taskbarFeatures: new UmbObjectState<Record<string, boolean>>({}).asObservable(),
+      locale: new UmbObjectState(UMBRADESKTOP_DEFAULT_SETTINGS.locale).asObservable(),
+      getHostElement: () => wrapper,
+    } as never).hostConnected();
+    taskbar = document.createElement('umbradesktop-taskbar') as UmbraDesktopTaskbarElement;
+    wrapper.appendChild(taskbar);
+    await taskbar.updateComplete;
+  });
+
+  beforeEach(() => {
+    asked.length = 0;
+    const root = document.documentElement;
+    const request = root.requestFullscreen;
+    const exit = document.exitFullscreen;
+    root.requestFullscreen = async () => void asked.push('enter');
+    document.exitFullscreen = async () => void asked.push('exit');
+    restore = [
+      () => (root.requestFullscreen = request),
+      () => (document.exitFullscreen = exit),
+      () => delete (document as unknown as Record<string, unknown>).fullscreenElement,
+    ];
+  });
+
+  afterEach(() => {
+    for (const undo of restore) undo();
+  });
+
+  after(() => {
+    host?.destroy();
+    wrapper?.remove();
+  });
+
+  /** The browser entering or leaving full screen, as it reports it. */
+  async function browserFullscreen(on: boolean): Promise<void> {
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => (on ? document.documentElement : null) });
+    document.dispatchEvent(new Event('fullscreenchange'));
+    await taskbar.updateComplete;
+  }
+
+  const row = () => [...taskbar.renderRoot.querySelectorAll<HTMLElement>('.features .task')];
+  const last = () => row()[row().length - 1];
+  const iconOf = (button: HTMLElement) => button.querySelector('umb-icon')?.getAttribute('name');
+
+  it('sits after the pinned apps', async function () {
+    this.timeout(MOUNT_TIMEOUT_MS);
+    expect(row().map(iconOf)).to.deep.equal(['icon-document', 'icon-fullscreen']);
+  });
+
+  it('asks the browser to take the whole page full screen', async function () {
+    this.timeout(MOUNT_TIMEOUT_MS);
+    last().click();
+    expect(asked).to.deep.equal(['enter']);
+  });
+
+  it('turns into Exit full screen when the browser goes full screen, and leaves it when clicked', async function () {
+    this.timeout(MOUNT_TIMEOUT_MS);
+    await browserFullscreen(true);
+    expect(iconOf(last())).to.equal('icon-exit-fullscreen');
+    expect(last().getAttribute('aria-pressed')).to.equal('true');
+    last().click();
+    expect(asked).to.deep.equal(['exit']);
+  });
+
+  it('follows the browser back out, as when Esc leaves full screen', async function () {
+    this.timeout(MOUNT_TIMEOUT_MS);
+    await browserFullscreen(true);
+    await browserFullscreen(false);
+    expect(iconOf(last())).to.equal('icon-fullscreen');
+    expect(last().getAttribute('aria-pressed')).to.equal('false');
   });
 });

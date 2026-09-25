@@ -1,5 +1,6 @@
 import { UMBRADESKTOP_AI_CHAT_FEATURE } from './ai-chat/index.js';
 import { UMBRADESKTOP_PINNED_APPS_FEATURE } from './pinned-apps/index.js';
+import { UMBRADESKTOP_FULLSCREEN_FEATURE } from './fullscreen/index.js';
 import { isFeatureEnabled } from './enabled.js';
 import type {
   UmbraDesktopTaskbarFeature,
@@ -23,6 +24,7 @@ import type {
 export const UMBRADESKTOP_TASKBAR_FEATURES: ReadonlyArray<UmbraDesktopTaskbarFeature> = [
   UMBRADESKTOP_AI_CHAT_FEATURE,
   UMBRADESKTOP_PINNED_APPS_FEATURE,
+  UMBRADESKTOP_FULLSCREEN_FEATURE,
 ];
 
 /**
