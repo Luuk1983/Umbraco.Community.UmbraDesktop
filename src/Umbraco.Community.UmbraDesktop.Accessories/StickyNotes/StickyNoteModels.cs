@@ -48,3 +48,7 @@ public sealed record CreateStickyNoteRequestModel(string Text, string Colour);
 /// <param name="Colour">Its paper colour.</param>
 /// <param name="Version">The version the edit was made against, which must still be the current one.</param>
 public sealed record UpdateStickyNoteRequestModel(string Text, string Colour, int Version);
+
+/// <summary>Where to move a note: before another, or at the end when <paramref name="Before"/> is null.</summary>
+/// <param name="Before">The note it should go before, or null for the end of the board.</param>
+public sealed record MoveStickyNoteRequestModel(Guid? Before);

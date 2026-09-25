@@ -68,3 +68,10 @@ describe('delete of a note already gone', () => {
     expect(await createStickyNotesApi().remove('k')).to.equal(true);
   });
 });
+
+describe('move of a note already gone', () => {
+  throwsFrom('put', { type: 'NotFound', title: 'Not Found', status: 404 });
+  it('reports that nothing was moved', async () => {
+    expect(await createStickyNotesApi().move('k', undefined)).to.equal(false);
+  });
+});

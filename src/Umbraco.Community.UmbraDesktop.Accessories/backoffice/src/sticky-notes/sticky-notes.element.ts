@@ -3,11 +3,13 @@ import { AREA } from '../shared/area.js';
 import { UNSAVED_ATTRIBUTE } from '../shared/unsaved.js';
 import { createStickyNotesApi } from './api.js';
 import type { StickyNotesApi } from './api.js';
-import { editNote, fromServer, mergeBoard, saved } from './board.js';
+import { editNote, fromServer, mergeBoard, moveNote, saved } from './board.js';
 import type { LocalNote } from './board.js';
 import {
+  STICKY_NOTES_COLOUR,
   STICKY_NOTES_FOCUS_REFRESH_GAP_MS,
   STICKY_NOTES_INK,
+  STICKY_NOTES_LINE_PX,
   STICKY_NOTES_NOTE_HEIGHT_PX,
   STICKY_NOTES_NOTE_MIN_WIDTH_PX,
   STICKY_NOTES_PADDING_PX,
@@ -15,14 +17,18 @@ import {
   STICKY_NOTES_POLL_INTERVAL_MS,
   STICKY_NOTES_SAVE_DELAY_MS,
   STICKY_NOTES_TEXT_MIN_HEIGHT_PX,
+  STICKY_NOTES_TEXT_TOP_PX,
   STICKY_NOTES_TOOLBAR_HEIGHT_PX,
 } from './constants.js';
 import { css, customElement, html, nothing, property, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
 
+/** The faint ruled lines on a note: the note's ink, mostly transparent. */
+const STICKY_NOTES_RULE = `color-mix(in srgb, ${STICKY_NOTES_INK} 14%, transparent)`;
+
 /** The limits the server sends with the board, until it has sent them. */
-const DEFAULT_LIMITS = { maxTextLength: 2000, maxNotes: 100, colours: Object.keys(STICKY_NOTES_PAPER) };
+const DEFAULT_LIMITS = { maxTextLength: 2000, maxNotes: 100, colours: [STICKY_NOTES_COLOUR] };
 
 /**
  * Sticky Notes, as a self-contained UmbraDesktop app: one board of notes shared by everyone who uses
@@ -105,6 +111,14 @@ export class StickyNotesElement extends UmbLitElement {
   /** When the board last refreshed, for skipping a focus refresh straight after one. */
   #lastRefresh = 0;
 
+  /** The note being dragged, while one is. */
+  @state()
+  private _dragging?: string;
+
+  /** Where a dragged note would land if it were dropped now: on which note, and which side of it. */
+  @state()
+  private _dropAt?: { key: string; side: 'before' | 'after' };
+
   /** Load the board and start refreshing. */
   override connectedCallback(): void {
     super.connectedCallback();
@@ -171,9 +185,9 @@ export class StickyNotesElement extends UmbLitElement {
     await Promise.all(this._notes.filter((note) => note.pending).map((note) => this.#save(note.key)));
   }
 
-  /** Add a note to the board, in the default colour, and put the cursor in it. */
+  /** Add a note to the board, in yellow, and put the cursor in it. */
   async #add(): Promise<void> {
-    const note = await this.api.create('', this._limits.colours[0] ?? 'yellow');
+    const note = await this.api.create('', STICKY_NOTES_COLOUR);
     if (!note) {
       this._offline = true;
       return;
@@ -300,6 +314,109 @@ export class StickyNotesElement extends UmbLitElement {
   }
 
   /**
+   * Move a note to sit before another, or to the end, for everyone.
+   *
+   * The window shows the new order straight away and tells the server, naming the note it now goes
+   * before rather than a position, so a note someone else adds or deletes meanwhile cannot make it
+   * land somewhere else. If the server refuses, the board is read again and shows the order as it
+   * really is.
+   * @param key The note to move.
+   * @param before The note it should go before, or undefined for the end.
+   */
+  async #move(key: string, before: string | undefined): Promise<void> {
+    if (key === before) return;
+    this._notes = moveNote(this._notes, key, before);
+    if (!(await this.api.move(key, before))) await this.refresh();
+  }
+
+  /**
+   * A drag has started on a note's handle.
+   * @param event The dragstart.
+   * @param key The note being dragged.
+   */
+  #onDragStart(event: DragEvent, key: string): void {
+    this._dragging = key;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      // Some browsers start no drag without data, and the key is as good as anything.
+      event.dataTransfer.setData('text/plain', key);
+      // The whole note as the drag image, not only the handle the pointer is on.
+      const card = (event.currentTarget as HTMLElement).closest<HTMLElement>('.note');
+      if (card) event.dataTransfer.setDragImage(card, 12, 12);
+    }
+  }
+
+  /**
+   * Which side of a note the pointer is over: its leading half puts the dragged note before it, its
+   * trailing half after it. Halved across rather than down, because the board fills rows left to
+   * right and "before" is to the left.
+   * @param event The drag event over the note.
+   * @returns The side.
+   */
+  #sideOf(event: DragEvent): 'before' | 'after' {
+    const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    return event.clientX < box.left + box.width / 2 ? 'before' : 'after';
+  }
+
+  /**
+   * A dragged note is over another: allow the drop and show where it would land.
+   * @param event The dragover.
+   * @param key The note under the pointer.
+   */
+  #onDragOver(event: DragEvent, key: string): void {
+    if (!this._dragging || this._dragging === key) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    const side = this.#sideOf(event);
+    if (this._dropAt?.key !== key || this._dropAt.side !== side) this._dropAt = { key, side };
+  }
+
+  /**
+   * A dragged note was dropped on another: move it to that side of it.
+   * @param event The drop.
+   * @param key The note it was dropped on.
+   */
+  #onDrop(event: DragEvent, key: string): void {
+    const dragged = this._dragging;
+    if (!dragged || dragged === key) return;
+    event.preventDefault();
+    const side = this.#sideOf(event);
+    this._dragging = undefined;
+    this._dropAt = undefined;
+    if (side === 'before') {
+      void this.#move(dragged, key);
+      return;
+    }
+    const rest = this._notes.filter((note) => note.key !== dragged);
+    void this.#move(dragged, rest[rest.findIndex((note) => note.key === key) + 1]?.key);
+  }
+
+  /** The drag is over, dropped or not: clear what it was showing. */
+  #onDragEnd(): void {
+    this._dragging = undefined;
+    this._dropAt = undefined;
+  }
+
+  /**
+   * The handle's keys: the arrows move its note one place earlier or later, so the board can be
+   * reordered without dragging. Focus stays on the handle as the note moves.
+   * @param event The keydown.
+   * @param key The note.
+   */
+  async #onHandleKey(event: KeyboardEvent, key: string): Promise<void> {
+    const earlier = event.key === 'ArrowLeft' || event.key === 'ArrowUp';
+    const later = event.key === 'ArrowRight' || event.key === 'ArrowDown';
+    if (!earlier && !later) return;
+    event.preventDefault();
+    const index = this._notes.findIndex((note) => note.key === key);
+    if (earlier && index > 0) await this.#move(key, this._notes[index - 1].key);
+    else if (later && index < this._notes.length - 1) await this.#move(key, this._notes[index + 2]?.key);
+    else return;
+    await this.updateComplete;
+    this.shadowRoot?.querySelector<HTMLElement>(`.note[data-key="${key}"] .handle`)?.focus();
+  }
+
+  /**
    * One word from this package's dictionary.
    * @param key The key inside the area.
    * @param fallback The English, shown if the dictionary has not loaded.
@@ -327,20 +444,28 @@ export class StickyNotesElement extends UmbLitElement {
    * @returns Its card.
    */
   #renderNote(note: LocalNote) {
-    const paper = STICKY_NOTES_PAPER[note.colour] ?? Object.values(STICKY_NOTES_PAPER)[0];
+    const move = this.#term('stickyNotesMove', 'Move note: drag it, or use the arrow keys');
     return html`
-      <article class="note" data-key=${note.key} style="--note-paper: ${paper}">
+      <article
+        class="note"
+        data-key=${note.key}
+        data-dragging=${this._dragging === note.key ? 'true' : nothing}
+        data-drop=${this._dropAt?.key === note.key ? this._dropAt.side : nothing}
+        @dragover=${(event: DragEvent) => this.#onDragOver(event, note.key)}
+        @drop=${(event: DragEvent) => this.#onDrop(event, note.key)}
+      >
         <header>
-          ${this._limits.colours.map(
-            (colour) => html`<button
-              class="swatch"
-              data-colour=${colour}
-              style="background: ${STICKY_NOTES_PAPER[colour] ?? paper}"
-              aria-label=${this.#term(`stickyNotesColour_${colour}`, colour)}
-              aria-pressed=${note.colour === colour ? 'true' : 'false'}
-              @click=${() => this.#edit(note.key, { colour })}
-            ></button>`,
-          )}
+          <button
+            class="handle"
+            draggable="true"
+            title=${move}
+            aria-label=${move}
+            @dragstart=${(event: DragEvent) => this.#onDragStart(event, note.key)}
+            @dragend=${() => this.#onDragEnd()}
+            @keydown=${(event: KeyboardEvent) => this.#onHandleKey(event, note.key)}
+          >
+            ⠿
+          </button>
           <span class="spacer"></span>
           <button
             class="delete"
@@ -481,9 +606,9 @@ export class StickyNotesElement extends UmbLitElement {
         display: flex;
         flex-direction: column;
         min-height: ${STICKY_NOTES_NOTE_HEIGHT_PX}px;
+        --note-paper: ${unsafeCSS(STICKY_NOTES_PAPER)};
         background: var(--note-paper);
         color: ${unsafeCSS(STICKY_NOTES_INK)};
-        box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
         border-radius: 2px;
         font-family: var(--umbradesktop-app-font, inherit);
       }
@@ -505,18 +630,42 @@ export class StickyNotesElement extends UmbLitElement {
         padding: 4px 4px 0;
       }
 
-      .swatch {
-        width: 14px;
-        height: 14px;
+      /* The grip a note is dragged by. Only this starts a drag, not the whole note, so selecting
+         text in a note still selects text. */
+      .handle {
+        width: 22px;
+        height: 22px;
         padding: 0;
-        border: 1px solid rgb(0 0 0 / 30%);
-        border-radius: 50%;
-        cursor: pointer;
+        border: none;
+        background: transparent;
+        color: inherit;
+        font-size: 14px;
+        line-height: 1;
+        cursor: grab;
+        opacity: 0.45;
       }
 
-      .swatch[aria-pressed='true'] {
-        outline: 2px solid ${unsafeCSS(STICKY_NOTES_INK)};
-        outline-offset: 1px;
+      .handle:hover,
+      .handle:focus-visible {
+        opacity: 1;
+      }
+
+      .handle:active {
+        cursor: grabbing;
+      }
+
+      /* While dragging: the note being moved fades, and the note it would land beside shows a bar
+         on the side it would land. The bar is an inset shadow, so it costs no layout. */
+      .note[data-dragging] {
+        opacity: 0.4;
+      }
+
+      .note[data-drop='before'] {
+        box-shadow: inset 3px 0 0 var(--umbradesktop-app-accent, var(--uui-color-selected));
+      }
+
+      .note[data-drop='after'] {
+        box-shadow: inset -3px 0 0 var(--umbradesktop-app-accent, var(--uui-color-selected));
       }
 
       .spacer {
@@ -545,16 +694,36 @@ export class StickyNotesElement extends UmbLitElement {
         flex: 1;
         min-height: ${STICKY_NOTES_TEXT_MIN_HEIGHT_PX}px;
         margin: 0;
-        padding: 4px 8px;
+        padding: ${STICKY_NOTES_TEXT_TOP_PX}px 8px;
         border: none;
         resize: none;
-        background: transparent;
         color: inherit;
         font: inherit;
-        line-height: 1.35;
+        /* Ruled like lined paper, as Windows' notes were: one faint line under each line of text.
+           The spacing is the line height, one constant for both, and the ruling scrolls with the
+           text (local) and starts where the text does, so the writing stays on the lines. */
+        line-height: ${STICKY_NOTES_LINE_PX}px;
+        background-color: transparent;
+        background-image: repeating-linear-gradient(
+          to bottom,
+          transparent 0 ${STICKY_NOTES_LINE_PX - 1}px,
+          ${unsafeCSS(STICKY_NOTES_RULE)} ${STICKY_NOTES_LINE_PX - 1}px ${STICKY_NOTES_LINE_PX}px
+        );
+        background-attachment: local;
+        background-position: 0 ${STICKY_NOTES_TEXT_TOP_PX}px;
       }
 
-      textarea:focus-visible,
+      /* Nothing a mouse does draws a ring or a shadow here: notes sit flat, and the note being typed
+         in is shown by its caret. A heavy
+         ink ring on the text, a lift and a faint edge were each tried and turned down. The text
+         needs its own rule because a textarea matches :focus-visible however it was focused, so
+         the keyboard ring below would otherwise frame every note anyone clicked into. */
+      textarea:focus-visible {
+        outline: none;
+      }
+
+      /* The keyboard's ring. A button matches :focus-visible only when reached from the keyboard, so
+         a click never shows it. */
       .swatch:focus-visible,
       .delete:focus-visible {
         outline: 2px solid ${unsafeCSS(STICKY_NOTES_INK)};

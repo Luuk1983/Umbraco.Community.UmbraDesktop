@@ -17,6 +17,7 @@ import type { MachineFacts, ServerFacts, SystemInfoSource } from './source.js';
 import { AREA } from '../shared/area.js';
 import { copyToClipboard } from '../shared/clipboard.js';
 import { accessoryStyles } from '../shared/styles.js';
+import { UMBRACO_BLUE, UMBRACO_LOGO_PATH, UMBRACO_LOGO_SIZE, UMBRACO_LOGO_VIEWBOX } from '../shared/umbraco-logo.js';
 import { css, customElement, html, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
@@ -221,9 +222,18 @@ export class SystemInfoElement extends UmbLitElement {
       },
       {
         heading: this.#term('systemInfoSectionPackages', 'Installed packages'),
-        rows: [...(server?.packages ?? [])]
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map((installed): [string, string] => [installed.name, installed.version || this.#unknown]),
+        // Only for users with the Packages section, and left out of the copied report for everyone
+        // else too, since the report is this same table. See ServerFacts.packagesVisible.
+        rows: server?.packagesVisible
+          ? [...(server.packages ?? [])]
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((installed): [string, string] => [installed.name, installed.version || this.#unknown])
+          : [
+              [
+                this.#term('systemInfoSectionPackages', 'Installed packages'),
+                this.#term('systemInfoPackagesDenied', 'Only users with the Packages section can see these'),
+              ],
+            ],
       },
     ];
   }
@@ -237,14 +247,18 @@ export class SystemInfoElement extends UmbLitElement {
   }
 
   /**
-   * The Umbraco mark: the blue disc and the white U, drawn rather than loaded, as Flying Umbraco
-   * draws it.
+   * The Umbraco logo, from the path in Umbraco's own `icon-umbraco` (see `shared/umbraco-logo.ts`).
+   *
+   * The mark is a disc with the U cut out of it, so a white disc sits underneath, a little smaller
+   * than the blue one so no white shows at the edge. That keeps the U white on every theme, as it
+   * is in the logo, rather than whatever colour the window happens to be.
    * @returns The logo.
    */
   #renderLogo() {
-    return html`<svg class="logo" viewBox="0 0 100 100" aria-hidden="true">
-      <circle cx="50" cy="50" r="48" fill="#3544b1"></circle>
-      <path d="M31 30 v22 a19 19 0 0 0 38 0 v-22" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"></path>
+    const half = UMBRACO_LOGO_SIZE / 2;
+    return html`<svg class="logo" viewBox=${UMBRACO_LOGO_VIEWBOX} aria-hidden="true">
+      <circle cx=${half} cy=${half} r=${half * 0.95} fill="#fff"></circle>
+      <path d=${UMBRACO_LOGO_PATH} fill=${UMBRACO_BLUE}></path>
     </svg>`;
   }
 

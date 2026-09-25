@@ -391,6 +391,8 @@ It cannot take effect where it stands: every window is a frame with its own copy
 
 **Clock** forces 12 or 24 hour when your language and your habits disagree. Umbraco offers no British English, so an English backoffice is a 12 hour one whether you like it or not; this is how you get 24 hour without giving up anything else. It overrides only the hour, so Dutch still writes p.m. its own way, Danish keeps its dot, and Japanese and Korean keep their own markers in their own places. Left on Automatic, your language decides.
 
+Both settings apply to apps as well as the taskbar: the Accessories Clock follows them, and any app can, through the desktop's settings context ([`docs/desktop-apps.md`](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/desktop-apps.md) §7.1).
+
 Regional format and Clock are stored per user, in that browser, alongside your theme and wallpaper. The backoffice language is stored on your Umbraco user, so it follows you to any machine you sign in on.
 
 ## Installing the backoffice as an app
@@ -458,11 +460,11 @@ dotnet add package Umbraco.Community.UmbraDesktop.Accessories
 That is the whole installation. They appear in an Accessories group in the launcher for anyone who can already reach the desktop, and the group is not there at all if the package is not installed.
 
 - **Notepad.** A plain-text editor for text files in the media library, with word wrap and the caret's line and column in a status bar. Open picks a file from the media library, Save writes it back.
-- **Paint.** Pencil, brush, eraser and fill, MS Paint's own twenty-eight colours (left click paints one, right click the other), and Undo, on a new picture or on an image opened from the media library.
+- **Paint.** Pencil, brush, eraser and fill, MS Paint's own twenty-eight colours (left click paints one, right click the other), and Undo, on a new picture or on an image opened from the media library. Drag the handles on the picture's edges to make it bigger or smaller, as in MS Paint.
 - **Sticky Notes.** One board of notes shared by everyone who uses the desktop, so a note one person writes is on everyone else's screen within about fifteen seconds, or as soon as they click back into the window. Each note says who last wrote it and when. Anyone can edit or delete any note; delete asks first. See [Sticky Notes](#sticky-notes).
 - **Calculator.** The Windows Standard calculator without its scientific row, from the keypad or the keyboard. It works left to right as a pocket calculator does, and shows `0.3` for `0.1 + 0.2`.
 - **Character Map.** Every character a keyboard does not have, in a grid by group: accented letters, dashes and quotes, currency, arrows, maths, box drawing and symbols. Click one for its Unicode name and its Windows Alt keystroke, double-click to add it to the characters to copy, and **Copy**. Or search by name, "right arrow", or by code, "U+2192".
-- **Clock.** An analogue face with the time and date under it, in your backoffice language.
+- **Clock.** An analogue face with the time and date under it, written the same way as the taskbar clock: your Regional format and Clock settings apply to both.
 - **Screen Saver.** Starfield, Mystify, or Umbraco logos flying at you, when the desktop has been left alone. See [Screen saver](#screen-saver).
 - **Disk Cleanup.** Empties the content recycle bin and the media recycle bin, one or both at once, for good. Nothing is ticked when it opens, and it always asks first. See [Disk Cleanup](#disk-cleanup).
 - **System Information.** Windows 98's System Properties for the site: the Umbraco version, the desktop's version and theme, who you are signed in as, and the browser and machine you are on. **Details** has the rest: the server's own report (operating system, .NET, database), every installed package with its version, and your display, memory and processors. **Copy all** puts the lot on the clipboard for a support request.

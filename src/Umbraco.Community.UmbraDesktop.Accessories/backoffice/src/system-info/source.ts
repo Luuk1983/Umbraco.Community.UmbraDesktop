@@ -18,6 +18,18 @@ export interface ServerFacts {
   packages?: InstalledPackage[];
   /** The signed-in user: who the desktop is "registered to". */
   user?: { name?: string; email?: string };
+  /**
+   * Whether the signed-in user may see the list of installed packages: true when they have the
+   * Packages section, which is where Umbraco itself lists them.
+   *
+   * This hides the list from the window; it does not make it secret. The list comes from Umbraco's
+   * manifest endpoint, which every signed-in backoffice user can call, because the backoffice loads
+   * every package's extensions through it (it answers 401 to anyone not signed in). What the guard
+   * stops is the window laying the whole list out for anyone who opens it. The desktop's own
+   * versions are still read from it, for the Desktop category, since those are not a list of what
+   * else is installed.
+   */
+  packagesVisible: boolean;
 }
 
 /** What the browser says about the machine it runs on. Everything a browser will say, and no more. */
@@ -60,6 +72,12 @@ export interface SystemInfoSource {
 const API = '/umbraco/management/api/v1';
 
 /**
+ * Umbraco's Packages section, whose users may see the installed packages. Written out because the
+ * backoffice exports no constant for it.
+ */
+const PACKAGES_SECTION_ALIAS = 'Umb.Section.Packages';
+
+/**
  * The graphics hardware's name from WebGL, which is the one place a browser gives it. Some browsers
  * refuse, or give a generic name on purpose; either way it is what the browser says, not a guess.
  * @returns The renderer's name, or undefined.
@@ -99,6 +117,7 @@ export function createSystemInfoSource(host: UmbLitElement): SystemInfoSource {
         troubleshooting: troubleshooting.data?.items ?? (isDenied(troubleshooting.error) ? 'denied' : undefined),
         packages: Array.isArray(packages.data) ? packages.data : undefined,
         user: userContext ? { name: userContext.getName(), email: userContext.getEmail() } : undefined,
+        packagesVisible: userContext?.getAllowedSection()?.includes(PACKAGES_SECTION_ALIAS) ?? false,
       };
     },
     async machine() {

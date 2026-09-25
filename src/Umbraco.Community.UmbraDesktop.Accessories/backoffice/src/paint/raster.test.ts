@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { blankImage, floodFill, linePoints, parseColour, pixelAt, stamp } from './raster.js';
+import { blankImage, floodFill, linePoints, parseColour, pixelAt, resizeImage, stamp } from './raster.js';
 import type { Rgba } from './raster.js';
 
 const WHITE: Rgba = [255, 255, 255, 255];
@@ -98,4 +98,36 @@ it('keeps fewer undo steps for a larger picture, and always at least one', async
   expect(undoDepthFor(480, 300)).to.equal(20);
   expect(undoDepthFor(4000, 3000)).to.be.lessThan(20).and.at.least(1);
   expect(undoDepthFor(20000, 20000)).to.equal(1);
+});
+
+/**
+ * Resizing the picture: anchored at the top left, growing into a fill colour and shrinking by
+ * cropping, as MS Paint's canvas handles do. Nothing that stays inside both sizes moves.
+ */
+describe('resizing', () => {
+  it('grows into the fill colour and keeps every pixel it had', () => {
+    const image = blankImage(2, 2);
+    stamp(image, 1, 1, 1, BLACK);
+    const grown = resizeImage(image, 4, 3, RED);
+    expect([grown.width, grown.height]).to.deep.equal([4, 3]);
+    expect(pixelAt(grown, 1, 1)).to.deep.equal(BLACK);
+    expect(pixelAt(grown, 0, 0)).to.deep.equal(WHITE);
+    expect(pixelAt(grown, 3, 0), 'new columns').to.deep.equal(RED);
+    expect(pixelAt(grown, 0, 2), 'new rows').to.deep.equal(RED);
+  });
+
+  it('crops from the right and the bottom', () => {
+    const image = blankImage(3, 3);
+    stamp(image, 0, 0, 1, BLACK);
+    stamp(image, 2, 2, 1, RED);
+    const cropped = resizeImage(image, 1, 1, WHITE);
+    expect([cropped.width, cropped.height]).to.deep.equal([1, 1]);
+    expect(pixelAt(cropped, 0, 0)).to.deep.equal(BLACK);
+  });
+
+  it('leaves the original alone', () => {
+    const image = blankImage(2, 2);
+    resizeImage(image, 5, 5, RED);
+    expect([image.width, image.height, image.data.length]).to.deep.equal([2, 2, 16]);
+  });
 });

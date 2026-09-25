@@ -176,3 +176,25 @@ export function floodFill(image: RasterImage, x: number, y: number, colour: Rgba
   }
   return filled;
 }
+
+/**
+ * The picture at a new size, anchored at the top left, as MS Paint's canvas handles resize it: what
+ * fits in both sizes stays exactly where it was, new columns and rows are the fill colour, and
+ * whatever falls outside the new size is cropped. The original is left alone, so it can go on the
+ * Undo history as it is.
+ * @param image The picture.
+ * @param width The new width, at least 1.
+ * @param height The new height, at least 1.
+ * @param fill The colour of any new area: the background colour, in Paint.
+ * @returns The resized picture.
+ */
+export function resizeImage(image: RasterImage, width: number, height: number, fill: Rgba): RasterImage {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let offset = 0; offset < data.length; offset += 4) data.set(fill, offset);
+  const rowBytes = Math.min(width, image.width) * 4;
+  for (let y = 0; y < Math.min(height, image.height); y++) {
+    const from = y * image.width * 4;
+    data.set(image.data.subarray(from, from + rowBytes), y * width * 4);
+  }
+  return { width, height, data };
+}

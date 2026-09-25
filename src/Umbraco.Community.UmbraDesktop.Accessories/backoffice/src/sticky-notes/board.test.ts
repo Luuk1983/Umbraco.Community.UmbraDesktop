@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { editNote, mergeBoard, saved, fromServer } from './board.js';
+import { editNote, mergeBoard, moveNote, saved, fromServer } from './board.js';
 import type { StickyNote } from './api.js';
 
 /**
@@ -80,4 +80,36 @@ it('stays pending when more was typed while the save was in flight', () => {
   expect(after[0].text).to.equal('two and three');
   expect(after[0].pending).to.equal(true);
   expect(after[0].version).to.equal(2);
+});
+
+/**
+ * Reordering, done here the way the server does it, so the window shows the new order at once and
+ * the next refresh confirms it rather than moving anything back.
+ */
+describe('moving a note', () => {
+  const board = () => fromServer([note('a', 'A'), note('b', 'B'), note('c', 'C')]);
+  const texts = (notes: { text: string }[]) => notes.map((each) => each.text);
+
+  it('puts a note before another', () => {
+    expect(texts(moveNote(board(), 'c', 'a'))).to.deep.equal(['C', 'A', 'B']);
+  });
+
+  it('puts a note at the end when there is nothing to go before', () => {
+    expect(texts(moveNote(board(), 'a', undefined))).to.deep.equal(['B', 'C', 'A']);
+  });
+
+  it('puts a note at the end when the note to go before has gone, as the server does', () => {
+    expect(texts(moveNote(board(), 'a', 'gone'))).to.deep.equal(['B', 'C', 'A']);
+  });
+
+  it('leaves the board alone for a note it does not have', () => {
+    const before = board();
+    expect(moveNote(before, 'gone', 'a')).to.equal(before);
+  });
+
+  it('keeps unsaved text with the note it moves', () => {
+    const edited = editNote(board(), 'b', { text: 'B, half written' });
+    const moved = moveNote(edited, 'b', 'a');
+    expect(moved[0]).to.include({ key: 'b', text: 'B, half written', pending: true });
+  });
 });

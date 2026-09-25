@@ -1,6 +1,7 @@
 import {
   DISK_CLEANUP_BUTTONS_PX,
   DISK_CLEANUP_CAPTION_PX,
+  DISK_CLEANUP_DESCRIPTION_LINE_PX,
   DISK_CLEANUP_DESCRIPTION_PX,
   DISK_CLEANUP_INTRO_PX,
   DISK_CLEANUP_PADDING_PX,
@@ -359,6 +360,7 @@ export class DiskCleanupElement extends UmbLitElement {
         margin: 0;
         overflow: auto;
         font-size: 0.9em;
+        line-height: ${DISK_CLEANUP_DESCRIPTION_LINE_PX}px;
       }
 
       .buttons {

@@ -94,3 +94,21 @@ export function saved(local: LocalNote[], confirmed: StickyNote, sentText: strin
     };
   });
 }
+
+/**
+ * Move a note to sit before another, exactly as the server does, so the window shows the new order
+ * at once and the next refresh confirms it rather than moving anything back.
+ * @param local The window's copy.
+ * @param key The note to move.
+ * @param before The note it should go before; undefined, or a note that is not on the board, means
+ *   the end.
+ * @returns The reordered board, or the same one when the note is not on it.
+ */
+export function moveNote(local: LocalNote[], key: string, before: string | undefined): LocalNote[] {
+  const note = local.find((each) => each.key === key);
+  if (!note) return local;
+  const rest = local.filter((each) => each.key !== key);
+  const at = before === undefined ? -1 : rest.findIndex((each) => each.key === before);
+  rest.splice(at < 0 ? rest.length : at, 0, note);
+  return rest;
+}

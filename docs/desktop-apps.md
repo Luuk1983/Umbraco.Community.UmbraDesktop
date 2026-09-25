@@ -560,6 +560,51 @@ needs a "start over" — and a game does — **offer it yourself, inside your ow
 name it in your own words and put it where the player expects. Minesweeper's is the "New game"
 button in its status row.
 
+### 7.1 Formatting dates and times like the desktop
+
+The taskbar clock follows two of the user's desktop settings: which culture formats times (the
+backoffice's or the browser's) and whether to force a 12 or 24 hour clock. An app that shows a time
+should follow the same two, or the user who asked for 24 hour sees "2:30 PM" in your window and
+"14:30" a few centimetres below it. `this.localize.date` does not know about either setting.
+
+The desktop publishes them through the context it provides to everything inside it, apps included.
+**This is public API**: the alias, the two members below and their behaviour are kept stable.
+
+| | |
+|---|---|
+| Context alias | `'UmbraDesktopSettingsContext'` |
+| `formatDateTime(date, options)` | Formats `date` with `Intl.DateTimeFormat` options, exactly as the taskbar clock does: the user's culture, their hour override when `options` asks for an hour, and the hour padded to suit the cycle. Returns a string |
+| `locale` | An observable that emits whenever either setting changes. Observe it and redraw; its value is the desktop's own and not something to read |
+
+As with the manifest type (§2), nothing is imported from the host. Declare the shape you use and a
+token with the same alias, and consume it:
+
+```ts
+import { UmbContextToken } from '@umbraco-cms/backoffice/context-api';
+import type { UmbContextMinimal } from '@umbraco-cms/backoffice/context-api';
+import type { Observable } from '@umbraco-cms/backoffice/external/rxjs';
+
+// UmbContextMinimal, because UmbContextToken requires it; the desktop's context is one.
+interface DesktopDateTime extends UmbContextMinimal {
+  formatDateTime(date: Date, options: Intl.DateTimeFormatOptions): string;
+  readonly locale: Observable<unknown>;
+}
+
+const DESKTOP_SETTINGS = new UmbContextToken<DesktopDateTime>('UmbraDesktopSettingsContext');
+
+// In your element:
+this.consumeContext(DESKTOP_SETTINGS, (desktop) => {
+  this.#desktop = desktop;
+  if (desktop) this.observe(desktop.locale, () => this.requestUpdate());
+});
+// …and when rendering, falling back to the backoffice's own formatting:
+const time = this.#desktop?.formatDateTime(now, options) ?? this.localize.date(now, options);
+```
+
+**Keep the fallback.** The context is absent in your own tests, and would be under a desktop older
+than this contract, and an app that renders nothing there is worse than one that follows the
+backoffice culture alone. The Accessories Clock is the worked example.
+
 ---
 
 ## 8. Traps

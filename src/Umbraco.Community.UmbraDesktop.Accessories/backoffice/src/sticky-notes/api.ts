@@ -50,7 +50,7 @@ export type StickyNoteUpdateResult =
   | { status: 'notFound' }
   | { status: 'failed' };
 
-/** The four things the window asks of the server. An interface so tests can answer them. */
+/** The five things the window asks of the server. An interface so tests can answer them. */
 export interface StickyNotesApi {
   /** The board, or undefined if it could not be read. */
   list(): Promise<StickyNoteBoard | undefined>;
@@ -73,6 +73,13 @@ export interface StickyNotesApi {
    * @param key The note.
    */
   remove(key: string): Promise<boolean>;
+  /**
+   * Move a note to sit before another, or to the end. False when the note has gone or the server
+   * could not be reached; either way the window's next refresh shows the order as it really is.
+   * @param key The note.
+   * @param before The note it should go before, or undefined for the end.
+   */
+  move(key: string, before: string | undefined): Promise<boolean>;
 }
 
 /** Where the controller is routed. */
@@ -114,6 +121,12 @@ export function createStickyNotesApi(): StickyNotesApi {
     async remove(key) {
       const { error } = await attempt(() => umbHttpClient.delete({ url: `${URL}/${key}`, security: [...SECURITY] }));
       return !error || statusOf(error) === 404;
+    },
+    async move(key, before) {
+      const { error } = await attempt(() =>
+        umbHttpClient.put({ url: `${URL}/${key}/position`, security: [...SECURITY], body: { before: before ?? null }, headers: json }),
+      );
+      return !error;
     },
   };
 }

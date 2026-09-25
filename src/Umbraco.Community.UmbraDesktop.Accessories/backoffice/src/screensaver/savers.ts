@@ -1,4 +1,5 @@
 import type { AccessoriesScreensaverId } from '../settings/settings.js';
+import { UMBRACO_BLUE, UMBRACO_LOGO_PATH, UMBRACO_LOGO_SIZE } from '../shared/umbraco-logo.js';
 
 /**
  * The screensavers, as small simulations: state, a step that moves it on by some milliseconds, and
@@ -107,6 +108,46 @@ function project(flier: Flier, width: number, height: number): { x: number; y: n
   };
 }
 
+/**
+ * The screen size every drawn size is given at, in px along the screen's longer side. A saver
+ * multiplies its sizes by {@link unitOf}, the screen's longer side over this, so everything is in
+ * proportion to the screen it is drawn on.
+ *
+ * They were fixed pixels, and the preview and the real thing then looked like two different
+ * savers: a logo that filled much of the 192px preview was small on a 1920px monitor, and the stars
+ * were specks. In proportion, the preview is a miniature of the full screen, and a full HD screen
+ * draws everything a little under twice the size the fixed pixels did.
+ */
+const REFERENCE_PX = 1000;
+
+/**
+ * The smallest anything is drawn, in px, so the preview's stars stay visible rather than shrinking
+ * to nothing. Only the preview is small enough to reach it.
+ */
+const MIN_DRAWN_PX = 1;
+
+/**
+ * How big one unit of size is on this screen.
+ * @param width The screen's width.
+ * @param height The screen's height.
+ * @returns Px per unit: 1 on a screen whose longer side is {@link REFERENCE_PX}.
+ */
+function unitOf(width: number, height: number): number {
+  return Math.max(width, height) / REFERENCE_PX;
+}
+
+/**
+ * A star's edge, in units ({@link unitOf}): from its size at the far plane to its size as it passes
+ * the viewer. Raised by half from the first 0.5 to 3, which read as specks.
+ */
+const STAR_SIZE = { far: 0.8, near: 4.5 } as const;
+
+/**
+ * A logo's radius, in units: from the far plane to passing the viewer, growing with the square of
+ * nearness so it swells as it arrives. Raised by half from the first 4 to 74, which read as small.
+ */
+const LOGO_RADIUS = { far: 6, near: 110 } as const;
+
 /** Paint the whole canvas black. */
 function blackout(context: CanvasRenderingContext2D): void {
   context.fillStyle = '#000';
@@ -125,6 +166,7 @@ export interface StarfieldState {
  */
 const starfield: SaverFactory = (width, height, random) => {
   const state: StarfieldState = { stars: Array.from({ length: 300 }, () => spawn(random, true)) };
+  const unit = unitOf(width, height);
   return {
     state,
     step: (elapsedMs) => fly(state.stars, 0.35, elapsedMs, random),
@@ -132,7 +174,7 @@ const starfield: SaverFactory = (width, height, random) => {
       blackout(context);
       for (const star of state.stars) {
         const { x, y, near } = project(star, width, height);
-        const size = 0.5 + near * 2.5;
+        const size = Math.max(MIN_DRAWN_PX, (STAR_SIZE.far + near * (STAR_SIZE.near - STAR_SIZE.far)) * unit);
         context.fillStyle = `rgba(255, 255, 255, ${0.25 + near * 0.75})`;
         context.fillRect(x - size / 2, y - size / 2, size, size);
       }
@@ -164,6 +206,7 @@ export interface MystifyState {
  */
 const mystify: SaverFactory = (width, height, random) => {
   const trailLength = 12;
+  const unit = unitOf(width, height);
   const speed = () => (0.12 + random() * 0.2) * (random() < 0.5 ? -1 : 1);
   const shape = (hue: number): MystifyShape => {
     const points = Array.from({ length: 4 }, () => ({ x: random() * width, y: random() * height, dx: speed(), dy: speed() }));
@@ -194,7 +237,7 @@ const mystify: SaverFactory = (width, height, random) => {
     },
     draw(context) {
       blackout(context);
-      context.lineWidth = 1.5;
+      context.lineWidth = Math.max(MIN_DRAWN_PX, 1.5 * unit);
       for (const each of state.shapes) {
         each.trail.forEach((points, age) => {
           context.strokeStyle = `hsla(${each.hue}, 90%, 60%, ${(age + 1) / each.trail.length})`;
@@ -214,35 +257,33 @@ export interface FlyingState {
   logos: Flier[];
 }
 
-/** The Umbraco blue, and the white of the U on it. */
-const UMBRACO_BLUE = '#3544b1';
+/** The logo as a canvas path, built on first use: `Path2D` is a browser type, and this module loads in tests too. */
+let logoPath: Path2D | undefined;
 
 /**
- * Draw the Umbraco mark: a blue disc with a white U in it, as a path rather than an image, so it is
- * sharp at every size and needs no asset.
+ * Draw the Umbraco logo, from the path in Umbraco's own `icon-umbraco` (see
+ * `shared/umbraco-logo.ts`), so it is the real mark and not a drawing that resembles it.
+ *
+ * The mark is a disc with the U cut out, so a white disc goes down first, a little smaller than the
+ * blue one so no white shows at the edge. On this black screen the U would otherwise be black.
  * @param context The canvas.
  * @param x Centre across.
  * @param y Centre down.
  * @param radius The disc's radius.
  */
-function drawMark(context: CanvasRenderingContext2D, x: number, y: number, radius: number): void {
-  context.fillStyle = UMBRACO_BLUE;
+export function drawUmbracoLogo(context: CanvasRenderingContext2D, x: number, y: number, radius: number): void {
+  logoPath ??= new Path2D(UMBRACO_LOGO_PATH);
+  const half = UMBRACO_LOGO_SIZE / 2;
+  context.save();
+  context.translate(x - radius, y - radius);
+  context.scale(radius / half, radius / half);
+  context.fillStyle = '#fff';
   context.beginPath();
-  context.arc(x, y, radius, 0, Math.PI * 2);
+  context.arc(half, half, half * 0.95, 0, Math.PI * 2);
   context.fill();
-  // The U: two uprights joined by a half circle, drawn as one thick rounded stroke.
-  context.strokeStyle = '#fff';
-  context.lineWidth = radius * 0.2;
-  context.lineCap = 'round';
-  const halfWidth = radius * 0.36;
-  const top = y - radius * 0.42;
-  const bend = y + radius * 0.08;
-  context.beginPath();
-  context.moveTo(x - halfWidth, top);
-  context.lineTo(x - halfWidth, bend);
-  context.arc(x, bend, halfWidth, Math.PI, 0, true);
-  context.lineTo(x + halfWidth, top);
-  context.stroke();
+  context.fillStyle = UMBRACO_BLUE;
+  context.fill(logoPath);
+  context.restore();
 }
 
 /**
@@ -251,6 +292,7 @@ function drawMark(context: CanvasRenderingContext2D, x: number, y: number, radiu
  */
 const flying: SaverFactory = (width, height, random) => {
   const state: FlyingState = { logos: Array.from({ length: 24 }, () => spawn(random, true)) };
+  const unit = unitOf(width, height);
   return {
     state,
     step: (elapsedMs) => fly(state.logos, 0.18, elapsedMs, random),
@@ -260,7 +302,8 @@ const flying: SaverFactory = (width, height, random) => {
       for (const logo of [...state.logos].sort((a, b) => b.z - a.z)) {
         const { x, y, near } = project(logo, width, height);
         context.globalAlpha = Math.min(1, 0.2 + near);
-        drawMark(context, x, y, 4 + near * near * 70);
+        const radius = LOGO_RADIUS.far + near * near * (LOGO_RADIUS.near - LOGO_RADIUS.far);
+        drawUmbracoLogo(context, x, y, Math.max(MIN_DRAWN_PX, radius * unit));
       }
       context.globalAlpha = 1;
     },

@@ -73,8 +73,17 @@ export const PAINT_STATUS_HEIGHT_PX = 24;
 /** The app's own padding, and the space between its rows, in px. */
 export const PAINT_PADDING_PX = 6;
 
-/** Padding inside the well round the picture, in px. */
-export const PAINT_WELL_PADDING_PX = 4;
+/**
+ * One of the picture's resize handles, in px: the small squares on its right edge, its bottom edge
+ * and its corner, drawn just outside the picture as MS Paint draws them.
+ */
+export const PAINT_RESIZE_HANDLE_PX = 6;
+
+/**
+ * Padding inside the well round the picture, in px: room for a resize handle outside the picture's
+ * edge and a small gap beyond it, so the handles never push the well into scrolling.
+ */
+export const PAINT_WELL_PADDING_PX = PAINT_RESIZE_HANDLE_PX + 4;
 
 /** Height of the palette: two rows of swatches and the gap between them. */
 const PALETTE_HEIGHT_PX = PAINT_SWATCH_PX * 2 + 2;
