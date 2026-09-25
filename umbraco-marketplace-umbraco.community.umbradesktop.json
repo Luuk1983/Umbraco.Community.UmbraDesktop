@@ -78,12 +78,12 @@
     "umbraco 4",
     "retro",
     "dashboard",
-    "minesweeper",
     "accessories",
     "notepad",
     "paint",
     "sticky notes",
     "calculator",
+    "minesweeper",
     "language",
     "localization",
     "translation",
@@ -145,14 +145,14 @@
   ],
   "RelatedPackages": [
     {
-      "PackageId": "Umbraco.Community.UmbraDesktop.Entertainment",
-      "GroupTitle": "Optional add-ons",
-      "Description": "Games for the desktop, starting with Minesweeper. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
-    },
-    {
       "PackageId": "Umbraco.Community.UmbraDesktop.Accessories",
       "GroupTitle": "Optional add-ons",
       "Description": "Notepad, Paint, Sticky Notes, Calculator, Disk Cleanup and the rest of Windows' Accessories for the desktop. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
+    },
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop.Entertainment",
+      "GroupTitle": "Optional add-ons",
+      "Description": "Games for the desktop, starting with Minesweeper. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
     }
   ]
 }
