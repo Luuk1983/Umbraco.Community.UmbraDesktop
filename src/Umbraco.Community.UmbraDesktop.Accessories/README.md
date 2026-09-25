@@ -56,7 +56,7 @@ This package and UmbraDesktop are released together from the same tag and always
 
 ## Writing your own
 
-Nothing in here is privileged. The `umbraDesktopApp` extension manifest that puts these tools in windows is public API that any package can register (as is `umbraDesktopSettingsCategory`, for a package that wants a page in Desktop settings; this one has no settings that need one), and the screen saver's idle watcher is an ordinary Umbraco `backofficeEntryPoint`. If you want your own app on the desktop, [`docs/desktop-apps.md`](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/desktop-apps.md) is the guide, and the source of this package is a worked example.
+Nothing in here is privileged. The `umbraDesktopApp` extension manifest that puts these tools in windows is public API that any package can register, and the screen saver's idle watcher is an ordinary Umbraco `backofficeEntryPoint`. If you want your own app on the desktop, [`docs/desktop-apps.md`](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/desktop-apps.md) is the guide, and the source of this package is a worked example.
 
 ## License
 

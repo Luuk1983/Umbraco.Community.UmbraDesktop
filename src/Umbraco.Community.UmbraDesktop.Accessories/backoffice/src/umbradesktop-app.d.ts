@@ -54,27 +54,6 @@ interface ManifestUmbraDesktopApp extends ManifestElement<HTMLElement>, Manifest
   meta: MetaUmbraDesktopApp;
 }
 
-/**
- * The `umbraDesktopSettingsCategory` manifest's `meta`, copied from the host's
- * `settings/settings-category.extension.ts` for the same reason as the app type above.
- */
-interface MetaUmbraDesktopSettingsCategory {
-  /** The row's name and the screen's heading. A localisation token or a literal. */
-  label: string;
-  /** The line under the row's name: what the category is for. A token or a literal. */
-  description: string;
-  /** Umbraco icon alias for the row. Falls back to `icon-settings`. */
-  icon?: string;
-}
-
-/** A category of the host's Desktop settings panel, registered by this package. */
-interface ManifestUmbraDesktopSettingsCategory extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions {
-  /** Discriminates this manifest from every other extension type. */
-  type: 'umbraDesktopSettingsCategory';
-  /** The row the panel draws. */
-  meta: MetaUmbraDesktopSettingsCategory;
-}
-
 declare global {
   /**
    * Adds `umbraDesktopApp` to Umbraco's own extension type map, which is what makes the manifest
@@ -84,7 +63,5 @@ declare global {
   interface UmbExtensionManifestMap {
     /** This package's desktop apps. */
     umbraDesktopApp: ManifestUmbraDesktopApp;
-    /** This package's Desktop settings category. */
-    umbraDesktopSettingsCategory: ManifestUmbraDesktopSettingsCategory;
   }
 }

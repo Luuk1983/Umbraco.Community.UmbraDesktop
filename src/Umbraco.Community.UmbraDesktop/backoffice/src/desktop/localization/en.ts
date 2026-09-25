@@ -122,7 +122,6 @@ export default {
     taskbarPinnedApps: 'Pinned apps',
     taskbarPinnedAppsAbout:
       'Shows the apps you pinned in the launcher on the taskbar too, in the same order. Pin and unpin in the launcher as you always have.',
-    settingsCategoryLoadFailed: 'This category could not be loaded.',
     settingsBack: 'Back to Desktop settings',
     // desktop settings — startup
     bootIntoDesktop: 'Open the desktop when I sign in',

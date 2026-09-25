@@ -82,7 +82,7 @@ host gained a second public manifest type, `umbraDesktopSettingsCategory`, model
 element and its values, and `conditions` are honoured through `UmbExtensionsManifestInitializer`.
 Registered categories sit after Taskbar and before Connections and Site. The alternative, an
 Accessories category built into the host, would have shipped a row that does nothing without the
-add-on and coupled the host to the add-on's storage. `docs/desktop-apps.md` §6.1 documents it.
+add-on and coupled the host to the add-on's storage.
 
 Review then asked whether new files could simply go to the root. Not quite: an editor whose media
 start node is a folder cannot reach the root, and for them every save would have failed. So the
@@ -91,11 +91,14 @@ folders only, with the root showing (`hideTreeRoot: false`, its key is null) and
 Choose saves to the root and anyone kept out of it sees their own folders instead. Only the root and folders can be picked; files show greyed out. The last choice
 is remembered for the session and shared across windows (`shared/save-location.ts`), not stored,
 because a folder remembered across sessions can have been moved or deleted. Cancelling saves
-nothing. This is also simply what Notepad and Paint always did. **The settings category was removed
-from this package, and the host's `umbraDesktopSettingsCategory` kept** as documented public API
-for other packages (decided with the repository owner); no package in this repository registers one
-now, and the host's own tests are what keep it working. A save folder stored by an earlier version is
-ignored when read.
+nothing. This is also simply what Notepad and Paint always did. A save folder stored by an earlier
+version is ignored when read.
+
+**The settings category was removed from this package, and the host's extension point moved to a
+pull request of its own** (decided with the repository owner, 2026-09-25): with nothing here using
+it, it is a host feature for other packages rather than part of Accessories. Branch
+`feature/settings-category-extension`, design doc `2026-09-25-settings-category-extension-design.md`
+there. This branch leaves the host's settings panel exactly as `main` has it.
 
 The package's settings (now the screensaver alone) are stored per user in `localStorage`, the same
 scope as every other desktop setting, under the add-on's own key. Controllers in open windows hear a
