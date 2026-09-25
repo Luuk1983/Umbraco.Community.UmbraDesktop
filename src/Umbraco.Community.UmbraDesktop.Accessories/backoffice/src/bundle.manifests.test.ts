@@ -104,15 +104,6 @@ it('lets every app open more than one window', () => {
 });
 
 /**
- * No Desktop settings category: this package's one setting, the screensaver, lives in its own window,
- * and Notepad and Paint ask where to save. The host's `umbraDesktopSettingsCategory` extension point
- * stays, for packages that do have settings; `docs/desktop-apps.md` §6.1 documents it.
- */
-it('registers no Desktop settings category', () => {
-  expect(manifests.filter((manifest) => manifest.type === 'umbraDesktopSettingsCategory')).to.have.length(0);
-});
-
-/**
  * The screensaver has to come on with every window closed, including its own, so something outside
  * the windows starts its watcher: a `backofficeEntryPoint`, whose field *is* `js`.
  */
