@@ -70,9 +70,34 @@ describe('snake element', () => {
     expect(text(element, '.message'), 'tells the player how to begin').to.not.equal('');
   });
 
+  /** The message sits dead centre on the playing field, whatever size the window is. */
+  it('centres the message on the playing field', async () => {
+    const element = await game(foodAt(0));
+    const message = element.shadowRoot!.querySelector<HTMLElement>('.message')!.getBoundingClientRect();
+    const board = field(element).getBoundingClientRect();
+    const centre = (box: DOMRect) => [box.left + box.width / 2, box.top + box.height / 2];
+    const [mx, my] = centre(message);
+    const [bx, by] = centre(board);
+    expect(Math.abs(mx - bx), 'across').to.be.at.most(0.5);
+    expect(Math.abs(my - by), 'down').to.be.at.most(0.5);
+  });
+
+  /** Random food can land under the start message; the window moves it before anyone sees. */
+  it('moves food dealt under the start message to where it can be seen', async () => {
+    const middle = Math.floor(SNAKE_BOARD.height / 2) * SNAKE_BOARD.width + Math.floor(SNAKE_BOARD.width / 2);
+    const element = await game(foodAt(middle, 0));
+    await element.updateComplete;
+    const message = element.shadowRoot!.querySelector<HTMLElement>('.message')!.getBoundingClientRect();
+    const food = cells(element).find((cell) => cell.dataset.part === 'food')!;
+    const box = food.getBoundingClientRect();
+    expect(cells(element).indexOf(food), 'moved to the next place the placer offers').to.equal(0);
+    expect(box.bottom > message.top && box.top < message.bottom).to.equal(false);
+  });
+
   it('does not cover the snake with the start message', async () => {
-    // The snake starts in the middle row, and a banner centred on the board hid it completely, so
-    // the player could not see which way it was facing before pressing a key.
+    // A banner centred on the board once hid the snake completely, because the snake started in
+    // the middle row, so the player could not see which way it was facing before pressing a key.
+    // The snake now starts a quarter of the way down, clear of it.
     const element = await game(foodAt(0));
     const message = element.shadowRoot!.querySelector<HTMLElement>('.message')!.getBoundingClientRect();
     for (const cell of cells(element).filter((each) => each.dataset.part)) {

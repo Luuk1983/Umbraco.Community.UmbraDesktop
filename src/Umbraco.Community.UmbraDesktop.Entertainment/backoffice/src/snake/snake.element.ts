@@ -6,7 +6,7 @@ import {
   SNAKE_STATUS_HEIGHT_PX,
   snakeTickInterval,
 } from './constants.js';
-import { createGame, steer, step, togglePause } from './rules.js';
+import { createGame, moveFoodFrom, steer, step, togglePause } from './rules.js';
 import type { SnakeConfig, SnakeDirection, SnakeFoodPlacer, SnakeGame } from './rules.js';
 import { css, customElement, html, nothing, property, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -167,6 +167,31 @@ export class SnakeElement extends UmbLitElement {
     const game = this._game;
     if (game?.status === 'playing') this.#startClock(game);
     else this.#stopClock();
+    if (game?.status === 'ready') this.#uncoverFood(game);
+  }
+
+  /**
+   * Move the food out from under the start message, if it was dealt there.
+   *
+   * Measured rather than worked out, because the message's height is its text's, which differs by
+   * language and theme: the cells it covers are the ones whose boxes it overlaps. Runs after a
+   * render of a waiting game, and the render it causes happens before the browser paints, so the
+   * food is never seen in the wrong place. The rules decide where it goes instead (`moveFoodFrom`).
+   * @param game The waiting game.
+   */
+  #uncoverFood(game: SnakeGame): void {
+    const message = this.shadowRoot?.querySelector<HTMLElement>('.message');
+    if (!message || message.hidden || game.food === undefined) return;
+    const banner = message.getBoundingClientRect();
+    const covered = new Set<number>();
+    this.shadowRoot!.querySelectorAll<HTMLElement>('.cell').forEach((cell, index) => {
+      const box = cell.getBoundingClientRect();
+      if (box.bottom > banner.top && box.top < banner.bottom && box.right > banner.left && box.left < banner.right) {
+        covered.add(index);
+      }
+    });
+    const moved = moveFoodFrom(game, covered, this.placer);
+    if (moved !== game) this._game = moved;
   }
 
   /**
@@ -296,8 +321,8 @@ export class SnakeElement extends UmbLitElement {
               (_unused, index) => html`<div class="cell" data-part=${parts.get(index) ?? nothing}></div>`,
             )}
           </div>
+          <p class="message" role="status" ?hidden=${!message}>${message}</p>
         </div>
-        <p class="message" role="status" ?hidden=${!message}>${message}</p>
       </div>
     `;
   }
@@ -384,7 +409,10 @@ export class SnakeElement extends UmbLitElement {
       cursor: pointer;
     }
 
+    /* Positioned so the start, pause and game-over message can be placed against the playing field
+       rather than against the whole window. */
     .well {
+      position: relative;
       margin-top: ${SNAKE_PADDING_PX}px;
       padding: ${SNAKE_PADDING_PX}px;
       width: fit-content;
@@ -437,13 +465,14 @@ export class SnakeElement extends UmbLitElement {
     /* A banner across the middle of the board, out of flow so it costs the window nothing, and
        pointer-events: none so it never gets in the way of a click that focuses the field.
 
-       Centred three quarters of the way down the board rather than in the middle, because the
-       middle row is where the snake starts: a centred banner hid it completely before the first
-       key press, so the player could not see which way it was facing. The offset is the status
-       row, the gap under it and the well's padding, then three quarters of the board. */
+       Centred on the playing field by being positioned inside the well, which wraps the field with
+       equal padding on every side: half way down the well is half way down the field, whatever
+       size the window is. It used to be placed by an offset summed from the status row and the
+       board, which only lined up while the arithmetic matched the layout. The snake starts a
+       quarter of the way down (rules.ts) so the banner does not hide it before the first key. */
     .message {
       position: absolute;
-      top: ${SNAKE_STATUS_HEIGHT_PX + SNAKE_PADDING_PX * 2 + SNAKE_BOARD.height * SNAKE_CELL_SIZE_PX * 0.75}px;
+      top: 50%;
       left: ${SNAKE_PADDING_PX * 2}px;
       right: ${SNAKE_PADDING_PX * 2}px;
       transform: translateY(-50%);

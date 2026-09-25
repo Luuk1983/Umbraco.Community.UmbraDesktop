@@ -131,8 +131,12 @@ function neighbour({ width, height }: SnakeConfig, index: number, direction: Sna
 }
 
 /**
- * A new game: the snake laid out horizontally in the middle of the board, facing right, with one
- * piece of food somewhere else.
+ * A new game: the snake laid out horizontally a quarter of the way down the board, facing right,
+ * with one piece of food somewhere else.
+ *
+ * A quarter of the way down rather than in the middle, because the middle is where the window puts
+ * its start message, centred on the board: a snake starting there was hidden behind it, so the
+ * player could not see which way it faced before the first key press.
  *
  * Facing right with the body trailing left, so the first thing in front of the player is the widest
  * stretch of open board rather than the body. An `initialLength` longer than the half-row the head
@@ -143,7 +147,7 @@ function neighbour({ width, height }: SnakeConfig, index: number, direction: Sna
  */
 export function createGame(config: SnakeConfig, placer: SnakeFoodPlacer = randomFoodPlacer): SnakeGame {
   const headX = Math.floor(config.width / 2);
-  const row = Math.floor(config.height / 2) * config.width;
+  const row = Math.floor(config.height / 4) * config.width;
   const length = Math.max(1, Math.min(config.initialLength, headX + 1));
   const snake = Array.from({ length }, (_unused, offset) => row + headX - offset);
   return {
@@ -155,6 +159,36 @@ export function createGame(config: SnakeConfig, placer: SnakeFoodPlacer = random
     score: 0,
     status: 'ready',
   };
+}
+
+/**
+ * Move a waiting game's food out of some cells, and do nothing once the game has started.
+ *
+ * For the window, whose start message covers the middle of the board: random food lands under it on
+ * about one start in five, and a piece of food half hidden behind a banner looks broken on the one
+ * screen that is meant to explain the game. Only a `ready` game, because once the snake moves, food
+ * jumping about would be a change of rules rather than of presentation. The rules know nothing about
+ * the message; the caller says which cells to avoid.
+ * @param game The game.
+ * @param avoid Cells the food should not be in.
+ * @param placer Where the food goes, from the cells that are free and not avoided.
+ * @returns The game with its food moved, or the same game when it is not waiting, its food is
+ *   already clear, or there is nowhere else to put it.
+ */
+export function moveFoodFrom(
+  game: SnakeGame,
+  avoid: ReadonlySet<number>,
+  placer: SnakeFoodPlacer = randomFoodPlacer,
+): SnakeGame {
+  if (game.status !== 'ready' || game.food === undefined || !avoid.has(game.food)) return game;
+  const taken = new Set(game.snake);
+  const clear: number[] = [];
+  for (let index = 0; index < game.width * game.height; index++) {
+    if (!taken.has(index) && !avoid.has(index)) clear.push(index);
+  }
+  if (!clear.length) return game;
+  const chosen = placer(clear);
+  return { ...game, food: clear.includes(chosen) ? chosen : clear[0] };
 }
 
 /**
