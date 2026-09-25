@@ -2,6 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import './system-info.element.js';
 import type { SystemInfoElement } from './system-info.element.js';
 import type { MachineFacts, ServerFacts, SystemInfoSource } from './source.js';
+import { UMBRACO_BLUE, UMBRACO_LOGO_PATH, UMBRACO_LOGO_VIEWBOX } from '../shared/umbraco-logo.js';
 
 /**
  * System Information: Windows 98's System Properties General tab (System, Registered to, Computer)
@@ -21,6 +22,7 @@ const SERVER: ServerFacts = {
     { name: 'Another', id: 'Another', version: '2.1.0' },
   ],
   user: { name: 'Grace Hopper', email: 'grace@example.test' },
+  packagesVisible: true,
 };
 
 const MACHINE: MachineFacts = {
@@ -78,6 +80,16 @@ async function press(element: SystemInfoElement, selector: string): Promise<void
 }
 
 describe('General', () => {
+  /** The real Umbraco mark, from Umbraco's own icon, not a drawing that only resembles it. */
+  it('shows the Umbraco logo', async () => {
+    const { element } = await sysinfo();
+    const logo = element.shadowRoot!.querySelector('svg.logo')!;
+    expect(logo.getAttribute('viewBox')).to.equal(UMBRACO_LOGO_VIEWBOX);
+    const path = logo.querySelector('path')!;
+    expect(path.getAttribute('d')).to.equal(UMBRACO_LOGO_PATH);
+    expect(path.getAttribute('fill')).to.equal(UMBRACO_BLUE);
+  });
+
   it('says which Umbraco, which desktop and which theme, as System Properties said System', async () => {
     const { element } = await sysinfo();
     const system = text(element, '[data-group="system"]');
@@ -149,6 +161,28 @@ describe('Details', () => {
     expect(table).to.contain('1920 × 1080');
     expect(table).to.contain('True Color (24 bit)');
     expect(table).to.contain('0:01:02:03');
+  });
+
+  /**
+   * The list of installed packages is for people who manage packages. It is Umbraco's own manifest
+   * endpoint, which every signed-in backoffice user can already call, so this hides it from the
+   * window rather than keeping it secret; what it does do is stop the window laying the whole list
+   * out for anyone who opens it. Shown to users with the Packages section, as Umbraco shows it.
+   */
+  it('keeps the installed packages to users with the Packages section', async () => {
+    const { element } = await sysinfo({ ...SERVER, packagesVisible: false });
+    await press(element, '[data-tab="details"]');
+    await press(element, '[data-section="4"]');
+    const table = text(element, '.table');
+    expect(table, 'no package names').to.not.contain('Another');
+    expect(table).to.contain('Packages section');
+  });
+
+  it('leaves the installed packages out of the copied report too, and keeps the desktop’s own version', async () => {
+    const { element, copied } = await sysinfo({ ...SERVER, packagesVisible: false });
+    await press(element, '[data-action="copy"]');
+    expect(copied[0], 'no package names').to.not.contain('Another');
+    expect(copied[0], 'the desktop is still named').to.contain('17.3.0');
   });
 
   it('lists every installed package with its version', async () => {

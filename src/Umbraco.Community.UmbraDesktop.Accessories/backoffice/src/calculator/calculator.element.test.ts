@@ -85,3 +85,26 @@ it('announces the display to a screen reader as it changes', async () => {
   const live = element.shadowRoot!.querySelector('.display');
   expect(live?.getAttribute('aria-live')).to.equal('polite');
 });
+
+/**
+ * Open it and type: the keyboard reaches the calculator without clicking it first.
+ *
+ * It did not. The desktop brings a window to the front but moves no keyboard focus into the app,
+ * so nothing in a newly opened Calculator had focus and typed keys went nowhere until one of its
+ * buttons had been clicked. The case above sends its keys straight to the element, which is why it
+ * passed; this one sends them to whatever has focus, which is what a keyboard does.
+ */
+it('takes the keyboard as soon as it opens', async () => {
+  const element = await calculator();
+  const focused = () => {
+    let active = document.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active;
+  };
+  expect(focused(), 'something in the calculator has focus').to.not.equal(document.body);
+  for (const key of ['7', '*', '6', 'Enter']) {
+    focused()!.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true }));
+    await element.updateComplete;
+  }
+  expect(display(element)).to.equal('42');
+});

@@ -8,6 +8,8 @@ import {
 import { handAngles, msUntilNextSecond } from './hands.js';
 import { css, customElement, html, property, state, svg } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+import { DESKTOP_SETTINGS_CONTEXT } from '../shared/desktop-settings.js';
+import type { DesktopDateTime } from '../shared/desktop-settings.js';
 
 /**
  * The face is drawn in a 200-unit box centred on the origin, so a hand is a line from `0,0` and a
@@ -29,11 +31,15 @@ const GEOMETRY = {
  * Clock, as a self-contained UmbraDesktop app: an analogue face, the time in words under it, and the
  * date.
  *
- * The time is formatted by `this.localize.date`, so it follows the backoffice culture the user has
- * chosen, the same culture every other date in the backoffice uses. It does **not** follow the
- * desktop's own 12/24-hour setting, and cannot: that setting lives in the host package's own context,
- * and a separate package has no route to it (`docs/desktop-apps.md` §1 is the whole of the contract,
- * and it is a manifest). The culture's own hour cycle is what shows.
+ * The time and date are formatted by the desktop, through its settings context, so they follow the
+ * same two settings as the taskbar clock: the user's culture, backoffice or browser, and their 12 or
+ * 24 hour override. They change when the user changes either. That is public API, documented in
+ * `docs/desktop-apps.md` §7.1; this clock is its worked example.
+ *
+ * Outside the desktop, in a test or under a desktop older than that contract, there is no such
+ * context and the clock falls back to `this.localize.date`, which follows the backoffice culture and
+ * its own hour cycle. It used to do only that, and the Clock window then read "2:30 PM" under a
+ * taskbar clock the user had set to "14:30".
  */
 @customElement('umbradesktop-clock')
 export class ClockElement extends UmbLitElement {
@@ -50,6 +56,29 @@ export class ClockElement extends UmbLitElement {
 
   /** The pending tick's `setTimeout` handle, or undefined when stopped. */
   #timer?: number;
+
+  /** The desktop's date and time formatting, when the clock is inside a desktop that provides it. */
+  #desktop?: DesktopDateTime;
+
+  constructor() {
+    super();
+    this.consumeContext(DESKTOP_SETTINGS_CONTEXT, (desktop) => {
+      this.#desktop = desktop ?? undefined;
+      // Redrawn on a change rather than at the next tick, which is up to a second away.
+      if (desktop) this.observe(desktop.locale, () => this.requestUpdate(), '_desktopLocale');
+      else this.requestUpdate();
+    });
+  }
+
+  /**
+   * Format the moment the way the desktop does, or the way the backoffice does outside one.
+   * @param moment The moment.
+   * @param options What to show.
+   * @returns The text.
+   */
+  #format(moment: Date, options: Intl.DateTimeFormatOptions): string {
+    return this.#desktop?.formatDateTime(moment, options) ?? this.localize.date(moment, options);
+  }
 
   /** Whether the clock is ticking. Public so a test can see that closing the window stops it. */
   get running(): boolean {
@@ -124,8 +153,8 @@ export class ClockElement extends UmbLitElement {
   override render() {
     const moment = this._moment ?? this.now();
     const angles = handAngles(moment);
-    const time = this.localize.date(moment, { hour: 'numeric', minute: '2-digit', second: '2-digit' });
-    const date = this.localize.date(moment, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const time = this.#format(moment, { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+    const date = this.#format(moment, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     return html`
       <div class="face">
         <svg viewBox="-100 -100 200 200" aria-hidden="true">

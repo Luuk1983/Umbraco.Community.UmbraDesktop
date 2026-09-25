@@ -132,6 +132,37 @@ public sealed class StickyNoteStore(IKeyValueService keyValueService, TimeProvid
         }
     }
 
+    /// <summary>Move a note to sit before another, which is how the board is reordered.</summary>
+    /// <remarks>
+    /// Named by the note it goes before, not by a position, so a note someone else adds or deletes in
+    /// the meantime cannot make it land somewhere the mover did not mean. The note itself is left as
+    /// it was, version and author included: moving is not editing, and somebody typing in the note
+    /// while it is moved must not get a conflict for it.
+    /// </remarks>
+    /// <param name="key">The note to move.</param>
+    /// <param name="before">The note it should go before, or null for the end of the board. A note
+    /// that has since been deleted also means the end.</param>
+    /// <returns>Whether there was a note to move.</returns>
+    public bool Move(Guid key, Guid? before)
+    {
+        lock (WriteLock)
+        {
+            var notes = Read().ToList();
+            var index = notes.FindIndex(note => note.Key == key);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            var note = notes[index];
+            notes.RemoveAt(index);
+            var target = before is null ? -1 : notes.FindIndex(other => other.Key == before);
+            notes.Insert(target < 0 ? notes.Count : target, note);
+            Write(notes);
+            return true;
+        }
+    }
+
     /// <summary>Cut text to the limit.</summary>
     /// <param name="text">The text as sent.</param>
     /// <returns>The text as stored.</returns>

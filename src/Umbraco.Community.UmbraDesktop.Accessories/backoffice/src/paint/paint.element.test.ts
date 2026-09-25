@@ -315,3 +315,134 @@ describe('opening an image from the media library', () => {
     expect(pixel(element, 2, 2)).to.deep.equal(RED);
   });
 });
+
+/**
+ * The picture can be made bigger or smaller by dragging the handles on its right edge, its bottom
+ * edge and its corner, as in MS Paint. It grows into the background colour and shrinks by cropping,
+ * anchored at the top left, and a resize is one step Undo takes back, size and all.
+ */
+describe('resizing the picture', () => {
+  /**
+   * Drag a resize handle by `dx`, `dy` screen pixels.
+   * @param element The Paint.
+   * @param which Which handle: `right`, `bottom` or `corner`.
+   * @param dx How far across.
+   * @param dy How far down.
+   */
+  async function resizeBy(element: PaintElement, which: string, dx: number, dy: number): Promise<void> {
+    const handle = element.shadowRoot!.querySelector<HTMLElement>(`[data-resize="${which}"]`)!;
+    const box = handle.getBoundingClientRect();
+    const start = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    const send = (type: string, x: number, y: number) =>
+      handle.dispatchEvent(
+        new PointerEvent(type, { clientX: x, clientY: y, button: 0, buttons: type === 'pointerup' ? 0 : 1, pointerId: 1, bubbles: true, composed: true }),
+      );
+    send('pointerdown', start.x, start.y);
+    send('pointermove', start.x + dx, start.y + dy);
+    await element.updateComplete;
+    send('pointerup', start.x + dx, start.y + dy);
+    for (let i = 0; i < 3; i++) {
+      await new Promise((resolve) => setTimeout(resolve));
+      await element.updateComplete;
+    }
+  }
+
+  const size = (element: PaintElement) => [canvas(element).width, canvas(element).height];
+
+  it('grows from the corner, keeping what was drawn and filling the rest with the background colour', async () => {
+    const { element } = await paint();
+    await drag(element, [[5, 5]]);
+    element.shadowRoot!.querySelector('[data-colour="#ff0000"]')!.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, composed: true, cancelable: true }),
+    );
+    await element.updateComplete;
+    await resizeBy(element, 'corner', 40, 20);
+    expect(size(element)).to.deep.equal([PAINT_CANVAS_SIZE.w + 40, PAINT_CANVAS_SIZE.h + 20]);
+    expect(pixel(element, 5, 5), 'the drawing stays where it was').to.deep.equal(BLACK);
+    expect(pixel(element, 10, 10), 'the old paper stays white').to.deep.equal(WHITE);
+    expect(pixel(element, PAINT_CANVAS_SIZE.w + 30, 10), 'the new area is the background colour').to.deep.equal(RED);
+    expect(pixel(element, 10, PAINT_CANVAS_SIZE.h + 10)).to.deep.equal(RED);
+    expect(element.dirty, 'a resize is unsaved work').to.equal(true);
+  });
+
+  it('changes only the width from the right edge, and only the height from the bottom', async () => {
+    const { element } = await paint();
+    await resizeBy(element, 'right', 30, 50);
+    expect(size(element)).to.deep.equal([PAINT_CANVAS_SIZE.w + 30, PAINT_CANVAS_SIZE.h]);
+    await resizeBy(element, 'bottom', 50, 25);
+    expect(size(element)).to.deep.equal([PAINT_CANVAS_SIZE.w + 30, PAINT_CANVAS_SIZE.h + 25]);
+  });
+
+  it('crops when made smaller', async () => {
+    const { element } = await paint();
+    await drag(element, [[5, 5]]);
+    await resizeBy(element, 'corner', -PAINT_CANVAS_SIZE.w + 20, -PAINT_CANVAS_SIZE.h + 10);
+    expect(size(element)).to.deep.equal([20, 10]);
+    expect(pixel(element, 5, 5)).to.deep.equal(BLACK);
+  });
+
+  it('never goes below one pixel', async () => {
+    const { element } = await paint();
+    await resizeBy(element, 'corner', -5000, -5000);
+    expect(size(element)).to.deep.equal([1, 1]);
+  });
+
+  it('takes a resize back with Undo, size and pixels', async () => {
+    const { element } = await paint();
+    await drag(element, [[5, 5]]);
+    await resizeBy(element, 'corner', -PAINT_CANVAS_SIZE.w + 20, -PAINT_CANVAS_SIZE.h + 10);
+    await click(element, '[data-action="undo"]');
+    expect(size(element)).to.deep.equal([PAINT_CANVAS_SIZE.w, PAINT_CANVAS_SIZE.h]);
+    expect(pixel(element, 5, 5)).to.deep.equal(BLACK);
+    expect(pixel(element, 100, 100), 'what the crop cut off is back').to.deep.equal(WHITE);
+  });
+
+  /** The handles are buttons, so the keyboard can resize too: a pixel a press, ten with Shift. */
+  it('resizes with the arrow keys on a handle', async () => {
+    const { element } = await paint();
+    const corner = element.shadowRoot!.querySelector<HTMLElement>('[data-resize="corner"]')!;
+    const press = async (key: string, shiftKey = false) => {
+      corner.dispatchEvent(new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, composed: true, cancelable: true }));
+      for (let i = 0; i < 3; i++) {
+        await new Promise((resolve) => setTimeout(resolve));
+        await element.updateComplete;
+      }
+    };
+    await press('ArrowRight');
+    await press('ArrowDown', true);
+    expect(size(element)).to.deep.equal([PAINT_CANVAS_SIZE.w + 1, PAINT_CANVAS_SIZE.h + 10]);
+  });
+});
+
+/**
+ * The area round the picture is never the picture's own white, so the edge of what can be drawn on
+ * is always visible. Most themes' sunken surface is already a grey; Windows 98's and Umbraco 4's is
+ * white, the same as new paper, and the picture vanished into it. Those two get a ground of their
+ * own: Windows 98 the dark grey MS Paint put behind the picture, Umbraco 4 its own border colour
+ * mixed into its white.
+ */
+describe('the area round the picture', () => {
+  /** The well's colour under a theme, with that theme's two app tokens set as the desktop sets them. */
+  async function wellUnder(theme: string, sunken: string, border: string): Promise<string> {
+    const { element } = await paint();
+    element.setAttribute('data-umbradesktop-theme', theme);
+    element.style.setProperty('--umbradesktop-app-surface-sunken', sunken);
+    element.style.setProperty('--umbradesktop-app-border', border);
+    await element.updateComplete;
+    return getComputedStyle(element.shadowRoot!.querySelector('.well')!).backgroundColor;
+  }
+
+  it('is MS Paint’s dark grey under Windows 98', async () => {
+    expect(await wellUnder('win98', '#ffffff', '#000000')).to.equal('rgb(128, 128, 128)');
+  });
+
+  it('is a grey from the theme’s own colours under Umbraco 4, not the paper’s white', async () => {
+    const colour = await wellUnder('umbraco4', '#ffffff', '#8f8a80');
+    expect(colour).to.not.equal('rgb(255, 255, 255)');
+    expect(colour).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('is left to the theme under the others', async () => {
+    expect(await wellUnder('win11', '#e6e6e6', '#797979')).to.equal('rgb(230, 230, 230)');
+  });
+});

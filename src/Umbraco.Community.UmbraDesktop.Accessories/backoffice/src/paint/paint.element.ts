@@ -15,14 +15,15 @@ import {
   PAINT_PADDING_PX,
   PAINT_PALETTE,
   PAINT_PALETTE_COLUMNS,
+  PAINT_RESIZE_HANDLE_PX,
   PAINT_STATUS_HEIGHT_PX,
   PAINT_SWATCH_PX,
   PAINT_TOOLBAR_HEIGHT_PX,
   PAINT_WELL_PADDING_PX,
   undoDepthFor,
 } from './constants.js';
-import { floodFill, linePoints, parseColour, stamp } from './raster.js';
-import { css, customElement, html, nothing, property, query, state } from '@umbraco-cms/backoffice/external/lit';
+import { floodFill, linePoints, parseColour, resizeImage, stamp } from './raster.js';
+import { css, customElement, html, nothing, property, query, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UMB_DISCARD_CHANGES_MODAL, umbOpenModal } from '@umbraco-cms/backoffice/modal';
 
@@ -42,6 +43,19 @@ const TOOLS: Record<PaintTool, { term: string; fallback: string; icon: string }>
 
 /** A new picture's file type. */
 const NEW_PICTURE_TYPE = 'image/png';
+
+/**
+ * The grey behind the picture in Windows 98's MS Paint, used under the Windows 98 theme. Hardcoded
+ * for the reason Minesweeper gives for Windows 98's greys: it is that operating system's colour, not
+ * a theme token.
+ */
+const PAINT_WIN98_WORKSPACE = '#808080';
+
+/** A resize handle: on the picture's right edge, its bottom edge, or its corner. */
+type ResizeHandle = 'right' | 'bottom' | 'corner';
+
+/** The resize handles, in the order they are drawn and tabbed to. */
+const RESIZE_HANDLES: readonly ResizeHandle[] = ['right', 'bottom', 'corner'];
 
 /**
  * Paint, as a self-contained UmbraDesktop app: a pencil, a brush, an eraser and a bucket, MS Paint's
@@ -178,6 +192,13 @@ export class PaintElement extends UmbLitElement {
   /** The stroke in progress: its last point and its colour. Undefined between strokes. */
   #stroke?: { x: number; y: number; colour: string };
 
+  /** The size a resize handle is being dragged to, drawn as an outline until it is let go. */
+  @state()
+  private _resizeTo?: { w: number; h: number };
+
+  /** The resize drag in progress: which handle, where the pointer started, and the size then. */
+  #resizeDrag?: { which: ResizeHandle; x: number; y: number; w: number; h: number };
+
   /** Listen for Ctrl+Z and Ctrl+S. */
   override connectedCallback(): void {
     super.connectedCallback();
@@ -254,13 +275,114 @@ export class PaintElement extends UmbLitElement {
     this._undoDepth = this.#history.length;
   }
 
-  /** Take the last stroke back. */
+  /**
+   * Take the last stroke back. A resize is a stroke too, so the picture may come back at another
+   * size: the canvas is resized first, since that clears it, and painted once it has.
+   */
   undo(): void {
     const previous = this.#history.pop();
     if (!previous) return;
     this.#image = previous;
     this._undoDepth = this.#history.length;
+    if (previous.width === this._pictureSize.w && previous.height === this._pictureSize.h) {
+      this.#paint();
+      return;
+    }
+    void this.#resize({ w: previous.width, h: previous.height }).then(() => this.#paint());
+  }
+
+  /**
+   * The size a handle drag or key press asks for, kept between one pixel and the largest picture
+   * Paint edits.
+   * @param which The handle: the right edge changes only the width, the bottom only the height.
+   * @param from The size before.
+   * @param dx The change across.
+   * @param dy The change down.
+   * @returns The new size.
+   */
+  #sizeFor(which: ResizeHandle, from: { w: number; h: number }, dx: number, dy: number): { w: number; h: number } {
+    const clamp = (value: number) => Math.min(PAINT_MAX_IMAGE_EDGE_PX, Math.max(1, Math.round(value)));
+    return {
+      w: which === 'bottom' ? from.w : clamp(from.w + dx),
+      h: which === 'right' ? from.h : clamp(from.h + dy),
+    };
+  }
+
+  /**
+   * Give the picture a new size, as MS Paint's canvas handles do: anchored at the top left, growing
+   * into the background colour and cropping when smaller. One step for Undo, and unsaved work.
+   * @param size The new size.
+   */
+  async #resizePicture(size: { w: number; h: number }): Promise<void> {
+    if (!this.#image || (size.w === this.#image.width && size.h === this.#image.height)) return;
+    this.#remember();
+    const resized = resizeImage(this.#image, size.w, size.h, parseColour(this._background));
+    this.#image = new ImageData(new Uint8ClampedArray(resized.data), resized.width, resized.height);
+    this.#setDirty(true);
+    await this.#resize(size);
     this.#paint();
+  }
+
+  /**
+   * Start dragging a resize handle.
+   * @param event The pointerdown.
+   * @param which The handle.
+   */
+  #onResizeDown(event: PointerEvent, which: ResizeHandle): void {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    try {
+      (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    } catch {
+      // A pointer the browser does not know (a synthetic one) cannot be captured; drag uncaptured.
+    }
+    const { w, h } = this._pictureSize;
+    this.#resizeDrag = { which, x: event.clientX, y: event.clientY, w, h };
+  }
+
+  /**
+   * Follow a resize drag with the outline. The picture is drawn at one screen pixel a picture pixel,
+   * so the pointer's travel is the change in size, scaled in case a stylesheet ever zooms it.
+   * @param event The pointermove.
+   */
+  #onResizeMove(event: PointerEvent): void {
+    const drag = this.#resizeDrag;
+    if (!drag) return;
+    const scale = this._canvas.getBoundingClientRect().width / this._canvas.width || 1;
+    this._resizeTo = this.#sizeFor(drag.which, drag, (event.clientX - drag.x) / scale, (event.clientY - drag.y) / scale);
+  }
+
+  /**
+   * Let go of a resize handle: the picture takes the outlined size.
+   * @param event The pointerup or pointercancel.
+   */
+  #onResizeUp(event: PointerEvent): void {
+    if (!this.#resizeDrag) return;
+    if (event.type === 'pointerup') this.#onResizeMove(event);
+    const size = event.type === 'pointerup' ? this._resizeTo : undefined;
+    this.#resizeDrag = undefined;
+    this._resizeTo = undefined;
+    if (size) void this.#resizePicture(size);
+  }
+
+  /**
+   * The handles' keys, so the picture can be resized without a pointer: the arrows change the size
+   * a pixel at a time, or ten with Shift.
+   * @param event The keydown.
+   * @param which The handle.
+   */
+  #onResizeKey(event: KeyboardEvent, which: ResizeHandle): void {
+    const step = event.shiftKey ? 10 : 1;
+    const change: Record<string, [number, number]> = {
+      ArrowRight: [step, 0],
+      ArrowLeft: [-step, 0],
+      ArrowDown: [0, step],
+      ArrowUp: [0, -step],
+    };
+    if (!(event.key in change)) return;
+    event.preventDefault();
+    const [dx, dy] = change[event.key];
+    void this.#resizePicture(this.#sizeFor(which, this._pictureSize, dx, dy));
   }
 
   /** Start a new picture, asking first if the current one has unsaved work. */
@@ -528,6 +650,7 @@ export class PaintElement extends UmbLitElement {
         ${this.#renderAction('save', 'icon-save', this.#term('saveTitle', 'Save to the media library (Ctrl+S)'), () => this.save())}
       </div>
       <div class="well sunken">
+        <div class="page">
         <canvas
           width=${this._pictureSize.w}
           height=${this._pictureSize.h}
@@ -538,6 +661,23 @@ export class PaintElement extends UmbLitElement {
           @pointercancel=${this.#onPointerUp}
           @contextmenu=${(event: Event) => event.preventDefault()}
         ></canvas>
+        ${RESIZE_HANDLES.map(
+          (which) => html`<button
+            class="handle"
+            data-resize=${which}
+            title=${this.#term('paintResize', 'Resize the picture: drag, or use the arrow keys')}
+            aria-label=${this.#term('paintResize', 'Resize the picture: drag, or use the arrow keys')}
+            @pointerdown=${(event: PointerEvent) => this.#onResizeDown(event, which)}
+            @pointermove=${(event: PointerEvent) => this.#onResizeMove(event)}
+            @pointerup=${(event: PointerEvent) => this.#onResizeUp(event)}
+            @pointercancel=${(event: PointerEvent) => this.#onResizeUp(event)}
+            @keydown=${(event: KeyboardEvent) => this.#onResizeKey(event, which)}
+          ></button>`,
+        )}
+        ${this._resizeTo
+          ? html`<div class="resize-outline" style="width: ${this._resizeTo.w}px; height: ${this._resizeTo.h}px"></div>`
+          : nothing}
+        </div>
       </div>
       <div class="colours">
         <div
@@ -560,7 +700,7 @@ export class PaintElement extends UmbLitElement {
           @input=${(event: Event) => (this._name = (event.target as HTMLInputElement).value)}
         />
         ${this._notice ? html`<span class="notice" role="status">${this._notice}</span>` : nothing}
-        <span class="dimensions">${this._pictureSize.w} × ${this._pictureSize.h}</span>
+        <span class="dimensions">${(this._resizeTo ?? this._pictureSize).w} × ${(this._resizeTo ?? this._pictureSize).h}</span>
       </div>
     `;
   }
@@ -625,14 +765,82 @@ export class PaintElement extends UmbLitElement {
         padding: ${PAINT_WELL_PADDING_PX}px;
       }
 
+      /* The area round the picture has to differ from the picture's white paper, or the edge of what
+         can be drawn on disappears. Most themes' sunken surface is already a grey. Windows 98's and
+         Umbraco 4's is white, so those two get a ground of their own here, which changes only how the
+         well looks and nothing about its size (docs/desktop-apps.md §8). Windows 98 gets the dark grey
+         MS Paint put behind the picture, which is also that theme's shadow grey; Umbraco 4 gets its
+         own border colour mixed into its white, so the grey is one from its palette. */
+      :host([data-umbradesktop-theme='win98']) .well {
+        background: ${unsafeCSS(PAINT_WIN98_WORKSPACE)};
+      }
+
+      :host([data-umbradesktop-theme='umbraco4']) .well {
+        background: color-mix(
+          in srgb,
+          var(--umbradesktop-app-border, var(--uui-color-text-alt)) 25%,
+          var(--umbradesktop-app-surface-sunken, var(--uui-color-background))
+        );
+      }
+
       /* Auto margins rather than place-content, so a picture larger than the well is pushed to the
-         top-left and scrolls, where centring would clip its first rows and columns out of reach. */
-      canvas {
+         top-left and scrolls, where centring would clip its first rows and columns out of reach.
+         On the page rather than the canvas, because the page also holds the resize handles, which
+         are positioned against the picture's edges. */
+      .page {
+        position: relative;
         margin: auto;
+      }
+
+      canvas {
         display: block;
         cursor: crosshair;
         touch-action: none;
         image-rendering: pixelated;
+      }
+
+      /* MS Paint's canvas handles: small squares just outside the picture's right edge, bottom edge
+         and corner, each with the resize cursor for the way it pulls. */
+      .handle {
+        position: absolute;
+        width: ${PAINT_RESIZE_HANDLE_PX}px;
+        height: ${PAINT_RESIZE_HANDLE_PX}px;
+        padding: 0;
+        border: 1px solid var(--umbradesktop-app-text, var(--uui-color-text));
+        background: var(--umbradesktop-app-surface, var(--uui-color-surface));
+        touch-action: none;
+      }
+
+      .handle[data-resize='right'] {
+        left: 100%;
+        top: calc(50% - ${PAINT_RESIZE_HANDLE_PX / 2}px);
+        cursor: ew-resize;
+      }
+
+      .handle[data-resize='bottom'] {
+        top: 100%;
+        left: calc(50% - ${PAINT_RESIZE_HANDLE_PX / 2}px);
+        cursor: ns-resize;
+      }
+
+      .handle[data-resize='corner'] {
+        left: 100%;
+        top: 100%;
+        cursor: nwse-resize;
+      }
+
+      .handle:focus-visible {
+        outline: 2px solid var(--umbradesktop-app-accent, var(--uui-color-selected));
+        outline-offset: 1px;
+      }
+
+      /* The size a handle is being dragged to, dashed as MS Paint dashes it, until it is let go. */
+      .resize-outline {
+        position: absolute;
+        top: 0;
+        left: 0;
+        border: 1px dashed var(--umbradesktop-app-text, var(--uui-color-text));
+        pointer-events: none;
       }
 
       .status {

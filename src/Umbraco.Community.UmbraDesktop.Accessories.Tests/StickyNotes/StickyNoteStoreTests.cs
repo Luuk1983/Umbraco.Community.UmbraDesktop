@@ -173,4 +173,85 @@ public class StickyNoteStoreTests
 
         Assert.Empty(new StickyNoteStore(values, clock).GetAll());
     }
+
+    /// <summary>The texts on the board, in board order, for asserting on order.</summary>
+    /// <param name="store">The store to read.</param>
+    /// <returns>Each note's text.</returns>
+    private static string[] Order(StickyNoteStore store) => store.GetAll().Select(note => note.Text).ToArray();
+
+    /// <summary>
+    /// A note can be moved to sit before another, which is how the board is reordered. Named by the
+    /// note it goes before rather than by a position, so a note someone else adds or deletes in the
+    /// meantime cannot make it land somewhere the mover did not mean.
+    /// </summary>
+    [Fact]
+    public void Moves_a_note_to_sit_before_another()
+    {
+        var (store, _, _) = Create();
+        var a = store.Create("A", "yellow", "Ada");
+        store.Create("B", "yellow", "Ada");
+        var c = store.Create("C", "yellow", "Ada");
+
+        Assert.True(store.Move(c.Key, a.Key));
+
+        Assert.Equal(["C", "A", "B"], Order(store));
+    }
+
+    /// <summary>No note to go before means the end of the board.</summary>
+    [Fact]
+    public void Moves_a_note_to_the_end_when_there_is_nothing_to_go_before()
+    {
+        var (store, _, _) = Create();
+        var a = store.Create("A", "yellow", "Ada");
+        store.Create("B", "yellow", "Ada");
+
+        Assert.True(store.Move(a.Key, null));
+
+        Assert.Equal(["B", "A"], Order(store));
+    }
+
+    /// <summary>
+    /// A note to go before that has since been deleted also means the end: the mover still meant to
+    /// move the note, and the end is the one place that cannot be wrong about anything else.
+    /// </summary>
+    [Fact]
+    public void Moves_to_the_end_when_the_note_to_go_before_has_gone()
+    {
+        var (store, _, _) = Create();
+        var a = store.Create("A", "yellow", "Ada");
+        store.Create("B", "yellow", "Ada");
+
+        Assert.True(store.Move(a.Key, Guid.NewGuid()));
+
+        Assert.Equal(["B", "A"], Order(store));
+    }
+
+    /// <summary>
+    /// Moving is not editing: the version, the author and the time stay as they were, so somebody
+    /// typing in the note while it is moved does not get a conflict for it.
+    /// </summary>
+    [Fact]
+    public void Leaves_a_moved_note_unchanged()
+    {
+        var (store, _, clock) = Create();
+        var a = store.Create("A", "yellow", "Ada");
+        store.Create("B", "yellow", "Ada");
+        clock.Advance(TimeSpan.FromMinutes(5));
+
+        store.Move(a.Key, null);
+
+        Assert.Equal(a, store.GetAll()[^1]);
+    }
+
+    /// <summary>A note that is not on the board cannot be moved, and nothing else changes.</summary>
+    [Fact]
+    public void Reports_a_move_of_a_missing_note()
+    {
+        var (store, _, _) = Create();
+        store.Create("A", "yellow", "Ada");
+
+        Assert.False(store.Move(Guid.NewGuid(), null));
+
+        Assert.Equal(["A"], Order(store));
+    }
 }

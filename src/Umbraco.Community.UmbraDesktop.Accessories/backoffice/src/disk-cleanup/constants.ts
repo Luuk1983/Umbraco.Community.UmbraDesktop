@@ -15,8 +15,23 @@ export const DISK_CLEANUP_CAPTION_PX = 18;
 /** One bin's row in the list, in px. */
 export const DISK_CLEANUP_ROW_PX = 30;
 
-/** The description box, in px: three lines, and it scrolls if a language needs a fourth. */
-export const DISK_CLEANUP_DESCRIPTION_PX = 58;
+/**
+ * One line of the description, in px, set on the box rather than inherited.
+ *
+ * It was inherited, and the box's height assumed about 19px a line. The backoffice's text runs on
+ * a line height of up to 21px, so three lines overflowed the box and it showed a scroll bar. Fixed
+ * here, the box's height is a count of lines this app controls.
+ */
+export const DISK_CLEANUP_DESCRIPTION_LINE_PX = 17;
+
+/**
+ * How many lines the description box holds. Four: the longest description, the media bin's in
+ * Dutch, wraps to four at the minimum width.
+ */
+export const DISK_CLEANUP_DESCRIPTION_LINES = 4;
+
+/** The description box, in px: {@link DISK_CLEANUP_DESCRIPTION_LINES} lines. */
+export const DISK_CLEANUP_DESCRIPTION_PX = DISK_CLEANUP_DESCRIPTION_LINE_PX * DISK_CLEANUP_DESCRIPTION_LINES;
 
 /** The buttons, in px. */
 export const DISK_CLEANUP_BUTTONS_PX = 28;

@@ -10,7 +10,7 @@ using Umbraco.Cms.Web.Common.Authorization;
 namespace Umbraco.Community.UmbraDesktop.Accessories.StickyNotes;
 
 /// <summary>
-/// The shared sticky note board: read it, add to it, edit and delete its notes.
+/// The shared sticky note board: read it, add to it, edit, move and delete its notes.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -20,7 +20,7 @@ namespace Umbraco.Community.UmbraDesktop.Accessories.StickyNotes;
 /// readable by every backoffice account, including ones the desktop was never granted to.
 /// </para>
 /// <para>
-/// <b>Anyone may edit or delete any note.</b> It is a shared noticeboard, and each note says who
+/// <b>Anyone may edit, move or delete any note.</b> It is a shared noticeboard, and each note says who
 /// last wrote it. What the API does guard is the lost update: an edit names the version it was made
 /// against and is refused with 409, carrying the note as it now stands, when somebody else got there
 /// first.
@@ -152,6 +152,25 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
         }
 
         return store.Delete(key) ? Ok() : NotFound();
+    }
+
+    /// <summary>Move a note on the board, to sit before another or at the end.</summary>
+    /// <param name="key">The note.</param>
+    /// <param name="model">The note it should go before, if any.</param>
+    /// <returns>200, or 404 when the note has gone.</returns>
+    [HttpPut("{key:guid}/position")]
+    [MapToApiVersion("1.0")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public IActionResult MoveNote(Guid key, MoveStickyNoteRequestModel model)
+    {
+        if (!CanUseDesktop(out _))
+        {
+            return Forbid();
+        }
+
+        return store.Move(key, model.Before) ? Ok() : NotFound();
     }
 
     /// <summary>Whether the current user has the Desktop section, and their name if so.</summary>

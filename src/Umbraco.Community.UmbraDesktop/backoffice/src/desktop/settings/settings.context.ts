@@ -37,6 +37,7 @@ import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import { UmbImagingRepository } from '@umbraco-cms/backoffice/imaging';
 import { UmbLocalizationController } from '@umbraco-cms/backoffice/localization-api';
 import { UMB_NOTIFICATION_CONTEXT } from '@umbraco-cms/backoffice/notification';
+import { formatDateTime } from '../clock-format';
 
 /**
  * Owns the current user's desktop settings: the persisted preference, and the resolved view the
@@ -88,6 +89,26 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    * anything — a source without a cycle cannot answer what the time looks like.
    */
   public readonly locale = this.#settings.asObservablePart((settings) => settings.locale);
+
+  /** Where the backoffice culture comes from, for {@link formatDateTime}. */
+  #localize = new UmbLocalizationController(this);
+
+  /**
+   * Format a date or time the way this user has asked for it, exactly as the taskbar clock does:
+   * their choice of culture, backoffice or browser, and their 12 or 24 hour override.
+   *
+   * **Public API for apps**, documented in `docs/desktop-apps.md` §7.1, which is why it is a method
+   * here rather than something an app reimplements: an app in another package cannot import
+   * `clock-format.ts`, and a copy of its rules would drift. Pair it with {@link locale}, which emits
+   * when either setting changes, so an app can redraw.
+   * @param date The moment to format.
+   * @param options What to show, as `Intl.DateTimeFormat` options. The hour override applies only
+   *   when these ask for an hour.
+   * @returns The formatted date or time.
+   */
+  public formatDateTime(date: Date, options: Intl.DateTimeFormatOptions): string {
+    return formatDateTime(date, this.#settings.getValue().locale, { backoffice: this.#localize.lang() }, options);
+  }
 
   /** Whether changing the theme also changes the wallpaper to that theme's match. */
   public readonly wallpaperFollowsTheme = this.#settings.asObservablePart(

@@ -2,6 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import './disk-cleanup.element.js';
 import type { DiskCleanupElement } from './disk-cleanup.element.js';
 import type { RecycleBinCount, RecycleBinEmptyResult, RecycleBinId, RecycleBins } from './recycle-bins.js';
+import { DISK_CLEANUP_CONTENT_SIZE, DISK_CLEANUP_MIN_CONTENT_SIZE } from './constants.js';
 
 /**
  * Disk Cleanup: empties the content and media recycle bins, one or both, and never without asking.
@@ -166,4 +167,50 @@ it('counts again on Refresh', async () => {
   await settle(element);
   expect(row(element, 'media').textContent).to.contain('1 item');
   expect(row(element, 'media').textContent).to.not.contain('1 items');
+});
+
+/**
+ * The description box holds the whole description with no scroll bar.
+ *
+ * It had one in the backoffice. The box was sized for three lines at whatever line height it
+ * inherited, and the backoffice's text is 14px on a line height of up to 21px, so three lines came
+ * to more than the box and it scrolled. Rendered here inside that same text, at both window widths
+ * and under every theme id, with each bin's description in turn.
+ */
+describe('the description', () => {
+  /** What each case mounted, removed after it. */
+  let after: Array<() => void> = [];
+  afterEach(() => {
+    for (const undo of after) undo();
+    after = [];
+  });
+
+  for (const [which, size] of [['default', DISK_CLEANUP_CONTENT_SIZE], ['minimum', DISK_CLEANUP_MIN_CONTENT_SIZE]] as const) {
+    for (const theme of [undefined, 'umbraco', 'umbraco4', 'macos', 'win11', 'win98']) {
+      it(`fits without scrolling at the ${which} size under ${theme ?? 'no theme'}`, async () => {
+        // Built by hand rather than with fixture(), which waits for an animation frame on anything
+        // that is not a Lit element, and a background tab, which most test files are when the whole
+        // suite runs, never gets one.
+        const body = document.createElement('div');
+        body.style.cssText = `display: flex; flex-direction: column; width: ${size.w}px; height: ${size.h}px; font: 14px/21px sans-serif`;
+        document.body.appendChild(body);
+        after.push(() => body.remove());
+        const element = document.createElement('umbradesktop-disk-cleanup') as DiskCleanupElement;
+        (element as unknown as { bins: RecycleBins }).bins = new FakeBins();
+        if (theme) element.setAttribute('data-umbradesktop-theme', theme);
+        element.style.flex = '1';
+        body.appendChild(element);
+        // Only the render, not settle(): the description does not wait on the counts, and settle's
+        // timer turns cost a second each in a background tab, which is what most test files are
+        // when the whole suite runs at once.
+        await element.updateComplete;
+        for (const bin of ['content', 'media'] as const) {
+          row(element, bin).dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
+          await element.updateComplete;
+          const description = element.shadowRoot!.querySelector<HTMLElement>('.description')!;
+          expect(description.scrollHeight, `${bin}: the text's height against the box's`).to.be.at.most(description.clientHeight);
+        }
+      });
+    }
+  }
 });

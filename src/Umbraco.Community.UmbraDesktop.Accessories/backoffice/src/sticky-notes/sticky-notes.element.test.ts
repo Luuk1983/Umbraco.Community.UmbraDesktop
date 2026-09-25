@@ -1,6 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './sticky-notes.element.js';
 import type { StickyNotesElement } from './sticky-notes.element.js';
+import { STICKY_NOTES_LINE_PX, STICKY_NOTES_PAPER } from './constants.js';
 import type { StickyNote, StickyNoteBoard, StickyNotesApi, StickyNoteUpdateResult } from './api.js';
 
 /**
@@ -49,6 +50,20 @@ class FakeServer implements StickyNotesApi {
 
   async remove(key: string): Promise<boolean> {
     this.notes = this.notes.filter((note) => note.key !== key);
+    return true;
+  }
+
+  /** Every move asked for, as [note, the note it goes before]. */
+  moves: Array<[string, string | undefined]> = [];
+
+  async move(key: string, before: string | undefined): Promise<boolean> {
+    this.moves.push([key, before]);
+    const note = this.notes.find((each) => each.key === key);
+    if (!note) return false;
+    const rest = this.notes.filter((each) => each.key !== key);
+    const at = before === undefined ? -1 : rest.findIndex((each) => each.key === before);
+    rest.splice(at < 0 ? rest.length : at, 0, note);
+    this.notes = rest;
     return true;
   }
 
@@ -217,14 +232,6 @@ it('offers to put back a note deleted elsewhere while it had unsaved text here',
   expect(server.notes.map((note) => note.text)).to.deep.equal(['unsaved words']);
 });
 
-it('changes a note’s colour for everyone', async () => {
-  const server = new FakeServer();
-  server.addAsSomeoneElse('colourful');
-  const element = await board(server);
-  await click(element, '[data-colour="green"]', 0);
-  expect(server.notes[0].colour).to.equal('green');
-});
-
 it('limits each note to the server’s length, and the board to its size', async () => {
   const server = new FakeServer();
   server.maxNotes = 1;
@@ -262,4 +269,129 @@ it('refreshes when the window is clicked, not only when something in it takes fo
   element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
   await settle(element);
   expect(pages(element).map((page) => page.value)).to.deep.equal(['From Grace']);
+});
+
+/**
+ * No ring or shadow for anything a mouse does: every note looks the same, active or not.
+ *
+ * A textarea matches :focus-visible however it was focused, so the 2px ink outline drew a heavy
+ * black frame round every note anyone clicked into. A lift was tried in its place, then a faint
+ * edge, and both were turned down, along with the resting drop shadow. The text's own caret is what
+ * marks where typing goes.
+ */
+it('draws no ring or shadow on notes or on the text being typed in', async () => {
+  const server = new FakeServer();
+  server.addAsSomeoneElse('One');
+  server.addAsSomeoneElse('Two');
+  const element = await board(server);
+  const [first] = pages(element);
+  const notes = element.shadowRoot!.querySelectorAll<HTMLElement>('.note');
+
+  first.focus();
+  await element.updateComplete;
+
+  expect(element.shadowRoot!.activeElement, 'the text took focus').to.equal(first);
+  expect(getComputedStyle(first).outlineStyle, 'no outline on the text').to.equal('none');
+  for (const note of notes) expect(getComputedStyle(note).boxShadow, 'every note sits flat').to.equal('none');
+});
+
+/**
+ * Every note is yellow, on lined paper, as Windows' Sticky Notes were. The colour choice went, so a
+ * note the server holds in another colour from before is drawn yellow too; the server's colour
+ * field is left alone.
+ */
+it('draws every note on yellow lined paper, with no colour to choose', async () => {
+  const server = new FakeServer();
+  const green = server.addAsSomeoneElse('Once green');
+  server.notes = server.notes.map((note) => (note.key === green.key ? { ...note, colour: 'green' } : note));
+  const element = await board(server);
+  const note = element.shadowRoot!.querySelector<HTMLElement>('.note')!;
+
+  expect(getComputedStyle(note).getPropertyValue('--note-paper').trim()).to.equal(STICKY_NOTES_PAPER);
+  expect(element.shadowRoot!.querySelectorAll('.swatch').length, 'no colour swatches').to.equal(0);
+  const page = pages(element)[0];
+  expect(getComputedStyle(page).backgroundImage, 'ruled').to.contain('repeating-linear-gradient');
+  expect(getComputedStyle(page).lineHeight, 'text on the lines').to.equal(`${STICKY_NOTES_LINE_PX}px`);
+});
+
+it('adds new notes in yellow', async () => {
+  const server = new FakeServer();
+  const element = await board(server);
+  await click(element, '[data-action="add"]');
+  expect(server.notes[server.notes.length - 1]?.colour).to.equal('yellow');
+});
+
+/** The notes' texts, in the order the window shows them. */
+const order = (element: StickyNotesElement) => pages(element).map((page) => page.value);
+
+/**
+ * Drag a note by its handle and drop it on another, on one side or the other.
+ * @param element The board.
+ * @param from The index of the note to drag.
+ * @param to The index of the note it is dropped on.
+ * @param side Which half of that note it lands on.
+ */
+async function drag(element: StickyNotesElement, from: number, to: number, side: 'left' | 'right'): Promise<void> {
+  const notes = element.shadowRoot!.querySelectorAll<HTMLElement>('.note');
+  const handle = notes[from].querySelector<HTMLElement>('.handle')!;
+  const target = notes[to];
+  const box = target.getBoundingClientRect();
+  const clientX = side === 'left' ? box.left + 2 : box.right - 2;
+  const clientY = box.top + box.height / 2;
+  const dataTransfer = new DataTransfer();
+  handle.dispatchEvent(new DragEvent('dragstart', { bubbles: true, composed: true, dataTransfer }));
+  target.dispatchEvent(new DragEvent('dragover', { bubbles: true, composed: true, cancelable: true, dataTransfer, clientX, clientY }));
+  target.dispatchEvent(new DragEvent('drop', { bubbles: true, composed: true, cancelable: true, dataTransfer, clientX, clientY }));
+  handle.dispatchEvent(new DragEvent('dragend', { bubbles: true, composed: true, dataTransfer }));
+  await settle(element);
+}
+
+/** A board of three notes: A, B, C. */
+async function abc(): Promise<{ server: FakeServer; element: StickyNotesElement }> {
+  const server = new FakeServer();
+  for (const text of ['A', 'B', 'C']) server.addAsSomeoneElse(text);
+  return { server, element: await board(server) };
+}
+
+/**
+ * Notes are reordered by dragging, like cards on a Trello board, and the new order is everyone's:
+ * the server is told which note it now goes before, so the next refresh confirms it.
+ */
+it('moves a note before another when it is dropped on the leading half of that note', async () => {
+  const { server, element } = await abc();
+  await drag(element, 2, 0, 'left');
+  expect(order(element)).to.deep.equal(['C', 'A', 'B']);
+  expect(server.moves).to.deep.equal([['note-3', 'note-1']]);
+});
+
+it('moves a note after another when it is dropped on the trailing half of that note', async () => {
+  const { server, element } = await abc();
+  await drag(element, 0, 2, 'right');
+  expect(order(element)).to.deep.equal(['B', 'C', 'A']);
+  expect(server.moves).to.deep.equal([['note-1', undefined]]);
+});
+
+it('keeps the new order when the board refreshes', async () => {
+  const { element } = await abc();
+  await drag(element, 2, 0, 'left');
+  await element.refresh();
+  await settle(element);
+  expect(order(element)).to.deep.equal(['C', 'A', 'B']);
+});
+
+/**
+ * Dragging is not the only way: the handle is a button, and the arrow keys move its note one place
+ * at a time, so a keyboard can reorder the board too.
+ */
+it('moves a note with the arrow keys on its handle', async () => {
+  const { server, element } = await abc();
+  const handles = () => element.shadowRoot!.querySelectorAll<HTMLElement>('.note .handle');
+  handles()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  await settle(element);
+  expect(order(element)).to.deep.equal(['B', 'A', 'C']);
+  expect(server.moves[server.moves.length - 1]).to.deep.equal(['note-1', 'note-3']);
+
+  handles()[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
+  await settle(element);
+  expect(order(element)).to.deep.equal(['A', 'B', 'C']);
 });

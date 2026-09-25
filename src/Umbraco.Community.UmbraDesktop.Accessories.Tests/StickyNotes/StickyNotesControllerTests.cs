@@ -158,4 +158,32 @@ public class StickyNotesControllerTests
         Assert.IsType<ForbidResult>(outsider.DeleteNote(note.Key));
         Assert.Equal("Private to desktop users", Assert.Single(_store.GetAll()).Text);
     }
+
+    /// <summary>A note is moved by naming the note it should go before, and anyone may move any note.</summary>
+    [Fact]
+    public void Moves_a_note()
+    {
+        var a = _store.Create("A", "yellow", "Ada");
+        var b = _store.Create("B", "yellow", "Ada");
+
+        Assert.IsType<OkResult>(As("Grace").MoveNote(b.Key, new MoveStickyNoteRequestModel(a.Key)));
+
+        Assert.Equal(["B", "A"], _store.GetAll().Select(note => note.Text));
+    }
+
+    /// <summary>Moving a note that has gone is a 404, as editing one is.</summary>
+    [Fact]
+    public void Answers_a_move_of_a_missing_note_with_404()
+    {
+        Assert.IsType<NotFoundResult>(As().MoveNote(Guid.NewGuid(), new MoveStickyNoteRequestModel(null)));
+    }
+
+    /// <summary>Moving is guarded like every other action: no Desktop section, no board.</summary>
+    [Fact]
+    public void Forbids_a_move_without_the_desktop_section()
+    {
+        var a = _store.Create("A", "yellow", "Ada");
+
+        Assert.IsType<ForbidResult>(As("Eve", "Umb.Section.Content").MoveNote(a.Key, new MoveStickyNoteRequestModel(null)));
+    }
 }

@@ -47,17 +47,26 @@ export const STICKY_NOTES_PADDING_PX = 10;
 export const STICKY_NOTES_TOOLBAR_HEIGHT_PX = 32;
 
 /**
- * The paper each colour is drawn on. This app's domain palette, like Paint's: a note is a document,
- * and a yellow sticky note is yellow under every theme. Text on it is always {@link STICKY_NOTES_INK}.
- * Unknown names from a newer server fall back to the first.
+ * The paper every note is drawn on: yellow, as Windows' Sticky Notes were. This app's domain colour,
+ * like Paint's palette, so a note is yellow under every theme. Text on it is always
+ * {@link STICKY_NOTES_INK}.
+ *
+ * There used to be five colours to choose from. The choice went, and every note is drawn on this
+ * paper whatever colour the server holds for it; the server's colour field is left as it is.
  */
-export const STICKY_NOTES_PAPER: Record<string, string> = {
-  yellow: '#fff7b1',
-  green: '#d4f5c8',
-  pink: '#fcd6e8',
-  purple: '#e5dbff',
-  blue: '#d3e9fc',
-};
+export const STICKY_NOTES_PAPER = '#fff7b1';
+
+/** The colour name new notes are created with, which is the server's name for {@link STICKY_NOTES_PAPER}. */
+export const STICKY_NOTES_COLOUR = 'yellow';
+
+/**
+ * One ruled line of a note, in px: the text's line height and the spacing of the lines drawn behind
+ * it, one number so the writing sits on the lines.
+ */
+export const STICKY_NOTES_LINE_PX = 20;
+
+/** Space above the first line of text, in px, which the ruling is shifted by to stay under the text. */
+export const STICKY_NOTES_TEXT_TOP_PX = 4;
 
 /**
  * The ink on every paper. Fixed, because the papers are, and at least 12:1 against the darkest of

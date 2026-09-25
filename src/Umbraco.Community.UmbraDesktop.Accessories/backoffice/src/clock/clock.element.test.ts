@@ -2,6 +2,8 @@ import { expect, fixture, html } from '@open-wc/testing';
 import './clock.element.js';
 import { handAngles } from './hands.js';
 import type { ClockElement } from './clock.element.js';
+import { UmbContextProvider } from '@umbraco-cms/backoffice/context-api';
+import { UmbObjectState } from '@umbraco-cms/backoffice/observable-api';
 
 /** Twenty past ten and eight seconds, on a date whose weekday is known. */
 const MOMENT = new Date(2026, 8, 24, 10, 20, 8);
@@ -66,4 +68,62 @@ it('stops its timer when the window closes', async () => {
   expect(element.running, 'ticking while open').to.equal(true);
   element.remove();
   expect(element.running, 'and not once closed').to.equal(false);
+});
+
+/**
+ * Inside the desktop the time and date come from the desktop's own formatting, so they follow the
+ * same culture and 12/24 hour setting as the taskbar clock and change when the user changes them.
+ * `docs/desktop-apps.md` §7.1 is the contract; this is a stand-in for the desktop's context.
+ */
+describe('inside the desktop', () => {
+  /** What each case mounted, removed after it. */
+  let after: Array<() => void> = [];
+  afterEach(() => {
+    for (const undo of after) undo();
+    after = [];
+  });
+
+  /**
+   * A clock under a stand-in for the desktop's settings context.
+   * @param cycle The hour setting the stand-in starts on.
+   */
+  async function inDesktop(cycle = 'h23') {
+    const settings = new UmbObjectState({ hourCycle: cycle });
+    // Built by hand, not with fixture(), which waits for an animation frame a background tab never
+    // gets when the whole suite runs at once.
+    const host = document.createElement('div');
+    const desktop = {
+      // Umbraco's context consumer asks a provided instance for its host, as every real context
+      // (the desktop's included) can answer; a plain object without this is not found at all.
+      getHostElement: () => host,
+      locale: settings.asObservable(),
+      formatDateTime: (date: Date, options: Intl.DateTimeFormatOptions) =>
+        `${options.hour ? 'time' : 'date'} ${settings.getValue().hourCycle} ${date.getSeconds()}`,
+    };
+    document.body.appendChild(host);
+    after.push(() => host.remove());
+    new UmbContextProvider(host, 'UmbraDesktopSettingsContext', desktop).hostConnected();
+    const element = document.createElement('umbradesktop-clock') as ClockElement;
+    element.now = () => MOMENT;
+    host.appendChild(element);
+    await element.updateComplete;
+    await element.updateComplete;
+    return { element, settings };
+  }
+
+  const read = (element: ClockElement, selector: string) =>
+    (element.shadowRoot!.querySelector(selector)?.textContent ?? '').trim();
+
+  it('shows the time and the date as the desktop formats them', async () => {
+    const { element } = await inDesktop();
+    expect(read(element, '.time')).to.equal('time h23 8');
+    expect(read(element, '.date')).to.equal('date h23 8');
+  });
+
+  it('follows the desktop when its clock setting changes', async () => {
+    const { element, settings } = await inDesktop('h23');
+    settings.setValue({ hourCycle: 'h12' });
+    await element.updateComplete;
+    expect(read(element, '.time')).to.equal('time h12 8');
+  });
 });

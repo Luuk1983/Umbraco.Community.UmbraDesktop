@@ -79,8 +79,10 @@ const OPERATORS = new Set<CalculatorKey>(Object.keys(OPERATOR_GLYPHS) as Calcula
  * arithmetic is tested without a DOM in `engine.test.ts` and this file is only wiring.
  *
  * It takes the keyboard as well as the pointer, because nobody types a long sum by clicking. The
- * host is focusable for that, and the window focuses its body when it is activated, so a person can
- * open Calculator and start typing.
+ * host is focusable for that, and it focuses itself when it first renders, so a person can open
+ * Calculator and start typing. The desktop does not do that for it: bringing a window to the front
+ * moves no keyboard focus into the app, and before this the keys typed into a newly opened
+ * Calculator went nowhere until one of its buttons had been clicked.
  */
 @customElement('umbradesktop-calculator')
 export class CalculatorElement extends UmbLitElement {
@@ -93,6 +95,14 @@ export class CalculatorElement extends UmbLitElement {
     super.connectedCallback();
     if (!this.hasAttribute('tabindex')) this.tabIndex = 0;
     this.addEventListener('keydown', this.#onKeyDown);
+  }
+
+  /**
+   * Take the keyboard as soon as the calculator is on screen. Without scrolling, since a window that
+   * has just opened has nothing to scroll to.
+   */
+  override firstUpdated(): void {
+    this.focus({ preventScroll: true });
   }
 
   /** Stop listening. The whole of teardown: there is no timer here. */

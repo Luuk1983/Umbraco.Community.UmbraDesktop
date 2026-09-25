@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
-import { SAVERS, seededRandom } from './savers.js';
+import { SAVERS, drawUmbracoLogo, seededRandom } from './savers.js';
+import { UMBRACO_LOGO_PATH, UMBRACO_LOGO_SIZE } from '../shared/umbraco-logo.js';
 import type { FlyingState, MystifyState, StarfieldState } from './savers.js';
 
 /**
@@ -100,4 +101,121 @@ it('draws every saver onto a canvas without throwing', () => {
     saver.step(FRAME_MS);
     saver.draw(context);
   }
+});
+
+/**
+ * Flying Umbraco's logo is Umbraco's own mark, checked against the path in Umbraco's `icon-umbraco`.
+ *
+ * Drawn once, large, then sampled: every point the official path covers must be blue, and every
+ * point inside the disc that it does not cover, which is the U, must be white. Points within a
+ * couple of pixels of an edge are skipped, since anti-aliasing blends them. The homemade U this
+ * replaced fails it, because its U was a different shape.
+ */
+it('draws the Umbraco logo as Umbraco draws it', () => {
+  const size = 200;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext('2d', { willReadFrequently: true })!;
+  drawUmbracoLogo(context, size / 2, size / 2, size / 2);
+
+  const official = new Path2D(UMBRACO_LOGO_PATH);
+  const scale = UMBRACO_LOGO_SIZE / size;
+  const covered = (x: number, y: number) => context.isPointInPath(official, x * scale, y * scale);
+  const inDisc = (x: number, y: number) => Math.hypot(x - size / 2, y - size / 2) < size * 0.44;
+  let checked = 0;
+  for (let y = 4; y < size; y += 6) {
+    for (let x = 4; x < size; x += 6) {
+      const here = covered(x, y);
+      const neighbours = [covered(x - 2, y), covered(x + 2, y), covered(x, y - 2), covered(x, y + 2)];
+      if (neighbours.some((each) => each !== here)) continue;
+      if (!here && !inDisc(x, y)) continue;
+      const [r, g, b] = context.getImageData(x, y, 1, 1).data;
+      if (here) expect([r, g, b], `blue at ${x},${y}`).to.deep.equal([0x35, 0x44, 0xb1]);
+      else expect([r, g, b], `the U is white at ${x},${y}`).to.deep.equal([255, 255, 255]);
+      checked++;
+    }
+  }
+  expect(checked, 'enough of the logo sampled to mean something').to.be.greaterThan(300);
+});
+
+/**
+ * A stand-in canvas that records what is drawn at what size, for asserting on proportions without
+ * reading pixels.
+ * @param width The screen's width.
+ * @param height The screen's height.
+ * @returns The context, and the sizes it was asked to draw: fillRect widths, scale factors (the
+ *   logo's), and line widths.
+ */
+function recorder(width: number, height: number) {
+  const drawn = { rects: [] as number[], scales: [] as number[], lines: [] as number[] };
+  const target: Record<string | symbol, unknown> = { canvas: { width, height } };
+  const context = new Proxy(target, {
+    get(_target, key) {
+      if (key in target) return target[key];
+      if (key === 'fillRect') return (_x: number, _y: number, w: number) => drawn.rects.push(w);
+      if (key === 'scale') return (by: number) => drawn.scales.push(by);
+      return () => undefined;
+    },
+    set(_target, key, value) {
+      if (key === 'lineWidth') drawn.lines.push(value as number);
+      target[key] = value;
+      return true;
+    },
+  }) as unknown as CanvasRenderingContext2D;
+  return { context, drawn };
+}
+
+/**
+ * Draw one frame of a saver on a screen, from a fixed seed.
+ * @param id The saver.
+ * @param width The screen's width.
+ * @param height The screen's height.
+ * @returns What it drew.
+ */
+function frame(id: keyof typeof SAVERS, width: number, height: number) {
+  const { context, drawn } = recorder(width, height);
+  const saver = SAVERS[id](width, height, seededRandom(3));
+  saver.step(FRAME_MS);
+  saver.draw(context);
+  return drawn;
+}
+
+/**
+ * Sizes are in proportion to the screen, so the little preview is a miniature of the real thing.
+ * They were fixed pixels: a logo that filled much of the 192px preview was small on a 1920px
+ * monitor, and the stars were specks, which was reported as the preview not looking like the output.
+ * A screen twice the size draws everything twice the size.
+ */
+describe('in proportion to the screen', () => {
+  const HD = [1920, 1080] as const;
+  const UHD = [3840, 2160] as const;
+  const scaled = (small: number[], large: number[]) => small.map((size, i) => large[i] / size);
+
+  it('draws stars twice the size on a screen twice the size', () => {
+    const small = frame('starfield', ...HD).rects.slice(1);
+    const large = frame('starfield', ...UHD).rects.slice(1);
+    // Only the stars drawn above the one-pixel minimum: the faintest on a full HD screen come out
+    // just under it and are lifted to it, so they do not double.
+    const pairs = small.map((size, i) => [size, large[i]]).filter(([size]) => size > 1);
+    expect(pairs.length, 'most stars are above the minimum').to.be.greaterThan(small.length / 2);
+    for (const [size, twice] of pairs) expect(twice / size).to.be.closeTo(2, 1e-9);
+  });
+
+  it('draws logos twice the size on a screen twice the size', () => {
+    for (const ratio of scaled(frame('flying', ...HD).scales, frame('flying', ...UHD).scales)) {
+      expect(ratio).to.be.closeTo(2, 1e-9);
+    }
+  });
+
+  it('draws Mystify’s lines twice as thick on a screen twice the size', () => {
+    expect(frame('mystify', ...UHD).lines[0] / frame('mystify', ...HD).lines[0]).to.be.closeTo(2, 1e-9);
+  });
+
+  it('draws bigger than it used to on a full HD screen, and never below a pixel in the preview', () => {
+    // The nearest logo used to be at most 74px across the radius, whatever the screen.
+    expect(Math.max(...frame('flying', ...HD).scales) * (315.89 / 2)).to.be.greaterThan(74);
+    const preview = frame('starfield', 192, 144).rects.slice(1);
+    expect(Math.min(...preview), 'every star in the preview still shows').to.be.at.least(1);
+  });
 });
