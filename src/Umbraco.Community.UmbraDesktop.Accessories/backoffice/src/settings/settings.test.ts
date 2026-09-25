@@ -9,15 +9,13 @@ import {
 
 /**
  * The Accessories package's settings, as pure functions over the stored string, so the fallback for
- * every kind of bad payload is testable without storage: which media folder new Notepad and Paint
- * files go into, and the screensaver.
+ * every kind of bad payload is testable without storage. One setting today: the screensaver.
  */
 
 const DEFAULT_SCREENSAVER = UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS.screensaver;
 
-it('saves new files to the media library root until someone chooses a folder', () => {
+it('has the defaults when nothing is stored', () => {
   expect(parseSettings(null)).to.deep.equal(UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS);
-  expect(UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS.folder).to.equal(null);
 });
 
 /**
@@ -30,27 +28,26 @@ it('has the screensaver off until someone turns it on', () => {
   expect(UMBRADESKTOP_SCREENSAVER_WAIT_CHOICES).to.include(DEFAULT_SCREENSAVER.waitMinutes);
 });
 
-it('round-trips a chosen folder and screensaver', () => {
+it('round-trips a chosen screensaver', () => {
   const settings = {
-    folder: { unique: 'abc', name: 'Notes' },
     screensaver: { enabled: true, saver: 'mystify', waitMinutes: 5 },
   } as const;
   expect(parseSettings(serializeSettings(settings))).to.deep.equal(settings);
 });
 
 /**
- * An earlier version stored a destination beside the folder, and no screensaver. The folder still
- * means what it meant and is kept; the rest takes its default.
+ * Earlier versions stored a save folder, and one before that a destination. Notepad and Paint now ask
+ * where on the first save, so both are ignored, and the screensaver stored beside them is kept.
  */
-it('keeps the folder from a setting saved by an earlier version', () => {
-  expect(parseSettings(JSON.stringify({ destination: 'computer', folder: { unique: 'f', name: 'Old' } }))).to.deep.equal({
-    folder: { unique: 'f', name: 'Old' },
-    screensaver: DEFAULT_SCREENSAVER,
-  });
+it('ignores the save folder an earlier version stored, and keeps the screensaver beside it', () => {
+  const screensaver = { enabled: true, saver: 'flying', waitMinutes: 2 };
+  expect(
+    parseSettings(JSON.stringify({ destination: 'computer', folder: { unique: 'f', name: 'Old' }, screensaver })),
+  ).to.deep.equal({ screensaver });
 });
 
 it('falls back field by field for anything it cannot read', () => {
-  for (const raw of ['not json', '42', '{"folder":{"unique":7}}', '{"folder":"notes"}']) {
+  for (const raw of ['not json', '42', '{"screensaver":7}', '{"screensaver":"on"}']) {
     expect(parseSettings(raw), raw).to.deep.equal(UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS);
   }
   expect(

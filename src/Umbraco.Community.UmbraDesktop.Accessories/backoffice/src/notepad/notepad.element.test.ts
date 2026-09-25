@@ -1,14 +1,13 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './notepad.element.js';
 import type { NotepadElement } from './notepad.element.js';
-import { fixedSettings } from '../settings/settings.source.js';
-import type { AccessoriesSettings } from '../settings/settings.js';
 import type { MediaOpenResult } from '../shared/media-open.js';
 import type { MediaSaveRequest, MediaSaveResult } from '../shared/media-save.js';
+import type { SaveFolderChoice } from '../shared/save-location.js';
 
 /**
  * Notepad as a media library editor: open a text file from the media library, edit it, save it
- * back; or write a new one and save it into the folder Desktop settings name.
+ * back; or write a new one and choose where it goes the first time it is saved, as Save As did.
  *
  * The media library itself is faked. `media.test` in a running backoffice is what proves the real
  * picker and repositories; these cases are about what Notepad does with their answers.
@@ -20,6 +19,8 @@ interface Recorded {
   saves: MediaSaveRequest[];
   /** How many times the discard question was asked. */
   confirms: number;
+  /** How many times Save asked where. */
+  picks: number;
 }
 
 /** What the fake media library answers. */
@@ -30,8 +31,8 @@ interface Fakes {
   saved?: MediaSaveResult[];
   /** What the discard question answers. */
   discard?: boolean;
-  /** Desktop settings. */
-  settings?: Partial<AccessoriesSettings>;
+  /** Where Save As is told to put a new document. */
+  picked?: SaveFolderChoice;
 }
 
 /**
@@ -40,14 +41,17 @@ interface Fakes {
  * @returns The element and what it asked for.
  */
 async function notepad(fakes: Fakes = {}): Promise<{ element: NotepadElement; recorded: Recorded }> {
-  const recorded: Recorded = { saves: [], confirms: 0 };
+  const recorded: Recorded = { saves: [], confirms: 0, picks: 0 };
   const answers = fakes.saved ?? [{ ok: true, unique: 'media-1' }];
   const element = await fixture<NotepadElement>(html`<umbradesktop-notepad
     .confirmDiscard=${async () => {
       recorded.confirms++;
       return fakes.discard ?? true;
     }}
-    .saveSettings=${fixedSettings(fakes.settings ?? { folder: { unique: 'folder-1', name: 'Notes' } })}
+    .pickSaveFolder=${async () => {
+      recorded.picks++;
+      return fakes.picked ?? { status: 'chosen', folder: 'folder-1' };
+    }}
     .saveToMedia=${async (request: MediaSaveRequest) => {
       recorded.saves.push(request);
       return answers.length > 1 ? answers.shift()! : answers[0];
@@ -130,7 +134,7 @@ it('has no way to save to, or open from, this computer', async () => {
 });
 
 describe('saving a new document', () => {
-  it('saves it into the folder Desktop settings name, as a text file named after the document', async () => {
+  it('asks where, and saves it there as a text file named after the document', async () => {
     const { element, recorded } = await notepad();
     await rename(element, 'Meeting notes');
     await write(element, 'hello');
@@ -144,11 +148,21 @@ describe('saving a new document', () => {
       undefined,
     ]);
     expect(await textOf(save)).to.equal('hello');
+    expect(recorded.picks).to.equal(1);
     expect(element.dirty).to.equal(false);
   });
 
-  it('calls an unnamed document Untitled', async () => {
-    const { element, recorded } = await notepad({ settings: { folder: null } });
+  /** Cancelling Save As saves nothing, as it always has. */
+  it('saves nothing when asking where is cancelled, and keeps the work unsaved', async () => {
+    const { element, recorded } = await notepad({ picked: { status: 'cancelled' } });
+    await write(element, 'hello');
+    await click(element, 'save');
+    expect(recorded.saves).to.have.length(0);
+    expect(element.dirty).to.equal(true);
+  });
+
+  it('calls an unnamed document Untitled, and saves to the root when the root is chosen', async () => {
+    const { element, recorded } = await notepad({ picked: { status: 'chosen', folder: null } });
     await write(element, 'hello');
     await click(element, 'save');
     expect([recorded.saves[0].name, recorded.saves[0].file.name, recorded.saves[0].folder]).to.deep.equal([
@@ -159,13 +173,14 @@ describe('saving a new document', () => {
   });
 
   /** Ctrl+S twice is one file that changed, not two files. */
-  it('overwrites the item it created on the next save', async () => {
+  it('overwrites the item it created on the next save, without asking again', async () => {
     const { element, recorded } = await notepad();
     await write(element, 'one');
     await click(element, 'save');
     await write(element, 'two');
     await click(element, 'save');
     expect(recorded.saves.map((save) => save.existing)).to.deep.equal([undefined, 'media-1']);
+    expect(recorded.picks).to.equal(1);
   });
 
   it('saves with Ctrl+S, and keeps the browser from saving the page instead', async () => {
@@ -197,11 +212,12 @@ describe('opening from the media library', () => {
   });
 
   /** An opened file is saved back where it lives, as the same kind of file. */
-  it('saves an edited file back over its own media item, keeping its extension', async () => {
+  it('saves an edited file back over its own media item, keeping its extension, without asking where', async () => {
     const { element, recorded } = await notepad({ opened: textFile('# Changes'), saved: [{ ok: true, unique: 'existing-1' }] });
     await click(element, 'open');
     await write(element, '# Changes\n- more');
     await click(element, 'save');
+    expect(recorded.picks).to.equal(0);
     const [save] = recorded.saves;
     expect([save.existing, save.name, save.file.name]).to.deep.equal(['existing-1', 'Changelog', 'Changelog.md']);
     expect(await textOf(save)).to.equal('# Changes\n- more');
@@ -247,7 +263,7 @@ it('asks before throwing away unsaved work, and only then', async () => {
   expect(page(element).value).to.equal('');
 });
 
-it('starts a new media item for a new document', async () => {
+it('starts a new media item for a new document, and asks where again', async () => {
   const { element, recorded } = await notepad();
   await write(element, 'one');
   await click(element, 'save');
@@ -255,6 +271,7 @@ it('starts a new media item for a new document', async () => {
   await write(element, 'two');
   await click(element, 'save');
   expect(recorded.saves[1].existing).to.equal(undefined);
+  expect(recorded.picks).to.equal(2);
 });
 
 it('counts a rename as unsaved, since saving is what renames the media item', async () => {

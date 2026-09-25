@@ -6,8 +6,8 @@ import { createMediaOpener } from '../shared/media-open.js';
 import type { MediaOpener } from '../shared/media-open.js';
 import { createMediaSaver } from '../shared/media-save.js';
 import type { MediaSaver } from '../shared/media-save.js';
-import { UmbraDesktopAccessoriesSettingsController } from '../settings/settings.source.js';
-import type { AccessoriesSettingsSource } from '../settings/settings.source.js';
+import { createSaveFolderPicker } from '../shared/save-location.js';
+import type { SaveFolderPicker } from '../shared/save-location.js';
 import {
   PAINT_BRUSH_SIZES,
   PAINT_CANVAS_SIZE,
@@ -50,7 +50,7 @@ const NEW_PICTURE_TYPE = 'image/png';
  * **Every picture lives in the media library**, as in Notepad. Open picks an image there and puts it
  * on the canvas at its own size; Save writes it back over the same media item, in the format it came
  * in where a browser can write that format, so a JPEG stays a JPEG. A new picture is white paper at
- * the default size, saved as a PNG into the folder Desktop settings name.
+ * the default size, saved as a PNG, and its first save asks which folder it goes in, as Save As did.
  *
  * New paper is white under every theme, because the paper is the document and not the chrome: a
  * dark theme should not turn someone's drawing black. Everything round it is the theme's.
@@ -86,9 +86,9 @@ export class PaintElement extends UmbLitElement {
   @state()
   private _size: number = PAINT_BRUSH_SIZES[1];
 
-  /** Which folder a new picture is saved into. The stored per-user Desktop setting unless a test says otherwise. */
+  /** Asks where a new picture goes, on its first save. Umbraco's folder picker unless a test says otherwise. */
   @property({ attribute: false })
-  saveSettings?: AccessoriesSettingsSource;
+  pickSaveFolder?: SaveFolderPicker;
 
   /** How a picture reaches the media library. The backoffice's media repositories unless a test says otherwise. */
   @property({ attribute: false })
@@ -98,8 +98,8 @@ export class PaintElement extends UmbLitElement {
   @property({ attribute: false })
   openFromMedia?: MediaOpener;
 
-  /** The settings in use: the ones given, or the stored ones. */
-  #settings?: AccessoriesSettingsSource;
+  /** The folder this picture was saved into, once it has been: null for the root. */
+  #folder?: string | null;
 
   /** The picture's size in pixels: the default for new paper, the image's own for an opened one. */
   @state()
@@ -178,11 +178,10 @@ export class PaintElement extends UmbLitElement {
   /** The stroke in progress: its last point and its colour. Undefined between strokes. */
   #stroke?: { x: number; y: number; colour: string };
 
-  /** Listen for Ctrl+Z and Ctrl+S, and to the save settings. */
+  /** Listen for Ctrl+Z and Ctrl+S. */
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('keydown', this.#onKeyDown);
-    this.#settings ??= this.saveSettings ?? new UmbraDesktopAccessoriesSettingsController(this);
   }
 
   /** Stop listening. The whole of teardown: there is no timer here. */
@@ -233,6 +232,7 @@ export class PaintElement extends UmbLitElement {
     this.#history = [];
     this._undoDepth = 0;
     this.#mediaUnique = unique;
+    this.#folder = undefined;
     this._name = name;
     this.#savedName = name;
     this.#type = type;
@@ -316,10 +316,16 @@ export class PaintElement extends UmbLitElement {
   }
 
   /**
-   * Save the picture to the media library: over the item it came from, or as a new item in the
-   * folder Desktop settings name.
+   * Save the picture to the media library: over the item it came from, or, the first time, as a new
+   * item in the folder Save As is told. Cancelling Save As saves nothing.
    */
   async save(): Promise<void> {
+    let folder = this.#folder ?? null;
+    if (!this.#mediaUnique) {
+      const choice = await (this.pickSaveFolder ?? createSaveFolderPicker(this))();
+      if (choice.status === 'cancelled') return;
+      folder = choice.folder;
+    }
     const blob = await new Promise<Blob | null>((resolve) => this._canvas.toBlob(resolve, this.#type, 0.92));
     if (!blob) return;
     const untitled = this.#term('paintUntitled', 'Untitled');
@@ -328,7 +334,7 @@ export class PaintElement extends UmbLitElement {
     const result = await (this.saveToMedia ?? createMediaSaver(this))({
       file: new File([blob], fileNameFor(name, untitled, this.#extension), { type: this.#type }),
       name: name.trim() || untitled,
-      folder: this.#settings?.value.folder?.unique ?? null,
+      folder,
       existing: this.#mediaUnique,
     });
     if (!result.ok) {
@@ -336,6 +342,7 @@ export class PaintElement extends UmbLitElement {
       return;
     }
     this.#mediaUnique = result.unique;
+    this.#folder = folder;
     this.#savedName = name;
     // Strokes made while the save was on its way were not in it, and are still unsaved.
     this.#setDirty(this.#history.length !== drawnBefore);

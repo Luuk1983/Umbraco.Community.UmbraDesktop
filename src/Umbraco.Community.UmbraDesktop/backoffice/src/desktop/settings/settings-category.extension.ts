@@ -33,9 +33,14 @@ export interface MetaUmbraDesktopSettingsCategory {
  * The panel's own categories are curated (`categories/index.ts`), and that stays true: a category of
  * this desktop's is a folder and one entry there. This type exists for the other case, a package
  * that adds apps to the desktop and has settings of its own for them, which the curated list cannot
- * hold without this repository knowing about that package. The Accessories add-on is the first: its
- * folder for new Notepad and Paint files is a desktop setting to the person using it, so it belongs
- * in the desktop's settings panel rather than in a panel of its own.
+ * hold without this repository knowing about that package. To the person using it, a package's
+ * setting for its desktop apps is a desktop setting, so it belongs in the desktop's settings panel
+ * rather than in a panel of its own.
+ *
+ * **Public API for other packages; nothing in this repository registers one today.** The Accessories
+ * add-on did, for a save folder, until Notepad and Paint moved to asking where on the first save.
+ * The extension point was kept deliberately, and is documented in `docs/desktop-apps.md` §6.1; the
+ * host's own tests (`settings-modal.test.ts`) register fakes and are what prove it works.
  *
  * What the host owns is the row, the navigation and the heading. What the package owns is the
  * element behind the row, and everything in it, including where its values are stored: the host

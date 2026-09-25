@@ -6,8 +6,8 @@ import { createMediaOpener } from '../shared/media-open.js';
 import type { MediaOpener } from '../shared/media-open.js';
 import { createMediaSaver } from '../shared/media-save.js';
 import type { MediaSaver } from '../shared/media-save.js';
-import { UmbraDesktopAccessoriesSettingsController } from '../settings/settings.source.js';
-import type { AccessoriesSettingsSource } from '../settings/settings.source.js';
+import { createSaveFolderPicker } from '../shared/save-location.js';
+import type { SaveFolderPicker } from '../shared/save-location.js';
 import { NOTEPAD_BAR_HEIGHT_PX, NOTEPAD_PADDING_PX } from './constants.js';
 import { caretPosition } from './text.js';
 import { css, customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
@@ -21,8 +21,8 @@ const NEW_DOCUMENT_EXTENSION = 'txt';
  * Notepad, as a self-contained UmbraDesktop app: a text editor over the media library.
  *
  * **Every file lives in the media library.** Open picks a file there with Umbraco's own media picker,
- * Save writes it back over the same media item, and a new document is saved into the folder Desktop
- * settings name, under the name typed in the status bar. There is no download and no local file
+ * Save writes it back over the same media item, and the first save of a new document asks which
+ * folder it goes in, as Save As did, under the name typed in the status bar. There is no download and no local file
  * dialog: a document here is site content, where everyone who works on the site can find it, and
  * the media library already has the permissions, the folders and the recycle bin for it.
  *
@@ -50,9 +50,9 @@ export class NotepadElement extends UmbLitElement {
     }
   };
 
-  /** Which folder a new document is saved into. The stored per-user Desktop setting unless a test says otherwise. */
+  /** Asks where a new document goes, on its first save. Umbraco's folder picker unless a test says otherwise. */
   @property({ attribute: false })
-  saveSettings?: AccessoriesSettingsSource;
+  pickSaveFolder?: SaveFolderPicker;
 
   /** How a file reaches the media library. The backoffice's media repositories unless a test says otherwise. */
   @property({ attribute: false })
@@ -96,19 +96,18 @@ export class NotepadElement extends UmbLitElement {
   @state()
   private _caret = 0;
 
-  /** The settings in use: the ones given, or the stored ones. */
-  #settings?: AccessoriesSettingsSource;
+  /** The folder this document was saved into, once it has been: null for the root. */
+  #folder?: string | null;
 
   /** Whether there is text, or a name, that has not been saved. */
   get dirty(): boolean {
     return this._text !== this._savedText || this._name !== this._savedName;
   }
 
-  /** Listen for the keyboard shortcuts, and settle on the settings. */
+  /** Listen for the keyboard shortcuts. */
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('keydown', this.#onKeyDown);
-    this.#settings ??= this.saveSettings ?? new UmbraDesktopAccessoriesSettingsController(this);
   }
 
   /** Stop listening. The whole of teardown: there is no timer here. */
@@ -179,20 +178,26 @@ export class NotepadElement extends UmbLitElement {
   }
 
   /**
-   * Save the document to the media library: over the item it came from, or as a new item in the
-   * folder Desktop settings name.
+   * Save the document to the media library: over the item it came from, or, the first time, as a
+   * new item in the folder Save As is told. Cancelling Save As saves nothing.
    *
    * The text and name that were saved are what "saved" is measured against, not the text when the
    * save finished: a save takes a round trip, and typing during it must still read as unsaved.
    */
   async save(): Promise<void> {
+    let folder = this.#folder ?? null;
+    if (!this.#mediaUnique) {
+      const choice = await (this.pickSaveFolder ?? createSaveFolderPicker(this))();
+      if (choice.status === 'cancelled') return;
+      folder = choice.folder;
+    }
     const untitled = this.#term('notepadUntitled', 'Untitled');
     const text = this._text;
     const name = this._name;
     const result = await (this.saveToMedia ?? createMediaSaver(this))({
       file: new File([text], fileNameFor(name, untitled, this.#extension), { type: 'text/plain;charset=utf-8' }),
       name: name.trim() || untitled,
-      folder: this.#settings?.value.folder?.unique ?? null,
+      folder,
       existing: this.#mediaUnique,
     });
     if (!result.ok) {
@@ -200,6 +205,7 @@ export class NotepadElement extends UmbLitElement {
       return;
     }
     this.#mediaUnique = result.unique;
+    this.#folder = folder;
     this._savedText = text;
     this._savedName = name;
     this._notice = this.#term('savedToMedia', 'Saved to the media library.');
@@ -219,6 +225,7 @@ export class NotepadElement extends UmbLitElement {
     this._savedName = name;
     this.#extension = extension;
     this.#mediaUnique = unique;
+    this.#folder = undefined;
     this._caret = 0;
     this._notice = '';
   }

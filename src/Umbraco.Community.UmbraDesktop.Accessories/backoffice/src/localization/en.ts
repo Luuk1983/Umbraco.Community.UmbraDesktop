@@ -76,14 +76,6 @@ export default {
     notepadNotText: 'Notepad opens text files, and %0% is not one.',
     paintNotImage: 'Paint edits pictures, and %0% is not one it can edit.',
     paintTooLarge: '%0% is too large for Paint, which opens pictures up to %1% pixels across.',
-    // The Accessories category of Desktop settings.
-    settingsCategory: 'Accessories',
-    settingsCategoryAbout: 'Where new Notepad and Paint files are saved',
-    settingsSaveTo: 'Save new files to',
-    settingsSaveToAbout: 'Where Notepad and Paint put a file the first time it is saved. A file opened from the media library is saved back where it is.',
-    settingsMediaRoot: 'Media library root',
-    settingsChooseFolder: 'Choose folder…',
-    settingsUseRoot: 'Use the root',
     // Screen Saver, in Windows 98's words where it had them.
     screensaverChoose: 'Screen saver',
     screensaverNone: '(None)',

@@ -2,31 +2,40 @@ import { expect, fixture, html } from '@open-wc/testing';
 import './paint.element.js';
 import { PAINT_CANVAS_SIZE, PAINT_MAX_IMAGE_EDGE_PX } from './constants.js';
 import type { PaintElement } from './paint.element.js';
-import { fixedSettings } from '../settings/settings.source.js';
 import type { MediaOpenResult } from '../shared/media-open.js';
 import type { MediaSaveRequest } from '../shared/media-save.js';
+import type { SaveFolderChoice } from '../shared/save-location.js';
 
 /**
  * Paint as a media library image editor: open an image from the media library, draw on it, save it
- * back; or draw a new picture and save it into the folder Desktop settings name. The media library is
- * faked; a running backoffice is what proves the real one.
+ * back; or draw a new picture and choose where it goes the first time it is saved. The media library
+ * is faked; a running backoffice is what proves the real one.
  */
 
 /** Everything the element asked of the media library, recorded. */
 interface Recorded {
   /** Every save, as asked for. */
   saves: MediaSaveRequest[];
+  /** How many times Save asked where. */
+  picks: number;
 }
 
 /**
  * A mounted Paint over a fake media library whose Open finds `opened`.
  * @param opened What Open finds.
+ * @param picked Where Save As is told to put a new picture.
  */
-async function paint(opened?: MediaOpenResult): Promise<{ element: PaintElement; recorded: Recorded }> {
-  const recorded: Recorded = { saves: [] };
+async function paint(
+  opened?: MediaOpenResult,
+  picked: SaveFolderChoice = { status: 'chosen', folder: 'folder-1' },
+): Promise<{ element: PaintElement; recorded: Recorded }> {
+  const recorded: Recorded = { saves: [], picks: 0 };
   const element = await fixture<PaintElement>(html`<umbradesktop-paint
     .confirmDiscard=${async () => true}
-    .saveSettings=${fixedSettings({ folder: { unique: 'folder-1', name: 'Pictures' } })}
+    .pickSaveFolder=${async () => {
+      recorded.picks++;
+      return picked;
+    }}
     .saveToMedia=${async (request: MediaSaveRequest) => {
       recorded.saves.push(request);
       return { ok: true, unique: request.existing ?? 'picture-1' };
@@ -195,7 +204,7 @@ it('has no way to save to this computer', async () => {
   expect(element.shadowRoot!.querySelector('[data-action="save-other"]')).to.equal(null);
 });
 
-it('saves a new picture as a PNG into the folder Desktop settings name, overwriting it next time', async () => {
+it('asks where a new picture goes, saves it there as a PNG, and overwrites it next time without asking', async () => {
   const { element, recorded } = await paint();
   const name = element.shadowRoot!.querySelector<HTMLInputElement>('[data-field="name"]')!;
   name.value = 'Sketch';
@@ -209,7 +218,27 @@ it('saves a new picture as a PNG into the folder Desktop settings name, overwrit
     ['Sketch', 'Sketch.png', 'image/png', 'folder-1', undefined],
     ['Sketch', 'Sketch.png', 'image/png', 'folder-1', 'picture-1'],
   ]);
+  expect(recorded.picks).to.equal(1);
   expect(element.hasAttribute('data-umbradesktop-dirty')).to.equal(false);
+});
+
+it('saves nothing when asking where is cancelled', async () => {
+  const { element, recorded } = await paint(undefined, { status: 'cancelled' });
+  await drag(element, [[5, 5]]);
+  await click(element, '[data-action="save"]');
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(recorded.saves).to.have.length(0);
+  expect(element.hasAttribute('data-umbradesktop-dirty')).to.equal(true);
+});
+
+it('saves an opened image back without asking where', async () => {
+  const { element, recorded } = await paint(await redImage(30, 20));
+  await click(element, '[data-action="open"]');
+  await until(() => canvas(element).width === 30);
+  await drag(element, [[5, 5]]);
+  await click(element, '[data-action="save"]');
+  await until(() => recorded.saves.length === 1);
+  expect(recorded.picks).to.equal(0);
 });
 
 it('starts a new media item for a new picture', async () => {
