@@ -60,8 +60,8 @@ a first version that saved to the person's machine by default). Open shows Umbra
 `UMB_MEDIA_PICKER_MODAL`, the picker a media property uses, so it browses, searches and uploads the
 way the rest of the backoffice does; a file on someone's computer gets in through its Upload button.
 Save writes the file back over the media item it came from, and renames that item if the name in the
-status bar changed. A new document or picture is saved into a folder chosen in **Desktop settings >
-Accessories**, the root until one is. There is no download and no local file dialog: a document
+status bar changed. The first save of a new document or picture asks which folder, as Save As did
+(below). There is no download and no local file dialog: a document
 here is site content, and the media library already has the folders, permissions and recycle bin
 for it.
 
@@ -75,8 +75,8 @@ for it.
 - **Messages go in the window.** Why an open or a save did not happen, and that a save did, show in
   the app's status bar rather than as a toast, since that is where the person is looking.
 
-**The folder setting lives in the desktop's own settings panel**, which needed a way in. The panel was
-curated only, and a curated list cannot name a package this repository does not know about, so the
+**Where a new file goes: first a setting, then Save As.** It began as a folder in the desktop's own
+settings panel, which needed a way in. The panel was curated only, and a curated list cannot name a package this repository does not know about, so the
 host gained a second public manifest type, `umbraDesktopSettingsCategory`, modelled on
 `umbraDesktopApp`: the host draws the row, heading and navigation, the registering package owns the
 element and its values, and `conditions` are honoured through `UmbExtensionsManifestInitializer`.
@@ -84,9 +84,22 @@ Registered categories sit after Taskbar and before Connections and Site. The alt
 Accessories category built into the host, would have shipped a row that does nothing without the
 add-on and coupled the host to the add-on's storage. `docs/desktop-apps.md` §6.1 documents it.
 
-The value is stored per user in `localStorage`, the same scope as every other desktop setting,
-under the add-on's own key. Controllers in open windows hear a change through a `window` event,
-because `storage` events only reach other documents.
+Review then asked whether new files could simply go to the root. Not quite: an editor whose media
+start node is a folder cannot reach the root, and for them every save would have failed. So the
+setting was replaced by **Save As**: the first save of a new file opens Umbraco's media tree picker,
+folders only, with the root showing (`hideTreeRoot: false`, its key is null) and selected, so
+Choose saves to the root and anyone kept out of it sees their own folders instead. Only the root and folders can be picked; files show greyed out. The last choice
+is remembered for the session and shared across windows (`shared/save-location.ts`), not stored,
+because a folder remembered across sessions can have been moved or deleted. Cancelling saves
+nothing. This is also simply what Notepad and Paint always did. **The settings category was removed
+from this package, and the host's `umbraDesktopSettingsCategory` kept** as documented public API
+for other packages (decided with the repository owner); no package in this repository registers one
+now, and the host's own tests are what keep it working. A save folder stored by an earlier version is
+ignored when read.
+
+The package's settings (now the screensaver alone) are stored per user in `localStorage`, the same
+scope as every other desktop setting, under the add-on's own key. Controllers in open windows hear a
+change through a `window` event, because `storage` events only reach other documents.
 
 **A media save goes through the backoffice's own repositories**, never a hand-built Management API
 call, so authentication, permissions and error messages are the backoffice's. A new item follows the
@@ -163,8 +176,7 @@ keeps the saver that was chosen, so switching back on is one choice.
 **Set in its window only.** It was first also embedded in Desktop settings > Accessories, since
 Windows kept it under Display Properties rather than Accessories. That was taken out on review: two
 places for one setting read as untidy, and the Accessories tile is where anyone who wants a screen
-saver goes. The setting is still stored beside the save folder, in the package's one settings
-record; only the screen is gone from the panel.
+saver goes. (The panel itself went later, with the save folder: §4.)
 
 **Off by default.** Something that covers the whole backoffice unasked would read as a fault the
 first time it happened after an upgrade.
@@ -329,3 +341,8 @@ question as the one above: the host would have to publish the setting to apps.
 - **A refusal cut off by an ellipsis is one nobody can act on.** Disk Cleanup's status first sat on
   one line beside the buttons, and the live run as a Writer showed "You do not have access to empty
   the conte…". Messages that explain a refusal get room to wrap.
+- **The media tree picker's `foldersOnly` still lists files, and Umbraco sets `isFolder` on no media
+  item**, not even the built-in Folder. A folder is told apart by its media type having a
+  `collection` (the built-in Folder and every list-view type do), or by already having children;
+  `isSaveFolder` in `shared/save-location.ts` is that rule, passed as the picker's
+  `pickableFilter`. The root is an item of its own with a null key once `hideTreeRoot` is false.

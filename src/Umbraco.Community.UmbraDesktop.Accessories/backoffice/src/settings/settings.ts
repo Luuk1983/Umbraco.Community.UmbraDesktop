@@ -1,22 +1,11 @@
 /**
- * The Accessories package's settings, and how they are stored: which media folder a new Notepad or
- * Paint file is saved into, and the screensaver.
+ * The Accessories package's settings, and how they are stored. One today, the screensaver, set in
+ * the Screen Saver window; the record is kept as a record so a later setting has somewhere to go.
  *
  * Pure functions over strings, with no storage and no DOM, for the reason the host's own
  * `settings-store.ts` gives: the fallback for every kind of unreadable payload is then a table a test
  * can walk, rather than something only a broken browser profile would ever exercise.
- *
- * A file opened from the media library is saved back where it lives; this folder only decides where
- * a new one goes.
  */
-
-/** A media folder, remembered with its name so the settings screen can show it without a request. */
-export interface AccessoriesMediaFolder {
-  /** The folder's key. */
-  unique: string;
-  /** Its name when it was chosen. For display only; the key is what saving uses. */
-  name: string;
-}
 
 /** The screensavers on offer, by id. The order is the order the Screen Saver window lists them in. */
 export const UMBRADESKTOP_SCREENSAVERS = ['starfield', 'mystify', 'flying'] as const;
@@ -43,8 +32,6 @@ export interface AccessoriesScreensaverSettings {
 
 /** The whole of the Accessories package's settings. */
 export interface AccessoriesSettings {
-  /** The folder new files are saved into, or null for the root of the media library. */
-  folder: AccessoriesMediaFolder | null;
   /** The screensaver. */
   screensaver: AccessoriesScreensaverSettings;
 }
@@ -57,7 +44,6 @@ export interface AccessoriesSettings {
  * Saver window, which is where anybody curious about it will be looking.
  */
 export const UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS: AccessoriesSettings = Object.freeze({
-  folder: null,
   screensaver: Object.freeze({ enabled: false, saver: 'starfield', waitMinutes: 10 }),
 });
 
@@ -66,7 +52,7 @@ const STORAGE_KEY_PREFIX = 'umbradesktop-accessories:settings';
 
 /**
  * The `localStorage` key holding one user's settings. Per user, as the host's are, so two accounts
- * sharing a browser do not share a media folder they may not both be able to reach.
+ * sharing a browser do not share one person's choices.
  * @param userUnique The current user's key.
  * @returns The storage key.
  */
@@ -75,22 +61,11 @@ export function settingsStorageKey(userUnique: string): string {
 }
 
 /**
- * Whether a decoded value is a folder this version understands.
- * @param value The decoded `folder` property.
- * @returns True when usable.
- */
-function isFolder(value: unknown): value is AccessoriesMediaFolder {
-  if (typeof value !== 'object' || value === null) return false;
-  const folder = value as Partial<AccessoriesMediaFolder>;
-  return typeof folder.unique === 'string' && typeof folder.name === 'string';
-}
-
-/**
  * Read stored settings.
  *
- * A payload from the previous version also carries a `destination` (this computer or the media
- * library) from when saving could go either way. The folder still means what it meant and is kept;
- * the destination is dropped, since the media library is now the only place.
+ * Payloads from earlier versions also carry a `folder`, from when new Notepad and Paint files went
+ * into a folder set in Desktop settings, and before that a `destination`. Both are ignored: a new
+ * file's folder is now asked for on its first save.
  * @param raw The stored string, or null when nothing is stored.
  * @returns Settings that are always usable.
  */
@@ -103,9 +78,8 @@ export function parseSettings(raw: string | null): AccessoriesSettings {
     return UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS;
   }
   if (typeof decoded !== 'object' || decoded === null) return UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS;
-  const { folder, screensaver } = decoded as { folder?: unknown; screensaver?: unknown };
+  const { screensaver } = decoded as { screensaver?: unknown };
   return {
-    folder: isFolder(folder) ? { unique: folder.unique, name: folder.name } : null,
     screensaver: parseScreensaver(screensaver),
   };
 }

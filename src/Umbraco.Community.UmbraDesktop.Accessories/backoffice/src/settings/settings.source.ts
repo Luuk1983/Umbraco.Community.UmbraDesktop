@@ -10,10 +10,10 @@ import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 
 /**
- * Where an element reads the save settings from and writes them to.
+ * Where an element reads the package's settings from and writes them to.
  *
- * An interface rather than the controller below, so that Notepad, Paint and the settings screen can
- * each be handed a {@link fixedSettings} in a test: the real one needs the current user, which
+ * An interface rather than the controller below, so that the Screen Saver window and the idle
+ * watcher can each be handed a {@link fixedSettings} in a test: the real one needs the current user, which
  * only a booted backoffice has.
  */
 export interface AccessoriesSettingsSource {
@@ -59,8 +59,8 @@ export function fixedSettings(initial: Partial<AccessoriesSettings> = {}): Acces
 /**
  * The event a write announces itself with, on `window`.
  *
- * `storage` events only reach *other* documents, so a Notepad window and the settings panel in the
- * same backoffice would not hear each other through it. Every controller writes through this event
+ * `storage` events only reach *other* documents, so the Screen Saver window and the idle watcher in
+ * the same backoffice would not hear each other through it. Every controller writes through this event
  * as well, and listens to both.
  */
 const CHANGED = 'umbradesktop-accessories:settings-changed';

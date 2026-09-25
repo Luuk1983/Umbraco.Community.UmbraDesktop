@@ -137,25 +137,6 @@ const apps: Array<UmbExtensionManifest> = [
 ];
 
 /**
- * The Accessories category of Desktop settings: where Notepad's and Paint's Save goes.
- *
- * A `umbraDesktopSettingsCategory`, which the host lists among its own personal settings, so the
- * choice is made where every other desktop setting is made, and the category exists only while this
- * package is installed. No `weight`, because it is this package's only category.
- */
-const settingsCategory: UmbExtensionManifest = {
-  type: 'umbraDesktopSettingsCategory',
-  alias: `${ALIAS}.Settings`,
-  name: 'Accessories settings',
-  element: () => import('./settings/accessories-settings.element.js'),
-  meta: {
-    label: `#${AREA}_settingsCategory`,
-    description: `#${AREA}_settingsCategoryAbout`,
-    icon: 'icon-notepad',
-  },
-};
-
-/**
  * Starts the screensaver's idle watcher. An entry point because the screensaver has to come on with
  * every window closed, including its own; `screensaver/entrypoint.ts` says why it costs next to
  * nothing while switched off.
@@ -175,4 +156,4 @@ const screensaverEntryPoint: UmbExtensionManifest = {
  * `umbradesktop-app.d.ts` in this folder, a copy of the Entertainment package's, for the reason given
  * there.
  */
-export const manifests: Array<UmbExtensionManifest> = [...apps, settingsCategory, screensaverEntryPoint, ...localizationManifests];
+export const manifests: Array<UmbExtensionManifest> = [...apps, screensaverEntryPoint, ...localizationManifests];

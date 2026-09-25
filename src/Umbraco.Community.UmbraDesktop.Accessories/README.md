@@ -28,7 +28,7 @@ Sticky Notes live in the Umbraco database (its key-value store), readable and wr
 
 Notepad and Paint work on the media library. Open shows Umbraco's own media picker (with its Upload button, which is how a file on your computer gets in), Save writes the file back over the same media item, and the name in the status bar is the media item's name. Notepad opens text files, SVG included; Paint opens pictures up to 4,096 pixels across and saves each in the format it came in, and refuses an SVG rather than flattening it.
 
-A new document or picture is saved into the folder you choose in **Desktop settings > Accessories**, the media library's root until you do. Saving behaves like dragging the file into the Media section: the extension picks the media type, the folder has to allow it, and you need access to both. A refusal shows in the window's status bar and leaves your work unsaved.
+The first save of a new document or picture asks where, as Save As did: Umbraco's folder picker opens on the media library's root, so **Choose** saves it there, or you pick a folder. Later saves go back to the same item without asking. Saving behaves like dragging the file into the Media section: the extension picks the media type, the folder has to allow it, and you need access to both. A refusal shows in the window's status bar and leaves your work unsaved.
 
 Disk Cleanup deletes for good: what it empties cannot be restored, which is why it asks every time.
 
@@ -56,7 +56,7 @@ This package and UmbraDesktop are released together from the same tag and always
 
 ## Writing your own
 
-Nothing in here is privileged. The `umbraDesktopApp` extension manifest that puts these tools in windows and the `umbraDesktopSettingsCategory` one that adds the Accessories settings are public API that any package can register, and the screen saver's idle watcher is an ordinary Umbraco `backofficeEntryPoint`. If you want your own app on the desktop, [`docs/desktop-apps.md`](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/desktop-apps.md) is the guide, and the source of this package is a worked example.
+Nothing in here is privileged. The `umbraDesktopApp` extension manifest that puts these tools in windows is public API that any package can register (as is `umbraDesktopSettingsCategory`, for a package that wants a page in Desktop settings; this one has no settings that need one), and the screen saver's idle watcher is an ordinary Umbraco `backofficeEntryPoint`. If you want your own app on the desktop, [`docs/desktop-apps.md`](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/desktop-apps.md) is the guide, and the source of this package is a worked example.
 
 ## License
 

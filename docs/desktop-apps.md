@@ -532,9 +532,39 @@ them among themselves and never moves one past a curated category. The panel can
 straight at yours by passing its alias as the settings modal's `category`.
 
 There is no Save button on any settings screen here, so apply a change the moment it is made, and
-have your apps pick it up without being reopened. The Accessories package's category, which sets
-which media folder new Notepad and Paint files are saved into, is the worked example: `settings/`
-in that package.
+have your apps pick it up without being reopened.
+
+The element is an ordinary one. It gets no properties from the host, so it reads and writes its
+own storage, and it is drawn under the host's heading on the panel's own background, so it should
+bring no chrome of its own:
+
+```ts
+@customElement('my-tools-settings')
+export class MyToolsSettingsElement extends UmbLitElement {
+  @state() private _units = readUnits();          // your storage, per user if it is personal
+
+  override render() {
+    return html`
+      <h4>${this.localize.term('myTools_units')}</h4>
+      <uui-select
+        .options=${unitOptions(this._units)}
+        @change=${(event: UUISelectEvent) => {
+          this._units = String(event.target.value);
+          writeUnits(this._units);                  // applies now; your apps listen for the change
+        }}></uui-select>
+    `;
+  }
+}
+
+export { MyToolsSettingsElement as element };
+```
+
+**No package in this repository registers a category today.** This is an extension point for
+packages that add apps and have settings for them. The Accessories add-on used it for a save
+folder until Notepad and Paint began asking where on the first save, as Save As does, which suited
+editors whose media start node keeps them out of the root better than a setting did. The host's
+own tests register fake categories and are what keep it working: `settings-modal.test.ts` in the
+host.
 
 ---
 

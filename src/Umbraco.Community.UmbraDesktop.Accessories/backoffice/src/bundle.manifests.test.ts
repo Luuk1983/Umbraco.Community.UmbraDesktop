@@ -104,22 +104,12 @@ it('lets every app open more than one window', () => {
 });
 
 /**
- * The Accessories category of Desktop settings, registered into the host's panel rather than shown
- * in a panel of its own. Its words are this package's, so both must be tokens the dictionary ships.
+ * No Desktop settings category: this package's one setting, the screensaver, lives in its own window,
+ * and Notepad and Paint ask where to save. The host's `umbraDesktopSettingsCategory` extension point
+ * stays, for packages that do have settings; `docs/desktop-apps.md` §6.1 documents it.
  */
-it('registers a Desktop settings category, named from this package’s dictionary', () => {
-  const categories = manifests.filter((manifest) => manifest.type === 'umbraDesktopSettingsCategory') as unknown as Array<{
-    element?: unknown;
-    meta: { label: string; description: string; icon?: string };
-  }>;
-  expect(categories.length).to.equal(1);
-  const [category] = categories;
-  expect(typeof category.element, 'a lazy element loader').to.equal('function');
-  const area = (en as Record<string, Record<string, string>>).umbraDesktopAccessories;
-  for (const token of [category.meta.label, category.meta.description]) {
-    const [, key] = /^#umbraDesktopAccessories_(\w+)$/.exec(token) ?? [];
-    expect(area[key], `${token} is in en.ts`).to.be.a('string');
-  }
+it('registers no Desktop settings category', () => {
+  expect(manifests.filter((manifest) => manifest.type === 'umbraDesktopSettingsCategory')).to.have.length(0);
 });
 
 /**
