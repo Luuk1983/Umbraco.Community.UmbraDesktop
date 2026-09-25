@@ -14,11 +14,11 @@ import nl from '../../localization/nl.js';
 /** The terms one language actually ships, by key. */
 const terms = (set: unknown) => (set as Record<string, Record<string, string>>).umbraDesktop;
 
-it('ships the AI chat first and pinned apps second, both on the launcher side', () => {
+it('ships the AI chat first, pinned apps second and full screen third, all on the launcher side', () => {
   // The order is the shell's and the user cannot change it, which is the whole reason the row is
   // worth building muscle memory for. A test rather than a comment because the order is spread
   // across two folders' weights, where a collision reads as harmless in either file alone.
-  expect(taskbarFeaturesIn('launcher').map((feature) => feature.id)).to.deep.equal(['ai-chat', 'pinned-apps']);
+  expect(taskbarFeaturesIn('launcher').map((feature) => feature.id)).to.deep.equal(['ai-chat', 'pinned-apps', 'fullscreen']);
 });
 
 it('gives every feature a unique id', () => {

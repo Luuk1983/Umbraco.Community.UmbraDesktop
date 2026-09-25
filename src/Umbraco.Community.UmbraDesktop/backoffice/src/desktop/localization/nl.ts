@@ -115,6 +115,11 @@ export default {
     taskbarPinnedApps: 'Vastgezette apps',
     taskbarPinnedAppsAbout:
       'Toont de apps die je in de launcher hebt vastgezet ook op de taakbalk, in dezelfde volgorde. Vastzetten en losmaken doe je in de launcher, zoals altijd.',
+    taskbarFullscreen: 'Volledig scherm',
+    taskbarFullscreenAbout: 'Zet na je vastgezette apps een knop die het bureaublad op volledig scherm zet, en weer terug. Esc verlaat volledig scherm ook.',
+    taskbarFullscreenEnter: 'Volledig scherm',
+    taskbarFullscreenExit: 'Volledig scherm verlaten',
+    taskbarFullscreenUnavailable: 'Deze browser staat niet toe dat het bureaublad op volledig scherm gaat.',
     settingsBack: 'Terug naar bureaubladinstellingen',
     // desktop settings — startup
     bootIntoDesktop: 'Open het bureaublad als ik inlog',

@@ -34,7 +34,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are remembered per user, in that browser.
 - A taskbar. Every open window gets a button: click to focus, click again to minimise.
-- The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: the AI chat, then your pinned apps. Both are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
+- The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: the AI chat, then your pinned apps, then a full screen button. All three are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
 - Choose your wallpaper. Ten backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user, in that browser.
 - Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, in that browser. See [Starting in the desktop](#starting-in-the-desktop).
 - Speaks your language, and writes the time your way. The desktop follows your Umbraco backoffice language, so a Danish backoffice gets a Danish clock rather than whatever your browser happens to be set to, and you can change that language from Desktop settings without needing access to the Users section. If your culture and your habits disagree, one switch forces a 12 or 24 hour clock without giving up anything else about how your language writes a time. See [Language and region](#language-and-region).
@@ -91,7 +91,7 @@ From the launcher:
 - Hover an app and click the pin to add it to Pinned, which sits at the top.
 - Drag a title bar to move a window, drag an edge or corner to resize, double-click the title bar to maximise.
 - Drag a window into the left or right edge of the desktop to snap it to that half, or into the top edge to maximise it. An outline appears while you are over an edge, showing where the window will go. Drag a snapped window away and it returns to the size it had before.
-- Use the taskbar at the bottom to switch between open windows. The icons to the left of them, beside the launcher button, are the fixed row: the AI chat and your pinned apps, one click from anywhere. See [On the taskbar](#on-the-taskbar).
+- Use the taskbar at the bottom to switch between open windows. The icons to the left of them, beside the launcher button, are the fixed row: the AI chat, your pinned apps and full screen, one click from anywhere. See [On the taskbar](#on-the-taskbar).
 - The path under a section window's title bar says where that window is. Click any step to go back to it; the first step returns the window to whatever it opened at. If the window has unsaved changes it asks before leaving, the same way closing it does.
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
 - While a window is fetching its content, whether you have just opened it or just reloaded it, it shows the Umbraco mark with a ring turning around it. It covers the window until the content is ready, so you never see a half-drawn backoffice assembling itself.
@@ -210,13 +210,15 @@ The launcher is the right way in for thirty-five apps. It is the wrong way in fo
 use all day, where every launch is two clicks and a scan of a panel you had to open first.
 
 So the taskbar carries a fixed row immediately to the right of the launcher button, before the open
-window buttons. Two things sit in it, in that order:
+window buttons. Three things sit in it, in that order:
 
 - **AI chat**, a single button that opens the Copilot Workspace. It is there if you have Umbraco AI
   installed and can reach it, and it is simply absent if you cannot.
 - **Pinned apps**, your pins as icon-only buttons, in the order the launcher shows them.
+- **Full screen**, which takes the desktop full screen, as F11 does, and brings it back. Its icon
+  changes while the desktop is full screen, and it notices when you leave with Esc instead.
 
-Both are on from the start, and each is one switch in Desktop settings, Taskbar. Switching one off
+All three are on from the start, and each is one switch in Desktop settings, Taskbar. Switching one off
 closes its space and moves nothing else: the order is fixed, so a button you have learned the
 position of stays where it is.
 
@@ -231,13 +233,14 @@ windows you already have is the job of the buttons on the other side of the bar,
 That is why nothing in the row needs a running indicator, a modifier click or a right-click menu.
 
 Switched on and showing nothing is a normal state, not a fault: that is Pinned apps before you have
-pinned anything, and AI chat on a site without the AI package. Desktop settings still lists both,
+pinned anything, and AI chat on a site without the AI package. Desktop settings still lists them,
 with the switch disabled and the reason given, because settings is where you find out what the
 product can do.
 
 The row works under all five themes, taking each one's own button style, and it is not a system
-tray: it sits on the launching half of the bar, beside the launcher button, and everything in it
-opens something.
+tray: it sits on the launching half of the bar, beside the launcher button. Everything in it opens
+something, apart from full screen, which sits there because it is a control you reach for rather
+than an icon that reports on something.
 
 Three of the themes need nothing else to keep the row and your open windows apart, because a window
 button there carries its window's title and a row button never carries anything. The two that show

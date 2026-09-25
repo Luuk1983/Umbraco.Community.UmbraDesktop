@@ -121,6 +121,11 @@ export default {
     taskbarPinnedApps: 'Pinned apps',
     taskbarPinnedAppsAbout:
       'Shows the apps you pinned in the launcher on the taskbar too, in the same order. Pin and unpin in the launcher as you always have.',
+    taskbarFullscreen: 'Full screen',
+    taskbarFullscreenAbout: 'Puts a button after your pinned apps that takes the desktop full screen, and brings it back. Esc leaves full screen too.',
+    taskbarFullscreenEnter: 'Full screen',
+    taskbarFullscreenExit: 'Exit full screen',
+    taskbarFullscreenUnavailable: 'This browser does not allow the desktop to go full screen.',
     settingsBack: 'Back to Desktop settings',
     // desktop settings — startup
     bootIntoDesktop: 'Open the desktop when I sign in',

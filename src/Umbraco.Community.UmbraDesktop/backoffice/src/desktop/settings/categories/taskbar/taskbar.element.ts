@@ -73,6 +73,11 @@ export class UmbraDesktopSettingsTaskbarElement extends UmbLitElement {
       isRefRegistered: (ref) => this.#catalogue?.isRefRegistered(ref) ?? false,
       open: () => undefined,
       localize: (value) => this.localize.string(value),
+      // Only availability is asked for here, and it reads nothing but whether full screen is
+      // allowed; settings neither shows nor changes the page's full screen state.
+      fullscreen: false,
+      canFullscreen: document.fullscreenEnabled,
+      toggleFullscreen: () => undefined,
     };
   }
 

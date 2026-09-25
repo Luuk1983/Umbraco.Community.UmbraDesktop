@@ -50,6 +50,14 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   private _clock = '';
 
   /**
+   * Whether the page is full screen, for the full screen feature's button. Read from the browser on
+   * every `fullscreenchange`, never set on a click, because leaving with Esc or with the browser's
+   * own control happens without the button and must still turn it back.
+   */
+  @state()
+  private _fullscreen = !!document.fullscreenElement;
+
+  /**
    * How this user wants the clock formatted.
    *
    * Seeded from the payload's own default rather than a second copy of it, so the two cannot drift:
@@ -125,12 +133,15 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     // in the background would otherwise show the minute it was last allowed to paint, which on this
     // taskbar is a minute next to the operating system's own correct one.
     document.addEventListener('visibilitychange', this.#onVisibilityChange);
+    document.addEventListener('fullscreenchange', this.#onFullscreenChange);
+    this._fullscreen = !!document.fullscreenElement;
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     if (this.#timer) window.clearTimeout(this.#timer);
     document.removeEventListener('visibilitychange', this.#onVisibilityChange);
+    document.removeEventListener('fullscreenchange', this.#onFullscreenChange);
     this.#setLauncherOpen(false);
   }
 
@@ -138,6 +149,22 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   #onVisibilityChange = () => {
     if (!document.hidden) this.#tick();
   };
+
+  /** The browser entered or left full screen, by the button or otherwise: follow it. */
+  #onFullscreenChange = () => {
+    this._fullscreen = !!document.fullscreenElement;
+  };
+
+  /**
+   * Take the whole page full screen, or bring it back. The page rather than the desktop element,
+   * for the reason the full screen feature gives: the backoffice's own overlays stay in view.
+   * Refusals are swallowed, since the browser already tells the user when it declines, and the
+   * button follows the browser's state rather than assuming the request worked.
+   */
+  #toggleFullscreen(): void {
+    const request = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    void request?.catch(() => undefined);
+  }
 
   /**
    * The clock, formatted the way this user asked for it, and then scheduled again for the moment the
@@ -355,6 +382,9 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       isRefRegistered: (ref) => this.#catalogue?.isRefRegistered(ref) ?? false,
       open: (app) => this.#manager?.open(app),
       localize: (value) => this.localize.string(value),
+      fullscreen: this._fullscreen,
+      canFullscreen: document.fullscreenEnabled,
+      toggleFullscreen: () => this.#toggleFullscreen(),
     };
   }
 
