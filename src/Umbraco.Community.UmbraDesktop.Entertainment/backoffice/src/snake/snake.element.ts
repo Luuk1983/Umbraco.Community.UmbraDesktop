@@ -167,7 +167,16 @@ export class SnakeElement extends UmbLitElement {
     const game = this._game;
     if (game?.status === 'playing') this.#startClock(game);
     else this.#stopClock();
-    if (game?.status === 'ready') this.#uncoverFood(game);
+    // Deferred to a microtask rather than done here, because moving the food assigns state, and
+    // assigning state inside updated() is what Lit's change-in-update warning is about. The second
+    // render is genuine, not an accident: which cells the message covers is only known once it has
+    // been laid out. A microtask still runs before the browser paints, so the food is never seen
+    // under the message, and the guard makes it a no-op if a key or New game got there first.
+    if (game?.status === 'ready') {
+      queueMicrotask(() => {
+        if (this.isConnected && this._game === game) this.#uncoverFood(game);
+      });
+    }
   }
 
   /**
