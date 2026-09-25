@@ -626,3 +626,94 @@ describe('snapping', () => {
     expect(w.snapped).to.equal(undefined);
   });
 });
+
+/**
+ * `resizable: false`: an app whose window stays the size it opened at, the way Minesweeper's did on
+ * every Windows up to XP. The rule is the manager's, not the titlebar's, because a window can be
+ * maximized or resized from more places than one button: a double-click, a drag into an edge, a
+ * resize handle. Enforced here, every one of them is covered at once, and any later route that goes
+ * through the manager inherits it.
+ */
+describe('fixed-size apps', () => {
+  /** The desktop these cases would snap into, if the window were allowed to. */
+  const BOUNDS = { w: 1200, h: 800 };
+
+  /** An app that asked to keep its size. */
+  const FIXED: UmbraDesktopApp = { ...APP, alias: 'fixed', resizable: false };
+
+  /**
+   * A manager with one fixed-size window open, and that window's id.
+   * @returns The manager and the window id.
+   */
+  function fixedWindow(): { ctx: ProbeManager; id: string } {
+    const ctx = manager();
+    ctx.clampToBounds(BOUNDS);
+    ctx.open(FIXED);
+    return { ctx, id: windowsOf(ctx)[0].id };
+  }
+
+  /**
+   * The manager's current ghost rectangle.
+   * @param ctx The manager to read.
+   * @returns The preview rect, or undefined when no snap is on offer.
+   */
+  function previewOf(ctx: UmbraDesktopWindowManagerContext) {
+    let rect: { x: number; y: number; w: number; h: number } | undefined;
+    ctx.snapPreview.subscribe((value) => (rect = value)).unsubscribe();
+    return rect;
+  }
+
+  it('will not maximize', () => {
+    const { ctx, id } = fixedWindow();
+    ctx.setState(id, 'maximized');
+    expect(windowsOf(ctx)[0].state).to.equal('normal');
+  });
+
+  it('still minimizes and restores, which change nothing about its size', () => {
+    const { ctx, id } = fixedWindow();
+    ctx.setState(id, 'minimized');
+    expect(windowsOf(ctx)[0].state).to.equal('minimized');
+    ctx.setState(id, 'normal');
+    expect(windowsOf(ctx)[0].state).to.equal('normal');
+  });
+
+  it('ignores a resize', () => {
+    const { ctx, id } = fixedWindow();
+    const before = windowsOf(ctx)[0].rect;
+    ctx.resize(id, { ...before, w: before.w + 200, h: before.h + 100 });
+    expect(windowsOf(ctx)[0].rect).to.eql(before);
+  });
+
+  it('still moves', () => {
+    const { ctx, id } = fixedWindow();
+    const before = windowsOf(ctx)[0].rect;
+    ctx.move(id, before.x + 40, before.y + 30);
+    expect(windowsOf(ctx)[0].rect).to.eql({ ...before, x: before.x + 40, y: before.y + 30 });
+  });
+
+  it('offers no snap at a side edge, and commits none', () => {
+    const { ctx, id } = fixedWindow();
+    const before = windowsOf(ctx)[0].rect;
+    ctx.previewSnap(id, { x: 0, y: 400 });
+    expect(previewOf(ctx), 'no ghost: a half of the desktop is a resize').to.equal(undefined);
+    ctx.commitSnap(id);
+    expect(windowsOf(ctx)[0].snapped).to.equal(undefined);
+    expect(windowsOf(ctx)[0].rect).to.eql(before);
+  });
+
+  it('offers no snap at the top edge either, which would maximize it', () => {
+    const { ctx, id } = fixedWindow();
+    ctx.previewSnap(id, { x: 600, y: 0 });
+    expect(previewOf(ctx)).to.equal(undefined);
+    ctx.commitSnap(id);
+    expect(windowsOf(ctx)[0].state).to.equal('normal');
+  });
+
+  it('leaves every other app resizable, since the default is allowed', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+    ctx.setState(id, 'maximized');
+    expect(windowsOf(ctx)[0].state).to.equal('maximized');
+  });
+});

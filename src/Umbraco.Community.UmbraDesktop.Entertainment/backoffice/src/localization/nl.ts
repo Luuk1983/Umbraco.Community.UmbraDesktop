@@ -4,7 +4,7 @@
  * "Minesweeper" is left untranslated on purpose: the Dutch Windows shipped it as Mijnenveger, but
  * the name a player is looking for in a launcher is the one they know the game by, and in practice
  * that is the English one. The game's own words are translated, since those are read rather than
- * searched for.
+ * searched for. "Snake" is the same word in Dutch, so the question does not arise.
  */
 export default {
   umbraDesktopEntertainment: {
@@ -19,5 +19,14 @@ export default {
     minesweeperFlagged: 'gemarkeerd',
     minesweeperMine: 'mijn',
     minesweeperEmpty: 'leeg',
+    snake: 'Snake',
+    snakeNewGame: 'Nieuw spel',
+    snakeScore: 'Score',
+    snakeBest: 'Record',
+    snakeBoard: 'Snake-speelveld. Stuur met de pijltjestoetsen',
+    snakeStart: 'Druk op een pijltjestoets om te beginnen',
+    snakePaused: 'Gepauzeerd. Druk op spatie om verder te gaan',
+    snakeOver: 'Game over. Druk op spatie om opnieuw te spelen',
+    snakeWon: 'Je hebt het hele veld gevuld!',
   },
 };

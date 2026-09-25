@@ -7,8 +7,8 @@
 
 A desktop app is one custom element in a window. You register it with an extension manifest, the
 desktop opens it, themes it and closes it, and your package never depends on anything here beyond
-the manifest type. Minesweeper is the first one; a calculator, a colour picker or a notepad would
-work the same way.
+the manifest type. Minesweeper was the first one and Snake the second, both in the Entertainment package; a
+calculator, a colour picker or a notepad would work the same way.
 
 ---
 
@@ -47,6 +47,7 @@ an app is for the case where there is no section, because there is no route.
     defaultSize: { w: 360, h: 460 },                  // your app's box. The desktop adds the window
     minSize: { w: 320, h: 400 },                      // your app's box, again
     allowMultiple: true,
+    resizable: false,                                 // fixed size: no resizing, no maximize
   },
   conditions: [],
 }
@@ -65,6 +66,7 @@ an app is for the case where there is no section, because there is no route.
 | `meta.defaultSize` | no | **Your app's own box** in px, not the window around it. The desktop adds its titlebar, its frame and whatever else the active theme's chrome costs. See §2.1 |
 | `meta.minSize` | no | The smallest box your app can work in, again yours rather than the window's. Falls back to the desktop's global minimum, and is **floored** at what the chrome itself needs. See §2.1 |
 | `meta.allowMultiple` | no | Whether two windows of your app may be open at once. Defaults to allowed, and leaving it there is almost always right: every other app on this desktop opens as many windows as the user asks for, so `false` makes yours the one tile that quietly refocuses instead. Set it only if a second instance genuinely cannot work — module-level state, an exclusive resource — and note that two instances of an app whose state lives in its own element share nothing at all |
+| `meta.resizable` | no | Whether the user may resize or maximize your window. Defaults to allowed. `false` keeps the window at `defaultSize` for its whole life, the way Minesweeper's was on every Windows up to XP: no resize handles, no snapping to a screen edge, a titlebar double-click does nothing, and there is no maximize button, which is left out rather than greyed, as Windows does. The window still moves, minimizes and closes. The window manager enforces it, not the titlebar, so every route to a new size is covered. Worth setting only when your content does not reflow and a bigger window would just be empty margin; both Entertainment games set it |
 | `conditions` | no | Umbraco's own conditions, and they are honoured: the desktop observes these manifests through `UmbExtensionsManifestInitializer`, so an app whose conditions are unmet never reaches the launcher, and does so **silently**: nothing is logged, because a condition doing its job is not a fault (§8). **No conditions means always available**, which is usually right: reaching the desktop at all already requires the Desktop section |
 
 **`element` is required in a different sense from everything else marked required here**, and the
@@ -111,8 +113,11 @@ Two consequences worth knowing:
   whichever is larger. An app asking for 282px used to get a titlebar too narrow for its own close
   button. So a very small `minSize` is safe to declare and will simply stop mattering.
 - **Your app can be given a box larger than it asked for**, because the user can maximize the
-  window and `defaultSize` is a starting size rather than a fixed one. Decide what a fixed-size app
-  does with the extra room. Minesweeper centres its board with `margin: auto` on a single wrapper,
+  window and `defaultSize` is a starting size rather than a fixed one — unless you set
+  `meta.resizable: false`, which is the direct answer for content that cannot use the room. Even
+  then, keep a plan for a slightly larger box: the window is floored at what the theme's chrome
+  needs, which can be wider than a small app. Decide what a fixed-size app does with the extra
+  room. Minesweeper centres its board with `margin: auto` on a single wrapper,
   which is a two-line answer; auto margins never resolve negative, so it also cannot centre the
   board into a clip if the box is ever the tighter of the two.
 
@@ -518,6 +523,14 @@ and restart your app.
 you want. If your app should idle out of sight, watch your own visibility: the desktop hides the
 window's frame rather than telling you about it.
 
+A real-time game is the case where it is not what you want. Minesweeper's clock ticking on while
+minimised is fair, since the board waits for the player, but Snake's snake does not: left running,
+it hits a wall unseen and the player restores the window to a finished game. Snake's answer is to
+pause whenever its playfield loses focus. That covers minimising, because minimising takes focus
+with it, and it also covers the player clicking into another window, which a visibility check would
+not catch. If your app takes keyboard input, the same pattern is the natural fit: make one element
+focusable, focus it in `firstUpdated`, and treat `focusout` as "the player has looked away".
+
 Teardown is the browser's own. `disconnectedCallback` is the whole contract: cancel your
 `requestAnimationFrame` there, clear your intervals, drop your listeners. There is no desktop signal
 to subscribe to and none is needed.
@@ -669,4 +682,5 @@ booting second backoffice inside an iframe and there is not one here. Your eleme
       subtracted from either (§2.1)
 - [ ] Your app at `meta.minSize` is still usable, since that is the smallest box a user can leave it
 - [ ] Your app does something sensible with a box **larger** than `defaultSize`, because a maximized
-      window is one (§2.1)
+      window is one — or it sets `meta.resizable: false`, if a bigger window is only empty margin
+      (§2.1)

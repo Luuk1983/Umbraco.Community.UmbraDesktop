@@ -1,4 +1,5 @@
 import { MINESWEEPER_CONTENT_SIZE, MINESWEEPER_MIN_CONTENT_SIZE } from './minesweeper/constants.js';
+import { SNAKE_CONTENT_SIZE, SNAKE_MIN_CONTENT_SIZE } from './snake/constants.js';
 import { manifests as localizationManifests } from './localization/manifest.js';
 
 /**
@@ -31,7 +32,7 @@ const minesweeper: UmbExtensionManifest = {
   alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Minesweeper',
   name: 'Minesweeper',
   element: () => import('./minesweeper/minesweeper.element.js'),
-  // 1000 rather than 100, with the next game expected at 900: the numbers are a sort key inside one
+  // 1000 rather than 100, with the next game at 900: the numbers are a sort key inside one
   // launcher group and nothing reads their magnitude, so leaving a hundred between them means
   // Solitaire can land beside this without renumbering anything. Set explicitly rather than left
   // off, because unset is not "no opinion": the launcher sorts on `weight ?? 0` and zero is a
@@ -58,6 +59,37 @@ const minesweeper: UmbExtensionManifest = {
     // the game is shared between two instances (every mutable thing is a field on the element, and
     // `rules.ts` is pure), so there is nothing to protect by saying no.
     allowMultiple: true,
+    // Fixed, as it was on every Windows up to XP: a 9x9 grid does not reflow, so resizing or
+    // maximizing only ever put empty space around it. The window still moves and minimizes.
+    resizable: false,
+  },
+};
+
+/**
+ * Snake, the second game, registered exactly the way Minesweeper is.
+ *
+ * Every field below follows Minesweeper's, for the reasons given there: `element` as a lazy loader,
+ * a namespaced `alias` that is final once shipped, sizes that are the content box derived from the
+ * board, and multiple windows allowed because every piece of game state lives on the element.
+ */
+const snake: UmbExtensionManifest = {
+  type: 'umbraDesktopApp',
+  alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Snake',
+  name: 'Snake',
+  element: () => import('./snake/snake.element.js'),
+  // Just below Minesweeper, which keeps the first game first in the launcher. This is the 900
+  // Minesweeper's comment had in mind for Solitaire; a later game can take 800.
+  weight: 900,
+  meta: {
+    label: '#umbraDesktopEntertainment_snake',
+    // No snake in Umbraco's icon set, so the generic game icon.
+    icon: 'icon-game',
+    group: 'games',
+    defaultSize: SNAKE_CONTENT_SIZE,
+    minSize: SNAKE_MIN_CONTENT_SIZE,
+    allowMultiple: true,
+    // Fixed for the same reason as Minesweeper: the board is a set number of pixels.
+    resizable: false,
   },
 };
 
@@ -68,4 +100,4 @@ const minesweeper: UmbExtensionManifest = {
  * in tsconfig's `types`, so there is nothing to import for it. The `umbraDesktopApp` arm of that
  * union is contributed by `umbradesktop-app.d.ts` in this folder, for the reason given there.
  */
-export const manifests: Array<UmbExtensionManifest> = [minesweeper, ...localizationManifests];
+export const manifests: Array<UmbExtensionManifest> = [minesweeper, snake, ...localizationManifests];
