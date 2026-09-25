@@ -1,6 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './snake.element.js';
 import { SNAKE_BOARD, SNAKE_CELL_SIZE_PX, SNAKE_CONTENT_SIZE, SNAKE_PADDING_PX } from './constants.js';
+import { BEST_SCORE_KEY } from './snake.element.js';
 import type { SnakeElement } from './snake.element.js';
 import type { SnakeFoodPlacer } from './rules.js';
 
@@ -120,10 +121,41 @@ describe('snake element', () => {
     }, 'the head should move up');
   });
 
-  it('steers with WASD as well as the arrows', async () => {
-    const element = await game(foodAt(0));
-    await press(element, 'w');
-    expect(status(element)).to.equal('playing');
+  /**
+   * Every key steers the way it says, the four arrows and W, A, S and D alike, checked by where the
+   * head actually goes rather than only that the game started.
+   *
+   * Left needs a turn first. The snake starts facing right, and a reversal is ignored so that a
+   * mistimed key cannot kill it, so Left or A on a fresh game rightly does nothing. Those two cases
+   * press Up first and then the key, and check the snake went up and then left; the other six are
+   * pressed on their own.
+   */
+  describe('steering', () => {
+    /** Where a cell is on the board. */
+    const at = (index: number) => ({ x: index % SNAKE_BOARD.width, y: Math.floor(index / SNAKE_BOARD.width) });
+
+    /** Where the head is now. */
+    const head = (element: SnakeElement) => at(cells(element).findIndex((cell) => cell.dataset.part === 'head'));
+
+    const cases: Array<{ keys: string[]; way: string; went: (from: { x: number; y: number }, to: { x: number; y: number }) => boolean }> = [
+      { keys: ['ArrowUp'], way: 'up', went: (from, to) => to.x === from.x && to.y < from.y },
+      { keys: ['w'], way: 'up', went: (from, to) => to.x === from.x && to.y < from.y },
+      { keys: ['ArrowDown'], way: 'down', went: (from, to) => to.x === from.x && to.y > from.y },
+      { keys: ['s'], way: 'down', went: (from, to) => to.x === from.x && to.y > from.y },
+      { keys: ['ArrowRight'], way: 'right', went: (from, to) => to.y === from.y && to.x > from.x },
+      { keys: ['d'], way: 'right', went: (from, to) => to.y === from.y && to.x > from.x },
+      { keys: ['ArrowUp', 'ArrowLeft'], way: 'up, then left', went: (from, to) => to.y < from.y && to.x < from.x },
+      { keys: ['ArrowUp', 'a'], way: 'up, then left', went: (from, to) => to.y < from.y && to.x < from.x },
+    ];
+
+    for (const { keys, way, went } of cases) {
+      it(`${keys.join(' then ')} steers ${way}`, async () => {
+        const element = await game(foodAt(0), 40);
+        const start = head(element);
+        for (const key of keys) await press(element, key);
+        await waitUntil(() => went(start, head(element)), `the head should go ${way}`);
+      });
+    }
   });
 
   it('scores when the snake eats', async () => {
@@ -183,5 +215,60 @@ describe('snake element', () => {
     expect(board.width + SNAKE_PADDING_PX * 2, 'width').to.equal(SNAKE_CONTENT_SIZE.w);
     expect(board.height + SNAKE_PADDING_PX * 2, 'height').to.equal(SNAKE_CONTENT_SIZE.h);
     expect(cells(element)[0].getBoundingClientRect().width).to.equal(SNAKE_CELL_SIZE_PX);
+  });
+});
+
+/**
+ * The best score is kept in this browser, and more than one window can be writing it: two Snake
+ * windows, or Snake in another tab. Each window used to compare against the best it read when it
+ * opened, so one that opened earlier could overwrite a higher best with a lower one. It now reads
+ * the stored best right before writing, and writes only a score that beats it.
+ */
+describe('the best score', () => {
+  beforeEach(() => window.localStorage.removeItem(BEST_SCORE_KEY));
+  afterEach(() => window.localStorage.removeItem(BEST_SCORE_KEY));
+
+  /** The cell in front of a new game's head, where food makes the first move a meal. */
+  async function ahead(): Promise<number> {
+    const probe = await game(foodAt(0), 1000);
+    const head = cells(probe).findIndex((cell) => cell.dataset.part === 'head');
+    probe.remove();
+    return head + 1;
+  }
+
+  /** Start a game and wait until it has scored `points`. */
+  async function scoreOf(element: SnakeElement, points: number): Promise<void> {
+    await press(element, 'ArrowRight');
+    await waitUntil(() => Number(text(element, '.score')) >= points, `the score should reach ${points}`);
+  }
+
+  const stored = () => window.localStorage.getItem(BEST_SCORE_KEY);
+
+  it('records a score that beats the stored best', async () => {
+    const first = await ahead();
+    const element = await game(foodAt(first, 0));
+    await scoreOf(element, 10);
+    expect(stored()).to.equal('10');
+    expect(text(element, '.best')).to.equal('10');
+  });
+
+  it('keeps a higher best saved by another window while this one was open', async () => {
+    const first = await ahead();
+    const element = await game(foodAt(first, 0));
+    // Saved elsewhere after this window read the best, which was nothing then.
+    window.localStorage.setItem(BEST_SCORE_KEY, '500');
+    await scoreOf(element, 10);
+    expect(stored(), 'the higher best is not overwritten').to.equal('500');
+    expect(text(element, '.best'), 'and this window shows it').to.equal('500');
+  });
+
+  it('never lets an earlier window write a lower best over a later one, with two open', async () => {
+    const first = await ahead();
+    const earlier = await game(foodAt(first, 0));
+    const later = await game(foodAt(first, first + 1, 0));
+    await scoreOf(later, 20);
+    expect(stored()).to.equal('20');
+    await scoreOf(earlier, 10);
+    expect(stored(), 'the earlier window scored less and must not win').to.equal('20');
   });
 });

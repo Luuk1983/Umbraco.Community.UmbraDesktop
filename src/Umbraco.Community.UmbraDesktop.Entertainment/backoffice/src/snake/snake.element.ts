@@ -30,7 +30,7 @@ const FOOD_COLOUR = '#e0302a';
  * losing it to a cleared cache costs nothing, and storing it server-side would mean an API and a
  * table for a number nobody else needs to see.
  */
-const BEST_SCORE_KEY = 'umbradesktop-entertainment-snake-best';
+export const BEST_SCORE_KEY = 'umbradesktop-entertainment-snake-best';
 
 /** Every key the game answers to, and the direction each one means. WASD for the left hand. */
 const KEY_DIRECTIONS: Readonly<Record<string, SnakeDirection>> = {
@@ -115,7 +115,7 @@ export class SnakeElement extends UmbLitElement {
   @state()
   private _game?: SnakeGame;
 
-  /** The best score seen in this browser, read once and updated as a game beats it. */
+  /** The best score seen in this browser: read when the window opens, and read again before a new best is written, since another window may have saved a higher one. */
   @state()
   private _best = readBestScore();
 
@@ -150,10 +150,13 @@ export class SnakeElement extends UmbLitElement {
    */
   override willUpdate(): void {
     const points = (this._game?.score ?? 0) * SNAKE_POINTS_PER_FOOD;
-    if (points > this._best) {
-      this._best = points;
-      writeBestScore(points);
-    }
+    if (points <= this._best) return;
+    // Compared with what is stored now, not only with what this window read when it opened: another
+    // Snake window, or Snake in another tab, may have saved a higher best since, and writing over it
+    // would let a lower score win. A higher stored best is shown instead, so this window stays right.
+    const best = Math.max(this._best, readBestScore());
+    if (points > best) writeBestScore(points);
+    this._best = Math.max(points, best);
   }
 
   /**
