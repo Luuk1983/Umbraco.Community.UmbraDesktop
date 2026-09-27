@@ -404,6 +404,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       apps: this._apps,
       pinned: this._pinned,
       isRefRegistered: (ref) => this.#catalogue?.isRefRegistered(ref) ?? false,
+      entryRef: (alias) => this.#catalogue?.getEntryRef(alias),
       open: (app) => this.#manager?.open(app),
       localize: (value) => this.localize.string(value),
       fullscreen: this._fullscreen,

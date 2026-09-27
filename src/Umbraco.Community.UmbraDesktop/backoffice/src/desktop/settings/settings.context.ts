@@ -6,7 +6,8 @@ import type {
 } from './types';
 import type { UmbraDesktopWallpaperView } from './wallpaper-view';
 import { resolveWallpaper, wallpaperThumbUrl } from './wallpaper';
-import { togglePinned } from './pinned';
+import { togglePinnedApp } from './pinned';
+import type { UmbraDesktopApp } from '../types';
 import { withFeatureEnabled } from '../taskbar/features/enabled';
 import { UMBRADESKTOP_DEFAULT_SETTINGS } from './settings-store';
 import { browserSettingsCache } from './settings-cache';
@@ -246,11 +247,11 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   }
 
   /**
-   * Pin an app to Favourites, or unpin it if it is already pinned.
-   * @param alias The app alias to toggle.
+   * Pin an app to Favourites, or unpin it if any stored pin stands for it (see `togglePinnedApp`).
+   * @param app The app whose pin was clicked.
    */
-  public togglePin(alias: string): void {
-    this.#update({ pinned: togglePinned(this.#settings.getValue().pinned, alias) });
+  public togglePin(app: UmbraDesktopApp): void {
+    this.#update({ pinned: togglePinnedApp(this.#settings.getValue().pinned, app) });
   }
 
   /**

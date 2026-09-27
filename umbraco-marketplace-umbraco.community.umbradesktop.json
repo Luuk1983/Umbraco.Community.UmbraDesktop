@@ -70,6 +70,7 @@
     "apps",
     "games",
     "extensibility",
+    "package integration",
     "concurrency",
     "collaboration",
     "overwrite protection",

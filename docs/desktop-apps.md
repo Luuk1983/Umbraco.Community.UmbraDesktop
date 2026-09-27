@@ -14,16 +14,16 @@ calculator, a colour picker or a notepad would work the same way.
 
 ## 1. Is your app registerable, or does it belong in the catalogue?
 
-Two kinds of thing can sit in the launcher, and only one of them is yours to register.
+Two kinds of thing can sit in the launcher, and a package can register both.
 
 | Your app is | Path | Why |
 |---|---|---|
 | **Self-contained**: its own element, its own state, no backoffice route behind it | Register a `umbraDesktopApp` manifest. Nothing to ask anyone | There is nothing to verify. An element in a box cannot point at the wrong URL, and the worst it can do is be a bad app |
-| **A backoffice surface**: a section, a dashboard, a workspace, anything with a URL | A pull request against `catalogue/` in this repository | A deep link needs its URL checked and a chrome profile chosen, and getting either wrong ships a broken window whose blame lands on the desktop |
+| **A backoffice surface**: a section, a dashboard, a workspace, anything with a URL | A `umbraDesktopCatalogue` entry. See [package-catalogues.md](package-catalogues.md) | Your package ships in step with its own screens, so it is the right place for their tiles |
 
-The manifest enforces this rather than describing it. `umbraDesktopApp` has no `url`, no `section`
-and no `chromeProfile` field, so a deep-linked entry is not expressible through it even if you want
-one.
+The two manifests split the work by what they describe. `umbraDesktopApp` has no `url`, `section`
+or `chromeProfile`, because an element in a box has none of them, and a catalogue entry has no
+`element`, because a deep link is a page someone else renders.
 
 If your package registers a *section*, you already appear in the launcher with no work at all: any
 section a user can reach shows up automatically in the More group with a generic icon. Registering
@@ -56,7 +56,7 @@ an app is for the case where there is no section, because there is no route.
 | Field | Required | Notes |
 |---|---|---|
 | `type` | yes | Always `'umbraDesktopApp'` |
-| `alias` | yes | Unique, and it must not collide with a curated catalogue entry's alias: if it does, your app is dropped and the console says so. It is also what pins a favourite, so it has to be stable across releases, since renaming it loses the pin for every user who made one. Namespace it with your package id and both problems go away |
+| `alias` | yes | Unique. If it matches one of the desktop's own catalogue entries, your app replaces that entry and the console says so. It is also what pins a favourite, so it has to be stable across releases, since renaming it loses the pin for every user who made one. Namespace it with your package id and both problems go away |
 | `element` | in practice | The app itself. Four forms, all supported, and it is the **only** field the desktop resolves: see §3. Required differently from the rest of this column, see below |
 | `name` | yes | Developer-facing, and required by `ManifestBase` rather than by anything here: omit it and `tsc` fails with `TS2741`, and Umbraco's own package schema rejects it too. The desktop reads it only as the window title, if `meta.label` is missing at runtime |
 | `weight` | no | **Higher sorts first.** See §8 |
@@ -466,21 +466,13 @@ never the other way round. A sixth theme must not be able to break your app.
 
 ---
 
-## 6. Groups, and the `games` contract
+## 6. Groups
 
-`meta.group` is a launcher group alias. The host owns the list, and an app naming a group that does
-not exist falls into the reserved More group, which is the same thing that happens to any uncurated
-app and is honest rather than a failure.
-
-`games` is reserved for exactly this purpose, and the way it is split is worth stating because it is
-a contract between two packages:
-
-- **This repository owns the group**: the alias, the label and its localisation.
-- **Your package owns the apps in it.** Nothing in this repository puts an app in `games`.
-
-So the host can ship a Games group with no games in it, your package can ship games without the host
-knowing which, and neither release has to wait for the other. If you want a different heading,
-name a different group and land in More until one exists.
+`meta.group` is a launcher group alias: one of the desktop's own, or one a package defines in its
+catalogue. The Entertainment add-on does exactly that for Games, so its games and their heading ship
+together and the desktop knows nothing about either. An app naming a group nobody defines lands in
+the reserved More group, which is honest rather than a failure. [package-catalogues.md](package-catalogues.md)
+§4 lists the desktop's groups and their weights, for placing one of your own among them.
 
 Most of the launcher then works on your app for nothing. Its tile and its taskbar button come from
 being in the app list at all. Pinning does key off `alias`, which is why §2 makes such a point of
@@ -640,15 +632,15 @@ positive Umbraco weight is a negative one on that scale, which is the whole poin
 above. The by-name tiebreak only ever settles peers that are both sitting on zero. So if you ship
 more than one app and care about their order, give every one of them a number.
 
-**An alias a curated entry already owns loses.** Registry uniqueness only holds among registered
-extensions, and the desktop's aliases are a single namespace shared with the curated catalogue. A
-manifest whose alias matches a catalogue entry's is dropped rather than allowed to produce a second
-app with the same alias, because alias is the key a pinned favourite resolves through and two tiles
-sharing one would mean a pin silently opening the wrong app. The curated entry wins, and the console
-gets a line naming your alias and telling you to rename it.
+**An alias a curated entry already owns is taken over.** The desktop's aliases are one namespace,
+shared with its catalogue, because an alias is what a pin is stored under and one alias must mean
+one app. A manifest whose alias matches one of the desktop's entries replaces that entry, and the
+console prints a line saying what it replaced, since swapping a deep link for an app is rarely an
+accident you want to miss. If two packages claim one alias, the one whose manifest has the higher
+weight keeps it and the console names both.
 
-**Three things can make your app not appear, and only two of them say so.** A colliding alias, this
-one. A manifest the desktop found no `element` in, which includes the case where you wrote `js`
+**Three things can make your app not appear, and only two of them say so.** An alias another
+package's manifest also claims, with the higher weight. A manifest the desktop found no `element` in, which includes the case where you wrote `js`
 instead (§3). Both print a line naming your alias. The third is an **unmet `condition`** (§2), and
 it is silent by design: an app whose condition is unmet is doing exactly what the manifest asked, so
 there is nothing to warn about, and Umbraco removes it from the list before the desktop sees it.

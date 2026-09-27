@@ -47,7 +47,6 @@ export default {
     groupAutomation: 'Automatisering',
     groupAi: 'AI',
     groupSystem: 'Systeem',
-    groupGames: 'Spellen',
     groupMore: 'Meer',
     launchDesktop: 'Bureaublad openen',
     openApps: 'Apps openen',

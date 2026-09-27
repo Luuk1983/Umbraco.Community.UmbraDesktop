@@ -29,7 +29,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Always says where you are. A window that holds a whole section carries a path under its title bar, Media library / Campaigns / hero.jpg, and every step of the way back is one click. In the plain backoffice you climb back out of a tree by clicking the section name in the header, and a window has no header, so this is where that goes.
 - Never loses your work. A window holding unsaved changes shows a dot in its title bar and on its taskbar button, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
 - Warns before you overwrite someone. If somebody else saves or bins a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. Deletion is warned about even when you have nothing unsaved, because there is no version left to refresh to. The plain backoffice does not warn about this at all.
-- A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus Games once a package puts an app there. Empty groups never show.
+- A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus any heading a package brings along, such as the Entertainment add-on's Games. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are stored on your Umbraco account, so they follow you to any browser you sign in on.
@@ -44,6 +44,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Let the wallpaper follow. Turn on one toggle in the theme picker and each theme brings its own background with it, so switching to Windows 98 gives you its bare teal and switching to macOS gives you a sunrise. Off by default, and choosing a wallpaper yourself turns it back off. See [Matching the wallpaper to the theme](#matching-the-wallpaper-to-the-theme).
 - Your desk follows you. Wallpaper, theme, pins, taskbar switches and language are stored on your Umbraco account rather than in one browser, so signing in from another machine, another browser or a private window gives you the desktop you set up, and clearing site data does not lose it. Settings you already had are moved across once, the first time you open the desktop after updating, behind a screen that tells you it is happening rather than doing it behind your back. See [Your settings follow you](#your-settings-follow-you).
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
+- Tiles your packages bring themselves. A package with backoffice screens of its own can give them proper tiles, the right window and a heading of its own in the launcher, from its own release. A package that reuses the alias of the desktop's own tile for them replaces it, pins included, so the package that owns the screens decides how they open. See [Custom and third-party apps](#custom-and-third-party-apps).
 - Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
 - Install it as an app. The backoffice declares a web app manifest, so your browser can install or pin it. It opens straight on the desktop in its own window, with no address bar and no tabs, and carries your site's own name and icon rather than a generic browser tile. Both are settings, so an agency running ten sites gets ten distinguishable apps. See [Installing the backoffice as an app](#installing-the-backoffice-as-an-app).
@@ -481,7 +482,7 @@ That is the whole installation. There is no section to grant and no dashboard to
 
 The add-on is released from the same tag as this package and always carries the same version number, so matching versions are the compatibility answer. Its dependency on the desktop is a version range rather than an exact pin, so upgrading the desktop on its own is fine.
 
-Nothing in that package is privileged. It reaches the desktop through the same public `umbraDesktopApp` manifest any package can register, which makes its source the worked example for [Custom and third-party apps](#custom-and-third-party-apps).
+Nothing in that package is privileged. It reaches the desktop through the same public manifests any package can register, a `umbraDesktopApp` for each game and a catalogue for the Games group, which makes its source the worked example for [Custom and third-party apps](#custom-and-third-party-apps).
 
 ## Connecting other Umbraco instances (experimental)
 
@@ -541,7 +542,7 @@ A window should not show the entire backoffice shell inside a small frame. Becau
 
 The launcher fills from two sources. The first, and the one that provides everything you see out of the box, is a curated catalogue in `backoffice/src/desktop/catalogue/`. Each entry points at a registered extension by alias, so its URL is inferred from the registry rather than hardcoded, and carries display detail: name, icon, group, chrome profile, default and minimum window size, whether multiple instances are allowed, and sort weight.
 
-The second is apps other packages register for themselves, covered below.
+The second is what other packages register for themselves: self-contained apps, and catalogues of their own that add tiles and groups or replace ours. Both are covered below.
 
 ### Umbraco's commercial packages
 
@@ -590,9 +591,9 @@ Beyond that there are two paths, and which one you take depends on what your app
 
 **A self-contained app you register yourself.** If your app is its own custom element, with no backoffice route behind it, register a `umbraDesktopApp` extension manifest and you are done. It gets a launcher tile, a group, a window, pinning, a taskbar button and the active theme's colours, and your package never talks to this repository. There is nothing for anyone here to verify: an element in a box cannot point at the wrong URL or pick the wrong chrome profile. This is how games and small tools get onto the desktop. [`docs/desktop-apps.md`](docs/desktop-apps.md) is the guide.
 
-**Curated placement for a backoffice surface.** If your app *is* a backoffice page (a custom icon, a friendly name, a specific group, a chrome profile or window sizing for a section or dashboard), it needs an entry in `backoffice/src/desktop/catalogue/`, which means opening a pull request against this repository. That is deliberate rather than a gap: a deep link needs its URL checked and its chrome profile chosen, and getting either wrong ships a broken window whose blame lands on the desktop. The manifest type has no `url`, `section` or `chromeProfile` field, so the split is structural and not a rule anyone has to remember.
+**Tiles for your own backoffice screens.** If your app *is* a backoffice page, a section, dashboard or workspace your package registers, register a `umbraDesktopCatalogue` manifest with an entry for it: a name, an icon, a group, a chrome profile and window sizing, resolved exactly like the desktop's own entries. The same manifest can define launcher groups of your own. It ships with your package, so nothing waits on a release of this one. If the desktop already has an entry for your screens, reuse its alias and yours is used instead, pins included. [`docs/package-catalogues.md`](docs/package-catalogues.md) is the guide.
 
-A curated entry for a third-party package points at its extension by alias rather than by URL, so it resolves only where that package is registered and stays silently absent everywhere else. No flag is needed and none exists: any package can unregister any extension, so no entry is ever guaranteed to resolve. uSync ships this way: install it and a uSync app appears in the Synchronisation group, opening its whole workspace without the Settings tree beside it. Not unconditionally, though, and that is the point of the mechanism. An install that runs uSync in its own section instead gates that entry out, and uSync turns up as an ordinary uncertified app in More.
+The desktop's own entry for a third-party package points at its extension by alias rather than by URL, so it resolves only where that package is registered and stays silently absent everywhere else. No flag is needed and none exists: any package can unregister any extension, so no entry is ever guaranteed to resolve. uSync ships this way: install it and a uSync app appears in the Synchronisation group, opening its whole workspace without the Settings tree beside it. Not unconditionally, though, and that is the point of the mechanism. An install that runs uSync in its own section instead gates that entry out, and uSync turns up as an ordinary uncertified app in More.
 
 ## Documentation
 
@@ -606,6 +607,12 @@ needs that a single control does not, how to branch per theme and why the theme
 ids are a published API, what the desktop does to your element over its lifetime, and the traps that
 cost real time. The reasoning is in
 [`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md).
+
+Putting your package's own backoffice screens on the desktop is one catalogue manifest.
+[`docs/package-catalogues.md`](docs/package-catalogues.md) is the guide: the entry and group fields,
+the desktop's published group weights, how replacing one of its tiles works, and what the console
+tells you. The reasoning is in
+[`docs/design/2026-09-25-package-catalogues-design.md`](docs/design/2026-09-25-package-catalogues-design.md).
 
 Building a theme of your own is a folder of CSS and one catalogue entry, with no change to the
 chrome itself. [`docs/theming.md`](docs/theming.md) is the guide: what a theme folder holds, the

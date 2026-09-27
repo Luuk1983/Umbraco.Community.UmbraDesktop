@@ -16,6 +16,15 @@ export const UMBRADESKTOP_DEFAULT_ICON = 'icon-box';
 export const UMBRADESKTOP_SECTION_PATHNAME = 'umbradesktop';
 
 /**
+ * The alias prefix of a section's uncertified fallback app: `section:<section alias>`.
+ *
+ * One constant because three places must agree on it. Derivation mints the alias, pin resolution
+ * reads it so that a pin can follow its section to the entry that replaces the fallback (design
+ * D15), and package catalogue validation reserves it so that no package entry collides with one.
+ */
+export const UMBRADESKTOP_FALLBACK_ALIAS_PREFIX = 'section:';
+
+/**
  * The attribute carrying the active chrome theme's id onto a self-contained app.
  *
  * A published contract, not an implementation detail: an app branches on it with

@@ -2,50 +2,6 @@ import { expect } from '@open-wc/testing';
 import { groups } from './groups';
 import { UMBRADESKTOP_MORE_GROUP_WEIGHT } from '../constants';
 
-/**
- * The `games` group is a curated label in the host, not a list of games: the entertainment package
- * names this alias from its own manifests, and nothing here knows which games exist. That is what
- * keeps the two packages' releases independent of each other's contents.
- */
-it('declares a games group whose label is the existing loc token', () => {
-  const games = groups.find((g) => g.alias === 'games');
-  expect(games, 'the games group must exist for registered game apps to land in').to.not.be
-    .undefined;
-  expect(games!.label).to.equal('#umbraDesktop_groupGames');
-});
-
-it('sorts games after every other finished group', () => {
-  const games = groups.find((g) => g.alias === 'games')!;
-  // Experimental is excluded rather than compared: it is a holding pen between the finished groups
-  // and the reserved "More", not a peer of them, and the assertion below is what pins it down.
-  const others = groups.filter((g) => g.alias !== 'games' && g.alias !== 'experimental');
-  for (const group of others) {
-    expect(
-      games.weight!,
-      `games must sort after ${group.alias} (it is the last thing an editor is looking for)`,
-    ).to.be.greaterThan(group.weight!);
-  }
-});
-
-/**
- * And before the reserved "More" group, which is the one ordering fact the loop above cannot see.
- *
- * "More" is not in this array at all: `group-apps.ts` synthesises it from
- * {@link UMBRADESKTOP_MORE_GROUP_WEIGHT} and appends it, so a comparison against the members of
- * `groups` is silent about the only neighbour Games has on that side. Games sorting after "More"
- * would put the curated group behind the bucket for everything uncurated, which reads as a bug in
- * the launcher rather than a weight nobody checked. There is plenty of headroom today (60 against
- * 9999) and that is exactly the reason to assert it: an unchecked fact held true only by a manual
- * comparison is the one that drifts.
- */
-it('sorts games before the reserved More group, which is not in this array', () => {
-  const games = groups.find((g) => g.alias === 'games')!;
-  expect(
-    games.weight!,
-    'games is a curated group and must not sort behind the bucket for uncurated apps',
-  ).to.be.lessThan(UMBRADESKTOP_MORE_GROUP_WEIGHT);
-});
-
 it('gives every group a unique alias and a token label', () => {
   const aliases = groups.map((g) => g.alias);
   expect(new Set(aliases).size).to.equal(aliases.length);
@@ -56,9 +12,10 @@ it('gives every group a unique alias and a token label', () => {
 
 /**
  * `group-apps.ts` sorts with `group.weight ?? 0`: a group whose `weight` is left unset does not
- * error, it silently sorts first, ahead of every curated group. The two tests above already
- * dereference `weight!` as if it were guaranteed, so this makes that guarantee an explicit,
- * checked one rather than an assumption borrowed from the non-null assertions.
+ * error, it silently sorts first, ahead of every curated group. The ordering case below dereferences
+ * `weight!` as if it were guaranteed, so this makes that guarantee an explicit, checked one rather
+ * than an assumption borrowed from the non-null assertions. The weights are also published, so
+ * packages can place their own groups among ours (package catalogues design D11).
  */
 it('gives every group a weight, so none of them silently sort first', () => {
   for (const group of groups) {
@@ -67,17 +24,46 @@ it('gives every group a weight, so none of them silently sort first', () => {
 });
 
 /**
- * Experimental sits between Games and the reserved "More".
+ * Experimental is the last real group, immediately before the reserved "More": after everything this
+ * repository ships, because an app still working out what it should be is furthest from what anybody
+ * came for, and before "More", the bucket for apps nobody curated. Games used to sit between the two;
+ * it belongs to the Entertainment package now, which places it at 60 (package catalogues design D10).
  *
- * Both halves matter and neither is visible to the loop above. After Games, because an app that is
- * still working out what it should be is further from what anybody came here for than a game is.
- * Before "More", because "More" is the bucket for apps nobody curated at all, and a group this
- * repository deliberately created should not sort behind it.
+ * "More" is not in this array at all: `group-apps.ts` synthesises it from
+ * {@link UMBRADESKTOP_MORE_GROUP_WEIGHT} and appends it, which is why that half is asserted against
+ * the constant rather than against a member of `groups`.
  */
-it('sorts experimental after games and before the reserved More group', () => {
-  const games = groups.find((g) => g.alias === 'games')!;
+it('sorts experimental after every other group and before the reserved More group', () => {
   const experimental = groups.find((g) => g.alias === 'experimental')!;
-
-  expect(experimental.weight!).to.be.greaterThan(games.weight!);
+  for (const group of groups.filter((g) => g.alias !== 'experimental')) {
+    expect(experimental.weight!, `experimental must sort after ${group.alias}`).to.be.greaterThan(group.weight!);
+  }
   expect(experimental.weight!).to.be.lessThan(UMBRADESKTOP_MORE_GROUP_WEIGHT);
+});
+
+/** The host no longer defines a group for another package's apps (package catalogues design D10). */
+it('does not define a games group of its own', () => {
+  expect(groups.map((g) => g.alias)).to.not.contain('games');
+});
+
+/**
+ * These weights are published (package catalogues design D11): a package places its own group among
+ * ours by number, and `docs/package-catalogues.md` §4 prints this table. Renumbering one is a
+ * breaking change for somebody else's package, so this is where it has to be a decision.
+ */
+it('keeps the published group weights', () => {
+  expect(Object.fromEntries(groups.map((g) => [g.alias, g.weight]))).to.deep.equal({
+    editing: 10,
+    workflow: 12,
+    'marketing-sales': 15,
+    development: 20,
+    synchronisation: 25,
+    security: 30,
+    'advanced-security': 35,
+    diagnostics: 40,
+    automation: 43,
+    ai: 45,
+    system: 50,
+    experimental: 70,
+  });
 });

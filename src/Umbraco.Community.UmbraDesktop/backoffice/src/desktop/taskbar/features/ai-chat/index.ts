@@ -1,16 +1,6 @@
-import { catalogue } from '../../../catalogue/index.js';
 import { taskbarAppButton } from '../app-button.js';
 import type { UmbraDesktopTaskbarFeature } from '../types';
 import { UMBRADESKTOP_AI_CHAT_APP_ALIAS, aiChatAvailability } from './availability.js';
-
-/**
- * The chat's `ref`, read from its own catalogue entry rather than written here a second time.
- *
- * The entry already knows which manifest the chat is; duplicating the alias would create two places
- * that have to agree about a third party's section, and the one that drifts would be this one,
- * because nothing about a broken registry probe is visible on an install that has the package.
- */
-const CHAT_REF = catalogue.entries.find((entry) => entry.alias === UMBRADESKTOP_AI_CHAT_APP_ALIAS)?.ref;
 
 /**
  * Umbraco AI's Copilot Workspace, as a single button at the head of the row's apps.
@@ -32,7 +22,11 @@ export const UMBRADESKTOP_AI_CHAT_FEATURE: UmbraDesktopTaskbarFeature = {
   labelKey: 'umbraDesktop_taskbarAiChat',
   descriptionKey: 'umbraDesktop_taskbarAiChatAbout',
   defaultEnabled: true,
-  availability: (context) => aiChatAvailability(context.apps, context.isRefRegistered, CHAT_REF),
+  // The chat's `ref` comes from its own catalogue entry, as the merged catalogue has it now, rather
+  // than being written here a second time: two places that must agree about a third party's section
+  // is one too many, and a package may since have replaced the entry with one that points elsewhere.
+  availability: (context) =>
+    aiChatAvailability(context.apps, context.isRefRegistered, context.entryRef(UMBRADESKTOP_AI_CHAT_APP_ALIAS)),
   render: (context) => {
     const chat = context.apps.find((app) => app.alias === UMBRADESKTOP_AI_CHAT_APP_ALIAS);
     return chat ? [taskbarAppButton(chat, context)] : [];
