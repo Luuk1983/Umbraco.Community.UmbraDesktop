@@ -264,12 +264,15 @@ describe('the taskbar feature row', () => {
 });
 
 /**
- * The full screen button: after the pinned apps, and following the browser's own full screen state,
+ * The full screen button: first on the row, and following the browser's own report of full screen,
  * so leaving with Esc turns it back into "Full screen" as surely as clicking it does.
  *
- * The browser's full screen is stood in for: a test cannot really take the page full screen, so
- * `requestFullscreen` and `exitFullscreen` are recorded, and `document.fullscreenElement` plus a
- * `fullscreenchange` event play the browser's part.
+ * Two kinds of full screen are stood in for, because a test can take the page into neither. The
+ * page's own, which the button asks for: `requestFullscreen` and `exitFullscreen` are recorded, and
+ * `document.fullscreenElement` plus a `fullscreenchange` event play the browser's part. And the
+ * browser's own, from F11 or its menu, which the Fullscreen API cannot see at all: only the
+ * `display-mode: fullscreen` media query reports it, so `matchMedia` hands the taskbar a query this
+ * file controls.
  */
 describe('the full screen button', () => {
   let wrapper: HTMLElement;
@@ -277,9 +280,25 @@ describe('the full screen button', () => {
   let taskbar: UmbraDesktopTaskbarElement;
   const asked: string[] = [];
   let restore: Array<() => void> = [];
+  /** `window.matchMedia` as the browser provides it, put back when this block is done. */
+  const realMatchMedia = window.matchMedia;
+  /** Whoever is listening to the stand-in query. */
+  const displayModeListeners = new Set<(event: MediaQueryListEvent) => void>();
+  /** The stand-in `display-mode: fullscreen` query: whether the browser window is full screen. */
+  const displayMode = {
+    matches: false,
+    media: '(display-mode: fullscreen)',
+    addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) =>
+      displayModeListeners.add(listener),
+    removeEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) =>
+      displayModeListeners.delete(listener),
+  };
 
   before(async function () {
     this.timeout(MOUNT_TIMEOUT_MS);
+    // Before the taskbar connects, because connecting is when it asks for the query.
+    window.matchMedia = (query: string) =>
+      query === displayMode.media ? (displayMode as unknown as MediaQueryList) : realMatchMedia.call(window, query);
     wrapper = document.createElement('div');
     document.body.appendChild(wrapper);
     host = new UmbElementControllerHost(wrapper);
@@ -316,51 +335,124 @@ describe('the full screen button', () => {
     ];
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     for (const undo of restore) undo();
+    // Out of both kinds of full screen, so no case starts where the last one left off: the real
+    // `fullscreenElement` is null again, and the stand-in query is told the window is not either.
+    document.dispatchEvent(new Event('fullscreenchange'));
+    await windowFullscreen(false);
   });
 
   after(() => {
+    window.matchMedia = realMatchMedia;
     host?.destroy();
     wrapper?.remove();
   });
 
-  /** The browser entering or leaving full screen, as it reports it. */
-  async function browserFullscreen(on: boolean): Promise<void> {
+  /**
+   * The page entering or leaving its own full screen, as the browser reports it.
+   * @param on Whether the page is full screen now.
+   */
+  async function pageFullscreen(on: boolean): Promise<void> {
     Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => (on ? document.documentElement : null) });
     document.dispatchEvent(new Event('fullscreenchange'));
     await taskbar.updateComplete;
   }
 
+  /**
+   * The browser window entering or leaving its own full screen, as after F11: no
+   * `fullscreenElement` and no `fullscreenchange`, only the media query changing.
+   * @param on Whether the window is full screen now.
+   */
+  async function windowFullscreen(on: boolean): Promise<void> {
+    displayMode.matches = on;
+    for (const listener of displayModeListeners) listener({ matches: on, media: displayMode.media } as MediaQueryListEvent);
+    await taskbar.updateComplete;
+  }
+
+  /** Every button on the fixed row, in the order it is drawn. */
   const row = () => [...taskbar.renderRoot.querySelectorAll<HTMLElement>('.features .task')];
-  const last = () => row()[row().length - 1];
+  /** The full screen button, which leads the row. */
+  const first = () => row()[0];
+  /**
+   * The icon a row button draws.
+   * @param button The button to read.
+   * @returns The icon's registered name.
+   */
   const iconOf = (button: HTMLElement) => button.querySelector('umb-icon')?.getAttribute('name');
 
-  it('sits after the pinned apps', async function () {
+  it('leads the row, before the pinned apps', async function () {
     this.timeout(MOUNT_TIMEOUT_MS);
-    expect(row().map(iconOf)).to.deep.equal(['icon-document', 'icon-fullscreen']);
+    expect(row().map(iconOf)).to.deep.equal(['icon-umbradesktop-fullscreen', 'icon-document']);
   });
 
   it('asks the browser to take the whole page full screen', async function () {
     this.timeout(MOUNT_TIMEOUT_MS);
-    last().click();
+    first().click();
     expect(asked).to.deep.equal(['enter']);
   });
 
-  it('turns into Exit full screen when the browser goes full screen, and leaves it when clicked', async function () {
+  it('turns into Exit full screen when the page goes full screen, and leaves it when clicked', async function () {
     this.timeout(MOUNT_TIMEOUT_MS);
-    await browserFullscreen(true);
-    expect(iconOf(last())).to.equal('icon-exit-fullscreen');
-    expect(last().getAttribute('aria-pressed')).to.equal('true');
-    last().click();
+    await pageFullscreen(true);
+    expect(iconOf(first())).to.equal('icon-umbradesktop-exit-fullscreen');
+    expect(first().getAttribute('aria-pressed')).to.equal('true');
+    first().click();
     expect(asked).to.deep.equal(['exit']);
   });
 
-  it('follows the browser back out, as when Esc leaves full screen', async function () {
+  it('follows the page back out, as when Esc leaves full screen', async function () {
     this.timeout(MOUNT_TIMEOUT_MS);
-    await browserFullscreen(true);
-    await browserFullscreen(false);
-    expect(iconOf(last())).to.equal('icon-fullscreen');
-    expect(last().getAttribute('aria-pressed')).to.equal('false');
+    await pageFullscreen(true);
+    await pageFullscreen(false);
+    expect(iconOf(first())).to.equal('icon-umbradesktop-fullscreen');
+    expect(first().getAttribute('aria-pressed')).to.equal('false');
+  });
+
+  it('keeps the page its own full screen, although the browser reports full screen for it too', async function () {
+    // Chrome matches `display-mode: fullscreen` during the page's own full screen as well as after
+    // F11, so the two reports arrive together here, and the page's own has to win: this is the
+    // full screen the button can leave.
+    this.timeout(MOUNT_TIMEOUT_MS);
+    await pageFullscreen(true);
+    await windowFullscreen(true);
+    expect(first().hasAttribute('aria-disabled'), 'this one is the button to leave').to.equal(false);
+    first().click();
+    expect(asked).to.deep.equal(['exit']);
+  });
+
+  it('greys out while the browser itself is full screen, as after F11', async function () {
+    this.timeout(MOUNT_TIMEOUT_MS);
+    await windowFullscreen(true);
+    expect(first().getAttribute('aria-disabled')).to.equal('true');
+    expect(iconOf(first()), 'the screen is full screen, so the arrows still point in').to.equal(
+      'icon-umbradesktop-exit-fullscreen',
+    );
+    first().click();
+    expect(asked, 'no page can leave the browser full screen, and asking for its own on top only confuses').to.deep.equal(
+      [],
+    );
+  });
+
+  it('comes back once the browser leaves its own full screen', async function () {
+    this.timeout(MOUNT_TIMEOUT_MS);
+    await windowFullscreen(true);
+    await windowFullscreen(false);
+    expect(first().hasAttribute('aria-disabled')).to.equal(false);
+    expect(iconOf(first())).to.equal('icon-umbradesktop-fullscreen');
+    first().click();
+    expect(asked).to.deep.equal(['enter']);
+  });
+
+  it('dims a greyed-out button and drops its pointer', async function () {
+    // The two things that say "this cannot act right now" on any theme's button face, whatever the
+    // theme draws behind it: the whole button fades, and the cursor stops promising a click.
+    this.timeout(MOUNT_TIMEOUT_MS);
+    const enabled = getComputedStyle(first());
+    expect([enabled.cursor, enabled.opacity], 'an enabled button').to.deep.equal(['pointer', '1']);
+    await windowFullscreen(true);
+    const greyed = getComputedStyle(first());
+    expect(greyed.cursor, 'no pointer over a button that cannot act').to.equal('default');
+    expect(Number(greyed.opacity), 'faded').to.be.lessThan(1);
   });
 });

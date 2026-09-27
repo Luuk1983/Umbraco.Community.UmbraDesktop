@@ -13,11 +13,12 @@ import { UMBRADESKTOP_AI_CHAT_APP_ALIAS, aiChatAvailability } from './availabili
 const CHAT_REF = catalogue.entries.find((entry) => entry.alias === UMBRADESKTOP_AI_CHAT_APP_ALIAS)?.ref;
 
 /**
- * Umbraco AI's Copilot Workspace, as a single button at the head of the row.
+ * Umbraco AI's Copilot Workspace, as a single button at the head of the row's apps.
  *
- * First because it is the app somebody who installed the AI package opens all day, and because a
- * position on this row is only worth learning if it never moves — so the one feature most likely to
- * be present on any given install takes the slot nearest the launcher button.
+ * First among the apps because it is the app somebody who installed the AI package opens all day.
+ * Not first on the row, because a position there is only worth learning if it never moves, and this
+ * one comes and goes with the AI package: full screen, which every install has, holds the slot
+ * nearest the launcher button, so nothing ahead of the chat shifts from one site to the next.
  *
  * Switched on by default: somebody who installed the AI package wanting the chat is the safe
  * assumption. Where the package is absent, or the user may not reach it, the feature stays listed

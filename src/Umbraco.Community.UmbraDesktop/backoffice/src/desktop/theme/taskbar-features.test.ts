@@ -118,4 +118,26 @@ for (const theme of UMBRADESKTOP_THEMES) {
       ).to.equal(false);
     }
   });
+
+  it(`leaves a greyed-out task button greyed out in the ${theme.name} theme`, async () => {
+    // The base fades a task button that cannot act, the full screen button while the browser owns
+    // full screen, with `opacity` and `cursor` on `.task[aria-disabled='true']`. A theme rule that
+    // declares either on the button itself can undo that, and then the one sign that the button will
+    // not respond is gone: a theme may restyle, never remove. A theme wanting a different fade sets
+    // `--umbradesktop-task-disabled-opacity` instead, which this does not read as a declaration.
+    const sheets = await theme.sheets?.();
+    for (const { selector, block } of rules(sheets?.taskbar?.cssText ?? '')) {
+      for (const part of selector.split(',')) {
+        // The button itself is the selector's last compound: a rule for its icon, its label or a
+        // marker drawn as a pseudo-element inside it fades nothing this is about.
+        const target = part.trim().split(/[\s>+~]+/).pop() ?? '';
+        if (!mentions(target, 'task') || target.includes('::')) continue;
+        expect(
+          /(?:^|[{;\s])(opacity|cursor)\s*:/.test(block.slice(block.indexOf('{'))),
+          `the ${theme.name} theme sets opacity or cursor on a task button, which can undo a greyed-out ` +
+            `one: ${block.trim()}`,
+        ).to.equal(false);
+      }
+    }
+  });
 }

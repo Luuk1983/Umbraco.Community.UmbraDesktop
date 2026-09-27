@@ -1,6 +1,8 @@
 import { expect } from '@open-wc/testing';
 import { render } from '@umbraco-cms/backoffice/external/lit';
 import { UMBRADESKTOP_FULLSCREEN_FEATURE } from './index.js';
+import { currentPlatform, leaveFullscreenHintKey } from './leave-hint.js';
+import icons from '../../../icons/icons.js';
 import type { UmbraDesktopTaskbarFeatureContext } from '../types';
 
 /**
@@ -22,7 +24,7 @@ function context(over: Partial<UmbraDesktopTaskbarFeatureContext> = {}) {
     isRefRegistered: () => false,
     open: () => undefined,
     localize: (key) => key,
-    fullscreen: false,
+    fullscreen: 'off',
     canFullscreen: true,
     toggleFullscreen: () => toggled.count++,
     ...over,
@@ -46,16 +48,55 @@ function button(value: UmbraDesktopTaskbarFeatureContext): HTMLButtonElement {
 it('offers to go full screen when the desktop is not', () => {
   const drawn = button(context().value);
   expect(drawn.classList.contains('task'), 'themed as a taskbar button').to.equal(true);
-  expect(drawn.querySelector('umb-icon')?.getAttribute('name')).to.equal('icon-fullscreen');
+  expect(drawn.querySelector('umb-icon')?.getAttribute('name')).to.equal('icon-umbradesktop-fullscreen');
   expect(drawn.getAttribute('aria-label')).to.equal('#umbraDesktop_taskbarFullscreenEnter');
   expect(drawn.getAttribute('aria-pressed')).to.equal('false');
 });
 
-it('offers to leave full screen when the desktop is full screen', () => {
-  const drawn = button(context({ fullscreen: true }).value);
-  expect(drawn.querySelector('umb-icon')?.getAttribute('name')).to.equal('icon-exit-fullscreen');
+it('offers to leave full screen when the page is full screen', () => {
+  const drawn = button(context({ fullscreen: 'page' }).value);
+  expect(drawn.querySelector('umb-icon')?.getAttribute('name')).to.equal('icon-umbradesktop-exit-fullscreen');
   expect(drawn.getAttribute('aria-label')).to.equal('#umbraDesktop_taskbarFullscreenExit');
   expect(drawn.getAttribute('aria-pressed')).to.equal('true');
+});
+
+/**
+ * Umbraco has no four-arrow pair, so both glyphs are this package's own, and a name nobody
+ * registered does not fail anywhere: `umb-icon` just draws an empty button. This is where that
+ * would surface.
+ */
+it('draws only icons this package registers', () => {
+  const registered = icons.map((icon) => icon.name);
+  for (const fullscreen of ['off', 'page', 'browser'] as const) {
+    const name = button(context({ fullscreen }).value).querySelector('umb-icon')?.getAttribute('name');
+    expect(registered, `${name} is not registered`).to.include(name);
+  }
+});
+
+/**
+ * F11, or the browser's own menu, puts the browser itself in full screen, and no page can leave
+ * that: `exitFullscreen()` is rejected, and asking for the page's own full screen on top only swaps
+ * one browser notice for another. So the button says so rather than pretending, and says how.
+ */
+it('greys out while the browser itself is full screen, and says how to leave it', () => {
+  const { value, toggled } = context({ fullscreen: 'browser' });
+  const drawn = button(value);
+  const hint = `#${leaveFullscreenHintKey(currentPlatform())}`;
+
+  expect(drawn.getAttribute('aria-disabled'), 'greyed out').to.equal('true');
+  expect(drawn.getAttribute('title'), 'the hint is the tooltip').to.equal(hint);
+  expect(drawn.getAttribute('aria-label'), 'and what a screen reader hears').to.equal(hint);
+  // Inward arrows still: the screen is full screen, it is only not this button's to end.
+  expect(drawn.querySelector('umb-icon')?.getAttribute('name')).to.equal('icon-umbradesktop-exit-fullscreen');
+
+  drawn.click();
+  expect(toggled.count, 'a click must not ask for a full screen nothing here can leave').to.equal(0);
+});
+
+it('stays enabled whenever the full screen is its own to leave, or there is none', () => {
+  for (const fullscreen of ['off', 'page'] as const) {
+    expect(button(context({ fullscreen }).value).hasAttribute('aria-disabled'), fullscreen).to.equal(false);
+  }
 });
 
 it('toggles full screen when clicked', () => {
@@ -77,7 +118,8 @@ it('is unavailable where the browser does not allow full screen', () => {
   expect(UMBRADESKTOP_FULLSCREEN_FEATURE.availability(context().value)).to.deep.equal({ available: true });
 });
 
-it('sits on the launcher side, after the pinned apps', () => {
+it('sits on the launcher side', () => {
+  // Where on that side is the registry's to say, and `features.test.ts` asserts it.
   expect(UMBRADESKTOP_FULLSCREEN_FEATURE.region).to.equal('launcher');
   expect(UMBRADESKTOP_FULLSCREEN_FEATURE.id).to.equal('fullscreen');
 });
