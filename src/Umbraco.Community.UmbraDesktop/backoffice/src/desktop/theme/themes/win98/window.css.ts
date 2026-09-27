@@ -182,20 +182,22 @@ export default css`
      the base draws and neither of which this theme has to restate. */
   /* A sunken well on the face, as this theme draws every read-only field: inset bevel, no bottom
      border, and a 2px inset from the frame's ring so the well sits *inside* the window rather than
-     spanning it. The strip's own height token already accounts for the inset. */
-  .path-bar {
+     spanning it. The strip's own height token already accounts for the inset. The pane header and
+     a floating attached window's strip are that strip in their other places, and a pane header sits
+     on the same row as the path, so they get the same well and the same inset. */
+  .path-bar,
+  .pane-header,
+  .attached-strip {
     box-shadow: ${unsafeCSS(WIN98_BEVEL_SUNKEN)};
     border-bottom: none;
     margin: 0 2px 2px;
     font-family: ${unsafeCSS(WIN98_FONT)};
   }
-  /* Square corners, and the era's selection blue behind a hovered crumb with white text on it —
-     the same pairing the Start menu and every list in this theme use. */
+  /* Square corners. The era's selection blue behind a hovered crumb, with white text on it, comes
+     from the palette's path-link hover tokens. The strip's toolbar buttons, Preview among them, are
+     squared and bevelled by the strip-button tokens instead. */
   .path-crumb {
     border-radius: 0;
-  }
-  .path-crumb:hover {
-    color: #ffffff;
   }
 
   .notice {

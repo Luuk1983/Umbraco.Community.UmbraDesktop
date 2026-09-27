@@ -29,6 +29,12 @@
     "taskbar",
     "full screen",
     "side by side",
+    "preview",
+    "live preview",
+    "headless",
+    "headless preview",
+    "docking",
+    "attached windows",
     "window snapping",
     "snap",
     "tiling",
@@ -110,6 +116,10 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/unsaved-changes-guard.png",
       "Caption": "Your work, guarded three ways at once: a dot for unsaved changes, a warning when someone else saved over you, and an error when they binned it. Every marker is repeated on the taskbar, so it reaches a window you minimised an hour ago."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/live-preview.png",
+      "Caption": "Live preview: the page opens beside the editor, inside the same window, and reloads every time you save. Headless front ends too, from the same preview URL as Save and preview."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png",

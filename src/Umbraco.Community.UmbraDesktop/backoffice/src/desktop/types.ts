@@ -45,7 +45,16 @@ export type UmbraDesktopChromeProfile = 'full-section' | 'workspace-only' | 'bar
  */
 export type UmbraDesktopAppContent =
   | { kind: 'iframe'; url: string }
-  | { kind: 'element'; element: ElementLoaderProperty };
+  | {
+      kind: 'element';
+      element: ElementLoaderProperty;
+      /**
+       * Properties assigned onto the element before it connects. Set by a feature opening an
+       * attached window, to tell its body which window and document it belongs to; never by a
+       * catalogue or package app, which has nothing to be told.
+       */
+      props?: Readonly<Record<string, unknown>>;
+    };
 
 /** A launchable app: what its window body is, plus how to frame and present it. */
 export interface UmbraDesktopApp {
@@ -241,6 +250,71 @@ export interface UmbraDesktopWindow {
    * router and by the banner's discard action. Design D7.
    */
   refreshing?: boolean;
+
+  /**
+   * How many times this window's document has had a new saved version since it loaded: its own save
+   * or publish, or a refresh after somebody else saved. Written by the dirty watcher through the
+   * manager, and read by whatever has to follow the saved version, which today is an attached
+   * preview. It changes only on a save, so carrying it on the render model costs a re-render per
+   * save and nothing per keystroke.
+   */
+  saves?: number;
+
+  /**
+   * The id of the window this one is attached to, when it is a floating attached window.
+   *
+   * A floating attached window belongs to its owner: the two rise as one layer, minimizing the owner
+   * takes it along, closing the owner closes it, and its taskbar button sits inside the owner's
+   * group. Absent on every ordinary window and on every owner, because a group is one owner and its
+   * attached windows and nothing nests. The group itself is never stored: it is derived from this
+   * field (see `window-group.ts`), so it cannot disagree with the list.
+   */
+  owner?: string;
+
+  /**
+   * The attached content this window draws as panes inside itself, beside its own content.
+   *
+   * On the owner rather than as windows of their own, because a pane is not a window: it has no
+   * titlebar, no taskbar button and no position, and it goes wherever its window goes. Absent on a
+   * window with none. Design: `docs/design/2026-09-27-attached-windows-design.md`.
+   */
+  panes?: ReadonlyArray<UmbraDesktopPane>;
+
+  /**
+   * Whether this floating attached window was minimized because its owner was, rather than on its
+   * own. Restoring the owner brings back exactly these, and not a window the editor had put away.
+   */
+  minimizedWithOwner?: boolean;
+
+  /**
+   * Which side of its owner a floating attached window docks back to, from its Dock button: the side
+   * it was on as a pane, or the side its feature asked for when it opened floating.
+   */
+  dockSide?: 'left' | 'right';
+}
+
+/**
+ * Attached content drawn inside its owner window, beside the owner's own content, behind a splitter.
+ *
+ * Docking and undocking move one app between a pane and a floating attached window; its {@link id}
+ * survives the move, so the two forms are one thing to the manager.
+ */
+export interface UmbraDesktopPane {
+  /** Stable id, kept when the content moves between pane and floating window. */
+  id: string;
+  /** The content: an element app, the same one either way. */
+  app: UmbraDesktopApp;
+  /** Which side of the owner's content it sits on. */
+  side: 'left' | 'right';
+  /** Its width in px, which the splitter adjusts. */
+  width: number;
+  /**
+   * How much the window grew to make room for this pane, which is what closing or undocking it gives
+   * back. Zero when the pane took its width from the editor instead, beside a window that could not
+   * grow. Recorded rather than recomputed, because the splitter may have moved since and the
+   * window's rect is not the place to read the difference from.
+   */
+  grew?: number;
 }
 
 /** Whether an app was maintainer-certified or auto-derived as an untested fallback. */

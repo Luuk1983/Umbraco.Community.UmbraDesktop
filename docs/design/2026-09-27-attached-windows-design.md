@@ -1,12 +1,12 @@
 # Attached windows - Design
 
-> Some windows only mean something beside another one: a preview of the document you are editing,
-> the list of what somebody else changed in it, its copy on another environment. This gives the
-> desktop one primitive for all of them. An attached window belongs to an owner window, rises and
-> minimizes with it, has no taskbar button of its own, and is either docked against the owner as
-> part of it or floating above it as a tool window.
+> Some content only means something beside a document: a preview of it, the list of what somebody
+> else changed in it, its copy on another environment. This gives the desktop one primitive for all
+> of them. Attached content belongs to an owner window and is shown one of two ways: **docked**, as a
+> pane inside the owner window, or **floating**, as a separate window that rises, minimizes and
+> closes with its owner and sits beside it on the taskbar in one group.
 
-- **Status:** Approved design / pre-implementation
+- **Status:** Built, revised twice after browser testing
 - **Date:** 2026-09-27
 - **Branch:** `claude/attached-windows-concept-112902`
 - **Issue:** [#94](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/94)
@@ -14,14 +14,16 @@
   preview), [#31](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/31) (the document
   on another environment), [#38](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/38)
   (show what changed)
+- **Mockup:** [`mockups/attached-windows.html`](mockups/attached-windows.html)
+- **Guide:** [`../attached-windows.md`](../attached-windows.md), for a feature that wants to use this
 - **Target:** Umbraco CMS **v17**, package `Umbraco.Community.UmbraDesktop`
 
 ---
 
 ## 1. Goal & scope
 
-Three features want a second window beside a document window, and all three are about the document
-next to them:
+Three features want something beside a document window, and all three are about the document next
+to them:
 
 - **#21** shows the rendered page beside the editor.
 - **#38** shows what changed when somebody else edited the document. Its design (overwrite guard
@@ -32,294 +34,326 @@ next to them:
 
 Built separately, each would invent its own pairing. This is the pairing, once.
 
-**In scope:** the relationship on the window model, its stacking, taskbar, minimize, close,
-placement, docking, maximize and snap rules, the dock ghost, and the tests for all of it.
+**In scope:** the relationship on the window model; the docked pane and its chrome; floating
+attached windows, their stacking, controls and taskbar group; docking and undocking; and the
+contract a consumer's content implements.
 
-**Out of scope:** anything that renders inside an attached window. Each consumer owns its content.
-Also out: attaching arbitrary windows to each other by hand. Windows 11's snap groups do that, and
-nobody has asked for it here.
+**Out of scope:** what renders inside. Each consumer owns its content. Also out: attaching arbitrary
+windows to each other by hand. Windows 11's snap groups do that, and nobody has asked for it here.
 
 ---
 
 ## 2. What other systems do
 
 - **Windows.** Owned windows (Find dialogs, tool palettes) stay above their owner, hide when it
-  minimizes, close with it and get no taskbar button. Maximizing the owner leaves them floating.
-- **macOS.** Child windows are ordered above their parent and move with it, which is the literally
-  attached version. Utility panels float above an application. Sheets and the old drawers are glued
-  to their window.
-- **Linux.** A transient window behaves like a Windows owned window: above its parent, minimized with
-  it, no taskbar entry.
+  minimizes, close with it and get no taskbar button.
+- **macOS.** Child windows are ordered above their parent and move with it. Utility panels float
+  above an application.
+- **Linux.** A transient window behaves like a Windows owned window.
 - **Applications.** Visual Studio, JetBrains IDEs and Photoshop have panels that are either docked,
-  which makes them part of the window's layout so they fill with it, or floating as tool windows on
-  top. Winamp's windows snapped together and moved as one while snapped.
-
-The operating systems float. The docked or floating split is an application pattern, and it is the
-one that fits a desktop whose windows are whole backoffices. Everything else here (above the owner,
-minimized with it, no taskbar button, closed with it) is what every platform already does.
+  which puts them *inside* the main window's layout, or floating as separate windows. That split,
+  not the operating systems' owned windows, is the model here.
 
 ---
 
 ## 3. Settled decisions
 
 - **D1. Created by features, never by hand.** A preview control, a notice action or a compare
-  action opens an attached window for a given owner. Attached windows are not launcher apps.
-- **D2. One owner, no nesting.** An attached window has exactly one owner and owns nothing itself.
-  An owner may have several attached windows, one of each kind, where the kind is the attached app's
-  alias. Asking for a kind already open focuses it.
-- **D3. One layer.** Focusing any window in a group raises the whole group. Attached windows always
-  stack above their owner, so a floating one can never be buried behind it.
-- **D4. No taskbar button.** The owner's button stands for the group. #21 had decided the preview
-  gets its own button, because a minimized preview would otherwise be unreachable; an attached
-  window never minimizes on its own, so that case no longer exists.
-- **D5. One state.** Minimize, maximize and restore from any window apply to the group.
-- **D6. Close cascades one way.** Closing the owner closes the group. Closing an attached window
-  closes only that one.
-- **D7. Docked or floating.** Docked is part of the owner: its top and height, against its left or
-  right edge, moving and maximizing with it. Floating is a tool window above the owner. Floating is
-  a necessary evil rather than the goal: the backoffice does not hold together much below 900px, so
-  when two windows do not fit side by side at a usable width, overlapping beats squeezing.
-- **D8. Docked moves as one.** Dragging the owner carries its docked windows. Dragging a docked
-  window's titlebar undocks it. Without the first half, the first move of the owner leaves the docked
-  window behind and docking means something only at the moment of maximizing.
-- **D9. A different document closes the group's attached windows.** They describe the document the
-  owner was showing. A consumer that would rather follow the new document can add that later.
+  action opens attached content for a given owner. It is never a launcher app.
+- **D2. One owner, no nesting, one of each kind.** Attached content has exactly one owner and owns
+  nothing itself. The kind is the attached app's alias, counted across panes and floating windows
+  together: asking for a kind that is already open, in either form, focuses it.
+- **D3. Docked is a pane inside the owner window.** One frame and one border, so nothing can overlap
+  and there is no seam between two windows to theme. The pane runs from the titlebar down, behind a
+  splitter, with a small header of its own: icon, title, reload, pop out, close. The path strip and
+  the notices stay over the owner's own content column, because both are about that content. A pane
+  has no minimize or maximize and no taskbar button: it goes wherever its window goes.
+- **D4. Floating is an attached window.** A separate window with the full set of controls (reload,
+  minimize, maximize, close). Under its titlebar is a strip the desktop draws, reading "Attached to
+  *owner*", with a Dock button at its end. The strip is the pane header's other half: pop out lives
+  in the header while docked, Dock lives in the strip while floating. The first build marked a
+  floating window with a chain-link glyph before its title instead, and nobody could have been
+  expected to read it. Dock is disabled, with a tooltip saying why, when the pane would not fit.
+- **D5. One layer, focused on top.** An owner and its floating windows rise as one, with no other
+  window between them, and within the group the window you focus goes on top. A fixed order (always
+  above the owner) was built first and dropped: it made the editor impossible to bring in front of
+  its own preview without moving one of them.
+- **D6. One group on the taskbar.** The owner's button, then a button for each of its floating
+  windows, all inside one box. Each is clickable on its own and behaves as any window button does:
+  clicking focuses that window, clicking the one that already has focus minimizes it. The active
+  marker sits on the focused window's button. The box is the signal, not the labels, so it survives
+  the icon-only themes.
+- **D7. Minimizing.** Minimizing the owner minimizes the group. Minimizing a floating window hides
+  only that one; its button brings it back. Restoring the owner brings back what was minimized with
+  it, not what was minimized on its own.
+- **D8. Maximizing is per window.** A floating window maximizes on its own, and maximizing the owner
+  leaves floating windows alone, reachable from their buttons. A pane maximizes with its window.
+- **D9. Closing cascades one way.** Closing the owner closes its panes and floating windows, asking
+  first about any with unsaved work. Closing attached content closes only that.
+- **D10. A different document closes it.** When the owner starts showing a different document, its
+  panes and floating windows close: they describe the document it was showing. A reload of the same
+  document closes nothing. A consumer that would rather follow the new document can add that later.
+- **D11. Docking follows the pointer.** While a floating window is dragged, its owner shows a dock
+  zone just inside each edge where a pane would fit: a band 160px wide (at most a third of the
+  owner), below the titlebar, labelled "Dock here". The zone under the pointer turns solid and says
+  "Release to dock", and letting go there docks. Where the dragged window's own edge happens to be
+  does not matter. The owner draws the zones inside its own frame, so the window being dragged
+  passes over them; drawn on the desktop above every window, they covered the window being dropped.
+  To undock, press Pop out in the pane header, or drag the header: after 12px the pane tears off
+  into a floating window under the pointer and the same drag carries on moving it, like a browser
+  tab.
+- **D12. Opening a pane widens the window.** The window grows by the pane's width so the editor
+  keeps its own, shifting onto the desktop if it would run off an edge. When the desktop cannot fit
+  the widened window, the content opens floating instead: the backoffice does not hold together much
+  below its minimum, so a second window over the owner beats squeezing the editor. A maximized or
+  snapped owner cannot grow, so there the pane takes its width from the editor, as long as the
+  editor keeps its minimum.
+- **D13. The preview control lives in the path strip, not the titlebar.** Every theme's titlebar
+  controls are summed into its drag-clamp metrics and measured by its `metrics.test.ts`. A control
+  only some windows draw under-counts those metrics, which is the unsafe direction: the reload
+  button gets away with it only because leaving it out over-counts. The strip carries no such sum,
+  already names the document, and is drawn on the section windows a document is edited in. It shows
+  as pressed while the pane is open, and clicking it then closes the pane.
+- **D14. Two actions that must not look alike.** Pop out uses a picture-in-picture glyph, a frame
+  with a small filled window in its corner. Leaving the desktop is spelled out as "Open in a new
+  browser tab" with the external-link arrow. The first build used one arrow for both. Dock uses
+  the same frame with its side panel filled, on the side it will dock to.
+- **D15. The strips are the path strip in other places.** The pane header and the floating
+  window's strip are drawn at the theme's `pathbarHeight` and from the path strip's tokens, so a
+  docked pane's header lines up with the owner's path beside it and reads as one strip. Each has
+  `pane-header-*` tokens of its own that fall back to the `path-*` ones, so a theme that styled its
+  path strip has styled these. The first build used a 30px strip in the backoffice's greys, which no
+  theme had styled, and it looked pasted on in all five.
+- **D16. Their buttons are toolbar buttons.** Preview, Dock and the pane header's controls have no
+  face and no border until hovered, and are written in the strip's text colour, not the link colour
+  the crumbs use. Pressed Preview is drawn the way the theme draws a toggled toolbar button, from
+  `strip-button-on-*` tokens: Umbraco's own "you are here" colour by default, a darker fill on macOS,
+  an accent tint on Windows 11, a pushed-in bevel over a dithered face on Windows 98. The first
+  build drew a bordered white button and an outline ring, which read as form controls dropped onto
+  the chrome.
 
 ---
 
 ## 4. The model
 
-`UmbraDesktopWindow` gains two optional fields:
+A pane is not a window. It is content the owner window draws, so it lives on the owner:
 
 ```ts
-owner?: string;            // the owner window's id; absent on every ordinary window
-docked?: 'left' | 'right'; // absent when floating, and always absent on an owner
+interface UmbraDesktopPane {
+  id: string;               // stable while it moves between pane and floating window
+  app: UmbraDesktopApp;     // the same element app either way
+  side: 'left' | 'right';
+  width: number;            // the pane's own width, splitter-adjustable
+  grew?: number;            // how much the window grew for it, given back when it goes
+}
+
+// UmbraDesktopWindow gains:
+panes?: ReadonlyArray<UmbraDesktopPane>;  // on an owner
+owner?: string;                           // on a floating attached window
+dockSide?: 'left' | 'right';              // on a floating attached window: where Dock puts it
+minimizedWithOwner?: boolean;             // D7: what restoring the owner brings back
+saves?: number;                           // on an owner: see §5
 ```
 
-Optional and absent, like `dirty` and `snapped`, so every window that exists today is an ordinary
-window without a migration. Nothing is persisted: open windows do not survive a reload, so there is
-no stored shape to version.
+Docking and undocking move one app between the two forms: undocking removes it from `panes` and
+opens a window with `owner` set; docking does the reverse. Its `id` survives the move, so a consumer
+can tell "moved" from "opened". Its element is remounted, because it moves between two DOM subtrees.
 
-A **group** is an owner plus every window whose `owner` is its id. It is derived, never stored, so it
-cannot disagree with the list.
+Nothing is persisted: open windows do not survive a reload.
 
-### 4.1 `window-group.ts` (new, pure)
+A **group** is an owner plus every window whose `owner` is its id, derived and never stored.
 
-The group rules get their own file beside `window-model.ts` rather than growing it:
+### 4.1 `window-group.ts` (pure)
 
-| Function | What it answers |
-| --- | --- |
-| `groupOf(windows, id)` | The owner and its attached windows, for any member's id |
-| `focusGroup(windows, id)` | Raise the group: the owner takes the next z, attached windows above it, the focused one active |
-| `setGroupState(windows, id, state)` | Minimize, maximize or restore every member |
-| `placeAttached(owner, size, side, bounds, mins)` | Where a new attached window goes, and whether the owner has to move (§5) |
-| `moveGroup(windows, id, x, y)` | Move the owner and carry its docked windows by the same delta |
-| `followOwner(windows, ownerId)` | Re-derive docked rectangles after the owner resized |
-| `dockTargetAt(dragged, owner, edge)` | Which side of its owner a floating window is offering to dock to, if any |
-| `groupLayout(windows, ownerId, region, mins)` | The maximize and half-snap layout (§6) |
+The group rules: finding a window's group, raising it (D5), minimizing and restoring it (D7),
+closing it (D9), the one-of-each-kind lookup (D2), pane placement and window widening (D12), and the
+dock target for a pointer (D11). Every function hands back the same list when nothing changed,
+because the observable's identity drives rendering.
 
-Every function hands back the same list when nothing changed, for the reason `setWindowDirty`
-documents: the observable's identity drives rendering.
+### 4.2 `window-manager.context.ts`
 
-### 4.2 `window-manager.context.ts` (edited)
+`openAttached(ownerId, app, side)` opens a pane when D12 allows and a floating window otherwise,
+and returns the content's id. `closeAttached`, `undock`, `dock`, `canDock`, `setPaneWidth` and
+`setAttachedContentWidth` do what they say. `focus`, `setState`, `close` and `requestClose` apply the
+group rules, and `setSubjects` applies D10. While a floating attached window is dragged,
+`previewSnap` offers the dock zones on `dockZones` instead of the half-desktop snap, and
+`commitSnap` docks when the pointer is in one.
 
-- Gains `openAttached(ownerId, app, side)`.
-- `focus`, `setState`, `move`, `resize`, `close` and `requestClose` become group-aware by calling
-  §4.1. `requestClose` on an owner guards every member with unsaved changes. None of the three
-  consumers ever has any, since all three are read-only, but the rule should not depend on that.
-- `setSubjects` already detects that a window started showing a different document, to clear its
-  conflict flags. It now also closes that owner's attached windows (D9). A reload of the same
-  document is not a change and closes nothing.
-- `commitSnap` and the maximize path route through `groupLayout` when the window has docked
-  windows. A window with none keeps today's behaviour exactly.
+### 4.3 The window element
 
-### 4.3 The window element (edited)
+Lays the frame out as titlebar, then a row: the panes on the left, the owner's column (path
+strip, notices, body), the panes on the right, each pane behind a splitter. A pane is its own
+element, `umbradesktop-window-pane`, but its drag is carried by the owner's frame, because the pane
+element is removed the moment it tears off and the same pointer has to go on moving the new window.
+On a floating attached window it draws the attached strip and the full controls. On an owner it
+draws its own dock zones while one of its floating windows is dragged.
 
-- A docked window draws no resize handle on the edge it shares with its owner, and its top and
-  bottom handles are gone too, since its height is the owner's.
-- Dragging an attached window never offers the half-desktop snap. It offers the dock ghost instead
-  (§7).
-- Drag stays hand-rolled with `setPointerCapture`. A group move is one state update per pointer
-  move, the same count as a single window's.
+### 4.4 The taskbar
 
-### 4.4 The taskbar (edited)
-
-It skips any window with an `owner`. The owner's button is active while any member has focus, and
-`taskActivation` answers for the group: clicking the active group's button minimizes the group, and
-clicking any other raises it.
+Draws each owner's button and its floating windows' buttons inside one group box (D6). Windows
+without attached windows draw exactly as today.
 
 ---
 
-## 5. Placement
+## 5. The consumer contract
 
-A new attached window asks for a side and a size (its app's `defaultSize`, with the active theme's
-chrome added exactly as `open` does). `placeAttached` tries, in order:
+What a feature builds to use this, and what `docs/attached-windows.md` explains to the next one:
 
-1. **Docked beside the owner**, at the owner's top and height. If that runs off the desktop, shift
-   the pair inward until it does not.
-2. **Docked, narrower.** Shrink the attached window towards its minimum width, then the owner towards
-   its own, until the pair fits.
-3. **Floating.** When even both minimums do not fit side by side, the window floats at the size it
-   asked for, inside the owner's edge on its side, starting one titlebar below the owner's top so the
-   owner's titlebar and controls stay visible.
-
-"Minimum" is `minWindowSizeForContent`, the same floor the resize and the snap already use. No
-second number for what counts as usable.
-
-Several docked windows on one side stack outwards in the order they were opened.
+- An **element app**, opened with `openAttached`. The same element must work as a pane and as a
+  floating window, because the editor decides which, and may change their mind.
+- **`content.props`**, assigned onto the element before it connects. This is how the body learns
+  its owner and its subject; a constructor takes no arguments. The app host already does this.
+- **Reload** remounts the body. A body that needs fresh data on reload fetches it on connect.
+- **The owner's state** is read from the window manager: `dirty`, `changedElsewhere`, and `saves`,
+  a count of how many times the owner's document has had a new saved version (its own save or
+  publish, or a clean window's refresh after somebody else saved). The dirty watcher counts it. A
+  discard is not counted, since it leaves the saved version alone.
 
 ---
 
-## 6. Maximize and snap
+## 6. Themes
 
-Maximizing from any window lays the group out across the desktop. A half snap of the owner does the
-same across that half, so one function serves both, with the region as its input:
+New surfaces, each with tokens so every theme restyles and none removes:
 
-- Docked windows keep their width on their side, full height.
-- The owner takes what is left.
-- If what is left is below the owner's minimum, the owner takes the whole region and its docked
-  windows overlap it at their sides, above it. This is the same policy `snapRect` already has for a
-  single window: a window you can work in beats a tiling that looks tidy.
-- Floating windows stay where they are, above the owner.
+- **The pane:** `pane-background`, `pane-header-*` (falling back to `path-*`, D15) and
+  `pane-splitter-*`. The header is not a titlebar and must not look like one.
+- **The strips' buttons:** `strip-button-*` for radius, hover and pressed (D16).
+- **The dock zones:** `dock-zone-*`, with an `active` set of their own. The first build filled the
+  active zone from the snap ghost's translucent white, which vanished over a white window.
+- **The taskbar group box:** `task-group-*`. A bordered box on Umbraco, a groove on Windows 98. Its
+  geometry goes inside the taskbar's own box, like the notice badge, because `.running` clips.
 
-**How it is drawn.** A maximized window without docked windows keeps today's 100% layout. A group
-with docked windows cannot be drawn in percentages, so its layout is written into each member's
-`rect`, with the previous rectangle in `restoreRect`, and re-derived on every desktop resize. That is
-exactly the arrangement snapping already uses (`snapWindow`, `resnapWindows`), so a maximized group
-is a snapped one as far as that machinery is concerned. Restore gives every member its `restoreRect`
-back.
-
-Dragging a maximized or snapped group's titlebar restores it under the pointer, as a single window
-does today.
+`theme/attached-content.test.ts` fails any sheet that hides the group box, the pane header or its
+controls, the splitter, the attached strip or the Dock button. It also fails a palette whose hover
+or pressed text matches its own background, and a palette that styles the path strip without giving
+pressed Preview a fill of its own. No new metric: the strip height is `pathbarHeight`.
 
 ---
 
-## 7. Docking by drag
-
-While a floating attached window is dragged, `dockTargetAt` checks whether the edge facing its owner
-is within `UMBRADESKTOP_SNAP_EDGE` of the owner's left or right edge. If it is, the desktop draws a
-ghost at the docked rectangle and letting go docks it there. It is only ever offered against the
-window's own owner.
-
-The ghost is the snap ghost: the same element and the same three tokens. A dock preview and a snap
-preview are one idea, "let go and it goes here", and two looks for it would ask every theme for a
-second answer to one question.
-
----
-
-## 8. The drag clamp
-
-A dragged group is clamped as a whole: `clampWindowPosition` runs against the union of the owner and
-its docked windows, and the resulting delta moves them all. Clamping each window on its own would let
-the desktop's edge pull a docked window off its owner, which D8 exists to prevent. Floating windows
-are clamped on their own, as today.
-
----
-
-## 9. Themes
-
-No new tokens are expected. Attached windows use the ordinary window chrome under every theme, and
-the dock ghost is the snap ghost. A docked pair is two windows touching, which themes with shadows or
-rounded corners may draw as a visible seam. That is checked in a browser under all five themes, and
-if one of them needs to style it, that is a missing token to add for every theme rather than a theme
-exception.
-
----
-
-## 10. Tests, written first
+## 7. Tests, written first
 
 | What | Where |
 | --- | --- |
-| Focusing an attached window raises the owner too and keeps the attached one above it | `window-group.test.ts` |
-| Minimizing from either window minimizes both; restoring restores both | same |
-| Closing the owner closes the group; closing an attached window leaves the owner | same |
-| Opening the same kind twice focuses the one already open | same |
-| An attached window cannot become an owner | same |
-| Placement: docked when it fits, pair shifted when that makes it fit, narrowed to the minimums, floating below the owner's titlebar when nothing fits | same |
-| A docked window follows the owner's move and resize | same |
-| Dragging a docked window undocks it at its own size | same |
-| A dock is offered near the owner's edge, not elsewhere, and never against another window | same |
-| Maximize: docked side by side, floating left alone, overlap rather than squeeze when too narrow | same |
-| A half snap lays the group out within the half by the same rule | same |
-| The union clamp keeps a docked pair together at the desktop's edges | same |
-| A different document closes attached windows; a reload of the same one does not | `window-manager.test.ts` |
-| A group close guards every member with unsaved changes | same |
-| An attached window has no taskbar button; the owner's is active while it has focus | `components/taskbar-features.test.ts` |
-| A docked window has no shared-edge, top or bottom handle; an attached window is never offered the half snap | `components/window-snap.test.ts` |
+| Raising a group puts the focused window on top and nothing between the group | `window-group.test.ts` |
+| Minimizing the owner takes the group; a floating window minimizes alone; restoring the owner brings back only what went with it | same |
+| One of each kind, across panes and floating windows | same |
+| Opening a pane widens the window by the pane, shifts it onto the desktop, and falls back to floating when it cannot fit | same |
+| A maximized or snapped owner's pane takes width from the editor, and floats when the editor would go below its minimum | same |
+| The dock target follows the pointer, not the window's edge | same |
+| Closing the owner closes panes and floating windows; a different document closes both; a reload of the same one does not | `window-manager` tests |
+| Undocking keeps the id and opens a floating window; docking does the reverse | same |
+| The taskbar draws a group box with one button per window, and the active marker on the focused one | `components/` tests |
+| The frame lays out owner column, splitter and pane; the path strip and notices stay in the owner column | same |
+| A floating attached window has the attached strip and full controls; a pane header has reload, pop out and close | same |
+| Tearing a pane off takes 12px and follows the pointer; pressing its header or splitter selects no text | same |
+| The dock zones are drawn inside the owner and under the dragged window, and the active one is solid | same |
+| The strips are the path strip's height and take its tokens; the buttons have no face at rest | same |
+| No theme hides any of the new surfaces; pressed and hovered text reads on its background | `theme/` |
+| The save count: a save counts, a load, a discard and another document's load do not | `dirty-watcher.test.ts` |
 
-**Browser checks, part of done and not of the suite:**
+**Browser checks, part of done:**
 
-- Drag a docked pair across other windows' iframes; it must not stall.
-- Maximize a group on a wide and on a narrow viewport, and restore it.
-- Dock and undock by drag, including the ghost.
-- All five themes, docked and floating.
-
----
-
-## 11. Risks
-
-- **R1. Maximize changes shape for a group.** A group with docked windows is laid out in pixels and
-  re-derived on resize, where a lone window is 100%. The mitigation is keeping the lone case
-  untouched and giving the group path the same machinery snapping already proved.
-- **R2. A narrow desktop always floats.** Below the two minimum widths, every attached window
-  overlaps its owner. Accepted: that is D7, and placement keeps the owner's titlebar visible.
-- **R3. Consumers' specs predate this.** #21 says the preview gets its own taskbar button, #31 says
-  it navigates to the other environment, and #38's design opens its panel in the notice region.
-  Each is superseded on that point by this design, and each issue's text has been brought in line
-  (§13). The overwrite guard design itself still says the notice region.
+- A docked pane and a floating window under all five themes, light and dark.
+- Dragging a floating window across other windows' iframes, and docking it by the pointer.
+- Opening a pane on a narrow desktop falls back to floating.
+- Focusing the editor and the preview in turn from the taskbar group.
 
 ---
 
-## 12. Alternatives considered
+## 8. Risks
 
-- **Always floating**, the Windows owned-window model. Simplest, and it covers a document you would
-  like to see beside its diff with a palette over it. Rejected as the only mode because comparing
-  is the point of two of the three consumers.
-- **Always docked**, the macOS child-window and drawer model. Rejected because on a laptop two
-  backoffices side by side are each too narrow to use, and a window that cannot be moved away from
-  its owner cannot be moved out of the way either.
-- **A pane inside the owner window.** Rejected in #21 already: content windows open at 960 wide and
-  the backoffice stops holding together nearer 900, so a pane forces the window to about 1440, and
-  `chromeProfile`, the reload button and the chrome injector are all per window.
-- **A group object in the manager**, holding members. It pays off only if users could group arbitrary
-  windows, which is out of scope. Two optional fields on the window cannot drift from the list.
-- **An own taskbar button for each attached window**, #21's original decision. Its reason, an
-  unreachable minimized preview, cannot occur under D5.
-- **Docked windows that do not follow the owner.** Rejected by D8.
+- **R1. Two new chrome surfaces across five themes.** The pane header and the group box are fifteen
+  states to check. The theme test covers removal mechanically; the look is the browser pass.
+- **R2. Widening a window can move it.** Opening a pane near the right edge shifts the window left.
+  That is the honest trade for keeping the editor usable, and it is what D12 says.
+- **R3. A remount on dock and undock.** Whatever the body held is rebuilt. For all three consumers
+  that is a refetch, and none of them hold unsaved work.
+- **R4. A pane holds an iframe inside a window that holds an iframe.** The owner's focus catcher
+  exists because an inactive iframe swallows the click that should focus its window; the pane's
+  frame needs the same treatment.
+
+---
+
+## 9. What the first build taught
+
+The first build made docked a second window against the owner's edge. It worked, and seeing it in a
+browser changed the design:
+
+- **Two windows side by side overlap.** Each frame paints its border and shadow outside its own
+  rectangle, so two touching rectangles are two overlapping frames, and a seam between them is a
+  styling problem in every theme. A pane has one frame.
+- **A docked window's own minimize and maximize made no sense**, and pressing maximize on it
+  maximized the owner. A pane has neither.
+- **The attached window needed reload**, like any window whose body is a frame.
+- **Docking by the dragged window's edge felt wrong.** The pointer is where the user is looking.
+- **Always-above stacking buried the editor** behind its own preview. Focused-on-top plus a taskbar
+  button is the answer; the button is what #21 originally asked for, for the reason it gave.
+- **The same glyph for pop out and for opening a browser tab** read as one action.
+
+Kept from the first build, because they are right in the new shape too: the save count on the dirty
+watcher, `content.props` on element apps, reading the document and variant off the owner's route,
+the preview URL taken from the same endpoint and provider as Save and preview, and the preview
+control in the path strip.
+
+The second round of browser testing, on the pane shape, changed less but still changed things:
+
+- **The dock zones drew the future pane**, which beside a wide owner covered most of the screen and
+  read as "you can dock almost anywhere". They are bands inside the owner's edges now.
+- **Zones drawn by the desktop sat over the dragged window.** The owner draws them now (D11).
+- **The active zone disappeared** over a white window, because it borrowed the snap ghost's white.
+  It has accent tokens of its own.
+- **Undocking needed a drag out of the whole window.** A 12px tear-off, like a browser tab.
+- **Dragging a pane header selected text** across the window under the pointer. The header and the
+  splitter cancel the press that starts a selection.
+- **The strips and their buttons were unthemed** (D15, D16).
+- **A reload on save made Umbraco's own preview page warn** that its connection was lost, because
+  that page refreshes itself over its own hub. A body whose page refreshes itself must not also be
+  reloaded; `docs/attached-windows.md` lists this as a trap.
+
+---
+
+## 10. Alternatives considered
+
+- **Docked as a separate window against the owner's edge.** Built first. Dropped for §9's reasons.
+- **A chain-link glyph on a floating window's title**, to say it is attached. Built first. Dropped
+  for the strip (D4): a glyph cannot say what it is attached to, or offer to dock it back.
+- **Always floating**, the Windows owned-window model. Simplest, but comparing is the point of two
+  of the three consumers, and a window over the document is not a comparison.
+- **Attached windows always above their owner.** Built first. Dropped by D5.
+- **No taskbar button for a floating window**, relying on the owner's. Built first. With
+  focused-on-top it leaves a covered window unreachable.
+- **One taskbar button for the group** that flips between windows or opens a list. It hides the
+  preview behind a gesture; the user wants to reach it in one click.
+- **A group object in the manager**, holding members. It pays off only if users could group
+  arbitrary windows, which is out of scope.
+- **The strip running over the pane.** It describes and navigates the owner's content, not the
+  pane's, and the pane has a header of its own.
 - **Following the owner to its new document.** Right for a preview, wrong for a diff that describes
-  one specific conflict. Closing is the rule that is right for all three; following can be added per
-  consumer.
+  one specific conflict. Closing is the rule that is right for all three.
 
 ---
 
-## 13. The consumers' issues, brought in line
+## 11. The consumers' issues
 
-All three were updated on 2026-09-27, when this design was written:
-
-- **#21:** the preview has no taskbar button of its own, per D4, and navigating the parent to a
-  different node closes it, per D9.
-- **#31:** renamed, and reshaped from a navigation into a read-only, compared attached window
-  fetched through a connection. That needs one new typed endpoint, because
-  `DesktopConnectionApiClient` is deliberately not a pass-through proxy. #77 put comparing
-  environments out of scope for connections; #31 reverses that for this one case.
-- **#38:** the panel opens as an attached window rather than in the notice region, superseding that
-  sentence of the overwrite guard design §10. The deleted-document case reuses it the same way, and
-  #31 reuses its renderer.
+#21, #31 and #38 were brought in line with the first version of this design on 2026-09-27. Two
+points in them now need revising again: #21 still says the preview opens docked "on the content
+window's right" as a separate window and has no taskbar button of its own, where it is now a pane
+by default and gets a button in the group when it floats; and #38's panel likewise becomes a pane
+by default.
 
 ---
 
-## 14. Definition of done
+## 12. Definition of done
 
-- [ ] `npm run build` and `npm test` both pass
-- [ ] `README.md`: does not apply until a consumer ships, since nothing here is visible on its own
-- [ ] `umbraco-marketplace-*.json`: does not apply, for the same reason
-- [ ] `docs/`: this design doc; `docs/theming.md` only if §9's browser check finds a seam that needs
-      a token
-- [ ] `docs/attached-windows.md`, a guide in the spirit of `docs/theming.md`, written for two readers:
-      a contributor whose issue needs an attached window, and an AI agent building a future add-on.
-      It explains when a feature should use one and when it should not, how to open one, the rules
-      the desktop enforces so a consumer does not re-implement them, and the traps the build finds.
-      Written from the built code rather than from this design, and linked from `CLAUDE.md` so an
-      agent working in this repository finds it
+- [x] `npm run build` and `npm test` both pass
+- [x] `README.md`: describes attached content with its first visible consumer
+- [x] `umbraco-marketplace-*.json`: a tag and a screenshot with its first visible consumer
+- [x] `docs/theming.md`: the new token groups, and the strips drawn at `pathbarHeight`
+- [x] `docs/attached-windows.md`, a guide in the spirit of `docs/theming.md`, written for two readers:
+      a contributor whose issue needs attached content, and an AI agent building a future add-on. It
+      explains when a feature should use it and when it should not, how to open it, the contract in
+      §5, the rules the desktop enforces so a consumer does not re-implement them, and the traps the
+      build finds. Written from the built code rather than from this design, and linked from
+      `CLAUDE.md` so an agent working in this repository finds it
 - [ ] Anything the build teaches that is not obvious from the code is written down where the next
       person will hit it

@@ -82,6 +82,15 @@ export interface UmbraDesktopFrameState {
   dirty: boolean;
   /** What the frame's workspaces are showing, for matching server events against. */
   subjects: ReadonlyArray<UmbraDesktopWorkspaceSubject>;
+  /**
+   * How many times a document's saved version has changed since it loaded, across the frame.
+   *
+   * A count rather than a flag, because what a listener wants is "it changed again", and a flag that
+   * is already true cannot say that twice. Covers the editor's own save and publish and a clean
+   * window's refresh after somebody else saved; a discard is not counted, since it leaves the saved
+   * version alone. This is what an attached preview reloads on.
+   */
+  saves: number;
 }
 
 /** One tracked workspace: its live subscriptions, its last dirty answer and what it is showing. */
@@ -90,6 +99,8 @@ interface TrackedWorkspace {
   release: () => void;
   /** Whether this workspace is currently holding unsaved changes. */
   dirty: boolean;
+  /** How many times its saved version has changed since its current document loaded. */
+  saves: number;
   /** The subject it is showing, or undefined until its unique and entity type both arrive. */
   subject?: UmbraDesktopWorkspaceSubject;
 }
@@ -174,7 +185,8 @@ export function watchWorkspaceDirtyState(
   const signatureOf = (
     dirty: boolean,
     subjects: ReadonlyArray<UmbraDesktopWorkspaceSubject>,
-  ): string => `${dirty}|${subjects.map((s) => `${s.entityType}:${s.unique}`).join(',')}`;
+    saves: number,
+  ): string => `${dirty}|${subjects.map((s) => `${s.entityType}:${s.unique}`).join(',')}|${saves}`;
 
   const tracked = new Map<object, TrackedWorkspace>();
   /**
@@ -186,7 +198,7 @@ export function watchWorkspaceDirtyState(
    * of a freshly opened window computes the empty signature; against an unset baseline that counts
    * as a change and every window would report clean-with-no-subjects the moment it loaded.
    */
-  let reported = signatureOf(false, []);
+  let reported = signatureOf(false, [], 0);
   let stopped = false;
 
   /** Push the frame's state out, but only when it has actually changed. */
@@ -196,10 +208,11 @@ export function watchWorkspaceDirtyState(
     const subjects = entries
       .map((entry) => entry.subject)
       .filter((subject): subject is UmbraDesktopWorkspaceSubject => subject !== undefined);
-    const signature = signatureOf(dirty, subjects);
+    const saves = entries.reduce((total, entry) => total + entry.saves, 0);
+    const signature = signatureOf(dirty, subjects, saves);
     if (signature === reported) return;
     reported = signature;
-    onChange({ dirty, subjects });
+    onChange({ dirty, subjects, saves });
   };
 
   /**
@@ -214,7 +227,13 @@ export function watchWorkspaceDirtyState(
     let current: unknown;
     let unique: string | null | undefined;
     let entityType: string | undefined;
-    const entry: TrackedWorkspace = { dirty: false, release: () => {} };
+    /**
+     * Which document `persisted` was last set for. A new saved version only counts as a save when
+     * it is the same document's: navigating inside the window loads another document's, which is a
+     * load and not a save, whatever order core sets the unique and the data in.
+     */
+    let persistedFor: string | null | undefined;
+    const entry: TrackedWorkspace = { dirty: false, saves: 0, release: () => {} };
     /**
      * Recompute this entry's dirty answer and its subject, then publish the frame's total.
      *
@@ -246,7 +265,11 @@ export function watchWorkspaceDirtyState(
     tracked.set(key, entry);
     const subs = [
       workspace.persistedData.subscribe((value) => {
+        const changed =
+          persisted !== undefined && value !== undefined && jsonStringComparison(persisted, value) === false;
+        if (changed && persistedFor === unique) entry.saves += 1;
         persisted = value;
+        persistedFor = unique;
         evaluate();
       }),
       workspace.data.subscribe((value) => {

@@ -29,11 +29,12 @@ It also does something the backoffice does not do at all. When two people have t
 - Always says where you are. A window that holds a whole section carries a path under its title bar, Media library / Campaigns / hero.jpg, and every step of the way back is one click. In the plain backoffice you climb back out of a tree by clicking the section name in the header, and a window has no header, so this is where that goes.
 - Never loses your work. A window holding unsaved changes shows a dot in its title bar and on its taskbar button, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
 - Warns before you overwrite someone. If somebody else saves or bins a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. Deletion is warned about even when you have nothing unsaved, because there is no version left to refresh to. The plain backoffice does not warn about this at all.
+- See the page while you edit it. Press Preview in a document window's path and the rendered page opens beside the editor, inside the same window, and reloads every time you save. It works for headless sites too, using the same preview URL as Save and preview. Pop it out into a window of its own and it stays grouped with its document on the taskbar. See [Live preview](#live-preview).
 - A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus Games once a package puts an app there. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are stored on your Umbraco account, so they follow you to any browser you sign in on.
-- A taskbar. Every open window gets a button: click to focus, click again to minimise.
+- A taskbar. Every open window gets a button: click to focus, click again to minimise. A preview you popped out gets its own button, in one box with its document's.
 - The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: a full screen button, then the AI chat, then your pinned apps. All three are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
 - Choose your wallpaper. Ten backgrounds ship with the package, or pick any image from your own Media Library. The choice is stored on your Umbraco account, so it follows you.
 - Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, with one wrinkle on a browser you have never opened the desktop in. See [Starting in the desktop](#starting-in-the-desktop).
@@ -94,6 +95,7 @@ From the launcher:
 - Drag a window into the left or right edge of the desktop to snap it to that half, or into the top edge to maximise it. An outline appears while you are over an edge, showing where the window will go. Drag a snapped window away and it returns to the size it had before.
 - Use the taskbar at the bottom to switch between open windows. The icons to the left of them, beside the launcher button, are the fixed row: full screen, the AI chat and your pinned apps, one click from anywhere. See [On the taskbar](#on-the-taskbar).
 - The path under a section window's title bar says where that window is. Click any step to go back to it; the first step returns the window to whatever it opened at. If the window has unsaved changes it asks before leaving, the same way closing it does.
+- A window showing a document has a Preview button at the right of its path. It opens the page beside the editor and shows as pressed while it is open; press it again to close it. See [Live preview](#live-preview).
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
 - While a window is fetching its content, whether you have just opened it or just reloaded it, it shows the Umbraco mark with a ring turning around it. It covers the window until the content is ready, so you never see a half-drawn backoffice assembling itself.
 - Choose Exit in the launcher's footer to return to the classic backoffice. If you start in the desktop, exiting keeps you in the classic backoffice until you close the tab.
@@ -139,6 +141,52 @@ window turns read-only the moment it catches up with that, than when it has been
 where there is nothing left to save to.
 
 Every theme carries it in its own idiom, and no theme is allowed to remove it.
+
+## Live preview
+
+Press Preview at the right of a document window's path and the page opens beside the editor, the
+way Save and preview would show it, without leaving the desktop and without saving.
+
+![A content editor window on the desktop with the preview docked inside it on the right: the editor's fields on the left, the rendered homepage on the right, and the Preview button in the path shown as pressed.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/live-preview.png)
+
+- **It shows the last saved version.** While the editor has unsaved changes, a line above the
+  page says so. Each save or publish reloads the preview, and so does somebody else saving the
+  same document. Typing does not.
+- **Docked or floating.** When there is room, the preview opens docked: a pane inside the document
+  window, and the window grows to make room so the editor keeps its width. Drag the divider to
+  resize it. On a desktop too narrow for both, it opens as a window of its own instead. The pane
+  header has reload, pop out and close. Drag the header a little way to pull it out into a window,
+  as you would a browser tab.
+- **As a window of its own**, it has the usual controls, and a strip under its title saying which
+  window it belongs to, with a Dock button to put it back. You can also drag it into the document
+  window: zones appear inside its left and right edges, and letting go on one docks it there. Its
+  taskbar button sits in one box with the document's, and each button works on its own.
+- **It belongs to its document.** It rises, minimizes and closes with the document window, and it
+  closes when that window moves to a different document.
+- **Phone, tablet and desktop widths** resize the preview to a device's width when it shows a
+  headless front end. Umbraco's own preview page has a device switcher of its own in its footer, so
+  there the buttons stay out of its way. If your site offers more than one way to preview, as extra entries under Save and
+  preview, a picker chooses between them.
+- **Open in a new browser tab** is always there, for when you want the page full size, or when it
+  cannot be shown inside the desktop.
+
+### Headless sites
+
+The preview asks Umbraco for the same URL the Save and preview button opens, from the same URL
+provider. A headless site that registers its own provider for its front end gets its front end in
+the preview, with nothing to configure in the desktop.
+
+The front end does have to let itself be shown inside the backoffice. The preview is an iframe, so:
+
+- Allow the backoffice's origin in `Content-Security-Policy: frame-ancestors`.
+- Do not send `X-Frame-Options: DENY`, or `SAMEORIGIN` when the front end is on a different origin
+  from the backoffice.
+- If previewing depends on a cookie and the front end is on a different site from the backoffice,
+  that cookie has to be `SameSite=None; Secure`. A browser does not send `Lax` or `Strict` cookies
+  to a frame from another site.
+
+When a front end refuses, the browser shows an empty or error page in the frame, and the desktop
+cannot tell that apart from a page that loaded. Open in a new browser tab still works.
 
 ## Background Jobs
 
@@ -613,6 +661,12 @@ two channels a theme reaches the chrome through, the geometry it has to publish 
 be measured rather than typed, the traps that cost real time, worked examples from the five
 shipped themes, and a checklist to run before you open a PR. The system behind it is described in
 [`docs/design/2026-09-04-theming-system-design.md`](docs/design/2026-09-04-theming-system-design.md).
+
+Showing something beside a window, the way the live preview does, is a building block of its own
+called attached windows. [`docs/attached-windows.md`](docs/attached-windows.md) is the guide for a
+feature that wants one: when to use it and when not, how to open it, what your element must do,
+what the desktop already handles for you, and the traps the preview hit. The reasoning is in
+[`docs/design/2026-09-27-attached-windows-design.md`](docs/design/2026-09-27-attached-windows-design.md).
 
 Connecting other Umbraco instances is experimental, and
 [`docs/connections.md`](docs/connections.md) is its guide: creating the API user on the instance you

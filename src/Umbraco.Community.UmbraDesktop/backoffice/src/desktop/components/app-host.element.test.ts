@@ -120,6 +120,29 @@ async function capturedErrors(run: () => Promise<unknown>): Promise<string[]> {
   return messages;
 }
 
+/** An app that records what it had been handed at the moment it connected. */
+class PropsAppElement extends HTMLElement {
+  /** A property the host is expected to have set before the element reached the DOM. */
+  public ownerId?: string;
+  /** What `ownerId` was when the element connected. */
+  public seenOnConnect?: string;
+
+  /** Records the property as it stood on connecting. */
+  connectedCallback() {
+    this.seenOnConnect = this.ownerId;
+  }
+}
+customElements.define('umbradesktop-test-props-app', PropsAppElement);
+
+it('hands an app its props before it connects', async () => {
+  const host = await fixture<UmbraDesktopAppHostElement>(html`<umbradesktop-app-host></umbradesktop-app-host>`);
+  host.props = { ownerId: 'owner-1' };
+  host.load = async () => ({ element: PropsAppElement });
+  await host.mountComplete;
+  const app = host.querySelector('umbradesktop-test-props-app') as PropsAppElement;
+  expect(app.seenOnConnect).to.equal('owner-1');
+});
+
 it('mounts the element the manifest loader resolves to', async () => {
   const host = await fixture<UmbraDesktopAppHostElement>(html`<umbradesktop-app-host></umbradesktop-app-host>`);
   host.load = async () => ({ element: TestAppElement });
