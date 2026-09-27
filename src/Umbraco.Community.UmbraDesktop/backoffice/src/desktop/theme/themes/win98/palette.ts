@@ -215,6 +215,9 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   // not to need the help.
   '--umbradesktop-desktop-scrim': 'transparent',
   '--umbradesktop-desktop-watermark-opacity': '0.08',
+  // The desktop label in the lettering of 1998, at its bold.
+  '--umbradesktop-desktop-label-font': WIN98_FONT,
+  '--umbradesktop-desktop-label-weight': '700',
 
   // Apps. Win98 is the theme the app token group was shaped around: `edge-width: 2px` with
   // `radius: 0` is what makes a plain app stylesheet render as a bevelled control here and as a

@@ -17,8 +17,11 @@ import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
 import type { UmbraDesktopWallpaperView } from '../settings/wallpaper-view.js';
 import { UmbraDesktopThemeContext } from '../theme/theme.context.js';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
+import { UmbraDesktopLabelContext } from '../desktop-label/desktop-label.context.js';
+import type { DesktopLabelResponseModel } from '../../api/types.gen';
 import './window.element.js';
 import './taskbar.element.js';
+import '../desktop-label/desktop-label.element.js';
 import '../migrations/migration-screen.element.js';
 import type { UmbraDesktopMigrationScreenState } from '../migrations/types.js';
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
@@ -44,8 +47,20 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    */
   #theme = new UmbraDesktopThemeContext(this);
 
+  /**
+   * Owns the label drawn in a corner of the desktop: the site's name, and the switches behind it.
+   *
+   * Provided here, beside the settings, so the Site screen in the settings modal reaches it the way
+   * the Appearance screen reaches the settings. It reads the label as soon as it exists.
+   */
+  #label = new UmbraDesktopLabelContext(this);
+
   @state()
   private _windows: UmbraDesktopWindow[] = [];
+
+  /** The desktop label as last read, or null while there is none to draw. */
+  @state()
+  private _label: DesktopLabelResponseModel | null = null;
 
   @state()
   private _wallpaper?: UmbraDesktopWallpaperView;
@@ -104,6 +119,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     this.observe(this.#theme.paletteStyle, (style) => (this._paletteCss = style ?? ''));
     this.observe(this.#theme.metrics, (metrics) => this.#manager.setMetrics(metrics));
     this.observe(this.#settings.loaded, (loaded) => this.reportSettingsLoaded(loaded === true));
+    this.observe(this.#label.label, (label) => (this._label = label));
     this.observe(this.#settings.migration, (migration) => (this._migration = migration ?? { phase: 'idle' }));
   }
 
@@ -288,6 +304,9 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         <div class="wallpaper-brand" aria-hidden="true">
           <umb-icon name="icon-umbraco"></umb-icon>
         </div>
+        <!-- On the wallpaper, like the logo: after it, and before the surface so every window
+             paints over it. It has no z-index, so this order is the whole of its stacking. -->
+        <umbradesktop-desktop-label .label=${this._label}></umbradesktop-desktop-label>
         <div class="surface" ?inert=${this.#migrationShowing}>
           ${repeat(
             this._windows,

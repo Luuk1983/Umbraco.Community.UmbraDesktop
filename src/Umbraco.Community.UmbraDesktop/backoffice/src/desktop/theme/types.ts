@@ -90,6 +90,8 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-desktop-background-image',
   '--umbradesktop-desktop-scrim',
   '--umbradesktop-desktop-watermark-opacity',
+  '--umbradesktop-desktop-label-font',
+  '--umbradesktop-desktop-label-weight',
 ] as const;
 
 /**

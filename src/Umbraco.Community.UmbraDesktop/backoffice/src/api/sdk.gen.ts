@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConnectionData, CreateConnectionErrors, CreateConnectionResponses, DeleteConnectionData, DeleteConnectionErrors, DeleteConnectionResponses, GetAppIdentityData, GetAppIdentityErrors, GetAppIdentityResponses, GetBackgroundJobsData, GetBackgroundJobsErrors, GetBackgroundJobsResponses, GetConnectionsData, GetConnectionsErrors, GetConnectionsResponses, GetConnectionStatusData, GetConnectionStatusErrors, GetConnectionStatusesData, GetConnectionStatusesErrors, GetConnectionStatusesResponses, GetConnectionStatusResponses, SetAppIdentityData, SetAppIdentityErrors, SetAppIdentityResponses, UpdateConnectionData, UpdateConnectionErrors, UpdateConnectionResponses } from './types.gen';
+import type { CreateConnectionData, CreateConnectionErrors, CreateConnectionResponses, DeleteConnectionData, DeleteConnectionErrors, DeleteConnectionResponses, GetAppIdentityData, GetAppIdentityErrors, GetAppIdentityResponses, GetBackgroundJobsData, GetBackgroundJobsErrors, GetBackgroundJobsResponses, GetConnectionsData, GetConnectionsErrors, GetConnectionsResponses, GetConnectionStatusData, GetConnectionStatusErrors, GetConnectionStatusesData, GetConnectionStatusesErrors, GetConnectionStatusesResponses, GetConnectionStatusResponses, GetDesktopLabelData, GetDesktopLabelErrors, GetDesktopLabelResponses, SetAppIdentityData, SetAppIdentityErrors, SetAppIdentityResponses, SetDesktopLabelData, SetDesktopLabelErrors, SetDesktopLabelResponses, UpdateConnectionData, UpdateConnectionErrors, UpdateConnectionResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -144,6 +144,36 @@ export class UmbraDesktopService {
             headers: {
                 'Content-Type': 'application/json',
                 ...options.headers
+            }
+        });
+    }
+    
+    public static getDesktopLabel<ThrowOnError extends boolean = false>(options?: Options<GetDesktopLabelData, ThrowOnError>) {
+        return (options?.client ?? client).get<GetDesktopLabelResponses, GetDesktopLabelErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/desktop-label',
+            ...options
+        });
+    }
+    
+    public static setDesktopLabel<ThrowOnError extends boolean = false>(options?: Options<SetDesktopLabelData, ThrowOnError>) {
+        return (options?.client ?? client).post<SetDesktopLabelResponses, SetDesktopLabelErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/desktop-label',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers
             }
         });
     }

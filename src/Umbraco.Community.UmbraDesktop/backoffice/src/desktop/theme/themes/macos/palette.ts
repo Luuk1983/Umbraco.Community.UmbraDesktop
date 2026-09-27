@@ -155,6 +155,10 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
     'linear-gradient(155deg, #4a3f78 0%, #3b6ea5 55%, #2f8f96 100%)',
   '--umbradesktop-desktop-scrim': 'rgba(0, 0, 0, 0.1)',
   '--umbradesktop-desktop-watermark-opacity': '0.05',
+  // The desktop label in San Francisco, at 800 rather than the base's 900, whose heaviest cut
+  // reads as a headline rather than as the system's own lettering.
+  '--umbradesktop-desktop-label-font': MACOS_FONT,
+  '--umbradesktop-desktop-label-weight': '800',
 
   // Apps. No bevel at all: `edge-width: 0` is the point, so all a raised control has to separate it
   // from its ground is the fill step between these surfaces. `edge-dark` matches the window border

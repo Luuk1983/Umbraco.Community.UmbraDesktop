@@ -219,3 +219,29 @@ it("falls back to the theme's own ground when given no wallpaper", async () => {
   expect(painted.backgroundImage).to.equal('none');
   expect(painted.backgroundColor).to.equal('rgb(0, 128, 128)');
 });
+
+it('draws what it is given on the desktop, behind the window, at desktop scale', async () => {
+  const element = await fixture<UmbraDesktopThemePreviewElement>(
+    html`<umbradesktop-theme-preview .theme=${UMBRADESKTOP_THEMES[0]}
+      ><div class="probe" style="position:absolute;inset:0"></div
+    ></umbradesktop-theme-preview>`,
+  );
+  await element.updateComplete;
+  const scene = element.shadowRoot!.querySelector('.scene')!;
+  const slot = scene.querySelector('slot');
+  const probe = element.querySelector('.probe') as HTMLElement;
+
+  // Before the window in the scene, so it stacks under it the way the desktop label sits under
+  // every window on the real desktop.
+  expect(slot, 'a slot in the scene').to.exist;
+  expect([...scene.children].indexOf(slot!)).to.be.below([...scene.children].indexOf(scene.querySelector('.frame')!));
+  expect(slot!.assignedElements()).to.deep.equal([probe]);
+  // Laid out in the scene's own desktop pixels and shrunk with it, so a real chrome component
+  // placed here measures itself against a desktop, not against a thumbnail.
+  expect(probe.offsetWidth).to.equal(UMBRADESKTOP_PREVIEW_SCENE.w);
+});
+
+it('reserves the taskbar the way the desktop does, so a bottom corner clears it', async () => {
+  const { scene } = await previewOf(UMBRADESKTOP_THEMES[0]);
+  expect(getComputedStyle(scene).getPropertyValue('--umbradesktop-taskbar-reserve').trim()).to.not.equal('');
+});
