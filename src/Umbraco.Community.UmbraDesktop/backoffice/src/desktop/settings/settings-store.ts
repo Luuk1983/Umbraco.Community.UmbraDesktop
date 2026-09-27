@@ -217,6 +217,37 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
 }
 
 /**
+ * Whether a stored payload is one this build can actually read, as opposed to one
+ * {@link parseSettings} would silently hand back the defaults for.
+ *
+ * {@link parseSettings} cannot answer this, and deliberately: it returns the defaults for anything
+ * unreadable, which is right for painting a desktop and wrong for deciding whether something is
+ * worth copying. The migration needs the distinction, because copying an unreadable payload means
+ * writing *defaults* onto the account and recording the migration as done — and the browser's copy
+ * is then overwritten by the account's, so the original is gone.
+ *
+ * The case that matters is not a corrupt payload, it is a payload from a **later** build: `v: 2`
+ * reads as unreadable here, and somebody moving between builds would have their real settings
+ * replaced by defaults with nothing having failed.
+ * @param raw The raw string from storage, or `null` when nothing is stored.
+ * @returns True when this build understands the payload well enough to move it.
+ */
+export function isReadableSettingsPayload(raw: string | null): boolean {
+  if (!raw) return false;
+
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(raw);
+  } catch {
+    return false;
+  }
+
+  if (typeof decoded !== 'object' || decoded === null || Array.isArray(decoded)) return false;
+
+  return (decoded as { v?: unknown }).v === 1;
+}
+
+/**
  * Encode settings for storage.
  * @param settings The settings to persist.
  * @returns The JSON payload.

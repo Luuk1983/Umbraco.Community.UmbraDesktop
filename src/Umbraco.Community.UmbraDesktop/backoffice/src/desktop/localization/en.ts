@@ -304,5 +304,21 @@ export default {
       "The API user on %0% may not read this. Someone with access to that instance can put it in a group that has the section it needs.",
     permissionNeededLocal:
       'Managing connections needs access to the Settings section here. Ask an administrator of this instance.',
+    // the boot splash, which only speaks when a load runs long, and the two ways settings fail to save
+    bootLoadingSettings: 'Loading your desktop',
+    migrationSettingsToAccount: 'Moving your desktop settings to your account',
+    // the migration screen, shown once over the desktop while settings move to the account
+    migrationTitle: 'Setting up your desktop',
+    migrationBody:
+      'Your desktop settings are moving from this browser to your Umbraco account. This happens once and takes a moment.',
+    migrationDoneTitle: 'Your desktop now follows you',
+    migrationDoneBody:
+      'Your wallpaper, theme and pinned apps are stored on your Umbraco account, so they follow you to any browser you sign in on and survive clearing site data.',
+    migrationFailedTitle: 'Your settings could not be moved',
+    migrationFailedBody:
+      'Nothing has been lost. Your settings are still in this browser and the desktop will try again the next time you sign in.',
+    migrationContinue: 'Continue',
+    settingsNotSaved:
+      'That setting could not be saved to your account. It applies for now, but this browser will forget it.',
   },
 };

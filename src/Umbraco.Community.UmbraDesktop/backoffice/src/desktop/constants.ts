@@ -258,3 +258,49 @@ export const UMBRADESKTOP_DEFAULT_METRICS: UmbraDesktopThemeMetrics = {
  * own edges and reads identically under all five.
  */
 export const UMBRADESKTOP_SNAP_EDGE = 8;
+
+/**
+ * The stacking order inside the desktop, as one list rather than literals spread across files.
+ *
+ * These were three numbers in two files until a review found that the migration screen, at 100, sat
+ * *under* the taskbar at 1,000,000: `.desktop` is `position: relative` with no `z-index`, so it
+ * opens no stacking context and its children compete directly. The screen that was supposed to
+ * cover the desktop left the taskbar clickable, and with it the settings dialog, during a migration
+ * that was rewriting those very settings.
+ *
+ * Ordered low to high, each derived from the one below, so the relationship is the thing that is
+ * written down and a new layer cannot be inserted by guessing a bigger number.
+ */
+
+/**
+ * The snap preview: over every window, deliberately under the taskbar. A preview that covered the
+ * taskbar would hide the thing the window is being snapped alongside.
+ */
+export const UMBRADESKTOP_Z_SNAP_GHOST = 999_999;
+
+/** The taskbar: the highest thing on the desktop proper. */
+export const UMBRADESKTOP_Z_TASKBAR = UMBRADESKTOP_Z_SNAP_GHOST + 1;
+
+/**
+ * A system screen, above everything the desktop itself draws.
+ *
+ * Only the one-time migration screen uses this. It is not desktop chrome: it is the machine
+ * reporting on itself, and it must cover the desktop completely, because the desktop underneath is
+ * mid-change and its controls would otherwise let somebody edit the settings being migrated.
+ */
+export const UMBRADESKTOP_Z_SYSTEM_SCREEN = UMBRADESKTOP_Z_TASKBAR + 1;
+
+/**
+ * How long a migration may run before the screen gives up on it, in milliseconds.
+ *
+ * A **last resort**, like the splash's own lift timeout and for the same reason: the running state
+ * deliberately has no button, so a request that hangs rather than fails — a proxy holding the
+ * connection, an app pool asleep — would leave somebody behind a full-screen cover with no way out
+ * and nothing to click. Reaching this means something is broken rather than merely slow: the work
+ * itself is two requests.
+ *
+ * The migration is not cancelled when this fires, because it cannot be: it may already have written
+ * to the account. It is left to finish while the person is shown the failed screen, which is honest
+ * — their settings are still in this browser either way — and the ledger makes repeating it safe.
+ */
+export const UMBRADESKTOP_MIGRATION_TIMEOUT_MS = 30_000;

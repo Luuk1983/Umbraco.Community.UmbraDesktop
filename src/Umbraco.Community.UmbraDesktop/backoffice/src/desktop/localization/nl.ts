@@ -295,5 +295,21 @@ export default {
       'De API-gebruiker op %0% mag dit niet lezen. Iemand met toegang tot die installatie kan de gebruiker in een groep zetten die de benodigde sectie heeft.',
     permissionNeededLocal:
       'Verbindingen beheren vereist toegang tot de sectie Instellingen hier. Vraag een beheerder van deze installatie.',
+    // het opstartscherm, dat alleen iets zegt als het laden lang duurt, en de twee manieren waarop opslaan mislukt
+    bootLoadingSettings: 'Je bureaublad wordt geladen',
+    migrationSettingsToAccount: 'Je bureaubladinstellingen worden naar je account verplaatst',
+    // het migratiescherm, dat eenmalig over het bureaublad verschijnt terwijl instellingen verhuizen
+    migrationTitle: 'Je bureaublad wordt ingericht',
+    migrationBody:
+      'Je bureaubladinstellingen verhuizen van deze browser naar je Umbraco-account. Dit gebeurt eenmalig en duurt even.',
+    migrationDoneTitle: 'Je bureaublad gaat met je mee',
+    migrationDoneBody:
+      'Je achtergrond, thema en vastgezette apps staan nu op je Umbraco-account. Ze gaan mee naar elke browser waarin je inlogt en blijven staan als je je sitegegevens wist.',
+    migrationFailedTitle: 'Je instellingen konden niet verhuizen',
+    migrationFailedBody:
+      'Er is niets verloren gegaan. Je instellingen staan nog in deze browser en het bureaublad probeert het opnieuw de volgende keer dat je inlogt.',
+    migrationContinue: 'Doorgaan',
+    settingsNotSaved:
+      'Die instelling kon niet op je account opgeslagen worden. Hij geldt nu wel, maar deze browser vergeet hem.',
   },
 };
