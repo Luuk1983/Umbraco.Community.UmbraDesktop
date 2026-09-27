@@ -50,6 +50,20 @@ export const UMBRADESKTOP_BOOT_PARAM_OFF = 'off';
 export const UMBRADESKTOP_WALLPAPER_WAIT_MS = 8000;
 
 /**
+ * How long a boot may run before the splash starts explaining itself, in milliseconds.
+ *
+ * A **floor on saying anything**, not a target. A line reading "loading your settings" is reassuring
+ * after a second and a half and faintly alarming after eighty, because at eighty it announces that
+ * something is slow when nothing is. Every normal boot finishes well inside this and so says
+ * nothing at all, which is the intended experience: the splash is a boot screen, not a progress
+ * report.
+ *
+ * Comfortably inside {@link UMBRADESKTOP_SPLASH_TIMEOUT_MS}, so a boot slow enough to be explained
+ * still has plenty of time to finish being explained.
+ */
+export const UMBRADESKTOP_BOOT_STATUS_DELAY_MS = 1500;
+
+/**
  * How long the splash may cover the backoffice before it lifts regardless, in milliseconds.
  *
  * A **last resort**, not a routine event: the only thing standing between a readiness signal that

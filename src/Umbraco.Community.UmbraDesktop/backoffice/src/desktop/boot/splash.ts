@@ -161,6 +161,21 @@ const SPLASH_CSS = `
     line-height: 1;
     color: rgba(255, 255, 255, 0.96);
   }
+  /* Only ever present on a boot that has gone on long enough to deserve an explanation — see
+     'splash-status.ts'. Sized and coloured to sit under the wordmark without competing with it: a
+     status line that read as loudly as the product name would make every slow boot look like an
+     error. Fades in on its own, because it arrives after the stack has already settled. */
+  #${UMBRADESKTOP_SPLASH_ELEMENT_ID} .status {
+    margin-top: 14px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    max-width: 32ch;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.62);
+    animation: umbradesktop-splash-in 220ms ease-out both;
+  }
   @keyframes umbradesktop-splash-spin {
     to { transform: rotate(360deg); }
   }
@@ -208,6 +223,38 @@ export function raiseBootSplash(doc: Document = document, timeoutMs = UMBRADESKT
   doc.body.appendChild(splash);
 
   liftTimeout = window.setTimeout(() => lowerBootSplash(doc), timeoutMs);
+}
+
+/**
+ * Put a line of explanation on the splash, or take it away.
+ *
+ * Text, never markup: the string comes from a localization dictionary, which is data this package
+ * does not author in every culture, and `innerHTML` here would make a translation a script injection
+ * point on a screen that covers the entire backoffice.
+ *
+ * Does nothing when no splash is up. That is not defensive padding — the desktop is reached two
+ * ways, booted into (splash) and clicked into from the section menu (no splash), and the same load
+ * path drives both. The status is simply lost on the second, which is correct: there is nothing
+ * covering the screen to explain.
+ *
+ * Nothing here decides *when* to speak. See `splash-status.ts`.
+ * @param text The already-localized line, or null to remove it.
+ * @param doc The document to act on. Defaults to the current document.
+ */
+export function setBootSplashStatus(text: string | null, doc: Document = document): void {
+  const stack = doc.querySelector(`#${UMBRADESKTOP_SPLASH_ELEMENT_ID} .stack`);
+  if (!stack) return;
+
+  const existing = stack.querySelector('.status');
+
+  if (text === null) {
+    existing?.remove();
+    return;
+  }
+
+  const status = existing ?? stack.appendChild(doc.createElement('div'));
+  status.className = 'status';
+  status.textContent = text;
 }
 
 /**

@@ -32,16 +32,17 @@ It also does something the backoffice does not do at all. When two people have t
 - A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus Games once a package puts an app there. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
-- Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are remembered per user, in that browser.
+- Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are stored on your Umbraco account, so they follow you to any browser you sign in on.
 - A taskbar. Every open window gets a button: click to focus, click again to minimise.
 - The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: a full screen button, then the AI chat, then your pinned apps. All three are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
-- Choose your wallpaper. Ten backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user, in that browser.
-- Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, in that browser. See [Starting in the desktop](#starting-in-the-desktop).
+- Choose your wallpaper. Ten backgrounds ship with the package, or pick any image from your own Media Library. The choice is stored on your Umbraco account, so it follows you.
+- Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, with one wrinkle on a browser you have never opened the desktop in. See [Starting in the desktop](#starting-in-the-desktop).
 - Speaks your language, and writes the time your way. The desktop follows your Umbraco backoffice language, so a Danish backoffice gets a Danish clock rather than whatever your browser happens to be set to, and you can change that language from Desktop settings without needing access to the Users section. If your culture and your habits disagree, one switch forces a 12 or 24 hour clock without giving up anything else about how your language writes a time. See [Language and region](#language-and-region).
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on. A window waiting for its content shows the Umbraco mark with a turning ring, the same animation the boot screen uses, so the wait belongs to the desktop rather than looking like the page has stalled.
 - Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice. Five ship: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98. Adding your own is a folder of CSS and one catalogue entry.
 - Light, dark and high contrast, in the same place. Umbraco's own colour schemes are normally set in the user menu, three clicks from the theme that sits beside them. Appearance now has a row for them too, listing whatever themes the backoffice has registered rather than a fixed three, so a site shipping its own gets it here for free. One setting, two ways in: change it here and the user menu agrees, and the other way round. See [The backoffice's own colours](#the-backoffices-own-colours).
 - Let the wallpaper follow. Turn on one toggle in the theme picker and each theme brings its own background with it, so switching to Windows 98 gives you its bare teal and switching to macOS gives you a sunrise. Off by default, and choosing a wallpaper yourself turns it back off. See [Matching the wallpaper to the theme](#matching-the-wallpaper-to-the-theme).
+- Your desk follows you. Wallpaper, theme, pins, taskbar switches and language are stored on your Umbraco account rather than in one browser, so signing in from another machine, another browser or a private window gives you the desktop you set up, and clearing site data does not lose it. Settings you already had are moved across once, the first time you open the desktop after updating, behind a screen that tells you it is happening rather than doing it behind your back. See [Your settings follow you](#your-settings-follow-you).
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
 - Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
@@ -280,7 +281,7 @@ Five ship today:
 
 ![The Windows 98 theme: grey window frames with navy title bars, the launcher as a Start menu open in the corner listing the app catalogue by group, a taskbar button for each open window, and the bare teal desktop this theme brings with it.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-win98.png)
 
-Your choice applies immediately and is remembered per user, in that browser. Themes follow the
+Your choice applies immediately and is stored on your Umbraco account, so it follows you between machines. Themes follow the
 backoffice's own Light and Dark settings; under High contrast a theme uses its darkest colours,
 while window content switches to Umbraco's real high-contrast styling. Umbraco 4 and Windows 98
 ship a single palette on purpose: their grey is the design rather than a light-mode choice, so
@@ -353,7 +354,7 @@ so you can try a few and watch the desktop change behind the panel.
 
 ![Desktop settings open over the desktop, showing the theme in use above the wallpaper in use, with the wallpaper picker open beside it: every background that ships with the package, named, alongside None for the plain gradient and a tile for choosing your own image from the Media Library.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/choose-background.png)
 
-Your choice applies immediately and is remembered per user, in that browser.
+Your choice applies immediately and is stored on your Umbraco account, so it follows you between machines.
 
 ### Using your own backgrounds
 
@@ -362,6 +363,22 @@ There is nothing to configure and nothing to deploy. Upload the image to the Med
 Umbraco resizes it for you: the desktop asks for a copy with no side longer than 2560px, so a large upload never reaches the browser at full size and the resized copy is cached server-side. You do not need to optimise anything first.
 
 If you pick something that is not an image, the desktop tells you and leaves your current wallpaper alone.
+
+## Your settings follow you
+
+Your wallpaper, theme, pinned apps, taskbar switches and language preferences are stored on your Umbraco user account rather than in the browser you happened to set them in. Sign in from another machine, another browser or a private window and you get the desktop you built. Clearing site data does not lose it either.
+
+If you already had settings in a browser, they move onto your account the first time you open the desktop after updating, and only that once. The desktop tells you while it happens: a screen comes up over it explaining what is moving, and when it is finished it waits for you to close it rather than disappearing on a timer. A brand new user never sees it, because there is nothing to move.
+
+Nothing is deleted. The browser keeps a copy, which from then on is a cache of what is on your account rather than the original, so rolling the package back still finds settings it understands. Settings this version cannot read are left untouched rather than moved, so a desktop set up in a newer version is never overwritten by an older one.
+
+Three cases worth knowing:
+
+- If you had set the desktop up in two different browsers before updating, whichever one you open first wins. The other adopts what is by then on your account.
+- If the server cannot be reached, the desktop still opens, using what this browser remembers. Changes made in that state apply for the rest of the session and are then forgotten, which is exactly what has always happened in a browser that refuses to store anything. You are told when a setting could not be saved.
+- "Open the desktop when I sign in" is the one setting a browser does not pick up straight away. See [Starting in the desktop](#starting-in-the-desktop).
+
+There is nothing to configure and no new permission to grant. The settings live in Umbraco's own per-user storage, and a user can only ever read and write their own.
 
 ## Starting in the desktop
 
@@ -378,7 +395,7 @@ Two ways out:
 
 That second one is worth knowing before you need it. The desktop hides the backoffice header while it is open, so if a future version of the desktop ever breaks on your setup, that address is how you get back to a normal backoffice and turn the setting off. The desktop also skips the startup jump by itself if the last attempt did not finish, so a bad boot does not repeat.
 
-The setting is stored per user, in that browser, alongside your theme and wallpaper. Signing in on another machine starts in the classic backoffice until you turn it on there too.
+This one setting behaves slightly differently from the rest. It is stored on your Umbraco account like your theme and wallpaper, but the decision to open the desktop is made before the backoffice has asked the server anything — it has to be, or you would get a flash of the classic interface while it waited. So a browser reads its own copy of the setting, and a browser that has never opened the desktop does not have one yet. Turn it on at home and the first sign-in at the office still starts in the classic backoffice; open the desktop once there and every load after that starts in it. Turning it off elsewhere takes effect on this machine the same way, one load later.
 
 ## Language and region
 
@@ -392,7 +409,7 @@ It cannot take effect where it stands: every window is a frame with its own copy
 
 **Clock** forces 12 or 24 hour when your language and your habits disagree. Umbraco offers no British English, so an English backoffice is a 12 hour one whether you like it or not; this is how you get 24 hour without giving up anything else. It overrides only the hour, so Dutch still writes p.m. its own way, Danish keeps its dot, and Japanese and Korean keep their own markers in their own places. Left on Automatic, your language decides.
 
-Regional format and Clock are stored per user, in that browser, alongside your theme and wallpaper. The backoffice language is stored on your Umbraco user, so it follows you to any machine you sign in on.
+Regional format and Clock are stored on your Umbraco account, alongside your theme and wallpaper, so they follow you to any browser you sign in on. So does the backoffice language, which Umbraco has always kept on your user.
 
 ## Installing the backoffice as an app
 
