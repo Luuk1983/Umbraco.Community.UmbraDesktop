@@ -67,6 +67,7 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-start-hover-background',
   '--umbradesktop-start-active-background',
   '--umbradesktop-task-active-marker',
+  '--umbradesktop-task-disabled-opacity',
   '--umbradesktop-launcher-width',
   '--umbradesktop-launcher-height',
   '--umbradesktop-launcher-max-height',

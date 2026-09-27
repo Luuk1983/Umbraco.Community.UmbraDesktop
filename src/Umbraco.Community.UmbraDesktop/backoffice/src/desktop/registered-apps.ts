@@ -108,6 +108,7 @@ export function normaliseRegisteredApps(
       defaultSize: manifest.meta?.defaultSize,
       minSize: manifest.meta?.minSize,
       allowMultiple: manifest.meta?.allowMultiple,
+      resizable: manifest.meta?.resizable,
     });
   }
   return { apps, dropped };

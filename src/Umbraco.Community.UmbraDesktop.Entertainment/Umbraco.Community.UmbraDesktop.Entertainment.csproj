@@ -10,8 +10,8 @@
 	  <Product>Umbraco.Community.UmbraDesktop.Entertainment</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop.Entertainment</PackageId>
 	  <Title>UmbraDesktop Entertainment</Title>
-	  <Description>Games for UmbraDesktop. An optional add-on that puts Minesweeper on the desktop, in a window of its own and themed along with the rest of it.</Description>
-	  <PackageTags>umbraco;backoffice;desktop;games;minesweeper;entertainment;umbradesktop;apps;umbraco-marketplace</PackageTags>
+	  <Description>Games for UmbraDesktop. An optional add-on that puts Minesweeper and Snake on the desktop, each in a window of its own and themed along with the rest of it.</Description>
+	  <PackageTags>umbraco;backoffice;desktop;games;minesweeper;snake;entertainment;umbradesktop;apps;umbraco-marketplace</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop.Entertainment</RootNamespace>
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>

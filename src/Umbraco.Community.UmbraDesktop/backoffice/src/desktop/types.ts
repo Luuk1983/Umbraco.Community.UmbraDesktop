@@ -79,6 +79,11 @@ export interface UmbraDesktopApp {
   minSize?: { w: number; h: number };
   /** Whether more than one instance may open (default: allowed). */
   allowMultiple?: boolean;
+  /**
+   * Whether the window may be resized or maximized (default: allowed). `false` keeps it at the
+   * size it opened at; the window manager enforces it, so every route to a new size is covered.
+   */
+  resizable?: boolean;
   /** Sort weight within its group (ascending). */
   weight?: number;
   /** Curatorial group alias; undefined → the reserved "More" group. */
@@ -120,6 +125,8 @@ export interface UmbraDesktopRegisteredApp {
   minSize?: { w: number; h: number };
   /** Whether more than one window may open. */
   allowMultiple?: boolean;
+  /** The manifest's `meta.resizable`: whether the window may be resized or maximized. */
+  resizable?: boolean;
 }
 
 /** A position/size rectangle in desktop pixels. */
@@ -279,6 +286,8 @@ export interface UmbraDesktopCatalogueEntry {
   minSize?: { w: number; h: number };
   /** Whether more than one instance may open. */
   allowMultiple?: boolean;
+  /** Whether the window may be resized or maximized (default: allowed). */
+  resizable?: boolean;
   /** Sort weight within its group (ascending). */
   weight?: number;
   /** Curatorial group alias (see catalogue/groups.ts). */

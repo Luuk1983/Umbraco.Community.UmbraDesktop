@@ -302,7 +302,8 @@ export class MinesweeperElement extends UmbLitElement {
    * thing you click, so a button is what a screen reader should be offered. The group's label is
    * what names the collection instead.
    * Everything sits in one `.board` box, which exists for one reason: a window can be bigger than
-   * this app (maximize it and it is much bigger), the grid does not reflow, so the whole of it
+   * this app (it is `resizable: false`, but the host still floors a window at what its chrome
+   * needs, and under a wide titlebar that is wider than nine cells), the grid does not reflow, so the whole of it
    * centres at its natural size rather than staying pinned to the top-left corner with an empty
    * expanse beside it. One box also means one thing to centre instead of three that would have to
    * agree.

@@ -27,6 +27,7 @@
     "quick launch",
     "pinned apps",
     "taskbar",
+    "full screen",
     "side by side",
     "window snapping",
     "snap",
@@ -83,6 +84,7 @@
     "retro",
     "dashboard",
     "minesweeper",
+    "snake",
     "language",
     "localization",
     "translation",
@@ -146,7 +148,7 @@
     {
       "PackageId": "Umbraco.Community.UmbraDesktop.Entertainment",
       "GroupTitle": "Optional add-ons",
-      "Description": "Games for the desktop, starting with Minesweeper. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
+      "Description": "Games for the desktop: Minesweeper and Snake. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
     }
   ]
 }

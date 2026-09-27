@@ -71,6 +71,20 @@ export function findAppWindow(
 }
 
 /**
+ * Whether a window may change size: be resized, maximized or snapped to an edge.
+ *
+ * One function rather than `app.resizable !== false` written wherever it is needed, because unset
+ * means allowed and a caller that wrote `app.resizable` as a plain truthiness test would quietly
+ * make every app that never mentioned the field fixed-size. The window manager enforces the answer
+ * and the window element reads the same one to draw its chrome, so the two cannot disagree.
+ * @param w The window to ask about (only its app matters).
+ * @returns False only when the app asked for `resizable: false`.
+ */
+export function isResizable(w: Pick<UmbraDesktopWindow, 'app'>): boolean {
+  return w.app.resizable !== false;
+}
+
+/**
  * Decide what clicking a window's taskbar button should do, mirroring Windows/KDE tasklist
  * behaviour: clicking the already-focused window minimizes it (a toggle), while clicking any
  * other — inactive or minimized — brings it to the front (`focusWindow` restores minimized ones).

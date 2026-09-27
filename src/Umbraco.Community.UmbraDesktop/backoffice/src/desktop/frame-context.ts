@@ -21,6 +21,7 @@
 /** Umbraco's context-api event names. Not exported by the package, and stable across v14+. */
 const CONTEXT_REQUEST_EVENT = 'umb:context-request';
 const CONTEXT_PROVIDE_EVENT = 'umb:context-provide';
+const CONTEXT_UNPROVIDED_EVENT = 'umb:context-unprovided';
 
 /**
  * The shape `UmbContextProvider` reads off a request event.
@@ -60,20 +61,27 @@ export function aliasesOf(token: { toString(): string }): [string, string] {
  * @param element The element a provider announced itself from.
  * @param contextAlias The context alias to ask for.
  * @param apiAlias The api alias to ask for.
- * @param onInstance Called with whatever that provider holds; return true to accept it, which stops
- * the request travelling further.
+ * @param onInstance Called with whatever that provider holds and with the element that provider
+ * lives on; return true to accept it, which stops the request travelling further.
  */
 export function requestContextFrom(
   element: EventTarget,
   contextAlias: string,
   apiAlias: string,
-  onInstance: (instance: unknown) => boolean,
+  onInstance: (instance: unknown, provider: EventTarget) => boolean,
 ): void {
   const event = new Event(CONTEXT_REQUEST_EVENT, { bubbles: true, composed: true, cancelable: true });
   const request: ContextRequestEventLike = {
     contextAlias,
     apiAlias,
-    callback: onInstance,
+    // `currentTarget` rather than `element`, and the difference is not pedantry: the request
+    // bubbles, so the provider that answers is not always the one it was dispatched from. Core
+    // registers each provider's request listener on its own `#eventTarget`, so while that listener
+    // runs — which is when this callback is called, synchronously — `currentTarget` *is* that
+    // provider's element. That is the element it will later announce its withdrawal from, and
+    // therefore the only place a caller can reliably hear about it. See
+    // {@link watchUnprovidedContext}.
+    callback: (instance: unknown) => onInstance(instance, event.currentTarget ?? element),
     // The provider stops the event at the first alias match, which is what we want: the nearest
     // provider to that element is the one it provides.
     stopAtContextMatch: true,
@@ -95,14 +103,15 @@ export function requestContextFrom(
  * @param doc The frame's document.
  * @param contextAlias The context alias to watch for.
  * @param apiAlias The api alias to watch for.
- * @param onInstance Called with each instance a provider answers with; return true to accept it.
+ * @param onInstance Called with each instance a provider answers with and the element that provider
+ * lives on; return true to accept it.
  * @returns A function that stops watching.
  */
 export function watchProvidedContexts(
   doc: Document,
   contextAlias: string,
   apiAlias: string,
-  onInstance: (instance: unknown) => boolean,
+  onInstance: (instance: unknown, provider: EventTarget) => boolean,
 ): () => void {
   const onProvide = (event: Event) => {
     // Core's `UmbContextProvideEventImplementation` always sets `contextAlias`, so in the frame this
@@ -120,4 +129,52 @@ export function watchProvidedContexts(
   };
   doc.addEventListener(CONTEXT_PROVIDE_EVENT, onProvide);
   return () => doc.removeEventListener(CONTEXT_PROVIDE_EVENT, onProvide);
+}
+
+/**
+ * Watch one provider for the moment it takes its context away again.
+ *
+ * The other half of {@link watchProvidedContexts}, and needed for the same reason: a consumer that
+ * only ever hears about contexts appearing keeps whatever it learned from the last one for ever. A
+ * window routed to a section root has no workspace at all, so nothing new is provided and there is
+ * no later event to correct the record — the dirty watcher would stay marked and the path strip
+ * would keep the last document's ancestry.
+ *
+ * **On the provider's own element, and that is the whole point of this function.**
+ * `umb:context-unprovided` bubbles and is composed exactly as the provide event is, so listening
+ * for it on the frame's document looks like the symmetrical thing to do. It does not work, and it
+ * fails silently. Core fires it from `UmbContextProvider.hostDisconnected()`, which runs from the
+ * element's `disconnectedCallback` — *after* the browser has detached the element. A bubbling event
+ * dispatched from a detached node reaches that node's ancestors inside the detached tree and stops:
+ * the document is no longer one of them. Measured in Chrome against core's own
+ * `UmbContextProviderController`, not reasoned about.
+ *
+ * There is exactly one case where the document does hear it, which is what makes the mistake so
+ * easy to keep: `router-slot` calls `destroy()` on the page element it owns *before* removing it,
+ * and that walks the controllers while the element is still in the document. So a context provided
+ * by the routed element itself announces its withdrawal loudly, and every context provided below it
+ * — which is where `umb-workspace` and therefore both contexts the path strip reads live — goes
+ * quiet. A listener on the provider's element hears both, because both dispatch on that element.
+ *
+ * **The instance, not the alias, is what identifies what went away.** One element hosts several
+ * providers, and the event carries the context alias but not the api alias — the two contexts the
+ * path strip reads are both `UmbWorkspaceContext`, differing only by the api alias the event leaves
+ * out. Comparing the instance is conclusive and needs no aliases at all.
+ * @param provider The element the provider announced itself from, as `watchProvidedContexts` hands
+ * it over.
+ * @param instance The instance whose withdrawal this is about.
+ * @param onUnprovided Called when that instance is taken away.
+ * @returns A function that stops watching.
+ */
+export function watchUnprovidedContext(
+  provider: EventTarget,
+  instance: unknown,
+  onUnprovided: () => void,
+): () => void {
+  const onEvent = (event: Event) => {
+    if ((event as { instance?: unknown }).instance !== instance) return;
+    onUnprovided();
+  };
+  provider.addEventListener(CONTEXT_UNPROVIDED_EVENT, onEvent);
+  return () => provider.removeEventListener(CONTEXT_UNPROVIDED_EVENT, onEvent);
 }

@@ -19,6 +19,7 @@ import {
   unsnapWindow,
   clearSnap,
   resnapWindows,
+  isResizable,
 } from './window-model';
 import { snapRect, snapTargetAt } from './snap';
 import type { UmbraDesktopSnapTarget } from './snap';
@@ -470,11 +471,13 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   }
 
   /**
-   * Resize a window to an absolute rectangle (already clamped by the caller).
+   * Resize a window to an absolute rectangle (already clamped by the caller). Ignored for a
+   * `resizable: false` window, which has no handles to drag, so this only guards other callers.
    * @param id The window to resize.
    * @param rect The new rectangle.
    */
   public resize(id: string, rect: Rect): void {
+    if (this.#isFixedSize(id)) return;
     // Resizing a snapped window ends the snap: the size is the user's now, and the next desktop
     // resize must not re-derive it back to a half and undo them.
     this.#windows.setValue(clearSnap(setWindowRect(this.#windows.getValue(), id, rect), id));
@@ -539,9 +542,32 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     if (this.#bounds) this.clampToBounds(this.#bounds);
   }
 
-  /** Set a window's state (normal / minimized / maximized). */
+  /**
+   * Set a window's state (normal / minimized / maximized).
+   *
+   * Maximizing a `resizable: false` window is ignored, here rather than at the maximize button,
+   * because the button is only one of the ways in: a titlebar double-click and a drag into the top
+   * edge both arrive here too. Minimizing and restoring change nothing about a window's size, so
+   * they are allowed.
+   * @param id The window to change.
+   * @param state The state to put it in.
+   */
   public setState(id: string, state: UmbraDesktopWindowState): void {
+    if (state === 'maximized' && this.#isFixedSize(id)) return;
     this.#windows.setValue(setWindowState(this.#windows.getValue(), id, state));
+  }
+
+  /**
+   * Whether the window asked to keep its size, `resizable: false`. See `isResizable`.
+   *
+   * Every method that could change a window's size asks this first, which is what makes the flag a
+   * property of the window rather than of whichever piece of chrome happened to check it.
+   * @param id The window to ask about.
+   * @returns True for an open window whose app is fixed-size; false otherwise.
+   */
+  #isFixedSize(id: string): boolean {
+    const window = this.#windows.getValue().find((w) => w.id === id);
+    return window !== undefined && !isResizable(window);
   }
 
   /**
@@ -580,7 +606,9 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     if (!bounds) return;
     const target = snapTargetAt(pointer, bounds, UMBRADESKTOP_SNAP_EDGE);
     const window = this.#windows.getValue().find((w) => w.id === id);
-    if (!target || !window) {
+    // A fixed-size window is never offered a snap: every snap is a new size, the top one included,
+    // which maximizes. No offer means no ghost and nothing for commitSnap to take.
+    if (!target || !window || !isResizable(window)) {
       this.clearSnapPreview();
       return;
     }

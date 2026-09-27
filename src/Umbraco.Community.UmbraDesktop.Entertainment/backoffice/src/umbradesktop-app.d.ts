@@ -38,6 +38,8 @@ interface MetaUmbraDesktopApp {
   minSize?: { w: number; h: number };
   /** Whether two windows of this app may be open at once. */
   allowMultiple?: boolean;
+  /** Whether the window may be resized or maximized. Default: allowed. */
+  resizable?: boolean;
 }
 
 /**

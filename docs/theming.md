@@ -619,7 +619,8 @@ icon in the caption entirely, and while both shared one selector that rule hid t
 
 **Never scope a `.task` rule to `.running`.** The taskbar draws task buttons in two places now: the
 window list inside `.running`, and the fixed feature row inside `.features`, which sits between the
-start button and the window list and holds the AI chat button and the user's pinned apps. Both use
+start button and the window list and holds the full screen button, the AI chat button and the user's
+pinned apps. Both use
 the **same** `.task` class, and that is the whole reason a theme gets the feature row for free —
 your bevels, your dock tiles, your Windows 11 squares apply to it without a line of new CSS.
 
@@ -633,6 +634,14 @@ The row's buttons carry no `.task-label`, deliberately: they are icon-only every
 launch button that never stands in for a window has no title to carry. If your theme shows labels,
 your `.task` padding and gap are what size an icon-only button, so check one — a rule tuned for
 `icon + label` can leave a lone icon sitting off-centre.
+
+**Leave a greyed-out button greyed out.** The full screen button greys out while the browser itself
+is full screen, after F11 or the browser's menu, because no page can leave that, and its tooltip
+says which key does. The base stylesheet draws the greyed-out state on `.task[aria-disabled='true']`
+as a fade and a plain cursor on top of your button face, so your theme gets it with no CSS of its
+own. For a different fade, set `--umbradesktop-task-disabled-opacity` from your palette. Do not
+declare `opacity` or `cursor` on a `.task` rule: that can undo the fade, and
+`theme/taskbar-features.test.ts` fails a sheet that does.
 
 **If you hide labels, you owe the bar a way to tell the two lists apart.** Both lists draw the same
 icon for the same app, so with labels on it is the title that separates them — a window button

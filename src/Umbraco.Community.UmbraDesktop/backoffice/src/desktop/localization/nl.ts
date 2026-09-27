@@ -103,18 +103,28 @@ export default {
     // omdat een scherm dat begint met een kale "AI-chat"-schakelaar nergens zegt waar het over gaat.
     taskbarRegionLauncher: 'Taakbalkonderdelen',
     taskbarRegionLauncherAbout:
-      'Knoppen naast de startknop, in deze volgorde. Elke knop opent een app, net als de launcher. Wisselen tussen de vensters die al open staan blijft bij de knoppen verderop in de balk.',
+      'Knoppen naast de startknop, in deze volgorde. Volledig scherm komt eerst, en elke knop daarna opent een app, net als de launcher. Wisselen tussen de vensters die al open staan blijft bij de knoppen verderop in de balk.',
     taskbarRegionTray: 'Systeemvakpictogrammen',
     taskbarRegionTrayAbout: 'Pictogrammen naast de klok, die iets melden in plaats van iets openen.',
     // Eén schakelaar per onderdeel. De regel eronder vertelt wat het onderdeel op de taakbalk zet;
     // een onderdeel dat hier niet aangezet kan worden, zegt daaronder waarom niet.
     taskbarAiChat: 'AI-chat',
-    taskbarAiChatAbout: 'Zet vooraan op de taakbalk een knop voor de Copilot Workspace.',
+    taskbarAiChatAbout: 'Zet op de taakbalk, voor je vastgezette apps, een knop voor de Copilot Workspace.',
     taskbarAiChatNotInstalled: 'Umbraco AI is niet op deze site geïnstalleerd, dus er is geen chat om te openen.',
     taskbarAiChatNoPermission: 'Je hebt geen toegang tot de AI-sectie, dus de chat kan hier niet worden geopend.',
     taskbarPinnedApps: 'Vastgezette apps',
     taskbarPinnedAppsAbout:
       'Toont de apps die je in de launcher hebt vastgezet ook op de taakbalk, in dezelfde volgorde. Vastzetten en losmaken doe je in de launcher, zoals altijd.',
+    taskbarFullscreen: 'Volledig scherm',
+    taskbarFullscreenAbout: 'Zet vooraan op de taakbalk, naast de startknop, een knop die het bureaublad op volledig scherm zet, en weer terug. Esc verlaat volledig scherm ook.',
+    taskbarFullscreenEnter: 'Volledig scherm',
+    taskbarFullscreenExit: 'Volledig scherm verlaten',
+    taskbarFullscreenUnavailable: 'Deze browser staat niet toe dat het bureaublad op volledig scherm gaat.',
+    // De tooltip van de grijze knop terwijl de browser zelf op volledig scherm staat. Alleen de eigen
+    // toets van de browser verlaat dat, en welke toets dat is hangt af van het platform.
+    taskbarFullscreenBrowserF11: 'Je browser staat op volledig scherm. Druk op F11 om het te verlaten.',
+    taskbarFullscreenBrowserMac: 'Je browser staat op volledig scherm. Druk op Control-Command-F om het te verlaten.',
+    taskbarFullscreenBrowserChromeOs: 'Je browser staat op volledig scherm. Druk op de toets voor volledig scherm om het te verlaten.',
     settingsBack: 'Terug naar bureaubladinstellingen',
     // desktop settings — startup
     bootIntoDesktop: 'Open het bureaublad als ik inlog',

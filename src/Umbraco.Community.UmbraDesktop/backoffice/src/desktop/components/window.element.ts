@@ -1,6 +1,6 @@
 import type { Rect, UmbraDesktopWindow } from '../types';
 import type { UmbraDesktopResizeEdges } from '../window-model';
-import { clampResizeOrigin, clampWindowPosition, resizeRect, restoreDragPosition } from '../window-model';
+import { clampResizeOrigin, clampWindowPosition, isResizable, resizeRect, restoreDragPosition } from '../window-model';
 import { injectChromeStyles } from '../chrome-injector';
 import { watchWorkspaceDirtyState } from '../dirty-watcher.js';
 import { resolveThemeSync, syncThemeStylesheet } from '../iframe-theme.js';
@@ -639,9 +639,13 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (this.window) this.#manager?.focus(this.window.id);
   };
 
-  /** Double-clicking the titlebar toggles maximize/restore, as on Windows/GNOME/KDE. */
+  /**
+   * Double-clicking the titlebar toggles maximize/restore, as on Windows/GNOME/KDE. Does nothing for
+   * a `resizable: false` window, as on Windows, where double-clicking Minesweeper's titlebar did not
+   * maximize it either. The manager would refuse anyway; this just does not ask.
+   */
   #onTitleDblClick = () => {
-    if (!this.window) return;
+    if (!this.window || !isResizable(this.window)) return;
     const maximized = this.window.state === 'maximized';
     this.#manager?.setState(this.window.id, maximized ? 'normal' : 'maximized');
   };
@@ -732,6 +736,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     // an app's number must not be able to push a window control off the end of the titlebar.
     const min = this.#minWindowSize(w);
     const maximized = w.state === 'maximized';
+    const resizable = isResizable(w);
     // One button, two meanings, so the label has to say which. On the iframe path a reload
     // re-fetches and keeps whatever route the user navigated to inside the frame, so nothing of
     // theirs is lost; on the element path the instance is discarded, and for a game that is the
@@ -817,13 +822,20 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
               @click=${() => this.#manager?.setState(w.id, 'minimized')}>
               ${this.#controlGlyph('minimize')}
             </button>
-            <button
-              class="ctrl ctrl-maximize"
-              title=${maximized ? 'Restore' : 'Maximize'}
-              aria-label=${maximized ? 'Restore' : 'Maximize'}
-              @click=${() => this.#manager?.setState(w.id, maximized ? 'normal' : 'maximized')}>
-              ${this.#controlGlyph(maximized ? 'restore' : 'maximize')}
-            </button>
+            <!-- Left out entirely for a resizable: false window, as Windows does for a window that
+                 cannot be maximized, rather than drawn disabled. Every theme lays these controls out
+                 in flex, so the rest close up. The theme's controls-width metric then over-counts by
+                 one button, which errs the safe way: the drag clamp keeps a little more titlebar on
+                 screen than it strictly has to. -->
+            ${resizable
+              ? html`<button
+                  class="ctrl ctrl-maximize"
+                  title=${maximized ? 'Restore' : 'Maximize'}
+                  aria-label=${maximized ? 'Restore' : 'Maximize'}
+                  @click=${() => this.#manager?.setState(w.id, maximized ? 'normal' : 'maximized')}>
+                  ${this.#controlGlyph(maximized ? 'restore' : 'maximize')}
+                </button>`
+              : nothing}
             <!-- 'close' is kept alongside 'ctrl-close' because '.ctrl.close:hover' still keys off
                  it for the red hover state — dropping it would silently kill that hover. -->
             <button
@@ -861,7 +873,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
             : ''}
           ${this._loading ? html`<div class="loading"><umbradesktop-loader></umbradesktop-loader></div>` : ''}
         </div>
-        ${w.state === 'normal'
+        ${w.state === 'normal' && resizable
           ? RESIZE_HANDLES.map(
               (rh) => html`<div
                 class="rh rh-${rh.dir}"

@@ -177,3 +177,18 @@ it('carries the loader through to content.element by reference, not a wrapper', 
     );
   }
 });
+
+/**
+ * `resizable: false` reaches the window from both places an app can come from: a package's
+ * manifest and the curated catalogue. Being "available to any app" is only true if both carry it.
+ */
+it('carries resizable through for registered and curated apps alike', () => {
+  const apps = deriveApps(
+    [resolved({ entry: entry({ alias: 'curated-fixed', resizable: false }) })],
+    SECTIONS,
+    [],
+    [{ ...MINESWEEPER, resizable: false }],
+  );
+  expect(apps.find((a) => a.alias === 'curated-fixed')!.resizable, 'curated').to.equal(false);
+  expect(apps.find((a) => a.alias === 'Pkg.Minesweeper')!.resizable, 'registered').to.equal(false);
+});

@@ -100,7 +100,16 @@ function mountProvider(instance: unknown, depth = 0) {
   return {
     element,
     provide: () => announce('umb:context-provide'),
+    // Announced while still in the document, which is what `router-slot` produces for the page
+    // element it owns: it calls `destroy()` before `removeChild`.
     unprovide: () => announce('umb:context-unprovided', { instance }),
+    // Announced after detachment, which is what every provider *below* that page element produces,
+    // `umb-workspace` and its contexts included. The event never reaches the document in this case,
+    // so a watcher listening there hears nothing. `path-watcher.test.ts` documents the measurement.
+    detach: () => {
+      host.remove();
+      announce('umb:context-unprovided', { instance });
+    },
     dispose: () => host.remove(),
   };
 }
@@ -241,6 +250,24 @@ it('goes clean when a dirty workspace is unprovided, as navigating away in the w
 
   provider.unprovide();
   expect(reported, 'the workspace that owned the edit is gone').to.deep.equal([true, false]);
+});
+
+it('goes clean when a dirty workspace is taken away detached, which is the real case', () => {
+  // The order the frame actually produces for a workspace context: the subtree is removed first and
+  // the withdrawal is announced from outside the document. Watching the document for it looks
+  // symmetrical with the provide half and silently never fires.
+  const reported = watch();
+  const workspace = fakeWorkspace();
+  const provider = mountProvider(workspace.instance, 2);
+  teardown.push(provider.dispose);
+
+  provider.provide();
+  workspace.load({ name: 'Home' });
+  workspace.current.set({ name: 'Edited' });
+  expect(reported).to.deep.equal([true]);
+
+  provider.detach();
+  expect(reported, 'the window has navigated away from the edit').to.deep.equal([true, false]);
 });
 
 it('stays dirty while any one of several workspaces is dirty', () => {

@@ -28,5 +28,15 @@ export default {
     minesweeperFlagged: 'flagged',
     minesweeperMine: 'mine',
     minesweeperEmpty: 'empty',
+    // Snake: the window title, then everything the game says.
+    snake: 'Snake',
+    snakeNewGame: 'New game',
+    snakeScore: 'Score',
+    snakeBest: 'Best',
+    snakeBoard: 'Snake board. Use the arrow keys to steer',
+    snakeStart: 'Press an arrow key to start',
+    snakePaused: 'Paused. Press space to carry on',
+    snakeOver: 'Game over. Press space to play again',
+    snakeWon: 'You filled the board!',
   },
 };

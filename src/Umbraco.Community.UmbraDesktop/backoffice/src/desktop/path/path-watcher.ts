@@ -1,7 +1,7 @@
 import { UMB_APP_LANGUAGE_CONTEXT } from '@umbraco-cms/backoffice/language';
 import { UMB_MENU_STRUCTURE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/menu';
 import { UMB_SUBMITTABLE_WORKSPACE_CONTEXT } from '@umbraco-cms/backoffice/workspace';
-import { aliasesOf, watchProvidedContexts } from '../frame-context.js';
+import { aliasesOf, watchProvidedContexts, watchUnprovidedContext } from '../frame-context.js';
 import type {
   UmbraDesktopAppLanguage,
   UmbraDesktopStructureItem,
@@ -17,9 +17,11 @@ import type {
  * that is both less code and more correct than parsing
  * `/umbraco/section/media/workspace/media/edit/<guid>` and then fetching a name for the guid.
  *
- * **No unit test, deliberately.** Like `dirty-watcher.ts`, all this module does is subscribe to a
- * booting backoffice, which the unit runner cannot stand up; the half worth testing is pure and
- * lives in `crumbs.ts`. Its wiring is covered by the manual pass.
+ * **Mostly untested, deliberately.** Like `dirty-watcher.ts`, most of what this module does is
+ * subscribe to a booting backoffice, which the unit runner cannot stand up; the half worth testing
+ * is pure and lives in `crumbs.ts`. Its wiring is covered by the manual pass. The exception is the
+ * bookkeeping around contexts going away, which is plain state handling over an event core
+ * documents and which the strip got wrong — `path-watcher.test.ts` covers that and nothing else.
  */
 
 /**
@@ -166,12 +168,71 @@ function flattenItem(
 }
 
 /**
+ * One accepted context and everything subscribing to it took out.
+ *
+ * Held per context rather than as one flat list of subscriptions, because a context can go away on
+ * its own — see {@link watchFramePath} — and what it was saying has to go with it and nothing else.
+ */
+interface TrackedContext {
+  /** The instance being listened to; what a withdrawal is matched against. */
+  instance: unknown;
+  /** Drop every subscription accepting this instance took out. */
+  release: () => void;
+}
+
+/** A menu-structure context and the ancestry it last published. */
+interface TrackedStructure extends TrackedContext {
+  /** The ancestry, root first and current item last. */
+  items: UmbraDesktopStructureItem[];
+}
+
+/** A workspace context and what it last said about itself. */
+interface TrackedWorkspace extends TrackedContext {
+  /** The item's live name. */
+  name?: string;
+  /** The variant it is showing, when it has variants. */
+  variant?: UmbraDesktopVariantId;
+}
+
+/**
+ * Forget one context, whichever position it holds.
+ *
+ * Spliced rather than popped because a withdrawal is not always of the innermost one: a modal
+ * workspace closing is, but a section's own workspace can go while something is still stacked on it.
+ * @param stack The contexts of one kind, outermost first.
+ * @param instance The instance whose provider has gone.
+ * @returns True when the stack actually held it, so a caller can skip publishing otherwise.
+ */
+function dropTracked(stack: TrackedContext[], instance: unknown): boolean {
+  const index = stack.findIndex((entry) => entry.instance === instance);
+  if (index === -1) return false;
+  stack[index].release();
+  stack.splice(index, 1);
+  return true;
+}
+
+/**
  * Watch a frame for the path it is at, reporting each time that path changes.
  *
  * Reports on change only, for the reason `dirty-watcher.ts` gives at greater length: a workspace
  * re-emits its name on every keystroke, and passing each one through would re-render the strip per
  * character. The comparison is over the whole reported answer, so a re-emission that would draw
  * identically costs nothing.
+ *
+ * **Contexts going away are reported too, and that is not tidiness.** Every crumb but the first
+ * comes from a workspace, and a window routed to its own root — which is what clicking the home
+ * crumb does — has no workspace at all. Nothing is provided there, so without listening for the
+ * withdrawal there is no second event to correct the record and the strip keeps naming the document
+ * the window has just left. That withdrawal is heard on each provider's own element and nowhere
+ * else; {@link watchUnprovidedContext} is where the reason is written down, and it is the one thing
+ * in this file most likely to be "simplified" back into a bug.
+ *
+ * **A stack of contexts rather than one, per kind.** The common case is one at a time, because
+ * `router-slot` clears its old page before it appends the new one, so an ordinary navigation
+ * withdraws before it provides. A modal workspace does not: it stacks a second one on top of the
+ * window's own and takes it away again when it closes. The innermost is what the strip reports, and
+ * a context underneath is left subscribed so that closing a modal restores the window's own name
+ * rather than blanking it.
  * @param doc The frame's document.
  * @param onChange Called with the frame's new path each time it changes.
  * @returns A function that stops watching and drops every subscription.
@@ -186,7 +247,12 @@ export function watchFramePath(
   const language: UmbraDesktopAppLanguage = {};
   let reported = '';
   let stopped = false;
-  const subscriptions: Array<{ unsubscribe: () => void }> = [];
+  const structures: TrackedStructure[] = [];
+  const workspaces: TrackedWorkspace[] = [];
+  // The app language context is global to the frame and outlives every navigation inside it, so it
+  // is never replaced and never withdrawn short of the frame itself going. A flat list is all its
+  // subscriptions need.
+  const languageSubscriptions: Array<{ unsubscribe: () => void }> = [];
 
   /** Push the frame's path out, but only when it would draw differently. */
   const publish = () => {
@@ -199,18 +265,44 @@ export function watchFramePath(
     onChange({ structure, currentName, activeVariant, language: { ...language } });
   };
 
+  /**
+   * Take the frame's path from the innermost context of each kind, and report it.
+   *
+   * Derived on every change rather than written to as contexts emit, so a context that is no longer
+   * the innermost — one the window has stacked a modal on top of, or one emitting a last time on its
+   * way out — updates its own record and changes nothing about what is shown.
+   */
+  const refresh = () => {
+    structure = structures[structures.length - 1]?.items ?? [];
+    const workspace = workspaces[workspaces.length - 1];
+    currentName = workspace?.name;
+    activeVariant = workspace?.variant;
+    publish();
+  };
+
   const stopStructure = watchProvidedContexts(
     doc,
     STRUCTURE_CONTEXT_ALIAS,
     STRUCTURE_API_ALIAS,
-    (instance) => {
+    (instance, provider) => {
       if (!isStructureContext(instance)) return false;
-      subscriptions.push(
-        instance.structure.subscribe((items) => {
-          structure = items.map((item) => flattenItem(item, instance));
-          publish();
-        }),
-      );
+      // Stacked before subscribing, as `dirty-watcher.ts` registers its entry before subscribing and
+      // for the same reason: an Umbraco observable emits its current value the moment it is
+      // subscribed to, and that first emission has to find this entry already in place or it would
+      // be written to an entry nothing reads.
+      const entry: TrackedStructure = { instance, items: [], release: () => {} };
+      structures.push(entry);
+      const subscription = instance.structure.subscribe((items) => {
+        entry.items = items.map((item) => flattenItem(item, instance));
+        refresh();
+      });
+      const stopWithdrawal = watchUnprovidedContext(provider, instance, () => {
+        if (dropTracked(structures, instance)) refresh();
+      });
+      entry.release = () => {
+        subscription.unsubscribe();
+        stopWithdrawal();
+      };
       return true;
     },
   );
@@ -219,25 +311,34 @@ export function watchFramePath(
     doc,
     WORKSPACE_CONTEXT_ALIAS,
     WORKSPACE_API_ALIAS,
-    (instance) => {
+    (instance, provider) => {
       if (!isNamedWorkspace(instance)) return false;
-      subscriptions.push(
+      const entry: TrackedWorkspace = { instance, release: () => {} };
+      workspaces.push(entry);
+      const subscriptions = [
         instance.name.subscribe((value) => {
-          currentName = value || undefined;
-          publish();
+          entry.name = value || undefined;
+          refresh();
         }),
-      );
+      ];
       // Only a workspace with variants has this, and only its first active variant matters: a split
       // view shows two, and the leading one is the one the path is written in.
       const splitView = instance.splitView;
       if (splitView) {
         subscriptions.push(
           splitView.activeVariantsInfo.subscribe((variants) => {
-            activeVariant = variants[0];
-            publish();
+            entry.variant = variants[0];
+            refresh();
           }),
         );
       }
+      const stopWithdrawal = watchUnprovidedContext(provider, instance, () => {
+        if (dropTracked(workspaces, instance)) refresh();
+      });
+      entry.release = () => {
+        for (const subscription of subscriptions) subscription.unsubscribe();
+        stopWithdrawal();
+      };
       return true;
     },
   );
@@ -248,7 +349,7 @@ export function watchFramePath(
     LANGUAGE_API_ALIAS,
     (instance) => {
       if (!isAppLanguageContext(instance)) return false;
-      subscriptions.push(
+      languageSubscriptions.push(
         instance.appLanguageCulture.subscribe((value) => {
           language.current = value;
           publish();
@@ -267,7 +368,10 @@ export function watchFramePath(
     stopStructure();
     stopWorkspace();
     stopLanguage();
-    for (const subscription of subscriptions) subscription.unsubscribe();
-    subscriptions.length = 0;
+    for (const entry of [...structures, ...workspaces]) entry.release();
+    structures.length = 0;
+    workspaces.length = 0;
+    for (const subscription of languageSubscriptions) subscription.unsubscribe();
+    languageSubscriptions.length = 0;
   };
 }
