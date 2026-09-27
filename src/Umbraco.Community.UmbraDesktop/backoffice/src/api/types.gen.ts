@@ -677,6 +677,21 @@ export type DesktopConnectionStatusResponseModel = {
     isLocal: boolean;
 };
 
+export type DesktopLabelCornerModel = 'TopRight' | 'TopLeft' | 'BottomLeft' | 'BottomRight';
+
+export type DesktopLabelRequestModel = {
+    show: boolean;
+    corner: DesktopLabelCornerModel;
+    showDomain: boolean;
+};
+
+export type DesktopLabelResponseModel = {
+    name?: string | null;
+    show: boolean;
+    corner: DesktopLabelCornerModel;
+    showDomain: boolean;
+};
+
 export type DictionaryItemItemResponseModel = {
     id: string;
     flags: Array<FlagModel>;
@@ -1014,6 +1029,7 @@ export type DocumentUrlInfoModel = {
     url: string | null;
     message: string | null;
     provider: string;
+    isExternal: boolean;
 };
 
 export type DocumentUrlInfoResponseModel = {
@@ -3320,6 +3336,7 @@ export type WebhookLogResponseModel = {
     key: string;
     webhookKey: string;
     statusCode: string;
+    httpStatusCode?: number | null;
     isSuccessStatusCode: boolean;
     date: string;
     eventAlias: string;
@@ -3678,3 +3695,61 @@ export type UpdateConnectionResponses = {
 };
 
 export type UpdateConnectionResponse = UpdateConnectionResponses[keyof UpdateConnectionResponses];
+
+export type GetDesktopLabelData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/desktop-label';
+};
+
+export type GetDesktopLabelErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type GetDesktopLabelResponses = {
+    /**
+     * OK
+     */
+    200: DesktopLabelResponseModel;
+};
+
+export type GetDesktopLabelResponse = GetDesktopLabelResponses[keyof GetDesktopLabelResponses];
+
+export type SetDesktopLabelData = {
+    body?: DesktopLabelRequestModel;
+    path?: never;
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/desktop-label';
+};
+
+export type SetDesktopLabelErrors = {
+    /**
+     * Bad Request
+     */
+    400: unknown;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type SetDesktopLabelResponses = {
+    /**
+     * No Content
+     */
+    204: void;
+};
+
+export type SetDesktopLabelResponse = SetDesktopLabelResponses[keyof SetDesktopLabelResponses];

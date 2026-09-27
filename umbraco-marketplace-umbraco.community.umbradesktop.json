@@ -95,7 +95,11 @@
     "web-app-manifest",
     "installable",
     "standalone",
-    "app-icon"
+    "app-icon",
+    "site name",
+    "environment name",
+    "environment label",
+    "watermark"
   ],
   "Screenshots": [
     {

@@ -135,6 +135,9 @@ export const W11_LIGHT: UmbraDesktopPalette = {
     'radial-gradient(120% 100% at 50% 42%, #4aa3e8 0%, #2464b4 42%, #14265e 100%)',
   '--umbradesktop-desktop-scrim': 'transparent',
   '--umbradesktop-desktop-watermark-opacity': '0.06',
+  // The desktop label in Segoe, at its bold, which is as heavy as Windows itself ever sets it.
+  '--umbradesktop-desktop-label-font': W11_FONT,
+  '--umbradesktop-desktop-label-weight': '700',
 
   // Apps. Mica's flat planes, so no bevel; the raised surface is a step *lighter* than the ground,
   // which is the inverse of Win98 and is why an app should read these rather than assume a

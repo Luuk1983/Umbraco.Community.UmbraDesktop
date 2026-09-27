@@ -6,10 +6,19 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UMB_MEDIA_PICKER_MODAL } from '@umbraco-cms/backoffice/media';
 import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
 import { tryExecute } from '@umbraco-cms/backoffice/resources';
+import type { UmbraDesktopLabelContext } from '../../../desktop-label/desktop-label.context';
+import { UMBRADESKTOP_DESKTOP_LABEL_CONTEXT } from '../../../desktop-label/desktop-label.context-token';
+import './desktop-label-settings.element.js';
+import './site-preview.element.js';
 
 /**
- * Site-wide settings: what the backoffice is called and which icon it wears once installed as an
- * app.
+ * Site-wide settings: what the backoffice is called, whether the desktop shows that name, and which
+ * icon it wears once installed as an app.
+ *
+ * Four boxes: a preview of the result, then one per thing you set. The name has its own because
+ * the desktop label and the installed app both use it, so it belongs to neither. Nothing on the
+ * screen appears or disappears as a setting changes: a control that does not apply is disabled in
+ * place, so the screen never rearranges itself under the pointer.
  *
  * Unlike every other category, this reads and writes the server rather than the per-user settings
  * context. The values are one site's, not one person's, and they have to be readable by an
@@ -55,6 +64,14 @@ export class UmbraDesktopSettingsSiteElement extends UmbLitElement {
    */
   #picking = false;
 
+  /** The desktop's label context, read again after a save so the desktop draws the new name. */
+  #labelContext?: UmbraDesktopLabelContext;
+
+  constructor() {
+    super();
+    this.consumeContext(UMBRADESKTOP_DESKTOP_LABEL_CONTEXT, (context) => (this.#labelContext = context));
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     void this.#load();
@@ -95,6 +112,12 @@ export class UmbraDesktopSettingsSiteElement extends UmbLitElement {
       UmbraDesktopService.setAppIdentity({ body: { mode, mediaKey, name } }),
     );
     await this.#load();
+
+    // The label's text is this name, but the label context read it when the desktop loaded. Without
+    // this, a renamed site kept its old name on the desktop until the next refresh. One read on
+    // every save rather than only on a rename: it is a small GET, and knowing which field changed
+    // is not worth a second code path.
+    await this.#labelContext?.load();
 
     // Prompt the browser to read the manifest again. It reads one when a page loads and then leaves
     // it alone, so without this a change here did nothing at all until the desktop was refreshed —
@@ -179,56 +202,78 @@ export class UmbraDesktopSettingsSiteElement extends UmbLitElement {
   }
 
   /**
-   * The two site-wide settings, each with the sentence that stops a disabled control looking broken.
+   * The four boxes: the preview, then the name, the desktop label and the installed app.
    * @returns The screen's contents.
    */
   override render() {
     if (!this._loaded) return html`<uui-loader></uui-loader>`;
 
     return html`
-      <h4>${this.localize.term('umbraDesktop_siteAppName')}</h4>
-      <p class="hint">${this.localize.term('umbraDesktop_siteAppNameAbout')}</p>
-      <uui-input
-        .value=${this._name ?? ''}
-        ?disabled=${this._nameLocked}
-        label=${this.localize.term('umbraDesktop_siteAppName')}
-        @change=${(event: Event) =>
-          void this.#saveName((event.target as HTMLInputElement).value)}></uui-input>
-      ${this.#lockedHint(this._nameLocked)}
+      <uui-box headline=${this.localize.term('umbraDesktop_siteGroupPreview')}>
+        <umbradesktop-settings-site-preview
+          .name=${this._name}
+          .iconUrl=${this._previewUrl}></umbradesktop-settings-site-preview>
+      </uui-box>
 
-      <h4 class="second">${this.localize.term('umbraDesktop_siteAppIcon')}</h4>
-      <p class="hint">${this.localize.term('umbraDesktop_siteAppIconAbout')}</p>
-      <uui-radio-group
-        .value=${this._mode}
-        ?disabled=${this._iconLocked}
-        @change=${(event: Event) =>
-          void this.#selectMode((event.target as HTMLInputElement).value as AppIconModeModel)}>
-        <uui-radio value="Default">${this.localize.term('umbraDesktop_siteAppIconDefault')}</uui-radio>
-        <uui-radio value="Custom">${this.localize.term('umbraDesktop_siteAppIconCustom')}</uui-radio>
-      </uui-radio-group>
+      <uui-box headline=${this.localize.term('umbraDesktop_siteGroupName')}>
+        <div class="field-label">${this.localize.term('umbraDesktop_siteAppName')}</div>
+        <p class="hint">${this.localize.term('umbraDesktop_siteAppNameAbout')}</p>
+        <uui-input
+          .value=${this._name ?? ''}
+          ?disabled=${this._nameLocked}
+          label=${this.localize.term('umbraDesktop_siteAppName')}
+          @change=${(event: Event) =>
+            void this.#saveName((event.target as HTMLInputElement).value)}></uui-input>
+        ${this.#lockedHint(this._nameLocked)}
+      </uui-box>
 
-      ${this._mode === 'Custom'
-        ? html`
-            <uui-button
-              look="secondary"
-              ?disabled=${this._iconLocked}
-              label=${this.localize.term('umbraDesktop_siteAppIconChoose')}
-              @click=${() => void this.#pickMedia()}></uui-button>
-            <p class="hint">${this.localize.term('umbraDesktop_siteAppIconGuidance')}</p>
-          `
-        : null}
+      <uui-box headline=${this.localize.term('umbraDesktop_siteGroupDesktopLabel')}>
+        <umbradesktop-settings-desktop-label></umbradesktop-settings-desktop-label>
+      </uui-box>
 
-      ${this.#lockedHint(this._iconLocked)}
+      <uui-box headline=${this.localize.term('umbraDesktop_siteGroupInstalledApp')}>
+        <div class="field-label">${this.localize.term('umbraDesktop_siteAppIcon')}</div>
+        <p class="hint">${this.localize.term('umbraDesktop_siteAppIconAbout')}</p>
+        <uui-radio-group
+          .value=${this._mode}
+          ?disabled=${this._iconLocked}
+          @change=${(event: Event) =>
+            void this.#selectMode((event.target as HTMLInputElement).value as AppIconModeModel)}>
+          <uui-radio value="Default">${this.localize.term('umbraDesktop_siteAppIconDefault')}</uui-radio>
+          <uui-radio value="Custom">${this.localize.term('umbraDesktop_siteAppIconCustom')}</uui-radio>
+        </uui-radio-group>
+        ${this.#renderImage()}
+        ${this.#lockedHint(this._iconLocked)}
+      </uui-box>
+    `;
+  }
 
-      ${this._previewUrl
-        ? html`
-            <h5>${this.localize.term('umbraDesktop_siteAppIconPreview')}</h5>
-            <div class="preview">
-              <img src=${this._previewUrl} alt="" />
-              <span>${this._name ?? ''}</span>
-            </div>
-          `
-        : null}
+  /**
+   * The chosen image and the button that picks it, under the radio that makes it apply.
+   *
+   * Always drawn, disabled until "your own image" is chosen. It used to appear only in Custom mode,
+   * which moved everything below it the moment the radio changed and left an admin on the default
+   * icon with no hint that an image could be picked at all.
+   * @returns The image row and its guidance.
+   */
+  #renderImage() {
+    const custom = this._mode === 'Custom';
+    const chosen = custom && !!this._mediaKey;
+    const applies = custom && !this._iconLocked;
+
+    return html`
+      <div class="image ${applies ? '' : 'inapplicable'}">
+        ${chosen && this._previewUrl
+          ? html`<img class="thumb" src=${this._previewUrl} alt="" />`
+          : html`<span class="thumb empty"></span>`}
+        <uui-button
+          class="choose"
+          look="secondary"
+          ?disabled=${!applies}
+          label=${this.localize.term(chosen ? 'umbraDesktop_siteAppIconChange' : 'umbraDesktop_siteAppIconChoose')}
+          @click=${() => void this.#pickMedia()}></uui-button>
+      </div>
+      <p class="hint guidance ${applies ? '' : 'inapplicable'}">${this.localize.term('umbraDesktop_siteAppIconGuidance')}</p>
     `;
   }
 
@@ -248,15 +293,15 @@ export class UmbraDesktopSettingsSiteElement extends UmbLitElement {
 
   static override styles = [
     css`
+      /* The boxes stack with the gap the backoffice leaves between boxes in a workspace. */
       :host {
-        display: block;
+        display: flex;
+        flex-direction: column;
+        gap: var(--uui-size-space-5);
       }
-      h4 {
-        margin: 0 0 var(--uui-size-space-2);
-      }
-      /* Space above the second setting, so the two do not read as one group. */
-      h4.second {
-        margin-top: var(--uui-size-space-6);
+      .field-label {
+        font-weight: 700;
+        margin-bottom: var(--uui-size-space-1);
       }
       .hint {
         margin: 0 0 var(--uui-size-space-4);
@@ -270,26 +315,37 @@ export class UmbraDesktopSettingsSiteElement extends UmbLitElement {
       uui-input {
         width: 100%;
       }
-      h5 {
-        margin: var(--uui-size-space-5) 0 var(--uui-size-space-2);
+      /* Indented to the radio labels, so it reads as belonging to "your own image" above it. */
+      .image,
+      .guidance {
+        margin-left: calc(var(--uui-size-space-5) + var(--uui-size-space-2));
       }
-      /* Deliberately small and rounded: this is a rehearsal of a taskbar tile, not a gallery. Shown
-         at 48px because a preview that flatters at 512 tells you nothing about the size the icon is
-         actually used at. */
-      .preview {
+      .image {
         display: flex;
         align-items: center;
         gap: var(--uui-size-space-4);
+        margin-top: var(--uui-size-space-4);
       }
-      .preview img {
+      .guidance {
+        margin-top: var(--uui-size-space-3);
+        margin-bottom: 0;
+      }
+      /* Deliberately small and rounded, at the 48px the preview shows the icon at. */
+      .thumb {
         width: 48px;
         height: 48px;
         border-radius: 10px;
         display: block;
+        flex-shrink: 0;
       }
-      .preview span {
-        font-size: var(--uui-type-small-size);
-        color: var(--uui-color-text-alt, var(--uui-color-text));
+      .thumb.empty {
+        box-sizing: border-box;
+        border: 1px dashed var(--uui-color-border);
+      }
+      /* Text belonging to a control that does not apply greys with it, so the two read as one unit
+         that does not apply yet rather than live text beside a dead control. */
+      .inapplicable {
+        color: var(--uui-color-disabled-contrast, var(--uui-color-text-alt));
       }
     `,
   ];

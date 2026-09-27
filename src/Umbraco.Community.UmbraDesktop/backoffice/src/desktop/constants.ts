@@ -45,6 +45,16 @@ export const UMBRADESKTOP_THEME_ATTRIBUTE = 'data-umbradesktop-theme';
  */
 export const UMBRADESKTOP_TASKBAR_HEIGHT = 50;
 
+/**
+ * How far the desktop label sits from the edges of the desktop, in pixels.
+ *
+ * One number for every theme and every corner: from the top and the sides as it is, and from the
+ * bottom on top of the taskbar reserve, which is what keeps it clear of a floating dock without a
+ * special case. The label's CSS reads it, and so does the test that measures where each theme
+ * really puts the label, so the two cannot disagree.
+ */
+export const UMBRADESKTOP_DESKTOP_LABEL_INSET = 20;
+
 /** Reserved group alias that collects uncurated / fallback apps. */
 export const UMBRADESKTOP_MORE_GROUP_ALIAS = 'umbradesktop-more';
 

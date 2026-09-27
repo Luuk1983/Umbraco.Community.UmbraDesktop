@@ -46,6 +46,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
 - Install it as an app. The backoffice declares a web app manifest, so your browser can install or pin it. It opens straight on the desktop in its own window, with no address bar and no tabs, and carries your site's own name and icon rather than a generic browser tile. Both are settings, so an agency running ten sites gets ten distinguishable apps. See [Installing the backoffice as an app](#installing-the-backoffice-as-an-app).
+- Know which site you are on. Switch it on and the site's name is written large in a corner of the desktop, behind the windows, with the domain under it if you like. Local, staging and production otherwise look identical, and a full-screen desktop or an installed app shows no address bar at all. See [Showing the site's name on the desktop](#showing-the-sites-name-on-the-desktop).
 - Nothing new to learn. The windows contain the backoffice you already know, with the same trees, the same editors and the same shortcuts.
 
 ## Installation & configuration
@@ -406,7 +407,7 @@ Both are site-wide, live in the desktop's own Settings under **Site**, and are v
 **Icon.** Two choices:
 
 - **UmbraDesktop** — the mark shipped with the package: the Umbraco logo inside the desktop's own loading ring, so an installed backoffice looks like the thing it opens.
-- **Choose an image** — any image from your Media Library. Umbraco resizes it for you, so one upload covers every size a browser asks for. The picker uploads too: drop a file into it and the image is added to the library and selected in one go. The screen shows a preview of the result at roughly the size a taskbar uses.
+- **Your own image** — any image from your Media Library. Umbraco resizes it for you, so one upload covers every size a browser asks for. The picker uploads too: drop a file into it and the image is added to the library and selected in one go. The **Preview** box at the top of the screen shows the result at roughly the size a taskbar uses.
 
 What to upload:
 
@@ -439,7 +440,26 @@ Both can be pinned in `appsettings.json`, which is the better option when you wa
 
 `Mode` is `Default` or `Custom`; `Custom` also needs a `MediaKey`. The two pin independently, so setting the name in configuration leaves the icon editable in the backoffice.
 
-This matters most if you restore databases between environments. The backoffice setting lives in the database and travels with a restore, so staging recovered from production comes back wearing production's name. A configured value does not.
+This matters most if you restore databases between environments. The backoffice setting lives in the database and travels with a restore, so staging recovered from production comes back wearing production's name. A configured value does not. That goes for the name on the desktop too, since it is the same App name.
+
+## Showing the site's name on the desktop
+
+Turn on **Show the name on the desktop** under Desktop settings, **Site**, and the site's name is written large in a corner of the desktop. It sits on the wallpaper behind the windows, like the faint Umbraco logo, so you see it when you land and a maximised window covers it. It is off by default.
+
+The name is the **App name** from the same screen, the one the installed app uses, so there is one name to set rather than two. Empty means your site's name from `Umbraco:CMS:Hosting:SiteName`, and if that is not set either, the label shows the domain instead.
+
+Two more choices sit under the switch, greyed out until it is on:
+
+- **Corner.** Top right by default, the one corner nothing else on the desktop uses: new windows open top left, the launcher is bottom left, and the clock and Umbraco's notifications are bottom right. The other three are there if you want them.
+- **Show the domain underneath.** Off by default. Useful full screen or in an installed app, where no address bar shows it.
+
+The **Preview** box at the top of the Site screen shows the result on a small copy of your own desktop, in your theme and over your wallpaper, with the installed app's icon beside it.
+
+Everyone on the site sees the label, editors with no access to the Settings section included. Only users with that access can change it, like everything else under Site.
+
+It is white with a dark edge around the letters, so it reads on any wallpaper, dark or pale, your own photos included. Each theme draws it in its own lettering: Verdana under Umbraco 4, MS Sans Serif under Windows 98, and so on.
+
+If you copy databases between environments, set the name in configuration. The switches, and a name set in the backoffice, live in the database, so a copy carries them along: copy staging to production and production says Staging. `AppName` in `appsettings.json` stays with each environment, as [Setting them from configuration instead](#setting-them-from-configuration-instead) describes. The domain line cannot be wrong, because it comes from the browser.
 
 ## Games
 
@@ -599,6 +619,11 @@ deliberately refuses to do.
 Installing the backoffice as an app is described above. The reasoning behind it, including the
 browser behaviour it depends on and the fixture that proves it, is in
 [`docs/design/2026-09-13-web-app-manifest-design.md`](docs/design/2026-09-13-web-app-manifest-design.md).
+
+Showing the site's name on the desktop is described above too. Why it is a watermark in a corner
+rather than a badge on the taskbar, why the name is the App name rather than a second one, and why
+the domain comes from the browser, is in
+[`docs/design/2026-09-27-desktop-label-design.md`](docs/design/2026-09-27-desktop-label-design.md).
 
 ## License
 

@@ -184,6 +184,10 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   // opaque enough to read against it without dimming anything.
   '--umbradesktop-desktop-scrim': 'transparent',
   '--umbradesktop-desktop-watermark-opacity': '0.09',
+  // The desktop label in this theme's own lettering. Its ink and halo are the same under every
+  // theme, because the wallpaper behind it is the user's choice rather than this pale desktop.
+  '--umbradesktop-desktop-label-font': U4_FONT,
+  '--umbradesktop-desktop-label-weight': '700',
 
   // Apps. A single hairline edge rather than a two-tone bevel: Umbraco 4's controls were outlined,
   // not chiselled, so `edge-light` is the same white it uses to lift a panel and `edge-dark` is its
