@@ -3,6 +3,9 @@ import type { UmbraDesktopResizeEdges } from '../window-model';
 import { clampResizeOrigin, clampWindowPosition, isResizable, resizeRect, restoreDragPosition } from '../window-model';
 import { injectChromeStyles } from '../chrome-injector';
 import { watchWorkspaceDirtyState } from '../dirty-watcher.js';
+import { watchNotifications } from '../notifications/notification-watcher.js';
+import { UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT } from '../notifications/notification-centre.context-token.js';
+import type { UmbraDesktopNotificationCentreContext } from '../notifications/notification-centre.context.js';
 import { resolveThemeSync, syncThemeStylesheet } from '../iframe-theme.js';
 import type { UmbraDesktopThemeManifest } from '../iframe-theme.js';
 import {
@@ -203,6 +206,15 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    */
   #stopPathWatch?: () => void;
 
+  /**
+   * Stops the current frame's notification watcher and takes it off the centre's list of sources.
+   * Replaced and released on the same occasions as {@link #stopDirtyWatch}, for the same reason.
+   */
+  #stopNotificationWatch?: () => void;
+
+  /** Where this window's notifications go instead of into its own frame. */
+  #notifications?: UmbraDesktopNotificationCentreContext;
+
   #startPointer = { x: 0, y: 0 };
   #startRect = { x: 0, y: 0 };
   #startSurface = { left: 0, top: 0, w: 0, h: 0 };
@@ -232,6 +244,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
       if (ctx) this.observe(ctx.dockZones, (zones) => (this._dockZones = zones ?? []), '_umbraDesktopDockZones');
+    });
+    this.consumeContext(UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT, (ctx) => {
+      this.#notifications = ctx ?? undefined;
     });
     this.consumeContext(UMB_THEME_CONTEXT, (context) => {
       if (!context) return;
@@ -274,6 +289,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.#stopDirtyWatch = undefined;
     this.#stopPathWatch?.();
     this.#stopPathWatch = undefined;
+    this.#stopNotificationWatch?.();
+    this.#stopNotificationWatch = undefined;
   }
 
   /**
@@ -324,6 +341,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     injectChromeStyles(iframe, this.window.app.chromeProfile, () => (this._loading = false));
     this.#startDirtyWatch(iframe);
     this.#startPathWatch(iframe);
+    this.#startNotificationWatch(iframe);
     // A frame boots on the stored alias, so it is normally already right — but a theme changed
     // while it was still loading would have been missed, and the reload path lands here too.
     this.#applyFrameTheme();
@@ -425,6 +443,38 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     const title = this.localize.term('umbraDesktop_previewTitle', this.localize.string(current));
     this.#manager.openAttached(w.id, createPreviewApp(w.id, target, title), 'right');
   };
+
+  /**
+   * Take the freshly loaded frame's notifications over, so they show once on the desktop rather than
+   * inside this window, and register the frame as where a notification can be raised again.
+   *
+   * Restarted on each load, as the other two watchers are, which is what makes a reloaded window
+   * watched again: the reload replaces the document and with it the context being listened to.
+   *
+   * **No centre, no watcher.** A watcher hides the frame's toasts once it is listening, so starting
+   * one with nowhere to send what it hears would swallow every notification in the window. A window
+   * outside a desktop keeps drawing its own, which is the direction to fail in.
+   * @param iframe The window's freshly loaded frame.
+   */
+  #startNotificationWatch(iframe: HTMLIFrameElement) {
+    this.#stopNotificationWatch?.();
+    this.#stopNotificationWatch = undefined;
+    const id = this.window?.id;
+    const doc = iframe.contentDocument;
+    const centre = this.#notifications;
+    if (!id || !doc || !centre) return;
+    const watch = watchNotifications(doc, {
+      // The app's name as the catalogue has it, possibly a `#key`: the centre localizes it when it is
+      // drawn, so an entry follows a language change rather than keeping the one it arrived in.
+      onRaised: (notification) => centre.raise(notification, { sourceId: id, source: this.window?.app.name ?? '' }),
+      onClosed: (key) => centre.closed(id, key),
+    });
+    const unregister = centre.registerSource(id, watch);
+    this.#stopNotificationWatch = () => {
+      unregister();
+      watch.stop();
+    };
+  }
 
   #startDirtyWatch(iframe: HTMLIFrameElement) {
     this.#stopDirtyWatch?.();

@@ -354,5 +354,15 @@ export default {
     migrationContinue: 'Doorgaan',
     settingsNotSaved:
       'Die instelling kon niet op je account opgeslagen worden. Hij geldt nu wel, maar deze browser vergeet hem.',
+    // desktopmeldingen: de toasts, en de geschiedenis achter de klok
+    notificationsTitle: 'Meldingen',
+    notificationsEmpty: 'Er is nog niets gemeld.',
+    notificationsClock: 'Meldingen',
+    notificationsClockAttention: 'Meldingen, waaronder waarschuwingen of fouten',
+    notificationsClear: 'Wissen',
+    notificationsSourceDesktop: 'Bureaublad',
+    notificationsRepeat: '%0% keer',
+    notificationsClose: 'Sluiten',
+    notificationsGone: 'Dat venster is gesloten.',
   },
 };

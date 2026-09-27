@@ -9,6 +9,8 @@ import { UmbraDesktopWindowPathElement } from '../components/window-path.element
 import { UmbraDesktopLoaderElement } from '../components/loader.element.js';
 import { UmbraDesktopWindowPaneElement } from '../components/window-pane.element.js';
 import { UmbraDesktopLabelElement } from '../desktop-label/desktop-label.element.js';
+import { UmbraDesktopToastsElement } from '../components/desktop-toasts.element.js';
+import { UmbraDesktopScrollbackElement } from '../components/scrollback.element.js';
 import { UMBRADESKTOP_TOKENS } from './types.js';
 import { UMBRADESKTOP_THEMES } from './themes/index.js';
 
@@ -61,6 +63,8 @@ it('has exactly the tokens the five chrome components read or write, no more and
     UmbraDesktopLoaderElement,
     UmbraDesktopWindowPaneElement,
     UmbraDesktopLabelElement,
+    UmbraDesktopToastsElement,
+    UmbraDesktopScrollbackElement,
   ]) {
     for (const token of tokensMentionedIn(ctor.styles)) mentioned.add(token);
   }

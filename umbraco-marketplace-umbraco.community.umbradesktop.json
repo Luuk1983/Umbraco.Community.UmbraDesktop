@@ -40,6 +40,10 @@
     "tiling",
     "workspace",
     "unsaved changes",
+    "notifications",
+    "notification center",
+    "notification history",
+    "toasts",
     "editor tools",
     "breadcrumb",
     "navigation",
@@ -125,6 +129,10 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/live-preview.png",
       "Caption": "Live preview: the page opens beside the editor, inside the same window, and reloads every time you save. Headless front ends too, from the same preview URL as Save and preview."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/notifications.png",
+      "Caption": "Notifications, once: a message raised in any window shows on the desktop instead, however many windows raised it. The clock keeps the last twenty, and a dot beside it says a warning or an error is among them."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png",

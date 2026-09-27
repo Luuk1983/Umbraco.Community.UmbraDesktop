@@ -157,6 +157,17 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-card-background': 'rgba(255, 255, 255, 0.1)',
   '--umbradesktop-launcher-card-border': '1px solid rgba(255, 255, 255, 0.16)',
   '--umbradesktop-launcher-card-radius': '12px',
+  // Notifications arrive at the top right on a Mac, under the menu bar, and stack downwards. There
+  // is no menu bar here, so the stack hangs from the top of the desktop instead. The surface is
+  // Launchpad's, rounded the way macOS rounds a notification, which the square full-screen
+  // Launchpad panel never needed.
+  '--umbradesktop-toasts-top': '12px',
+  '--umbradesktop-toasts-bottom': 'auto',
+  '--umbradesktop-toasts-direction': 'column',
+  '--umbradesktop-toast-radius': '14px',
+  '--umbradesktop-toast-border': '1px solid rgba(255, 255, 255, 0.16)',
+  '--umbradesktop-toast-shadow': '0 10px 30px rgba(0, 0, 0, 0.3)',
+  '--umbradesktop-scrollback-radius': '14px',
   '--umbradesktop-desktop-background-color': '#3b6ea5',
   '--umbradesktop-desktop-background-image':
     'linear-gradient(155deg, #4a3f78 0%, #3b6ea5 55%, #2f8f96 100%)',

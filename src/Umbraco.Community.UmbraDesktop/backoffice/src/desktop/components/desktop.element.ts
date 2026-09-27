@@ -18,9 +18,13 @@ import type { UmbraDesktopWallpaperView } from '../settings/wallpaper-view.js';
 import { UmbraDesktopThemeContext } from '../theme/theme.context.js';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import { UmbraDesktopLabelContext } from '../desktop-label/desktop-label.context.js';
+import { UmbraDesktopNotificationCentreContext } from '../notifications/notification-centre.context.js';
+import { watchNotifications } from '../notifications/notification-watcher.js';
+import { UMBRADESKTOP_DESKTOP_SOURCE_ID } from '../notifications/types.js';
 import type { DesktopLabelResponseModel } from '../../api/types.gen';
 import './window.element.js';
 import './taskbar.element.js';
+import './desktop-toasts.element.js';
 import '../desktop-label/desktop-label.element.js';
 import '../migrations/migration-screen.element.js';
 import type { UmbraDesktopMigrationScreenState } from '../migrations/types.js';
@@ -54,6 +58,15 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    * the Appearance screen reaches the settings. It reads the label as soon as it exists.
    */
   #label = new UmbraDesktopLabelContext(this);
+
+  /**
+   * Where every notification on the desktop ends up, once: the toasts and the scrollback behind the
+   * clock. Windows feed it from their frames; this element feeds it from its own document.
+   */
+  #notifications = new UmbraDesktopNotificationCentreContext(this, this.#manager);
+
+  /** Stops watching this desktop's own document and takes it off the centre's sources. */
+  #stopOwnNotifications?: () => void;
 
   @state()
   private _windows: UmbraDesktopWindow[] = [];
@@ -183,6 +196,15 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   }
 
   /**
+   * The notification centre this desktop owns, for the test that checks a notification the desktop
+   * raises itself is recorded as the desktop's rather than as some window's.
+   * @returns The centre.
+   */
+  public get notificationsForTest(): UmbraDesktopNotificationCentreContext {
+    return this.#notifications;
+  }
+
+  /**
    * Watches the desktop surface so a shrinking viewport (a narrowed browser, devtools opening, a
    * monitor undocked) pulls any stranded window back into reach instead of losing it off the edge.
    */
@@ -196,6 +218,29 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     // Hide the outer backoffice header for a fullscreen desktop. Leaving the
     // section (via the taskbar's Exit) unmounts this element and restores it.
     this.#setOuterChrome(true);
+    this.#watchOwnNotifications();
+  }
+
+  /**
+   * Take the notifications of the backoffice this desktop is running in over, so a notification the
+   * desktop raises itself is drawn once, as the desktop's, like one raised in any window.
+   *
+   * From connect to disconnect only. Leaving the desktop lifts the hiding rule with the watcher, so
+   * the classic backoffice draws its own toasts again the moment it is back.
+   */
+  #watchOwnNotifications() {
+    this.#stopOwnNotifications?.();
+    const centre = this.#notifications;
+    const origin = { sourceId: UMBRADESKTOP_DESKTOP_SOURCE_ID, source: '#umbraDesktop_notificationsSourceDesktop' };
+    const watch = watchNotifications(this.ownerDocument, {
+      onRaised: (notification) => centre.raise(notification, origin),
+      onClosed: (key) => centre.closed(UMBRADESKTOP_DESKTOP_SOURCE_ID, key),
+    });
+    const unregister = centre.registerSource(UMBRADESKTOP_DESKTOP_SOURCE_ID, watch);
+    this.#stopOwnNotifications = () => {
+      unregister();
+      watch.stop();
+    };
   }
 
   /**
@@ -223,6 +268,8 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     // rather than comparing against one that is no longer watched.
     this.#observedSurface = undefined;
     this.#setOuterChrome(false);
+    this.#stopOwnNotifications?.();
+    this.#stopOwnNotifications = undefined;
   }
 
   /**
@@ -315,6 +362,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
           )}
           ${this.#renderSnapGhost()}
         </div>
+        <umbradesktop-toasts ?inert=${this.#migrationShowing}></umbradesktop-toasts>
         <umbradesktop-taskbar ?inert=${this.#migrationShowing}></umbradesktop-taskbar>
         ${this.#renderMigration()}
       </div>
