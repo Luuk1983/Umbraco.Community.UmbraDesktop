@@ -14,6 +14,11 @@ import { inferUrl } from './url-inference.js';
 import { deriveApps } from './derive-apps.js';
 import { groupApps } from './group-apps.js';
 import { normaliseRegisteredApps } from './registered-apps.js';
+import type { ManifestUmbraDesktopCatalogue } from './catalogue.extension.js';
+import { normalisePackageCatalogues, type UmbraDesktopPackageCatalogue } from './package-catalogues.js';
+import { mergeCatalogues, type UmbraDesktopAppClaim } from './merge-catalogues.js';
+import { isFiniteNumber, isNonEmptyString, isRecord } from './manifest-values.js';
+import { UMBRADESKTOP_SECTION_ALIAS } from './constants.js';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from './app-catalogue.context-token.js';
 import { UmbraDesktopConditionGateController } from './condition-gate.controller.js';
 import type { UmbraDesktopConditionConfig } from './condition-gate';
@@ -74,6 +79,20 @@ type UmbraDesktopExtensionRegistry = typeof umbExtensionsRegistry;
  */
 const DIAGNOSTIC_DELAY_MS = 5000;
 
+/**
+ * A value read from another package's manifest, when it is text, or the fallback when it is not.
+ *
+ * Those manifests are typed by nothing once they come from a static `umbraco-package.json`, and a
+ * label or name that is a number or an object would otherwise become a tile's name and reach
+ * `groupApps` (design D9 of the package catalogues design).
+ * @param value The value as the manifest has it.
+ * @param fallback What to use instead.
+ * @returns The value when it is a non-empty string, otherwise the fallback.
+ */
+function textOr<T>(value: unknown, fallback: T): string | T {
+  return isNonEmptyString(value) ? value : fallback;
+}
+
 /** Dependency overrides. All default to the real thing; tests inject their own. */
 export interface UmbraDesktopAppCatalogueOptions {
   /** The curated catalogue to resolve. Defaults to the shipped catalogue. */
@@ -111,6 +130,13 @@ export interface UmbraDesktopAppCatalogueOptions {
  * a variant, a user permission) and is *expected* to change. Which is why the app list has to be
  * able to shrink as well as grow, and why `#recompute` rebuilds it rather than accumulating into
  * it.
+ *
+ * A third input joined the two above with package catalogues: `umbraDesktopCatalogue` manifests any
+ * package may register, each carrying groups and deep links in the curated fragments' shape. They
+ * are validated and merged over the curated catalogue on every recompute, the package winning on a
+ * shared alias (see `merge-catalogues.ts` and the 2026-09-25 package catalogues design). Because a
+ * package entry can name a ref nothing watched before, the set of watched refs follows the merged
+ * catalogue rather than being fixed at construction; `#watchRefs` says how that avoids recursing.
  */
 export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   #apps = new UmbArrayState<UmbraDesktopApp>([], (a) => a.alias);
@@ -131,8 +157,8 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   }
 
   /**
-   * Whether a curated entry's `ref` is registered on this install, regardless of whether the
-   * current user may reach what it points at.
+   * Whether a `ref` the merged catalogue names is registered on this install, regardless of whether
+   * the current user may reach what it points at.
    *
    * The one question `apps` cannot answer. An app missing from that list has two quite different
    * causes — the package is not installed, or this user may not reach its section — and a caller
@@ -145,11 +171,30 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
    * pass, so a subscription would be state to hold for no extra answer. Refs the catalogue does not
    * carry are unknown here and answer false, which is the safe direction — nothing is observing
    * them, so nothing could ever make the answer true.
+   *
+   * A ref first named by a package catalogue is subscribed by the recompute that found it, before
+   * that recompute resolves anything, so the list it emits already carries the answer. The one
+   * weakening of the same-pass guarantee above is a closed desktop: nothing new is subscribed while
+   * it is closed, so a ref first named then answers `false` until reopening recomputes.
    * @param ref The referenced manifest's alias.
    * @returns True when a manifest with that alias is registered.
    */
   public isRefRegistered(ref: string): boolean {
     return this.#manifests.get(ref) !== undefined;
+  }
+
+  /**
+   * The `ref` of the merged catalogue's entry with this alias, if it has one.
+   *
+   * A package can replace one of our entries with one that points somewhere else, so a host feature
+   * that needs a curated entry's ref (the taskbar's AI chat is the one today) asks here rather than
+   * reading the static catalogue at module load, which would answer for an entry that no longer
+   * exists.
+   * @param alias The entry alias.
+   * @returns Its ref, or `undefined`.
+   */
+  public getEntryRef(alias: string): string | undefined {
+    return this.#merged.entries.find((entry) => entry.alias === alias)?.ref;
   }
 
   #groups = new UmbArrayState<UmbraDesktopLauncherGroup>([], (g) => g.group.alias);
@@ -182,14 +227,40 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
   #registeredAppManifests: ReadonlyArray<ManifestUmbraDesktopApp> = [];
 
   /**
-   * Aliases the curated catalogue has claimed, for the collision check in `#recompute`.
-   *
-   * Every entry's alias, not only the entries that resolved: the rule has to be answerable without
-   * knowing who is looking. Filtering against the apps that actually derived would make a package's
-   * app appear for a user without the colliding entry's section and vanish for a user with it, which
-   * is a support case nobody can reproduce. Reserved is reserved.
+   * Every registered `umbraDesktopCatalogue` manifest whose conditions are currently met, kept current
+   * by the second extension initializer. Manifests rather than validated catalogues, for the same
+   * reason as `#registeredAppManifests`: validation, and its reports, happen once, in `#recompute`.
    */
-  #curatedAliases: ReadonlySet<string>;
+  #packageCatalogueManifests: ReadonlyArray<ManifestUmbraDesktopCatalogue> = [];
+
+  /**
+   * The catalogue the last recompute resolved: curated, with every package definition applied.
+   * Starts as the curated catalogue, so `getEntryRef` has an answer before the first recompute.
+   */
+  #merged: UmbraDesktopCatalogue;
+
+  /** Which package catalogue each package-defined entry came from, for naming it in diagnostics. */
+  #entrySources: ReadonlyMap<string, string> = new Map();
+
+  /** Refs with an observation, marked before it is created (design D16). */
+  #watchedRefs = new Set<string>();
+
+  /** The entry aliases the last recompute resolved, so the gate can forget the ones that leave. */
+  #entryAliases: ReadonlySet<string> = new Set();
+
+  /**
+   * While true, `#recompute` returns at once: a batch of synchronous emissions is being collected,
+   * and exactly one recompute follows it. Construction, reconnection and `#watchRefs` each raise it,
+   * which is what turns the forty-odd recomputes construction used to do into one (design D16).
+   */
+  #batching = false;
+
+  /**
+   * Whether `destroy()` has run. `#recompute` is a no-op from then on: the initializers report empty
+   * lists from inside `super.destroy()`, and a recompute then would re-track entries on a gate that
+   * has already been destroyed, leaving condition checks nothing tears down.
+   */
+  #destroyed = false;
 
   /** Registry-quiet window before diagnostics are reported. */
   #diagnosticDelayMs: number;
@@ -235,8 +306,12 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     this.#catalogue = options.catalogue ?? catalogue;
     this.#registry = options.registry ?? umbExtensionsRegistry;
     this.#diagnosticDelayMs = options.diagnosticDelayMs ?? DIAGNOSTIC_DELAY_MS;
-    this.#curatedAliases = new Set(this.#catalogue.entries.map((e) => e.alias));
+    this.#merged = this.#catalogue;
     this.#validateCatalogue();
+
+    // Everything below emits synchronously as it is set up. Collect it all, then recompute once
+    // (design D16). The first recompute is also what starts watching every curated ref.
+    this.#batching = true;
 
     // A verdict change calls back in to recompute, which is why `track` no-ops on an unchanged
     // condition set: without that, every recompute would rebuild the conditions and recompute again.
@@ -276,6 +351,22 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
       'observeRegisteredApps',
     );
 
+    // Package catalogues, through the same kind of initializer and for the same reason: it is the
+    // route that evaluates a manifest's conditions, so a catalogue whose conditions are unmet never
+    // reaches the merge and claims nothing (design D5). It also applies Umbraco's `overwrites`
+    // between catalogue manifests before we see them.
+    new UmbExtensionsManifestInitializer(
+      this,
+      this.#registry,
+      'umbraDesktopCatalogue',
+      null,
+      (permitted) => {
+        this.#packageCatalogueManifests = permitted.map((controller) => controller.manifest);
+        this.#recompute();
+      },
+      'observePackageCatalogues',
+    );
+
     this.observe(
       this.#registry.byType('section'),
       (sections) => {
@@ -284,21 +375,6 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
       },
       'observeRegisteredSections',
     );
-
-    // One observation per distinct `ref`. Each needs its own controller alias: `observe` otherwise
-    // derives one from the callback's source, which is identical on every iteration, so each
-    // observation would evict the previous one. `byAlias` also kind-merges the manifest, which the
-    // former `getByAlias` snapshot did not — so a menu item's `kind` now resolves correctly.
-    for (const ref of this.#refs()) {
-      this.observe(
-        this.#registry.byAlias(ref),
-        (manifest) => {
-          this.#manifests.set(ref, manifest as ReferencedManifest | undefined);
-          this.#recompute();
-        },
-        `observeRef:${ref}`,
-      );
-    }
 
     this.consumeContext(UMB_CURRENT_USER_CONTEXT, (currentUser) => {
       if (!currentUser) return;
@@ -311,6 +387,28 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
         'observeAllowedSections',
       );
     });
+
+    this.#batching = false;
+    this.#recomputeGuarded();
+  }
+
+  /**
+   * `#recompute`, for the two places that call it directly rather than from an observation.
+   *
+   * Every other call arrives inside an RxJS subscriber or an extension initializer's callback, which
+   * catch a throw and report it. These two do not: the constructor runs inside the desktop element's
+   * setup, and `hostConnected` inside Umbraco's `UmbControllerHostMixin.hostConnected`, a plain
+   * `forEach` over the element's controllers. A throw escaping from here stops that loop and leaves
+   * every controller registered after this one, the theme styles and the server events among them,
+   * disconnected. Validation (design D9) means nothing known throws; this is what keeps an unknown
+   * cause from taking the rest of the desktop with it.
+   */
+  #recomputeGuarded(): void {
+    try {
+      this.#recompute();
+    } catch (error) {
+      console.error('[UmbraDesktop] Rebuilding the app list failed; the launcher keeps its last list.', error);
+    }
   }
 
   /**
@@ -319,7 +417,9 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
    *
    * The flag is set *before* `super.destroy()`, not merely alongside the cancel: destroying the
    * controllers destroys the extension initializer, whose own `destroy` reports an empty permitted
-   * set, which recomputes and would re-arm the timer this method just cancelled.
+   * set, which recomputes and would re-arm the timer this method just cancelled. `#destroyed` goes
+   * up first of all, so the recomputes the initializers trigger from inside `super.destroy()` do
+   * nothing.
    *
    * The gate is destroyed here for the same reason from the other end, and because this context
    * constructs it and nothing else can: the gate registers against the *host element*, not against
@@ -331,6 +431,7 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
    * index on a second pass), so destroying the gate twice is safe.
    */
   override destroy(): void {
+    this.#destroyed = true;
     this.#stopped = true;
     this.#cancelDiagnostics();
     this.#conditionGate.destroy();
@@ -358,10 +459,22 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
    * `super.hostConnected()` re-subscribes them, so each one emits its current value and the
    * recompute that follows re-arms whatever is still wrong. A misconfiguration the user walked away
    * from is still worth a line when they walk back.
+   *
+   * Re-subscribing makes every observation emit at once, so the batch collects them and one
+   * recompute follows, which is also where any ref that could not be watched while the desktop was
+   * closed gets its observation. The batch is lowered in a `finally`: left raised by a throw, it
+   * would make every later recompute a no-op, which is the frozen launcher design D9 exists to
+   * prevent.
    */
   override hostConnected(): void {
     this.#stopped = false;
-    super.hostConnected();
+    this.#batching = true;
+    try {
+      super.hostConnected();
+    } finally {
+      this.#batching = false;
+    }
+    this.#recomputeGuarded();
   }
 
   /** Drop any armed diagnostic flush, leaving the pending set for the next recompute to rebuild. */
@@ -405,12 +518,6 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     }, this.#diagnosticDelayMs);
   }
 
-  /** The distinct `ref` aliases the catalogue points at. */
-  #refs(): string[] {
-    const refs = this.#catalogue.entries.map((e) => e.ref).filter((ref): ref is string => !!ref);
-    return [...new Set(refs)];
-  }
-
   /**
    * Dev diagnostic: warn about catalogue entries whose display placement references
    * a group that isn't defined, so a contributor's typo doesn't make an app silently
@@ -447,73 +554,176 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
       .filter((s) => allowed.has(s.alias))
       .map((s) => ({
         alias: s.alias,
-        label: s.meta?.label ?? s.name ?? s.alias,
-        pathname: s.meta?.pathname ?? '',
+        // Read defensively: a section manifest is any package's JSON, and a label that is not text
+        // would become a fallback tile's name and reach `groupApps` (design D9).
+        label: textOr(s.meta?.label, textOr(s.name, s.alias)),
+        pathname: textOr(s.meta?.pathname, ''),
       }));
   }
 
-  /** Re-resolve the catalogue and publish the derived + grouped apps. */
+  /** Re-merge and re-resolve the catalogue, and publish the derived and grouped apps. */
   #recompute(): void {
+    if (this.#destroyed || this.#batching) return;
     this.#pendingDiagnostics.clear();
     this.#sections = this.#resolveSections();
-    const resolved = this.#catalogue.entries.map((e) => this.#resolveEntry(e));
+    const registered = this.#normaliseRegisteredApps();
+    const merged = mergeCatalogues({
+      curated: this.#catalogue,
+      packages: this.#normalisePackageCatalogues(),
+      apps: this.#appClaims(registered),
+    });
+    for (const report of merged.reports) this.#diagnose(report.key, report.message);
+    this.#merged = merged.catalogue;
+    this.#entrySources = merged.entrySources;
+    this.#watchRefs(merged.catalogue.entries);
+    this.#forgetDepartedEntries(merged.catalogue.entries);
+    const resolved = merged.catalogue.entries.map((entry) => this.#resolveEntry(entry));
     const apps = deriveApps(
       resolved,
       this.#sections,
-      this.#catalogue.excludedSections,
-      this.#resolveRegisteredApps(),
+      merged.catalogue.excludedSections,
+      registered.filter((app) => !merged.droppedApps.has(app.alias)),
     );
     this.#apps.setValue(apps);
-    this.#groups.setValue(groupApps(apps, this.#catalogue.groups));
+    this.#groups.setValue(groupApps(apps, merged.catalogue.groups));
     this.#scheduleDiagnostics();
   }
 
   /**
-   * Normalise the permitted `umbraDesktopApp` manifests, reporting what did not survive.
+   * Start watching every `ref` in these entries that nothing watches yet (design D16).
    *
-   * Two things can cost a permitted manifest its tile, and neither is visible from anywhere else: a
-   * package registered, Umbraco allowed it, and the launcher simply has no such app in it. So both
-   * go through `#diagnose`, which is the register they belong in — dev-facing, console-only,
+   * Three rules, each for a failure that was found rather than imagined. **Mark before subscribing:**
+   * `UmbObserverController` subscribes, and so emits, from inside its own constructor, before it has
+   * even registered as a controller, and the callback recomputes, so a ref marked afterwards is found
+   * unwatched again by that very recompute and subscribed again, until the stack overflows. **Batch
+   * the callbacks:** while subscribing they only record the manifest, and the recompute that called
+   * this carries on with every new manifest recorded. **Respect the lifecycle:** nothing is subscribed
+   * once destroyed, where it would outlive the context, or while stopped, where an observation created
+   * during `hostDisconnected` is never reached by that pass and stays live with the desktop closed.
+   * Refs skipped while stopped are simply still unwatched, and the recompute after reconnecting picks
+   * them up.
+   *
+   * A ref that later drops out of the catalogue stays watched. That saves re-subscribing when a
+   * condition flips back; the cost is one registry scan per watched ref per registry change, bounded by
+   * the refs any catalogue has named this session.
+   * @param entries The merged catalogue's entries.
+   */
+  #watchRefs(entries: ReadonlyArray<UmbraDesktopCatalogueEntry>): void {
+    if (this.#destroyed || this.#stopped) return;
+    const fresh = [...new Set(entries.map((entry) => entry.ref))].filter(
+      (ref): ref is string => !!ref && !this.#watchedRefs.has(ref),
+    );
+    if (fresh.length === 0) return;
+    const batching = this.#batching;
+    this.#batching = true;
+    try {
+      for (const ref of fresh) {
+        this.#watchedRefs.add(ref);
+        // One observation per distinct ref, each under its own controller alias: `observe` otherwise
+        // derives one from the callback's source, identical on every iteration, and each would evict
+        // the last. `byAlias` also kind-merges the manifest, so a menu item's `kind` resolves.
+        this.observe(
+          this.#registry.byAlias(ref),
+          (manifest) => {
+            this.#manifests.set(ref, manifest as ReferencedManifest | undefined);
+            this.#recompute();
+          },
+          `observeRef:${ref}`,
+        );
+      }
+    } finally {
+      this.#batching = batching;
+    }
+  }
+
+  /**
+   * Tell the condition gate to drop every entry that has left the merged catalogue, so its condition
+   * checks stop firing. Before package catalogues, an entry could only lose its ref; now it can leave
+   * the catalogue altogether, and `#resolveEntry` never sees it again to forget it.
+   * @param entries The merged catalogue's entries.
+   */
+  #forgetDepartedEntries(entries: ReadonlyArray<UmbraDesktopCatalogueEntry>): void {
+    const present = new Set(entries.map((entry) => entry.alias));
+    for (const alias of this.#entryAliases) if (!present.has(alias)) this.#conditionGate.forget(alias);
+    this.#entryAliases = present;
+  }
+
+  /**
+   * The registered apps' claims on their aliases, carrying each manifest's own root weight: the
+   * normalised app's weight has already been inverted onto the launcher's scale, and the merge
+   * compares manifests on Umbraco's.
+   * @param registered The normalised apps.
+   * @returns One claim per app.
+   */
+  #appClaims(registered: ReadonlyArray<UmbraDesktopRegisteredApp>): UmbraDesktopAppClaim[] {
+    const weights = new Map(
+      this.#registeredAppManifests.map((manifest) => [manifest.alias, isFiniteNumber(manifest.weight) ? manifest.weight : 0] as const),
+    );
+    return registered.map((app) => ({ alias: app.alias, manifestWeight: weights.get(app.alias) ?? 0 }));
+  }
+
+  /**
+   * Validate the permitted package catalogues, reporting what did not survive.
+   * @returns The usable catalogues.
+   */
+  #normalisePackageCatalogues(): UmbraDesktopPackageCatalogue[] {
+    const { catalogues, reports } = normalisePackageCatalogues(this.#packageCatalogueManifests, window.location.origin);
+    for (const report of reports) this.#diagnose(report.key, report.message);
+    return catalogues;
+  }
+
+  /**
+   * How a diagnostic names an entry: by alias, plus the package catalogue it came from, if any. Two
+   * packages can use one alias for different things, so the source goes into the key as well.
+   * @param entry The entry.
+   * @returns The name to print, such as `"Pkg.App" from "Pkg.Catalogue"`.
+   */
+  #entryLabel(entry: UmbraDesktopCatalogueEntry): string {
+    const source = this.#entrySources.get(entry.alias);
+    return source ? `"${entry.alias}" from "${source}"` : `"${entry.alias}"`;
+  }
+
+  /**
+   * Normalise the permitted `umbraDesktopApp` manifests, reporting what did not survive and which
+   * fields were ignored. Which app keeps an alias shared with an entry is the merge's decision now
+   * (design D4), so nothing here filters on aliases.
+   *
+   * Neither report is visible from anywhere else: a package registered, Umbraco allowed it, and the
+   * launcher simply has no such app in it, or shows it without the field its author set. So both go
+   * through `#diagnose`, which is the register they belong in — dev-facing, console-only,
    * deduplicated, and held back until the registry stops changing so a diagnostic is never printed
    * about a state that was merely transient.
-   * @returns The registered apps derivation should see.
+   * @returns The registered apps the merge should see.
    */
-  #resolveRegisteredApps(): UmbraDesktopRegisteredApp[] {
-    const { apps, dropped } = normaliseRegisteredApps(this.#registeredAppManifests);
+  #normaliseRegisteredApps(): UmbraDesktopRegisteredApp[] {
+    const { apps, dropped, ignored } = normaliseRegisteredApps(this.#registeredAppManifests);
     for (const drop of dropped) {
       this.#diagnose(
         `registered-dropped:${drop.alias}`,
         `[UmbraDesktop] Registered app "${drop.alias}" was dropped because ${drop.reason}.`,
       );
     }
-    return apps.filter((app) => {
-      // Registry uniqueness holds only inside the registered set, so a manifest is free to claim an
-      // alias the curated catalogue already uses, and the alias is not decoration: it is the key a
-      // pinned favourite is stored under, and the launcher resolves a pin with a `find` over the app
-      // list. Two apps under one alias therefore means a pin that opens whichever of them
-      // derivation happened to emit first. The curated entry wins because it is the one whose URL
-      // and chrome profile this repository has verified, and it used to win by accident of pass
-      // ordering; this makes it the decision, and tells the package, which is the half that was
-      // missing. (Only catalogue aliases are checked, not derivation's synthesised
-      // `section:<alias>` fallbacks: those cannot collide without a manifest deliberately aliasing
-      // itself `section:…`, and a package that does that has said what it wants.)
-      if (!this.#curatedAliases.has(app.alias)) return true;
+    for (const { alias, field } of ignored) {
       this.#diagnose(
-        `registered-collision:${app.alias}`,
-        `[UmbraDesktop] Registered app "${app.alias}" was dropped because a curated catalogue entry already owns that alias. Rename the manifest alias.`,
+        `registered-ignored:${alias}:${field}`,
+        `[UmbraDesktop] Registered app "${alias}": "${field}" has the wrong type, so it was ignored.`,
       );
-      return false;
-    });
+    }
+    return apps;
   }
 
   /** Resolve one catalogue entry to a concrete URL + gate + inherited presentation. */
   #resolveEntry(entry: UmbraDesktopCatalogueEntry): UmbraDesktopResolvedEntry {
     // Explicit-URL entry: the gate is the stated section.
     if (entry.url) {
+      // A url entry is never gated, so anything the gate was tracking under this alias is stale: a
+      // package can now replace a conditioned `ref` entry (Workflow's, say) with a `url` one, and
+      // without this its condition checks would keep firing for the rest of the session.
+      this.#conditionGate.forget(entry.alias);
       if (!entry.section) {
         this.#diagnose(
-          `ungated:${entry.alias}`,
-          `[UmbraDesktop] Catalogue entry "${entry.alias}" has a "url" but no "section" gate, so it will never appear. Add "section".`,
+          `ungated:${this.#entrySources.get(entry.alias) ?? ''}:${entry.alias}`,
+          `[UmbraDesktop] Catalogue entry ${this.#entryLabel(entry)} has a "url" but no "section" gate, so it will never appear. Add "section".`,
         );
       }
       return { entry, url: entry.url, gateSectionAlias: entry.section ?? null, isSectionRoot: false };
@@ -543,6 +753,15 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
       return { entry, url: null, gateSectionAlias: entry.section ?? null, isSectionRoot: false };
     }
     const described = this.#describe(manifest, entry);
+    // `excludedSections` only guards the fallback, so an entry whose gate is the desktop's own section
+    // (a dashboard registered there, say) would open a desktop inside a desktop window (design D14).
+    if (described.gateSectionAlias === UMBRADESKTOP_SECTION_ALIAS) {
+      this.#diagnose(
+        `desktop:${this.#entrySources.get(entry.alias) ?? ''}:${entry.alias}`,
+        `[UmbraDesktop] Catalogue entry ${this.#entryLabel(entry)} would open the desktop inside a desktop window, so it is not shown.`,
+      );
+      return { entry, url: null, gateSectionAlias: null, isSectionRoot: false };
+    }
     const url = described.ref ? inferUrl(described.ref) : null;
     // A null URL is expected when the entry is gated out (its owning section isn't
     // permitted for this user); only warn when the entry IS relevant but still
@@ -551,9 +770,12 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
       !described.gateSectionAlias ||
       this.#sections.some((s) => s.alias === described.gateSectionAlias);
     if (!url && gatePermitted) {
+      const missingSection = manifest.type === 'menuItem' && !entry.section;
       this.#diagnose(
-        `unresolved:${entry.alias}`,
-        `[UmbraDesktop] Catalogue entry "${entry.alias}" (ref "${entry.ref}", type "${manifest.type}") is permitted but could not be resolved to a URL — it may need an explicit "url".`,
+        `unresolved:${this.#entrySources.get(entry.alias) ?? ''}:${entry.alias}`,
+        missingSection
+          ? `[UmbraDesktop] Catalogue entry ${this.#entryLabel(entry)} (ref "${entry.ref}") is a menu item with no "section", so its URL cannot be built. Add "section".`
+          : `[UmbraDesktop] Catalogue entry ${this.#entryLabel(entry)} (ref "${entry.ref}", type "${manifest.type}") is permitted but could not be resolved to a URL — it may need an explicit "url".`,
       );
     }
     return {
@@ -561,8 +783,10 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
       url,
       gateSectionAlias: described.gateSectionAlias,
       isSectionRoot: described.isSectionRoot,
-      inheritedName: manifest.meta?.label ?? manifest.name,
-      inheritedIcon: manifest.meta?.icon,
+      // Inherited from another package's manifest, so only when it is text: a number here would be
+      // a tile's name and reach `groupApps` (design D9).
+      inheritedName: textOr(manifest.meta?.label, textOr(manifest.name, undefined)),
+      inheritedIcon: textOr(manifest.meta?.icon, undefined),
     };
   }
 
@@ -614,8 +838,13 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
 
   /** The section a dashboard is scoped to, read from its section-alias condition. */
   #dashboardSectionAlias(manifest: Pick<ReferencedManifest, 'conditions'>): string | null {
-    const condition = (manifest.conditions ?? []).find((c) => c.alias === UMB_SECTION_ALIAS_CONDITION_ALIAS);
-    return condition?.match ?? null;
+    // Guarded because `conditions` is another package's JSON: anything but a list here used to make
+    // `.find` throw inside the recompute, which froze the launcher (design D9).
+    const conditions: ReadonlyArray<unknown> = Array.isArray(manifest.conditions) ? manifest.conditions : [];
+    const condition = conditions.find(
+      (c): c is { match?: unknown } => isRecord(c) && c.alias === UMB_SECTION_ALIAS_CONDITION_ALIAS,
+    );
+    return textOr(condition?.match, null);
   }
 }
 

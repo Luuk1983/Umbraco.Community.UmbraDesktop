@@ -8,6 +8,7 @@
  */
 export default {
   umbraDesktopEntertainment: {
+    groupGames: 'Spellen',
     minesweeper: 'Minesweeper',
     minesweeperNewGame: 'Nieuw spel',
     minesweeperMinesLeft: 'Mijnen over',

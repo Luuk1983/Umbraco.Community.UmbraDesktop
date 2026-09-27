@@ -1,31 +1,44 @@
 import { expect } from '@open-wc/testing';
 import type { UmbraDesktopApp } from '../types';
-import { resolvePinned, togglePinned } from './pinned';
+import { pinKeysFor, resolvePinned, togglePinnedApp } from './pinned';
 
-it('appends an alias that is not pinned, so new pins land at the end of the list', () => {
-  expect(togglePinned(['content', 'media'], 'log-viewer')).to.deep.equal(['content', 'media', 'log-viewer']);
+/**
+ * A stand-in app for the toggle cases, which read nothing but its alias.
+ * @param alias The app alias.
+ * @returns The app.
+ */
+const plain = (alias: string): UmbraDesktopApp => ({
+  alias,
+  name: alias,
+  icon: 'icon-document',
+  content: { kind: 'iframe', url: '' },
+  chromeProfile: 'full-section',
 });
 
-it('removes an alias that is already pinned', () => {
-  expect(togglePinned(['content', 'media'], 'content')).to.deep.equal(['media']);
+it('appends an app that is not pinned, so new pins land at the end of the list', () => {
+  expect(togglePinnedApp(['content', 'media'], plain('log-viewer'))).to.deep.equal(['content', 'media', 'log-viewer']);
+});
+
+it('removes an app that is already pinned', () => {
+  expect(togglePinnedApp(['content', 'media'], plain('content'))).to.deep.equal(['media']);
 });
 
 it('pins into an empty list', () => {
-  expect(togglePinned([], 'content')).to.deep.equal(['content']);
+  expect(togglePinnedApp([], plain('content'))).to.deep.equal(['content']);
 });
 
-it('unpins the last remaining alias', () => {
-  expect(togglePinned(['content'], 'content')).to.deep.equal([]);
+it('unpins the last remaining app', () => {
+  expect(togglePinnedApp(['content'], plain('content'))).to.deep.equal([]);
 });
 
 it('does not mutate the list it is given', () => {
   const before = ['content'];
-  togglePinned(before, 'media');
+  togglePinnedApp(before, plain('media'));
   expect(before).to.deep.equal(['content']);
 });
 
 it('preserves pin order when unpinning from the middle', () => {
-  expect(togglePinned(['a', 'b', 'c'], 'b')).to.deep.equal(['a', 'c']);
+  expect(togglePinnedApp(['a', 'b', 'c'], plain('b'))).to.deep.equal(['a', 'c']);
 });
 
 describe('resolving pins against the apps a user may launch', () => {
@@ -61,5 +74,50 @@ describe('resolving pins against the apps a user may launch', () => {
 
   it('returns nothing for an empty pin list', () => {
     expect(resolvePinned([app('content')], [])).to.deep.equal([]);
+  });
+});
+
+describe('a pin that follows its section', () => {
+  /**
+   * An app, optionally the section-root app of a section.
+   * @param alias The app alias.
+   * @param coversSection The section it opens as its root, if any.
+   * @returns A stand-in app.
+   */
+  const app = (alias: string, coversSection?: string): UmbraDesktopApp => ({
+    alias,
+    name: alias,
+    icon: 'icon-document',
+    content: { kind: 'iframe', url: '' },
+    chromeProfile: 'full-section',
+    ...(coversSection ? { coversSection } : {}),
+  });
+
+  it('resolves a pin on the fallback tile to the app that now covers the section', () => {
+    expect(resolvePinned([app('Pkg.App', 'Pkg.Section')], ['section:Pkg.Section']).map((a) => a.alias)).to.deep.equal([
+      'Pkg.App',
+    ]);
+  });
+
+  it('shows the app once when both of its pins are stored', () => {
+    const resolved = resolvePinned([app('Pkg.App', 'Pkg.Section')], ['section:Pkg.Section', 'Pkg.App']);
+    expect(resolved.map((a) => a.alias)).to.deep.equal(['Pkg.App']);
+  });
+
+  it('knows every stored pin that stands for an app', () => {
+    expect(pinKeysFor(app('Pkg.App', 'Pkg.Section'), ['content', 'section:Pkg.Section', 'Pkg.App'])).to.deep.equal([
+      'section:Pkg.Section',
+      'Pkg.App',
+    ]);
+  });
+
+  it('unpins every key for the app, so it does not come straight back', () => {
+    expect(togglePinnedApp(['content', 'section:Pkg.Section', 'Pkg.App'], app('Pkg.App', 'Pkg.Section'))).to.deep.equal([
+      'content',
+    ]);
+  });
+
+  it('pins an app under its own alias', () => {
+    expect(togglePinnedApp(['content'], app('Pkg.App', 'Pkg.Section'))).to.deep.equal(['content', 'Pkg.App']);
   });
 });

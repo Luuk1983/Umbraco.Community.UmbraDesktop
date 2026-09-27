@@ -82,6 +82,7 @@ async function launcherWithLongName(): Promise<UmbraDesktopLauncherElement> {
     apps: apps.asObservable(),
     groups: groups.asObservable(),
     isRefRegistered: () => true,
+    getEntryRef: () => undefined,
     getHostElement: () => wrapper,
   } as never).hostConnected();
 

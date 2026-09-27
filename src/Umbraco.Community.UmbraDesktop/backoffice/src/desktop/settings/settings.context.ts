@@ -6,16 +6,28 @@ import type {
 } from './types';
 import type { UmbraDesktopWallpaperView } from './wallpaper-view';
 import { resolveWallpaper, wallpaperThumbUrl } from './wallpaper';
-import { togglePinned } from './pinned';
+import { togglePinnedApp } from './pinned';
+import type { UmbraDesktopApp } from '../types';
 import { withFeatureEnabled } from '../taskbar/features/enabled';
-import { UMBRADESKTOP_DEFAULT_SETTINGS, parseSettings, serialiseSettings, settingsStorageKey } from './settings-store';
+import { UMBRADESKTOP_DEFAULT_SETTINGS } from './settings-store';
+import { browserSettingsCache } from './settings-cache';
+import { UmbraDesktopSettingsPersistence } from './settings-persistence';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from './settings.context-token';
+import { UMBRADESKTOP_MIGRATION_TIMEOUT_MS } from '../constants';
+import { UMBRADESKTOP_USER_DATA_GROUP } from '../user-data/constants';
+import { UmbraDesktopUserDataRepository } from '../user-data/user-data.repository';
+import { UmbraDesktopUserDataServerClient } from '../user-data/server.client';
+import { UmbraDesktopStoredMigrationLedger } from '../migrations/ledger';
+import { umbraDesktopMigrations } from '../migrations/index';
+import type { UmbraDesktopMigrationScreenState } from '../migrations/types';
+import { UMBRADESKTOP_BOOT_STATUS_DELAY_MS } from '../boot/constants';
+import { setBootSplashStatus } from '../boot/splash';
+import { delayedBootStatus } from '../boot/splash-status';
 import {
   UMBRADESKTOP_MEDIA_THUMB_SIZE,
   UMBRADESKTOP_MEDIA_WALLPAPER_SIZE,
   mediaImagingRequest,
 } from './media-imaging';
-import { writeBootHint } from '../boot/boot-storage';
 import { themeWallpaper } from '../theme/theme-wallpaper';
 import { UMBRADESKTOP_THEMES } from '../theme/themes/index';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
@@ -23,15 +35,19 @@ import { UmbBooleanState, UmbObjectState } from '@umbraco-cms/backoffice/observa
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import { UmbImagingRepository } from '@umbraco-cms/backoffice/imaging';
+import { UmbLocalizationController } from '@umbraco-cms/backoffice/localization-api';
+import { UMB_NOTIFICATION_CONTEXT } from '@umbraco-cms/backoffice/notification';
 
 /**
  * Owns the current user's desktop settings: the persisted preference, and the resolved view the
  * desktop and the settings dialog actually paint. Provided by the desktop element, so it is
  * scoped to the desktop subtree the same way the window manager and app catalogue are.
  *
- * Persistence is per-browser `localStorage`, keyed by user. Storage is treated as best-effort
- * throughout: a browser that refuses it (private mode, site data blocked) still gets a working
- * desktop for the session, just one that forgets.
+ * Persistence is the user's Umbraco account, in `umbracoUserData`, with `localStorage` kept as a
+ * cache of it. Everything about that relationship lives in {@link UmbraDesktopSettingsPersistence};
+ * what matters here is that both ends are best-effort, exactly as storage alone used to be. A
+ * browser that refuses storage, or a server that cannot be reached, still gets a working desktop for
+ * the session — one that forgets.
  */
 export class UmbraDesktopSettingsContext extends UmbContextBase {
   #settings = new UmbObjectState<UmbraDesktopSettings>(UMBRADESKTOP_DEFAULT_SETTINGS);
@@ -95,22 +111,98 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   /** Whether the stored settings have been read and their wallpaper resolved. */
   public readonly loaded = this.#loaded.asObservable();
 
+  /**
+   * Whether a one-time migration is showing a screen over the desktop, and which one.
+   *
+   * Idle almost always. It leaves idle only for somebody whose settings are still in this browser
+   * rather than on their account, which is once per person, ever.
+   */
+  #migration = new UmbObjectState<UmbraDesktopMigrationScreenState>({ phase: 'idle' });
+
+  /** The migration screen's state, for the desktop to render. */
+  public readonly migration = this.#migration.asObservable();
+
   #imaging: UmbImagingRepository;
+
+  /** Resolves the strings the boot splash and the failure notification show. */
+  #localize: UmbLocalizationController;
+
+  /** The host, kept so the user-data client can be built once the user is known. */
+  #host: UmbControllerHost;
 
   /** The current user's id, once known. Until then nothing is persisted. */
   #userUnique?: string;
 
+  /**
+   * Account-and-cache persistence for the current user, built once they are known.
+   *
+   * Absent until then, which is what stops anything being written against the wrong account — and
+   * why every write goes through {@link #persist} rather than touching storage directly.
+   */
+  #persistence?: UmbraDesktopSettingsPersistence;
+
+  /**
+   * The account store behind {@link #persistence}, kept only so it can be retired when the user
+   * changes. See {@link UmbraDesktopUserDataRepository.abandon}.
+   */
+  #store?: UmbraDesktopUserDataRepository;
+
+  /**
+   * The boot splash's status line while a load is in flight, or undefined when none is.
+   *
+   * Only the load drives it. Migrations used to as well, back when they ran behind the boot splash;
+   * they have their own screen now, so the splash says nothing about them and this exists purely to
+   * explain a load that is taking longer than it should.
+   */
+  #status?: ReturnType<typeof delayedBootStatus>;
+
   constructor(host: UmbControllerHost) {
     super(host, UMBRADESKTOP_SETTINGS_CONTEXT);
+    this.#host = host;
     this.#imaging = new UmbImagingRepository(host);
+    this.#localize = new UmbLocalizationController(host);
 
     this.consumeContext(UMB_CURRENT_USER_CONTEXT, (context) => {
       if (!context) return;
       this.observe(context.currentUser, (user) => {
         if (!user?.unique || user.unique === this.#userUnique) return;
         this.#userUnique = user.unique;
+        this.#persistence = this.#buildPersistence(user.unique);
         void this.#load();
       });
+    });
+  }
+
+  /**
+   * Wire up persistence for one user: their account rows, their browser cache, and the migrations
+   * that move one to the other.
+   *
+   * All of it per user, and rebuilt when the user changes, because two accounts sharing a browser
+   * must not inherit each other's desktop — the same reason the cache key has always been scoped.
+   *
+   * The repository is shared between the settings and the ledger deliberately: it fetches the whole
+   * group once and serves both from that, so a load is one request rather than two.
+   * @param userUnique The current user's unique id.
+   * @returns Persistence for that user.
+   */
+  #buildPersistence(userUnique: string): UmbraDesktopSettingsPersistence {
+    // Retire the outgoing one first. Writes are queued, so a save for the person who just signed
+    // out can still be waiting, and it would go out carrying the new user's token — see
+    // `UmbraDesktopUserDataRepository.abandon`.
+    this.#store?.abandon();
+
+    const store = new UmbraDesktopUserDataRepository(
+      UMBRADESKTOP_USER_DATA_GROUP,
+      new UmbraDesktopUserDataServerClient(this.#host),
+    );
+    this.#store = store;
+    const cache = browserSettingsCache(userUnique);
+
+    return new UmbraDesktopSettingsPersistence({
+      store,
+      cache,
+      ledger: new UmbraDesktopStoredMigrationLedger(store),
+      migrations: umbraDesktopMigrations({ store, readLegacySettings: () => cache.read() }),
     });
   }
 
@@ -155,11 +247,11 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   }
 
   /**
-   * Pin an app to Favourites, or unpin it if it is already pinned.
-   * @param alias The app alias to toggle.
+   * Pin an app to Favourites, or unpin it if any stored pin stands for it (see `togglePinnedApp`).
+   * @param app The app whose pin was clicked.
    */
-  public togglePin(alias: string): void {
-    this.#update({ pinned: togglePinned(this.#settings.getValue().pinned, alias) });
+  public togglePin(app: UmbraDesktopApp): void {
+    this.#update({ pinned: togglePinnedApp(this.#settings.getValue().pinned, app) });
   }
 
   /**
@@ -229,13 +321,13 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    * sign-in but also a plain refresh of it. Nothing changes on the spot, which is why the settings
    * panel says so rather than leaving a toggle that looks broken.
    *
-   * Writes the browser-level hint as well as the payload, so the next boot can raise the splash
-   * before it knows who is logged in.
+   * The browser-level hint the next boot reads moves with the cache rather than from here, once the
+   * account has accepted the change — see `settings-cache.ts` for why those two may never be written
+   * apart.
    * @param enabled Whether to boot into the desktop.
    */
   public setBootIntoDesktop(enabled: boolean): void {
     this.#update({ bootIntoDesktop: enabled });
-    writeBootHint(enabled);
   }
 
   /**
@@ -291,7 +383,9 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   #update(partial: Partial<Omit<UmbraDesktopSettings, 'v'>>): void {
     const settings: UmbraDesktopSettings = { ...this.#settings.getValue(), ...partial };
     this.#settings.setValue(settings);
-    this.#persist(settings);
+    // Not awaited: every caller is a click, and a click that waited on a round trip before the
+    // wallpaper moved would make the whole desktop feel like it was on a leash.
+    void this.#persist(settings);
   }
 
   /**
@@ -302,13 +396,178 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    * desktop that is about to change under the user.
    */
   async #load(): Promise<void> {
-    const settings = parseSettings(this.#read());
-    this.#settings.setValue(settings);
-    // Mirror the boot preference to a browser-level key so the *next* boot can decide whether to
-    // raise the splash before it knows who is logged in. See `boot/constants.ts`.
-    writeBootHint(settings.bootIntoDesktop);
-    await this.#refreshView(settings.wallpaper);
-    this.#loaded.setValue(true);
+    const persistence = this.#persistence;
+    if (!persistence) return;
+
+    // A load is a fresh start. Without this, a `running` phase left behind by the previous user —
+    // whose run was cut short by the `#stale` guards below — would be inherited by this one, who
+    // would arrive behind a screen belonging to somebody else's migration, with no button on it.
+    this.#migration.setValue({ phase: 'idle' });
+
+    // Quiet unless the boot runs long — see `boot/splash-status.ts`. Armed before the first request
+    // rather than after it, so a slow *first* request is covered too.
+    this.#status = delayedBootStatus({
+      delayMs: UMBRADESKTOP_BOOT_STATUS_DELAY_MS,
+      show: (text) => setBootSplashStatus(text),
+    });
+    this.#status.set(() => this.#localize.term('umbraDesktop_bootLoadingSettings'));
+
+    try {
+      const load = await persistence.load();
+      if (this.#stale(persistence)) return;
+      this.#settings.setValue(load.settings);
+
+      // Asked *before* the desktop is allowed to paint, so that when it does, the screen is already
+      // part of the same frame. A beat later would mean a flash of a desktop that is about to change
+      // under the person looking at it.
+      const pending = await persistence.pending();
+      if (this.#stale(persistence)) return;
+      if (pending.length > 0) {
+        this.#migration.setValue({ phase: 'running', descriptionKey: pending[0].descriptionKey });
+      }
+
+      await this.#refreshView(load.settings.wallpaper);
+    } catch (error) {
+      // Nothing below this is expected to throw: every port between here and the network reports
+      // failure rather than raising it, and each of them is tested for that. This is the backstop
+      // for the day one of them stops doing so, because the cost of being wrong is the worst
+      // failure the desktop has — `#loaded` never flips, so it holds on a blank surface forever and
+      // the splash sits on top of it until its own timeout lifts it onto nothing.
+      // eslint-disable-next-line no-console
+      console.error('[UmbraDesktop] Could not load settings; painting what we have.', error);
+    } finally {
+      // The desktop paints either way. Whatever settings survived the attempt are what it paints,
+      // which for a total failure is the defaults — worse than the user's own desktop, far better
+      // than never arriving.
+      this.#loaded.setValue(true);
+      // The splash must not be left narrating a load that ended badly.
+      this.#status.stop();
+      this.#status = undefined;
+    }
+
+    // Unconditionally, not only when the look-ahead found something. The look-ahead decides whether
+    // a *screen* appears; the runner decides what runs, and it re-checks each migration itself. An
+    // earlier version gated this call on the phase, which quietly made the look-ahead the thing that
+    // decided whether migrations happened at all — so a future migration whose `pending()` was wrong,
+    // or threw, would never run, on any load, forever, with nothing reported.
+    //
+    // After the splash is released, not before: the migration has its own screen inside the desktop,
+    // and running it behind the boot screen is exactly what this stopped doing.
+    await this.#migrate();
+  }
+
+  /**
+   * Run the pending migrations behind the screen that is already up, then apply what they wrote.
+   *
+   * The desktop underneath is currently painting this browser's settings, because the account had
+   * none. When the migration succeeds those same settings are on the account, so the reload below
+   * changes nothing visible — which is the point. What it does do is make the account the source of
+   * truth from here on, without a second load.
+   */
+  async #migrate(): Promise<void> {
+    const persistence = this.#persistence;
+    if (!persistence) return;
+
+    // Bounded, because `running` has no button. The migration is not cancelled — it may already
+    // have written — it is simply no longer the thing holding the screen. See
+    // `UMBRADESKTOP_MIGRATION_TIMEOUT_MS`.
+    let expired: number | undefined;
+    const bound = new Promise<never>((_, reject) => {
+      expired = window.setTimeout(
+        () => reject(new Error('The migration did not finish in time.')),
+        UMBRADESKTOP_MIGRATION_TIMEOUT_MS,
+      );
+    });
+
+    try {
+      await Promise.race([this.#runMigrations(persistence), bound]);
+    } catch (error) {
+      // The backstop that matters most in this file. `running` is deliberately the one state with
+      // no way out, so a throw escaping here leaves somebody behind a full-screen overlay they
+      // cannot dismiss. Anything unexpected lands them on the failed screen instead, which has a
+      // button and tells them their settings are still in this browser — true either way.
+      // eslint-disable-next-line no-console
+      console.error('[UmbraDesktop] Migration failed unexpectedly.', error);
+      if (!this.#stale(persistence)) this.#migration.setValue({ phase: 'failed' });
+    } finally {
+      if (expired !== undefined) window.clearTimeout(expired);
+    }
+  }
+
+  /**
+   * Whether the run holding this persistence has been overtaken by a newer one.
+   *
+   * Both the load and the migration write to shared state after several awaits, and
+   * {@link #buildPersistence} replaces `#persistence` whenever the current user changes. Without
+   * this, an in-flight run could finish after the switch and paint one person's wallpaper, theme
+   * and pinned apps onto another person's desktop — and worse, `#persist` would then save them
+   * there.
+   *
+   * Reachable only if the signed-in user changes without the page reloading, which signing out does
+   * not normally allow. Cheap insurance against the worst category of bug this feature has.
+   * @param persistence The persistence the caller started with.
+   * @returns True when a newer run has taken over and this one must stop.
+   */
+  #stale(persistence: UmbraDesktopSettingsPersistence): boolean {
+    return this.#persistence !== persistence;
+  }
+
+  /**
+   * The migration run itself, separated so {@link #migrate} is nothing but its safety net.
+   * @param persistence The persistence to run against.
+   */
+  async #runMigrations(persistence: UmbraDesktopSettingsPersistence): Promise<void> {
+    const report = await persistence.migrate((migration) => {
+      if (this.#stale(persistence)) return;
+      this.#migration.setValue({ phase: 'running', descriptionKey: migration.descriptionKey });
+    });
+
+    // Migrations write to the account through their own store, so the work stands either way. What
+    // must not happen is reporting it on a desktop that now belongs to somebody else.
+    if (this.#stale(persistence)) return;
+
+    if (report.unrecorded.length > 0) {
+      // The work stands, the bookkeeping did not, and it will be attempted again next load. Not
+      // worth interrupting anybody over, but invisible without this.
+      // eslint-disable-next-line no-console
+      console.info('[UmbraDesktop] Migrations ran but could not be recorded:', report.unrecorded);
+    }
+
+    if (report.failure) {
+      this.#migration.setValue({ phase: 'failed', descriptionKey: report.failure.descriptionKey });
+      return;
+    }
+
+    if (report.applied.length === 0) {
+      // Nothing was applied. Either nothing was pending — the ordinary case, where no screen ever
+      // went up — or the look-ahead was wrong and a screen did. Either way, idle: there is nothing
+      // to congratulate anybody on.
+      //
+      // Note this also covers a migration that did the work but whose record failed. That lands in
+      // `unrecorded`, logged above, and it will be attempted again next load. The screen says
+      // nothing because the outcome is genuinely "come back later", not "done".
+      this.#migration.setValue({ phase: 'idle' });
+      return;
+    }
+
+    const load = await persistence.load();
+    if (this.#stale(persistence)) return;
+    this.#settings.setValue(load.settings);
+    await this.#refreshView(load.settings.wallpaper);
+    if (this.#stale(persistence)) return;
+
+    this.#migration.setValue({ phase: 'done' });
+  }
+
+  /**
+   * Take the migration screen away, because the person pressed the button on it.
+   *
+   * Explicit rather than timed. A screen that lifted itself after a couple of seconds has to guess
+   * how fast somebody reads, and the whole reason this screen exists is that a migration nobody saw
+   * may as well not have been explained.
+   */
+  public dismissMigration(): void {
+    this.#migration.setValue({ phase: 'idle' });
   }
 
   /**
@@ -323,10 +582,17 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
       return;
     }
 
+    const persistence = this.#persistence;
+
     const [url, thumbUrl] = await Promise.all([
       this.#resizedMediaUrl(ref.unique, UMBRADESKTOP_MEDIA_WALLPAPER_SIZE),
       this.#resizedMediaUrl(ref.unique, UMBRADESKTOP_MEDIA_THUMB_SIZE),
     ]);
+
+    // Two imaging round trips is long enough for the user to have changed underneath them, and the
+    // line below paints the desktop. Painting one person's wallpaper for another is precisely what
+    // `#stale` exists to prevent, and this was one of the two places it was missing.
+    if (persistence && this.#stale(persistence)) return;
 
     // A deleted or unreadable media item leaves both null, and resolveWallpaper falls back to
     // the default image rather than leaving the desktop blank.
@@ -355,30 +621,36 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   }
 
   /**
-   * Read the raw stored payload.
-   * @returns The payload, or `null` when nothing is stored or storage is unavailable.
-   */
-  #read(): string | null {
-    if (!this.#userUnique) return null;
-    try {
-      return localStorage.getItem(settingsStorageKey(this.#userUnique));
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Write settings to storage. Silently does nothing when the user is not yet known or the
-   * browser refuses storage — the in-memory state has already been updated either way.
+   * Write settings to the user's account, and report it when they do not get there.
+   *
+   * Fire-and-forget from the caller's point of view: the in-memory state has already changed, so the
+   * desktop has already responded and the user is not waiting on a round trip to see their wallpaper
+   * move. What they are waiting on is the *answer*, which is why a refusal is announced rather than
+   * swallowed — a theme that silently failed to save looks identical to one that saved, right up
+   * until the next machine.
+   *
+   * Does nothing before the user is known, which is the same guard the storage write always had.
    * @param settings The settings to persist.
    */
-  #persist(settings: UmbraDesktopSettings): void {
-    if (!this.#userUnique) return;
-    try {
-      localStorage.setItem(settingsStorageKey(this.#userUnique), serialiseSettings(settings));
-    } catch {
-      // Private mode or blocked site data: the desktop still works, it just forgets.
-    }
+  async #persist(settings: UmbraDesktopSettings): Promise<void> {
+    const persistence = this.#persistence;
+    if (!persistence) return;
+
+    // Before the write is even started. A save that goes out after the user changed would carry the
+    // new user's token, and core's PUT has no ownership check, so it would re-home the old user's
+    // row rather than fail. The repository refuses abandoned writes too; this is the cheaper half
+    // of the same guard.
+    if (this.#stale(persistence)) return;
+
+    if (await persistence.save(settings)) return;
+
+    // The failure belongs to the user whose save it was. Telling whoever is on screen now would be
+    // reporting a problem they did not cause and cannot act on.
+    if (this.#stale(persistence)) return;
+
+    const message = this.#localize.term('umbraDesktop_settingsNotSaved');
+    const notifications = await this.getContext(UMB_NOTIFICATION_CONTEXT);
+    notifications?.peek('warning', { data: { message } });
   }
 }
 

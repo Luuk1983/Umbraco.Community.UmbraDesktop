@@ -1,5 +1,9 @@
 import type { Rect, UmbraDesktopWindow } from '../types';
-import { UMBRADESKTOP_SECTION_ALIAS } from '../constants';
+import {
+  UMBRADESKTOP_SECTION_ALIAS,
+  UMBRADESKTOP_Z_SNAP_GHOST,
+  UMBRADESKTOP_Z_TASKBAR,
+} from '../constants';
 import { findChromeRoot } from '../chrome-injector';
 import { clearBootAttempt } from '../boot/boot-storage';
 import { lowerBootSplash } from '../boot/splash';
@@ -18,7 +22,9 @@ import type { DesktopLabelResponseModel } from '../../api/types.gen';
 import './window.element.js';
 import './taskbar.element.js';
 import '../desktop-label/desktop-label.element.js';
-import { css, customElement, html, repeat, state } from '@umbraco-cms/backoffice/external/lit';
+import '../migrations/migration-screen.element.js';
+import type { UmbraDesktopMigrationScreenState } from '../migrations/types.js';
+import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
 const OUTER_CHROME_STYLE_ID = 'umbradesktop-outer-chrome';
@@ -82,6 +88,15 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   private _settingsLoaded = false;
 
   /**
+   * Whether a one-time migration is showing a screen over the desktop, and which one.
+   *
+   * Idle for everybody except somebody whose settings are still in this browser rather than on their
+   * account, which is once per person, ever.
+   */
+  @state()
+  private _migration: UmbraDesktopMigrationScreenState = { phase: 'idle' };
+
+  /**
    * The surface currently under the resize observer, so it is attached exactly once per surface.
    *
    * Needed because the surface does not exist for the whole life of this element any more: it
@@ -105,6 +120,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     this.observe(this.#theme.metrics, (metrics) => this.#manager.setMetrics(metrics));
     this.observe(this.#settings.loaded, (loaded) => this.reportSettingsLoaded(loaded === true));
     this.observe(this.#label.label, (label) => (this._label = label));
+    this.observe(this.#settings.migration, (migration) => (this._migration = migration ?? { phase: 'idle' }));
   }
 
   /**
@@ -291,7 +307,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         <!-- On the wallpaper, like the logo: after it, and before the surface so every window
              paints over it. It has no z-index, so this order is the whole of its stacking. -->
         <umbradesktop-desktop-label .label=${this._label}></umbradesktop-desktop-label>
-        <div class="surface">
+        <div class="surface" ?inert=${this.#migrationShowing}>
           ${repeat(
             this._windows,
             (w) => w.id,
@@ -299,9 +315,46 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
           )}
           ${this.#renderSnapGhost()}
         </div>
-        <umbradesktop-taskbar></umbradesktop-taskbar>
+        <umbradesktop-taskbar ?inert=${this.#migrationShowing}></umbradesktop-taskbar>
+        ${this.#renderMigration()}
       </div>
     `;
+  }
+
+  /**
+   * The one-time migration screen, when one is showing.
+   *
+   * Inside the desktop rather than over the whole viewport, and rendered in the same pass the
+   * desktop itself is: the settings context sets the phase *before* it reports the settings loaded,
+   * so the screen and the desktop arrive together. A beat later would be a flash of a desktop that
+   * is about to change under the person looking at it.
+   *
+   * This is also why the screen lives here and not on the boot splash. The desktop is reached two
+   * ways, booted into and clicked into from the section menu, and only one of those has a splash.
+   * Putting it here is what makes the way somebody arrived stop mattering.
+   * @returns The screen, or nothing when no migration is showing.
+   */
+  /**
+   * Whether the migration screen is up, and therefore whether the desktop behind it is inert.
+   *
+   * The screen covers the desktop visually via `UMBRADESKTOP_Z_SYSTEM_SCREEN`, but covering is not
+   * blocking: without `inert` the windows and the taskbar stay in the tab order and reachable by
+   * assistive technology, and the taskbar's cog opens the settings dialog — during a migration that
+   * is rewriting those very settings. An element cannot make its own siblings inert, so it is
+   * applied here.
+   * @returns True while a migration screen is showing.
+   */
+  get #migrationShowing(): boolean {
+    return this._migration.phase !== 'idle';
+  }
+
+  #renderMigration() {
+    if (!this.#migrationShowing) return nothing;
+
+    return html`<umbradesktop-migration-screen
+      .phase=${this._migration.phase}
+      .descriptionKey=${this._migration.descriptionKey}
+      @umbradesktop-migration-dismiss=${() => this.#settings.dismissMigration()}></umbradesktop-migration-screen>`;
   }
 
   static override styles = [
@@ -400,16 +453,17 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         bottom: var(--umbradesktop-taskbar-reserve, 50px);
         overflow: hidden;
       }
-      /* The ghost, over every window and under the taskbar — the z-index below is deliberately one
-         short of the taskbar's own, which is the highest thing on the desktop. A snap preview that
-         covered the taskbar would hide the very thing the window is being snapped alongside.
+      /* The ghost, over every window and under the taskbar. Both numbers come from ../constants,
+         where the whole stacking order is written as one derived list — a snap preview that covered
+         the taskbar would hide the very thing the window is being snapped alongside, and that
+         relationship is the thing worth recording rather than two literals that happen to differ.
 
          Sized and placed inline; everything here is only how it is painted, which is why all three
          are tokens: a theme that draws its windows as Windows 98 bevels has no business showing a
          translucent rounded rectangle. */
       .snap-ghost {
         position: absolute;
-        z-index: 999999;
+        z-index: ${UMBRADESKTOP_Z_SNAP_GHOST};
         box-sizing: border-box;
         pointer-events: none;
         background: var(--umbradesktop-snap-ghost-background, rgba(255, 255, 255, 0.2));
@@ -421,7 +475,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         left: 0;
         right: 0;
         bottom: 0;
-        z-index: 1000000;
+        z-index: ${UMBRADESKTOP_Z_TASKBAR};
       }
     `,
   ];

@@ -5,9 +5,17 @@ import {
   UMBRADESKTOP_MORE_GROUP_WEIGHT,
 } from './constants';
 
-/** Compare by weight ascending, then a stable string tiebreak (labels/names are loc tokens). */
+/**
+ * Compare by weight ascending, then a stable string tiebreak (labels/names are loc tokens).
+ *
+ * The keys go through `String()` because the type is a promise nothing enforces: an app's name can
+ * be inherited from another package's extension label, which a static `umbraco-package.json` can
+ * make a number or an object, and `localeCompare` on one of those throws. This is the one place
+ * every name and label passes through, and a throw here stops the recompute that called it, which
+ * freezes the launcher (package catalogues design D9).
+ */
 function byWeightThenKey(aw: number, ak: string, bw: number, bk: string): number {
-  return aw - bw || ak.localeCompare(bk);
+  return aw - bw || String(ak).localeCompare(String(bk));
 }
 
 /**

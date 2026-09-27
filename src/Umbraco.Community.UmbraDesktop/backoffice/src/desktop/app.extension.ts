@@ -4,10 +4,9 @@ import type { ManifestElement, ManifestWithDynamicConditions } from '@umbraco-cm
  * What a `umbraDesktopApp` manifest carries beyond the extension basics.
  *
  * Note what is **absent**: no `url`, no `section`, no `chromeProfile`. A self-contained app points
- * at nothing, is gated by nothing, and has no backoffice chrome to strip. Their absence is what
- * keeps the design's boundary structural rather than advisory: a package cannot express a
- * deep-linked catalogue entry through this type even if it wants to, so deep links stay curated in
- * this repository where their URL and chrome profile can be verified.
+ * at nothing, is gated by nothing, and has no backoffice chrome to strip, so none of those fields
+ * exist here. A package that wants a tile for one of its backoffice screens registers a
+ * `umbraDesktopCatalogue` instead (`catalogue.extension.ts`), which is where deep links live.
  *
  * Ordering is absent too, and on purpose: it lives on the manifest's root `weight`, where Umbraco
  * puts it, rather than being duplicated here as a second knob for one thing. See
