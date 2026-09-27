@@ -22,6 +22,7 @@ function context(over: Partial<UmbraDesktopTaskbarFeatureContext> = {}) {
     apps: [],
     pinned: [],
     isRefRegistered: () => false,
+    entryRef: () => undefined,
     open: () => undefined,
     localize: (key) => key,
     fullscreen: 'off',

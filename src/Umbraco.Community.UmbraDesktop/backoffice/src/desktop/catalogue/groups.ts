@@ -23,10 +23,6 @@ export const groups: UmbraDesktopGroup[] = [
   { alias: 'automation', label: '#umbraDesktop_groupAutomation', weight: 43 },
   { alias: 'ai', label: '#umbraDesktop_groupAi', weight: 45 },
   { alias: 'system', label: '#umbraDesktop_groupSystem', weight: 50 },
-  // Games, last of the real groups and before the reserved "More". Populated entirely by registered
-  // apps from the entertainment package: nothing in this repository puts an app here, which is why
-  // the group can exist without either package knowing the other's release schedule.
-  { alias: 'games', label: '#umbraDesktop_groupGames', weight: 60 },
   // Where an app lands while it is still finding out what it should be. A promise to empty
   // itself rather than a permanent home: an app here either graduates into a real group or is
   // removed. Last of the real groups, immediately before the reserved "More", because it is the

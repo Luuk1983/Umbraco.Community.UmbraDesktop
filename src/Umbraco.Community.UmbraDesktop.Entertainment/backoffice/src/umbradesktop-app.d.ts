@@ -1,11 +1,13 @@
 import type { ManifestElement, ManifestWithDynamicConditions } from '@umbraco-cms/backoffice/extension-api';
 
 /**
- * The `umbraDesktopApp` manifest type, declared here because a consuming package cannot import it.
+ * The desktop's manifest types, `umbraDesktopApp` and `umbraDesktopCatalogue`, declared here because
+ * a consuming package cannot import them.
  *
  * **This file is a hand-written copy of a contract that lives in another package, and it exists
- * because there is currently no other way.** UmbraDesktop's own `app.extension.ts` declares this
- * type and registers it in Umbraco's `UmbExtensionManifestMap`, but that declaration reaches nobody
+ * because there is currently no other way.** UmbraDesktop's own `app.extension.ts` and
+ * `catalogue.extension.ts` declare these types and register them in Umbraco's
+ * `UmbExtensionManifestMap`, but those declarations reach nobody
  * outside its own project: the host's npm package is `private`, its NuGet package ships built
  * JavaScript rather than TypeScript, and `docs/desktop-apps.md` makes a virtue of the contract
  * being structural, so nothing is imported from the host at all.
@@ -56,14 +58,78 @@ interface ManifestUmbraDesktopApp extends ManifestElement<HTMLElement>, Manifest
   meta: MetaUmbraDesktopApp;
 }
 
+/** A launcher group this package defines. A copy of the host's `UmbraDesktopPackageGroup`. */
+interface UmbraDesktopPackageGroup {
+  /** Stable id, named by an app's `meta.group` or an entry's `group`. */
+  alias: string;
+  /** Heading text: a localisation token from this package's dictionary, or a literal. */
+  label: string;
+  /** Position among the launcher's groups, **lower first**: the host's Editing is 10, System 50, Experimental 70. */
+  weight?: number;
+}
+
+/** A deep link into one of this package's backoffice screens. A copy of the host's `UmbraDesktopPackageEntry`. */
+interface UmbraDesktopPackageEntry {
+  /** Stable app id and pin key. Reuse one of the host's aliases to replace that entry. */
+  alias: string;
+  /** Alias of a registered section, dashboard or default-kind menu item; the URL is inferred from it. */
+  ref?: string;
+  /** An explicit backoffice path under `/umbraco/section/` on this site, for what `ref` cannot infer. */
+  url?: string;
+  /** Permission gate; required with a menu-item `ref` or a `url`. */
+  section?: string;
+  /** Window title and tile text; defaults to the referenced extension's label. */
+  name?: string;
+  /** Native Umbraco icon alias; defaults to the referenced extension's icon. */
+  icon?: string;
+  /** How much backoffice chrome the window keeps. Defaults to `full-section`. */
+  chromeProfile?: 'full-section' | 'workspace-only' | 'bare';
+  /** The window body's opening size in px; the host adds the theme's chrome. */
+  defaultSize?: { w: number; h: number };
+  /** The smallest body in px; floored at what the theme's chrome needs. */
+  minSize?: { w: number; h: number };
+  /** Whether two windows of it may be open at once. */
+  allowMultiple?: boolean;
+  /** Whether the window may be resized or maximized. Default: allowed. */
+  resizable?: boolean;
+  /** Position within its group, **lower first**, like the host's own entries. */
+  weight?: number;
+  /** Launcher group alias. */
+  group?: string;
+  /** Mount-independent condition aliases on the referenced extension to answer before showing it. */
+  evaluateConditions?: string[];
+}
+
+/** What a `umbraDesktopCatalogue` manifest carries. A copy of the host's `MetaUmbraDesktopCatalogue`. */
+interface MetaUmbraDesktopCatalogue {
+  /** Launcher groups this package defines. */
+  groups?: UmbraDesktopPackageGroup[];
+  /** Deep links into this package's backoffice screens. */
+  entries?: UmbraDesktopPackageEntry[];
+}
+
+/**
+ * A package's catalogue: its own launcher groups and backoffice deep links, as data. The host promises
+ * these types only ever gain optional fields, which is what keeps this copy correct while it lags.
+ */
+interface ManifestUmbraDesktopCatalogue extends ManifestWithDynamicConditions {
+  /** Discriminates this manifest from every other extension type. */
+  type: 'umbraDesktopCatalogue';
+  /** The groups and entries. */
+  meta: MetaUmbraDesktopCatalogue;
+}
+
 declare global {
   /**
-   * Adds `umbraDesktopApp` to Umbraco's own extension type map, which is what makes the manifest
-   * assignable to `UmbExtensionManifest` and so accepted in this package's `manifests` array.
-   * Umbraco's own extension kinds declare themselves the same way, and so does the host.
+   * Adds `umbraDesktopApp` and `umbraDesktopCatalogue` to Umbraco's own extension type map, which is
+   * what makes the manifests assignable to `UmbExtensionManifest` and so accepted in this package's
+   * `manifests` array. Umbraco's own extension kinds declare themselves the same way, and so does
+   * the host.
    */
   interface UmbExtensionManifestMap {
     /** This package's desktop apps. */
     umbraDesktopApp: ManifestUmbraDesktopApp;
+    /** This package's launcher groups. */
+    umbraDesktopCatalogue: ManifestUmbraDesktopCatalogue;
   }
 }

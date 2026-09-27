@@ -51,7 +51,6 @@ export default {
     groupAutomation: 'Automation',
     groupAi: 'AI',
     groupSystem: 'System',
-    groupGames: 'Games',
     groupMore: 'More',
     // header-app launcher
     launchDesktop: 'Open desktop',

@@ -2,7 +2,7 @@ import type { UmbraDesktopApp, UmbraDesktopLauncherGroup } from '../types';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token.js';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
-import { resolvePinned } from '../settings/pinned.js';
+import { pinKeysFor, resolvePinned } from '../settings/pinned.js';
 import type { UmbraDesktopSettingsContext } from '../settings/settings.context';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -91,7 +91,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
    */
   #togglePin(e: Event, app: UmbraDesktopApp) {
     e.stopPropagation();
-    this.#settings?.togglePin(app.alias);
+    this.#settings?.togglePin(app);
   }
 
   /** Ask the taskbar to open the native backoffice search modal. */
@@ -150,7 +150,9 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   }
 
   #tile(app: UmbraDesktopApp) {
-    const pinned = this._pinned.includes(app.alias);
+    // Through `pinKeysFor`, not `includes(app.alias)`: a pin that followed its section to this app is
+    // stored under the section's fallback alias, and has to read as pinned here to be unpinnable.
+    const pinned = pinKeysFor(app, this._pinned).length > 0;
     const pinLabel = this.localize.term(pinned ? 'umbraDesktop_unpin' : 'umbraDesktop_pin');
     return html`
       <div class="tile">

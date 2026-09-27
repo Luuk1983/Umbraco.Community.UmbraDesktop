@@ -42,3 +42,22 @@ it('drops empty groups', () => {
   const result = groupApps([app('content', { group: 'editing' })], groups);
   expect(result.map((g) => g.group.alias)).to.deep.equal(['editing']);
 });
+
+/**
+ * A name that is not text must not stop the launcher. An app's name can be inherited from another
+ * package's extension label, and a static `umbraco-package.json` is type-checked by nothing, so a
+ * number or an object can arrive here; `localeCompare` on one throws, and a throw in the recompute
+ * that calls this freezes the launcher (package catalogues design D9, found by the branch review).
+ */
+it('sorts apps and groups whose names are not text without throwing', () => {
+  const odd = (value: unknown) => value as string;
+  expect(() =>
+    groupApps(
+      [
+        app('a', { group: 'editing', weight: 10, name: odd(42) }),
+        app('b', { group: 'editing', weight: 10, name: odd({ en: 'Reports' }) }),
+      ],
+      [...groups, { alias: 'x', label: odd(7), weight: 10 }, { alias: 'y', label: odd(8), weight: 10 }],
+    ),
+  ).to.not.throw();
+});

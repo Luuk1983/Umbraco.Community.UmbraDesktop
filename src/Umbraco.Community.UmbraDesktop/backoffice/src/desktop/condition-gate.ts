@@ -30,8 +30,11 @@ export function evaluableConditions<T extends UmbraDesktopConditionConfig>(
   configs: ReadonlyArray<T> | undefined,
   evaluate: ReadonlyArray<string> | undefined,
 ): T[] {
-  if (!configs?.length || !evaluate?.length) return [];
-  return configs.filter((config) => evaluate.includes(config.alias));
+  // `configs` is another package's manifest `conditions`, typed by nothing when it came from a
+  // static `umbraco-package.json`: a string has a `length` and no `filter`, and a throw here stops the
+  // recompute that called this (package catalogues design D9).
+  if (!Array.isArray(configs) || !evaluate?.length) return [];
+  return configs.filter((config) => !!config && typeof config === 'object' && evaluate.includes(config.alias));
 }
 
 /**
