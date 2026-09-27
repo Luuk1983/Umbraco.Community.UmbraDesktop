@@ -240,6 +240,40 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
    * window, otherwise bring it to the front (restoring it if minimized). See `taskActivation`.
    * @param w The window whose taskbar button was clicked.
    */
+  /**
+   * One running-window button.
+   *
+   * Every window gets the same button, an owner's and a floating attached window's alike, and it
+   * behaves the same: it focuses its own window, or minimizes it when that window already has focus.
+   * What differs for a group is only that its buttons share a box.
+   * @param w The window the button stands for.
+   * @returns The button.
+   */
+  #renderTask(w: UmbraDesktopWindow) {
+    const notices = windowNotices(w);
+    // Every severity reaches the taskbar, and the *shape* says which; see `#renderBadge`. Design D4
+    // kept `info` off it originally; the reasoning that put a conflict here in the first place
+    // applies to unsaved work too, because a window you minimized an hour ago is exactly the one
+    // whose state you cannot see.
+    const worst = worstSeverity(notices);
+    const name = this.localize.string(w.app.name);
+    // The words, not just the shape: this is the accessible name and the tooltip, so the state is
+    // readable to a screen reader and on a monochrome display. `notices[0]` is the worst notice,
+    // which is the one the badge is drawing.
+    const label = worst ? `${name} — ${this.localize.term(notices[0].title)}` : name;
+    return html`
+      <button
+        class="task window ${w.active ? 'active' : ''}"
+        title=${label}
+        aria-label=${label}
+        @click=${() => this.#onTaskClick(w)}>
+        <umb-icon class="task-icon" name=${w.app.icon}></umb-icon>
+        <span class="task-label">${name}</span>
+        ${this.#renderBadge(worst)}
+      </button>
+    `;
+  }
+
   #onTaskClick(w: UmbraDesktopWindow) {
     if (!this.#manager) return;
     if (taskActivation(w) === 'minimize') this.#manager.setState(w.id, 'minimized');
@@ -490,31 +524,19 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           ${this.#renderFeatures()} ${this.#renderDivider()}
           <div class="running">
             ${repeat(
-              this._windows,
+              // Owners and ordinary windows only: a floating attached window is drawn inside its
+              // owner's group, right after the owner, and never on its own.
+              this._windows.filter((w) => !w.owner || !this._windows.some((o) => o.id === w.owner)),
               (w) => w.id,
               (w) => {
-                const notices = windowNotices(w);
-                // Every severity reaches the taskbar, and the *shape* says which — see `#renderBadge`.
-                // Design D4 kept `info` off it originally; the reasoning that put a conflict here in
-                // the first place applies to unsaved work too, because a window you minimized an
-                // hour ago is exactly the one whose state you cannot see.
-                const worst = worstSeverity(notices);
-                const name = this.localize.string(w.app.name);
-                // The words, not just the shape: this is the accessible name and the tooltip, so the
-                // state is readable to a screen reader and on a monochrome display. `notices[0]` is
-                // the worst notice, which is the one the badge is drawing.
-                const label = worst ? `${name} — ${this.localize.term(notices[0].title)}` : name;
-                return html`
-                  <button
-                    class="task window ${w.active ? 'active' : ''}"
-                    title=${label}
-                    aria-label=${label}
-                    @click=${() => this.#onTaskClick(w)}>
-                    <umb-icon class="task-icon" name=${w.app.icon}></umb-icon>
-                    <span class="task-label">${name}</span>
-                    ${this.#renderBadge(worst)}
-                  </button>
-                `;
+                const floating = this._windows.filter((a) => a.owner === w.id);
+                if (floating.length === 0) return this.#renderTask(w);
+                // One box around the owner and its floating windows, each still its own button. The
+                // box is the signal that they belong together, not the labels, so it survives the
+                // themes that draw icon-only tiles. Design D6.
+                return html`<div class="task-group" role="group" aria-label=${this.localize.string(w.app.name)}>
+                  ${[w, ...floating].map((member) => this.#renderTask(member))}
+                </div>`;
               },
             )}
           </div>
@@ -682,6 +704,22 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         min-width: 0;
         overflow: hidden;
         margin-left: var(--uui-size-space-1);
+      }
+      /* The box around an owner and its floating attached windows. Every value is a token, because
+         each theme draws a group in its own idiom: a bordered box here, a tray on a dock, a sunken
+         groove on Windows 98. A theme may restyle it and may not remove it: the box is the only thing
+         on the bar that says these windows belong together. Its buttons are ordinary '.task' buttons,
+         so every theme's button styling reaches them with no rule of its own. */
+      .task-group {
+        display: flex;
+        align-items: stretch;
+        flex: none;
+        box-sizing: border-box;
+        gap: var(--umbradesktop-task-group-gap, 2px);
+        padding: var(--umbradesktop-task-group-padding, 2px);
+        border: var(--umbradesktop-task-group-border, 1px solid color-mix(in srgb, currentColor 35%, transparent));
+        border-radius: var(--umbradesktop-task-group-radius, 6px);
+        background: var(--umbradesktop-task-group-background, color-mix(in srgb, currentColor 5%, transparent));
       }
       /* '.window' marks a button that stands for an open window, which '.task' alone no longer does:
          the fixed row's buttons are '.task' too, and they launch rather than switch. Nothing in this

@@ -193,6 +193,13 @@ export const UMBRADESKTOP_TITLEBAR_BORDER = 1;
 export const UMBRADESKTOP_PATH_HEIGHT = 28;
 
 /**
+ * How wide a dock zone is, in px: the band just inside an owner window's edge that a floating
+ * attached window can be dropped on to dock there. Capped at a third of the owner's width so the two
+ * zones never meet and most of the window is never a target. Wide enough to find without aiming.
+ */
+export const UMBRADESKTOP_DOCK_ZONE_WIDTH = 160;
+
+/**
  * What must stay inside the desktop while dragging, under the Umbraco theme.
  *
  * `trailing` is the non-draggable band at the titlebar's right end, measured from the window's own

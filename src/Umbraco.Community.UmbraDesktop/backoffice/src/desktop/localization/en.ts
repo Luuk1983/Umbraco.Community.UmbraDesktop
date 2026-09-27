@@ -229,6 +229,22 @@ export default {
     discardConflictedHeadline: 'Close this window?',
     discardConflictedQuestion:
       'Closing is the safe option here: your unsaved changes are discarded and the version someone else saved is kept.',
+    // Preview, an attached window beside a document
+    previewOpen: 'Preview',
+    previewClose: 'Close the preview',
+    dockHere: 'Dock here',
+    dockRelease: 'Release to dock',
+    attachedTo: 'Attached to',
+    dock: 'Dock',
+    dockNoRoom: 'Not enough room beside %0% to dock',
+    previewTitle: 'Preview: %0%',
+    previewUnsaved: 'You have unsaved changes. The preview shows the last saved version.',
+    previewOpenInTab: 'Open in a new browser tab',
+    previewPhone: 'Phone width',
+    previewTablet: 'Tablet width',
+    previewDesktop: 'Desktop width',
+    previewOption: 'Preview with',
+    previewFailed: 'The preview could not be opened.',
     // Background Jobs app
     backgroundJobsIntro:
       'Every scheduled job Umbraco runs behind your site: publishing, webhooks, cleanups, and anything a package added. Nothing here can be started or stopped, it is a read-only view of what the CMS is doing on its own.',

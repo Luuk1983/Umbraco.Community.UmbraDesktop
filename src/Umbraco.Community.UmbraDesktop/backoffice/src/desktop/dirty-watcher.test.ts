@@ -123,12 +123,20 @@ afterEach(() => {
 });
 
 /**
- * Start a watcher over the test document and collect what it reports.
- * @returns The reported values, in order.
+ * Start a watcher over the test document and collect every flip of its dirty answer.
+ *
+ * Flips rather than reports: a report can also carry a new save count while the dirty answer stays
+ * where it was (one of two dirty workspaces saving), and what every test using this helper is about
+ * is the dirty answer alone.
+ * @returns The dirty answers, in the order they flipped.
  */
 function watch(): boolean[] {
   const reported: boolean[] = [];
-  teardown.push(watchWorkspaceDirtyState(document, (state) => reported.push(state.dirty)));
+  teardown.push(
+    watchWorkspaceDirtyState(document, (state) => {
+      if (reported[reported.length - 1] !== state.dirty) reported.push(state.dirty);
+    }),
+  );
   return reported;
 }
 
@@ -409,4 +417,64 @@ it('still does not report again for a keystroke that changes nothing about the a
   expect(reported.length, 'a keystroke in an already-dirty window repaints the whole desktop').to.equal(
     afterFirstEdit,
   );
+});
+
+describe('saves', () => {
+  it('counts a save: the saved version changing after the document loaded', () => {
+    const states = watchState();
+    const workspace = fakeSubjectWorkspace();
+    const provider = mountProvider(workspace.instance);
+    teardown.push(provider.dispose);
+    provider.provide();
+    workspace.load({ name: 'Home' });
+    workspace.current.set({ name: 'Home page' });
+    workspace.persisted.set({ name: 'Home page' });
+    expect(states[states.length - 1]?.saves).to.equal(1);
+  });
+
+  it('counts a refresh from the server, which changes both halves at once', () => {
+    const states = watchState();
+    const workspace = fakeSubjectWorkspace();
+    const provider = mountProvider(workspace.instance);
+    teardown.push(provider.dispose);
+    provider.provide();
+    workspace.load({ name: 'Home' });
+    workspace.load({ name: 'Home, by a colleague' });
+    expect(states[states.length - 1]?.saves).to.equal(1);
+  });
+
+  it('does not count loading the document', () => {
+    const states = watchState();
+    const workspace = fakeSubjectWorkspace();
+    const provider = mountProvider(workspace.instance);
+    teardown.push(provider.dispose);
+    provider.provide();
+    workspace.load({ name: 'Home' });
+    expect(states[states.length - 1]?.saves ?? 0).to.equal(0);
+  });
+
+  it('does not count a discard, which leaves the saved version alone', () => {
+    const states = watchState();
+    const workspace = fakeSubjectWorkspace();
+    const provider = mountProvider(workspace.instance);
+    teardown.push(provider.dispose);
+    provider.provide();
+    workspace.load({ name: 'Home' });
+    workspace.current.set({ name: 'Home page' });
+    workspace.current.set({ name: 'Home' });
+    workspace.persisted.set({ name: 'Home' });
+    expect(states[states.length - 1]?.saves ?? 0).to.equal(0);
+  });
+
+  it('does not count loading a different document in the same window', () => {
+    const states = watchState();
+    const workspace = fakeSubjectWorkspace('a1');
+    const provider = mountProvider(workspace.instance);
+    teardown.push(provider.dispose);
+    provider.provide();
+    workspace.load({ name: 'Home' });
+    workspace.uniqueState.set('b2');
+    workspace.load({ name: 'About' });
+    expect(states[states.length - 1]?.saves ?? 0).to.equal(0);
+  });
 });
