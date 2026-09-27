@@ -71,6 +71,7 @@ export class UmbraDesktopSettingsTaskbarElement extends UmbLitElement {
       apps: this._apps,
       pinned: [],
       isRefRegistered: (ref) => this.#catalogue?.isRefRegistered(ref) ?? false,
+      entryRef: (alias) => this.#catalogue?.getEntryRef(alias),
       open: () => undefined,
       localize: (value) => this.localize.string(value),
       // Only availability is asked for here, and it reads nothing but whether full screen is

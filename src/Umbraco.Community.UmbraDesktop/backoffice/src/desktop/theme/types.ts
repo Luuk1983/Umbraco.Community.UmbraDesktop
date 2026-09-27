@@ -91,8 +91,10 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-desktop-background-image',
   '--umbradesktop-desktop-scrim',
   '--umbradesktop-desktop-watermark-opacity',
-  // Attached content: the pane inside a window, its splitter, the link mark on a floating attached
-  // window, and the taskbar box around a group. Design: 2026-09-27-attached-windows-design.md §6.
+  '--umbradesktop-desktop-label-font',
+  '--umbradesktop-desktop-label-weight',
+  // Attached content: the pane inside a window, its splitter, the strips' toolbar buttons, the dock
+  // zones, and the taskbar box around a group. Design: 2026-09-27-attached-windows-design.md §6.
   '--umbradesktop-pane-background',
   '--umbradesktop-pane-header-background',
   '--umbradesktop-pane-header-border',

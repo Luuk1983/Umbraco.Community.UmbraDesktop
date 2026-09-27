@@ -289,7 +289,7 @@ prefix is for:
 
 | Group | What it covers |
 |---|---|
-| `desktop-*` | Wallpaper fallback colour and gradient, the image scrim, the watermark's opacity |
+| `desktop-*` | Wallpaper fallback colour and gradient, the image scrim, the watermark's opacity, and the desktop label's font and weight. The label is the site's name written large in a corner, and a theme sets its lettering only: its ink is the same white with a dark halo under every theme, because the ground behind it is whatever wallpaper the user picked, not yours |
 | `window-*` | The frame: background, body background, border, radius, resting and active shadows |
 | `titlebar-*` | Height, background, bottom border, text colour, the inactive-frame opacity, and the unsaved-changes marker's colour and size |
 | `control-*` | The window buttons: width, glyph colour, hover fills, and close's own hover pair |
@@ -828,6 +828,10 @@ has shipped a green test run and a red build, and the reverse.
 - [ ] Windows dragged hard against all four screen edges stay grabbable
 - [ ] Switching to your theme with windows open pulls stranded windows back into reach
 - [ ] The backoffice's light, dark and high-contrast settings all render something sane
+- [ ] The desktop label looks right in your lettering. You set only its font and weight, and
+      `desktop-label.element.test.ts` checks each corner against your `taskbarReserve`. No test
+      can see a picture, so turn the label on under Desktop settings, Site, and look at your font
+      over your own wallpaper and over a photo too
 - [ ] Your theme has a `descriptionKey`, and the string behind it exists in every localization file
 - [ ] Your theme declares a `wallpaper` (§1.1). `{ kind: 'none' }` counts and is the right answer for
       a theme whose own ground is the point; leaving the field off is the one option that is wrong,

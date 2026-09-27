@@ -37,6 +37,12 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
  * `.taskbar`: a theme's preview stylesheet can then use the selectors its author already knows from
  * writing the theme's window and taskbar sheets.
  *
+ * **Children are drawn on the desktop.** Anything slotted in lands in the scene before the window,
+ * so it stacks under it the way the desktop label sits under every window, and it is laid out in
+ * desktop pixels and shrunk with the rest. That is what lets the Site screen put the real label
+ * component on a miniature rather than a drawing of one: it sizes itself against a 960px desktop,
+ * exactly as it does against a real one.
+ *
  * **No launcher.** The launcher is a surface you open, not one the desktop rests in, and drawn open
  * in every preview it would cover the window that carries most of the signature. A theme that wants
  * to say something about its launcher has the chrome itself to say it in.
@@ -195,6 +201,7 @@ export class UmbraDesktopThemePreviewElement extends UmbLitElement {
     const metrics = this.theme.metrics;
     return html`
       <div class="scene" style="${paletteCss(this.#palette())}${this.#wallpaperCss()}" aria-hidden="true">
+        <slot></slot>
         <div class="frame">
           <div class="titlebar">
             ${this.#renderControls('leading', metrics.leadingControlsWidth)}
@@ -232,6 +239,10 @@ export class UmbraDesktopThemePreviewElement extends UmbLitElement {
         height: ${UMBRADESKTOP_PREVIEW_SCENE.h}px;
         transform: scale(var(--_scale));
         transform-origin: top left;
+        /* The reserve 'desktop.element' declares, chained the same way, so a slotted label in a
+           bottom corner clears this miniature's taskbar as it clears the real one. A palette that
+           sets its own reserve still wins: the palette is inline on this element. */
+        --umbradesktop-taskbar-reserve: var(--umbradesktop-taskbar-height, ${UMBRADESKTOP_TASKBAR_HEIGHT}px);
         /* Mirrors 'desktop.element': the solid colour is the fallback for browsers without
            color-mix, upgraded in the @supports block below, and the gradient is the soft
            top-left highlight the desktop paints when no wallpaper is set. */

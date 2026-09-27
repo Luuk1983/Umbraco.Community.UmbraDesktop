@@ -79,13 +79,21 @@ export interface UmbraDesktopTaskbarFeatureContext {
   /** Aliases of the user's pinned apps, in pin order — the launcher's list, not a second one. */
   pinned: ReadonlyArray<string>;
   /**
-   * Whether a curated catalogue `ref` is registered on this install, regardless of whether this
-   * user may reach it. The one thing {@link apps} cannot answer, and the difference between "the
-   * package is not installed" and "you cannot reach it".
+   * Whether a catalogue `ref`, ours or a package's, is registered on this install, regardless of
+   * whether this user may reach it. The one thing {@link apps} cannot answer, and the difference
+   * between "the package is not installed" and "you cannot reach it".
    * @param ref The referenced manifest's alias.
    * @returns True when something has registered that alias.
    */
   isRefRegistered(ref: string): boolean;
+  /**
+   * The `ref` of the catalogue entry with this alias, as the merged catalogue has it now. A package
+   * may replace one of our entries with one that points elsewhere, so a feature that needs an entry's
+   * ref reads it here rather than from the static curated catalogue.
+   * @param alias The entry alias.
+   * @returns Its ref, or `undefined`.
+   */
+  entryRef(alias: string): string | undefined;
   /**
    * Launch an app, exactly as the launcher's tile does.
    * @param app The app to open.

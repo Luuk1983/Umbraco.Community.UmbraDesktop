@@ -76,6 +76,7 @@ describe('the taskbar feature row', () => {
       apps: apps.asObservable(),
       groups: new UmbArrayState<never>([], (g) => g).asObservable(),
       isRefRegistered: () => true,
+      getEntryRef: () => undefined,
       getHostElement: () => wrapper,
     } as never).hostConnected();
     new UmbContextProvider(wrapper, UMBRADESKTOP_SETTINGS_CONTEXT, {
@@ -308,6 +309,7 @@ describe('the full screen button', () => {
       apps: new UmbArrayState<UmbraDesktopApp>([CONTENT], (a) => a.alias).asObservable(),
       groups: new UmbArrayState<never>([], (g) => g).asObservable(),
       isRefRegistered: () => true,
+      getEntryRef: () => undefined,
       getHostElement: () => wrapper,
     } as never).hostConnected();
     new UmbContextProvider(wrapper, UMBRADESKTOP_SETTINGS_CONTEXT, {

@@ -54,3 +54,15 @@ describe('isPermitted', () => {
     expect(isPermitted([true, false, undefined])).to.be.false;
   });
 });
+
+/**
+ * `conditions` belongs to another package's manifest, and nothing types it once it came from a static
+ * `umbraco-package.json`. A string used to pass the old `length` check and then throw on `filter`,
+ * which stops the recompute that called this (package catalogues design D9).
+ */
+it('evaluates nothing when a manifest carries conditions that are not a list, and skips holes in one', () => {
+  expect(evaluableConditions('Pkg.Condition' as never, ['Pkg.Condition'])).to.deep.equal([]);
+  expect(evaluableConditions([null, { alias: 'Pkg.Condition' }] as never, ['Pkg.Condition'])).to.deep.equal([
+    { alias: 'Pkg.Condition' },
+  ]);
+});

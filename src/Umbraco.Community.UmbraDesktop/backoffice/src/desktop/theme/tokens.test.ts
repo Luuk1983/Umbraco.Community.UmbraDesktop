@@ -8,6 +8,7 @@ import { UmbraDesktopWindowNoticesElement } from '../components/window-notices.e
 import { UmbraDesktopWindowPathElement } from '../components/window-path.element.js';
 import { UmbraDesktopLoaderElement } from '../components/loader.element.js';
 import { UmbraDesktopWindowPaneElement } from '../components/window-pane.element.js';
+import { UmbraDesktopLabelElement } from '../desktop-label/desktop-label.element.js';
 import { UMBRADESKTOP_TOKENS } from './types.js';
 import { UMBRADESKTOP_THEMES } from './themes/index.js';
 
@@ -26,9 +27,10 @@ import { UMBRADESKTOP_THEMES } from './themes/index.js';
  * `--umbradesktop-notice-*` group, and a token declared in `UMBRADESKTOP_TOKENS` whose only reader
  * is a component this test does not scan reads as dead weight and fails here. The path element
  * joined it on the same terms, owning `--umbradesktop-path-*`, and the loader element on the same
- * terms again, owning `--umbradesktop-window-loader-color`. That is the standing rule rather than a
- * growing list: any new chrome component with tokens of its own belongs here the day it is written,
- * or its whole group fails this test as unused.
+ * terms again, owning `--umbradesktop-window-loader-color`, and the desktop label on the same terms,
+ * owning `--umbradesktop-desktop-label-*`. That is the standing rule rather than a growing list: any
+ * new chrome component with tokens of its own belongs here the day it is written, or its whole group
+ * fails this test as unused.
  */
 
 /** Flatten a Lit `CSSResultGroup` — possibly a nested array — into a flat list of leaf entries. */
@@ -58,6 +60,7 @@ it('has exactly the tokens the five chrome components read or write, no more and
     UmbraDesktopWindowPathElement,
     UmbraDesktopLoaderElement,
     UmbraDesktopWindowPaneElement,
+    UmbraDesktopLabelElement,
   ]) {
     for (const token of tokensMentionedIn(ctor.styles)) mentioned.add(token);
   }

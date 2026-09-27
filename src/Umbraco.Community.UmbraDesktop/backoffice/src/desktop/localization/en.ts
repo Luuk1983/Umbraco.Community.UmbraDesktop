@@ -51,7 +51,6 @@ export default {
     groupAutomation: 'Automation',
     groupAi: 'AI',
     groupSystem: 'System',
-    groupGames: 'Games',
     groupMore: 'More',
     // header-app launcher
     launchDesktop: 'Open desktop',
@@ -92,19 +91,39 @@ export default {
     groupTaskbarAbout: 'What the taskbar keeps beside the launcher button',
     groupSite: 'Site',
     groupSiteAbout: 'Settings that apply to everyone on this site, not just to you',
-    siteAppIcon: 'App icon',
+    siteAppIcon: 'Icon',
     siteAppIconAbout:
       'The icon this site gets when someone installs the backoffice as an app. Everyone sees the same one.',
     siteAppIconDefault: 'UmbraDesktop',
     siteAppIconGuidance:
-      'A square PNG of at least 512×512. It is cropped to a square and shrunk to 32px on a taskbar, so keep it simple and avoid small text. Transparency is fine; the corners may be rounded or cut to a circle by the operating system, so keep anything important away from the edges.',
-    siteAppIconPreview: 'What it will look like',
-    siteAppIconCustom: 'Choose an image',
+      'A square PNG of at least 512×512. Keep it simple: it is shown as small as 32px on a taskbar.',
+    siteAppIconCustom: 'Your own image',
     siteAppIconChoose: 'Choose an image…',
+    siteAppIconChange: 'Change…',
     siteAppName: 'App name',
     siteAppNameAbout:
-      "What the installed app is called. Leave empty to use this site's own name.",
+      "What this site is called, on the installed app and on the desktop. Leave empty to use this site's own name.",
+    // desktop settings — site, the desktop label. It shows the App name above it, so none of these
+    // name it again.
+    siteDesktopLabelShow: 'Show the name on the desktop',
+    siteDesktopLabelShowAbout:
+      'Written large in a corner of the desktop, behind the windows. Handy for telling environments apart, such as staging and production.',
+    siteDesktopLabelCorner: 'Corner',
+    siteDesktopLabelCornerTopRight: 'Top right',
+    siteDesktopLabelCornerTopLeft: 'Top left',
+    siteDesktopLabelCornerBottomLeft: 'Bottom left',
+    siteDesktopLabelCornerBottomRight: 'Bottom right',
+    siteDesktopLabelDomain: 'Show the domain underneath',
+    siteDesktopLabelDomainAbout: 'Useful full screen or in an installed app, where no address bar shows it.',
     siteLockedByConfiguration: 'Set in appsettings.json, so it cannot be changed here.',
+    // desktop settings — site, the four boxes the screen is grouped into, and the preview's captions.
+    siteGroupPreview: 'Preview',
+    siteGroupName: 'Name',
+    siteGroupDesktopLabel: 'Desktop label',
+    siteGroupInstalledApp: 'Installed app',
+    sitePreviewDesktop: 'On your desktop',
+    sitePreviewDesktopHidden: 'On your desktop: the name is not shown',
+    sitePreviewApp: 'Installed as an app',
     // desktop settings — taskbar. The switches are grouped by which end of the bar they are about,
     // because a screen that opens on a bare "AI chat" switch never says what it is a setting for.
     taskbarRegionLauncher: 'Taskbar items',

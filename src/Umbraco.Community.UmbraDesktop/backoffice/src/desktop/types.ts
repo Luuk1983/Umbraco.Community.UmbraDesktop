@@ -99,6 +99,13 @@ export interface UmbraDesktopApp {
   group?: string;
   /** Source section alias — permission gate + default-group hint. */
   sourceSection?: string;
+  /**
+   * The section this app opens as its root, when it is that section's certified app; absent for
+   * everything else. A pin stored on the section's uncertified fallback tile resolves to the app that
+   * covers the section now, which is how a pin survives a package shipping its own entry for its
+   * section (design D15).
+   */
+  coversSection?: string;
   /** Confidence tier (always set by derivation; optional for back-compat). */
   confidence?: UmbraDesktopConfidence;
 }
@@ -333,8 +340,10 @@ export interface UmbraDesktopGroup {
 }
 
 /**
- * One curated catalogue entry. Links to a destination via `ref` (URL inferred from
- * the registry) or `url` (explicit escape hatch), plus display placement.
+ * One catalogue entry: a curated one in `catalogue/`, or, published as `UmbraDesktopPackageEntry`,
+ * one a package registers (see `catalogue.extension.ts`, whose rule that the published type only
+ * ever gains optional fields applies to this one too). Links to a destination via `ref` (URL
+ * inferred from the registry) or `url` (explicit escape hatch), plus display placement.
  */
 export interface UmbraDesktopCatalogueEntry {
   /** Stable app id. */
@@ -436,4 +445,17 @@ export interface UmbraDesktopLauncherGroup {
   group: UmbraDesktopGroup;
   /** Apps in this group, sorted. */
   apps: UmbraDesktopApp[];
+}
+
+/**
+ * One thing the catalogue pipeline wants a developer to know, keyed so it prints once.
+ *
+ * Produced by the pure validation and merge units and printed by the context through its
+ * quiet-window diagnostics, so the units stay testable by calling them and never touch the console.
+ */
+export interface UmbraDesktopCatalogueReport {
+  /** Deduplication key: a key already printed during this desktop visit is not printed again. */
+  key: string;
+  /** The whole console line, `[UmbraDesktop]` prefix included. */
+  message: string;
 }

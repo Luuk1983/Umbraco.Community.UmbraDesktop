@@ -76,6 +76,7 @@
     "apps",
     "games",
     "extensibility",
+    "package integration",
     "concurrency",
     "collaboration",
     "overwrite protection",
@@ -106,7 +107,11 @@
     "web-app-manifest",
     "installable",
     "standalone",
-    "app-icon"
+    "app-icon",
+    "site name",
+    "environment name",
+    "environment label",
+    "watermark"
   ],
   "Screenshots": [
     {

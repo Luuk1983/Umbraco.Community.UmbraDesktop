@@ -90,3 +90,23 @@ it('opens every game in a window that cannot be resized or maximized', () => {
     expect((app as { meta?: { resizable?: boolean } }).meta?.resizable, app.alias).to.equal(false);
   }
 });
+
+/** The one catalogue this package registers. */
+const catalogue = manifests.find((manifest) => manifest.type === 'umbraDesktopCatalogue');
+
+/**
+ * The Games group is this package's own now, label and all, so this is the only place that says it
+ * exists. The bounds are literals because the host's list cannot be imported from here: after its
+ * System (50) and before its Experimental (70), the weights the host publishes so packages can place
+ * against them (package catalogues design D10, D11).
+ */
+it('defines the games group itself, between System and Experimental', () => {
+  const groups =
+    (catalogue as { meta?: { groups?: Array<{ alias: string; label: string; weight?: number }> } } | undefined)?.meta
+      ?.groups ?? [];
+  const games = groups.find((group) => group.alias === 'games');
+  expect(games, 'the package must define the group its games name').to.not.equal(undefined);
+  expect(games!.label, "a token from this package's own dictionary").to.equal('#umbraDesktopEntertainment_groupGames');
+  expect(games!.weight).to.be.greaterThan(50);
+  expect(games!.weight).to.be.lessThan(70);
+});
