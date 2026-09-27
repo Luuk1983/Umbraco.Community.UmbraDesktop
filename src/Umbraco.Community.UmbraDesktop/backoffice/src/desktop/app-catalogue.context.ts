@@ -2,7 +2,7 @@ import type {
   UmbraDesktopApp,
   UmbraDesktopCatalogue,
   UmbraDesktopCatalogueEntry,
-  UmbraDesktopLauncherGroup,
+  UmbraDesktopGroup,
   UmbraDesktopRefDescriptor,
   UmbraDesktopRegisteredApp,
   UmbraDesktopResolvedEntry,
@@ -12,7 +12,6 @@ import type { ManifestUmbraDesktopApp } from './app.extension.js';
 import { catalogue } from './catalogue/index.js';
 import { inferUrl } from './url-inference.js';
 import { deriveApps } from './derive-apps.js';
-import { groupApps } from './group-apps.js';
 import { normaliseRegisteredApps } from './registered-apps.js';
 import type { ManifestUmbraDesktopCatalogue } from './catalogue.extension.js';
 import { normalisePackageCatalogues, type UmbraDesktopPackageCatalogue } from './package-catalogues.js';
@@ -106,8 +105,9 @@ export interface UmbraDesktopAppCatalogueOptions {
 /**
  * Resolves the curated catalogue against the current install: reads the user's
  * permitted sections, infers each entry's URL from the registry, collects the
- * self-contained apps packages have registered, then derives and groups the app
- * list. Impure glue around the pure `deriveApps` / `groupApps` (design §6).
+ * self-contained apps packages have registered, then derives the app list and
+ * publishes it beside the merged catalogue's groups. Impure glue around the pure `deriveApps`
+ * (design §6); grouping is the launcher's, over both.
  * Provided by the desktop element so it is scoped to the desktop subtree.
  *
  * Every input is *observed*, never sampled, for two reasons that arrive from different directions.
@@ -197,9 +197,14 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     return this.#merged.entries.find((entry) => entry.alias === alias)?.ref;
   }
 
-  #groups = new UmbArrayState<UmbraDesktopLauncherGroup>([], (g) => g.group.alias);
-  /** Grouped display list for the launcher. */
-  public readonly groups = this.#groups.asObservable();
+  #catalogueGroups = new UmbArrayState<UmbraDesktopGroup>([], (g) => g.alias);
+  /**
+   * Every group in the merged catalogue, curated and package, whether or not it holds an app for
+   * this user. The launcher groups the apps itself (`launcher/resolve-launcher.ts`), because it
+   * needs all of these rather than only the ones holding apps: to name a group and to put a
+   * returning one back in catalogue order.
+   */
+  public readonly catalogueGroups = this.#catalogueGroups.asObservable();
 
   /** The catalogue being resolved. */
   #catalogue: UmbraDesktopCatalogue;
@@ -585,7 +590,7 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
       registered.filter((app) => !merged.droppedApps.has(app.alias)),
     );
     this.#apps.setValue(apps);
-    this.#groups.setValue(groupApps(apps, merged.catalogue.groups));
+    this.#catalogueGroups.setValue(merged.catalogue.groups);
     this.#scheduleDiagnostics();
   }
 

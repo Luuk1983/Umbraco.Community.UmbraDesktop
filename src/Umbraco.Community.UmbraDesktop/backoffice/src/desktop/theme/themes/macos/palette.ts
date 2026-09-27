@@ -150,6 +150,28 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-card-background': 'rgba(255, 255, 255, 0.1)',
   '--umbradesktop-launcher-card-border': '1px solid rgba(255, 255, 255, 0.16)',
   '--umbradesktop-launcher-card-radius': '12px',
+  // The launcher's own controls and arrange mode, as frosted pills on the dimmed surface like the
+  // cards. A pressed or default control is filled with the accent that carries white text, not the
+  // brighter one, because the base writes white on it; see {@link MACOS_ACCENT}.
+  '--umbradesktop-launcher-control-background': 'rgba(255, 255, 255, 0.12)',
+  '--umbradesktop-launcher-control-border': '1px solid rgba(255, 255, 255, 0.18)',
+  '--umbradesktop-launcher-control-text': '#ffffff',
+  '--umbradesktop-launcher-control-active-background': MACOS_ACCENT,
+  '--umbradesktop-launcher-letter-text': '#ffffff',
+  '--umbradesktop-launcher-letter-border': '1px solid rgba(255, 255, 255, 0.16)',
+  '--umbradesktop-launcher-text-muted': 'rgba(255, 255, 255, 0.6)',
+  '--umbradesktop-launcher-banner-background': 'rgba(255, 255, 255, 0.14)',
+  '--umbradesktop-launcher-banner-border': '1px solid rgba(255, 255, 255, 0.22)',
+  '--umbradesktop-launcher-banner-text': '#ffffff',
+  '--umbradesktop-launcher-divider': '1px solid rgba(255, 255, 255, 0.16)',
+  // Where a drop lands carries no text, so it takes the bright accent, which is the one that reads
+  // on this dark surface; the wash is the same blue at low alpha.
+  '--umbradesktop-launcher-drop-background': 'rgba(10, 132, 255, 0.18)',
+  '--umbradesktop-launcher-drop-outline': `2px solid ${MACOS_ACCENT_DARK}`,
+  '--umbradesktop-launcher-ghost-shadow': '0 12px 32px rgba(0, 0, 0, 0.45)',
+  '--umbradesktop-launcher-remove-background': 'rgba(255, 69, 58, 0.22)',
+  '--umbradesktop-launcher-remove-border': '2px dashed #ff453a',
+  '--umbradesktop-launcher-remove-text': '#ffffff',
   '--umbradesktop-desktop-background-color': '#3b6ea5',
   '--umbradesktop-desktop-background-image':
     'linear-gradient(155deg, #4a3f78 0%, #3b6ea5 55%, #2f8f96 100%)',

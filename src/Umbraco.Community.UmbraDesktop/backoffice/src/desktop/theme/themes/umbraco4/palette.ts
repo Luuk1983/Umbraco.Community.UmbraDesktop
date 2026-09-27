@@ -177,7 +177,27 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-card-border': `1px solid ${U4_LINE_SOFT}`,
   '--umbradesktop-launcher-card-radius': '0',
   '--umbradesktop-launcher-border-emphasis': U4_SELECT_LINE,
-  '--umbradesktop-launcher-pin-hover-background': U4_FACE,
+  // The launcher's controls and arrange mode. A control is a raised v4 button, the same gradient
+  // and edge as the footer's and the taskbar's, and a pressed or default one takes the pale blue
+  // selection, whose dark text is restated in launcher.css.ts because the base writes white on it.
+  '--umbradesktop-launcher-control-background': U4_RAISED,
+  '--umbradesktop-launcher-control-border': `1px solid ${U4_EDGE}`,
+  '--umbradesktop-launcher-control-text': U4_TEXT,
+  '--umbradesktop-launcher-control-active-background': U4_SELECT,
+  '--umbradesktop-launcher-letter-text': U4_TEXT,
+  '--umbradesktop-launcher-letter-border': `1px solid ${U4_LINE_SOFT}`,
+  // v4's own secondary text grey, which is what it wrote hints in; the edge greys are for lines.
+  '--umbradesktop-launcher-text-muted': U4_TEXT_SOFT,
+  '--umbradesktop-launcher-banner-background': U4_SELECT,
+  '--umbradesktop-launcher-banner-border': `1px solid ${U4_SELECT_LINE}`,
+  '--umbradesktop-launcher-banner-text': U4_TEXT,
+  '--umbradesktop-launcher-divider': `1px solid ${U4_LINE_SOFT}`,
+  '--umbradesktop-launcher-drop-background': U4_SELECT,
+  '--umbradesktop-launcher-drop-outline': `2px solid ${U4_SELECT_LINE}`,
+  '--umbradesktop-launcher-ghost-shadow': '0 4px 12px rgba(25, 35, 50, 0.3)',
+  '--umbradesktop-launcher-remove-background': '#fbe9e7',
+  '--umbradesktop-launcher-remove-border': '2px dashed #c0392b',
+  '--umbradesktop-launcher-remove-text': '#8e2a1f',
   '--umbradesktop-desktop-background-color': U4_DESKTOP,
   '--umbradesktop-desktop-background-image': U4_DESKTOP_IMAGE,
   // No scrim: the wallpaper here is a flat gradient rather than a photograph, and the chrome is

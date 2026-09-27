@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { UmbraDesktopAppCatalogueContext } from './app-catalogue.context';
-import type { UmbraDesktopApp, UmbraDesktopCatalogue, UmbraDesktopLauncherGroup } from './types';
+import type { UmbraDesktopApp, UmbraDesktopCatalogue, UmbraDesktopGroup } from './types';
 import { catalogue } from './catalogue/index.js';
 import { UMBRADESKTOP_SECTION_ALIAS, UMBRADESKTOP_SECTION_PATHNAME } from './constants';
 import { UmbExtensionRegistry } from '@umbraco-cms/backoffice/extension-api';
@@ -167,8 +167,8 @@ async function setup(
   });
   let apps: UmbraDesktopApp[] = [];
   const subscription = context.apps.subscribe((value) => (apps = value));
-  let groups: UmbraDesktopLauncherGroup[] = [];
-  const groupSubscription = context.groups.subscribe((value) => (groups = value));
+  let catalogueGroups: UmbraDesktopGroup[] = [];
+  const groupSubscription = context.catalogueGroups.subscribe((value) => (catalogueGroups = value));
 
   return {
     /** The context itself, for cases about its own accessors rather than its output. */
@@ -179,8 +179,8 @@ async function setup(
     warnings,
     aliases: () => apps.map((app) => app.alias),
     app: (alias: string) => apps.find((a) => a.alias === alias),
-    /** The launcher groups, for the cases about where a package's own group lands. */
-    groups: () => groups,
+    /** The merged catalogue's groups, for the cases about a package bringing a group of its own. */
+    catalogueGroups: () => catalogueGroups,
     /** Only the desktop's own warnings, so an unrelated Umbraco line cannot fail an assertion. */
     desktopWarnings: () => warnings.filter((w) => w.includes('[UmbraDesktop]')),
     teardown: () => {
@@ -779,7 +779,8 @@ describe('package catalogues', () => {
       expect(app!.content).to.deep.equal({ kind: 'iframe', url: '/umbraco/section/pkg' });
       expect(app!.coversSection).to.equal('Pkg.Section');
       expect(harness.aliases(), 'the section needs no fallback tile any more').to.not.contain('section:Pkg.Section');
-      expect(harness.groups().map((group) => group.group.alias)).to.contain('pkg');
+      expect(harness.catalogueGroups().map((group) => group.alias)).to.contain('pkg');
+      expect(app!.group, 'and its app is in it').to.equal('pkg');
     } finally {
       harness.teardown();
     }
@@ -1138,6 +1139,20 @@ describe('package catalogues', () => {
    * the registered app, where nothing had been permitted, so no empty list was ever reported and the
    * case passed with the guard deleted (found by the branch review).
    */
+  it('publishes the merged catalogue groups, including groups a package brings', async () => {
+    const { context, registry, teardown } = await setup();
+    try {
+      registerCatalogue(registry, 'Pkg.Catalogue', { groups: [{ alias: 'pkg', label: 'Package', weight: 80 }], entries: [] });
+      await settle();
+      await settle();
+      let groups: ReadonlyArray<{ alias: string }> = [];
+      context.catalogueGroups.subscribe((value) => (groups = value)).unsubscribe();
+      expect(groups.map((g) => g.alias)).to.include.members(['synchronisation', 'pkg']);
+    } finally {
+      teardown();
+    }
+  });
+
   it('does nothing once destroyed', async () => {
     const harness = await setup();
     try {

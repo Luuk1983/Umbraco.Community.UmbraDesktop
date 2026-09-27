@@ -6,6 +6,7 @@ import {
   WIN98_FACE,
   WIN98_FONT,
   WIN98_HILIGHT,
+  WIN98_MENU_HILIGHT,
   WIN98_MENU_HILIGHT_TEXT,
   WIN98_SHADOW,
   WIN98_TEXT,
@@ -19,9 +20,10 @@ import { WIN98_BEVEL_DEPTH, WIN98_FRAME_BORDER } from './metrics.js';
  *
  * Every affordance survives the restyle, because a theme may restyle and never remove — the search
  * row becomes a sunken text field, the group cards lose their boxes but keep their headings as
- * grooved separators, the pin badge becomes a square toggle button that looks held down while an
- * app is pinned, and the footer keeps the user button, Desktop settings, Logout and Exit as menu
- * items above a groove.
+ * grooved separators, the All apps and Arrange controls stay in the header row beside the search,
+ * the footer keeps the user button, Desktop settings, Logout and Exit as menu items above a
+ * groove, and in arrange mode every tile stays a menu row with its − and ⋯ as push buttons at the
+ * row's end.
  *
  * Nothing here sets the panel's width or position. Those come from
  * `--umbradesktop-launcher-width`/`-left`/`-max-height` in the palette, read by the base `:host`
@@ -39,10 +41,16 @@ export default css`
     box-sizing: border-box;
     padding: ${WIN98_FRAME_BORDER}px;
   }
+  /* The base's .hdr row now carries the panel's own outer margin (this theme's usual bevel-depth
+     ring): the search field shares that row with the All apps button, and the base already gives
+     .hdr a margin of its own, so leaving one here too would double it instead of moving it. */
+  .hdr {
+    margin: ${WIN98_BEVEL_DEPTH}px;
+    gap: ${WIN98_BEVEL_DEPTH}px;
+  }
   /* Win98's "Find" is a menu item, but this is a search field and should look like one: a white
      well with a sunken edge, which is how every Win98 text input is drawn. */
   .search {
-    margin: ${WIN98_BEVEL_DEPTH}px;
     padding: 3px 4px;
     gap: 4px;
     background: ${unsafeCSS(WIN98_WINDOW)};
@@ -76,7 +84,8 @@ export default css`
   /* Group headings become Win98 menu separators with their label still on them: a shadow line
      with a highlight line under it, which is how every groove in the interface is drawn. */
   .ch,
-  .fav .ch {
+  .fav .ch,
+  .gh {
     margin: ${WIN98_BEVEL_DEPTH}px 0;
     padding: 0 4px 2px;
     font-size: 11px;
@@ -87,13 +96,12 @@ export default css`
     border-bottom: 1px solid ${unsafeCSS(WIN98_SHADOW)};
     box-shadow: 0 1px 0 ${unsafeCSS(WIN98_HILIGHT)};
   }
-  /* A menu row: icon then label, on one line, filling the menu's width. The trailing padding is
-     the space the pin toggle occupies, so a long app name is clamped before it runs underneath. */
+  /* A menu row: icon then label, on one line, filling the menu's width. */
   .launch {
     flex-direction: row;
     align-items: center;
     gap: 6px;
-    padding: 3px 22px 3px 6px;
+    padding: 3px 6px;
     border-radius: 0;
     text-align: left;
     font-size: 11px;
@@ -116,29 +124,6 @@ export default css`
      on navy and is unreadable, which is the one way a hover state can be worse than none. */
   .tile:hover .launch {
     color: ${unsafeCSS(WIN98_MENU_HILIGHT_TEXT)};
-  }
-  /* The pin moves from a round badge hanging off a tile's corner to a square toggle button at the
-     end of the row, which is the only place a row has spare width. Still hover-only, still the
-     same button, and still the same behaviour — only 'pinned' now reads as 'held down', because
-     that is how Win98 shows a toggle that is on. */
-  .pin {
-    top: 50%;
-    right: ${WIN98_BEVEL_DEPTH}px;
-    transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
-    border-radius: 0;
-    background: ${unsafeCSS(WIN98_FACE)};
-    box-shadow: ${unsafeCSS(WIN98_BEVEL_RAISED)};
-    transition: none;
-  }
-  .pin.on,
-  .pin:active {
-    box-shadow: ${unsafeCSS(WIN98_BEVEL_PRESSED)};
-  }
-  .pin .pin-ico {
-    width: 12px;
-    height: 12px;
   }
   /* The footer keeps its contents and swaps its own fill for a groove, so it reads as the bottom
      block of one menu rather than a separate bar with its own surface. */
@@ -166,5 +151,201 @@ export default css`
   }
   .fbtn umb-icon {
     font-size: 14px;
+  }
+
+  /* ---- The launcher's own controls, All apps and arrange mode ---- */
+
+  /* Every launcher button is a Win98 push button: raised, square, pressed while held or on. The
+     hover resets the face because the base hover paints the menu's navy selection bar, which on a
+     push button with black text on it would be unreadable, and a Win98 button does not react to
+     hover at all. */
+  .ctl,
+  .handle,
+  .gdel,
+  .edit,
+  .ctl:hover,
+  .handle:hover,
+  .gdel:hover,
+  .edit:hover {
+    border: none;
+    border-radius: 0;
+    background: ${unsafeCSS(WIN98_FACE)};
+    box-shadow: ${unsafeCSS(WIN98_BEVEL_RAISED)};
+    color: ${unsafeCSS(WIN98_TEXT)};
+    font-size: 11px;
+  }
+  .ctl {
+    min-height: 22px;
+    padding: 0 8px;
+  }
+  .ctl umb-icon {
+    font-size: 14px;
+  }
+  .ctl:active,
+  .handle:active,
+  .gdel:active,
+  .edit:active,
+  .ctl[aria-pressed='true'] {
+    box-shadow: ${unsafeCSS(WIN98_BEVEL_PRESSED)};
+  }
+  /* The default button of a Win98 dialog has a black frame; Done and the Reset confirm are those.
+     The text is restated because the base writes white on a pressed or default control, which on
+     button-face grey is unreadable. */
+  .ctl.primary,
+  .ctl[aria-pressed='true'] {
+    color: ${unsafeCSS(WIN98_TEXT)};
+  }
+  .ctl.primary {
+    outline: 1px solid ${unsafeCSS(WIN98_TEXT)};
+    outline-offset: -1px;
+  }
+  .banner {
+    margin: ${WIN98_BEVEL_DEPTH}px;
+    font-size: 11px;
+  }
+  /* The rename field is a text input like the search field, so it is drawn as the same white well.
+     The drawer and palette filters already are one: they carry the search field's class. */
+  .rename {
+    border: none;
+    background: ${unsafeCSS(WIN98_WINDOW)};
+    box-shadow: ${unsafeCSS(WIN98_BEVEL_SUNKEN)};
+    font-size: 11px;
+  }
+  .gname,
+  .hint {
+    font-size: 11px;
+  }
+  /* All apps is one menu column too, with its letters drawn as grooves like the group headings. */
+  .alpha {
+    columns: 1;
+  }
+  .lh {
+    padding: 0 4px 2px;
+    font-size: 11px;
+    border-bottom: 1px solid ${unsafeCSS(WIN98_SHADOW)};
+    box-shadow: 0 1px 0 ${unsafeCSS(WIN98_HILIGHT)};
+  }
+  .row {
+    padding: 3px 6px;
+    border-radius: 0;
+    font-size: 11px;
+  }
+  .row umb-icon {
+    font-size: 16px;
+  }
+  /* Same pairing as the app rows: the navy fill is tokenised, the white text it needs is not. */
+  .row:hover {
+    color: ${unsafeCSS(WIN98_MENU_HILIGHT_TEXT)};
+  }
+  /* In arrange mode a tile is a menu row too. Its two buttons leave their corners and join the row
+     at its end, after the name, which takes the room between; in the flow rather than positioned,
+     so they keep the base's size without this sheet restating it, and the name can never run under
+     them however long it is. The row is only as tall as the buttons, so it stays near the height of
+     the rows it stands for. */
+  .tile.arr {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 2px 1px 6px;
+    border: none;
+    border-radius: 0;
+    font-size: 11px;
+    text-align: left;
+  }
+  .tile.arr umb-icon {
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+  .tile.arr .tlb {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .tile.arr .edit {
+    position: static;
+  }
+  /* The landing bar runs across a row rather than down its side, because in a single column the
+     next tile is below, not beside. */
+  .tile.drop-before::before,
+  .tile.drop-after::after {
+    top: auto;
+    bottom: auto;
+    left: 4px;
+    right: 4px;
+    border-left: none;
+    border-top: var(--umbradesktop-launcher-drop-outline, 1px dotted ${unsafeCSS(WIN98_TEXT)});
+  }
+  .tile.drop-before::before {
+    top: -1px;
+  }
+  .tile.drop-after::after {
+    bottom: -1px;
+  }
+  /* The copy under the pointer is the row it was lifted from, square and level: nothing in Win98
+     tilts, and a row keeps its menu look already, since the row rules above are not scoped to a
+     card. It is no wider than what it shows: the drag gives the copy the width of the row it was
+     lifted from, which here is the whole menu, and a copy that wide covers the remove pane's text it
+     is being dragged to. A maximum rather than a width, so it can only ever shrink the copy. */
+  .drag-ghost {
+    border-radius: 0;
+    transform: translate(-50%, -50%);
+    max-width: max-content;
+  }
+  /* A lifted row is drawn selected, in the menu's navy with white text. With no shadow in this
+     theme, a grey row over the grey menu would otherwise have nothing to set it apart from the
+     rows beneath it. The group handle's copy is a push button and stays one. */
+  .tile.drag-ghost,
+  .prow.drag-ghost {
+    background: var(--umbradesktop-launcher-hover-background, ${unsafeCSS(WIN98_MENU_HILIGHT)});
+  }
+  .tile.drag-ghost.arr,
+  .tile.drag-ghost .launch,
+  .prow.drag-ghost {
+    color: ${unsafeCSS(WIN98_MENU_HILIGHT_TEXT)};
+  }
+  /* Move to is a context menu: a raised panel of rows with a groove above its last two. */
+  .movemenu {
+    border: none;
+    border-radius: 0;
+    background: ${unsafeCSS(WIN98_FACE)};
+    box-shadow: ${unsafeCSS(WIN98_BEVEL_RAISED)};
+  }
+  .mmi,
+  .mmh {
+    font-size: 11px;
+  }
+  .mmi.new {
+    border-top: 1px solid ${unsafeCSS(WIN98_SHADOW)};
+    box-shadow: inset 0 1px 0 ${unsafeCSS(WIN98_HILIGHT)};
+  }
+  .mmi:hover,
+  .mmi:focus-visible {
+    color: ${unsafeCSS(WIN98_MENU_HILIGHT_TEXT)};
+  }
+  /* New group is one more menu row at the end of the list, with the selection bar like the rest. */
+  .newgroup {
+    justify-content: flex-start;
+    min-height: 0;
+    padding: 3px 6px;
+    border: none;
+    font-size: 11px;
+  }
+  .newgroup:hover {
+    background: var(--umbradesktop-launcher-hover-background, ${unsafeCSS(WIN98_MENU_HILIGHT)});
+    color: ${unsafeCSS(WIN98_MENU_HILIGHT_TEXT)};
+  }
+  .ph,
+  .pgh,
+  .prow {
+    font-size: 11px;
+  }
+  .prow {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+  /* The remove pane keeps the dotted edge its palette token gives it, which is what marks it as a
+     drop target; only its text drops to the menu's size. */
+  .removepane {
+    font-size: 11px;
   }
 `;

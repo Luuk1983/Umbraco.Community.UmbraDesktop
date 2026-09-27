@@ -295,7 +295,7 @@ prefix is for:
 | `control-*` | The window buttons: width, glyph colour, hover fills, and close's own hover pair |
 | `taskbar-*` | The bar itself: height, reserve, margin, radius, background (plus an opaque fallback), backdrop filter, top border, shadow, two text colours |
 | `start-*`, `task-*` | The buttons inside the bar: hover and active fills, and the running-window marker |
-| `launcher-*` | The panel: geometry, background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills |
+| `launcher-*` | The panel: geometry, background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills, the All apps/Arrange controls' own rest, border, text and active fills, the drawer's letter headings, muted text for a group handle and the like, the drop target and insertion slot, the drag ghost's shadow, the remove pane and the arrange banner, and the palette's divider |
 | `path-*` | The path strip under a section window's caption: its height, padding, background, bottom border, text and link colours, the hover fill behind a crumb, the separator's colour and the strip's font size |
 | `snap-ghost-*` | The outline showing where a window dragged into a desktop edge will land: its fill, its border shorthand and its corner radius. It stands in for the window that is about to be there, so the obvious value for the radius is your own `window-radius`, and Windows 98 shows what to do when your design has no translucency to lend it |
 | `notice-*` | The overwrite guard: the titlebar marker and taskbar badge colours at `info`/`warning`/`error`, the marker and badge sizes, and the banner's own background, text and leading-edge width |
@@ -797,6 +797,39 @@ This is the single most common way a new theme gets its geometry wrong: it has n
 Umbraco 4 twice — the caption and the bar — and Windows 11 once, in three consecutive themes, and
 in every case the only thing that noticed was `metrics.test.ts`. Write that file first.
 
+### 6.4 Arrange mode in a narrow theme
+
+Arrange mode's layout and its palette of what is missing sit side by side when there is room, and
+stack when there is not: a container query on the arrange-mode container switches at
+`UMBRADESKTOP_LAUNCHER_SPLIT_MIN`, in `launcher/geometry.ts`, which every theme reads rather than
+restates. Below that width the palette becomes its own view, reached from an "Add apps" button in
+the banner, and the plus, Add all and Add group buttons still do the adding once you are looking at
+it. A launcher narrower than the split minimum gets this for free; nothing in the theme has to ask
+for it.
+
+A menu-row theme, one whose launcher is a single column rather than a card grid, still has to say
+where a tile's own buttons go once that tile is also a row: Windows 98 and Umbraco 4 both place
+`.tile.arr .edit` back in the row's flow, after the name, so the button sits at the row's end
+instead of pinned to a corner that no longer means anything once the tile is not a card.
+
+The drag ghost, the copy that follows the pointer while you drag, is not part of the layout it was
+lifted from. It is put in the top layer as a manual popover, so a panel with a blur or a backdrop
+filter cannot become its containing block and clip it. That also means a rule scoped under
+`.cards .card` never reaches it, on purpose: style `.drag-ghost` directly if a theme wants the copy
+to look different from the tile it came from, the way Windows 98 draws it selected rather than
+faded.
+
+And a theme may decide that scrolling belongs to an element other than the one the base launcher
+scrolls. The base scrolls the panel body itself, but nothing requires that: Umbraco 4 keeps its
+Favourites row fixed at the top and scrolls only the tree of groups underneath it, so its body never
+scrolls and its tree does. The drag does not assume either answer. It asks the launcher's own
+candidates, outermost first, which one actually has `overflow-y: auto` or `scroll` on it right now,
+and scrolls that one near the pointer, in `launcher/drag-scroller.ts`. A theme that moves scrolling
+inward to one of the candidates that file already lists (the body or its `.cards` in the launcher,
+the layout pane or its `.cards` in arrange mode) needs no plumbing to announce it; the drag finds it
+by asking the browser the same question you would. Scrolling some other element means adding it to
+that list, or the drag will not scroll near the edges at all.
+
 ---
 
 ## 7. Checklist before you open a PR
@@ -810,8 +843,15 @@ has shipped a green test run and a red build, and the reverse.
       to a component without adding it to `UMBRADESKTOP_TOKENS`, or the reverse, and
       `app-tokens.test.ts`, which fails if your palette answers the chrome group but misses an app
       token — a theme can pass the first and fail the second
-- [ ] Every launcher affordance still *works*: search, tiles, pinning, the user button, Desktop
-      settings, Exit. A theme may restyle, never remove (design §1.1)
+- [ ] Every launcher affordance still *works*: search, All apps, Arrange, the tiles, the drag
+      targets (Pinned and the remove pane), arrange mode's controls (the banner, handles, rename
+      fields, − and ⋯, Move to, the palette and the Reset confirm), the user button, Desktop
+      settings, Exit. A theme may restyle, never remove (design §1.1). Two tests hold most of that
+      for every theme: `theme/themes/launcher-controls.test.ts` renders each control under your
+      palette and sheet and checks it is visible, inside the panel, legible and what a press at its
+      centre actually hits, and `theme/themes/launcher-geometry.test.ts` measures what a drag and
+      arrange mode do to the layout. Both loop over every registered theme, so yours is in them
+      the moment it is in `theme/themes/index.ts`
 - [ ] Your theme's `metrics` are measured and not merely derived — a `metrics.test.ts` (§4),
       `chromeWidth` and `chromeHeight` included, since those are what every registered app's window
       is sized from
