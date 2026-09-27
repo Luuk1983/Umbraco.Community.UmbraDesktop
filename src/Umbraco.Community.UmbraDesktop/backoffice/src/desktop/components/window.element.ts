@@ -673,12 +673,38 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (this.window) this.#manager?.commitSnap(this.window.id);
     this._dragging = false;
     this.#pendingRestore = false;
+    this.#release(e);
+  };
+
+  /**
+   * End a titlebar drag the browser took back before the pointer was released.
+   *
+   * The browser sends this instead of `pointerup` when it claims a pointer mid-gesture: an
+   * operating-system gesture, a touch it decides is a pan, a lost capture. Without it the drag stayed
+   * switched on with no `pointerup` coming to end it, and the next `pointermove` over the titlebar,
+   * even a mouse passing by with no button down, carried on dragging the window. Unlike a release it
+   * withdraws the snap on offer rather than taking it: nobody let go over that edge. The window
+   * stays wherever the drag had already put it, since every move was applied as it happened.
+   * @param e The cancelled pointer's event.
+   */
+  #onTitlePointerCancel = (e: PointerEvent) => {
+    this.#manager?.clearSnapPreview();
+    this._dragging = false;
+    this.#pendingRestore = false;
+    this.#release(e);
+  };
+
+  /**
+   * Give up the pointer capture a gesture took, and carry on if there was none.
+   * @param e The event that ended the gesture, whose target took capture in `#capture`.
+   */
+  #release(e: PointerEvent) {
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
     } catch {
       // Nothing was captured — see `#capture`.
     }
-  };
+  }
 
   #onResizeDown = (e: PointerEvent, edges: UmbraDesktopResizeEdges) => {
     if (!this.window || this.window.state !== 'normal') return;
@@ -703,13 +729,18 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.#manager?.resize(this.window.id, rect);
   };
 
-  #onResizeUp = (e: PointerEvent) => {
+  /**
+   * End a resize, whether the pointer was released or the browser cancelled it.
+   *
+   * One handler for both because a resize has nothing to commit: every move already resized the
+   * window, so ending it is only a matter of switching it off. Listening for `pointercancel` too is
+   * what stops a cancelled resize carrying on under the next pointer to cross the handle. See
+   * `#onTitlePointerCancel`.
+   * @param e The `pointerup` or `pointercancel` event.
+   */
+  #onResizeEnd = (e: PointerEvent) => {
     this.#resizing = false;
-    try {
-      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
-    } catch {
-      // Nothing was captured — see `#capture`.
-    }
+    this.#release(e);
   };
 
   #onFocus = () => {
@@ -1038,6 +1069,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
           @pointerdown=${this.#onTitlePointerDown}
           @pointermove=${this.#onTitlePointerMove}
           @pointerup=${this.#onTitlePointerUp}
+          @pointercancel=${this.#onTitlePointerCancel}
           @dblclick=${this.#onTitleDblClick}>
           <span class="title">
             <umb-icon class="app-icon" name=${w.app.icon}></umb-icon>
@@ -1175,7 +1207,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
                 class="rh rh-${rh.dir}"
                 @pointerdown=${(e: PointerEvent) => this.#onResizeDown(e, rh.edges)}
                 @pointermove=${this.#onResizeMove}
-                @pointerup=${this.#onResizeUp}></div>`,
+                @pointerup=${this.#onResizeEnd}
+                @pointercancel=${this.#onResizeEnd}></div>`,
             )
           : ''}
       </div>
@@ -1227,6 +1260,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         );
         cursor: move;
         user-select: none;
+        /* The titlebar is the drag handle, so a finger on it drags the window rather than panning
+           the page. Without this a touchscreen (or DevTools' device mode) takes the first few
+           pixels of a drag for a pan and sends 'pointercancel', and the window never moves. The
+           resize handles below have the same rule for the same reason. Taps on the controls still
+           arrive as clicks: this stops panning and zooming, not tapping. */
+        touch-action: none;
       }
       .frame:not(.active) .title,
       .frame:not(.active) .controls {
