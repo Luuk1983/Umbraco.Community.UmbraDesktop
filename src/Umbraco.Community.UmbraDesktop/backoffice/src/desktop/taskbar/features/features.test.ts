@@ -14,11 +14,13 @@ import nl from '../../localization/nl.js';
 /** The terms one language actually ships, by key. */
 const terms = (set: unknown) => (set as Record<string, Record<string, string>>).umbraDesktop;
 
-it('ships the AI chat first and pinned apps second, both on the launcher side', () => {
+it('ships full screen first, the AI chat second and pinned apps last, all on the launcher side', () => {
   // The order is the shell's and the user cannot change it, which is the whole reason the row is
   // worth building muscle memory for. A test rather than a comment because the order is spread
-  // across two folders' weights, where a collision reads as harmless in either file alone.
-  expect(taskbarFeaturesIn('launcher').map((feature) => feature.id)).to.deep.equal(['ai-chat', 'pinned-apps']);
+  // across three folders' weights, where a collision reads as harmless in any one file alone.
+  // Pinned apps is last because it is the one feature whose length changes: anything after it would
+  // move every time the user pinned or unpinned something.
+  expect(taskbarFeaturesIn('launcher').map((feature) => feature.id)).to.deep.equal(['fullscreen', 'ai-chat', 'pinned-apps']);
 });
 
 it('gives every feature a unique id', () => {
@@ -37,8 +39,8 @@ it('orders a region by weight and never leaves two entries tied', () => {
 });
 
 it('switches every shipped feature on by default', () => {
-  // A feature that ships switched off is mostly never found, and both of these are safe to assume
-  // somebody wants: they installed the AI package, or they pinned the app themselves.
+  // A feature that ships switched off is mostly never found, and the chat and the pins are safe to
+  // assume somebody wants: they installed the AI package, or they pinned the app themselves.
   for (const feature of UMBRADESKTOP_TASKBAR_FEATURES) {
     expect(feature.defaultEnabled, `${feature.id} should ship on`).to.equal(true);
   }

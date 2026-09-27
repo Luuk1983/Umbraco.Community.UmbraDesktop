@@ -13,7 +13,7 @@ import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-toke
 import type { UmbraDesktopLocaleSettings } from '../settings/types';
 import { UMBRADESKTOP_DEFAULT_SETTINGS } from '../settings/settings-store.js';
 import { taskbarRowFeatures } from '../taskbar/features/index.js';
-import type { UmbraDesktopTaskbarFeatureContext } from '../taskbar/features/types';
+import type { UmbraDesktopFullscreenState, UmbraDesktopTaskbarFeatureContext } from '../taskbar/features/types';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import './launcher.element.js';
 import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
@@ -48,6 +48,22 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
 
   @state()
   private _clock = '';
+
+  /**
+   * Whether the page is full screen, and whose full screen it is, for the full screen feature's
+   * button. Read from the browser whenever either of its two reports changes, never set on a click,
+   * because leaving with Esc or with the browser's own control happens without the button and must
+   * still turn it back.
+   */
+  @state()
+  private _fullscreen: UmbraDesktopFullscreenState = 'off';
+
+  /**
+   * The browser's report of its own full screen, from F11 or its menu, which the Fullscreen API
+   * cannot see: only this media query changes. Asked for on connect rather than at construction so
+   * a test can stand in for it, and kept so the listener can be taken off again.
+   */
+  #displayModeFullscreen?: MediaQueryList;
 
   /**
    * How this user wants the clock formatted.
@@ -125,12 +141,18 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     // in the background would otherwise show the minute it was last allowed to paint, which on this
     // taskbar is a minute next to the operating system's own correct one.
     document.addEventListener('visibilitychange', this.#onVisibilityChange);
+    document.addEventListener('fullscreenchange', this.#onFullscreenChange);
+    this.#displayModeFullscreen = window.matchMedia('(display-mode: fullscreen)');
+    this.#displayModeFullscreen.addEventListener('change', this.#onFullscreenChange);
+    this._fullscreen = this.#readFullscreen();
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     if (this.#timer) window.clearTimeout(this.#timer);
     document.removeEventListener('visibilitychange', this.#onVisibilityChange);
+    document.removeEventListener('fullscreenchange', this.#onFullscreenChange);
+    this.#displayModeFullscreen?.removeEventListener('change', this.#onFullscreenChange);
     this.#setLauncherOpen(false);
   }
 
@@ -138,6 +160,35 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   #onVisibilityChange = () => {
     if (!document.hidden) this.#tick();
   };
+
+  /** Either kind of full screen started or ended, by the button or otherwise: follow it. */
+  #onFullscreenChange = () => {
+    this._fullscreen = this.#readFullscreen();
+  };
+
+  /**
+   * Which full screen the page is in, if any.
+   *
+   * The page's own is asked first, and the order is the point: Chrome matches `display-mode:
+   * fullscreen` during the page's own full screen as well as after F11, so a match alone cannot
+   * tell the two apart, while a `fullscreenElement` can only be the page's.
+   * @returns The state the full screen button draws.
+   */
+  #readFullscreen(): UmbraDesktopFullscreenState {
+    if (document.fullscreenElement) return 'page';
+    return this.#displayModeFullscreen?.matches ? 'browser' : 'off';
+  }
+
+  /**
+   * Take the whole page full screen, or bring it back. The page rather than the desktop element,
+   * for the reason the full screen feature gives: the backoffice's own overlays stay in view.
+   * Refusals are swallowed, since the browser already tells the user when it declines, and the
+   * button follows the browser's state rather than assuming the request worked.
+   */
+  #toggleFullscreen(): void {
+    const request = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    void request?.catch(() => undefined);
+  }
 
   /**
    * The clock, formatted the way this user asked for it, and then scheduled again for the moment the
@@ -355,6 +406,9 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       isRefRegistered: (ref) => this.#catalogue?.isRefRegistered(ref) ?? false,
       open: (app) => this.#manager?.open(app),
       localize: (value) => this.localize.string(value),
+      fullscreen: this._fullscreen,
+      canFullscreen: document.fullscreenEnabled,
+      toggleFullscreen: () => this.#toggleFullscreen(),
     };
   }
 
@@ -363,7 +417,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
    * buttons.
    *
    * **This is not the system tray.** Windows separates the two and so does this: the launcher side
-   * launches things, while the notification area by the clock reports on things. Keeping them apart
+   * launches things, with full screen at its head as the one control among them, while the
+   * notification area by the clock reports on things. Keeping them apart
    * is what lets the row stay silent about windows — no running indicator, no modifier click, no
    * context menu — because it never stands in for one.
    *
@@ -686,6 +741,15 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       .task.active {
         color: var(--umbradesktop-taskbar-text-emphasis, var(--uui-color-header-contrast-emphasis));
         box-shadow: inset 0 -3px 0 var(--umbradesktop-task-active-marker, var(--uui-color-current, #f5c1bc));
+      }
+      /* A task button that cannot act right now: the full screen button while the browser itself is
+         full screen. Faded as a whole and without the pointer, on top of whatever face the theme
+         draws, so every theme gets it with no CSS of its own. A theme that wants a different fade
+         sets the token from its palette; restating 'opacity' or 'cursor' on a '.task' rule could undo
+         this, and 'theme/taskbar-features.test.ts' fails a sheet that does. */
+      .task[aria-disabled='true'] {
+        cursor: default;
+        opacity: var(--umbradesktop-task-disabled-opacity, 0.5);
       }
       /* Drawn INSIDE the button's own box, deliberately. '.running' keeps 'overflow: hidden' in the
          base stylesheet and in every one of the five themes, so anything drawn outside the button is

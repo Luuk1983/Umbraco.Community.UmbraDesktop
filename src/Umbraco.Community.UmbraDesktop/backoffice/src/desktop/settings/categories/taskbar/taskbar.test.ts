@@ -28,6 +28,29 @@ function rows(element: UmbraDesktopSettingsTaskbarElement) {
   }));
 }
 
+/**
+ * One feature's row, found by the label on its switch rather than by where it sits, so a case about
+ * the AI chat stays about the AI chat when the order of the row changes. No localization is
+ * registered in this mount, so the label is the raw key.
+ * @param element The mounted screen.
+ * @param labelKey The feature's label key.
+ * @returns That feature's row.
+ */
+function rowFor(element: UmbraDesktopSettingsTaskbarElement, labelKey: string) {
+  const row = rows(element).find((candidate) => candidate.toggle?.getAttribute('label') === labelKey);
+  expect(row, `no row for ${labelKey}`).to.not.equal(undefined);
+  return row!;
+}
+
+it('lists the switches in the order the taskbar draws them', async () => {
+  // Settings is where a user reads what the row holds, so a switch listed anywhere but its button's
+  // place sends them looking in the wrong spot. Compared with the registry the row is drawn from
+  // rather than restated here, because pinning the order down is `features.test.ts`'s job.
+  const element = await screen();
+  const labels = rows(element).map((row) => row.toggle?.getAttribute('label'));
+  expect(labels).to.deep.equal(taskbarFeaturesIn('launcher').map((feature) => feature.labelKey));
+});
+
 it('says what a feature is even when it cannot be switched on', async () => {
   // The bug this is the guard for: the screen showed the reason *instead of* the description, so a
   // site without the AI package got "Umbraco AI is not installed" under a switch labelled AI chat
@@ -35,7 +58,7 @@ it('says what a feature is even when it cannot be switched on', async () => {
   // what-is, because the person reading a disabled switch is usually deciding whether to go and
   // install the thing.
   const element = await screen();
-  const chat = rows(element)[0];
+  const chat = rowFor(element, 'umbraDesktop_taskbarAiChat');
 
   expect(chat.toggle?.hasAttribute('disabled'), 'the AI chat switch should be disabled here').to.equal(true);
   expect(chat.lines.length, 'a disabled row needs both what it is and why not').to.equal(2);
@@ -47,7 +70,7 @@ it('says only what a feature is when it can be switched on', async () => {
   // Pinned apps is always available, so there is no reason to give and a second line would be an
   // empty paragraph under every switch that works.
   const element = await screen();
-  const pinned = rows(element)[1];
+  const pinned = rowFor(element, 'umbraDesktop_taskbarPinnedApps');
 
   expect(pinned.toggle?.hasAttribute('disabled')).to.equal(false);
   expect(pinned.lines.length).to.equal(1);

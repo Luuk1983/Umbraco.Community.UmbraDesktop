@@ -109,18 +109,28 @@ export default {
     // because a screen that opens on a bare "AI chat" switch never says what it is a setting for.
     taskbarRegionLauncher: 'Taskbar items',
     taskbarRegionLauncherAbout:
-      'Buttons beside the launcher button, in this order. Each one opens an app, the way the launcher does. Switching between the windows you already have stays with the buttons further along the bar.',
+      'Buttons beside the launcher button, in this order. Full screen comes first, and each one after it opens an app, the way the launcher does. Switching between the windows you already have stays with the buttons further along the bar.',
     taskbarRegionTray: 'System tray icons',
     taskbarRegionTrayAbout: 'Icons beside the clock, which report on things rather than open them.',
     // One switch per feature. The line under it says what the feature puts on the taskbar, and a
     // feature that cannot be switched on here says why underneath that.
     taskbarAiChat: 'AI chat',
-    taskbarAiChatAbout: 'Puts a button for the Copilot Workspace at the start of the taskbar.',
+    taskbarAiChatAbout: 'Puts a button for the Copilot Workspace on the taskbar, before your pinned apps.',
     taskbarAiChatNotInstalled: 'Umbraco AI is not installed on this site, so there is no chat to open.',
     taskbarAiChatNoPermission: 'You do not have access to the AI section, so the chat cannot be opened from here.',
     taskbarPinnedApps: 'Pinned apps',
     taskbarPinnedAppsAbout:
       'Shows the apps you pinned in the launcher on the taskbar too, in the same order. Pin and unpin in the launcher as you always have.',
+    taskbarFullscreen: 'Full screen',
+    taskbarFullscreenAbout: 'Puts a button at the start of the taskbar, beside the launcher button, that takes the desktop full screen and brings it back. Esc leaves full screen too.',
+    taskbarFullscreenEnter: 'Full screen',
+    taskbarFullscreenExit: 'Exit full screen',
+    taskbarFullscreenUnavailable: 'This browser does not allow the desktop to go full screen.',
+    // The greyed-out button's tooltip while the browser itself is full screen, which only the
+    // browser's own key can leave, and that key depends on the platform.
+    taskbarFullscreenBrowserF11: 'Your browser is in full screen. Press F11 to leave it.',
+    taskbarFullscreenBrowserMac: 'Your browser is in full screen. Press Control-Command-F to leave it.',
+    taskbarFullscreenBrowserChromeOs: 'Your browser is in full screen. Press the full screen key to leave it.',
     settingsBack: 'Back to Desktop settings',
     // desktop settings — startup
     bootIntoDesktop: 'Open the desktop when I sign in',

@@ -4,11 +4,12 @@ import type { UmbraDesktopApp } from '../../types';
 /**
  * Which end of the taskbar a feature's elements belong to.
  *
- * `launcher` is the launching half, beside the launcher button: everything there opens something.
- * `tray` is the reporting half, beside the clock, where the health indicator (#22) and a
- * hide-the-clock toggle belong. Windows keeps the same separation — taskbar items against system
- * tray icons — and the reason is that the two speak different languages: a launcher-side element
- * calls `open()`, a tray element reports state. Nothing fills `tray` yet, and this issue must not:
+ * `launcher` is the launching half, beside the launcher button: the full screen control at its
+ * head, then everything that opens something. `tray` is the reporting half, beside the clock, where
+ * the health indicator (#22) and a hide-the-clock toggle belong. Windows keeps the same separation —
+ * taskbar items against system tray icons — and the reason is that the two speak different
+ * languages: a launcher-side element acts when clicked, which for everything but full screen means
+ * calling `open()`, and a tray element reports state. Nothing fills `tray` yet, and this issue must not:
  * the region exists so that when it does arrive it arrives as an entry here rather than as a second
  * mechanism with its own settings shape.
  *
@@ -39,6 +40,18 @@ export interface UmbraDesktopTaskbarRegionInfo {
 }
 
 /**
+ * Whether the page is full screen, and whose full screen it is.
+ *
+ * Two kinds, because they behave differently and only one of them is the page's to end. `page` is
+ * the full screen a page asks for, through `requestFullscreen()`: the page can leave it again, and
+ * Esc leaves it too. `browser` is the browser window's own, from F11 or the browser's menu: nothing a
+ * page does can leave it, since `exitFullscreen()` is rejected there, and the Fullscreen API cannot
+ * even see it; only the `display-mode: fullscreen` media query reports it, in Chromium and Firefox.
+ * Safari reports neither, so there it simply reads as `off`.
+ */
+export type UmbraDesktopFullscreenState = 'off' | 'page' | 'browser';
+
+/**
  * Whether a feature can be used on this install, and why not when it cannot.
  *
  * The reason is a localization key rather than a sentence because only one surface ever shows it:
@@ -51,9 +64,9 @@ export type UmbraDesktopFeatureAvailability = { available: true } | { available:
 /**
  * Everything a feature is handed in order to answer for itself and to draw.
  *
- * Assembled by the taskbar from the contexts it already consumes, so a feature never reaches for a
- * context of its own: that is what keeps a feature a folder of pure-ish functions rather than an
- * element with a lifecycle.
+ * Assembled by the taskbar from the contexts it already consumes, and from the browser for full
+ * screen, so a feature never reaches for a context of its own: that is what keeps a feature a folder
+ * of pure-ish functions rather than an element with a lifecycle.
  */
 export interface UmbraDesktopTaskbarFeatureContext {
   /**
@@ -84,6 +97,12 @@ export interface UmbraDesktopTaskbarFeatureContext {
    * @returns The string to show.
    */
   localize(value: string): string;
+  /** Whether the page is full screen right now, and whether that full screen is the page's own. */
+  fullscreen: UmbraDesktopFullscreenState;
+  /** Whether the browser allows this page to go full screen at all. */
+  canFullscreen: boolean;
+  /** Take the page full screen, or bring it back when it already is. */
+  toggleFullscreen(): void;
 }
 
 /**
@@ -127,7 +146,7 @@ export interface UmbraDesktopTaskbarFeature {
   /**
    * Whether the feature is on for a user who has never said otherwise.
    *
-   * Both shipped features are on. Someone who installed the AI package wanting the chat is the safe
+   * Every shipped feature is on. Someone who installed the AI package wanting the chat is the safe
    * assumption, someone who pinned an app wanted it close, and a feature that ships switched off is
    * mostly never found.
    */
