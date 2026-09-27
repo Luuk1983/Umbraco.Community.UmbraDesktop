@@ -226,6 +226,11 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-card-border': 'none',
   '--umbradesktop-launcher-card-radius': '0',
   '--umbradesktop-launcher-pin-hover-background': WIN98_FACE,
+  // The scrollback's rows take the launcher's navy selection bar, and need its white text with it.
+  '--umbradesktop-scrollback-hover-text': WIN98_MENU_HILIGHT_TEXT,
+  // A toast is a small raised panel here, and a Win98 panel has square corners like every other.
+  '--umbradesktop-toast-radius': '0',
+  '--umbradesktop-scrollback-radius': '0',
   '--umbradesktop-desktop-background-color': WIN98_DESKTOP,
   // Flat teal, with no gradient: this is the desktop of a machine nobody has personalised yet.
   '--umbradesktop-desktop-background-image': 'none',

@@ -35,6 +35,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are stored on your Umbraco account, so they follow you to any browser you sign in on.
 - A taskbar. Every open window gets a button: click to focus, click again to minimise. A preview you popped out gets its own button, in one box with its document's.
+- Told once, not once per window. A notification raised in any window, a save, an error, a package's license warning, shows once on the desktop instead of inside the window, however many windows raised it. Click it to go to the window it came from. The clock keeps the last twenty, with who said it, how often and when, and shows a dot while any of them is a warning or an error. See [Notifications](#notifications).
 - The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: a full screen button, then the AI chat, then your pinned apps. All three are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
 - Choose your wallpaper. Ten backgrounds ship with the package, or pick any image from your own Media Library. The choice is stored on your Umbraco account, so it follows you.
 - Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, with one wrinkle on a browser you have never opened the desktop in. See [Starting in the desktop](#starting-in-the-desktop).
@@ -304,6 +305,35 @@ also marks each open window with a small bar under its icon, grey for open and i
 the one you are in. So on those themes a bare icon launches something and a marked one is already
 open.
 
+## Notifications
+
+Umbraco raises a notification in the backoffice it happened in, and every window on the desktop is a
+backoffice of its own. Left alone, five open windows would show a package's license warning five
+times, each inside its own window. So the desktop takes them over: a notification raised in any
+window is shown once, on the desktop, and not inside the window.
+
+- **Once.** The same message from several windows is one notification with a count on it, not one
+  per window.
+- **For as long as its sender asked.** A notification goes away after the time the sender chose, and
+  one the sender asked to keep stays until you close it. Point at it to hold it while you read.
+- **Click it to go there.** Clicking a notification brings forward the window that raised it, and
+  restores it if it was minimised. An error that carries buttons of its own, such as Full Error
+  Message, is shown again inside its window, where those buttons work.
+- **The clock remembers.** Click the clock for the last twenty, newest first, each with the window
+  that raised it, how many times and when it last did. A repeat updates its line rather than taking
+  a new one, so one noisy message cannot push the others out.
+- **A dot by the clock** means a warning or an error is in the list, red when one is an error. It is
+  not an unread count, so looking does not clear it. It goes when the last warning or error drops
+  off the end of the list, or when you press Clear, which empties the list.
+- **Per tab.** The list survives reloading the desktop and is gone when you close the tab, and two
+  tabs are two desktops with a list each. Windows do not survive a reload, so after one the lines
+  that pointed at a window stay readable but can no longer be clicked.
+
+Every theme draws them its own way. Under macOS they arrive at the top right, as they do on a Mac;
+the others put them above the clock.
+
+![The desktop with a content and a media window open and the notification list open from the taskbar clock: a document published, a scheduled publishing warning raised twice, and a media save, each with the window it came from and the time. A dot by the clock says a warning is in the list.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/notifications.png)
+
 ## Changing the theme
 
 Open Desktop settings and pick Appearance. The Theme row shows the theme you are on as a miniature
@@ -523,7 +553,7 @@ The name is the **App name** from the same screen, the one the installed app use
 
 Two more choices sit under the switch, greyed out until it is on:
 
-- **Corner.** Top right by default, the one corner nothing else on the desktop uses: new windows open top left, the launcher is bottom left, and the clock and Umbraco's notifications are bottom right. The other three are there if you want them.
+- **Corner.** Top right by default, the one corner nothing else on the desktop uses: new windows open top left, the launcher is bottom left, and the clock and the desktop's notifications are bottom right. Under macOS notifications arrive at the top right, over the label, and go again. The other three are there if you want them.
 - **Show the domain underneath.** Off by default. Useful full screen or in an installed app, where no address bar shows it.
 
 The **Preview** box at the top of the Site screen shows the result on a small copy of your own desktop, in your theme and over your wallpaper, with the installed app's icon beside it.
@@ -605,6 +635,10 @@ A window should not show the entire backoffice shell inside a small frame. Becau
 | `full-section` | Section sidebar and tree, without the top header | Tools where the tree *is* the tool: Content, Media, Document Types |
 | `workspace-only` | Just the workspace | Self-contained editors: Log Viewer, Webhooks |
 | `bare` | The target view only | Single-focus dashboards: Examine, Health Check, Profiling, Background Jobs |
+
+Every profile also hides the toasts inside the window, once the desktop is listening to that
+window's notification context and not before, and the desktop draws them itself. The design and the
+reasoning are in [the notifications design doc](docs/design/2026-09-27-desktop-notifications-design.md).
 
 ### The app catalogue
 

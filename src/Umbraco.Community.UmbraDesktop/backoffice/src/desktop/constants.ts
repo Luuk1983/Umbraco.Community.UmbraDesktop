@@ -304,8 +304,14 @@ export const UMBRADESKTOP_SNAP_EDGE = 8;
  */
 export const UMBRADESKTOP_Z_SNAP_GHOST = 999_999;
 
+/**
+ * The desktop's notifications: over every window and the snap preview, and under the taskbar, so the
+ * scrollback panel opened from the clock is never covered by the toasts it lists.
+ */
+export const UMBRADESKTOP_Z_TOASTS = UMBRADESKTOP_Z_SNAP_GHOST + 1;
+
 /** The taskbar: the highest thing on the desktop proper. */
-export const UMBRADESKTOP_Z_TASKBAR = UMBRADESKTOP_Z_SNAP_GHOST + 1;
+export const UMBRADESKTOP_Z_TASKBAR = UMBRADESKTOP_Z_TOASTS + 1;
 
 /**
  * A system screen, above everything the desktop itself draws.

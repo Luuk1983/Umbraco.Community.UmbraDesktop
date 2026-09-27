@@ -123,6 +123,25 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-dock-zone-active-border',
   '--umbradesktop-dock-zone-active-background',
   '--umbradesktop-dock-zone-active-label-background',
+  // Desktop notifications: the toast stack, where it sits, and the scrollback behind the clock. Each
+  // falls back to the launcher's surface, so a theme that sets none of them still draws its own.
+  // Design: 2026-09-27-desktop-notifications-design.md §5.
+  '--umbradesktop-toasts-top',
+  '--umbradesktop-toasts-right',
+  '--umbradesktop-toasts-bottom',
+  '--umbradesktop-toasts-left',
+  '--umbradesktop-toasts-direction',
+  '--umbradesktop-toast-width',
+  '--umbradesktop-toast-background',
+  '--umbradesktop-toast-backdrop',
+  '--umbradesktop-toast-text',
+  '--umbradesktop-toast-border',
+  '--umbradesktop-toast-radius',
+  '--umbradesktop-toast-shadow',
+  '--umbradesktop-toast-positive-color',
+  '--umbradesktop-scrollback-bottom',
+  '--umbradesktop-scrollback-radius',
+  '--umbradesktop-scrollback-hover-text',
 ] as const;
 
 /**

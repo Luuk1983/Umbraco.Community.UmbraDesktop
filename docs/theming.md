@@ -303,6 +303,8 @@ prefix is for:
 | `strip-button-*` | The toolbar buttons in those strips: the path strip's Preview, the pane header's controls and a floating attached window's Dock. Corner radius, the hover fill, text and shadow, and the pressed fill, text and shadow. Separate from a crumb's hover, because a crumb is a link and these are buttons: Windows 98 hovers a crumb in navy and raises a button. A theme that styles the path strip must set the pressed pair, or it gets Umbraco's own "you are here" pink |
 | `dock-zone-*` | The zones inside an owner window where a dragged attached window can dock: border, radius, fill and label colours, and an `active` border, fill and label for the zone under the pointer. Keep the active one strong: it is drawn over a window, often a white one |
 | `task-group-*` | The box on the taskbar around a window's button and its floating attached windows' buttons: gap, padding, border, radius and background |
+| `toasts-*`, `toast-*` | The desktop's notifications ([design](design/2026-09-27-desktop-notifications-design.md)). `toasts-*` places the stack: its `top`, `right`, `bottom` and `left` offsets and its flex `direction`. The default hangs it above the taskbar at the trailing edge and grows it upwards; macOS sets `top`, clears `bottom` to `auto` and turns the direction to `column`, which is all a theme with its bar or a menu bar at the top needs. `toast-*` is one toast's surface: width, background, backdrop, text, border, radius and shadow, each falling back to the matching `launcher-*` token, so a theme that styled its launcher has styled its toasts. `toast-positive-color` is the success edge; the other severities read the `notice-*` colours |
+| `scrollback-*` | The list behind the clock. It is drawn on the `launcher-*` surface outright, so it has only its gap above the bar (`scrollback-bottom`), its radius, and `scrollback-hover-text` for a theme whose launcher hover fill is a selection bar that needs its own text colour, as Windows 98's navy does. There is no horizontal token: the list hangs from wherever your theme puts the clock, measured, so a dock that carries its clock mid-screen needs nothing. The toasts stand aside while it is open |
 | `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent with the text that reads on it, and the UI font |
 
 The two groups are checked differently, which is why they are two lists rather than one. The
@@ -828,6 +830,9 @@ has shipped a green test run and a red build, and the reverse.
 - [ ] Windows dragged hard against all four screen edges stay grabbable
 - [ ] Switching to your theme with windows open pulls stranded windows back into reach
 - [ ] The backoffice's light, dark and high-contrast settings all render something sane
+- [ ] Notifications look right: raise a success and a warning, open the list from the clock, and
+      check that the stack clears your taskbar or dock and the list reads on your launcher surface.
+      No test measures either against your chrome
 - [ ] The desktop label looks right in your lettering. You set only its font and weight, and
       `desktop-label.element.test.ts` checks each corner against your `taskbarReserve`. No test
       can see a picture, so turn the label on under Desktop settings, Site, and look at your font

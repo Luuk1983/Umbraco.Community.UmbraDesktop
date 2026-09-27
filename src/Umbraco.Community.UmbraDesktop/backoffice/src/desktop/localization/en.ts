@@ -365,5 +365,15 @@ export default {
     migrationContinue: 'Continue',
     settingsNotSaved:
       'That setting could not be saved to your account. It applies for now, but this browser will forget it.',
+    // desktop notifications: the toasts, and the scrollback behind the clock
+    notificationsTitle: 'Notifications',
+    notificationsEmpty: 'Nothing has been said yet.',
+    notificationsClock: 'Notifications',
+    notificationsClockAttention: 'Notifications, including warnings or errors',
+    notificationsClear: 'Clear',
+    notificationsSourceDesktop: 'Desktop',
+    notificationsRepeat: '%0% times',
+    notificationsClose: 'Close',
+    notificationsGone: 'That window has been closed.',
   },
 };
