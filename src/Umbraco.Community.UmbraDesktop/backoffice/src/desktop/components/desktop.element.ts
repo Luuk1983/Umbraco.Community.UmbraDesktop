@@ -14,6 +14,7 @@ import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
 import { UmbraDesktopServerEventController } from '../conflict/server-event.controller.js';
 import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
+import { UmbraDesktopWindowLayoutController } from '../windows/layout.controller.js';
 import type { UmbraDesktopWallpaperView } from '../settings/wallpaper-view.js';
 import { UmbraDesktopThemeContext } from '../theme/theme.context.js';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -119,9 +120,11 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   constructor() {
     super();
-    // Instantiating (without keeping a reference) is enough to provide the
-    // catalogue context to the desktop subtree; nothing here consumes it directly.
-    new UmbraDesktopAppCatalogueContext(this);
+    // Instantiating is enough to provide the catalogue context to the desktop subtree. The one
+    // reference kept is for the window layout below, which reopens windows by their apps.
+    const catalogue = new UmbraDesktopAppCatalogueContext(this);
+    // Reopens this user's windows once their settings have loaded, and keeps the layout saved.
+    new UmbraDesktopWindowLayoutController(this, { manager: this.#manager, settings: this.#settings, apps: catalogue.apps });
     // Adopts the active theme's desktop-surface stylesheet into this element's shadow root.
     new UmbraDesktopThemeStyles(this, 'desktop');
     // Consumed once here, not per window: see the class doc on why.

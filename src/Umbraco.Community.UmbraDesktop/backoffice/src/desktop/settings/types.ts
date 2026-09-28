@@ -95,6 +95,15 @@ export interface UmbraDesktopSettings {
    */
   bootIntoDesktop: boolean;
   /**
+   * Whether the desktop reopens the windows this user had open when they last left it.
+   *
+   * Off by default, so it is opt-in: nobody's desktop changes behaviour until they turn it on in
+   * Desktop settings > General. Stored here, on the account, so the choice follows the user; the
+   * layout itself is kept in the browser (`windows/layout-persistence.ts`), because it changes
+   * whenever a window moves.
+   */
+  reopenWindows: boolean;
+  /**
    * Whether changing the theme should also change the wallpaper to the one that theme declares.
    *
    * Off by default. Switching it on is the user asking for their wallpaper to be managed, which is

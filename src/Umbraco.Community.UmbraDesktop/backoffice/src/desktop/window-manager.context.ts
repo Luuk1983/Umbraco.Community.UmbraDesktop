@@ -45,6 +45,8 @@ import {
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-token';
 import { minWindowSizeForContent, windowSizeForContent } from './window-chrome';
 import { windowShowsPath } from './path/crumbs.js';
+import { restoredUrl } from './windows/layout';
+import type { UmbraDesktopSavedWindow } from './windows/layout';
 import type { UmbraDesktopThemeMetrics } from './theme/types';
 import type { UmbraDesktopKeepVisible } from './window-model';
 import type { UmbraDesktopServerStatePatch } from './window-model';
@@ -223,6 +225,52 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
       state: 'normal',
     };
     this.#windows.setValue(focusWindow([...current, win], win.id));
+  }
+
+  /**
+   * Reopen a window from a saved layout, as it was: its rectangle, state and snap, and for a
+   * backoffice window the page it was showing. Called once per saved window when the desktop starts
+   * (see `windows/layout-restorer.ts`), in stacking order, so each lands above the last.
+   *
+   * It never takes focus. The saved layout says which window was active, and the restorer gives it
+   * focus once every window is back; a window activating itself here would move focus once per
+   * window restored. Its rectangle is taken as stored and pulled into reach by the same clamp that
+   * runs on every desktop resize, so a layout saved on a larger screen still lands usable.
+   * @param saved The saved window.
+   * @param app The app it belongs to, resolved by alias against the apps this user may open.
+   */
+  public restoreWindow(saved: UmbraDesktopSavedWindow, app: UmbraDesktopApp): void {
+    const current = this.#windows.getValue();
+    const url = restoredUrl(app, saved.location);
+    const win: UmbraDesktopWindow = {
+      id: crypto.randomUUID(),
+      // A copy with the stored page as its address, so the frame loads where the editor was. The
+      // app's own entry is left untouched: the launcher still opens it at its start page.
+      app: url && app.content.kind === 'iframe' && url !== app.content.url ? { ...app, content: { kind: 'iframe', url } } : app,
+      rect: { ...saved.rect },
+      z: nextZIndex(current),
+      active: false,
+      state: saved.state,
+    };
+    if (url && app.content.kind === 'iframe') win.location = url;
+    if (saved.snapped) win.snapped = saved.snapped;
+    if (saved.restoreRect) win.restoreRect = { ...saved.restoreRect };
+    const next = [...current, win];
+    this.#windows.setValue(this.#bounds ? clampWindowsToBounds(next, this.#bounds, this.#keep) : next);
+  }
+
+  /**
+   * Record the page a backoffice window's frame is showing, for the window layout to reopen it at.
+   * Written without a re-render when nothing changed, because the frame reports on every route
+   * change and most of those are to the page it is already on.
+   * @param id The window.
+   * @param location The frame's page, as a path on this site.
+   */
+  public setLocation(id: string, location: string): void {
+    const current = this.#windows.getValue();
+    const target = current.find((w) => w.id === id);
+    if (!target || target.location === location) return;
+    this.#windows.setValue(current.map((w) => (w.id === id ? { ...w, location } : w)));
   }
 
   /**

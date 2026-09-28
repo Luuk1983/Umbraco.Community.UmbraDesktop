@@ -18,6 +18,10 @@ export class UmbraDesktopSettingsGeneralElement extends UmbLitElement {
   @state()
   private _bootIntoDesktop = false;
 
+  /** Whether the desktop reopens this user's windows when it starts. */
+  @state()
+  private _reopenWindows = false;
+
   #settings?: UmbraDesktopSettingsContext;
 
   constructor() {
@@ -26,6 +30,7 @@ export class UmbraDesktopSettingsGeneralElement extends UmbLitElement {
       this.#settings = context ?? undefined;
       if (!context) return;
       this.observe(context.bootIntoDesktop, (enabled) => (this._bootIntoDesktop = enabled === true));
+      this.observe(context.reopenWindows, (enabled) => (this._reopenWindows = enabled === true));
     });
   }
 
@@ -50,6 +55,12 @@ export class UmbraDesktopSettingsGeneralElement extends UmbLitElement {
         @change=${(event: Event) =>
           this.#settings?.setBootIntoDesktop(!!(event.target as HTMLInputElement | null)?.checked)}></uui-toggle>
       <p class="hint">${this.localize.term('umbraDesktop_bootDescription')}</p>
+      <uui-toggle
+        label=${this.localize.term('umbraDesktop_reopenWindows')}
+        ?checked=${this._reopenWindows}
+        @change=${(event: Event) =>
+          this.#settings?.setReopenWindows(!!(event.target as HTMLInputElement | null)?.checked)}></uui-toggle>
+      <p class="hint">${this.localize.term('umbraDesktop_reopenWindowsDescription')}</p>
     `;
   }
 

@@ -194,3 +194,15 @@ it('changes the format source and the clock override independently', async () =>
   context.setClockHourCycle('h23');
   expect(localeOf(context)).to.deep.equal({ source: 'browser', hourCycle: 'h23' });
 });
+
+it('turns reopening windows on and off again', async () => {
+  const context = await contextOnHost();
+  let reopen: boolean | undefined;
+  const subscription = context.reopenWindows.subscribe((value) => (reopen = value));
+  expect(reopen, 'off until the user opts in').to.equal(false);
+  context.setReopenWindows(true);
+  expect(reopen).to.equal(true);
+  context.setReopenWindows(false);
+  expect(reopen).to.equal(false);
+  subscription.unsubscribe();
+});

@@ -24,6 +24,7 @@ export const UMBRADESKTOP_DEFAULT_SETTINGS: UmbraDesktopSettings = {
   theme: UMBRADESKTOP_DEFAULT_THEME_ID,
   pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
   bootIntoDesktop: false,
+  reopenWindows: false,
   taskbarFeatures: {},
   wallpaperFollowsTheme: false,
   locale: { source: 'backoffice', hourCycle: 'auto' },
@@ -174,6 +175,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
     bootIntoDesktop: UMBRADESKTOP_DEFAULT_SETTINGS.bootIntoDesktop,
+    reopenWindows: UMBRADESKTOP_DEFAULT_SETTINGS.reopenWindows,
     taskbarFeatures: {},
     wallpaperFollowsTheme: UMBRADESKTOP_DEFAULT_SETTINGS.wallpaperFollowsTheme,
     locale: { ...UMBRADESKTOP_DEFAULT_SETTINGS.locale },
@@ -196,6 +198,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     pinned?: unknown;
     theme?: unknown;
     bootIntoDesktop?: unknown;
+    reopenWindows?: unknown;
     taskbarFeatures?: unknown;
     wallpaperFollowsTheme?: unknown;
     locale?: unknown;
@@ -207,6 +210,8 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
   if (isThemeId(payload.theme)) settings.theme = payload.theme;
   if (isPinnedList(payload.pinned)) settings.pinned = payload.pinned;
   if (isBootPreference(payload.bootIntoDesktop)) settings.bootIntoDesktop = payload.bootIntoDesktop;
+  // A plain boolean or nothing, as with the boot preference: anything else keeps the default.
+  if (typeof payload.reopenWindows === 'boolean') settings.reopenWindows = payload.reopenWindows;
   if (isFeatureMap(payload.taskbarFeatures)) settings.taskbarFeatures = { ...payload.taskbarFeatures };
   if (isWallpaperFollowsTheme(payload.wallpaperFollowsTheme)) {
     settings.wallpaperFollowsTheme = payload.wallpaperFollowsTheme;

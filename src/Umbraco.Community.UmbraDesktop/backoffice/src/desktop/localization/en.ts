@@ -155,6 +155,9 @@ export default {
     bootIntoDesktop: 'Open the desktop when I sign in',
     bootDescription:
       'Takes effect the next time you open the backoffice, not right now. A link straight to a document still opens that document. Add ?desktop=off to the backoffice address to skip it once.',
+    reopenWindows: 'Reopen my windows',
+    reopenWindowsDescription:
+      'When the desktop starts, open the windows you had open last time, where you left them. Backoffice windows reopen at the page they were showing; unsaved changes are not kept.',
     // desktop settings — language and region. The first row is the odd one out and its hint says so:
     // it changes the whole backoffice, and it is the only setting here that needs a reload.
     backofficeLanguage: 'Backoffice language',

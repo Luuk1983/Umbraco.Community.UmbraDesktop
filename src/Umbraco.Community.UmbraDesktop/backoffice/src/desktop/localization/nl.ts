@@ -147,6 +147,9 @@ export default {
     bootIntoDesktop: 'Open het bureaublad als ik inlog',
     bootDescription:
       'Werkt vanaf de volgende keer dat je de backoffice opent, niet direct. Een link rechtstreeks naar een document opent nog steeds dat document. Zet ?desktop=off achter het backoffice-adres om het één keer over te slaan.',
+    reopenWindows: 'Mijn vensters opnieuw openen',
+    reopenWindowsDescription:
+      'Open bij het starten van het bureaublad de vensters die je de vorige keer open had, waar je ze liet. Backoffice-vensters openen op de pagina die ze lieten zien; niet-opgeslagen wijzigingen worden niet bewaard.',
     // bureaubladinstellingen — taal en regio. De eerste rij is de vreemde eend en de regel eronder
     // zegt dat ook: die verandert de hele backoffice en is de enige die opnieuw laden vraagt.
     backofficeLanguage: 'Taal van de backoffice',

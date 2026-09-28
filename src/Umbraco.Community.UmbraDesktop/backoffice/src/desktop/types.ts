@@ -268,6 +268,15 @@ export interface UmbraDesktopWindow {
   saves?: number;
 
   /**
+   * The page a backoffice window's frame is showing, as a path on this site with its query and hash.
+   *
+   * Reported by the window as the frame's router moves, so the window layout can reopen the window
+   * where the editor was rather than at its section's start page (see `windows/layout.ts`). Absent
+   * until the frame has loaded, and always absent on an app window, which has no address.
+   */
+  location?: string;
+
+  /**
    * The id of the window this one is attached to, when it is a floating attached window.
    *
    * A floating attached window belongs to its owner: the two rise as one layer, minimizing the owner

@@ -81,6 +81,9 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   /** Whether landing on the backoffice root should open the desktop. */
   public readonly bootIntoDesktop = this.#settings.asObservablePart((settings) => settings.bootIntoDesktop);
 
+  /** Whether the desktop reopens the windows this user had open when they last left it. */
+  public readonly reopenWindows = this.#settings.asObservablePart((settings) => settings.reopenWindows);
+
   /**
    * How this user wants dates and times formatted: which culture, and any clock override.
    *
@@ -328,6 +331,15 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    */
   public setBootIntoDesktop(enabled: boolean): void {
     this.#update({ bootIntoDesktop: enabled });
+  }
+
+  /**
+   * Choose whether the desktop reopens this user's windows when it starts. Persists, and takes effect
+   * the next time the desktop starts; the windows open now are not touched either way.
+   * @param enabled Whether to reopen them.
+   */
+  public setReopenWindows(enabled: boolean): void {
+    this.#update({ reopenWindows: enabled });
   }
 
   /**

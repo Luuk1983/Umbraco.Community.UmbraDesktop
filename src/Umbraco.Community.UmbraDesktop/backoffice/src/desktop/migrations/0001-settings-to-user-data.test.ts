@@ -30,6 +30,7 @@ const STORED = JSON.stringify({
   theme: 'win98',
   pinned: ['content'],
   bootIntoDesktop: true,
+  reopenWindows: true,
   taskbarFeatures: { clock: false },
   wallpaperFollowsTheme: false,
   locale: { source: 'browser', hourCycle: 'h23' },

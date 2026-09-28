@@ -27,6 +27,7 @@ it('round-trips settings through serialise and parse', () => {
     taskbarFeatures: { 'ai-chat': false },
     wallpaperFollowsTheme: true,
     locale: { source: 'browser', hourCycle: 'h23' },
+    reopenWindows: false,
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -45,6 +46,7 @@ it('reads back each wallpaper kind unchanged', () => {
           theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
           pinned: [],
           bootIntoDesktop: false,
+          reopenWindows: true,
           taskbarFeatures: {},
           wallpaperFollowsTheme: false,
           locale: { source: 'backoffice', hourCycle: 'auto' },
@@ -99,6 +101,7 @@ it('round-trips a pinned list', () => {
     taskbarFeatures: {},
     wallpaperFollowsTheme: false,
     locale: { source: 'backoffice', hourCycle: 'auto' },
+    reopenWindows: true,
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -303,4 +306,18 @@ it('never returns the shared default locale, so a caller cannot mutate it', () =
   const first = parseSettings(null);
   first.locale.hourCycle = 'h12';
   expect(parseSettings(null).locale.hourCycle).to.equal('auto');
+});
+
+/**
+ * Reopening your windows is opt-in: off for a user who has never said otherwise, including every
+ * user whose stored settings predate it, so nobody's desktop changes behaviour until they ask.
+ */
+it('does not reopen windows by default, including for settings stored before the preference existed', () => {
+  expect(parseSettings(null).reopenWindows).to.equal(false);
+  expect(parseSettings(JSON.stringify({ v: 1, theme: 'win98' })).reopenWindows).to.equal(false);
+});
+
+it('keeps a stored choice to reopen windows, and ignores one that is not a true or false', () => {
+  expect(parseSettings(JSON.stringify({ v: 1, reopenWindows: true })).reopenWindows).to.equal(true);
+  expect(parseSettings(JSON.stringify({ v: 1, reopenWindows: 'yes' })).reopenWindows).to.equal(false);
 });
