@@ -1,3 +1,5 @@
+import { arrangeWidthFor } from '../../../launcher/geometry.js';
+
 /**
  * The Umbraco 4 theme's geometry, factored out so the numbers JavaScript needs (`index.ts`'s
  * `metrics`) are computed from the same constants the CSS renders (`window.css.ts`,
@@ -108,9 +110,19 @@ export const U4_GRAB = 80;
  * Width of the launcher panel. Wider than Win98's 224px menu because this one is two stacked
  * idioms rather than one list — a Favourites grid of four columns above a grouped tree — and
  * narrower than the base's roomy multi-column card canvas, because v4's Sections panel was a
- * corner panel, not a full-screen surface.
+ * corner panel, not a full-screen surface. 450px rather than the 320px it started at: the search
+ * field shares the top row with All apps and Arrange, and at 320px its placeholder wrapped.
  */
-export const U4_LAUNCHER_WIDTH = 320;
+export const U4_LAUNCHER_WIDTH = 450;
+
+/** The launcher panel's border, in px, on every side. */
+export const U4_LAUNCHER_BORDER_PX = 1;
+
+/**
+ * Width of the launcher in arrange mode: wide enough for the palette of what is missing to sit
+ * beside Favourites and the tree, so arranging needs no switching between the two.
+ */
+export const U4_LAUNCHER_ARRANGE_WIDTH = arrangeWidthFor(U4_LAUNCHER_WIDTH, 2 * U4_LAUNCHER_BORDER_PX);
 
 /**
  * Vertical space the launcher leaves above itself, so the panel stops short of the very top of

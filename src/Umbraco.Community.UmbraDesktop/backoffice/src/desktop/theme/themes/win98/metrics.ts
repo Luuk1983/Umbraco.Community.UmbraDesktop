@@ -1,3 +1,5 @@
+import { arrangeWidthFor } from '../../../launcher/geometry.js';
+
 /**
  * The Win98 theme's geometry, factored out so the numbers JavaScript needs (`index.ts`'s
  * `metrics`) are computed from the same constants the CSS renders (`window.css.ts`,
@@ -132,8 +134,19 @@ export const WIN98_GRAB = 80;
  */
 export const WIN98_LAUNCHER_TOP_CLEARANCE = 16;
 
-/** Width of the start menu panel. Narrow, because it is a vertical list rather than a card grid. */
-export const WIN98_LAUNCHER_WIDTH = 224;
+/**
+ * Width of the start menu panel. Narrow, because it is a vertical list rather than a card grid, but
+ * not Windows 98's own 224px: the search field shares the top row with All apps and Arrange, and at
+ * 224px its placeholder wrapped onto five lines. A theme is a look, not a size limit.
+ */
+export const WIN98_LAUNCHER_WIDTH = 450;
+
+/**
+ * Width of the start menu in arrange mode: wide enough for the palette of what is missing to sit
+ * beside the menu, so arranging needs no switching between the two. The chrome is the bevel padding
+ * on both sides; the menu has no border of its own.
+ */
+export const WIN98_LAUNCHER_ARRANGE_WIDTH = arrangeWidthFor(WIN98_LAUNCHER_WIDTH, 2 * WIN98_FRAME_BORDER);
 
 /**
  * The path strip's height under this theme, in px.

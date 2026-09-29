@@ -33,7 +33,8 @@ It also does something the backoffice does not do at all. When two people have t
 - A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus any heading a package brings along, such as the Entertainment add-on's Games. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
-- Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are stored on your Umbraco account, so they follow you to any browser you sign in on.
+- Arrange it your way. Drag a tile to move it, drop it on Pinned to pin it, or drop it on the remove pane to take it off. Arrange mode edits groups (reorder, rename, delete, create) and keeps a place to add anything you removed back. There, taking an app off, moving it to another group or to Pinned, adding it back and every group edit has a button, and reordering tiles or groups works with a drag or the arrow keys. All apps lists everything alphabetically with a filter. New apps land in their group on their own. On upgrade your pinned apps (by default Content editor, Media library and Log Viewer) move out of their groups into Pinned, because an app now lives in one place; otherwise the launcher stays as it ships until you arrange it. See [Arranging the launcher](#arranging-the-launcher).
+- Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, instead of in their group, and on the taskbar as icons. One pin, shown in two places. Your pins are stored on your Umbraco account, so they follow you to any browser you sign in on.
 - A taskbar. Every open window gets a button: click to focus, click again to minimise. A preview you popped out gets its own button, in one box with its document's.
 - Told once, not once per window. A notification raised in any window, a save, an error, a package's license warning, shows once on the desktop instead of inside the window, however many windows raised it. Click it to go to the window it came from. The clock keeps the last twenty, with who said it, how often and when, and shows a dot while any of them is a warning or an error. See [Notifications](#notifications).
 - The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: a full screen button, then the AI chat, then your pinned apps. All three are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
@@ -94,7 +95,7 @@ Most people are probably familiar with the concept of a desktop and will have no
 From the launcher:
 
 - Click an app to open it in a window.
-- Hover an app and click the pin to add it to Pinned, which sits at the top.
+- Drag a tile to move it, pin it or take it off the launcher, and use All apps or Arrange in the header for everything else. See [Arranging the launcher](#arranging-the-launcher).
 - Drag a title bar to move a window, drag an edge or corner to resize, double-click the title bar to maximise.
 - Drag a window into the left or right edge of the desktop to snap it to that half, or into the top edge to maximise it. An outline appears while you are over an edge, showing where the window will go. Drag a snapped window away and it returns to the size it had before.
 - Use the taskbar at the bottom to switch between open windows. The icons to the left of them, beside the launcher button, are the fixed row: full screen, the AI chat and your pinned apps, one click from anywhere. See [On the taskbar](#on-the-taskbar).
@@ -106,6 +107,14 @@ From the launcher:
 - Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Language and region for the backoffice language and how times are written, Appearance for your theme, your wallpaper and the backoffice's own colours, Taskbar for what sits beside the launcher button — and the desktop stays in view behind it, so you can see a change as you make it.
 
 Several apps can be open at once, and some of them (the content editor and media library, for instance) can be opened more than once, so you can compare two documents side by side.
+
+## Arranging the launcher
+
+Until you change it, the launcher is the one the catalogue builds: every app sits in the group its catalogue puts it in, nothing hidden and nothing to opt out of. The one thing an upgrade changes is Pinned. An app now lives in one place, so your pinned apps (by default Content editor, Media library and Log Viewer) move out of their groups and are shown under Pinned only. Everything below is optional, and a package that adds apps of its own keeps working the same way after you have arranged as it did before: a new app still turns up in its group by itself.
+
+- **Drag a tile** to move it. Drop it on another tile to place it before or after that one, on a group's empty space to add it there, or on **Pinned** to pin it: an empty Pinned appears at the top of the launcher the moment you start a drag, even if you have never pinned anything. Drop it on the **remove pane**, which covers the footer for as long as the drag lasts, to take it off the launcher. Nothing is deleted: a removed app still shows up in All apps, and in Arrange's list of what is missing.
+- **All apps**, next to Search, lists everything you can open, A to Z, with a filter. It has no groups and nothing drags there; it is for finding something by name.
+- **Arrange**, next to All apps, is where groups get edited: reorder them, rename one, delete one (its apps wait in a "Not on your launcher" list rather than disappearing) or create a new one. Move a tile to another group or to Pinned with a drag or with its own button, which lists Pinned and every other group. Add something back from "Not on your launcher" with a click, or bring its whole group back in one. Taking an app off, moving it to another group or to Pinned, adding it back and the group edits all have buttons. Reordering tiles within a group, and moving a group, is by drag, or with the arrow keys once the tile or the group's handle has focus; a group's own ⋯ button moves it or deletes it without either. **Reset to default** puts the groups back the way the catalogue built them and asks first; it leaves your pins alone. In the narrow themes, Windows 98 and Umbraco 4, the launcher widens while you arrange so the list of what is missing sits beside it. Arrange mode stays open until you press **Done**, so a click that misses does not throw you out of it, and Escape steps back from Arrange or All apps to the launcher before it closes it. The launcher also stays open when you switch to another program and back.
 
 ## A note on screen size
 
@@ -277,8 +286,8 @@ All three are on from the start, and each is one switch in Desktop settings, Tas
 closes its space and moves nothing else: the order is fixed, so a button you have learned the
 position of stays where it is.
 
-**Pinning does not change.** You pin in the launcher, exactly as before, and switching the row on
-simply draws that same list in a second place. There is no pin-to-where question to answer, because
+**You pin in the launcher.** Drag a tile onto Pinned, or choose Pinned from the tile's Move to in
+Arrange, and switching the row on simply draws that same list in a second place. There is no pin-to-where question to answer, because
 there is only one list, and nothing on the taskbar pins, unpins or reorders anything.
 
 **The row launches, it does not switch windows.** A button there does precisely what the app's tile
