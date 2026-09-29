@@ -19,6 +19,33 @@ function byWeightThenKey(aw: number, ak: string, bw: number, bk: string): number
 }
 
 /**
+ * The catalogue groups in launcher order: by weight, then label, with the reserved "More" group
+ * always last. Exported because the launcher layout inserts a returning catalogue group by this
+ * order (design §4.2 step 4), and a second copy of the sort would drift from this one.
+ * @param groups Curated and package groups, merged.
+ * @returns A new list, More included.
+ */
+export function launcherGroupOrder(groups: ReadonlyArray<UmbraDesktopGroup>): UmbraDesktopGroup[] {
+  const moreGroup: UmbraDesktopGroup = {
+    alias: UMBRADESKTOP_MORE_GROUP_ALIAS,
+    label: UMBRADESKTOP_MORE_GROUP_LABEL,
+    weight: UMBRADESKTOP_MORE_GROUP_WEIGHT,
+    auto: true,
+  };
+  return [...groups, moreGroup].sort((a, b) => byWeightThenKey(a.weight ?? 0, a.label, b.weight ?? 0, b.label));
+}
+
+/**
+ * The catalogue group an app belongs to: its own `group` when that group exists, otherwise More.
+ * @param app The app.
+ * @param groups Curated and package groups, merged.
+ * @returns A group alias.
+ */
+export function catalogueGroupOf(app: UmbraDesktopApp, groups: ReadonlyArray<UmbraDesktopGroup>): string {
+  return app.group && groups.some((g) => g.alias === app.group) ? app.group : UMBRADESKTOP_MORE_GROUP_ALIAS;
+}
+
+/**
  * Group the flat app list into the launcher's display groups: one flat level, sorted by
  * group weight, empties dropped, the reserved auto "More" group always last. Apps whose
  * `group` is unset or unknown fall into "More". Pure.
@@ -30,27 +57,13 @@ export function groupApps(
   apps: ReadonlyArray<UmbraDesktopApp>,
   groups: ReadonlyArray<UmbraDesktopGroup>,
 ): UmbraDesktopLauncherGroup[] {
-  const moreGroup: UmbraDesktopGroup = {
-    alias: UMBRADESKTOP_MORE_GROUP_ALIAS,
-    label: UMBRADESKTOP_MORE_GROUP_LABEL,
-    weight: UMBRADESKTOP_MORE_GROUP_WEIGHT,
-    auto: true,
-  };
-  const allGroups = [...groups, moreGroup];
-  const known = new Set(groups.map((g) => g.alias));
-  const groupOf = (a: UmbraDesktopApp) =>
-    a.group && known.has(a.group) ? a.group : UMBRADESKTOP_MORE_GROUP_ALIAS;
-
-  return allGroups
+  return launcherGroupOrder(groups)
     .map((group) => ({
       group,
       apps: apps
-        .filter((a) => groupOf(a) === group.alias)
+        .filter((a) => catalogueGroupOf(a, groups) === group.alias)
         .slice()
         .sort((a, b) => byWeightThenKey(a.weight ?? 0, a.name, b.weight ?? 0, b.name)),
     }))
-    .filter((lg) => lg.apps.length > 0)
-    .sort((a, b) =>
-      byWeightThenKey(a.group.weight ?? 0, a.group.label, b.group.weight ?? 0, b.group.label),
-    );
+    .filter((lg) => lg.apps.length > 0);
 }

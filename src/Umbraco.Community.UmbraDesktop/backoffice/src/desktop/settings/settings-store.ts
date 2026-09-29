@@ -1,4 +1,10 @@
-import type { UmbraDesktopLocaleSettings, UmbraDesktopSettings, UmbraDesktopWallpaperRef } from './types';
+import type {
+  UmbraDesktopLauncherLayout,
+  UmbraDesktopLauncherLayoutGroup,
+  UmbraDesktopLocaleSettings,
+  UmbraDesktopSettings,
+  UmbraDesktopWallpaperRef,
+} from './types';
 import { UMBRADESKTOP_DEFAULT_WALLPAPER_ID } from './wallpapers.generated';
 import { UMBRADESKTOP_DEFAULT_THEME_ID } from '../theme/themes/index';
 
@@ -152,6 +158,44 @@ function readLocale(value: unknown): UmbraDesktopLocaleSettings {
 }
 
 /**
+ * The strings in a decoded list, or an empty list when it is not one.
+ * @param value A decoded property that should be a list of strings.
+ * @returns Its string entries, in order.
+ */
+function stringsIn(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+}
+
+/**
+ * Read a stored launcher layout, recovering what it can.
+ *
+ * Anything that is not an object with a list of groups is **absent**, which costs the user their
+ * arrangement and nothing else: the launcher falls back to the catalogue's grouping, and the
+ * wallpaper, theme and pins beside it are read independently. Within a readable layout a broken
+ * group is dropped on its own and a stray non-string is filtered out on its own, so one bad entry
+ * never costs the rest.
+ * @param value The decoded `layout` property.
+ * @returns A usable layout, or `undefined`.
+ */
+function readLayout(value: unknown): UmbraDesktopLauncherLayout | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const stored = value as { groups?: unknown; removed?: unknown; deletedGroups?: unknown };
+  if (!Array.isArray(stored.groups)) return undefined;
+
+  const seen = new Set<string>();
+  const groups: UmbraDesktopLauncherLayoutGroup[] = [];
+  for (const candidate of stored.groups) {
+    if (typeof candidate !== 'object' || candidate === null) continue;
+    const group = candidate as { id?: unknown; label?: unknown; apps?: unknown };
+    if (typeof group.id !== 'string' || group.id.length === 0 || seen.has(group.id)) continue;
+    if (group.label !== null && typeof group.label !== 'string') continue;
+    seen.add(group.id);
+    groups.push({ id: group.id, label: group.label, apps: stringsIn(group.apps) });
+  }
+  return { groups, removed: stringsIn(stored.removed), deletedGroups: stringsIn(stored.deletedGroups) };
+}
+
+/**
  * Decode a stored payload into settings. Never throws, and never returns something partially
  * valid: anything unreadable — absent, malformed, or a version this build predates — yields a
  * fresh copy of the defaults. A silently reset preference is a far better failure than a blank
@@ -199,6 +243,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     taskbarFeatures?: unknown;
     wallpaperFollowsTheme?: unknown;
     locale?: unknown;
+    layout?: unknown;
   };
   if (payload.v !== 1) return fallback();
 
@@ -213,6 +258,9 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
   }
   // Assigned rather than guarded, because this one reads each field separately — see readLocale.
   settings.locale = readLocale(payload.locale);
+  // Assigned only when readable: an absent layout is the ordinary case, not a default to write.
+  const layout = readLayout(payload.layout);
+  if (layout) settings.layout = layout;
   return settings;
 }
 

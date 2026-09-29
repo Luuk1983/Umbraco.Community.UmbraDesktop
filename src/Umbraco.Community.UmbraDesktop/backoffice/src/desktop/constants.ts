@@ -336,3 +336,10 @@ export const UMBRADESKTOP_Z_SYSTEM_SCREEN = UMBRADESKTOP_Z_TASKBAR + 1;
  * — their settings are still in this browser either way — and the ledger makes repeating it safe.
  */
 export const UMBRADESKTOP_MIGRATION_TIMEOUT_MS = 30_000;
+
+/**
+ * The id the launcher uses for the Pinned place wherever it needs a group-shaped id: drop targets
+ * and Move to. Starts with `@` because a layout group id is a catalogue alias or `custom-…`, and a
+ * package could otherwise register a group called `pinned`.
+ */
+export const UMBRADESKTOP_PINNED_GROUP_ID = '@pinned';

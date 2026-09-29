@@ -1,18 +1,33 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import {
   U4_EDGE,
+  U4_EDGE_STRONG,
   U4_FACE_DIM,
   U4_FACE_LIT,
   U4_FONT,
   U4_HILIGHT,
   U4_LINE,
   U4_LINE_SOFT,
+  U4_PANEL,
   U4_PRESSED,
-  U4_RAISED,
+  U4_SELECT,
   U4_SELECT_LINE,
   U4_TEXT,
   U4_WELL,
 } from './palette.js';
+
+/**
+ * The tree's leading indent, in px: how far in from the well's edge a row's icon starts. Shared by
+ * the launcher's tree rows, the New group row, and the arrange rows, whose own padding is derived
+ * from it below so their icons line up with the tree's.
+ */
+const TREE_INDENT_PX = 14;
+
+/** How far an arrange row sits in from its card on each side, leaving room for its dashed edge. */
+const ARRANGE_ROW_INSET_PX = 4;
+
+/** The width of the dashed edge that marks an arrange row as movable. */
+const ARRANGE_ROW_BORDER_PX = 1;
 
 /**
  * The launcher, as **both halves** of the Umbraco 4 backoffice rather than one of them stretched.
@@ -31,9 +46,10 @@ import {
  * orb grid.
  *
  * Every affordance survives the restyle, because a theme may restyle and never remove: the search
- * row becomes a sunken field, the pin badge becomes a small square toggle that looks held down
- * while an app is pinned, and the footer keeps the user button, Desktop settings, Logout and Exit
- * as raised buttons above a groove.
+ * row becomes a sunken field, the All apps and Arrange controls stay in the header row beside it,
+ * the footer keeps the user button, Desktop settings, Logout and Exit as raised buttons above a
+ * groove, and in arrange mode every tile, Favourites included, becomes a tree row with its − and ⋯
+ * as raised buttons at the row's end.
  *
  * Nothing here sets the panel's width or position. Those come from
  * '--umbradesktop-launcher-width'/'-left'/'-max-height' in the palette, read by the base :host
@@ -47,9 +63,20 @@ export default css`
     box-sizing: border-box;
     font-size: 11px;
   }
+  /* The base's .hdr row now carries the panel's own outer margin: the search field shares that
+     row with the All apps button, and the base already gives .hdr a margin of its own, so leaving
+     one here too would double it instead of moving it. The arrange banner takes that row's place,
+     so it shares the one margin rather than restating it, and the top row stays put as arrange
+     mode opens. */
+  .hdr,
+  .banner {
+    margin: 5px 5px 0;
+  }
+  .hdr {
+    gap: 4px;
+  }
   /* A white well with a sunken edge, which is how every v4 text input was drawn. */
   .search {
-    margin: 5px 5px 0;
     padding: 4px 6px;
     gap: 6px;
     background: ${unsafeCSS(U4_WELL)};
@@ -78,7 +105,8 @@ export default css`
     padding: 5px 6px 7px;
     background: linear-gradient(180deg, #fdfcfa 0%, #f2f0ea 100%);
   }
-  .card.fav .ch {
+  .card.fav .ch,
+  .card.fav .gh {
     font-size: 11px;
     font-weight: 700;
     text-transform: none;
@@ -201,7 +229,8 @@ export default css`
   }
   /* Group headings become the grooved strips v4 divided a panel with, and stick to the top of the
      well so the group a row belongs to is still readable once the list is scrolled. */
-  .cards .card .ch {
+  .cards .card .ch,
+  .cards .card .gh {
     position: sticky;
     top: 0;
     z-index: 2;
@@ -218,7 +247,8 @@ export default css`
     border-bottom: 1px solid ${unsafeCSS(U4_LINE)};
     box-shadow: inset 0 1px 0 ${unsafeCSS(U4_HILIGHT)};
   }
-  .cards .card:first-child .ch {
+  .cards .card:first-child .ch,
+  .cards .card:first-child .gh {
     border-top: none;
   }
   /* A tree row: icon then label, one line, filling the well's width. */
@@ -228,26 +258,31 @@ export default css`
     gap: 0;
     padding: 2px 0 3px;
   }
-  .cards .card .launch {
+  /* The row geometry is written once for the two things drawn as a tree row: a row in the tree, and
+     an arrange tile, which is a tree row too and restates only its padding further down. One list,
+     so the two cannot drift apart. */
+  .cards .card .launch,
+  .tile.arr {
     flex-direction: row;
     align-items: center;
     gap: 7px;
-    /* The trailing padding is the space the pin toggle occupies, so a long app name is clamped
-       before it runs underneath. The leading indent is the tree's own. */
-    padding: 3px 24px 3px 14px;
+    padding: 3px ${TREE_INDENT_PX}px;
     border-radius: 0;
     text-align: left;
   }
   /* Flat tree icons, not orbs — the gloss belongs to Favourites alone, and twenty-five orbs is
      the thing this split exists to avoid. */
-  .cards .card .launch umb-icon {
+  .cards .card .launch umb-icon,
+  .tile.arr umb-icon {
     flex-shrink: 0;
     font-size: 15px;
   }
-  .cards .card .tlb {
+  .cards .card .tlb,
+  .tile.arr .tlb {
     -webkit-line-clamp: 1;
     min-height: 0;
     flex: 1 1 auto;
+    min-width: 0;
     font-size: 11px;
     line-height: 1.45;
     text-align: left;
@@ -259,35 +294,8 @@ export default css`
     box-shadow: inset 0 0 0 1px ${unsafeCSS(U4_SELECT_LINE)};
   }
 
-  /* ---- Pin, footer ---- */
+  /* ---- Footer ---- */
 
-  /* The pin moves from a round badge hanging off a tile's corner to a small square toggle. Still
-     hover-only, still the same button and the same behaviour — only 'pinned' now reads as 'held
-     down', because that is how a 2009 interface showed a toggle that was on. */
-  .pin {
-    top: 2px;
-    right: 2px;
-    width: 17px;
-    height: 17px;
-    border: 1px solid ${unsafeCSS(U4_EDGE)};
-    border-radius: 2px;
-    background: ${unsafeCSS(U4_RAISED)};
-    box-shadow: inset 0 1px 0 ${unsafeCSS(U4_HILIGHT)};
-    transition: none;
-  }
-  .cards .card .pin {
-    top: 50%;
-    transform: translateY(-50%);
-  }
-  .pin.on,
-  .pin:active {
-    background: ${unsafeCSS(U4_PRESSED)};
-    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.18);
-  }
-  .pin .pin-ico {
-    width: 11px;
-    height: 11px;
-  }
   /* The footer keeps its contents and swaps its fill for a groove, so it reads as the bottom
      block of one panel rather than a separate bar with a surface of its own. */
   .footer {
@@ -324,5 +332,135 @@ export default css`
   }
   .fbtn umb-icon {
     font-size: 13px;
+  }
+
+  /* ---- The launcher's own controls, All apps and arrange mode ---- */
+
+  /* A control is a raised v4 button: the fill and edge come from the palette, and this adds the
+     highlight along its top edge and the corners the footer's buttons have. The handle stays a bare
+     grip, as in the base. */
+  .ctl,
+  .gdel,
+  .edit {
+    border-radius: 3px;
+    box-shadow: inset 0 1px 0 ${unsafeCSS(U4_HILIGHT)};
+  }
+  .ctl:active,
+  .gdel:active,
+  .edit:active {
+    background: ${unsafeCSS(U4_PRESSED)};
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.18);
+  }
+  /* The pressed and default states read as v4's pale blue selection, with dark text on it: the
+     base writes white on a pressed control, which on this blue is unreadable. Bold marks Done as
+     the default button, because on a banner of the same blue its fill alone would not. */
+  .ctl[aria-pressed='true'],
+  .ctl.primary {
+    color: ${unsafeCSS(U4_TEXT)};
+    border-color: ${unsafeCSS(U4_SELECT_LINE)};
+  }
+  .ctl.primary {
+    font-weight: 700;
+  }
+  .ctl umb-icon {
+    font-size: 14px;
+  }
+  .banner,
+  .movemenu,
+  .prow {
+    border-radius: 0;
+  }
+  /* The rename field is a text input like the search field, so it is the same sunken white well. */
+  .rename {
+    background: ${unsafeCSS(U4_WELL)};
+    box-shadow: inset 1px 1px 0 #e9e6df;
+    font-size: 11px;
+  }
+  .gname,
+  .hint {
+    font-size: 11px;
+  }
+  .alpha {
+    columns: 1;
+  }
+  /* In arrange mode the layout pane scrolls as a whole, as the base's does, rather than leaving it
+     to the tree well the way the launcher itself does. The drag scrolls the pane near its edges,
+     and Move to keeps its list inside the pane, so a well scrolling on its own inside it would
+     leave both measuring the wrong box. */
+  .layout-pane {
+    overflow: auto;
+  }
+  .layout-pane .cards {
+    flex-shrink: 0;
+    overflow: visible;
+  }
+  /* Arrange tiles are tree rows too, Favourites included, so they stack in one column with a line
+     of room between them for the dashed edge that marks each as movable. */
+  .card.fav.agroup .grid,
+  .cards .card.agroup .grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 3px ${ARRANGE_ROW_INSET_PX}px;
+  }
+  /* The row geometry is the tree's, in the shared rule above; only the padding differs. Its two
+     buttons leave their corners and join the row at its end, after the name, which takes the room
+     between; in the flow rather than positioned, so they keep the base's size without this sheet
+     restating it, and the name can never run under them however long it is. So the buttons set the
+     row's height, which leaves only a pixel of padding above and below, and they end the row, which
+     leaves only a little after them. The leading padding is the tree's indent less the row's inset
+     and its dashed edge, so the icon starts exactly where a tree row's does. */
+  .tile.arr {
+    padding: 1px 2px 1px ${TREE_INDENT_PX - ARRANGE_ROW_INSET_PX - ARRANGE_ROW_BORDER_PX}px;
+    border: ${ARRANGE_ROW_BORDER_PX}px dashed ${unsafeCSS(U4_LINE_SOFT)};
+  }
+  .tile.arr .edit {
+    position: static;
+  }
+  /* The landing bar runs across a tree row rather than down its side, because the next row is
+     below it. Favourites in the launcher keeps the base's upright bar: its orbs sit side by side. */
+  .cards .tile.drop-before::before,
+  .cards .tile.drop-after::after,
+  .tile.arr.drop-before::before,
+  .tile.arr.drop-after::after {
+    top: auto;
+    bottom: auto;
+    left: 4px;
+    right: 4px;
+    border-left: none;
+    border-top: var(--umbradesktop-launcher-drop-outline, 2px solid ${unsafeCSS(U4_SELECT_LINE)});
+  }
+  .cards .tile.drop-before::before,
+  .tile.arr.drop-before::before {
+    top: -2px;
+  }
+  .cards .tile.drop-after::after,
+  .tile.arr.drop-after::after {
+    bottom: -2px;
+  }
+  /* New group is one more row at the foot of the tree, under a line like the group strips. The
+     tree's card rule outranks a bare selector, so this one is scoped to it. */
+  .cards .newgroup {
+    flex-direction: row;
+    justify-content: flex-start;
+    min-height: 0;
+    padding: 4px ${TREE_INDENT_PX}px;
+    border-top: 1px solid ${unsafeCSS(U4_LINE_SOFT)};
+    font-size: 11px;
+  }
+  .cards .newgroup:hover {
+    background: var(--umbradesktop-launcher-hover-background, ${unsafeCSS(U4_SELECT)});
+  }
+  .movemenu {
+    background: ${unsafeCSS(U4_PANEL)};
+    border: 1px solid ${unsafeCSS(U4_EDGE_STRONG)};
+  }
+  .ph,
+  .pgh,
+  .prow,
+  .mmi,
+  .mmh,
+  .removepane {
+    font-size: 11px;
   }
 `;

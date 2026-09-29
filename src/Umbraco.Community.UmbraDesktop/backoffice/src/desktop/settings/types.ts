@@ -49,6 +49,41 @@ export interface UmbraDesktopLocaleSettings {
 }
 
 /**
+ * One group on a launcher the user has arranged.
+ *
+ * A group that came from the catalogue keeps the catalogue group's alias as its `id` and a `null`
+ * label, so its name is looked up (see `launcher/group-labels.ts`) and follows the backoffice
+ * language. Only a group the user named carries literal text.
+ */
+export interface UmbraDesktopLauncherLayoutGroup {
+  /** A catalogue group alias, or `custom-…` for a group the user created. */
+  id: string;
+  /** `null` to look the name up by `id`; otherwise the user's own text. */
+  label: string | null;
+  /**
+   * App aliases in the user's order. Never pruned: an alias this user cannot open right now is
+   * skipped when the launcher is drawn and comes back in the same place when they can.
+   */
+  apps: string[];
+}
+
+/**
+ * The user's changes to the launcher, and only those (design D2).
+ *
+ * Absent until the user first changes a group, so a launcher nobody has arranged is always the
+ * catalogue's own grouping and follows it when a release regroups apps. New apps are placed by
+ * `launcher/resolve-launcher.ts`, not stored here, which is what lets them keep arriving (D3).
+ */
+export interface UmbraDesktopLauncherLayout {
+  /** The user's groups, in their order. */
+  groups: UmbraDesktopLauncherLayoutGroup[];
+  /** Apps the user took off the launcher. They wait in the palette and in All apps. */
+  removed: string[];
+  /** Catalogue groups the user deleted, so their new apps wait in the palette instead of returning. */
+  deletedGroups: string[];
+}
+
+/**
  * One user's desktop settings, as persisted. Versioned from the start so a future shape change
  * has somewhere to hang a migration rather than silently discarding preferences.
  */
@@ -113,6 +148,13 @@ export interface UmbraDesktopSettings {
    * showed whatever the browser's language happened to be.
    */
   locale: UmbraDesktopLocaleSettings;
+
+  /**
+   * The user's changes to the launcher. Absent means never arranged: the launcher is the catalogue's
+   * grouping. Optional rather than defaulted, and the payload stays at `v: 1`, for the reason
+   * `parseSettings` gives: an unknown optional field costs an older build nothing (design D14).
+   */
+  layout?: UmbraDesktopLauncherLayout;
 }
 
 /** What the desktop element needs in order to paint a wallpaper. */

@@ -1,0 +1,124 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Launcher states</title>
+<style>
+  :root { --canvas:#f3f3f5; --card:#fff; --border:#e2e2e8; --text:#1b264f; --muted:#68708a; --accent:#3544b1; --coral:#f5c1bc; }
+  body { margin:0; font-family: Lato, 'Segoe UI', system-ui, sans-serif; background:#0f1a3a; color:var(--text); }
+  .intro { max-width:1180px; margin:0 auto; padding:24px 16px 8px; color:#dfe3f5; }
+  .intro h1 { font-size:22px; margin:0 0 6px; } .intro p { margin:4px 0; font-size:14px; line-height:1.45; }
+  .scene { max-width:1180px; margin:0 auto 36px; padding:0 16px; }
+  .scene h2 { color:#fff; font-size:17px; margin:18px 0 4px; } .scene .note { color:#c7cbe0; font-size:13px; margin:0 0 10px; line-height:1.45; }
+  .scene .note b { color:#fff; }
+  .panel { position:relative; background:var(--canvas); border:1px solid var(--border); border-radius:3px; box-shadow:0 10px 30px rgba(0,0,0,.4); display:flex; flex-direction:column; max-height:760px; overflow:hidden; }
+  .hdr { display:flex; gap:8px; margin:12px 12px 0; align-items:stretch; }
+  .search { flex:1; padding:9px 12px; border:1px solid var(--border); border-radius:3px; background:var(--card); font-size:13px; color:var(--muted); }
+  .hbtn { font:inherit; font-size:13px; padding:0 12px; border:1px solid var(--border); border-radius:3px; background:var(--card); color:var(--text); display:inline-flex; align-items:center; gap:6px; white-space:nowrap; cursor:pointer; min-height:34px; }
+  .hbtn.primary { background:var(--accent); color:#fff; border-color:var(--accent); } .hbtn.ghost { background:transparent; }
+  .badge { background:#d42054; color:#fff; border-radius:9px; font-size:11px; padding:1px 6px; font-weight:700; }
+  .body { flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:18px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; align-items:stretch; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:6px; padding:12px; }
+  .ch { font-size:16px; margin:0 0 9px; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+  .fgrid { grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); }
+  .tile { display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px 3px; border-radius:3px; min-width:0; position:relative; }
+  .tile:hover { background:var(--canvas); }
+  .ico { width:28px; height:28px; border-radius:6px; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
+  .tlb { font-size:12px; text-align:center; line-height:1.2; min-height:2.4em; overflow-wrap:anywhere; }
+  .footer { display:flex; justify-content:space-between; align-items:center; padding:9px 12px; background:var(--card); border-top:1px solid var(--border); font-size:14px; }
+  .avatar { display:inline-flex; width:26px; height:26px; border-radius:50%; background:var(--coral); align-items:center; justify-content:center; font-size:11px; margin-right:6px; }
+  .fbtns { letter-spacing:14px; color:var(--muted); }
+  /* drawer */
+  .alpha { columns:4 220px; column-gap:18px; }
+  .letter { break-inside:avoid; margin-bottom:10px; }
+  .lh { font-size:13px; font-weight:700; color:var(--accent); border-bottom:1px solid var(--border); padding:2px 4px; margin-bottom:2px; }
+  .row { display:flex; align-items:center; gap:9px; padding:5px 6px; border-radius:3px; font-size:13px; }
+  .row:hover { background:var(--card); } .row .ico { width:22px; height:22px; font-size:11px; border-radius:5px; }
+  .pgh { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; margin:8px 0 4px; } .pgh .addall { margin-left:auto; font-weight:400; font-size:12px; border:1px solid var(--accent); color:var(--accent); border-radius:3px; padding:2px 8px; } .empty { color:var(--muted); font-size:13px; padding:16px 6px; text-align:center; }
+  .removepane { display:flex; flex-direction:column; align-items:center; gap:2px; padding:12px; background:#fdecef; border-top:2px dashed #d42054; color:#b0103c; font-size:14px; font-weight:700; } .removepane .sub { font-weight:400; font-size:12px; color:#7a4450; } .tile.lifted { opacity:.3; outline:1px dashed #c9cde0; }
+  .tile.arr.focus { outline:2px solid var(--accent); outline-offset:1px; z-index:5; } .movemenu { position:absolute; top:26px; right:-6px; z-index:10; width:190px; background:var(--card); border:1px solid var(--border); border-radius:4px; box-shadow:0 8px 22px rgba(0,0,0,.2); text-align:left; padding:4px 0; } .mmh { font-size:11px; color:var(--muted); padding:4px 10px; } .mmi { font-size:13px; padding:6px 10px; } .mmi:hover, .mmi:first-of-type + .mmi { } .mmi.new { color:var(--accent); border-top:1px solid var(--border); } .mmi.rmv { color:#b0103c; }
+  .newdot { margin-left:auto; font-size:10px; font-weight:700; background:#d42054; color:#fff; border-radius:8px; padding:1px 6px; }
+  /* arrange */
+  .banner { display:flex; align-items:center; gap:8px; margin:12px 12px 0; padding:8px 12px; background:#fff6d6; border:1px solid #efd98c; border-radius:3px; font-size:13px; }
+  .bspace { flex:1; }
+  .split { flex:1; display:grid; grid-template-columns:1fr 300px; min-height:0; }
+  .lpane { border-right:2px dashed #c9cde0; }
+  .palette { display:flex; flex-direction:column; gap:8px; padding:12px; min-height:0; overflow:auto; }
+  .palette .search { flex:none; }
+  .prow { background:var(--card); border:1px solid var(--border); margin-bottom:4px; cursor:grab; }
+  .prow.placed { opacity:.55; } .prow .add { margin-left:auto; width:22px; height:22px; border:1px solid var(--border); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:700; }
+  .prow .newdot { margin-left:auto; } .prow .newdot + .add { margin-left:6px; }
+  .more { font-size:12px; color:var(--muted); padding:4px 6px; }
+  .gh { display:flex; align-items:center; gap:8px; margin:0 0 9px; font-size:15px; }
+  .handle { cursor:grab; color:var(--muted); font-size:16px; }
+  .rename { flex:1; border:1px solid var(--border); border-radius:3px; padding:3px 7px; background:#fbfbfd; }
+  .gdel { font-size:13px; opacity:.7; cursor:pointer; } .lock { font-size:13px; } .hint { margin-left:auto; font-size:11px; color:var(--muted); }
+  .tile.arr { border:1px dashed #c9cde0; cursor:grab; }
+  .tile.arr .rm, .tile.arr .mv { position:absolute; top:2px; width:18px; height:18px; border-radius:50%; background:var(--card); border:1px solid var(--border); font-size:12px; line-height:16px; text-align:center; }
+  .tile.arr .rm { left:2px; } .tile.arr .mv { right:2px; }
+  .agroup.drop { outline:2px solid var(--accent); outline-offset:2px; background:#eef0fb; }
+  .tile.slot { border:2px dashed var(--accent); color:var(--accent); font-size:11px; justify-content:center; min-height:58px; }
+  .confirm { font-size:12px; background:#fdecef; border:1px solid #f3b8c4; padding:6px 8px; border-radius:3px; margin-bottom:8px; }
+  .confirm b { color:#b0103c; margin-left:6px; } .confirm u { margin-left:6px; }
+  .newgroup { display:flex; align-items:center; justify-content:center; border-style:dashed; color:var(--accent); font-size:14px; min-height:100px; }
+  .ghost-drag { position:absolute; top:230px; left:520px; display:flex; align-items:center; gap:8px; background:var(--card); padding:6px 10px; border-radius:4px; box-shadow:0 6px 18px rgba(0,0,0,.25); transform:rotate(-3deg); font-size:13px; opacity:.95; }
+</style></head><body>
+<div class="intro">
+  <h1>Launcher, fourth pass: arrange mode without dragging</h1>
+  <p>No right-click anywhere. Everything a drag does has a visible button in arrange mode, where tiles do not launch, so a button on a tile cannot be hit by accident.</p>
+</div>
+<div class="scene"><h2>Arrange, with Move to open on Data Types</h2>
+<p class="note">Every tile: <b>−</b> removes it from the launcher (it goes to the palette), <b>⋯</b> opens <b>Move to</b>: Pinned, every other group, New group, and Remove. That list is an inline popover inside the panel, not a modal. A focused tile moves within its group with the arrow keys. Group headers: <b>handle</b> (drag, or focus and arrow keys), <b>rename</b> field, <b>delete</b> (apps go to the palette). Pinned is a place like a group, but fixed: it cannot be renamed, moved or deleted, because the taskbar reads it too. The palette on the right holds what is not on the launcher, with <b>+</b>, <b>Add all</b> and <b>Add group</b>.</p>
+
+<div class="panel" style="max-height:900px">
+  <div class="banner">✥ Arranging your launcher. Tiles don't open while you arrange. <span class="bspace"></span><button class="hbtn ghost">Reset to default</button><button class="hbtn primary">Done</button></div>
+  <div class="split">
+    <div class="body lpane">
+      
+  <div class="card agroup fav">
+    <div class="gh"><span class="lock">📌</span><span>Pinned</span><span class="hint">fixed place · cannot be renamed, moved or deleted</span></div>
+    <div class="grid fgrid"><div class="tile arr "><span class="ico" style="background:#3544b1">C</span><span class="tlb">Content editor</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div><div class="tile arr "><span class="ico" style="background:#1b9e77">M</span><span class="tlb">Media library</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div><div class="tile arr "><span class="ico" style="background:#b15928">L</span><span class="tlb">Log Viewer</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div></div>
+  </div>
+      <div class="cards">
+        
+  <div class="card agroup ">
+    <div class="gh"><span class="handle" title="Drag, or focus and use the arrow keys">⠿</span><span class="rename">Daily</span><span class="gdel" title="Delete group: its apps go to the palette">🗑</span></div>
+    <div class="grid "><div class="tile arr "><span class="ico" style="background:#e7298a">W</span><span class="tlb">Workflow tasks</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div><div class="tile arr "><span class="ico" style="background:#d95f02">F</span><span class="tlb">Forms</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div><div class="tile arr "><span class="ico" style="background:#1f78b4">D</span><span class="tlb">Deploy status</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div></div>
+  </div>
+  <div class="card agroup ">
+    <div class="gh"><span class="handle" title="Drag, or focus and use the arrow keys">⠿</span><span class="rename">Editing</span><span class="gdel" title="Delete group: its apps go to the palette">🗑</span></div>
+    <div class="grid "><div class="tile arr "><span class="ico" style="background:#7570b3">T</span><span class="tlb">Translation</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div></div>
+  </div>
+  <div class="card agroup ">
+    <div class="gh"><span class="handle" title="Drag, or focus and use the arrow keys">⠿</span><span class="rename">Workflow</span><span class="gdel" title="Delete group: its apps go to the palette">🗑</span></div>
+    <div class="grid "><div class="tile arr "><span class="ico" style="background:#e7298a">W</span><span class="tlb">Workflow</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div></div>
+  </div>
+  <div class="card agroup ">
+    <div class="gh"><span class="handle" title="Drag, or focus and use the arrow keys">⠿</span><span class="rename">Development</span><span class="gdel" title="Delete group: its apps go to the palette">🗑</span></div>
+    <div class="grid "><div class="tile arr "><span class="ico" style="background:#3544b1">D</span><span class="tlb">Document Types</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div><div class="tile arr focus"><span class="ico" style="background:#3544b1">D</span><span class="tlb">Data Types</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span><div class="movemenu"><div class="mmh">Move Data Types to</div><div class="mmi">📌 Pinned</div><div class="mmi">Daily</div><div class="mmi">Editing</div><div class="mmi">Workflow</div><div class="mmi">Synchronisation</div><div class="mmi">Security</div><div class="mmi">Diagnostics</div><div class="mmi">System</div><div class="mmi new">＋ New group</div><div class="mmi rmv">Remove from launcher</div></div></div><div class="tile arr "><span class="ico" style="background:#3544b1">T</span><span class="tlb">Templates</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div><div class="tile arr "><span class="ico" style="background:#a6761d">U</span><span class="tlb">UI Builder</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div></div>
+  </div>
+  <div class="card agroup ">
+    <div class="gh"><span class="handle" title="Drag, or focus and use the arrow keys">⠿</span><span class="rename">Synchronisation</span><span class="gdel" title="Delete group: its apps go to the palette">🗑</span></div>
+    <div class="grid "><div class="tile arr "><span class="ico" style="background:#1f78b4">D</span><span class="tlb">Deploy</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div><div class="tile arr "><span class="ico" style="background:#1f78b4">D</span><span class="tlb">Deploy environments</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div><div class="tile arr "><span class="ico" style="background:#33a02c">u</span><span class="tlb">uSync</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div></div>
+  </div>
+  <div class="card agroup ">
+    <div class="gh"><span class="handle" title="Drag, or focus and use the arrow keys">⠿</span><span class="rename">Security</span><span class="gdel" title="Delete group: its apps go to the palette">🗑</span></div>
+    <div class="grid "><div class="tile arr "><span class="ico" style="background:#6a3d9a">U</span><span class="tlb">Users</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div><div class="tile arr "><span class="ico" style="background:#6a3d9a">M</span><span class="tlb">Members</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div></div>
+  </div>
+  <div class="card agroup ">
+    <div class="gh"><span class="handle" title="Drag, or focus and use the arrow keys">⠿</span><span class="rename">Diagnostics</span><span class="gdel" title="Delete group: its apps go to the palette">🗑</span></div>
+    <div class="grid "><div class="tile arr "><span class="ico" style="background:#b15928">E</span><span class="tlb">Examine Management</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div><div class="tile arr "><span class="ico" style="background:#b15928">H</span><span class="tlb">Health Check</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div></div>
+  </div>
+  <div class="card agroup ">
+    <div class="gh"><span class="handle" title="Drag, or focus and use the arrow keys">⠿</span><span class="rename">System</span><span class="gdel" title="Delete group: its apps go to the palette">🗑</span></div>
+    <div class="grid "><div class="tile arr "><span class="ico" style="background:#555">S</span><span class="tlb">Settings</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div><div class="tile arr "><span class="ico" style="background:#555">P</span><span class="tlb">Packages</span><span class="rm" title="Remove from launcher">−</span><span class="mv" title="Move to…">⋯</span></div></div>
+  </div>
+        <div class="card newgroup">＋ New group</div>
+      </div>
+    </div>
+    <div class="palette">
+      <div class="lh" style="color:var(--text)">Not on your launcher</div>
+      <div class="search filter">⌕ Filter apps</div>
+      <div class="plist"><div class="pgh">Marketing and sales<span class="addall">Add group</span></div><div class="row prow"><span class="ico" style="background:#66a61e">C</span><span>Commerce</span><span class="add" title="Add to…">+</span></div><div class="row prow"><span class="ico" style="background:#e6ab02">E</span><span>Engage</span><span class="add" title="Add to…">+</span></div><div class="pgh">Advanced security<span class="addall">Add group</span></div><div class="row prow"><span class="ico" style="background:#999">C</span><span>Content permissions</span><span class="add" title="Add to…">+</span></div><div class="row prow"><span class="ico" style="background:#999">C</span><span>Content access</span><span class="add" title="Add to…">+</span></div><div class="row prow"><span class="ico" style="background:#999">D</span><span>Document Type permissions</span><span class="add" title="Add to…">+</span></div><div class="pgh">Diagnostics<span class="addall">Add all</span></div><div class="row prow"><span class="ico" style="background:#b15928">P</span><span>Profiling</span><span class="add" title="Add to…">+</span></div><div class="row prow"><span class="ico" style="background:#b15928">B</span><span>Background Jobs</span><span class="add" title="Add to…">+</span></div><div class="more">…</div></div>
+    </div>
+  </div>
+</div></div>
+</body></html>
