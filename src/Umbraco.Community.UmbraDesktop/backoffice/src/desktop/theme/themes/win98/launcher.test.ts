@@ -17,8 +17,8 @@ import { WIN98_FRAME_BORDER } from './metrics.js';
  * on the CSS text is what tells those two apart.
  *
  * The second is that nothing was removed on the way. What a browser can check here is the footer,
- * which renders without any of the launcher's contexts; the app tiles and their pin toggles need
- * the app catalogue, so whether *those* still work is a question for a real backoffice.
+ * which renders without any of the launcher's contexts; the app tiles need the app catalogue, so
+ * whether *those* still work is a question for a real backoffice.
  */
 
 /** The themed launcher under test, mounted once for the whole file. */
@@ -62,6 +62,18 @@ it('wins over the launcher\'s own styles on the surfaces it restyles', function 
   expect(footerStyle.borderTopStyle).to.equal('solid');
   expect(footerStyle.borderTopColor, 'the shadow half of the groove').to.equal('rgb(128, 128, 128)');
   expect(footerStyle.boxShadow, 'the highlight half of the groove, drawn inside it').to.contain('inset');
+});
+
+it('moves its outer margin to the header row, not the search field inside it', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // Theme sheets are appended after the base styles, so a .search rule that kept its own margin
+  // here would beat the base's `.search { margin: 0 }` and reintroduce it inside .hdr, doubling
+  // with .hdr's own margin and pushing the row right and down from where the sheet puts it.
+  const search = panel.root.querySelector('.search') as HTMLElement;
+  expect(search, 'the launcher should render a search row').to.not.equal(null);
+  const style = getComputedStyle(search);
+  expect(style.marginLeft, 'the header row owns the left margin now, not the field').to.equal('0px');
+  expect(style.marginTop, 'the header row owns the top margin now, not the field').to.equal('0px');
 });
 
 it('keeps every footer action rendered and sized to be clicked', function () {

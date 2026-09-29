@@ -3,6 +3,7 @@ import {
   WIN98_PATH_HEIGHT,
   WIN98_CONTROL_WIDTH,
   WIN98_LAUNCHER_TOP_CLEARANCE,
+  WIN98_LAUNCHER_ARRANGE_WIDTH,
   WIN98_LAUNCHER_WIDTH,
   WIN98_TASKBAR_HEIGHT,
   WIN98_TITLEBAR_HEIGHT,
@@ -207,6 +208,7 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-start-hover-background': WIN98_FACE,
   '--umbradesktop-start-active-background': WIN98_FACE,
   '--umbradesktop-launcher-width': `${WIN98_LAUNCHER_WIDTH}px`,
+  '--umbradesktop-launcher-arrange-width': `min(${WIN98_LAUNCHER_ARRANGE_WIDTH}px, 92vw)`,
   // Hard against the left edge, directly above the bar, the way the Start menu opens.
   '--umbradesktop-launcher-left': '0',
   '--umbradesktop-launcher-max-height': `calc(100vh - ${WIN98_TASKBAR_HEIGHT + WIN98_LAUNCHER_TOP_CLEARANCE}px)`,
@@ -225,7 +227,31 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-card-background': WIN98_FACE,
   '--umbradesktop-launcher-card-border': 'none',
   '--umbradesktop-launcher-card-radius': '0',
-  '--umbradesktop-launcher-pin-hover-background': WIN98_FACE,
+  // The launcher's controls and arrange mode. Every button is a push button in button-face grey,
+  // pressed or not, because a Win98 button shows a press with its bevel rather than a fill; the
+  // bevels themselves are drawn in `launcher.css.ts`, so the borders here are none.
+  '--umbradesktop-launcher-control-background': WIN98_FACE,
+  '--umbradesktop-launcher-control-border': 'none',
+  '--umbradesktop-launcher-control-text': WIN98_TEXT,
+  '--umbradesktop-launcher-control-active-background': WIN98_FACE,
+  '--umbradesktop-launcher-letter-text': WIN98_TEXT,
+  '--umbradesktop-launcher-letter-border': 'none',
+  // Win98's disabled grey is its only quiet text colour, and the one it has that stays readable on
+  // the face: the shadow grey is under 2:1 there.
+  '--umbradesktop-launcher-text-muted': WIN98_GRAY_TEXT,
+  // The arrange banner as a tooltip: the pale yellow and black frame Win98 drew every one in.
+  '--umbradesktop-launcher-banner-background': '#ffffe1',
+  '--umbradesktop-launcher-banner-border': `1px solid ${WIN98_TEXT}`,
+  '--umbradesktop-launcher-banner-text': WIN98_TEXT,
+  '--umbradesktop-launcher-divider': `1px solid ${WIN98_SHADOW}`,
+  // A drop lands where the dotted focus rectangle is, which is how Win98 marked any target; there
+  // is no tint and no shadow in a system without either.
+  '--umbradesktop-launcher-drop-background': 'transparent',
+  '--umbradesktop-launcher-drop-outline': `1px dotted ${WIN98_TEXT}`,
+  '--umbradesktop-launcher-ghost-shadow': 'none',
+  '--umbradesktop-launcher-remove-background': WIN98_FACE,
+  '--umbradesktop-launcher-remove-border': `2px dotted ${WIN98_TEXT}`,
+  '--umbradesktop-launcher-remove-text': WIN98_TEXT,
   // The scrollback's rows take the launcher's navy selection bar, and need its white text with it.
   '--umbradesktop-scrollback-hover-text': WIN98_MENU_HILIGHT_TEXT,
   // A toast is a small raised panel here, and a Win98 panel has square corners like every other.

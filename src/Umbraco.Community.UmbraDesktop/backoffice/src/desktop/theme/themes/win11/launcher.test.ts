@@ -78,6 +78,18 @@ it('renders the panel as one acrylic surface with no visible cards', function ()
   }
 });
 
+it('moves its outer margin to the header row, not the search field inside it', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // Theme sheets are appended after the base styles, so a .search rule that kept its own margin
+  // here would beat the base's `.search { margin: 0 }` and reintroduce it inside .hdr, doubling
+  // with .hdr's own margin and pushing the row right and down from where the sheet puts it.
+  const search = panel.root.querySelector('.search') as HTMLElement;
+  expect(search, 'the launcher should render a search row').to.not.equal(null);
+  const style = getComputedStyle(search);
+  expect(style.marginLeft, 'the header row owns the left margin now, not the field').to.equal('0px');
+  expect(style.marginTop, 'the header row owns the top margin now, not the field').to.equal('0px');
+});
+
 it('keeps every footer action rendered and sized to be clicked', function () {
   this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
   // Desktop settings, Log out, Exit — which is close to what Windows 11 puts in Start's own

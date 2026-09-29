@@ -18,3 +18,11 @@ Presented in the order the design was explored:
 5. **[fullscreen-drawer.html](./fullscreen-drawer.html)** — the fullscreen launchpad,
    categorised per section with multilevel sub-groups. v1 scope: **auto + search**.
 6. **[blueprint.html](./blueprint.html)** — the end-to-end architecture on one screen.
+
+Later mockups, one set per feature, named after the design doc they belong to:
+
+- **[launcher-layout-model.html](./launcher-layout-model.html)**,
+  **[launcher-layout-drag.html](./launcher-layout-drag.html)** and
+  **[launcher-layout-arrange.html](./launcher-layout-arrange.html)**: the launcher you arrange
+  yourself, for [`../2026-09-27-launcher-layout-design.md`](../2026-09-27-launcher-layout-design.md).
+  The first one's normal-mode view predates Pinned being a place, which the second one shows.
