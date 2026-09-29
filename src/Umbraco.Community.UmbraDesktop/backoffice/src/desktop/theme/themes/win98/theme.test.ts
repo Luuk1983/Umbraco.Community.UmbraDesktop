@@ -129,3 +129,13 @@ it('needs no !important anywhere, because theme sheets are appended and already 
       'the wrong selector',
   ).to.deep.equal([]);
 });
+
+it("draws the strip's buttons as the era's flat toolbar buttons: raised on hover, pushed in while on", () => {
+  const palette = UMBRADESKTOP_WIN98_THEME.palettes.light as Record<string, string | undefined>;
+  const hover = palette['--umbradesktop-strip-button-hover-shadow'] ?? '';
+  const on = palette['--umbradesktop-strip-button-on-shadow'] ?? '';
+  // Light on the leading edge raises a button, and dark there pushes it in.
+  expect(hover, 'raised on hover').to.match(/inset 1px 1px #ffffff/i);
+  expect(on, 'pushed in while on').to.match(/inset 1px 1px #808080/i);
+  expect(palette['--umbradesktop-strip-button-hover-background'], 'on the face, not the selection navy').to.equal('#c0c0c0');
+});

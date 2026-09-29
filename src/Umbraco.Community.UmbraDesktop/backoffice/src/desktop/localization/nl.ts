@@ -256,6 +256,22 @@ export default {
     discardConflictedHeadline: 'Dit venster sluiten?',
     discardConflictedQuestion:
       'Sluiten is hier de veilige keuze: je niet-opgeslagen wijzigingen gaan verloren en de versie die iemand anders heeft opgeslagen blijft staan.',
+    // Voorbeeld, een gekoppeld venster naast een document
+    previewOpen: 'Voorbeeld',
+    previewClose: 'Voorbeeld sluiten',
+    dockHere: 'Hier vastzetten',
+    dockRelease: 'Loslaten om vast te zetten',
+    attachedTo: 'Hoort bij',
+    dock: 'Vastzetten',
+    dockNoRoom: 'Te weinig ruimte naast %0% om vast te zetten',
+    previewTitle: 'Voorbeeld: %0%',
+    previewUnsaved: 'Je hebt niet-opgeslagen wijzigingen. Het voorbeeld toont de laatst opgeslagen versie.',
+    previewOpenInTab: 'Openen in een nieuw browsertabblad',
+    previewPhone: 'Telefoonbreedte',
+    previewTablet: 'Tabletbreedte',
+    previewDesktop: 'Desktopbreedte',
+    previewOption: 'Voorbeeld met',
+    previewFailed: 'Het voorbeeld kon niet worden geopend.',
     // Background Jobs app
     backgroundJobsIntro:
       'Alle geplande taken die Umbraco achter je site uitvoert: publiceren, webhooks, opschoningen, en alles wat een pakket heeft toegevoegd. Je kunt hier niets starten of stoppen, dit is een alleen-lezen overzicht van wat het CMS uit zichzelf doet.',
@@ -376,5 +392,15 @@ export default {
     migrationContinue: 'Doorgaan',
     settingsNotSaved:
       'Die instelling kon niet op je account opgeslagen worden. Hij geldt nu wel, maar deze browser vergeet hem.',
+    // desktopmeldingen: de toasts, en de geschiedenis achter de klok
+    notificationsTitle: 'Meldingen',
+    notificationsEmpty: 'Er is nog niets gemeld.',
+    notificationsClock: 'Meldingen',
+    notificationsClockAttention: 'Meldingen, waaronder waarschuwingen of fouten',
+    notificationsClear: 'Wissen',
+    notificationsSourceDesktop: 'Bureaublad',
+    notificationsRepeat: '%0% keer',
+    notificationsClose: 'Sluiten',
+    notificationsGone: 'Dat venster is gesloten.',
   },
 };

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attached windows mock</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; background: #eceef2; color: #1f2230; font: 14px/1.45 Lato, "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lede { margin: 0 0 24px; color: #4a4f63; }
+  section { margin: 0 0 36px; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  .note { margin: 0 0 10px; color: #4a4f63; max-width: 820px; }
+  .note b { color: #1f2230; }
+
+  /* A desktop, scaled by its own width: every size inside is in container units, so the scene is
+     the same picture at any width without a line of script. */
+  .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; container-type: inline-size; overflow: hidden;
+    border-radius: 8px; background: radial-gradient(130% 130% at 25% 8%, #1b264f, #0e1329 70%); }
+  .win { position: absolute; display: flex; flex-direction: column; overflow: hidden; background: #fff;
+    border: 1px solid #c9ccd6; border-radius: .5cqw; box-shadow: 0 1cqw 3cqw rgba(0,0,0,.4); }
+  .win.back { box-shadow: 0 .5cqw 1.5cqw rgba(0,0,0,.3); }
+  .win.back .tb { color: #8a8d99; }
+  .tb { flex: none; height: 3.3cqw; display: flex; align-items: center; gap: .7cqw; padding: 0 .9cqw;
+    font-size: 1.2cqw; color: #303033; border-bottom: 1px solid #e6e7ea; }
+  .tb .t { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ic { display: inline-flex; align-items: center; justify-content: center; width: 1.6cqw; height: 1.6cqw; }
+  .ic svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.6; }
+  .ctl { display: inline-flex; width: 2.3cqw; justify-content: center; color: #515054; }
+  .ctl .ic { width: 1.25cqw; height: 1.25cqw; }
+  .link { color: #3544b1; }
+  .path { flex: none; height: 2.4cqw; display: flex; align-items: center; gap: .5cqw; padding: 0 .9cqw;
+    font-size: .95cqw; color: #303033; border-bottom: 1px solid #e6e7ea; background: #fafafa; }
+  .path .sp { flex: 1; }
+  .path .pv { display: inline-flex; align-items: center; gap: .35cqw; color: #3544b1; }
+  .path .pv .ic { width: 1.1cqw; height: 1.1cqw; }
+  .path .pv.on { background: #e3e6f5; box-shadow: inset 0 0 0 1px #b8bfe6; border-radius: .3cqw; padding: .2cqw .5cqw; }
+  .col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .inner { flex: 1; display: flex; min-height: 0; }
+  .body { flex: 1; display: flex; min-height: 0; }
+  .tree { width: 21%; flex: none; padding: 1.2cqw 1cqw; font-size: 1.05cqw; border-right: 1px solid #e6e7ea; }
+  .tree .h { font-weight: 700; margin-bottom: .9cqw; }
+  .tree .n { padding: .45cqw .6cqw; border-radius: .3cqw; margin-bottom: .2cqw; }
+  .tree .n.sel { background: #f5c1bc; }
+  .editor { flex: 1; min-width: 0; background: #f3f3f5; padding: 1.1cqw; display: flex; flex-direction: column; gap: .8cqw; }
+  .card { background: #fff; border: 1px solid #e6e7ea; border-radius: .3cqw; padding: 1cqw; font-size: .95cqw; }
+  .card .l { font-weight: 700; margin-bottom: .4cqw; }
+  .card .i { height: 2.2cqw; border: 1px solid #d8d9de; border-radius: .2cqw; display: flex; align-items: center; padding: 0 .6cqw; }
+  .card .i.tall { height: 4.4cqw; align-items: flex-start; padding-top: .5cqw; }
+  .actions { margin-top: auto; display: flex; justify-content: flex-end; gap: .6cqw; font-size: .95cqw; }
+  .btn { padding: .5cqw 1cqw; border-radius: .3cqw; background: #e6e7ea; }
+  .btn.go { background: #0b7a50; color: #fff; }
+
+  /* The site being previewed. */
+  .site { flex: 1; min-height: 0; background: #fff; padding: 1cqw; display: flex; }
+  .hero { flex: 1; background: #7e7c7e; color: #fff; padding: 1.4cqw; display: flex; flex-direction: column; gap: 1cqw; overflow: hidden; }
+  .hero .brand { font: 700 1.3cqw Georgia, serif; letter-spacing: .08em; border-bottom: .2cqw solid #fff; align-self: flex-start; padding-bottom: .2cqw; }
+  .hero .big { font: 700 2.4cqw Georgia, serif; margin-top: 2cqw; }
+  .hero .copy { font-size: 1cqw; opacity: .9; }
+  .hero .cta { align-self: flex-start; margin-top: .6cqw; background: #e8a89f; color: #1f2230; font-size: .9cqw; font-weight: 700; letter-spacing: .1em; padding: .7cqw 1.2cqw; }
+  .ptools { flex: none; height: 2.3cqw; display: flex; align-items: center; gap: .6cqw; padding: 0 .8cqw; border-bottom: 1px solid #e6e7ea; font-size: .9cqw; color: #515054; }
+  .ptools .sp { flex: 1; }
+  .ptools .ic { width: 1.1cqw; height: 1.1cqw; }
+
+  /* The pane: a column inside the owner window, behind a splitter. */
+  .pane { flex: none; display: flex; flex-direction: column; border-left: 1px solid #d8d9de; background: #fff; }
+  .splitter { flex: none; width: .45cqw; background: #eceef2; border-left: 1px solid #d8d9de; display: flex; align-items: center; justify-content: center; }
+  .splitter::after { content: ''; width: .12cqw; height: 2.4cqw; border-left: .12cqw dotted #9a9dab; border-right: .12cqw dotted #9a9dab; }
+  .phead { flex: none; height: 2.6cqw; display: flex; align-items: center; gap: .6cqw; padding: 0 .7cqw; background: #f3f3f5; border-bottom: 1px solid #e6e7ea; font-size: 1cqw; color: #303033; }
+  .phead .t { flex: 1; font-weight: 600; }
+  .phead .ctl .ic { width: 1.1cqw; height: 1.1cqw; }
+
+  .ghost { position: absolute; border: .25cqw solid rgba(53,68,177,.85); background: rgba(53,68,177,.14); border-radius: .3cqw; }
+  .cursor { position: absolute; width: 1.8cqw; height: 1.8cqw; }
+  .dragging { opacity: .85; }
+
+  /* The taskbar, with the group box this mock is mostly about. */
+  .taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: 4.4cqw; display: flex; align-items: center; gap: .7cqw; padding: 0 1cqw;
+    background: rgba(18,24,52,.94); color: #fff; font-size: 1.05cqw; }
+  .start { width: 3cqw; height: 3cqw; border-radius: 50%; background: #fff; color: #1b264f; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.4cqw; }
+  .task { position: relative; height: 3.1cqw; display: flex; align-items: center; gap: .5cqw; padding: 0 .9cqw; border-radius: .35cqw; background: rgba(255,255,255,.08); white-space: nowrap; }
+  .task .ic { width: 1.25cqw; height: 1.25cqw; }
+  .task.active { background: rgba(255,255,255,.2); }
+  .task.active::after { content: ''; position: absolute; left: 20%; right: 20%; bottom: .2cqw; height: .22cqw; border-radius: .2cqw; background: #f5c1bc; }
+  .task.min { opacity: .6; }
+  .group { display: flex; align-items: center; gap: .3cqw; padding: .25cqw; border: 1px solid rgba(255,255,255,.4); border-radius: .55cqw; background: rgba(255,255,255,.05); }
+  .group .task { height: 2.6cqw; }
+  .clock { margin-left: auto; opacity: .85; }
+  .label { position: absolute; font-size: 1.05cqw; color: #fff; background: rgba(0,0,0,.55); padding: .3cqw .6cqw; border-radius: .3cqw; }
+
+  /* Titlebar close-ups: wide, short strips. */
+  .strip { position: relative; width: 100%; container-type: inline-size; background: #dfe2ea; border-radius: 8px; padding: 1.4cqw; box-sizing: border-box; display: grid; gap: 1.2cqw; }
+  .strip .row { display: grid; grid-template-columns: 20% 1fr; align-items: center; gap: 1.2cqw; font-size: 1.15cqw; color: #4a4f63; }
+  .strip .mini { position: static; border-radius: .5cqw; box-shadow: none; }
+  .strip .mini .tb { height: 3.3cqw; font-size: 1.2cqw; }
+  .strip .mini .phead { height: 2.9cqw; font-size: 1.1cqw; }
+
+  /* Three themes' taskbar groups. */
+  .bars { width: 100%; container-type: inline-size; display: grid; gap: 1cqw; }
+  .bar { position: relative; height: 5.4cqw; display: flex; align-items: center; gap: .9cqw; padding: 0 1.2cqw; border-radius: 8px; font-size: 1.2cqw; }
+  .bar .cap { position: absolute; right: 1.2cqw; font-size: 1cqw; }
+  .bar.umb { background: rgba(18,24,52,.96); color: #fff; }
+  .bar.mac { justify-content: center; background: linear-gradient(#9fb0d6, #7d8fbd); }
+  .bar.mac .cap { color: #1f2230; }
+  .dock { display: flex; align-items: center; gap: .7cqw; padding: .5cqw .9cqw; border-radius: 1.3cqw; background: rgba(255,255,255,.45); border: 1px solid rgba(255,255,255,.7); }
+  .tile { position: relative; width: 3.6cqw; height: 3.6cqw; border-radius: .9cqw; display: flex; align-items: center; justify-content: center; color: #fff; }
+  .tile .ic { width: 1.9cqw; height: 1.9cqw; }
+  .tile.a { background: #3544b1; } .tile.b { background: #6a7bd6; } .tile.c { background: #1e8a6b; } .tile.d { background: #c2692f; }
+  .tile.on::after { content: ''; position: absolute; bottom: -.7cqw; width: .45cqw; height: .45cqw; border-radius: 50%; background: #1f2230; }
+  .tray { display: flex; gap: .45cqw; padding: .3cqw; border-radius: 1.1cqw; background: rgba(255,255,255,.55); box-shadow: inset 0 0 0 1px rgba(31,34,48,.25); }
+  .bar.w98 { background: #c0c0c0; color: #000; border-radius: 0; box-shadow: inset 0 .15cqw 0 #fff; font-family: Tahoma, "MS Sans Serif", sans-serif; }
+  .w98btn { height: 3.2cqw; display: flex; align-items: center; gap: .5cqw; padding: 0 .9cqw; background: #c0c0c0;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf; }
+  .w98btn.on { box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080; background: #d4d4d4; font-weight: 700; }
+  .w98start { font-weight: 700; }
+  .groove { display: flex; gap: .3cqw; padding: .3cqw; box-shadow: inset 1px 1px #808080, inset -1px -1px #fff; }
+
+  ul.changes { margin: 6px 0 0 18px; padding: 0; color: #4a4f63; }
+  ul.changes li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Attached windows</h1>
+  <p class="lede">Revised after the first build. Docked becomes a pane inside the document window; floating stays a
+    separate window, gets its own taskbar button inside its owner's group, and its own minimize and maximize.</p>
+
+  <!-- Inline SVG glyphs, reused below by copy rather than by <use>, so every scene stands alone. -->
+
+  <section>
+    <h2>1. Docked: a pane inside the document window</h2>
+    <p class="note">One window, one border, so nothing can overlap. The pane runs from the titlebar down with its own
+      header (title, reload, pop out, close) and a splitter; the path strip and any notices stay over the editor, because
+      they are about the editor's content. The Preview button shows as pressed while the pane is open, and clicking it
+      then closes the pane. Opening it widens the window so the editor keeps its width; when that does not fit on the
+      desktop, the preview opens floating instead. <b>No taskbar button</b>: the pane is part of the window.</p>
+    <div class="stage">
+      <div class="win" style="left:3%; top:4%; width:90%; height:81%;">
+        <div class="tb">
+          <span class="ic"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z M9 1.5v3h3"/></svg></span>
+          <span class="t">Content editor</span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M3 9h10"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></span>
+        </div>
+        <div class="body">
+          <!-- The strip and anything else about the frame's content live in the editor's column; the
+               pane is a column of its own from the titlebar down. -->
+          <div class="col">
+            <div class="path"><span>⌂</span><span>/</span><span>Home</span><span class="sp"></span>
+              <span class="pv on" title="Close the preview"><span class="ic"><svg viewBox="0 0 16 16"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></span>Preview</span></div>
+            <div class="inner">
+              <div class="tree"><div class="h">Content</div><div class="n sel">⌂ Home</div><div class="n">🗑 Recycle Bin</div></div>
+              <div class="editor">
+                <div class="card"><div class="l">Header *</div><div class="i">Umbraco Demo 7</div></div>
+                <div class="card"><div class="l">Description *</div><div class="i tall">Moonfish, steelhead, lamprey southern flounder tadpole fish sculpin bigeye…</div></div>
+                <div class="card"><div class="l">Call To Action Caption *</div><div class="i">Check our products</div></div>
+                <div class="actions"><span class="btn">Save and preview</span><span class="btn">Save</span><span class="btn go">Save and publish</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="splitter"></div>
+          <div class="pane" style="width:33%;">
+            <div class="phead">
+              <span class="ic"><svg viewBox="0 0 16 16"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></span>
+              <span class="t">Preview: Home</span>
+              <span class="ctl" title="Reload"><span class="ic"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"/></svg></span></span>
+              <span class="ctl" title="Pop out"><span class="ic"><svg viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><rect x="8" y="7.5" width="5" height="4.5" fill="currentColor" stroke="none"/></svg></span></span>
+              <span class="ctl" title="Close"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></span>
+            </div>
+            <div class="ptools"><span>📱</span><span>▭</span><span>🖥</span><span class="sp"></span><span class="link">↗ Open in a new browser tab</span></div>
+            <div class="site"><div class="hero"><div class="brand">UMBRACO SAMPLE SITE</div><div class="big">Umbraco Demo 7</div>
+              <div class="copy">Moonfish, steelhead, lamprey southern flounder tadpole fish…</div><div class="cta">CHECK OUR PRODUCTS</div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="taskbar"><div class="start">U</div>
+        <div class="task active"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z M9 1.5v3h3"/></svg></span>Content editor</div>
+        <div class="task"><span class="ic"><svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10"/><path d="M2 11l4-4 3 3 2-2 3 3"/></svg></span>Media</div>
+        <div class="clock">14:32</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Floating, with the editor in front</h2>
+    <p class="note">A separate window, attached. The group rises as one, and inside it <b>the window you focus goes on
+      top</b>, so the editor can cover the preview. The preview's own button, inside the owner's group box, brings it
+      back. The link mark in its titlebar says it belongs to something.</p>
+    <div class="stage">
+      <div class="win back" style="left:55%; top:10%; width:40%; height:70%;">
+        <div class="tb">
+          <span class="ic link"><svg viewBox="0 0 16 16"><path d="M6.5 9.5l3-3M5 7L3.5 8.5a2.5 2.5 0 0 0 3.5 3.5L8.5 10.5M11 9l1.5-1.5a2.5 2.5 0 0 0-3.5-3.5L7.5 5.5"/></svg></span>
+          <span class="t">Preview: Home</span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M3 9h10"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></span>
+        </div>
+        <div class="ptools"><span>📱</span><span>▭</span><span>🖥</span><span class="sp"></span><span class="link">↗ Open in a new browser tab</span></div>
+        <div class="site"><div class="hero"><div class="brand">UMBRACO SAMPLE SITE</div><div class="big">Umbraco Demo 7</div>
+          <div class="copy">Moonfish, steelhead, lamprey southern flounder…</div></div></div>
+      </div>
+      <div class="win" style="left:3%; top:4%; width:62%; height:81%;">
+        <div class="tb">
+          <span class="ic"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z M9 1.5v3h3"/></svg></span>
+          <span class="t">Content editor</span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M3 9h10"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></span>
+        </div>
+        <div class="path"><span>⌂</span><span>/</span><span>Home</span><span class="sp"></span>
+          <span class="pv"><span class="ic"><svg viewBox="0 0 16 16"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></span>Preview</span></div>
+        <div class="body">
+          <div class="tree"><div class="h">Content</div><div class="n sel">⌂ Home</div><div class="n">🗑 Recycle Bin</div></div>
+          <div class="editor">
+            <div class="card"><div class="l">Header *</div><div class="i">Umbraco Demo 7</div></div>
+            <div class="card"><div class="l">Description *</div><div class="i tall">Moonfish, steelhead, lamprey southern flounder…</div></div>
+            <div class="actions"><span class="btn">Save</span><span class="btn go">Save and publish</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="taskbar"><div class="start">U</div>
+        <div class="group">
+          <div class="task active"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z M9 1.5v3h3"/></svg></span>Content editor</div>
+          <div class="task"><span class="ic"><svg viewBox="0 0 16 16"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></span>Preview: Home</div>
+        </div>
+        <div class="task"><span class="ic"><svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10"/><path d="M2 11l4-4 3 3 2-2 3 3"/></svg></span>Media</div>
+        <div class="clock">14:32</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Floating, with the preview in front</h2>
+    <p class="note">Clicking the preview's button, or the preview itself, puts it on top. The active marker moves to its
+      button; the group box does not move. Clicking the active button again minimizes that window only; minimizing the
+      editor would take the whole group.</p>
+    <div class="stage">
+      <div class="win back" style="left:3%; top:4%; width:62%; height:81%;">
+        <div class="tb">
+          <span class="ic"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z M9 1.5v3h3"/></svg></span>
+          <span class="t">Content editor</span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M3 9h10"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></span>
+        </div>
+        <div class="path"><span>⌂</span><span>/</span><span>Home</span><span class="sp"></span>
+          <span class="pv"><span class="ic"><svg viewBox="0 0 16 16"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></span>Preview</span></div>
+        <div class="body">
+          <div class="tree"><div class="h">Content</div><div class="n sel">⌂ Home</div><div class="n">🗑 Recycle Bin</div></div>
+          <div class="editor">
+            <div class="card"><div class="l">Header *</div><div class="i">Umbraco Demo 7</div></div>
+            <div class="card"><div class="l">Description *</div><div class="i tall">Moonfish, steelhead, lamprey southern flounder…</div></div>
+            <div class="actions"><span class="btn">Save</span><span class="btn go">Save and publish</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="win" style="left:55%; top:10%; width:40%; height:70%;">
+        <div class="tb">
+          <span class="ic link"><svg viewBox="0 0 16 16"><path d="M6.5 9.5l3-3M5 7L3.5 8.5a2.5 2.5 0 0 0 3.5 3.5L8.5 10.5M11 9l1.5-1.5a2.5 2.5 0 0 0-3.5-3.5L7.5 5.5"/></svg></span>
+          <span class="t">Preview: Home</span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M3 9h10"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></span>
+        </div>
+        <div class="ptools"><span>📱</span><span>▭</span><span>🖥</span><span class="sp"></span><span class="link">↗ Open in a new browser tab</span></div>
+        <div class="site"><div class="hero"><div class="brand">UMBRACO SAMPLE SITE</div><div class="big">Umbraco Demo 7</div>
+          <div class="copy">Moonfish, steelhead, lamprey southern flounder tadpole fish…</div><div class="cta">CHECK OUR PRODUCTS</div></div></div>
+      </div>
+      <div class="taskbar"><div class="start">U</div>
+        <div class="group">
+          <div class="task"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z M9 1.5v3h3"/></svg></span>Content editor</div>
+          <div class="task active"><span class="ic"><svg viewBox="0 0 16 16"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></span>Preview: Home</div>
+        </div>
+        <div class="task"><span class="ic"><svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10"/><path d="M2 11l4-4 3 3 2-2 3 3"/></svg></span>Media</div>
+        <div class="clock">14:32</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Docking by dragging: the pointer decides</h2>
+    <p class="note">While a floating preview is dragged, bringing the <b>pointer</b> within reach of the owner's right
+      edge shows the pane ghost inside the owner; letting go docks it. Where the window's own edge happens to be does not
+      matter. Dragging a pane's header out of its window does the reverse and makes it float.</p>
+    <div class="stage">
+      <div class="win" style="left:3%; top:4%; width:66%; height:81%;">
+        <div class="tb">
+          <span class="ic"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z M9 1.5v3h3"/></svg></span>
+          <span class="t">Content editor</span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M3 9h10"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></span>
+        </div>
+        <div class="path"><span>⌂</span><span>/</span><span>Home</span><span class="sp"></span>
+          <span class="pv"><span class="ic"><svg viewBox="0 0 16 16"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></span>Preview</span></div>
+        <div class="body">
+          <div class="tree"><div class="h">Content</div><div class="n sel">⌂ Home</div><div class="n">🗑 Recycle Bin</div></div>
+          <div class="editor">
+            <div class="card"><div class="l">Header *</div><div class="i">Umbraco Demo 7</div></div>
+            <div class="card"><div class="l">Description *</div><div class="i tall">Moonfish, steelhead, lamprey southern flounder…</div></div>
+            <div class="actions"><span class="btn">Save</span><span class="btn go">Save and publish</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- The ghost: the pane's rectangle inside the owner, from just below its titlebar down, so it
+           covers the part of the path strip the pane will take. -->
+      <div class="ghost" style="left:47%; top:9.9%; width:22%; height:75%;"></div>
+      <div class="label" style="left:48.5%; top:46%;">Release to dock here</div>
+      <div class="win dragging" style="left:67%; top:24%; width:30%; height:52%;">
+        <div class="tb">
+          <span class="ic link"><svg viewBox="0 0 16 16"><path d="M6.5 9.5l3-3M5 7L3.5 8.5a2.5 2.5 0 0 0 3.5 3.5L8.5 10.5M11 9l1.5-1.5a2.5 2.5 0 0 0-3.5-3.5L7.5 5.5"/></svg></span>
+          <span class="t">Preview: Home</span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M3 9h10"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></span>
+        </div>
+        <div class="site"><div class="hero"><div class="brand">UMBRACO SAMPLE SITE</div><div class="big">Umbraco Demo 7</div></div></div>
+      </div>
+      <svg class="cursor" style="left:68.2%; top:25.3%;" viewBox="0 0 16 16"><path d="M2 1l11 7-5 1 3 5-2 1-3-5-4 3z" fill="#fff" stroke="#000" stroke-width="1"/></svg>
+      <div class="taskbar"><div class="start">U</div>
+        <div class="group">
+          <div class="task"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z M9 1.5v3h3"/></svg></span>Content editor</div>
+          <div class="task active"><span class="ic"><svg viewBox="0 0 16 16"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></span>Preview: Home</div>
+        </div>
+        <div class="clock">14:32</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. The three kinds of header</h2>
+    <p class="note">The owner keeps its titlebar exactly as it is. A floating attached window has a full set of controls
+      now that it has its own taskbar button, plus the link mark. A pane has no minimize or maximize: it goes wherever its
+      window goes.</p>
+    <div class="strip">
+      <div class="row"><span>Owner window</span>
+        <div class="win mini"><div class="tb">
+          <span class="ic"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z M9 1.5v3h3"/></svg></span>
+          <span class="t">Content editor</span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M3 9h10"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></span>
+        </div></div></div>
+      <div class="row"><span>Floating attached window</span>
+        <div class="win mini"><div class="tb">
+          <span class="ic link"><svg viewBox="0 0 16 16"><path d="M6.5 9.5l3-3M5 7L3.5 8.5a2.5 2.5 0 0 0 3.5 3.5L8.5 10.5M11 9l1.5-1.5a2.5 2.5 0 0 0-3.5-3.5L7.5 5.5"/></svg></span>
+          <span class="t">Preview: Home</span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M3 9h10"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9"/></svg></span></span>
+          <span class="ctl"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></span>
+        </div></div></div>
+      <div class="row"><span>Docked pane</span>
+        <div class="win mini"><div class="phead">
+          <span class="ic"><svg viewBox="0 0 16 16"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></span>
+          <span class="t">Preview: Home</span>
+          <span class="ctl" title="Reload"><span class="ic"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"/></svg></span></span>
+          <span class="ctl" title="Pop out"><span class="ic"><svg viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><rect x="8" y="7.5" width="5" height="4.5" fill="currentColor" stroke="none"/></svg></span></span>
+          <span class="ctl" title="Close"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></span>
+        </div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. The group box under three themes</h2>
+    <p class="note">The box is the signal, not the labels, so it survives the two icon-only themes. Each theme draws it in
+      its own idiom through new tokens: a bordered box on Umbraco, a tray on the macOS dock, a sunken groove on
+      Windows 98.</p>
+    <div class="bars">
+      <div class="bar umb"><div class="start">U</div>
+        <div class="group">
+          <div class="task active"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z M9 1.5v3h3"/></svg></span>Content editor</div>
+          <div class="task"><span class="ic"><svg viewBox="0 0 16 16"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></span>Preview: Home</div>
+        </div>
+        <div class="task"><span class="ic"><svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10"/><path d="M2 11l4-4 3 3 2-2 3 3"/></svg></span>Media</div>
+        <span class="cap">Umbraco</span></div>
+      <div class="bar mac"><div class="dock">
+          <div class="tile a"><span class="ic"><svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12"/></svg></span></div>
+          <div class="tray">
+            <div class="tile b on"><span class="ic"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z M9 1.5v3h3"/></svg></span></div>
+            <div class="tile c on"><span class="ic"><svg viewBox="0 0 16 16"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></span></div>
+          </div>
+          <div class="tile d on"><span class="ic"><svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10"/><path d="M2 11l4-4 3 3 2-2 3 3"/></svg></span></div>
+        </div><span class="cap">macOS</span></div>
+      <div class="bar w98"><div class="w98btn w98start">⊞ Start</div>
+        <div class="groove">
+          <div class="w98btn on">📄 Content editor</div>
+          <div class="w98btn">👁 Preview: Home</div>
+        </div>
+        <div class="w98btn">🖼 Media</div>
+        <span class="cap">Windows 98</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What changed since the first build</h2>
+    <ul class="changes">
+      <li><b>Docked is a pane</b> inside the owner, not a second window beside it. The overlap goes, and so do all the rules
+        for moving, clamping and maximizing a pair.</li>
+      <li><b>Floating windows get a taskbar button</b>, inside their owner's group box, each clickable on its own.</li>
+      <li><b>Inside a group, the focused window is on top.</b> The group still rises as one.</li>
+      <li><b>Floating windows get minimize and maximize</b>, because their button can always bring them back. Minimizing
+        the owner still takes the whole group.</li>
+      <li><b>Reload</b> on the floating titlebar and in the pane header.</li>
+      <li><b>Docking follows the pointer</b>, not the edge of the window being dragged.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

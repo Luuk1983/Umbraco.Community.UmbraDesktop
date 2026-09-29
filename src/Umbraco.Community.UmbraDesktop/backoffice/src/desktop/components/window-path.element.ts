@@ -57,6 +57,26 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
   public busy = false;
 
   /**
+   * Whether the window is showing a document that can be previewed, which puts a Preview action at
+   * the strip's right end.
+   *
+   * On the strip rather than in the titlebar, because the titlebar's controls are summed into every
+   * theme's drag-clamp metrics, and a control that only some windows draw would under-count them in
+   * the unsafe direction. The strip carries no such sum, already names the document, and is only
+   * drawn on the section windows a document is edited in. The window decides: it is the one that
+   * knows what its frame is showing.
+   */
+  @property({ attribute: false })
+  public previewable = false;
+
+  /**
+   * Whether a preview of this window's document is open, as a pane or floating. The action then shows
+   * as pressed, and pressing it closes the preview, which is what a pressed button promises.
+   */
+  @property({ attribute: false })
+  public previewActive = false;
+
+  /**
    * Adopts the active theme's `window` stylesheet.
    *
    * Its own call rather than something inherited from `window.element`'s: custom properties cross a
@@ -131,9 +151,29 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
             : html`<span class="path-current" aria-current="page" title=${label}>${content}</span>`;
           return html`${body}${separator}`;
         })}
+        ${this.previewable
+          ? html`<button
+              class="path-preview ${this.previewActive ? 'path-preview-on' : ''}"
+              type="button"
+              aria-pressed=${this.previewActive ? 'true' : 'false'}
+              title=${this.localize.term(this.previewActive ? 'umbraDesktop_previewClose' : 'umbraDesktop_previewOpen')}
+              aria-label=${this.localize.term('umbraDesktop_previewOpen')}
+              @click=${this.#preview}>
+              <umb-icon class="path-preview-icon" name="icon-eye"></umb-icon>
+              <span class="path-preview-label">${this.localize.term('umbraDesktop_previewOpen')}</span>
+            </button>`
+          : nothing}
       </nav>
     `;
   }
+
+  /**
+   * Ask the window to open its preview. An event, for the same reason {@link #navigate} is one: the
+   * window owns the frame, the route and the manager, and this strip owns none of them.
+   */
+  #preview = () => {
+    this.dispatchEvent(new CustomEvent('umbradesktop-path-preview', { bubbles: true, composed: true }));
+  };
 
   static override styles = [
     css`
@@ -180,8 +220,13 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
         cursor: pointer;
         color: var(--umbradesktop-path-link, var(--uui-color-interactive));
       }
+      /* The hover text is its own token because the hover background can be as strong as the link
+         colour itself: Windows 98 draws its era's navy selection behind a navy link, and white text
+         on it is what makes that readable. One token for every button on the strip, so a new one
+         cannot miss the rescue the way the Preview button first did. */
       .path-crumb:hover {
         background: var(--umbradesktop-path-link-hover-background, var(--uui-color-surface-emphasis));
+        color: var(--umbradesktop-path-link-hover-text, var(--umbradesktop-path-link, var(--uui-color-interactive)));
       }
       .path-crumb-home {
         display: inline-flex;
@@ -209,6 +254,55 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
       .path-separator {
         flex: none;
         color: var(--umbradesktop-path-separator, color-mix(in srgb, currentColor 55%, transparent));
+      }
+      /* Pinned to the strip's right end, and kept there while a deep path scrolls sideways under it:
+         sticky inside the strip's own horizontal scroller, with the strip's background behind it so
+         crumbs passing underneath do not show through. Styled as a crumb, from the crumb's tokens,
+         so every theme that restyles its crumbs restyles this with them. */
+      .path-preview {
+        flex: none;
+        position: sticky;
+        right: 0;
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 0;
+        padding: 2px 6px;
+        border-radius: var(--umbradesktop-strip-button-radius, 3px);
+        background: var(--umbradesktop-path-background, var(--uui-color-surface-alt));
+        font: inherit;
+        cursor: pointer;
+        /* The strip's text colour, not the link colour the crumbs use: this is a button beside the
+           path, and in a link's navy or accent it read as one more crumb. */
+        color: var(--umbradesktop-path-text, var(--uui-color-text));
+      }
+      /* A toolbar button's hover, shared with the pane header's controls and the Dock button, and
+         separate from a crumb's: Windows 98 hovers a crumb in its navy selection, as a link, and a
+         toolbar button by raising it. */
+      .path-preview:hover {
+        background: var(
+          --umbradesktop-strip-button-hover-background,
+          var(--umbradesktop-path-link-hover-background, var(--uui-color-surface-emphasis))
+        );
+        color: var(--umbradesktop-strip-button-hover-text, var(--umbradesktop-path-text, var(--uui-color-text)));
+        box-shadow: var(--umbradesktop-strip-button-hover-shadow, none);
+      }
+      /* On while the preview is open, drawn the way the theme draws a toggled toolbar button: a
+         filled face, and a pushed-in bevel where the theme has bevels. Hovering it keeps it on. The
+         fallback is the backoffice's own "you are here" colour, the one its tree marks the open
+         document with, so the Umbraco theme needs no palette for it; every other theme sets its own,
+         which 'theme/attached-content.test.ts' holds it to. The first version drew an outline ring
+         on the hover ground, which is what a focused form field looks like, not a toggle. */
+      .path-preview-on,
+      .path-preview-on:hover {
+        background: var(--umbradesktop-strip-button-on-background, var(--uui-color-current));
+        color: var(--umbradesktop-strip-button-on-text, var(--uui-color-current-contrast));
+        box-shadow: var(--umbradesktop-strip-button-on-shadow, none);
+      }
+      .path-preview-icon {
+        font-size: 1.15em;
+        line-height: 1;
       }
     `,
   ];

@@ -74,6 +74,12 @@ export const W11_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-path-link': W11_ACCENT,
   '--umbradesktop-path-link-hover-background': 'rgba(0, 0, 0, 0.05)',
   '--umbradesktop-path-separator': 'rgba(0, 0, 0, 0.35)',
+  // The strip's toolbar buttons, as a command bar draws them: a subtle fill on hover, and a tint
+  // of the accent with accent text while toggled on.
+  '--umbradesktop-strip-button-radius': '4px',
+  '--umbradesktop-strip-button-hover-background': 'rgba(0, 0, 0, 0.05)',
+  '--umbradesktop-strip-button-on-background': `color-mix(in srgb, ${W11_ACCENT} 13%, transparent)`,
+  '--umbradesktop-strip-button-on-text': W11_ACCENT,
   // Mica: the caption is the same plane as the window body, with no gradient and no divider.
   '--umbradesktop-titlebar-background': '#f3f3f3',
   '--umbradesktop-titlebar-border-bottom': 'none',
@@ -225,6 +231,10 @@ export const W11_DARK: UmbraDesktopPalette = {
   '--umbradesktop-path-link': W11_ACCENT_DARK,
   '--umbradesktop-path-link-hover-background': 'rgba(255, 255, 255, 0.08)',
   '--umbradesktop-path-separator': 'rgba(255, 255, 255, 0.4)',
+  '--umbradesktop-strip-button-radius': '4px',
+  '--umbradesktop-strip-button-hover-background': 'rgba(255, 255, 255, 0.08)',
+  '--umbradesktop-strip-button-on-background': `color-mix(in srgb, ${W11_ACCENT_DARK} 18%, transparent)`,
+  '--umbradesktop-strip-button-on-text': W11_ACCENT_DARK,
   '--umbradesktop-titlebar-text': '#ffffff',
   '--umbradesktop-control-color': '#ffffff',
   '--umbradesktop-control-hover-background': 'rgba(255, 255, 255, 0.08)',

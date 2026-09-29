@@ -147,3 +147,90 @@ it('does not offer an empty path as a navigation landmark', async () => {
   expect(root.querySelector('nav'), 'the empty strip should not be a nav landmark').to.be.null;
   dispose();
 });
+
+describe('the preview action', () => {
+  const crumbs: UmbraDesktopPathCrumb[] = [
+    { label: 'Content', href: '/umbraco/section/content', current: false, home: true },
+    { label: 'Home', href: undefined, current: true },
+  ];
+
+  it('is offered when the window can be previewed', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.previewable = true;
+    await element.updateComplete;
+    expect(root.querySelector('button.path-preview')).to.exist;
+    dispose();
+  });
+
+  it('is not offered otherwise', async () => {
+    const { root, dispose } = await mountPath(crumbs);
+    expect(root.querySelector('button.path-preview')).to.equal(null);
+    dispose();
+  });
+
+  it('asks the window to open the preview, rather than opening it itself', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.previewable = true;
+    await element.updateComplete;
+    let asked = 0;
+    element.addEventListener('umbradesktop-path-preview', () => (asked += 1));
+    (root.querySelector('button.path-preview') as HTMLButtonElement).click();
+    expect(asked).to.equal(1);
+    dispose();
+  });
+});
+
+describe('the preview action while a preview is open', () => {
+  const crumbs: UmbraDesktopPathCrumb[] = [
+    { label: 'Content', href: '/umbraco/section/content', current: false, home: true },
+    { label: 'Home', href: undefined, current: true },
+  ];
+
+  it("draws Preview at rest in the strip's text colour, as a button, where the crumbs are links", async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.style.setProperty('--umbradesktop-path-link', 'rgb(200, 0, 0)');
+    element.style.setProperty('--umbradesktop-path-text', 'rgb(0, 90, 0)');
+    element.previewable = true;
+    await element.updateComplete;
+    expect(getComputedStyle(root.querySelector('button.path-preview')!).color).to.equal('rgb(0, 90, 0)');
+    dispose();
+  });
+
+  it("fills the pressed toggle from the theme's on tokens, which no other state uses", async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.style.setProperty('--umbradesktop-strip-button-on-background', 'rgb(1, 2, 3)');
+    element.style.setProperty('--umbradesktop-strip-button-on-text', 'rgb(4, 5, 6)');
+    element.previewable = true;
+    await element.updateComplete;
+    const button = root.querySelector('button.path-preview')!;
+    expect(getComputedStyle(button).backgroundColor, 'not while it is off').to.not.equal('rgb(1, 2, 3)');
+    element.previewActive = true;
+    await element.updateComplete;
+    expect(getComputedStyle(button).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(button).color).to.equal('rgb(4, 5, 6)');
+    dispose();
+  });
+
+  it('shows as pressed', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    // A link colour that resolves, so a ring drawn from it would show rather than drop out.
+    element.style.setProperty('--umbradesktop-path-link', 'rgb(7, 8, 9)');
+    element.previewable = true;
+    element.previewActive = true;
+    await element.updateComplete;
+    expect(root.querySelector('button.path-preview')?.getAttribute('aria-pressed')).to.equal('true');
+    // Pressed is drawn as a filled toggle, from its own token, and never as the outline ring a form
+    // control draws.
+    const pressed = getComputedStyle(root.querySelector('button.path-preview')!);
+    expect(pressed.boxShadow).to.equal('none');
+    dispose();
+  });
+
+  it('is not pressed otherwise', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.previewable = true;
+    await element.updateComplete;
+    expect(root.querySelector('button.path-preview')?.getAttribute('aria-pressed')).to.equal('false');
+    dispose();
+  });
+});

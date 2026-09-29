@@ -14,6 +14,7 @@ src/Umbraco.Community.UmbraDesktop/
   backoffice/public/            umbraco-package.json (registers the one bundle)
 docs/
   theming.md                    how to build a theme. The guide for contributors
+  attached-windows.md           how to show content beside a window (a pane or a grouped window)
   design/                       dated design docs, one per feature
 umbraco-marketplace-*.json      what the Umbraco Marketplace shows, one file per package
 ```
@@ -85,6 +86,14 @@ Two files have confusingly similar names and opposite answers, so to be explicit
 - **`backoffice/public/umbraco-package.json`** is the Umbraco extension manifest. It registers one
   bundle, and everything inside the desktop is wired up in TypeScript rather than as separate
   manifest entries, so it almost never changes for a feature.
+
+## Attached windows
+
+Content that belongs beside one window (a preview, a diff, a copy from another environment) is
+attached content: a pane inside its owner, or a window grouped with it. Read
+`docs/attached-windows.md` before building a feature like that. The desktop already handles
+placement, docking, stacking, minimizing, closing and theming, and the guide lists what your element
+must do and the traps the first consumer hit.
 
 ## Themes
 

@@ -296,9 +296,15 @@ prefix is for:
 | `taskbar-*` | The bar itself: height, reserve, margin, radius, background (plus an opaque fallback), backdrop filter, top border, shadow, two text colours |
 | `start-*`, `task-*` | The buttons inside the bar: hover and active fills, and the running-window marker |
 | `launcher-*` | The panel: geometry (including its width in arrange mode), background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills, the All apps/Arrange controls' own rest, border, text and active fills, the drawer's letter headings, muted text for a group handle and the like, the drop target and insertion slot, the drag ghost's shadow, the remove pane and the arrange banner, and the palette's divider |
-| `path-*` | The path strip under a section window's caption: its height, padding, background, bottom border, text and link colours, the hover fill behind a crumb, the separator's colour and the strip's font size |
+| `path-*` | The path strip under a section window's caption: its height, padding, background, bottom border, text and link colours, the hover fill and text behind a crumb, the separator's colour and the strip's font size |
 | `snap-ghost-*` | The outline showing where a window dragged into a desktop edge will land: its fill, its border shorthand and its corner radius. It stands in for the window that is about to be there, so the obvious value for the radius is your own `window-radius`, and Windows 98 shows what to do when your design has no translucency to lend it |
 | `notice-*` | The overwrite guard: the titlebar marker and taskbar badge colours at `info`/`warning`/`error`, the marker and badge sizes, and the banner's own background, text and leading-edge width |
+| `pane-*` | A docked pane ([attached windows](attached-windows.md)): its background, its header's background, bottom border, text and font size, and the splitter's width and fills. The header tokens fall back to the `path-*` ones, because the header sits on the same row as the path strip and is drawn as its continuation, so a theme that styled its path strip has styled the header too |
+| `strip-button-*` | The toolbar buttons in those strips: the path strip's Preview, the pane header's controls and a floating attached window's Dock. Corner radius, the hover fill, text and shadow, and the pressed fill, text and shadow. Separate from a crumb's hover, because a crumb is a link and these are buttons: Windows 98 hovers a crumb in navy and raises a button. A theme that styles the path strip must set the pressed pair, or it gets Umbraco's own "you are here" pink |
+| `dock-zone-*` | The zones inside an owner window where a dragged attached window can dock: border, radius, fill and label colours, and an `active` border, fill and label for the zone under the pointer. Keep the active one strong: it is drawn over a window, often a white one |
+| `task-group-*` | The box on the taskbar around a window's button and its floating attached windows' buttons: gap, padding, border, radius and background |
+| `toasts-*`, `toast-*` | The desktop's notifications ([design](design/2026-09-27-desktop-notifications-design.md)). `toasts-*` places the stack: its `top`, `right`, `bottom` and `left` offsets and its flex `direction`. The default hangs it above the taskbar at the trailing edge and grows it upwards; macOS sets `top`, clears `bottom` to `auto` and turns the direction to `column`, which is all a theme with its bar or a menu bar at the top needs. `toast-*` is one toast's surface: width, background, backdrop, text, border, radius and shadow, each falling back to the matching `launcher-*` token, so a theme that styled its launcher has styled its toasts. `toast-positive-color` is the success edge; the other severities read the `notice-*` colours |
+| `scrollback-*` | The list behind the clock. It is drawn on the `launcher-*` surface outright, so it has only its gap above the bar (`scrollback-bottom`), its radius, and `scrollback-hover-text` for a theme whose launcher hover fill is a selection bar that needs its own text colour, as Windows 98's navy does. There is no horizontal token: the list hangs from wherever your theme puts the clock, measured, so a dock that carries its clock mid-screen needs nothing. The toasts stand aside while it is open |
 | `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent with the text that reads on it, and the UI font |
 
 The two groups are checked differently, which is why they are two lists rather than one. The
@@ -517,6 +523,12 @@ Your `window` sheet is adopted into the strip as well as the banner, with the sa
 own classes are all namespaced (`.path-bar`, `.path-crumb`, `.path-current`, `.path-separator`, held
 by `components/window-path.test.ts`), but a bare `button` or `nav` rule you wrote for the frame will
 land in it too.
+
+Two more strips are drawn at this height: a docked pane's header, and the strip under a floating
+attached window's titlebar. Neither has a metric of its own. The window sizing pays for the second
+at `pathbarHeight`, and both read `--umbradesktop-path-height`, so the one constant you already have
+covers them. Your `window` sheet is adopted into the pane as well, where every class is prefixed
+`pane-`.
 
 ### Then measure it
 
@@ -873,6 +885,9 @@ has shipped a green test run and a red build, and the reverse.
 - [ ] Windows dragged hard against all four screen edges stay grabbable
 - [ ] Switching to your theme with windows open pulls stranded windows back into reach
 - [ ] The backoffice's light, dark and high-contrast settings all render something sane
+- [ ] Notifications look right: raise a success and a warning, open the list from the clock, and
+      check that the stack clears your taskbar or dock and the list reads on your launcher surface.
+      No test measures either against your chrome
 - [ ] The desktop label looks right in your lettering. You set only its font and weight, and
       `desktop-label.element.test.ts` checks each corner against your `taskbarReserve`. No test
       can see a picture, so turn the label on under Desktop settings, Site, and look at your font

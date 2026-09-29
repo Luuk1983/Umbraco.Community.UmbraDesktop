@@ -152,7 +152,18 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-path-text': WIN98_TEXT,
   '--umbradesktop-path-link': '#000080',
   '--umbradesktop-path-link-hover-background': '#000080',
+  // White on the selection navy, as the Start menu and every list in this theme draw a selection.
+  '--umbradesktop-path-link-hover-text': '#ffffff',
   '--umbradesktop-path-separator': '#404040',
+  // The strip's toolbar buttons, as the era's flat toolbars drew them: no edge at rest, a thin
+  // raised edge on the grey face on hover, and pushed in over a dithered face while toggled on.
+  // Not the navy selection a crumb hovers in, which is a link's highlight and not a button's.
+  '--umbradesktop-strip-button-hover-background': WIN98_FACE,
+  '--umbradesktop-strip-button-hover-text': WIN98_TEXT,
+  '--umbradesktop-strip-button-hover-shadow': `inset -1px -1px ${WIN98_SHADOW}, inset 1px 1px ${WIN98_HILIGHT}`,
+  '--umbradesktop-strip-button-on-background': `repeating-conic-gradient(${WIN98_HILIGHT} 0 25%, ${WIN98_FACE} 0 50%) 0 0 / 2px 2px`,
+  '--umbradesktop-strip-button-on-text': WIN98_TEXT,
+  '--umbradesktop-strip-button-on-shadow': `inset -1px -1px ${WIN98_HILIGHT}, inset 1px 1px ${WIN98_SHADOW}`,
   '--umbradesktop-path-font-size': '11px',
   '--umbradesktop-titlebar-background': WIN98_ACTIVE_CAPTION,
   '--umbradesktop-titlebar-border-bottom': 'none',
@@ -176,6 +187,13 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-taskbar-reserve': `${WIN98_TASKBAR_HEIGHT}px`,
   '--umbradesktop-taskbar-margin': '0',
   '--umbradesktop-taskbar-radius': '0',
+  // The box around a window and its floating attached windows: a sunken groove on the face colour,
+  // the way Windows 98 grouped anything in a panel, rather than a rounded outline it never drew.
+  '--umbradesktop-task-group-radius': '0',
+  '--umbradesktop-strip-button-radius': '0',
+  '--umbradesktop-dock-zone-radius': '0',
+  '--umbradesktop-task-group-border': '2px groove #fff',
+  '--umbradesktop-task-group-background': 'transparent',
   '--umbradesktop-taskbar-background': WIN98_FACE,
   '--umbradesktop-taskbar-background-opaque': WIN98_FACE,
   // 1998 had no compositor. An opaque bar over the wallpaper is the point, not a limitation.
@@ -234,6 +252,11 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-remove-background': WIN98_FACE,
   '--umbradesktop-launcher-remove-border': `2px dotted ${WIN98_TEXT}`,
   '--umbradesktop-launcher-remove-text': WIN98_TEXT,
+  // The scrollback's rows take the launcher's navy selection bar, and need its white text with it.
+  '--umbradesktop-scrollback-hover-text': WIN98_MENU_HILIGHT_TEXT,
+  // A toast is a small raised panel here, and a Win98 panel has square corners like every other.
+  '--umbradesktop-toast-radius': '0',
+  '--umbradesktop-scrollback-radius': '0',
   '--umbradesktop-desktop-background-color': WIN98_DESKTOP,
   // Flat teal, with no gradient: this is the desktop of a machine nobody has personalised yet.
   '--umbradesktop-desktop-background-image': 'none',

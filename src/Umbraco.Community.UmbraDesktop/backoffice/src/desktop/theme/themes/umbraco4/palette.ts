@@ -129,6 +129,12 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-path-link': U4_TEXT,
   '--umbradesktop-path-link-hover-background': U4_SELECT,
   '--umbradesktop-path-separator': U4_EDGE,
+  // The strip's toolbar buttons: the era's pale selection blue on hover, and the same blue inside
+  // its darker line while toggled on, as the old tree drew its selected node.
+  '--umbradesktop-strip-button-hover-background': U4_SELECT,
+  '--umbradesktop-strip-button-on-background': U4_SELECT,
+  '--umbradesktop-strip-button-on-text': U4_TEXT,
+  '--umbradesktop-strip-button-on-shadow': `inset 0 0 0 1px ${U4_SELECT_LINE}`,
   '--umbradesktop-path-font-size': '11px',
   '--umbradesktop-titlebar-background': U4_RAISED,
   '--umbradesktop-titlebar-border-bottom': `1px solid ${U4_LINE}`,

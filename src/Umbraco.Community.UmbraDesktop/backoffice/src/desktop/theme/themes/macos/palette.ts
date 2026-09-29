@@ -95,6 +95,13 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-path-link': '#4d4d4d',
   '--umbradesktop-path-link-hover-background': 'rgba(0, 0, 0, 0.07)',
   '--umbradesktop-path-separator': '#9a9a9e',
+  // The strip's toolbar buttons, as a Finder toolbar draws them: no face until hovered, and a
+  // darker rounded fill while toggled on, in the ordinary text colour rather than an accent.
+  '--umbradesktop-strip-button-radius': '5px',
+  '--umbradesktop-strip-button-hover-background': 'rgba(0, 0, 0, 0.06)',
+  '--umbradesktop-strip-button-hover-text': '#1d1d1f',
+  '--umbradesktop-strip-button-on-background': 'rgba(0, 0, 0, 0.11)',
+  '--umbradesktop-strip-button-on-text': '#1d1d1f',
   '--umbradesktop-titlebar-background': 'linear-gradient(#f8f8f8, #e8e8e8)',
   '--umbradesktop-titlebar-border-bottom': `${MACOS_TITLEBAR_BORDER}px solid #cfcfcf`,
   '--umbradesktop-titlebar-text': '#4d4d4d',
@@ -172,6 +179,17 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-remove-background': 'rgba(255, 69, 58, 0.22)',
   '--umbradesktop-launcher-remove-border': '2px dashed #ff453a',
   '--umbradesktop-launcher-remove-text': '#ffffff',
+  // Notifications arrive at the top right on a Mac, under the menu bar, and stack downwards. There
+  // is no menu bar here, so the stack hangs from the top of the desktop instead. The surface is
+  // Launchpad's, rounded the way macOS rounds a notification, which the square full-screen
+  // Launchpad panel never needed.
+  '--umbradesktop-toasts-top': '12px',
+  '--umbradesktop-toasts-bottom': 'auto',
+  '--umbradesktop-toasts-direction': 'column',
+  '--umbradesktop-toast-radius': '14px',
+  '--umbradesktop-toast-border': '1px solid rgba(255, 255, 255, 0.16)',
+  '--umbradesktop-toast-shadow': '0 10px 30px rgba(0, 0, 0, 0.3)',
+  '--umbradesktop-scrollback-radius': '14px',
   '--umbradesktop-desktop-background-color': '#3b6ea5',
   '--umbradesktop-desktop-background-image':
     'linear-gradient(155deg, #4a3f78 0%, #3b6ea5 55%, #2f8f96 100%)',
@@ -239,6 +257,11 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   '--umbradesktop-path-link': '#d0d0d2',
   '--umbradesktop-path-link-hover-background': 'rgba(255, 255, 255, 0.1)',
   '--umbradesktop-path-separator': '#8e8e93',
+  '--umbradesktop-strip-button-radius': '5px',
+  '--umbradesktop-strip-button-hover-background': 'rgba(255, 255, 255, 0.08)',
+  '--umbradesktop-strip-button-hover-text': '#ffffff',
+  '--umbradesktop-strip-button-on-background': 'rgba(255, 255, 255, 0.16)',
+  '--umbradesktop-strip-button-on-text': '#ffffff',
   '--umbradesktop-titlebar-border-bottom': `${MACOS_TITLEBAR_BORDER}px solid rgba(0, 0, 0, 0.5)`,
   '--umbradesktop-titlebar-text': '#d0d0d2',
   '--umbradesktop-control-color': '#d0d0d2',

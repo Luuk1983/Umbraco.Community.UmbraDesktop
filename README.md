@@ -29,12 +29,14 @@ It also does something the backoffice does not do at all. When two people have t
 - Always says where you are. A window that holds a whole section carries a path under its title bar, Media library / Campaigns / hero.jpg, and every step of the way back is one click. In the plain backoffice you climb back out of a tree by clicking the section name in the header, and a window has no header, so this is where that goes.
 - Never loses your work. A window holding unsaved changes shows a dot in its title bar and on its taskbar button, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
 - Warns before you overwrite someone. If somebody else saves or bins a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. Deletion is warned about even when you have nothing unsaved, because there is no version left to refresh to. The plain backoffice does not warn about this at all.
+- See the page while you edit it. Press Preview in a document window's path and the rendered page opens beside the editor, inside the same window, and reloads every time you save. It works for headless sites too, using the same preview URL as Save and preview. Pop it out into a window of its own and it stays grouped with its document on the taskbar. See [Live preview](#live-preview).
 - A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus any heading a package brings along, such as the Entertainment add-on's Games. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
 - Arrange it your way. Drag a tile to move it, drop it on Pinned to pin it, or drop it on the remove pane to take it off. Arrange mode edits groups (reorder, rename, delete, create) and keeps a place to add anything you removed back. There, taking an app off, moving it to another group or to Pinned, adding it back and every group edit has a button, and reordering tiles or groups works with a drag or the arrow keys. All apps lists everything alphabetically with a filter. New apps land in their group on their own. On upgrade your pinned apps (by default Content editor, Media library and Log Viewer) move out of their groups into Pinned, because an app now lives in one place; otherwise the launcher stays as it ships until you arrange it. See [Arranging the launcher](#arranging-the-launcher).
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, instead of in their group, and on the taskbar as icons. One pin, shown in two places. Your pins are stored on your Umbraco account, so they follow you to any browser you sign in on.
-- A taskbar. Every open window gets a button: click to focus, click again to minimise.
+- A taskbar. Every open window gets a button: click to focus, click again to minimise. A preview you popped out gets its own button, in one box with its document's.
+- Told once, not once per window. A notification raised in any window, a save, an error, a package's license warning, shows once on the desktop instead of inside the window, however many windows raised it. Click it to go to the window it came from. The clock keeps the last twenty, with who said it, how often and when, and shows a dot while any of them is a warning or an error. See [Notifications](#notifications).
 - The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: a full screen button, then the AI chat, then your pinned apps. All three are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
 - Choose your wallpaper. Ten backgrounds ship with the package, or pick any image from your own Media Library. The choice is stored on your Umbraco account, so it follows you.
 - Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, with one wrinkle on a browser you have never opened the desktop in. See [Starting in the desktop](#starting-in-the-desktop).
@@ -97,6 +99,7 @@ From the launcher:
 - Drag a window into the left or right edge of the desktop to snap it to that half, or into the top edge to maximise it. An outline appears while you are over an edge, showing where the window will go. Drag a snapped window away and it returns to the size it had before.
 - Use the taskbar at the bottom to switch between open windows. The icons to the left of them, beside the launcher button, are the fixed row: full screen, the AI chat and your pinned apps, one click from anywhere. See [On the taskbar](#on-the-taskbar).
 - The path under a section window's title bar says where that window is. Click any step to go back to it; the first step returns the window to whatever it opened at. If the window has unsaved changes it asks before leaving, the same way closing it does.
+- A window showing a document has a Preview button at the right of its path. It opens the page beside the editor and shows as pressed while it is open; press it again to close it. See [Live preview](#live-preview).
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
 - While a window is fetching its content, whether you have just opened it or just reloaded it, it shows the Umbraco mark with a ring turning around it. It covers the window until the content is ready, so you never see a half-drawn backoffice assembling itself.
 - Choose Exit in the launcher's footer to return to the classic backoffice. If you start in the desktop, exiting keeps you in the classic backoffice until you close the tab.
@@ -150,6 +153,52 @@ window turns read-only the moment it catches up with that, than when it has been
 where there is nothing left to save to.
 
 Every theme carries it in its own idiom, and no theme is allowed to remove it.
+
+## Live preview
+
+Press Preview at the right of a document window's path and the page opens beside the editor, the
+way Save and preview would show it, without leaving the desktop and without saving.
+
+![A content editor window on the desktop with the preview docked inside it on the right: the editor's fields on the left, the rendered homepage on the right, and the Preview button in the path shown as pressed.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/live-preview.png)
+
+- **It shows the last saved version.** While the editor has unsaved changes, a line above the
+  page says so. Each save or publish reloads the preview, and so does somebody else saving the
+  same document. Typing does not.
+- **Docked or floating.** When there is room, the preview opens docked: a pane inside the document
+  window, and the window grows to make room so the editor keeps its width. Drag the divider to
+  resize it. On a desktop too narrow for both, it opens as a window of its own instead. The pane
+  header has reload, pop out and close. Drag the header a little way to pull it out into a window,
+  as you would a browser tab.
+- **As a window of its own**, it has the usual controls, and a strip under its title saying which
+  window it belongs to, with a Dock button to put it back. You can also drag it into the document
+  window: zones appear inside its left and right edges, and letting go on one docks it there. Its
+  taskbar button sits in one box with the document's, and each button works on its own.
+- **It belongs to its document.** It rises, minimizes and closes with the document window, and it
+  closes when that window moves to a different document.
+- **Phone, tablet and desktop widths** resize the preview to a device's width when it shows a
+  headless front end. Umbraco's own preview page has a device switcher of its own in its footer, so
+  there the buttons stay out of its way. If your site offers more than one way to preview, as extra entries under Save and
+  preview, a picker chooses between them.
+- **Open in a new browser tab** is always there, for when you want the page full size, or when it
+  cannot be shown inside the desktop.
+
+### Headless sites
+
+The preview asks Umbraco for the same URL the Save and preview button opens, from the same URL
+provider. A headless site that registers its own provider for its front end gets its front end in
+the preview, with nothing to configure in the desktop.
+
+The front end does have to let itself be shown inside the backoffice. The preview is an iframe, so:
+
+- Allow the backoffice's origin in `Content-Security-Policy: frame-ancestors`.
+- Do not send `X-Frame-Options: DENY`, or `SAMEORIGIN` when the front end is on a different origin
+  from the backoffice.
+- If previewing depends on a cookie and the front end is on a different site from the backoffice,
+  that cookie has to be `SameSite=None; Secure`. A browser does not send `Lax` or `Strict` cookies
+  to a frame from another site.
+
+When a front end refuses, the browser shows an empty or error page in the frame, and the desktop
+cannot tell that apart from a page that loaded. Open in a new browser tab still works.
 
 ## Background Jobs
 
@@ -264,6 +313,35 @@ icons without labels say it another way. Both put a separator between the two gr
 also marks each open window with a small bar under its icon, grey for open and its blue accent for
 the one you are in. So on those themes a bare icon launches something and a marked one is already
 open.
+
+## Notifications
+
+Umbraco raises a notification in the backoffice it happened in, and every window on the desktop is a
+backoffice of its own. Left alone, five open windows would show a package's license warning five
+times, each inside its own window. So the desktop takes them over: a notification raised in any
+window is shown once, on the desktop, and not inside the window.
+
+- **Once.** The same message from several windows is one notification with a count on it, not one
+  per window.
+- **For as long as its sender asked.** A notification goes away after the time the sender chose, and
+  one the sender asked to keep stays until you close it. Point at it to hold it while you read.
+- **Click it to go there.** Clicking a notification brings forward the window that raised it, and
+  restores it if it was minimised. An error that carries buttons of its own, such as Full Error
+  Message, is shown again inside its window, where those buttons work.
+- **The clock remembers.** Click the clock for the last twenty, newest first, each with the window
+  that raised it, how many times and when it last did. A repeat updates its line rather than taking
+  a new one, so one noisy message cannot push the others out.
+- **A dot by the clock** means a warning or an error is in the list, red when one is an error. It is
+  not an unread count, so looking does not clear it. It goes when the last warning or error drops
+  off the end of the list, or when you press Clear, which empties the list.
+- **Per tab.** The list survives reloading the desktop and is gone when you close the tab, and two
+  tabs are two desktops with a list each. Windows do not survive a reload, so after one the lines
+  that pointed at a window stay readable but can no longer be clicked.
+
+Every theme draws them its own way. Under macOS they arrive at the top right, as they do on a Mac;
+the others put them above the clock.
+
+![The desktop with a content and a media window open and the notification list open from the taskbar clock: a document published, a scheduled publishing warning raised twice, and a media save, each with the window it came from and the time. A dot by the clock says a warning is in the list.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/notifications.png)
 
 ## Changing the theme
 
@@ -484,7 +562,7 @@ The name is the **App name** from the same screen, the one the installed app use
 
 Two more choices sit under the switch, greyed out until it is on:
 
-- **Corner.** Top right by default, the one corner nothing else on the desktop uses: new windows open top left, the launcher is bottom left, and the clock and Umbraco's notifications are bottom right. The other three are there if you want them.
+- **Corner.** Top right by default, the one corner nothing else on the desktop uses: new windows open top left, the launcher is bottom left, and the clock and the desktop's notifications are bottom right. Under macOS notifications arrive at the top right, over the label, and go again. The other three are there if you want them.
 - **Show the domain underneath.** Off by default. Useful full screen or in an installed app, where no address bar shows it.
 
 The **Preview** box at the top of the Site screen shows the result on a small copy of your own desktop, in your theme and over your wallpaper, with the installed app's icon beside it.
@@ -566,6 +644,10 @@ A window should not show the entire backoffice shell inside a small frame. Becau
 | `full-section` | Section sidebar and tree, without the top header | Tools where the tree *is* the tool: Content, Media, Document Types |
 | `workspace-only` | Just the workspace | Self-contained editors: Log Viewer, Webhooks |
 | `bare` | The target view only | Single-focus dashboards: Examine, Health Check, Profiling, Background Jobs |
+
+Every profile also hides the toasts inside the window, once the desktop is listening to that
+window's notification context and not before, and the desktop draws them itself. The design and the
+reasoning are in [the notifications design doc](docs/design/2026-09-27-desktop-notifications-design.md).
 
 ### The app catalogue
 
@@ -649,6 +731,12 @@ two channels a theme reaches the chrome through, the geometry it has to publish 
 be measured rather than typed, the traps that cost real time, worked examples from the five
 shipped themes, and a checklist to run before you open a PR. The system behind it is described in
 [`docs/design/2026-09-04-theming-system-design.md`](docs/design/2026-09-04-theming-system-design.md).
+
+Showing something beside a window, the way the live preview does, is a building block of its own
+called attached windows. [`docs/attached-windows.md`](docs/attached-windows.md) is the guide for a
+feature that wants one: when to use it and when not, how to open it, what your element must do,
+what the desktop already handles for you, and the traps the preview hit. The reasoning is in
+[`docs/design/2026-09-27-attached-windows-design.md`](docs/design/2026-09-27-attached-windows-design.md).
 
 Connecting other Umbraco instances is experimental, and
 [`docs/connections.md`](docs/connections.md) is its guide: creating the API user on the instance you
