@@ -1,9 +1,8 @@
 /**
  * English (en) strings for the `umbraDesktopAccessories` area.
  *
- * This package's own dictionary, and only this package's: the `accessories` launcher group's
- * heading belongs to the host and ships there, per the group contract in `docs/desktop-apps.md` §6.
- * What lives here is each app's name, which its manifest points at through `meta.label`, and
+ * This package's own dictionary: the Accessories group's heading, which this package's catalogue
+ * manifest defines, each app's name, which its manifest points at through `meta.label`, and
  * everything the apps themselves say.
  *
  * The elements pass each key to `localize.termOrDefault` with the same English as its fallback, so a
@@ -13,6 +12,8 @@
  */
 export default {
   umbraDesktopAccessories: {
+    // The launcher group this package's catalogue manifest defines (bundle.manifests.ts).
+    groupAccessories: 'Accessories',
     // The window titles, taskbar labels and launcher tile text, all from meta.label.
     notepad: 'Notepad',
     paint: 'Paint',

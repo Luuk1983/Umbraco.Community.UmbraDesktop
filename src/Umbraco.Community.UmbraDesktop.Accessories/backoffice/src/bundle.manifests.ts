@@ -18,13 +18,39 @@ import { manifests as localizationManifests } from './localization/manifest.js';
 const ALIAS = 'Umbraco.Community.UmbraDesktop.Accessories';
 
 /**
+ * The Accessories group, defined by the package whose tools fill it, as the Entertainment package
+ * defines Games.
+ *
+ * The host used to reserve `accessories` on this package's behalf. It no longer defines any group
+ * that exists only for somebody else's apps (design D10 of
+ * `docs/design/2026-09-25-package-catalogues-design.md`), so without this every tool would land
+ * under More.
+ *
+ * This weight is on the launcher's own scale, lower first, unlike the apps' root `weight` below,
+ * which is Umbraco's. 55 places Accessories after the host's System (50) and before Entertainment's
+ * Games (60), where Windows kept Start > Programs > Accessories: a tool is closer to what an editor
+ * came for than a game is. The host publishes its weights for exactly this (design D11).
+ *
+ * No `entries`: an entry deep-links one of the package's own backoffice screens, and this package has
+ * none.
+ */
+const catalogue: UmbExtensionManifest = {
+  type: 'umbraDesktopCatalogue',
+  alias: `${ALIAS}.Catalogue`,
+  name: 'UmbraDesktop Accessories catalogue',
+  meta: {
+    groups: [{ alias: 'accessories', label: `#${AREA}_groupAccessories`, weight: 55 }],
+  },
+};
+
+/**
  * One accessory's manifest.
  *
  * The accessories differ only in what they are called, where they sort and how big they are, so they are
  * built by one function rather than written out once each. Every field is the Entertainment
  * package's reasoning for Minesweeper, applied to each: `element` and never `js`, because the
  * desktop reads only `element`; an explicit `weight`, because unset is a position rather than an
- * absence; the host's `accessories` group, which this package names and the host owns; sizes that are
+ * absence; the `accessories` group, which this package's catalogue above defines; sizes that are
  * the app's content box, derived by its own `constants.ts`, with the chrome left to the host; and no
  * `conditions`, because reaching the desktop already takes the Desktop section, and an unmet
  * condition is the one way an app vanishes from the launcher in silence.
@@ -152,8 +178,8 @@ const screensaverEntryPoint: UmbExtensionManifest = {
  * The bundle Umbraco loads for this package, and the only entry point it has.
  *
  * `UmbExtensionManifest` is a global type from `@umbraco-cms/backoffice/extension-types`, wired up in
- * tsconfig's `types`. The `umbraDesktopApp` arm of that union is contributed by
- * `umbradesktop-app.d.ts` in this folder, a copy of the Entertainment package's, for the reason given
- * there.
+ * tsconfig's `types`. The `umbraDesktopApp` and `umbraDesktopCatalogue` arms of that union are
+ * contributed by `umbradesktop-app.d.ts` in this folder, a copy of the Entertainment package's, for
+ * the reason given there.
  */
-export const manifests: Array<UmbExtensionManifest> = [...apps, screensaverEntryPoint, ...localizationManifests];
+export const manifests: Array<UmbExtensionManifest> = [catalogue, ...apps, screensaverEntryPoint, ...localizationManifests];

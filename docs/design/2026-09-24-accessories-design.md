@@ -26,10 +26,16 @@ Everything about its layout, versioning and release is Entertainment's, unchange
 
 ## 2. The `accessories` group
 
-The host gains one group, `accessories`, with the same contract as `games`: the host owns the alias,
-the label and its localisation, and nothing in the host puts an app in it. Weight 55, after System
-(50) and before Games (60). That is where Windows put it, with Games a folder inside Accessories, and
-a tool is closer to what an editor came for than a game is.
+This package defines one group, `accessories`, in a `umbraDesktopCatalogue` manifest of its own, the
+way the Entertainment package defines `games`. Weight 55, after System (50) and before Games (60).
+That is where Windows put it, with Games a folder inside Accessories, and a tool is closer to what an
+editor came for than a game is.
+
+This was first built as a host group with the same contract `games` then had: the host owned the
+alias, the label and its localisation, and nothing in the host put an app in it. The package
+catalogues change (#85) took `games` out of the host, because a host group that exists only for
+another package's apps is the wrong way round, and the rebase onto it moved `accessories` into this
+package for the same reason. The host now knows nothing about accessories.
 
 Dutch is "Bureau-accessoires", the name the Dutch Windows 95 and 98 used.
 

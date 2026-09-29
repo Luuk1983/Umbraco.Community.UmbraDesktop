@@ -90,9 +90,6 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    */
   public readonly locale = this.#settings.asObservablePart((settings) => settings.locale);
 
-  /** Where the backoffice culture comes from, for {@link formatDateTime}. */
-  #localize = new UmbLocalizationController(this);
-
   /**
    * Format a date or time the way this user has asked for it, exactly as the taskbar clock does:
    * their choice of culture, backoffice or browser, and their 12 or 24 hour override.
@@ -145,7 +142,10 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
 
   #imaging: UmbImagingRepository;
 
-  /** Resolves the strings the boot splash and the failure notification show. */
+  /**
+   * Resolves the strings the boot splash and the failure notification show, and is where
+   * {@link formatDateTime} reads the backoffice culture.
+   */
   #localize: UmbLocalizationController;
 
   /** The host, kept so the user-data client can be built once the user is known. */

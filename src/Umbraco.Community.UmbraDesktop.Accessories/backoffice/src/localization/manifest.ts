@@ -5,8 +5,8 @@ import type { ManifestLocalization } from '@umbraco-cms/backoffice/localization'
  *
  * Registered separately from the host's for the reason the Entertainment package gives: Umbraco
  * merges dictionaries by area and key at runtime, so a package ships the area it owns and nothing
- * has to be coordinated between releases. The `accessories` launcher group's heading is the host's
- * and ships there; what lives here is each app's name, which its manifest points at through
+ * has to be coordinated between releases. What lives here is the Accessories group's heading, which
+ * this package's catalogue defines, each app's name, which its manifest points at through
  * `meta.label`, and everything the apps themselves say.
  */
 export const manifests: Array<ManifestLocalization> = [

@@ -68,8 +68,8 @@ it('declares every app through a lazy `element` loader', () => {
   }
 });
 
-/** The host owns the group; this package only names it. */
-it('puts every app in the host’s accessories group', () => {
+/** Every app sits in the group this package defines below. */
+it('puts every app in the accessories group', () => {
   for (const app of apps) expect(app.meta.group, app.alias).to.equal('accessories');
 });
 
@@ -114,4 +114,25 @@ it('starts the screensaver from an entry point', async () => {
   const module = await entry.js();
   expect(module.onInit).to.equal(screensaverEntryPoint.onInit);
   expect([typeof module.onInit, typeof module.onUnload]).to.deep.equal(['function', 'function']);
+});
+
+/** The one catalogue this package registers. */
+const catalogue = manifests.find((manifest) => manifest.type === 'umbraDesktopCatalogue');
+
+/**
+ * The Accessories group is this package's own, label and all, as Games is the Entertainment
+ * package's: the host defines neither (package catalogues design D10), so without this every tool
+ * lands under More. The bounds are literals because the host's list cannot be imported from here:
+ * after its System (50), and before Entertainment's Games (60), where Windows kept Accessories.
+ */
+it('defines the accessories group itself, after System and before Games', () => {
+  const groups =
+    (catalogue as { meta?: { groups?: Array<{ alias: string; label: string; weight?: number }> } } | undefined)?.meta
+      ?.groups ?? [];
+  const accessories = groups.find((group) => group.alias === 'accessories');
+  expect(accessories, 'the package must define the group its apps name').to.not.equal(undefined);
+  expect(accessories!.label, "a token from this package's own dictionary").to.equal('#umbraDesktopAccessories_groupAccessories');
+  expect((en as Record<string, Record<string, string>>).umbraDesktopAccessories.groupAccessories, 'the dictionary answers it').to.be.a('string');
+  expect(accessories!.weight).to.be.greaterThan(50);
+  expect(accessories!.weight).to.be.lessThan(60);
 });

@@ -7,6 +7,7 @@
  */
 export default {
   umbraDesktopAccessories: {
+    groupAccessories: 'Bureau-accessoires',
     notepad: 'Kladblok',
     paint: 'Paint',
     calculator: 'Rekenmachine',
