@@ -376,6 +376,22 @@ export default {
     connectionStatusManage: 'Verbindingen beheren',
     connectionStatusRefresh: 'Verversen',
     connectionStatusLoadFailed: 'De verbindingsstatus kon niet gelezen worden.',
+    // de app voor externe content, die de content van een andere installatie alleen-lezen toont
+    appRemoteContent: 'Externe content',
+    remoteContentConnection: 'Installatie',
+    remoteContentReadOnly: 'Alleen-lezen',
+    remoteContentConnecting: 'Verbinding maken met %0%',
+    remoteContentLoading: '%0% wordt geladen',
+    remoteContentNotUsable: '%0% kan niet geopend worden: %1%.',
+    remoteContentLoadFailed: '%0% is niet volledig geladen.',
+    remoteContentLeaked:
+      'Sommige verzoeken kwamen bij deze installatie uit in plaats van bij %0%, dus wat hier zou verschijnen is mogelijk niet de content van %0%.',
+    remoteContentVersionTitle: 'Andere Umbraco-versie',
+    remoteContentVersionBody:
+      '%0% draait Umbraco %1% en deze installatie draait %2%. De content wordt getoond met de editors die hier geïnstalleerd zijn, dus sommige eigenschappen worden mogelijk niet goed weergegeven.',
+    remoteContentOpenAnyway: 'Toch openen',
+    remoteContentTryAgain: 'Opnieuw proberen',
+    remoteContentNoConnections: 'Er zijn geen verbonden installaties.',
     // de toestemmingskaart, getoond in plaats van wat niet gelezen kon worden
     permissionNeeded: 'Toestemming nodig',
     permissionNeededRemote:
