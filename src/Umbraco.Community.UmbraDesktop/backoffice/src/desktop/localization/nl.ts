@@ -80,7 +80,7 @@ export default {
     groupLanguage: 'Taal en regio',
     groupTaskbar: 'Taakbalk',
     groupAppearanceAbout: 'Het thema en de achtergrond achter je vensters',
-    groupGeneralAbout: 'Hoe het bureaublad start en waar je terechtkomt als je inlogt',
+    groupGeneralAbout: 'Hoe het bureaublad start en welke vensters terugkomen',
     groupLanguageAbout: 'De taal van de backoffice, en hoe het bureaublad datums en tijden schrijft',
     groupTaskbarAbout: 'Wat de taakbalk naast de startknop bewaart',
     groupSite: 'Site',
@@ -147,9 +147,12 @@ export default {
     bootIntoDesktop: 'Open het bureaublad als ik inlog',
     bootDescription:
       'Werkt vanaf de volgende keer dat je de backoffice opent, niet direct. Een link rechtstreeks naar een document opent nog steeds dat document. Zet ?desktop=off achter het backoffice-adres om het één keer over te slaan.',
-    reopenWindows: 'Mijn vensters opnieuw openen',
+    reopenWindows: 'Mijn geopende vensters onthouden',
+    reopenWindowsOff: 'Niet onthouden',
+    reopenWindowsSession: 'Deze sessie',
+    reopenWindowsPersistent: 'Altijd',
     reopenWindowsDescription:
-      'Open bij het starten van het bureaublad de vensters die je de vorige keer open had, waar je ze liet. Backoffice-vensters openen op de pagina die ze lieten zien; niet-opgeslagen wijzigingen worden niet bewaard.',
+      'Deze sessie bewaart je vensters als je de pagina herlaadt of het bureaublad verlaat en terugkomt, tot je het tabblad sluit. Altijd brengt ze ook terug de volgende keer dat je de backoffice opent. Backoffice-vensters openen op de pagina die ze lieten zien; niet-opgeslagen wijzigingen worden niet bewaard.',
     // bureaubladinstellingen — taal en regio. De eerste rij is de vreemde eend en de regel eronder
     // zegt dat ook: die verandert de hele backoffice en is de enige die opnieuw laden vraagt.
     backofficeLanguage: 'Taal van de backoffice',
@@ -343,6 +346,7 @@ export default {
       'Verbindingen beheren vereist toegang tot de sectie Instellingen hier. Vraag een beheerder van deze installatie.',
     // het opstartscherm, dat alleen iets zegt als het laden lang duurt, en de twee manieren waarop opslaan mislukt
     bootLoadingSettings: 'Je bureaublad wordt geladen',
+    bootReopeningWindows: 'Je vensters worden weer geopend',
     migrationSettingsToAccount: 'Je bureaubladinstellingen worden naar je account verplaatst',
     // het migratiescherm, dat eenmalig over het bureaublad verschijnt terwijl instellingen verhuizen
     migrationTitle: 'Je bureaublad wordt ingericht',

@@ -1,4 +1,9 @@
-import type { UmbraDesktopLocaleSettings, UmbraDesktopSettings, UmbraDesktopWallpaperRef } from './types';
+import type {
+  UmbraDesktopLocaleSettings,
+  UmbraDesktopReopenWindows,
+  UmbraDesktopSettings,
+  UmbraDesktopWallpaperRef,
+} from './types';
 import { UMBRADESKTOP_DEFAULT_WALLPAPER_ID } from './wallpapers.generated';
 import { UMBRADESKTOP_DEFAULT_THEME_ID } from '../theme/themes/index';
 
@@ -24,7 +29,7 @@ export const UMBRADESKTOP_DEFAULT_SETTINGS: UmbraDesktopSettings = {
   theme: UMBRADESKTOP_DEFAULT_THEME_ID,
   pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
   bootIntoDesktop: false,
-  reopenWindows: false,
+  reopenWindows: 'session',
   taskbarFeatures: {},
   wallpaperFollowsTheme: false,
   locale: { source: 'backoffice', hourCycle: 'auto' },
@@ -100,6 +105,19 @@ function isFeatureMap(value: unknown): value is Record<string, boolean> {
  */
 function isBootPreference(value: unknown): value is boolean {
   return typeof value === 'boolean';
+}
+
+/**
+ * Whether a decoded value is one of the three answers to when windows are reopened.
+ *
+ * Strict, and a stored boolean is not one of them: an early build of this setting stored `true` or
+ * `false`, and reading those as anything but the default would guess at what somebody meant by a
+ * switch that no longer exists.
+ * @param value The decoded `reopenWindows` property.
+ * @returns True when the value is a usable choice.
+ */
+function isReopenWindows(value: unknown): value is UmbraDesktopReopenWindows {
+  return value === 'off' || value === 'session' || value === 'persistent';
 }
 
 /**
@@ -210,8 +228,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
   if (isThemeId(payload.theme)) settings.theme = payload.theme;
   if (isPinnedList(payload.pinned)) settings.pinned = payload.pinned;
   if (isBootPreference(payload.bootIntoDesktop)) settings.bootIntoDesktop = payload.bootIntoDesktop;
-  // A plain boolean or nothing, as with the boot preference: anything else keeps the default.
-  if (typeof payload.reopenWindows === 'boolean') settings.reopenWindows = payload.reopenWindows;
+  if (isReopenWindows(payload.reopenWindows)) settings.reopenWindows = payload.reopenWindows;
   if (isFeatureMap(payload.taskbarFeatures)) settings.taskbarFeatures = { ...payload.taskbarFeatures };
   if (isWallpaperFollowsTheme(payload.wallpaperFollowsTheme)) {
     settings.wallpaperFollowsTheme = payload.wallpaperFollowsTheme;

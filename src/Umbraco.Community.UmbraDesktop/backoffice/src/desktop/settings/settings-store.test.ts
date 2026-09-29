@@ -27,7 +27,7 @@ it('round-trips settings through serialise and parse', () => {
     taskbarFeatures: { 'ai-chat': false },
     wallpaperFollowsTheme: true,
     locale: { source: 'browser', hourCycle: 'h23' },
-    reopenWindows: false,
+    reopenWindows: 'off',
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -46,7 +46,7 @@ it('reads back each wallpaper kind unchanged', () => {
           theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
           pinned: [],
           bootIntoDesktop: false,
-          reopenWindows: true,
+          reopenWindows: 'persistent',
           taskbarFeatures: {},
           wallpaperFollowsTheme: false,
           locale: { source: 'backoffice', hourCycle: 'auto' },
@@ -101,7 +101,7 @@ it('round-trips a pinned list', () => {
     taskbarFeatures: {},
     wallpaperFollowsTheme: false,
     locale: { source: 'backoffice', hourCycle: 'auto' },
-    reopenWindows: true,
+    reopenWindows: 'session',
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -309,15 +309,19 @@ it('never returns the shared default locale, so a caller cannot mutate it', () =
 });
 
 /**
- * Reopening your windows is opt-in: off for a user who has never said otherwise, including every
- * user whose stored settings predate it, so nobody's desktop changes behaviour until they ask.
+ * Reopening your windows after a refresh is the default: nobody expects F5 to close everything they
+ * had open. Keeping them after the browser closes is the opt-in, and so is switching it off.
  */
-it('does not reopen windows by default, including for settings stored before the preference existed', () => {
-  expect(parseSettings(null).reopenWindows).to.equal(false);
-  expect(parseSettings(JSON.stringify({ v: 1, theme: 'win98' })).reopenWindows).to.equal(false);
+it('reopens windows after a refresh by default, including for settings stored before the preference existed', () => {
+  expect(parseSettings(null).reopenWindows).to.equal('session');
+  expect(parseSettings(JSON.stringify({ v: 1, theme: 'win98' })).reopenWindows).to.equal('session');
 });
 
-it('keeps a stored choice to reopen windows, and ignores one that is not a true or false', () => {
-  expect(parseSettings(JSON.stringify({ v: 1, reopenWindows: true })).reopenWindows).to.equal(true);
-  expect(parseSettings(JSON.stringify({ v: 1, reopenWindows: 'yes' })).reopenWindows).to.equal(false);
+it('keeps each stored choice of when to reopen windows, and ignores anything else', () => {
+  for (const mode of ['off', 'session', 'persistent'] as const) {
+    expect(parseSettings(JSON.stringify({ v: 1, reopenWindows: mode })).reopenWindows, mode).to.equal(mode);
+  }
+  for (const junk of [true, false, 'yes', 1]) {
+    expect(parseSettings(JSON.stringify({ v: 1, reopenWindows: junk })).reopenWindows, String(junk)).to.equal('session');
+  }
 });

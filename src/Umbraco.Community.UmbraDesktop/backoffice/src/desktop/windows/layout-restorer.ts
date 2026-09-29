@@ -3,18 +3,28 @@ import type { UmbraDesktopSavedWindow, UmbraDesktopWindowLayout } from './layout
 import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
 import type { Observable, Subscription } from '@umbraco-cms/backoffice/external/rxjs';
 
-/** How long a saved window waits for its app to appear before it is dropped, in ms. */
-export const UMBRADESKTOP_LAYOUT_RESTORE_DEADLINE_MS = 10_000;
+/**
+ * How long a saved window waits for its app to appear before it is given up on, in ms.
+ *
+ * The desktop is held behind the boot splash for as long as a restore runs, so this is also the
+ * longest a missing app can hold up a load. Five seconds because the two ways of getting it wrong
+ * are not equal. Too short, and a package that is merely slow to register (a slow connection is
+ * enough) loses its window on every load. Too long only costs anything when an app has gone for
+ * good, an uninstalled package or a section the user lost, and then only once: the window is
+ * removed from the stored layout the moment it is given up on, so the next load does not wait.
+ * Normally every app is already known and the restore is instant, whatever this says.
+ */
+export const UMBRADESKTOP_LAYOUT_RESTORE_DEADLINE_MS = 5_000;
 
 /** How long the layout has to stay still before it is saved, in ms. */
 export const UMBRADESKTOP_LAYOUT_SAVE_DELAY_MS = 1_000;
 
 /** What the restorer needs. Narrow on purpose, so a test can hand it a real manager and fakes. */
 export interface UmbraDesktopWindowLayoutRestorerSources {
-  /** Where the layout is kept: this browser's localStorage (see `layout-persistence.ts`). */
-  persistence: {
-    load(): Promise<{ layout: UmbraDesktopWindowLayout }>;
-    save(layout: UmbraDesktopWindowLayout): Promise<boolean>;
+  /** Where the layout is kept (see `layout-persistence.ts`). */
+  store: {
+    load(): UmbraDesktopWindowLayout;
+    save(layout: UmbraDesktopWindowLayout): void;
   };
   /** The window manager. */
   manager: {
@@ -25,7 +35,11 @@ export interface UmbraDesktopWindowLayoutRestorerSources {
   };
   /** The apps this user may open, as the catalogue delivers them: possibly a few at a time. */
   apps: Observable<ReadonlyArray<UmbraDesktopApp>>;
-  /** Whether this user wants their windows reopened (Desktop settings > General). */
+  /**
+   * Whether to reopen the stored layout. False when the restorer starts on a desktop that is
+   * already in use, which is when the user switches reopening back on: there it only keeps the
+   * layout saved from then on.
+   */
   reopen: boolean;
   /** How long a saved window waits for its app. Defaults to {@link UMBRADESKTOP_LAYOUT_RESTORE_DEADLINE_MS}. */
   deadlineMs?: number;
@@ -36,21 +50,22 @@ export interface UmbraDesktopWindowLayoutRestorerSources {
 /**
  * Reopens the windows a user had open when the desktop starts, and keeps their layout saved after.
  *
- * **Restoring waits for apps.** The catalogue delivers apps as their packages register, and a
- * package's bundle can land a while after the desktop is up, so a saved window whose app has not
- * appeared yet is kept waiting rather than dropped. Each is restored the moment its app appears, in
- * the saved stacking order within each arrival, and whatever is still waiting when the deadline
- * passes is dropped: an uninstalled package, or a section the user can no longer open. Then the
- * window that was active is given focus, once, rather than every window taking it in turn.
+ * **Restoring waits for apps, briefly.** The catalogue delivers apps as their packages register,
+ * and a package's bundle can land a moment after the desktop is up, so a saved window whose app has
+ * not appeared yet waits for it. Each is restored the moment its app appears, in the saved stacking
+ * order within each arrival, and whatever is still waiting at the deadline is given up on. Then the
+ * window that was active is given focus, once. None of this is visible: the desktop holds its first
+ * paint until {@link start} settles, so nobody is using it while windows appear.
  *
- * **Saving starts only when restoring has finished.** Before then the open windows are a partial
- * picture of the saved layout, and saving it would overwrite the whole one: a window still waiting
- * for its package would be forgotten for good. After that, the layout is saved once it has stayed
- * still for a moment, so a drag is one save rather than one per pixel, and not at all when nothing
- * that is kept actually changed.
+ * **The restored layout is saved at once.** That forgets any window that was given up on, so the
+ * next load does not wait for it again, and it gives a tab seeded from the copy kept between visits
+ * a working copy of its own.
  *
- * Saving continues when reopening is switched off, so switching it back on reopens what the user
- * last had rather than something weeks old.
+ * **Nothing else is saved until restoring has finished.** Before then the open windows are a partial
+ * picture of the saved layout, and saving it would overwrite the whole one. After that, the layout
+ * is saved once it has stayed still for a moment, so a drag is one save rather than one per pixel,
+ * not at all when nothing that is kept changed, and at once when the page is hidden, so an F5 right
+ * after a change keeps it.
  */
 export class UmbraDesktopWindowLayoutRestorer {
   /** What it works with. */
@@ -65,8 +80,17 @@ export class UmbraDesktopWindowLayoutRestorer {
   /** The layout as last saved or loaded, to tell a real change from a repeat. */
   #lastSaved?: string;
 
+  /** Whether restoring has finished and the layout is being kept saved. */
+  #saving = false;
+
+  /** A save waiting out its delay: its timer, and what it will write. */
+  #pending?: { timer: number; snapshot: UmbraDesktopWindowLayout; payload: string };
+
   /** Whether {@link stop} has been called, after which nothing more happens. */
   #stopped = false;
+
+  /** Writes a pending save when the page goes away, so it is not lost with it. */
+  #onPageHide = () => this.#flushPending();
 
   /**
    * @param sources What it works with.
@@ -76,29 +100,46 @@ export class UmbraDesktopWindowLayoutRestorer {
   }
 
   /**
-   * Load the layout, reopen it if the user wants, then start keeping it saved.
+   * Load the layout, reopen it if asked to, then start keeping it saved.
    * @returns A promise settling once restoring has finished, successfully or at the deadline.
    */
   async start(): Promise<void> {
-    const { layout } = await this.#sources.persistence.load();
-    if (this.#stopped) return;
+    const layout = this.#sources.store.load();
     this.#lastSaved = serialiseLayout(layout);
     if (this.#sources.reopen && layout.windows.length > 0) {
       await this.#restore(layout);
       if (this.#stopped) return;
-      // The restored windows are the saved layout, reopened: the same windows in the same places,
-      // though not byte for byte (stacking numbers are renumbered, and a backoffice window now
-      // records the address it opened at). Taking them as the baseline is what keeps the first
-      // update after a restore from saving a layout nobody changed.
-      this.#lastSaved = serialiseLayout(snapshotLayout(this.#sources.manager.getWindows()));
+      // Saved straight away, as the new baseline: see the class doc. It is the saved layout,
+      // reopened, but not byte for byte (stacking is renumbered, a backoffice window records the
+      // address it opened at, and a window given up on is gone), so this is also what keeps the
+      // first update after a restore from saving a layout nobody changed.
+      const restored = snapshotLayout(this.#sources.manager.getWindows());
+      this.#lastSaved = serialiseLayout(restored);
+      this.#sources.store.save(restored);
     }
     if (this.#stopped) return;
     this.#keepSaved();
   }
 
-  /** Stop: release every subscription and timer. Nothing is restored or saved after this. */
+  /**
+   * Save the layout now, changed or not, cancelling any save still waiting out its delay. For when
+   * where it is kept has just changed, so the new place has it without waiting for the next move.
+   * Does nothing until restoring has finished, for the same reason nothing else is saved before.
+   */
+  saveNow(): void {
+    if (!this.#saving || this.#stopped) return;
+    this.#cancelPending();
+    const snapshot = snapshotLayout(this.#sources.manager.getWindows());
+    this.#lastSaved = serialiseLayout(snapshot);
+    this.#sources.store.save(snapshot);
+  }
+
+  /** Stop: release every subscription, timer and listener. Nothing is restored or saved after this. */
   stop(): void {
     this.#stopped = true;
+    this.#saving = false;
+    this.#pending = undefined;
+    window.removeEventListener('pagehide', this.#onPageHide);
     for (const subscription of this.#subscriptions) subscription.unsubscribe();
     this.#subscriptions = [];
     for (const timer of this.#timers) window.clearTimeout(timer);
@@ -156,26 +197,35 @@ export class UmbraDesktopWindowLayoutRestorer {
 
   /** Save the layout whenever it has changed and then stayed still for a moment. */
   #keepSaved(): void {
-    let pending: number | undefined;
+    this.#saving = true;
+    window.addEventListener('pagehide', this.#onPageHide);
     const subscription = this.#sources.manager.windows.subscribe((windows) => {
       if (this.#stopped) return;
       const snapshot = snapshotLayout(windows);
       const payload = serialiseLayout(snapshot);
-      if (pending !== undefined) {
-        window.clearTimeout(pending);
-        this.#timers.delete(pending);
-        pending = undefined;
-      }
+      this.#cancelPending();
       if (payload === this.#lastSaved) return;
-      pending = window.setTimeout(() => {
-        if (pending !== undefined) this.#timers.delete(pending);
-        pending = undefined;
-        if (this.#stopped) return;
-        this.#lastSaved = payload;
-        void this.#sources.persistence.save(snapshot);
-      }, this.#sources.saveDelayMs ?? UMBRADESKTOP_LAYOUT_SAVE_DELAY_MS);
-      this.#timers.add(pending);
+      const timer = window.setTimeout(() => this.#flushPending(), this.#sources.saveDelayMs ?? UMBRADESKTOP_LAYOUT_SAVE_DELAY_MS);
+      this.#timers.add(timer);
+      this.#pending = { timer, snapshot, payload };
     });
     this.#subscriptions.push(subscription);
+  }
+
+  /** Write the save that is waiting out its delay, if there is one, now. */
+  #flushPending(): void {
+    const pending = this.#pending;
+    if (!pending || this.#stopped) return;
+    this.#cancelPending();
+    this.#lastSaved = pending.payload;
+    this.#sources.store.save(pending.snapshot);
+  }
+
+  /** Drop the save that is waiting out its delay, if there is one. */
+  #cancelPending(): void {
+    if (!this.#pending) return;
+    window.clearTimeout(this.#pending.timer);
+    this.#timers.delete(this.#pending.timer);
+    this.#pending = undefined;
   }
 }

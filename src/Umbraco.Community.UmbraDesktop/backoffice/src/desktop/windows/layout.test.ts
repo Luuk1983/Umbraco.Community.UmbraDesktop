@@ -5,7 +5,7 @@ import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types.js';
 /**
  * The saved window layout, as pure functions: what is kept of an open window, how it survives a
  * round trip through storage, and how carefully a stored value is read back. Stored data outlives
- * the code that wrote it and can be edited by hand in the database, so every field is checked on
+ * the code that wrote it and can be edited by hand in the browser's tools, so every field is checked on
  * the way in and a bad entry is dropped rather than trusted.
  */
 

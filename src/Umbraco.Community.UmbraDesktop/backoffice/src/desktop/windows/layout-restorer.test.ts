@@ -36,11 +36,14 @@ const LAYOUT: UmbraDesktopWindowLayout = {
   ],
 };
 
-/** Every host to tear down after a case. */
+/** Every host and restorer to tear down after a case. */
 let hosts: UmbElementControllerHost[] = [];
+let restorers: UmbraDesktopWindowLayoutRestorer[] = [];
 afterEach(() => {
+  for (const restorer of restorers) restorer.stop();
   for (const host of hosts) host.destroy();
   hosts = [];
+  restorers = [];
 });
 
 /**
@@ -54,12 +57,9 @@ function setup(options: { layout?: UmbraDesktopWindowLayout; apps?: UmbraDesktop
   const apps = new UmbArrayState<UmbraDesktopApp>(options.apps ?? [CONTENT, MEDIA], (a) => a.alias);
   const saves: UmbraDesktopWindowLayout[] = [];
   const restorer = new UmbraDesktopWindowLayoutRestorer({
-    persistence: {
-      load: async () => ({ layout: options.layout ?? LAYOUT, source: 'server' }),
-      save: async (layout) => {
-        saves.push(layout);
-        return true;
-      },
+    store: {
+      load: () => options.layout ?? LAYOUT,
+      save: (layout) => void saves.push(layout),
     },
     manager,
     apps: apps.asObservable(),
@@ -67,6 +67,7 @@ function setup(options: { layout?: UmbraDesktopWindowLayout; apps?: UmbraDesktop
     deadlineMs: 150,
     saveDelayMs: 20,
   });
+  restorers.push(restorer);
   const windows = (): ReadonlyArray<UmbraDesktopWindow> => manager.getWindows();
   return { manager, apps, saves, restorer, windows };
 }
@@ -84,7 +85,6 @@ it('reopens the saved windows in stacking order, as they were, with the same win
   expect(front.rect).to.eql({ x: 300, y: 40, w: 500, h: 400 });
   expect(front.active, 'the window that was active is again').to.equal(true);
   expect(front.z).to.be.greaterThan(back.z);
-  restorer.stop();
 });
 
 it('waits for an app that arrives late, as a package’s apps can', async () => {
@@ -95,7 +95,6 @@ it('waits for an app that arrives late, as a package’s apps can', async () => 
   apps.setValue([CONTENT, MEDIA]);
   await started;
   expect(windows().map((w) => w.app.alias)).to.deep.equal(['content', 'media']);
-  restorer.stop();
 });
 
 it('drops a window whose app never arrives, and still restores the rest', async () => {
@@ -106,7 +105,22 @@ it('drops a window whose app never arrives, and still restores the rest', async 
   const { restorer, windows } = setup({ layout });
   await restorer.start();
   expect(windows().map((w) => w.app.alias)).to.deep.equal(['content', 'media']);
-  restorer.stop();
+});
+
+/**
+ * The restore is saved the moment it finishes, not at the next change. That is what forgets a
+ * window whose app never came, so the next load does not wait for it all over again, and what gives
+ * a tab seeded from the copy kept between visits a working copy of its own.
+ */
+it('saves the restored layout straight away, without the windows that never came back', async () => {
+  const layout: UmbraDesktopWindowLayout = {
+    version: 1,
+    windows: [...LAYOUT.windows, { app: 'uninstalled', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 9, active: false }],
+  };
+  const { restorer, saves } = setup({ layout });
+  await restorer.start();
+  expect(saves.length, 'saved once, at the end of the restore').to.equal(1);
+  expect(saves[0].windows.map((w) => w.app)).to.deep.equal(['content', 'media']);
 });
 
 /**
@@ -120,9 +134,11 @@ it('saves nothing until the restore has finished', async () => {
   manager.open(GAME);
   await afterSaveDelay();
   expect(saves, 'nothing yet: media is still waiting for its app').to.deep.equal([]);
+  restorer.saveNow();
+  expect(saves, 'not even when asked to').to.deep.equal([]);
   apps.setValue([CONTENT, MEDIA]);
   await started;
-  restorer.stop();
+  expect(saves.length).to.equal(1);
 });
 
 it('saves the layout shortly after it changes, once for a burst of changes', async () => {
@@ -133,9 +149,8 @@ it('saves the layout shortly after it changes, once for a burst of changes', asy
   manager.move(id, 60, 60);
   manager.move(id, 70, 70);
   await afterSaveDelay();
-  expect(saves.length, 'one save for the drag, not one per move').to.equal(1);
-  expect(saves[0].windows.find((w) => w.app === 'content')?.rect).to.include({ x: 70, y: 70 });
-  restorer.stop();
+  expect(saves.length, 'the restore, then one save for the drag, not one per move').to.equal(2);
+  expect(saves[1].windows.find((w) => w.app === 'content')?.rect).to.include({ x: 70, y: 70 });
 });
 
 it('does not save a layout that has not changed', async () => {
@@ -143,11 +158,35 @@ it('does not save a layout that has not changed', async () => {
   await restorer.start();
   manager.setLocation(windows()[0].id, windows()[0].location ?? '/umbraco/section/content');
   await afterSaveDelay();
-  expect(saves).to.deep.equal([]);
-  restorer.stop();
+  expect(saves.length, 'only the restore itself').to.equal(1);
 });
 
-it('reopens nothing when the user has switched it off, but still keeps the layout saved', async () => {
+/**
+ * F5 straight after a change is the case this feature exists for, so a save still waiting out its
+ * delay goes out when the page is hidden rather than being lost with it.
+ */
+it('saves a pending change at once when the page is hidden', async () => {
+  const { restorer, manager, saves, windows } = setup({ layout: { version: 1, windows: [] } });
+  await restorer.start();
+  manager.open(CONTENT);
+  manager.move(windows()[0].id, 80, 90);
+  window.dispatchEvent(new Event('pagehide'));
+  expect(saves.length, 'saved before the delay has passed').to.equal(1);
+  expect(saves[0].windows[0].rect).to.include({ x: 80, y: 90 });
+  await afterSaveDelay();
+  expect(saves.length, 'and not a second time when the delay would have').to.equal(1);
+});
+
+/** Switching to "keep between visits" has to fill the browser's copy now, not at the next move. */
+it('saves on request, even when nothing has changed', async () => {
+  const { restorer, saves } = setup();
+  await restorer.start();
+  restorer.saveNow();
+  expect(saves.length).to.equal(2);
+  expect(saves[1].windows.map((w) => w.app)).to.deep.equal(['content', 'media']);
+});
+
+it('reopens nothing when not asked to, but still keeps the layout saved', async () => {
   const { restorer, manager, saves, windows } = setup({ reopen: false });
   await restorer.start();
   expect(windows()).to.deep.equal([]);
@@ -155,7 +194,6 @@ it('reopens nothing when the user has switched it off, but still keeps the layou
   await afterSaveDelay();
   expect(saves.length).to.equal(1);
   expect(saves[0].windows.map((w) => w.app)).to.deep.equal(['content']);
-  restorer.stop();
 });
 
 it('stops saving once stopped', async () => {
@@ -163,6 +201,8 @@ it('stops saving once stopped', async () => {
   await restorer.start();
   restorer.stop();
   manager.open(GAME);
+  window.dispatchEvent(new Event('pagehide'));
+  restorer.saveNow();
   await afterSaveDelay();
-  expect(saves).to.deep.equal([]);
+  expect(saves.length, 'only the restore itself').to.equal(1);
 });

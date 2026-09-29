@@ -39,7 +39,7 @@ It also does something the backoffice does not do at all. When two people have t
 - The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: a full screen button, then the AI chat, then your pinned apps. All three are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
 - Choose your wallpaper. Ten backgrounds ship with the package, or pick any image from your own Media Library. The choice is stored on your Umbraco account, so it follows you.
 - Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, with one wrinkle on a browser you have never opened the desktop in. See [Starting in the desktop](#starting-in-the-desktop).
-- Pick up where you left off. Reload the page or come back tomorrow and the windows you had open reopen where you left them, maximised, minimised or snapped as they were, each backoffice window at the page it was showing. Turn it on in Desktop settings; the layout is kept in your browser. See [Reopening your windows](#reopening-your-windows).
+- Pick up where you left off. Reload the page and the windows you had open come back where you left them, maximised, minimised or snapped as they were, each backoffice window at the page it was showing. On by default for the tab you are in; one setting keeps them after you close the browser too, and another turns it off. The layout is kept in your browser. See [Reopening your windows](#reopening-your-windows).
 - Speaks your language, and writes the time your way. The desktop follows your Umbraco backoffice language, so a Danish backoffice gets a Danish clock rather than whatever your browser happens to be set to, and you can change that language from Desktop settings without needing access to the Users section. If your culture and your habits disagree, one switch forces a 12 or 24 hour clock without giving up anything else about how your language writes a time. See [Language and region](#language-and-region).
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on. A window waiting for its content shows the Umbraco mark with a turning ring, the same animation the boot screen uses, so the wait belongs to the desktop rather than looking like the page has stalled.
 - Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice. Five ship: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98. Adding your own is a folder of CSS and one catalogue entry.
@@ -480,23 +480,29 @@ This one setting behaves slightly differently from the rest. It is stored on you
 
 ## Reopening your windows
 
-Turn on "Reopen my windows" in Desktop settings, General, and when you reload the page, or come back the next day, the desktop reopens the windows you had open when you left it:
+Reload the page and the desktop reopens the windows you had open:
 
 - each one where it was and the size it was, pulled back into view if your screen is smaller now
 - maximised, minimised or snapped to a half, as it was
 - in the same order, with the same window in front
 - each backoffice window at the page it was showing, a document, a media folder, a settings screen, rather than at its section's start page
 
+The desktop waits behind its loading screen until your windows are back in place, so nothing appears under your pointer once you can use it. It does not wait for each window to finish loading: those show their own spinner.
+
+"Remember my open windows" in Desktop settings, General, has three choices:
+
+- **This session**, the default. Reloading the page, Exit and back, or signing in again in the same tab brings your windows back. Close the tab and they are gone. Each tab keeps its own, so two tabs never mix up their windows.
+- **Always.** Close the browser and come back tomorrow and your windows are still there. A new tab starts from the layout you changed last, whichever tab that was in.
+- **Don't remember.** The desktop starts empty every time and keeps nothing about your windows.
+
 Some things do not come back, by design:
 
-- **Unsaved changes.** The desktop already asks before you leave with any, and a reload cannot bring them back.
+- **Unsaved changes.** The desktop already asks before you leave with any, and a reload cannot bring them back. Plain Umbraco loses them on a reload too.
 - **An app's own state.** Apps such as Minesweeper start fresh, so you get a new board.
-- **Windows you can no longer open.** A package that has been uninstalled, or a section your account has lost access to, is quietly skipped. The desktop gives a package a few seconds to load its apps before deciding.
+- **Windows you can no longer open.** A package that has been uninstalled, or a section your account has lost access to, is skipped and forgotten. The desktop gives a package five seconds to load its apps before deciding, so on a very slow connection a window from a slow package can occasionally be lost too. Reopen it from the launcher and it is kept again.
 - **A preview or other window attached to another.** Attached windows and panes are left out for now; the window they belong to reopens on its own.
 
-The layout is kept in this browser, for your user, rather than on your Umbraco account. It changes every time a window moves, so saving it to the server each time would be excessive for what is a convenience, and a layout belongs to a screen anyway: one from your laptop would be little use on a large monitor. So each browser remembers its own. It is saved a moment after you stop moving things, so a drag is one save, not hundreds. Only the "Reopen my windows" switch is on your account, with your other settings.
-
-It is off until you turn it on, so nobody's desktop changes behaviour without asking. While it is off the desktop starts empty, as it always has. It still notes your layout in the browser while the setting is off, so the first time you turn it on, your windows come back from your last visit rather than from some time ago.
+The layout is kept in this browser, for your user, rather than on your Umbraco account. It changes every time a window moves, so saving it to the server each time would be excessive for what is a convenience, and a layout belongs to a screen anyway: one from your laptop would be little use on a large monitor. It is saved a moment after you stop moving things, so a drag is one save, not hundreds, and straight away when you leave the page. Only your choice of when to reopen windows is on your account, with your other settings. Switching to "Don't remember" forgets what was kept, and switching from "Always" back to "This session" forgets the copy kept for your next visit.
 
 ## Language and region
 

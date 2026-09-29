@@ -49,6 +49,21 @@ export interface UmbraDesktopLocaleSettings {
 }
 
 /**
+ * When the desktop reopens the windows a user had open.
+ *
+ * - `off`: never. Nothing about the windows is kept anywhere.
+ * - `session`: after a refresh, Exit and back, or signing in again in the same tab. Kept in the
+ *   tab's `sessionStorage`, so it ends with the tab and two tabs never touch each other's windows.
+ *   The default, because nobody expects F5 to close everything they had open.
+ * - `persistent`: also after the browser has been closed. The tab still works from its own copy;
+ *   `localStorage` is written as well, and read only by a tab that has no copy yet.
+ *
+ * Three values rather than a boolean plus a checkbox, because `off` and `persistent` are not
+ * two ends of one switch: the middle one is where nearly everybody belongs.
+ */
+export type UmbraDesktopReopenWindows = 'off' | 'session' | 'persistent';
+
+/**
  * One user's desktop settings, as persisted. Versioned from the start so a future shape change
  * has somewhere to hang a migration rather than silently discarding preferences.
  */
@@ -95,14 +110,14 @@ export interface UmbraDesktopSettings {
    */
   bootIntoDesktop: boolean;
   /**
-   * Whether the desktop reopens the windows this user had open when they last left it.
+   * When the desktop reopens the windows this user had open: never, after a refresh of the same tab,
+   * or also after the browser has been closed. See {@link UmbraDesktopReopenWindows}.
    *
-   * Off by default, so it is opt-in: nobody's desktop changes behaviour until they turn it on in
-   * Desktop settings > General. Stored here, on the account, so the choice follows the user; the
-   * layout itself is kept in the browser (`windows/layout-persistence.ts`), because it changes
-   * whenever a window moves.
+   * Stored here, on the account, so the choice follows the user. The layout itself never does: it
+   * is kept in the browser (`windows/layout-persistence.ts`), because it changes whenever a window
+   * moves and belongs to one screen.
    */
-  reopenWindows: boolean;
+  reopenWindows: UmbraDesktopReopenWindows;
   /**
    * Whether changing the theme should also change the wallpaper to the one that theme declares.
    *

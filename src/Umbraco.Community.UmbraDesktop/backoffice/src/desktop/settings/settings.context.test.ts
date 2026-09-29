@@ -195,14 +195,14 @@ it('changes the format source and the clock override independently', async () =>
   expect(localeOf(context)).to.deep.equal({ source: 'browser', hourCycle: 'h23' });
 });
 
-it('turns reopening windows on and off again', async () => {
+it('changes when windows are reopened', async () => {
   const context = await contextOnHost();
-  let reopen: boolean | undefined;
+  let reopen: string | undefined;
   const subscription = context.reopenWindows.subscribe((value) => (reopen = value));
-  expect(reopen, 'off until the user opts in').to.equal(false);
-  context.setReopenWindows(true);
-  expect(reopen).to.equal(true);
-  context.setReopenWindows(false);
-  expect(reopen).to.equal(false);
+  expect(reopen, 'after a refresh until the user says otherwise').to.equal('session');
+  context.setReopenWindows('persistent');
+  expect(reopen).to.equal('persistent');
+  context.setReopenWindows('off');
+  expect(reopen).to.equal('off');
   subscription.unsubscribe();
 });
