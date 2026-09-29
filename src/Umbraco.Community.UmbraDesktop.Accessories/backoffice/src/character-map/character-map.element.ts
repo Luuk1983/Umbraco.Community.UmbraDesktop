@@ -9,6 +9,7 @@ import type { CharacterEntry } from './characters.js';
 import { AREA } from '../shared/area.js';
 import { copyToClipboard } from '../shared/clipboard.js';
 import { accessoryStyles } from '../shared/styles.js';
+import { keepFocusOnPress } from '../shared/press-focus.js';
 import { css, customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
@@ -84,6 +85,12 @@ export class CharacterMapElement extends UmbLitElement {
 
   /** Whether the next render should bring the chosen cell into view: after a key, not after a click. */
   #reveal = false;
+
+  /** Keep a mouse press on Select or Copy from leaving a focus ring behind. See {@link keepFocusOnPress}. */
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.addEventListener('mousedown', keepFocusOnPress);
+  }
 
   /**
    * One word from this package's dictionary.

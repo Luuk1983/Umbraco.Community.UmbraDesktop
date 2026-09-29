@@ -1,4 +1,5 @@
 import { accessoryStyles } from '../shared/styles.js';
+import { keepFocusOnPress } from '../shared/press-focus.js';
 import { AREA } from '../shared/area.js';
 import { UNSAVED_ATTRIBUTE } from '../shared/unsaved.js';
 import { fileNameFor, isTextFile } from '../shared/media-files.js';
@@ -107,6 +108,7 @@ export class NotepadElement extends UmbLitElement {
   /** Listen for the keyboard shortcuts. */
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('mousedown', keepFocusOnPress);
     this.addEventListener('keydown', this.#onKeyDown);
   }
 

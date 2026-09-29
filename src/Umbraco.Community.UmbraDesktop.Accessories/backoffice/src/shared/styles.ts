@@ -110,6 +110,17 @@ export const accessoryStyles = css`
       inset -2px -2px #dfdfdf;
   }
 
+  /* A switched-on control as a Windows 98 button looks held down: the pressed bevel above on the
+     ordinary face, in the ordinary text colour. Not the accent fill the unbranched rule gives,
+     because this theme's accent is navy, and a navy face inside the black-and-white bevel reads as a
+     focus ring. It was reported as exactly that, on a tab nobody had clicked. A white-and-grey
+     dither, as Windows 98's toolbars latched a button, was tried and rejected as not looking like
+     Windows 98 either. */
+  :host([data-umbradesktop-theme='win98']) .control[aria-pressed='true'] {
+    background: var(--umbradesktop-app-surface-raised, var(--uui-color-surface-emphasis));
+    color: var(--umbradesktop-app-text, var(--uui-color-text));
+  }
+
   :host([data-umbradesktop-theme='win98']) .sunken {
     box-shadow:
       inset 1px 1px #808080,

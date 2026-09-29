@@ -1,4 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
+import { sendKeys, sendMouse } from '@web/test-runner-commands';
 import './notepad.element.js';
 import type { NotepadElement } from './notepad.element.js';
 import type { MediaOpenResult } from '../shared/media-open.js';
@@ -302,4 +303,27 @@ it('wraps long lines until word wrap is switched off', async () => {
   await click(element, 'wrap');
   expect(page(element).getAttribute('wrap')).to.equal('off');
   expect(toggle.getAttribute('aria-pressed')).to.equal('false');
+});
+
+/**
+ * Switching word wrap mid-sentence leaves the typing where it was.
+ *
+ * A clicked button takes focus, so before this the next keystroke went to the Word wrap button: it
+ * never reached the page, and Chrome drew the accent focus ring round the button because a key had
+ * been pressed on it. Real mouse and keyboard, since only the browser's own input moves focus.
+ */
+it('keeps typing in the page after a toolbar click, with no ring on the button', async () => {
+  const { element } = await notepad();
+  const centre = (target: Element): [number, number] => {
+    const box = target.getBoundingClientRect();
+    return [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)];
+  };
+  await sendMouse({ type: 'click', position: centre(page(element)) });
+  await sendKeys({ type: 'a' });
+  const toggle = element.shadowRoot!.querySelector('[data-action="wrap"]')!;
+  await sendMouse({ type: 'click', position: centre(toggle) });
+  await sendKeys({ type: 'b' });
+  await element.updateComplete;
+  expect(page(element).value).to.equal('ab');
+  expect(toggle.matches(':focus-visible'), 'the clicked button shows a focus ring').to.equal(false);
 });

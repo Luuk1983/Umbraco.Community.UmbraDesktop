@@ -17,6 +17,7 @@ import type { MachineFacts, ServerFacts, SystemInfoSource } from './source.js';
 import { AREA } from '../shared/area.js';
 import { copyToClipboard } from '../shared/clipboard.js';
 import { accessoryStyles } from '../shared/styles.js';
+import { keepFocusOnPress } from '../shared/press-focus.js';
 import { UMBRACO_BLUE, UMBRACO_LOGO_PATH, UMBRACO_LOGO_SIZE, UMBRACO_LOGO_VIEWBOX } from '../shared/umbraco-logo.js';
 import { css, customElement, html, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -86,6 +87,7 @@ export class SystemInfoElement extends UmbLitElement {
   /** Ask for the facts as the window opens. */
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('mousedown', keepFocusOnPress);
     const source = this.source ?? createSystemInfoSource(this);
     void source.server().then((server) => (this._server = server));
     void source.machine().then((machine) => (this._machine = machine));

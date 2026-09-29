@@ -1,4 +1,5 @@
 import { accessoryStyles } from '../shared/styles.js';
+import { keepFocusOnPress } from '../shared/press-focus.js';
 import { AREA } from '../shared/area.js';
 import { UNSAVED_ATTRIBUTE } from '../shared/unsaved.js';
 import { editableImageType, fileNameFor } from '../shared/media-files.js';
@@ -199,9 +200,19 @@ export class PaintElement extends UmbLitElement {
   /** The resize drag in progress: which handle, where the pointer started, and the size then. */
   #resizeDrag?: { which: ResizeHandle; x: number; y: number; w: number; h: number };
 
-  /** Listen for Ctrl+Z and Ctrl+S. */
+  /**
+   * Listen for Ctrl+Z and Ctrl+S, and be somewhere for them to arrive.
+   *
+   * The shortcuts are heard on the host, so they reach Paint only while focus is inside it. The
+   * canvas cannot take focus, and a click on something that cannot moves focus to the nearest
+   * ancestor that can, which was none: drawing with the mouse left focus on the page itself, and
+   * Ctrl+Z after a stroke went nowhere. A tabindex of -1 makes the host that ancestor without putting
+   * it in the Tab order, where it would be one more stop that does nothing.
+   */
   override connectedCallback(): void {
     super.connectedCallback();
+    if (!this.hasAttribute('tabindex')) this.tabIndex = -1;
+    this.addEventListener('mousedown', keepFocusOnPress);
     this.addEventListener('keydown', this.#onKeyDown);
   }
 
@@ -715,7 +726,10 @@ export class PaintElement extends UmbLitElement {
   static override styles = [
     accessoryStyles,
     css`
+      /* No ring round the whole app. The host takes focus only so the shortcuts have somewhere to
+         arrive, from a click, and Chrome would ring it at the next keypress, Ctrl+Z included. */
       :host {
+        outline: none;
         padding: ${PAINT_PADDING_PX}px;
         gap: ${PAINT_PADDING_PX}px;
         height: 100%;

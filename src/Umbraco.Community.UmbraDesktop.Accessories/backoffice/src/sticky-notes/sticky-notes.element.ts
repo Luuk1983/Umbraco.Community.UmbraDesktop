@@ -1,4 +1,5 @@
 import { accessoryStyles } from '../shared/styles.js';
+import { keepFocusOnPress } from '../shared/press-focus.js';
 import { AREA } from '../shared/area.js';
 import { UNSAVED_ATTRIBUTE } from '../shared/unsaved.js';
 import { createStickyNotesApi } from './api.js';
@@ -122,6 +123,7 @@ export class StickyNotesElement extends UmbLitElement {
   /** Load the board and start refreshing. */
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('mousedown', keepFocusOnPress);
     this.addEventListener('focusin', this.#onFocus);
     this.addEventListener('pointerdown', this.#onFocus);
     void this.refresh();

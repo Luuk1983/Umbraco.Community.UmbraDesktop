@@ -12,6 +12,7 @@ import { createRecycleBins, RECYCLE_BINS } from './recycle-bins.js';
 import type { RecycleBinCount, RecycleBinId, RecycleBins } from './recycle-bins.js';
 import { AREA } from '../shared/area.js';
 import { accessoryStyles } from '../shared/styles.js';
+import { keepFocusOnPress } from '../shared/press-focus.js';
 import { css, customElement, html, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
@@ -91,6 +92,7 @@ export class DiskCleanupElement extends UmbLitElement {
   /** Count the bins as the window opens. */
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('mousedown', keepFocusOnPress);
     void this.#refresh();
   }
 

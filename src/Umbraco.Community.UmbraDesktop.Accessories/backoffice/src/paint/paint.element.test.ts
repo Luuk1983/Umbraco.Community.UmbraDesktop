@@ -1,4 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
+import { sendKeys, sendMouse } from '@web/test-runner-commands';
 import './paint.element.js';
 import { PAINT_CANVAS_SIZE, PAINT_MAX_IMAGE_EDGE_PX } from './constants.js';
 import type { PaintElement } from './paint.element.js';
@@ -445,4 +446,39 @@ describe('the area round the picture', () => {
   it('is left to the theme under the others', async () => {
     expect(await wellUnder('win11', '#e6e6e6', '#797979')).to.equal('rgb(230, 230, 230)');
   });
+});
+
+/**
+ * Ctrl+Z works after drawing with the real mouse, and the tool clicked first wears no focus ring.
+ *
+ * Paint listens for its shortcuts on its host, so they reach it only while focus is inside Paint.
+ * The canvas cannot take focus, so a click on it used to move focus out of Paint altogether, and
+ * Ctrl+Z after a stroke did nothing. The test above missed that by handing the key straight to the
+ * element. The field outside stands for another window that had focus before. Real mouse and
+ * keyboard, since only the browser's own input moves focus.
+ */
+it('hears Ctrl+Z after a real stroke, with no ring on the tool clicked first', async () => {
+  const { element } = await paint();
+  const elsewhere = document.createElement('input');
+  document.body.appendChild(elsewhere);
+  elsewhere.focus();
+  const at = (target: Element, dx = 0.5, dy = 0.5): [number, number] => {
+    const box = target.getBoundingClientRect();
+    return [Math.round(box.x + box.width * dx), Math.round(box.y + box.height * dy)];
+  };
+  const tool = element.shadowRoot!.querySelector('[data-tool="pencil"]')!;
+  await sendMouse({ type: 'click', position: at(tool) });
+  const rect = canvas(element).getBoundingClientRect();
+  const scale = rect.width / canvas(element).width;
+  await sendMouse({ type: 'click', position: [Math.floor(rect.left + 5.5 * scale), Math.floor(rect.top + 5.5 * scale)] });
+  await until(() => pixel(element, 5, 5)[0] === 0);
+  expect(pixel(element, 5, 5), 'the stroke').to.deep.equal(BLACK);
+  await sendKeys({ down: 'Control' });
+  await sendKeys({ press: 'z' });
+  await sendKeys({ up: 'Control' });
+  await until(() => pixel(element, 5, 5)[0] === 255);
+  elsewhere.remove();
+  expect(pixel(element, 5, 5), 'Ctrl+Z took the stroke back').to.deep.equal(WHITE);
+  expect(tool.matches(':focus-visible'), 'the clicked tool shows a focus ring').to.equal(false);
+  expect(getComputedStyle(element).outlineStyle, 'a ring round the whole app').to.equal('none');
 });

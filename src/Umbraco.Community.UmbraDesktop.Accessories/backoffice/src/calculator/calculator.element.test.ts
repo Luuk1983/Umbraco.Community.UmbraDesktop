@@ -1,4 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
+import { sendKeys, sendMouse } from '@web/test-runner-commands';
 import './calculator.element.js';
 import { CALCULATOR_KEYPAD } from './constants.js';
 import type { CalculatorElement } from './calculator.element.js';
@@ -107,4 +108,26 @@ it('takes the keyboard as soon as it opens', async () => {
     await element.updateComplete;
   }
   expect(display(element)).to.equal('42');
+});
+
+/**
+ * Clicking a key and then typing draws no focus ring round the key.
+ *
+ * Chrome keeps a clicked button focused and switches it to `:focus-visible` as soon as a key is
+ * pressed, which is how this app is used: click a number, type the rest. Every key the mouse had
+ * touched then wore the accent ring, which no other part of the desktop does. The event script
+ * above cannot see this, so this one uses the browser's own mouse and keyboard.
+ */
+it('draws no focus ring on a clicked key when typing follows', async () => {
+  const element = await calculator();
+  const key = element.shadowRoot!.querySelector<HTMLButtonElement>('[data-key="7"]')!;
+  const box = key.getBoundingClientRect();
+  await sendMouse({ type: 'click', position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)] });
+  await sendKeys({ type: '+3' });
+  await element.updateComplete;
+  expect(key.matches(':focus-visible'), 'the clicked key shows a focus ring').to.equal(false);
+  expect(display(element)).to.equal('3');
+  await sendKeys({ press: 'Enter' });
+  await element.updateComplete;
+  expect(display(element), 'Enter is equals, not a second press of the clicked key').to.equal('10');
 });

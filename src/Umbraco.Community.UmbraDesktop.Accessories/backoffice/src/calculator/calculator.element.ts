@@ -1,4 +1,5 @@
 import { accessoryStyles } from '../shared/styles.js';
+import { keepFocusOnPress } from '../shared/press-focus.js';
 import { AREA } from '../shared/area.js';
 import {
   CALCULATOR_COLUMNS,
@@ -93,6 +94,7 @@ export class CalculatorElement extends UmbLitElement {
   /** Take focus and listen for keys. */
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('mousedown', keepFocusOnPress);
     if (!this.hasAttribute('tabindex')) this.tabIndex = 0;
     this.addEventListener('keydown', this.#onKeyDown);
   }

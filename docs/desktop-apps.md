@@ -663,6 +663,26 @@ the size you declare is exact under every theme including the ones that do not e
 of a fixed size (`box-sizing: border-box`) are unaffected and should keep using a border, which is
 what §4's example does.
 
+**A button the mouse clicked grows a focus ring at the next keypress.** Chrome focuses a clicked
+`<button>` and, correctly, shows no `:focus-visible` ring for it. The moment any key is pressed, it
+decides the person is using the keyboard and draws the ring after all. Any key counts, Shift, Ctrl
+or the Windows key on their own included, so a screenshot shortcut or a switch between windows is
+enough. The Accessories apps all shipped with this: a tab or toolbar button someone had clicked wore
+the accent ring the next time they touched the keyboard, while nothing on the desktop's own chrome
+did, because none of it takes focus on a click. Your `:focus-visible` rule is not wrong, and it
+should stay, since it is the keyboard's only way to see where it is. What fixes it is not taking
+focus on a mouse press in the first place: cancel the `mousedown` default on your buttons. The click
+still fires, `:active` still draws the press, and Tab still reaches the button and still shows its
+ring. It also keeps typing where it was, so a Word wrap toggle does not swallow the next keystroke.
+Leave a `draggable` button alone, because a cancelled mousedown never starts an HTML drag, and leave
+selects and fields alone. The Accessories package does this for every app in one function,
+`shared/press-focus.ts`. The other half: if your app listens for shortcuts on its host, a click must
+leave focus somewhere inside it. A click on something that cannot take focus, such as a canvas, moves
+focus to the nearest ancestor that can, and with none it lands on the page. Paint's Ctrl+Z did
+nothing after a real stroke until its host got `tabIndex = -1` and `outline: none`. Neither the
+ring nor this one shows up when a unit test dispatches its own events. Only real input shows them,
+through `sendMouse` and `sendKeys` from `@web/test-runner-commands`.
+
 **Read the theme id in CSS, not in your constructor.** The attribute is set on your element after it
 is constructed and before it is inserted. A CSS rule is therefore always safe: CSS is declarative and
 applies the moment the attribute exists, so nothing is ever painted unstyled. But

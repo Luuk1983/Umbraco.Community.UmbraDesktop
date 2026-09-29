@@ -9,6 +9,7 @@ import {
 } from './constants.js';
 import { AREA } from '../shared/area.js';
 import { accessoryStyles } from '../shared/styles.js';
+import { keepFocusOnPress } from '../shared/press-focus.js';
 import { UmbraDesktopAccessoriesSettingsController } from '../settings/settings.source.js';
 import type { AccessoriesSettingsSource } from '../settings/settings.source.js';
 import {
@@ -63,6 +64,7 @@ export class ScreensaverPanelElement extends UmbLitElement {
   /** Settle on a source and listen to it. */
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('mousedown', keepFocusOnPress);
     this.#source ??= this.source ?? new UmbraDesktopAccessoriesSettingsController(this);
     this.#unsubscribe = this.#source.subscribe(() => this._revision++);
   }

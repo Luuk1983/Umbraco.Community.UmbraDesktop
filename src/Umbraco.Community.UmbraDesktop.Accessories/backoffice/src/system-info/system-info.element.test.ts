@@ -1,4 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
+import { sendKeys, sendMouse } from '@web/test-runner-commands';
 import './system-info.element.js';
 import type { SystemInfoElement } from './system-info.element.js';
 import type { MachineFacts, ServerFacts, SystemInfoSource } from './source.js';
@@ -199,4 +200,46 @@ it('copies the whole report as text, for a support request', async () => {
   expect(copied).to.have.length(1);
   expect(copied[0]).to.contain('[Umbraco]').and.to.contain('17.7.0+d64a209').and.to.contain('[Installed packages]');
   expect(text(element, '.notice')).to.contain('Copied');
+});
+
+/**
+ * Choosing a tab with the mouse leaves no focus ring, even after a key is pressed.
+ *
+ * Chrome focuses a clicked button and turns its ring on at the next keypress, and any key counts:
+ * Shift on its own does it, and so does the shortcut a person uses to take a screenshot. So the
+ * tab someone had clicked wore the accent ring whenever they next touched the keyboard. Real mouse
+ * and keyboard, since only the browser's own input takes that path. The press must still look
+ * pressed while the button is held, because Windows 98 draws that from :active.
+ */
+it('leaves no focus ring on a clicked tab when a key is pressed afterwards', async () => {
+  const { element } = await sysinfo();
+  const tab = element.shadowRoot!.querySelector<HTMLElement>('[data-tab="details"]')!;
+  const box = tab.getBoundingClientRect();
+  await sendMouse({ type: 'move', position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)] });
+  await sendMouse({ type: 'down' });
+  expect(tab.matches(':active'), 'the held tab looks pressed').to.equal(true);
+  await sendMouse({ type: 'up' });
+  await settle(element);
+  await sendKeys({ press: 'Shift' });
+  expect(tab.getAttribute('aria-pressed'), 'the click chose the tab').to.equal('true');
+  expect(tab.matches(':focus-visible'), 'the clicked tab shows a focus ring').to.equal(false);
+});
+
+/**
+ * Under Windows 98 the chosen tab looks held down: sunken, on the same face as the other tab.
+ *
+ * Windows 98's accent is navy, and a navy face inside the black-and-white pressed bevel looks
+ * exactly like a focus ring: it was reported as one, on the General tab of a System Information
+ * nobody had clicked. The accent and face are set here because the test has no palette.
+ */
+it('draws the chosen tab as a held-down Windows 98 button, with no accent fill', async () => {
+  const { element } = await sysinfo();
+  element.style.setProperty('--umbradesktop-app-accent', 'rgb(0, 0, 128)');
+  element.style.setProperty('--umbradesktop-app-surface-raised', 'rgb(192, 192, 192)');
+  const chosen = getComputedStyle(element.shadowRoot!.querySelector<HTMLElement>('[data-tab="general"]')!);
+  const other = getComputedStyle(element.shadowRoot!.querySelector<HTMLElement>('[data-tab="details"]')!);
+  expect(chosen.backgroundColor, 'the same face as the tab not chosen').to.equal(other.backgroundColor);
+  expect(chosen.backgroundImage, 'no pattern on the face').to.equal('none');
+  expect(chosen.color, 'the ordinary text colour').to.equal(other.color);
+  expect(chosen.boxShadow, 'sunken').to.contain('rgb(0, 0, 0) 1px 1px 0px 0px inset');
 });
