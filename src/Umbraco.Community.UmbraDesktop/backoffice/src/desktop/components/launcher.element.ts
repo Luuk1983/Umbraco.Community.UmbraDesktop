@@ -4,10 +4,14 @@ import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-tok
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token.js';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
 import { UMBRADESKTOP_PINNED_GROUP_ID } from '../constants.js';
-import { UmbraDesktopTileDragController } from '../launcher/tile-drag.controller.js';
+import {
+  UMBRADESKTOP_DRAG_GHOST_OFFSET_PX,
+  UMBRADESKTOP_DRAG_GHOST_TOUCH_LIFT_PX,
+  UmbraDesktopTileDragController,
+} from '../launcher/tile-drag.controller.js';
 import type { UmbraDesktopDragSource } from '../launcher/tile-drag.controller.js';
-import { dropClassFor, dropTargetAt } from '../launcher/drop-target.js';
-import type { UmbraDesktopDropTarget } from '../launcher/drop-target.js';
+import { dropClassFor, dropTargetAt, nearestGroupTarget } from '../launcher/drop-target.js';
+import type { UmbraDesktopDragAccept, UmbraDesktopDropTarget } from '../launcher/drop-target.js';
 import { applyAppDrop, applyGroupDrop } from '../launcher/apply-drop.js';
 import { resolveLauncher } from '../launcher/resolve-launcher.js';
 import { dragScroller } from '../launcher/drag-scroller.js';
@@ -31,6 +35,32 @@ import type { UmbCurrentUserModel } from '@umbraco-cms/backoffice/current-user';
 import { UMB_AUTH_CONTEXT } from '@umbraco-cms/backoffice/auth';
 
 /**
+ * A question the launcher asks its host to put to the user, as the detail of a cancelable `confirm`
+ * event. The host calls `preventDefault()` to say it will answer, then calls {@link answer} once.
+ * Unanswered, because nothing handled the event, the answer is no.
+ */
+export interface UmbraDesktopLauncherConfirm {
+  /** The dialog's heading. */
+  headline: string;
+  /** What will happen. */
+  content: string;
+  /** The label on the button that says yes. */
+  confirmLabel: string;
+  /**
+   * The user's answer.
+   * @param confirmed True for yes.
+   */
+  answer(confirmed: boolean): void;
+}
+
+/**
+ * The height, in px, the panel is held at while All apps or arrange mode is open, as a custom
+ * property on the host. Private to this element, hence no `--umbradesktop-` prefix: that namespace is
+ * the theme contract, and a theme has no business setting this.
+ */
+const HELD_HEIGHT = '--launcher-held-height';
+
+/**
  * The start-menu-style launcher panel: search, the Pinned place, the user's groups as cards of
  * icon tiles, and a footer (user, desktop settings, log out, exit). What it draws is
  * `resolveLauncher`'s view of the catalogue plus the user's changes to it (see the 2026-09-27
@@ -47,7 +77,10 @@ import { UMB_AUTH_CONTEXT } from '@umbraco-cms/backoffice/auth';
  * requests through the element that opened it, so a modal owned by the launcher loses its
  * context origin on the first click inside it, and every later `getContext` hangs forever with
  * no error at all. Instead the footer reports intent (`search`, `profile`, `settings`, `exit`)
- * and the taskbar, which lives as long as the desktop, owns the modal.
+ * and the taskbar, which lives as long as the desktop, owns the modal. The one question the
+ * launcher asks, arrange mode's Reset, goes the same way: a `confirm` event carrying
+ * {@link UmbraDesktopLauncherConfirm}, which the taskbar answers from a modal it owns while holding
+ * the launcher open under it.
  */
 @customElement('umbradesktop-launcher')
 export class UmbraDesktopLauncherElement extends UmbLitElement {
@@ -86,6 +119,10 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   @state()
   private _over?: UmbraDesktopDropTarget;
 
+  /** What the drag under way is moving, which decides how a group card shows it is the target. */
+  @state()
+  private _dragKind?: UmbraDesktopDragAccept;
+
   /** The window manager, which a launched app is handed to; the launcher opens no window itself. */
   #manager?: UmbraDesktopWindowManagerContext;
 
@@ -113,6 +150,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     commit: (result) => this.#commit(result),
     beginDrag: (e, source) => this.#drag.begin(e, source),
     done: () => void this.#setMode('launcher'),
+    confirm: (question) => this.#confirm(question),
   });
 
   /**
@@ -120,9 +158,11 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
    * shadow root and a drop means the same thing in both.
    */
   #drag = new UmbraDesktopTileDragController(() => this.shadowRoot, {
-    targetAt: (x, y, source) =>
-      this.shadowRoot ? this.#accepted(source, dropTargetAt(this.shadowRoot, x, y, source.kind)) : undefined,
-    onStart: () => (this._dragging = true),
+    targetAt: (x, y, source) => (this.shadowRoot ? this.#targetAt(this.shadowRoot, x, y, source) : undefined),
+    onStart: (source) => {
+      this._dragging = true;
+      this._dragKind = source.kind;
+    },
     onOver: (target) => (this._over = target),
     onDrop: (source, target) =>
       this.#commit(
@@ -133,6 +173,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     onEnd: () => {
       this._dragging = false;
       this._over = undefined;
+      this._dragKind = undefined;
     },
     // Whichever element the active theme lets scroll, not always the body: a theme may keep part
     // of the panel fixed and scroll an inner element instead, as Umbraco 4 does with its fixed
@@ -191,6 +232,24 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   }
 
   /**
+   * What a drag over a point would drop on. A group over no group card, or over Pinned where no
+   * group can go, lands beside the nearest group instead, so the bar showing where it lands does not
+   * go out between two cards or above the first one (see `nearestGroupTarget`).
+   * @param root This element's shadow root.
+   * @param x The pointer's client x.
+   * @param y The pointer's client y.
+   * @param source What is being dragged.
+   * @returns The target, or `undefined` for none.
+   */
+  #targetAt(root: ShadowRoot, x: number, y: number, source: UmbraDesktopDragSource): UmbraDesktopDropTarget | undefined {
+    const hit = dropTargetAt(root, x, y, source.kind);
+    if (source.kind === 'group' && (!hit || (hit.kind === 'group' && hit.groupId === UMBRADESKTOP_PINNED_GROUP_ID))) {
+      return nearestGroupTarget(root, x, y, [UMBRADESKTOP_PINNED_GROUP_ID, source.groupId]);
+    }
+    return this.#accepted(source, hit);
+  }
+
+  /**
    * The drop target, unless dropping this source there would be refused anyway, in which case the
    * pointer is over nothing: a highlight has to mean the drop will land. A group cannot go into
    * Pinned or onto itself, and a palette app dropped back on the palette is not a removal.
@@ -203,6 +262,44 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     if (source.kind === 'app') return source.fromPalette && target.kind === 'palette' ? undefined : target;
     const refused = target.kind === 'group' && (target.groupId === UMBRADESKTOP_PINNED_GROUP_ID || target.groupId === source.groupId);
     return refused ? undefined : target;
+  }
+
+  /**
+   * Whether the launcher should stay open when a pointer goes down outside it or focus leaves for a
+   * window. True while arranging: a missed click there closed the whole launcher and dropped the user
+   * out of the mode, and Done is the way out of it. Nothing is lost either way, since every edit is
+   * stored as it is made, so the hold is about not being thrown out rather than about saving work.
+   * @returns True while in arrange mode.
+   */
+  get holdsOpen(): boolean {
+    return this._mode === 'arrange';
+  }
+
+  /**
+   * Step back one level, which is what Escape does: from All apps or arrange mode to the launcher.
+   * The taskbar asks this first and closes the launcher only when there is nowhere to step back to.
+   * @returns True when it stepped back, false when it was already showing the launcher.
+   */
+  back(): boolean {
+    if (this._mode === 'launcher') return false;
+    void this.#setMode('launcher');
+    return true;
+  }
+
+  /**
+   * Ask the taskbar to put a question to the user, in a modal the taskbar owns (see the class
+   * comment for why this element never opens one itself).
+   * @param question What to ask.
+   * @returns The answer; no when nothing handled the request.
+   */
+  #confirm(question: Omit<UmbraDesktopLauncherConfirm, 'answer'>): Promise<boolean> {
+    return new Promise((resolve) => {
+      const event = new CustomEvent<UmbraDesktopLauncherConfirm>('confirm', {
+        cancelable: true,
+        detail: { ...question, answer: resolve },
+      });
+      if (this.dispatchEvent(event)) resolve(false);
+    });
   }
 
   /** Launch an app and let the taskbar know so it can close the launcher. */
@@ -255,6 +352,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
    */
   async #setMode(mode: UmbraDesktopLauncherMode) {
     const from = this._mode;
+    if (from === 'launcher' && mode !== 'launcher') this.style.setProperty(HELD_HEIGHT, `${this.getBoundingClientRect().height}px`);
     if (mode === 'drawer') this.#drawer.reset();
     if (mode === 'arrange') this.#arrange.reset();
     this._mode = mode;
@@ -265,12 +363,40 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   }
 
   /**
-   * Arrange mode puts focus where its last action asked, once the result has rendered.
+   * Mark the host while arranging, so the theme's arrange width applies (see the `:host([arranging])`
+   * rule). Before the render rather than after, so the first frame of arrange mode is already wide.
+   * @param changed The properties about to update.
+   */
+  override willUpdate(changed: Map<PropertyKey, unknown>) {
+    super.willUpdate(changed);
+    this.toggleAttribute('arranging', this._mode === 'arrange');
+  }
+
+  /**
+   * Arrange mode puts focus where its last action asked, once the result has rendered. Then the
+   * panel's height is held, see {@link #holdHeight}.
    * @param changed The properties that changed in this update.
    */
   override updated(changed: Map<PropertyKey, unknown>) {
     super.updated(changed);
     if (this._mode === 'arrange') this.#arrange.afterRender();
+    this.#holdHeight();
+  }
+
+  /**
+   * Keep the panel from shrinking while All apps or arrange mode is open. Its height follows its
+   * content, so every letter a filter took away made the panel jump shorter, and so did opening
+   * All apps from a launcher taller than the list. It may grow, and the hold grows with it; it never
+   * shrinks until the launcher is back, which lets go. Held as a minimum rather than a height, and
+   * capped in CSS by the panel's maximum, so a window made smaller still shrinks it.
+   */
+  #holdHeight(): void {
+    if (this._mode === 'launcher') {
+      this.style.removeProperty(HELD_HEIGHT);
+      return;
+    }
+    const height = this.getBoundingClientRect().height;
+    if (height > (parseFloat(this.style.getPropertyValue(HELD_HEIGHT)) || 0)) this.style.setProperty(HELD_HEIGHT, `${height}px`);
   }
 
   /** Ask the taskbar to open the native backoffice search modal. */
@@ -487,6 +613,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
           arrangement: this.#arrangement,
           view,
           over: this._over,
+          dragging: this._dragKind,
           label: (label) => this.#label(label),
         })}
         ${this.#renderFooter()}
@@ -502,10 +629,12 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
           <span>${this.localize.term('umbraDesktop_search')}</span>
         </button>
         <button class="ctl all-apps" @click=${() => this.#setMode('drawer')}>
+          <umb-icon name="icon-thumbnails-small"></umb-icon>
           <span>${this.localize.term('umbraDesktop_allApps')}</span>
         </button>
+        <!-- Layout blocks rather than the grip, which is what a group's drag handle shows. -->
         <button class="ctl arrange" @click=${() => this.#setMode('arrange')}>
-          <umb-icon name="icon-grip"></umb-icon>
+          <umb-icon name="icon-layout-masonry"></umb-icon>
           <span>${this.localize.term('umbraDesktop_arrange')}</span>
         </button>
         ${pinTarget ? this.#renderPinTarget() : ''}
@@ -540,6 +669,9 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
            They exist so a future theme can turn this panel into a fullscreen blurred surface. */
         height: var(--umbradesktop-launcher-height, auto);
         max-height: var(--umbradesktop-launcher-max-height, calc(100vh - 66px));
+        /* The height held while All apps or arrange mode is open (see holdHeight), never more than
+           the maximum, so a smaller window still wins. */
+        min-height: min(var(${unsafeCSS(HELD_HEIGHT)}, 0px), var(--umbradesktop-launcher-max-height, calc(100vh - 66px)));
         overflow: hidden;
         /* Light-grey canvas so the white group cards read as distinct "boxes". */
         background: var(
@@ -552,6 +684,15 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         border-radius: var(--umbradesktop-launcher-radius, var(--uui-border-radius, 3px));
         box-shadow: var(--umbradesktop-launcher-shadow, var(--uui-shadow-depth-4));
         color: var(--umbradesktop-launcher-text, var(--uui-color-text));
+      }
+      /* Arrange mode's own width, for a theme whose launcher is too narrow for the palette to sit
+         beside the layout (a Start menu list, say): see arrangeWidthFor in launcher/geometry.ts.
+         Unset, arrange mode keeps the launcher's width. */
+      :host([arranging]) {
+        width: var(
+          --umbradesktop-launcher-arrange-width,
+          var(--umbradesktop-launcher-width, min(${unsafeCSS(UMBRADESKTOP_LAUNCHER_DEFAULT_WIDTH)}px, 92vw))
+        );
       }
       .search {
         flex: 1;
@@ -575,6 +716,15 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       }
       .search:hover {
         border-color: var(--umbradesktop-launcher-border-emphasis, var(--uui-color-border-emphasis, var(--uui-color-border)));
+      }
+      /* One line, ending in an ellipsis where the row is short of room, rather than wrapping: the
+         field shares its row with All apps and Arrange, and a placeholder wrapped onto three to five
+         lines made the whole row that tall. */
+      .search span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .search umb-icon {
         flex-shrink: 0;
@@ -784,12 +934,20 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       [data-lifted] {
         opacity: 0.35;
       }
-      /* The copy that follows the pointer. Fixed, centred on the pointer, and out of hit-testing so
-         the drop target underneath it is what the pointer finds. The drag shows it in the top layer
-         as a popover, so a theme that blurs this panel cannot become its containing block or clip
-         it; the resets below undo the browser's popover styles (centred with margin: auto over the
-         whole viewport, with a border, padding and its own colours) so it still looks like the tile
-         and sits where left and top put it. */
+      /* While a drag is under way the pressed element holds the pointer, so its cursor is the one
+         shown: the four arrows Umbraco uses for moving things around. */
+      [data-lifted] {
+        cursor: move;
+      }
+      /* The icon that follows the pointer: the pressed tile's icon alone, beside the pointer rather
+         than under it, so the landing bar the user is steering by stays in sight; above a finger
+         instead, which would cover it. Out of hit-testing so the drop target underneath is what the
+         pointer finds. The drag shows it in the top layer as a popover, so a theme that blurs this
+         panel cannot become its containing block or clip it; the resets below undo the browser's
+         popover styles (centred with margin: auto over the whole viewport, with a border, padding,
+         a background and its own colours) so it sits where left and top put it. Its shadow is a
+         drop shadow, which follows the icon's outline where a box shadow would draw the square the
+         icon sits in. */
       .drag-ghost {
         position: fixed;
         z-index: 1000;
@@ -798,12 +956,15 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         padding: 0;
         border: 0;
         overflow: visible;
-        color: inherit;
+        background: transparent;
+        color: var(--umbradesktop-launcher-text, var(--uui-color-text));
+        font-size: 28px;
         pointer-events: none;
-        transform: translate(-50%, -50%) rotate(-3deg);
-        background: var(--umbradesktop-launcher-card-background, var(--uui-color-surface));
-        border-radius: var(--uui-border-radius, 3px);
-        box-shadow: var(--umbradesktop-launcher-ghost-shadow, var(--uui-shadow-depth-3));
+        transform: translate(${unsafeCSS(UMBRADESKTOP_DRAG_GHOST_OFFSET_PX)}px, ${unsafeCSS(UMBRADESKTOP_DRAG_GHOST_OFFSET_PX)}px);
+        filter: drop-shadow(var(--umbradesktop-launcher-ghost-shadow, 0 4px 12px rgba(0, 0, 0, 0.3)));
+      }
+      .drag-ghost[data-pointer='touch'] {
+        transform: translate(-50%, calc(-100% - ${unsafeCSS(UMBRADESKTOP_DRAG_GHOST_TOUCH_LIFT_PX)}px));
       }
       /* Where a drop lands: a highlighted card, or a bar before or after a tile. */
       .card.drop,

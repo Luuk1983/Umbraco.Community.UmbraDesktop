@@ -1,5 +1,4 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
-import { UMBRADESKTOP_PINNED_GROUP_ID } from '../../../constants.js';
 import {
   U4_EDGE,
   U4_EDGE_STRONG,
@@ -29,12 +28,6 @@ const ARRANGE_ROW_INSET_PX = 4;
 
 /** The width of the dashed edge that marks an arrange row as movable. */
 const ARRANGE_ROW_BORDER_PX = 1;
-
-/**
- * The copy of a lifted tree row, which follows the pointer outside the tree: any drag ghost except
- * one lifted from Favourites, whose orb grid is a column layout to begin with.
- */
-const TREE_ROW_GHOST = unsafeCSS(`.drag-ghost:not([data-group='${UMBRADESKTOP_PINNED_GROUP_ID}'])`);
 
 /**
  * The launcher, as **both halves** of the Umbraco 4 backoffice rather than one of them stretched.
@@ -265,13 +258,11 @@ export default css`
     gap: 0;
     padding: 2px 0 3px;
   }
-  /* The row geometry is written once for the three things drawn as a tree row: a row in the tree,
-     an arrange tile, which is a tree row too and restates only its padding further down, and the
-     copy of a row that follows the pointer during a drag, which is drawn outside the tree and so
-     outside the reach of the tree's own selectors. One list, so the three cannot drift apart. */
+  /* The row geometry is written once for the two things drawn as a tree row: a row in the tree, and
+     an arrange tile, which is a tree row too and restates only its padding further down. One list,
+     so the two cannot drift apart. */
   .cards .card .launch,
-  .tile.arr,
-  ${TREE_ROW_GHOST} .launch {
+  .tile.arr {
     flex-direction: row;
     align-items: center;
     gap: 7px;
@@ -282,14 +273,12 @@ export default css`
   /* Flat tree icons, not orbs — the gloss belongs to Favourites alone, and twenty-five orbs is
      the thing this split exists to avoid. */
   .cards .card .launch umb-icon,
-  .tile.arr umb-icon,
-  ${TREE_ROW_GHOST} .launch umb-icon {
+  .tile.arr umb-icon {
     flex-shrink: 0;
     font-size: 15px;
   }
   .cards .card .tlb,
-  .tile.arr .tlb,
-  ${TREE_ROW_GHOST} .tlb {
+  .tile.arr .tlb {
     -webkit-line-clamp: 1;
     min-height: 0;
     flex: 1 1 auto;
@@ -448,21 +437,6 @@ export default css`
   .cards .tile.drop-after::after,
   .tile.arr.drop-after::after {
     bottom: -2px;
-  }
-  /* The copy under the pointer is drawn outside the tree, so the tree's scoped rules do not reach
-     it and a tree row would follow the pointer as a base column tile as wide as the row. The shared
-     row rule in the tree section lists it for that reason; this draws it as a selected tree row. A
-     Favourites tile is lifted from the orb grid, where it is a column already, so it is left as
-     one. It is no wider than what it shows: the drag gives the copy the width of the row it was
-     lifted from, which is the whole tree, and a copy that wide covers the remove pane's text it is
-     being dragged to. A maximum rather than a width, so it can only ever shrink the copy. */
-  .drag-ghost {
-    max-width: max-content;
-    border-radius: 0;
-    background: ${unsafeCSS(U4_SELECT)};
-    box-shadow:
-      inset 0 0 0 1px ${unsafeCSS(U4_SELECT_LINE)},
-      var(--umbradesktop-launcher-ghost-shadow, 0 4px 12px rgba(25, 35, 50, 0.3));
   }
   /* New group is one more row at the foot of the tree, under a line like the group strips. The
      tree's card rule outranks a bare selector, so this one is scoped to it. */

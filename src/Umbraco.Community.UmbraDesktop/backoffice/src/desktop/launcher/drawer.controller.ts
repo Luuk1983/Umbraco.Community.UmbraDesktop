@@ -5,8 +5,8 @@ import type { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
 /**
  * Escape in a filter field: with text in it, clear the text and stop the key there; empty, let it
- * through, so the taskbar closes the launcher exactly as Escape does anywhere else. One press undoes
- * the typing rather than throwing the whole panel away with it, and a second press still gets out.
+ * through, so the taskbar steps back a level exactly as Escape does anywhere else. One press undoes
+ * the typing rather than throwing the whole view away with it, and a second press still gets out.
  * Shared by the drawer's filter and the palette's.
  * @param e The key event.
  * @param clear Empties the filter and redraws.

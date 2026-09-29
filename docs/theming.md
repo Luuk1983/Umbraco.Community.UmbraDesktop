@@ -295,7 +295,7 @@ prefix is for:
 | `control-*` | The window buttons: width, glyph colour, hover fills, and close's own hover pair |
 | `taskbar-*` | The bar itself: height, reserve, margin, radius, background (plus an opaque fallback), backdrop filter, top border, shadow, two text colours |
 | `start-*`, `task-*` | The buttons inside the bar: hover and active fills, and the running-window marker |
-| `launcher-*` | The panel: geometry, background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills, the All apps/Arrange controls' own rest, border, text and active fills, the drawer's letter headings, muted text for a group handle and the like, the drop target and insertion slot, the drag ghost's shadow, the remove pane and the arrange banner, and the palette's divider |
+| `launcher-*` | The panel: geometry (including its width in arrange mode), background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills, the All apps/Arrange controls' own rest, border, text and active fills, the drawer's letter headings, muted text for a group handle and the like, the drop target and insertion slot, the drag ghost's shadow, the remove pane and the arrange banner, and the palette's divider |
 | `path-*` | The path strip under a section window's caption: its height, padding, background, bottom border, text and link colours, the hover fill behind a crumb, the separator's colour and the strip's font size |
 | `snap-ghost-*` | The outline showing where a window dragged into a desktop edge will land: its fill, its border shorthand and its corner radius. It stands in for the window that is about to be there, so the obvious value for the radius is your own `window-radius`, and Windows 98 shows what to do when your design has no translucency to lend it |
 | `notice-*` | The overwrite guard: the titlebar marker and taskbar badge colours at `info`/`warning`/`error`, the marker and badge sizes, and the banner's own background, text and leading-edge width |
@@ -807,17 +807,32 @@ the banner, and the plus, Add all and Add group buttons still do the adding once
 it. A launcher narrower than the split minimum gets this for free; nothing in the theme has to ask
 for it.
 
+That fallback works, but switching between the layout and the palette to move things across is
+the least pleasant way to arrange, so a narrow theme should rather widen in arrange mode. Set
+`--umbradesktop-launcher-arrange-width` in the palette: the launcher takes that width while
+arranging and goes back to `--umbradesktop-launcher-width` on Done. Derive it with
+`arrangeWidthFor(yourWidth, chrome)` from `launcher/geometry.ts`, which gives your width plus the
+palette's and never less than the split minimum plus `chrome`, the border and padding your
+launcher draws around the arrange area on both sides together. Windows 98 and Umbraco 4 both do
+this, in their `metrics.ts`, and cap it at `92vw` so a small screen still falls back to the
+stacked view. Left unset, arrange mode keeps the launcher's own width.
+
+A heading you lift with `z-index`, as Umbraco 4 does for its sticky group strips, must stay below
+5, which is where the bar showing a dragged group's landing place is drawn.
+
 A menu-row theme, one whose launcher is a single column rather than a card grid, still has to say
 where a tile's own buttons go once that tile is also a row: Windows 98 and Umbraco 4 both place
 `.tile.arr .edit` back in the row's flow, after the name, so the button sits at the row's end
 instead of pinned to a corner that no longer means anything once the tile is not a card.
 
-The drag ghost, the copy that follows the pointer while you drag, is not part of the layout it was
-lifted from. It is put in the top layer as a manual popover, so a panel with a blur or a backdrop
-filter cannot become its containing block and clip it. That also means a rule scoped under
-`.cards .card` never reaches it, on purpose: style `.drag-ghost` directly if a theme wants the copy
-to look different from the tile it came from, the way Windows 98 draws it selected rather than
-faded.
+The drag ghost, what follows the pointer while you drag, is the dragged tile's icon alone, an
+`umb-icon` with the class `drag-ghost`, drawn beside the pointer so the landing bar under it stays in
+sight. It is not part of the layout it was lifted from: it is put in the top layer as a manual
+popover, so a panel with a blur or a backdrop filter cannot become its containing block and clip it.
+That also means a rule scoped under `.cards .card` never reaches it, on purpose: style `.drag-ghost`
+directly for its size or colour. Its shadow is `launcher-ghost-shadow`, used as a CSS `drop-shadow()`
+so it follows the icon's outline, which means the token takes an offset, a blur and a colour but no
+spread; `none` turns it off, as Windows 98 does.
 
 And a theme may decide that scrolling belongs to an element other than the one the base launcher
 scrolls. The base scrolls the panel body itself, but nothing requires that: Umbraco 4 keeps its
@@ -845,7 +860,7 @@ has shipped a green test run and a red build, and the reverse.
       token — a theme can pass the first and fail the second
 - [ ] Every launcher affordance still *works*: search, All apps, Arrange, the tiles, the drag
       targets (Pinned and the remove pane), arrange mode's controls (the banner, handles, rename
-      fields, − and ⋯, Move to, the palette and the Reset confirm), the user button, Desktop
+      fields, a tile's remove and ⋯, a group's ⋯, Move to, the palette), the user button, Desktop
       settings, Exit. A theme may restyle, never remove (design §1.1). Two tests hold most of that
       for every theme: `theme/themes/launcher-controls.test.ts` renders each control under your
       palette and sheet and checks it is visible, inside the panel, legible and what a press at its

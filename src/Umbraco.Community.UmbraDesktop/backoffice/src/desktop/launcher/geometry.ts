@@ -31,3 +31,18 @@ export const UMBRADESKTOP_LAUNCHER_PALETTE_WIDTH = 300;
  */
 export const UMBRADESKTOP_LAUNCHER_SPLIT_MIN =
   UMBRADESKTOP_LAUNCHER_CARD_MIN_WIDTH + 2 * UMBRADESKTOP_LAUNCHER_BODY_PADDING + UMBRADESKTOP_LAUNCHER_PALETTE_WIDTH;
+
+/**
+ * The launcher's width in arrange mode for a theme whose own launcher is too narrow for the palette
+ * to sit beside the layout, such as a Start menu list: its own width plus the palette's, so the
+ * layout keeps the width it has outside arrange mode, and never short of the split plus whatever
+ * the theme draws around the arrange area. Switching between the layout and the palette in a narrow
+ * panel was the one thing arrange mode made hard, and a theme is a look, not a size limit.
+ * @param launcherWidth The theme's launcher width, in px.
+ * @param chrome What the theme's launcher draws either side of the arrange area together (border and
+ * padding), in px, since the split is measured on the arrange area itself.
+ * @returns The width, in px.
+ */
+export function arrangeWidthFor(launcherWidth: number, chrome: number): number {
+  return Math.max(launcherWidth + UMBRADESKTOP_LAUNCHER_PALETTE_WIDTH, UMBRADESKTOP_LAUNCHER_SPLIT_MIN + chrome);
+}

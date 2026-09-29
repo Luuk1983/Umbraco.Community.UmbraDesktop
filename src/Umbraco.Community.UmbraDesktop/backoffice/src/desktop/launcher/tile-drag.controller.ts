@@ -39,6 +39,19 @@ export const UMBRADESKTOP_DRAG_SCROLL_BAND_PX = 40;
 export const UMBRADESKTOP_DRAG_SCROLL_STEP_PX = 12;
 
 /**
+ * How far, in px, the ghost sits below and right of a mouse or pen pointer. Beside the pointer
+ * rather than centred on it, because what the user is aiming at is the landing bar at the pointer,
+ * and a ghost over the pointer covered exactly that.
+ */
+export const UMBRADESKTOP_DRAG_GHOST_OFFSET_PX = 12;
+
+/**
+ * How far, in px, the ghost's bottom edge sits above a touch point, so the finger does not hide it:
+ * roughly a fingertip's height.
+ */
+export const UMBRADESKTOP_DRAG_GHOST_TOUCH_LIFT_PX = 40;
+
+/**
  * How far to scroll the scroller this frame for a pointer at a point: up in its top band, down in
  * its bottom band, and not at all anywhere else. Outside the scroller's box counts as anywhere
  * else, which is what keeps the remove pane usable: it sits just below the body, and scrolling
@@ -122,7 +135,7 @@ export interface UmbraDesktopTileDragOptions {
 interface UmbraDesktopPendingDrag {
   /** What it stands for. */
   source: UmbraDesktopDragSource;
-  /** The pressed element, which the ghost copies and which takes capture. */
+  /** The pressed element, whose icon the ghost copies and which takes capture. */
   element: HTMLElement;
   /** The pointer, so a second finger is ignored. */
   pointerId: number;
@@ -138,7 +151,7 @@ interface UmbraDesktopPendingDrag {
 
 /** A drag under way. */
 interface UmbraDesktopActiveDrag extends UmbraDesktopPendingDrag {
-  /** The copy that follows the pointer. */
+  /** The copy of the pressed element's icon that follows the pointer. */
   ghost: HTMLElement;
   /** The pointer now. */
   x: number;
@@ -272,16 +285,23 @@ export class UmbraDesktopTileDragController {
     this.cancel();
   };
 
-  /** Turn the pending press into a drag: capture, draw the ghost, tell the launcher. */
+  /**
+   * Turn the pending press into a drag: capture, draw the ghost, tell the launcher.
+   *
+   * The ghost is the pressed element's icon alone, not a copy of the whole tile: a tile's card,
+   * label and all covered the tiles around the pointer, and with them the landing bar the user was
+   * steering by. Something with no icon of its own is copied whole. `data-pointer` tells the
+   * launcher's CSS which side of the pointer to draw it on.
+   */
   #start(): void {
     const pending = this.#pending;
     const root = this.#root();
     if (!pending || !root) return;
-    const box = pending.element.getBoundingClientRect();
-    const ghost = pending.element.cloneNode(true) as HTMLElement;
+    const icon = pending.element.querySelector('umb-icon');
+    const ghost = (icon ?? pending.element).cloneNode(true) as HTMLElement;
     ghost.classList.add('drag-ghost');
     ghost.removeAttribute('data-drop');
-    ghost.style.width = `${box.width}px`;
+    ghost.dataset.pointer = pending.pointerType === 'touch' ? 'touch' : 'mouse';
     root.appendChild(ghost);
     showInTopLayer(ghost);
     pending.element.toggleAttribute('data-lifted', true);

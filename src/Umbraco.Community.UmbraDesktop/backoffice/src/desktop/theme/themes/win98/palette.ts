@@ -3,6 +3,7 @@ import {
   WIN98_PATH_HEIGHT,
   WIN98_CONTROL_WIDTH,
   WIN98_LAUNCHER_TOP_CLEARANCE,
+  WIN98_LAUNCHER_ARRANGE_WIDTH,
   WIN98_LAUNCHER_WIDTH,
   WIN98_TASKBAR_HEIGHT,
   WIN98_TITLEBAR_HEIGHT,
@@ -189,6 +190,7 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-start-hover-background': WIN98_FACE,
   '--umbradesktop-start-active-background': WIN98_FACE,
   '--umbradesktop-launcher-width': `${WIN98_LAUNCHER_WIDTH}px`,
+  '--umbradesktop-launcher-arrange-width': `min(${WIN98_LAUNCHER_ARRANGE_WIDTH}px, 92vw)`,
   // Hard against the left edge, directly above the bar, the way the Start menu opens.
   '--umbradesktop-launcher-left': '0',
   '--umbradesktop-launcher-max-height': `calc(100vh - ${WIN98_TASKBAR_HEIGHT + WIN98_LAUNCHER_TOP_CLEARANCE}px)`,

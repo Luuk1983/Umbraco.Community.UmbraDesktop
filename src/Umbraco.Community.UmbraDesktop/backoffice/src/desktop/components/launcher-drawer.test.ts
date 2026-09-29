@@ -119,5 +119,42 @@ it('clears the filter on Escape without closing the launcher, and lets Escape th
   await mount.settle();
   expect(mount.root.querySelector<HTMLInputElement>('.drawer-filter')!.value).to.equal('');
   expect(sections(mount.root).length, 'the whole list is back').to.equal(3);
-  expect(escapeReachesDocument(mount.root.querySelector<HTMLInputElement>('.drawer-filter')!), 'Escape on an empty filter closes the launcher as before').to.equal(true);
+  expect(escapeReachesDocument(mount.root.querySelector<HTMLInputElement>('.drawer-filter')!), 'Escape on an empty filter goes on to the taskbar, which steps back').to.equal(true);
+});
+
+it('keeps its height while the filter narrows the list', async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await openDrawer();
+  const before = mount.launcher.getBoundingClientRect().height;
+  const filter = mount.root.querySelector<HTMLInputElement>('.drawer-filter')!;
+  filter.value = 'med';
+  filter.dispatchEvent(new Event('input'));
+  await mount.settle();
+  expect(sections(mount.root).length, 'the filter did narrow the list').to.equal(1);
+  expect(mount.launcher.getBoundingClientRect().height).to.be.closeTo(before, 0.5);
+  filter.value = 'nothing like this';
+  filter.dispatchEvent(new Event('input'));
+  await mount.settle();
+  expect(mount.launcher.getBoundingClientRect().height).to.be.closeTo(before, 0.5);
+});
+
+it('is no shorter than the launcher it opened from, and lets go of that height on the way back', async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await mountLauncher({ apps: APPS, groups: GROUPS, pinned: ['Logs'] });
+  const launcher = mount.launcher.getBoundingClientRect().height;
+  mount.root.querySelector<HTMLElement>('.ctl.all-apps')!.click();
+  await mount.settle();
+  expect(mount.launcher.getBoundingClientRect().height).to.be.at.least(launcher - 0.5);
+  mount.root.querySelector<HTMLElement>('.ctl.back')!.click();
+  await mount.settle();
+  expect(mount.launcher.style.getPropertyValue('--launcher-held-height')).to.equal('');
+});
+
+it('steps back to the launcher, with focus on All apps', async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await openDrawer();
+  expect(mount.launcher.back()).to.equal(true);
+  await mount.settle();
+  expect(mount.root.querySelectorAll('.drawer').length).to.equal(0);
+  expect((mount.root.activeElement as HTMLElement | null)?.className ?? '').to.contain('all-apps');
 });

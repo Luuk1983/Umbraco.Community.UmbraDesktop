@@ -84,3 +84,12 @@ it('launches an app when its tile is clicked', async function () {
   mount.root.querySelector<HTMLElement>('.tile[data-alias="media"] .launch')!.click();
   expect(mount.launched.map((a) => a.alias)).to.deep.equal(['media']);
 });
+
+it("gives All apps the grid of dots and Arrange the layout blocks, not the group handle's grip", async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await mountLauncher({ apps: APPS, groups: GROUPS });
+  const icon = (selector: string) => mount!.root.querySelector(`${selector} umb-icon`)?.getAttribute('name');
+  expect(icon('.hdr .ctl.all-apps')).to.equal('icon-thumbnails-small');
+  // The grip is what a group's drag handle shows in arrange mode, so on the button it read as a handle.
+  expect(icon('.hdr .ctl.arrange')).to.equal('icon-layout-masonry');
+});

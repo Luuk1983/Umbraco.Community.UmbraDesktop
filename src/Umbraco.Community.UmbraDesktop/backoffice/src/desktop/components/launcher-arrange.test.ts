@@ -1,6 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { dragOnto, mountLauncher, stubApp } from './launcher.test-helper.js';
 import type { UmbraDesktopLauncherMount } from './launcher.test-helper.js';
+import type { UmbraDesktopLauncherConfirm } from './launcher.element.js';
 import { UMBRADESKTOP_LAUNCHER_DEFAULT_WIDTH, UMBRADESKTOP_LAUNCHER_SPLIT_MIN } from '../launcher/geometry.js';
 
 /**
@@ -122,7 +123,7 @@ function moveFocus(m: UmbraDesktopLauncherMount, to: HTMLElement): void {
 
 /**
  * Press Escape on an element and report whether the key got as far as the document, which is where
- * the taskbar listens for it to close the whole launcher.
+ * the taskbar listens for it to step back a level or close the launcher.
  * @param element Where the key is pressed.
  * @returns True when the Escape reached the document.
  */
@@ -149,7 +150,7 @@ it('puts focus on Done when arrange mode opens, since the Arrange button it came
   expect(focusedClass(mount)).to.contain('done');
 });
 
-it('removes an app with its − button, and adds it back from the palette with +', async function () {
+it('removes an app with its remove button, and adds it back from the palette with +', async function () {
   this.timeout(TIMEOUT_MS);
   mount = await arranging();
   $(mount, '.tile.arr[data-alias="profiling"] .rm').click();
@@ -273,17 +274,95 @@ it('moves a group with the arrow keys on its handle', async function () {
   expect(arranged(mount).map(([id]) => id)).to.deep.equal(['diagnostics', 'editing']);
 });
 
-it('asks before Reset, and Reset keeps the pins', async function () {
+/**
+ * Press Reset and catch the confirm the launcher asks its host to show, since the launcher opens no
+ * modal itself (see `launcher-events.test.ts`).
+ * @param m The mount.
+ * @returns The request, or `undefined` when none was made.
+ */
+async function pressReset(m: UmbraDesktopLauncherMount): Promise<UmbraDesktopLauncherConfirm | undefined> {
+  let request: UmbraDesktopLauncherConfirm | undefined;
+  const listener = (e: Event) => {
+    // Claimed, as the taskbar does, or the launcher takes the silence for a no.
+    e.preventDefault();
+    request = (e as CustomEvent<UmbraDesktopLauncherConfirm>).detail;
+  };
+  m.launcher.addEventListener('confirm', listener);
+  $(m, '.ctl.reset').click();
+  m.launcher.removeEventListener('confirm', listener);
+  await m.settle();
+  return request;
+}
+
+it('asks its host to confirm Reset, and Reset keeps the pins', async function () {
   this.timeout(TIMEOUT_MS);
   mount = await arranging({ pinned: ['logs'] });
   $(mount, '.tile.arr[data-alias="profiling"] .rm').click();
   await mount.settle();
-  $(mount, '.ctl.reset').click();
-  await mount.settle();
-  expect(mount.writes[mount.writes.length - 1]?.layout).to.not.equal(undefined);
-  $(mount, '.ctl.reset-yes').click();
+  const request = await pressReset(mount);
+  expect(request?.headline).to.equal('umbraDesktop_arrangeResetHeadline');
+  expect(request?.confirmLabel).to.equal('umbraDesktop_arrangeReset');
+  expect(mount.writes[mount.writes.length - 1]?.layout, 'nothing is reset before the answer').to.not.equal(undefined);
+  request!.answer(true);
   await mount.settle();
   expect(mount.writes[mount.writes.length - 1]).to.deep.equal({ pinned: ['logs'], layout: undefined });
+});
+
+it('changes nothing when Reset is declined, and draws no confirm of its own', async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await arranging();
+  const request = await pressReset(mount);
+  expect(count(mount, '[role="alertdialog"]')).to.equal(0);
+  expect(count(mount, '.banner .ctl.reset')).to.equal(1);
+  request!.answer(false);
+  await mount.settle();
+  expect(mount.writes.length).to.equal(0);
+});
+
+it('steps back from arrange mode to the launcher, with focus on Arrange', async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await arranging();
+  expect(mount.launcher.back()).to.equal(true);
+  await mount.settle();
+  expect(count(mount, '.banner')).to.equal(0);
+  expect(focusedClass(mount)).to.contain('arrange');
+  expect(mount.launcher.back(), 'the launcher itself has nothing to step back to').to.equal(false);
+});
+
+it('holds the launcher open against an outside press while arranging, and only then', async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await arranging();
+  expect(mount.launcher.holdsOpen).to.equal(true);
+  $(mount, '.ctl.done').click();
+  await mount.settle();
+  expect(mount.launcher.holdsOpen).to.equal(false);
+});
+
+it('uses one icon for taking something off the launcher, an app or a group', async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await arranging();
+  const app = mount.root.querySelector('.tile.arr .rm umb-icon')?.getAttribute('name');
+  const group = mount.root.querySelector('.agroup .gdel umb-icon')?.getAttribute('name');
+  expect(app).to.equal('icon-trash');
+  expect(group).to.equal('icon-trash');
+});
+
+it('shows a + on the palette buttons that add a whole category', async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await arranging();
+  $(mount, '.agroup[data-group="diagnostics"] .gdel').click();
+  await mount.settle();
+  expect(count(mount, '.addall[data-addall="diagnostics"] svg')).to.equal(1);
+});
+
+it('shows the move cursor on everything that drags, as Umbraco does', async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await arranging({ launcherWidth: IN_VIEWPORT_WIDTH });
+  $(mount, '.tile.arr[data-alias="profiling"] .rm').click();
+  await mount.settle();
+  for (const selector of ['.tile.arr', '.handle', '.prow']) {
+    expect(getComputedStyle($(mount, selector)).cursor, selector).to.equal('move');
+  }
 });
 
 it('goes back to normal mode on Done, with focus on Arrange', async function () {
@@ -332,6 +411,7 @@ describe('the container query (design D12)', () => {
     const actual = m.root.querySelector<HTMLElement>('.arrange-mode')!.getBoundingClientRect().width;
     if (actual !== width) {
       m.launcher.style.setProperty('--umbradesktop-launcher-width', `${2 * width - actual}px`);
+      m.launcher.style.setProperty('--umbradesktop-launcher-arrange-width', `${2 * width - actual}px`);
       await m.settle();
     }
     return m;
@@ -466,7 +546,7 @@ describe('focus after the pressed control leaves the page', () => {
     expect(focused(mount)).to.equal('tile:content');
   });
 
-  it('treats Move to > Remove like the − button', async function () {
+  it('treats Move to > Remove like the remove button', async function () {
     this.timeout(TIMEOUT_MS);
     mount = await arranging();
     $(mount, '.tile.arr[data-alias="logs"] .mv').click();
@@ -497,43 +577,6 @@ describe('focus after the pressed control leaves the page', () => {
     await mount.settle();
     await mount.settle();
     expect(focused(mount)).to.equal('handle:editing');
-  });
-
-  it('puts focus on Cancel when Reset asks, back on Reset on Cancel, and Cancel changes nothing', async function () {
-    this.timeout(TIMEOUT_MS);
-    mount = await arranging();
-    $(mount, '.ctl.reset').click();
-    await mount.settle();
-    expect(focusedClass(mount)).to.contain('reset-no');
-    expect(count(mount, '.banner[role="alertdialog"]')).to.equal(1);
-    $(mount, '.ctl.reset-no').click();
-    await mount.settle();
-    expect(focusedClass(mount).split(' ')).to.include('reset');
-    expect(count(mount, '.banner[role="alertdialog"]')).to.equal(0);
-    expect(mount.writes.length).to.equal(0);
-  });
-
-  it('cancels the Reset confirm on Escape, back on Reset, without closing the launcher', async function () {
-    this.timeout(TIMEOUT_MS);
-    mount = await arranging();
-    $(mount, '.ctl.reset').click();
-    await mount.settle();
-    const reachedDocument = escapeReachesDocument($(mount, '.ctl.reset-no'));
-    await mount.settle();
-    expect(reachedDocument).to.equal(false);
-    expect(count(mount, '.banner[role="alertdialog"]')).to.equal(0);
-    expect(focusedClass(mount).split(' ')).to.include('reset');
-    expect(mount.writes.length).to.equal(0);
-  });
-
-  it('puts focus on Done once Reset is confirmed', async function () {
-    this.timeout(TIMEOUT_MS);
-    mount = await arranging();
-    $(mount, '.ctl.reset').click();
-    await mount.settle();
-    $(mount, '.ctl.reset-yes').click();
-    await mount.settle();
-    expect(focusedClass(mount)).to.contain('done');
   });
 
   it('moves from an added palette row to the next row, and from the last one to the filter', async function () {
@@ -644,7 +687,7 @@ describe('the palette', () => {
     await mount.settle();
     expect(($(mount, '.palette-filter') as HTMLInputElement).value).to.equal('');
     expect(count(mount, '.prow[data-alias="profiling"]'), 'the palette shows everything again').to.equal(1);
-    expect(escapeReachesDocument($(mount, '.palette-filter')), 'Escape on an empty filter closes the launcher as before').to.equal(true);
+    expect(escapeReachesDocument($(mount, '.palette-filter')), 'Escape on an empty filter goes on to the taskbar, which steps back').to.equal(true);
   });
 
   it('says so when the filter matches nothing', async function () {
@@ -660,21 +703,6 @@ describe('the palette', () => {
   });
 });
 
-it('does not offer Pinned as a place for a group being dragged', async function () {
-  this.timeout(TIMEOUT_MS);
-  mount = await arranging({ launcherWidth: IN_VIEWPORT_WIDTH });
-  await startDrag(mount, $(mount, '.handle[data-handle="diagnostics"]'));
-  const pinned = $(mount, '.card.fav').getBoundingClientRect();
-  const x = pinned.left + 20;
-  const y = pinned.top + pinned.height / 2;
-  window.dispatchEvent(pointer('pointermove', x, y));
-  await mount.settle();
-  expect(count(mount, '.card.fav.drop')).to.equal(0);
-  window.dispatchEvent(pointer('pointerup', x, y));
-  await mount.settle();
-  expect(mount.writes.length).to.equal(0);
-});
-
 it('lets one card column shrink rather than scroll sideways at the narrowest split', async function () {
   this.timeout(TIMEOUT_MS);
   mount = await arranging({ launcherWidth: UMBRADESKTOP_LAUNCHER_SPLIT_MIN });
@@ -682,7 +710,7 @@ it('lets one card column shrink rather than scroll sideways at the narrowest spl
   expect(pane.scrollWidth).to.be.at.most(pane.clientWidth);
 });
 
-it('gives the − and ⋯ buttons a 24px target (WCAG 2.5.8)', async function () {
+it('gives the remove and ⋯ buttons a 24px target (WCAG 2.5.8)', async function () {
   this.timeout(TIMEOUT_MS);
   mount = await arranging();
   for (const selector of ['.tile.arr .rm', '.tile.arr .mv']) {
@@ -725,4 +753,129 @@ it('moves a focused tile forward with ArrowRight and keeps focus on it', async f
   await mount.settle();
   expect(arranged(mount)[0]).to.deep.equal(['editing', ['media', 'content']]);
   expect(focused(mount)).to.equal('tile:content');
+});
+
+describe('moving a group', () => {
+  it('shows a bar before or after the group a dragged group would land beside', async function () {
+    this.timeout(TIMEOUT_MS);
+    mount = await arranging({ launcherWidth: IN_VIEWPORT_WIDTH });
+    // The backoffice's spacing, which this runner does not load, so the cards have their real gap.
+    mount.launcher.style.setProperty('--uui-size-space-5', '18px');
+    await mount.settle();
+    await startDrag(mount, $(mount, '.handle[data-handle="diagnostics"]'));
+    const editing = $(mount, '.agroup[data-group="editing"]').getBoundingClientRect();
+    const x = editing.left + 10;
+    const y = editing.top + editing.height / 2;
+    window.dispatchEvent(pointer('pointermove', x, y));
+    await mount.settle();
+    expect(count(mount, '.agroup[data-group="editing"].drop-before')).to.equal(1);
+    expect(count(mount, '.agroup.drop'), 'a group is not dropped into a group, so no card lights up whole').to.equal(0);
+    // In the middle of the gap between the cards rather than on the card's own edge: half the gap
+    // out, less half the bar's own 2px. Across the top when the cards are stacked, down the side when
+    // they are side by side, and this width can give either.
+    const card = $(mount, '.agroup[data-group="editing"]');
+    const stacked = card.classList.contains('drop-stacked');
+    const grid = getComputedStyle(card.parentElement!);
+    const gap = parseFloat(stacked ? grid.rowGap : grid.columnGap);
+    expect(gap, 'the cards have a gap for the bar to sit in').to.be.above(0);
+    const bar = getComputedStyle(card, '::before');
+    expect(parseFloat(stacked ? bar.top : bar.left)).to.be.closeTo(-gap / 2 - 1, 0.5);
+    window.dispatchEvent(pointer('pointerup', x, y));
+    await mount.settle();
+    expect(arranged(mount).map(([id]) => id)).to.deep.equal(['diagnostics', 'editing']);
+  });
+
+  it('still lights up the whole card for an app dropped into it', async function () {
+    this.timeout(TIMEOUT_MS);
+    mount = await arranging({ launcherWidth: IN_VIEWPORT_WIDTH });
+    await startDrag(mount, arrTile(mount, 'editing', 'content'));
+    const heading = $(mount, '.agroup[data-group="diagnostics"] .gh').getBoundingClientRect();
+    const x = heading.left + 4;
+    const y = heading.top + heading.height / 2;
+    window.dispatchEvent(pointer('pointermove', x, y));
+    await mount.settle();
+    expect(count(mount, '.agroup[data-group="diagnostics"].drop')).to.equal(1);
+    window.dispatchEvent(pointer('pointerup', 0, 0));
+    await mount.settle();
+  });
+
+  /**
+   * Open a group's ⋯ menu.
+   * @param m The mount.
+   * @param groupId The group.
+   * @returns The labels of its items, as term keys.
+   */
+  async function openGroupMenu(m: UmbraDesktopLauncherMount, groupId: string): Promise<string[]> {
+    $(m, `.agroup[data-group="${groupId}"] .gh .mv`).click();
+    await m.settle();
+    await m.settle();
+    return [...m.root.querySelectorAll<HTMLElement>('.movemenu .mmi')].map((item) => item.textContent!.trim());
+  }
+
+  it('has a ⋯ menu that moves a group without dragging, offering only moves that do something', async function () {
+    this.timeout(TIMEOUT_MS);
+    mount = await arranging();
+    // Second of two: one place earlier is also the start, so only one of the two is offered.
+    expect(await openGroupMenu(mount, 'diagnostics')).to.deep.equal([
+      'umbraDesktop_arrangeMoveEarlier',
+      'umbraDesktop_arrangeDeleteGroupItem',
+    ]);
+    expect(focusedClass(mount), 'the menu opens with focus on its first item').to.contain('mmi');
+    $(mount, '.movemenu .mmi.earlier').click();
+    await mount.settle();
+    await mount.settle();
+    expect(arranged(mount).map(([id]) => id)).to.deep.equal(['diagnostics', 'editing']);
+    expect(count(mount, '.movemenu')).to.equal(0);
+    expect((mount.root.activeElement as HTMLElement | null)?.dataset.menu, 'focus follows the group to its new place').to.equal(
+      'g|diagnostics',
+    );
+  });
+
+  it('moves a group to the end from its menu', async function () {
+    this.timeout(TIMEOUT_MS);
+    mount = await arranging({ groups: [...GROUPS, { alias: 'settings', label: 'Settings', weight: 50 }], apps: [...APPS, stubApp('users', 'settings')] });
+    expect(await openGroupMenu(mount, 'editing')).to.deep.equal([
+      'umbraDesktop_arrangeMoveLater',
+      'umbraDesktop_arrangeMoveLast',
+      'umbraDesktop_arrangeDeleteGroupItem',
+    ]);
+    $(mount, '.movemenu .mmi.last').click();
+    await mount.settle();
+    expect(arranged(mount).map(([id]) => id)).to.deep.equal(['diagnostics', 'settings', 'editing']);
+  });
+
+  it('deletes a group from its menu', async function () {
+    this.timeout(TIMEOUT_MS);
+    mount = await arranging();
+    await openGroupMenu(mount, 'editing');
+    $(mount, '.movemenu .mmi.rmv').click();
+    await mount.settle();
+    expect(arranged(mount).map(([id]) => id)).to.deep.equal(['diagnostics']);
+  });
+
+  it('closes the group menu on Escape and keeps the Escape from reaching the taskbar', async function () {
+    this.timeout(TIMEOUT_MS);
+    mount = await arranging();
+    await openGroupMenu(mount, 'editing');
+    expect(escapeReachesDocument($(mount, '.movemenu .mmi'))).to.equal(false);
+    await mount.settle();
+    expect(count(mount, '.movemenu')).to.equal(0);
+    expect((mount.root.activeElement as HTMLElement | null)?.dataset.menu).to.equal('g|editing');
+  });
+});
+
+it('marks the first place for a group dragged up over Pinned, and drops it there', async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await arranging({ launcherWidth: IN_VIEWPORT_WIDTH, pinned: ['content'] });
+  await startDrag(mount, $(mount, '.handle[data-handle="diagnostics"]'));
+  const pinned = $(mount, '.card.fav').getBoundingClientRect();
+  const x = pinned.left + 20;
+  const y = pinned.top + pinned.height / 2;
+  window.dispatchEvent(pointer('pointermove', x, y));
+  await mount.settle();
+  expect(count(mount, '.agroup[data-group="editing"].drop-before')).to.equal(1);
+  expect(count(mount, '.card.fav.drop'), 'Pinned itself still takes no group').to.equal(0);
+  window.dispatchEvent(pointer('pointerup', x, y));
+  await mount.settle();
+  expect(arranged(mount).map(([id]) => id)).to.deep.equal(['diagnostics', 'editing']);
 });

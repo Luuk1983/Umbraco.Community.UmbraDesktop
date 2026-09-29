@@ -213,7 +213,7 @@ for (const theme of UMBRADESKTOP_THEMES) {
         await click('.ctl.back');
 
         await click('.ctl.arrange');
-        expectControls(mount, ['.ctl.reset', '.ctl.done', '.handle', '.rename', '.gdel', '.tile.arr .rm', '.tile.arr .mv', '.newgroup'], 'arrange mode');
+        expectControls(mount, ['.ctl.reset', '.ctl.done', '.handle', '.rename', '.gdel', '.agroup .gh .mv', '.tile.arr .rm', '.tile.arr .mv', '.newgroup'], 'arrange mode');
 
         // Side by side where the theme is wide enough; otherwise behind Add apps, which has to swap
         // the palette in for the layout and back.
@@ -244,13 +244,13 @@ for (const theme of UMBRADESKTOP_THEMES) {
           const label = tile.querySelector('.tlb')!.getBoundingClientRect();
           const icon = tile.querySelector('umb-icon')!.getBoundingClientRect();
           const [rm, mv] = ['.rm', '.mv'].map((selector) => tile.querySelector(selector)!.getBoundingClientRect());
-          for (const [name, button] of [['−', rm], ['⋯', mv]] as const) {
+          for (const [name, button] of [['remove', rm], ['⋯', mv]] as const) {
             expect(Math.min(button.width, button.height), `${alias}: ${name} is big enough to press`).to.be.at.least(MIN_TARGET_PX - EPSILON_PX);
             expect(withinX(button, box), `${alias}: ${name} stays on its own tile`).to.equal(true);
             expect(overlaps(button, label), `${alias}: ${name} keeps clear of the name`).to.equal(false);
             expect(overlaps(button, icon), `${alias}: ${name} keeps clear of the icon`).to.equal(false);
           }
-          expect(overlaps(rm, mv), `${alias}: − and ⋯ do not cover each other`).to.equal(false);
+          expect(overlaps(rm, mv), `${alias}: remove and ⋯ do not cover each other`).to.equal(false);
         }
 
         // Move to, from a group tile so it lists Pinned too: every item has to be on top of the
@@ -261,9 +261,12 @@ for (const theme of UMBRADESKTOP_THEMES) {
         $('.movemenu .mmi')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
         await mount.settle();
 
-        await click('.ctl.reset');
-        expectControls(mount, ['.ctl.reset-yes', '.ctl.reset-no'], 'the Reset confirm');
-        await click('.ctl.reset-no');
+        // A group's own menu, which opens under its heading, over the tiles of its group.
+        await click('.agroup[data-group="editing"] .gh .mv');
+        await mount.settle();
+        expectControls(mount, ['.movemenu .mmi'], 'a group menu');
+        $('.movemenu .mmi')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+        await mount.settle();
       } finally {
         mount.remove();
       }

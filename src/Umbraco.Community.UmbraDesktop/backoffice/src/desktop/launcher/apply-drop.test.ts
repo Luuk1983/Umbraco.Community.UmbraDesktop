@@ -54,12 +54,12 @@ it('drops before a tile, or after it by which half the pointer is over', () => {
 });
 
 it('appends when dropped on a group card', () => {
-  const result = applyAppDrop(INPUTS, UNTOUCHED, content, { kind: 'group', groupId: 'diagnostics', after: false })!;
+  const result = applyAppDrop(INPUTS, UNTOUCHED, content, { kind: 'group', groupId: 'diagnostics', after: false, stacked: false, gap: 0 })!;
   expect(drawn(result)[1]).to.deep.equal(['diagnostics', ['logs', 'content']]);
 });
 
 it('pins when dropped on Pinned or on a pinned tile', () => {
-  const onCard = applyAppDrop(INPUTS, UNTOUCHED, logs, { kind: 'group', groupId: UMBRADESKTOP_PINNED_GROUP_ID, after: false })!;
+  const onCard = applyAppDrop(INPUTS, UNTOUCHED, logs, { kind: 'group', groupId: UMBRADESKTOP_PINNED_GROUP_ID, after: false, stacked: false, gap: 0 })!;
   expect(onCard.pinned).to.deep.equal(['logs']);
   const onTile = applyAppDrop(INPUTS, { pinned: ['content'] }, logs, {
     kind: 'tile',
@@ -80,8 +80,8 @@ it('does nothing when a tile is dropped on itself', () => {
 });
 
 it('moves a group before or after the group it is dropped on, and ignores anything else', () => {
-  const result = applyGroupDrop(INPUTS, UNTOUCHED, 'diagnostics', { kind: 'group', groupId: 'editing', after: false })!;
+  const result = applyGroupDrop(INPUTS, UNTOUCHED, 'diagnostics', { kind: 'group', groupId: 'editing', after: false, stacked: false, gap: 0 })!;
   expect(drawn(result).map(([id]) => id)).to.deep.equal(['diagnostics', 'editing']);
-  expect(applyGroupDrop(INPUTS, UNTOUCHED, 'editing', { kind: 'group', groupId: 'editing', after: true })).to.equal(undefined);
+  expect(applyGroupDrop(INPUTS, UNTOUCHED, 'editing', { kind: 'group', groupId: 'editing', after: true, stacked: false, gap: 0 })).to.equal(undefined);
   expect(applyGroupDrop(INPUTS, UNTOUCHED, 'editing', { kind: 'remove' })).to.equal(undefined);
 });

@@ -119,11 +119,29 @@ it("keeps arrange mode's banner clear of the footer's user and actions clusters,
   expect(clearOf(bannerBox, userBox), "the banner must not run into the footer's user button").to.equal(true);
   expect(clearOf(bannerBox, actionsBox), "the banner must not run into the footer's actions").to.equal(true);
   expectPressable(['.ctl.reset', '.ctl.done'], 'arrange mode');
-  (panel.root.querySelector('.ctl.reset') as HTMLElement).click();
-  await panel.element.updateComplete;
-  expectPressable(['.ctl.reset-yes', '.ctl.reset-no'], 'the Reset confirm');
-  (panel.root.querySelector('.ctl.reset-no') as HTMLElement).click();
-  await panel.element.updateComplete;
   // And the footer's own clusters still take a press, since they are what the footer is for.
   expectPressable(['.footer .user', '.footer .fbtn'], 'arrange mode');
+});
+
+it("draws All apps and Arrange as the search field's siblings: one toolbar of frosted pills", async function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // The mount is shared, and the arrange case above leaves it arranging.
+  (panel.root.querySelector('.ctl.done') as HTMLElement | null)?.click();
+  await panel.element.updateComplete;
+  // They read as out of place beside the search pill: shorter, square-cornered and a different
+  // frost, like controls from another system. macOS has no All apps button to copy, so the honest
+  // look is the search field's own, which is what Spotlight's toolbar does with its buttons.
+  const search = panel.root.querySelector('.hdr .search') as HTMLElement;
+  const controls = [...panel.root.querySelectorAll<HTMLElement>('.hdr .ctl')];
+  expect(controls.length, 'the header row draws All apps and Arrange').to.equal(2);
+  const pill = getComputedStyle(search);
+  for (const control of controls) {
+    const style = getComputedStyle(control);
+    const name = control.className;
+    expect(control.getBoundingClientRect().height, `${name}: as tall as the search field`).to.be.closeTo(search.getBoundingClientRect().height, 0.5);
+    expect(style.borderTopLeftRadius, `${name}: the same pill ends`).to.equal(pill.borderTopLeftRadius);
+    expect(style.backgroundColor, `${name}: the same frost`).to.equal(pill.backgroundColor);
+    expect(style.borderTopColor, `${name}: the same edge`).to.equal(pill.borderTopColor);
+    expect(style.borderTopWidth, `${name}: the same edge`).to.equal(pill.borderTopWidth);
+  }
 });

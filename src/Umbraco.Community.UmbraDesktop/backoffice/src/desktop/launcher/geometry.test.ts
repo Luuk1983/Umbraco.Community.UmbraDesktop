@@ -4,6 +4,7 @@ import {
   UMBRADESKTOP_LAUNCHER_CARD_MIN_WIDTH,
   UMBRADESKTOP_LAUNCHER_PALETTE_WIDTH,
   UMBRADESKTOP_LAUNCHER_SPLIT_MIN,
+  arrangeWidthFor,
 } from './geometry';
 import { mountLauncher, stubApp } from '../components/launcher.test-helper.js';
 
@@ -35,4 +36,11 @@ it("states the body padding the launcher's CSS really draws under the backoffice
   } finally {
     mount.remove();
   }
+});
+
+it('widens a narrow theme in arrange mode by the palette, and never short of the split', () => {
+  // Umbraco 4: its own width plus the palette's is already past the split, border and all.
+  expect(arrangeWidthFor(320, 2)).to.equal(320 + UMBRADESKTOP_LAUNCHER_PALETTE_WIDTH);
+  // Windows 98: its own width plus the palette's falls short, so the split and its bevel decide.
+  expect(arrangeWidthFor(224, 6)).to.equal(UMBRADESKTOP_LAUNCHER_SPLIT_MIN + 6);
 });

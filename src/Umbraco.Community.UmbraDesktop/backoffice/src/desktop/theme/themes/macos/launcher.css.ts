@@ -57,6 +57,21 @@ export default css`
     justify-content: center;
     color: rgba(255, 255, 255, 0.85);
   }
+  /* All apps and Arrange, and Back in All apps, as the search pill's siblings: its height (the row
+     stretches them to it), its round ends, its frost and its edge, read from the same tokens so the
+     three cannot drift apart. macOS has no All apps button to copy, and the base's small rounded
+     rectangles read as controls from another system beside the pill, so the row becomes one toolbar
+     of pills, the way Spotlight's own buttons sit beside its field. */
+  .hdr .ctl {
+    padding: 0 18px;
+    border: var(--umbradesktop-launcher-card-border, 1px solid var(--uui-color-border));
+    border-radius: 999px;
+    background: var(--umbradesktop-launcher-card-background, var(--uui-color-surface));
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .hdr .ctl:hover {
+    background: var(--umbradesktop-launcher-hover-background, var(--uui-color-surface-alt));
+  }
   .body {
     align-items: center;
     padding: 6px 40px 28px;

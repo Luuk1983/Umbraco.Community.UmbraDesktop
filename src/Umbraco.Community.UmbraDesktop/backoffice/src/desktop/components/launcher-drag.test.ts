@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import { cardsOf, dragOnto, mountLauncher, stubApp } from './launcher.test-helper.js';
 import type { UmbraDesktopLauncherMount } from './launcher.test-helper.js';
 import { UMBRADESKTOP_PINNED_GROUP_ID } from '../constants.js';
+import { UMBRADESKTOP_DRAG_GHOST_OFFSET_PX } from '../launcher/tile-drag.controller.js';
 
 /** Dragging in normal mode: move, pin and remove, and nothing else (design §3.1, D6). */
 
@@ -145,6 +146,32 @@ it('keeps the ghost under the pointer when a theme blurs the panel behind it', a
   const ghosts = mount.root.querySelectorAll<HTMLElement>('.drag-ghost');
   expect(ghosts.length).to.equal(1);
   const box = ghosts[0].getBoundingClientRect();
-  expect(Math.abs(box.left + box.width / 2 - (x + 30)), 'horizontal distance from the pointer').to.be.below(4);
-  expect(Math.abs(box.top + box.height / 2 - (y + 20)), 'vertical distance from the pointer').to.be.below(4);
+  // Beside the pointer rather than under it, so the landing bar at the pointer stays in sight.
+  expect(box.left - (x + 30), 'horizontal gap from the pointer').to.be.within(0, UMBRADESKTOP_DRAG_GHOST_OFFSET_PX + 1);
+  expect(box.top - (y + 20), 'vertical gap from the pointer').to.be.within(0, UMBRADESKTOP_DRAG_GHOST_OFFSET_PX + 1);
+  at('pointerup', 0, 0, window);
+  await mount.settle();
+});
+
+it('drags only the icon, so the tile it is dropped beside stays in sight', async function () {
+  this.timeout(TIMEOUT_MS);
+  mount = await mountLauncher({ apps: APPS, groups: GROUPS });
+  const source = tile(mount, 'content');
+  const from = source.getBoundingClientRect();
+  const at = (type: string, px: number, py: number, on: EventTarget) =>
+    on.dispatchEvent(new PointerEvent(type, { clientX: px, clientY: py, pointerId: 13, pointerType: 'mouse', button: 0, bubbles: true, composed: true }));
+  at('pointerdown', from.left + 10, from.top + 10, source);
+  at('pointermove', from.left + 30, from.top + 10, window);
+  await mount.settle();
+  try {
+    const ghost = mount.root.querySelectorAll<HTMLElement>('.drag-ghost');
+    expect(ghost.length).to.equal(1);
+    expect(ghost[0].localName).to.equal('umb-icon');
+    expect(ghost[0].getAttribute('name')).to.equal('icon-box');
+    expect(getComputedStyle(ghost[0]).backgroundColor, 'no card behind the icon').to.equal('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(source).cursor, 'the tile it came from shows the move cursor').to.equal('move');
+  } finally {
+    at('pointerup', 0, 0, window);
+    await mount.settle();
+  }
 });

@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { dropClassFor, dropTargetAt } from './drop-target';
+import { dropClassFor, dropTargetAt, nearestGroupTarget } from './drop-target';
 
 /** The boards this file appended, taken out after each case. */
 const hosts: HTMLElement[] = [];
@@ -37,7 +37,7 @@ it('reads a tile, with the half the pointer is over', async () => {
 
 it("reads a group card's empty area", async () => {
   const root = await board();
-  expect(dropTargetAt(root, 300, 150, 'app')).to.deep.equal({ kind: 'group', groupId: 'editing', after: true });
+  expect(dropTargetAt(root, 300, 150, 'app')).to.deep.equal({ kind: 'group', groupId: 'editing', after: true, stacked: true, gap: 0 });
 });
 
 it('reads the remove pane, and nothing where there is no target', async () => {
@@ -48,7 +48,7 @@ it('reads the remove pane, and nothing where there is no target', async () => {
 
 it('looks through tiles to their group when a group is being dragged', async () => {
   const root = await board();
-  expect(dropTargetAt(root, 30, 30, 'group')).to.deep.equal({ kind: 'group', groupId: 'editing', after: false });
+  expect(dropTargetAt(root, 30, 30, 'group')).to.deep.equal({ kind: 'group', groupId: 'editing', after: false, stacked: true, gap: 0 });
 });
 
 it('names the highlight a tile or a card gets from the target under the pointer', () => {
@@ -57,7 +57,71 @@ it('names the highlight a tile or a card gets from the target under the pointer'
   expect(dropClassFor({ ...overTile, after: false }, 'editing', 'media')).to.equal('drop-before');
   expect(dropClassFor(overTile, 'editing', 'content')).to.equal('');
   expect(dropClassFor(overTile, 'editing')).to.equal('drop');
-  expect(dropClassFor({ kind: 'group', groupId: 'editing', after: false }, 'editing')).to.equal('drop');
+  expect(dropClassFor({ kind: 'group', groupId: 'editing', after: false, stacked: false, gap: 0 }, 'editing')).to.equal('drop');
   expect(dropClassFor({ kind: 'remove' }, 'editing')).to.equal('');
   expect(dropClassFor(undefined, 'editing')).to.equal('');
+});
+
+it('reads groups laid out side by side by the half across, and stacked ones by the half down', async () => {
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed; left:0; top:0;';
+  document.body.appendChild(host);
+  hosts.push(host);
+  const root = host.attachShadow({ mode: 'open' });
+  // Two cards side by side, each far taller than wide in neither direction, so only the layout
+  // around them can say which way the next one lies.
+  root.innerHTML = `
+    <div style="display:grid; grid-template-columns:200px 200px; column-gap:20px; row-gap:8px;">
+      <div data-drop="group" data-group="a" style="height:200px;"></div>
+      <div data-drop="group" data-group="b" style="height:200px;"></div>
+    </div>`;
+  // The gap is the grid's own, across for cards side by side, so the bar can sit in its middle.
+  expect(dropTargetAt(root, 150, 20, 'group')).to.deep.equal({ kind: 'group', groupId: 'a', after: true, stacked: false, gap: 20 });
+  expect(dropTargetAt(root, 50, 180, 'group')).to.deep.equal({ kind: 'group', groupId: 'a', after: false, stacked: false, gap: 20 });
+});
+
+it('marks where a dragged group lands with a bar before or after the card, not the card itself', () => {
+  const beside = { kind: 'group' as const, groupId: 'editing', after: false, stacked: false, gap: 0 };
+  expect(dropClassFor(beside, 'editing', undefined, 'group')).to.equal('drop-before');
+  expect(dropClassFor({ ...beside, after: true }, 'editing', undefined, 'group')).to.equal('drop-after');
+  expect(dropClassFor({ ...beside, stacked: true }, 'editing', undefined, 'group')).to.equal('drop-before drop-stacked');
+  expect(dropClassFor(beside, 'other', undefined, 'group')).to.equal('');
+  expect(dropClassFor(beside, 'editing', undefined, 'app'), 'an app still lights the whole card').to.equal('drop');
+});
+
+describe('the nearest group, for a dragged group over no card', () => {
+  /**
+   * A pane with Pinned above two stacked groups and a 10px gap between them, like a menu-row theme.
+   * @returns The shadow root.
+   */
+  function pane(): ShadowRoot {
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed; left:0; top:0;';
+    document.body.appendChild(host);
+    hosts.push(host);
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = `
+      <div class="layout-pane" style="width:300px; height:400px;">
+        <div data-drop="group" data-group="@pinned" style="height:80px;"></div>
+        <div class="cards" style="display:grid; row-gap:10px;">
+          <div data-drop="group" data-group="a" style="height:100px;"></div>
+          <div data-drop="group" data-group="b" style="height:100px;"></div>
+        </div>
+      </div>`;
+    return root;
+  }
+
+  it('lands before the first group from above it, as over Pinned', () => {
+    expect(nearestGroupTarget(pane(), 50, 40, ['@pinned', 'b'])).to.deep.equal({ kind: 'group', groupId: 'a', after: false, stacked: true, gap: 10 });
+  });
+
+  it('lands beside the closer group from the gap between two', () => {
+    // 'a' ends at 180 and 'b' starts at 190: 183 is closer to 'a', whose second half it is past.
+    expect(nearestGroupTarget(pane(), 50, 183, ['@pinned'])).to.deep.equal({ kind: 'group', groupId: 'a', after: true, stacked: true, gap: 10 });
+  });
+
+  it('leaves out the groups it is told to, and finds nothing outside the pane', () => {
+    expect(nearestGroupTarget(pane(), 50, 40, ['@pinned', 'a'])).to.deep.include({ kind: 'group', groupId: 'b' });
+    expect(nearestGroupTarget(pane(), 600, 40, ['@pinned'])).to.equal(undefined);
+  });
 });

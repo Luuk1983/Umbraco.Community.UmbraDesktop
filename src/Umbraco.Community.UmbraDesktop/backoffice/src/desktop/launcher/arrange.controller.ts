@@ -3,7 +3,7 @@ import { UMBRADESKTOP_PINNED_GROUP_ID } from '../constants';
 import { filterApps } from './alphabet';
 import { escapeClearsFilter } from './drawer.controller';
 import { dropClassFor } from './drop-target';
-import type { UmbraDesktopDropTarget } from './drop-target';
+import type { UmbraDesktopDragAccept, UmbraDesktopDropTarget } from './drop-target';
 import type { UmbraDesktopDragSource } from './tile-drag.controller';
 import type { UmbraDesktopGroupLabel } from './group-labels';
 import {
@@ -27,7 +27,7 @@ import type {
   UmbraDesktopPaletteGroup,
 } from './resolve-launcher';
 import { UMBRADESKTOP_LAUNCHER_PALETTE_WIDTH, UMBRADESKTOP_LAUNCHER_SPLIT_MIN } from './geometry';
-import { css, html, live, repeat, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
+import { css, html, live, nothing, repeat, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import type { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
 /**
@@ -36,8 +36,9 @@ import type { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
  *
  * A controller rendering into the launcher's shadow root, like the drawer, so theme sheets reach it
  * and the one drag controller can hit-test it. Every edit goes through `layout-edits.ts` and is
- * handed to the launcher to store, one write per action. The launcher opens no modal, so Move to,
- * the rename field and the Reset confirm are all inline.
+ * handed to the launcher to store, one write per action. Move to and the rename field are inline.
+ * Reset asks first, in a modal the taskbar opens on the launcher's behalf, since the launcher opens
+ * no modal itself.
  */
 
 /** What arrange mode asks of the launcher, which owns storage, the drag and the mode. */
@@ -55,6 +56,12 @@ export interface UmbraDesktopArrangeActions {
   beginDrag(e: PointerEvent, source: UmbraDesktopDragSource): void;
   /** Leave arrange mode. */
   done(): void;
+  /**
+   * Put a question to the user in a modal, which the launcher asks the taskbar to open.
+   * @param question The heading, what will happen, and the label of the button that says yes.
+   * @returns The answer.
+   */
+  confirm(question: { headline: string; content: string; confirmLabel: string }): Promise<boolean>;
 }
 
 /** What arrange mode draws from, handed in on every render so handlers act on the latest. */
@@ -67,6 +74,8 @@ export interface UmbraDesktopArrangeState {
   view: UmbraDesktopLauncherView;
   /** The drop target under the pointer during a drag. */
   over?: UmbraDesktopDropTarget;
+  /** What is being dragged, which decides how a group card shows it is the target. */
+  dragging?: UmbraDesktopDragAccept;
   /**
    * A group heading's text, translated or literal. The launcher's own, so both modes name a group
    * the same way.
@@ -77,30 +86,51 @@ export interface UmbraDesktopArrangeState {
 }
 
 /**
- * The size of arrange mode's small buttons, in px: a tile's − and ⋯, a group's handle and delete, a
- * palette row's +, and the height of Add all. The WCAG 2.5.8 minimum for a pointer target.
+ * The size of arrange mode's small buttons, in px: a tile's remove and ⋯, a group's handle, ⋯ and
+ * delete, a palette row's +, and the height of Add all. The WCAG 2.5.8 minimum for a pointer target.
  */
 const EDIT_BUTTON_PX = 24;
 
 /**
- * How far a tile's − and ⋯ buttons sit in from its corners, in px. Move to opens the same distance
- * below them, so its offset is derived from both rather than typed.
+ * How far a tile's remove and ⋯ buttons sit in from its corners, in px. Move to opens the same
+ * distance below them, so its offset is derived from both rather than typed.
  */
 const EDIT_INSET_PX = 2;
 
-/** The − glyph. Chrome, like the window controls, so inline rather than an icon font. */
-const MINUS = html`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"></path></svg>`;
-
-/** The + glyph, for the same reason as the − one. */
+/**
+ * The + glyph. Chrome, like the window controls, so inline rather than an icon font: Umbraco's
+ * `icon-add` is drawn heavier than the ⋯ beside it at this size.
+ */
 const PLUS = html`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M8 3v10" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"></path></svg>`;
 
 /** The ⋯ glyph. Umbraco's icon set has no "more" icon. */
 const DOTS = html`<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1.5" fill="currentColor"></circle><circle cx="8" cy="8" r="1.5" fill="currentColor"></circle><circle cx="13" cy="8" r="1.5" fill="currentColor"></circle></svg>`;
 
 /**
+ * The key of an open menu: a tile's Move to, as `t|group|alias` since an app is drawn once per place,
+ * or a group's own menu, as `g|group`.
+ */
+type UmbraDesktopMenuKey = string;
+
+/**
+ * The key of a tile's Move to.
+ * @param groupId Its group, or the Pinned id.
+ * @param alias The app.
+ * @returns The key.
+ */
+const tileMenuKey = (groupId: string, alias: string): UmbraDesktopMenuKey => `t|${groupId}|${alias}`;
+
+/**
+ * The key of a group's menu.
+ * @param groupId The group.
+ * @returns The key.
+ */
+const groupMenuKey = (groupId: string): UmbraDesktopMenuKey => `g|${groupId}`;
+
+/**
  * Arrange mode's rendering and local state. The launcher owns what is stored and the drag; this
- * owns only what lives for one visit to the mode: the Reset confirm, which half of a narrow panel
- * shows, the palette filter, the open Move to list and where focus goes next.
+ * owns only what lives for one visit to the mode: which half of a narrow panel shows, the palette
+ * filter, the open menu and where focus goes next.
  */
 export class UmbraDesktopArrangeController {
   /** The launcher, whose shadow root this renders into and whose localize it borrows. */
@@ -112,17 +142,14 @@ export class UmbraDesktopArrangeController {
   /** The state of the last render, which every handler acts on. */
   #state?: UmbraDesktopArrangeState;
 
-  /** Whether the banner is asking to confirm Reset, the one edit that asks (design D11). */
-  #confirmReset = false;
-
   /** Whether the narrow layout is showing the palette instead of the layout (design D12). */
   #showPalette = false;
 
   /** The palette's filter text. */
   #paletteQuery = '';
 
-  /** The tile whose Move to list is open, as `group|alias`, since an app is drawn once per place. */
-  #menuFor?: string;
+  /** The menu that is open: a tile's Move to or a group's own. */
+  #menuFor?: UmbraDesktopMenuKey;
 
   /**
    * A selector to focus once it exists. Kept until found, because an edit lands through the
@@ -140,9 +167,8 @@ export class UmbraDesktopArrangeController {
     this.#actions = actions;
   }
 
-  /** Start fresh each time arrange mode is entered, so no half-finished confirm or filter lingers. */
+  /** Start fresh each time arrange mode is entered, so no open menu or filter lingers. */
   reset(): void {
-    this.#confirmReset = false;
     this.#showPalette = false;
     this.#paletteQuery = '';
     this.#menuFor = undefined;
@@ -291,21 +317,10 @@ export class UmbraDesktopArrangeController {
   }
 
   /**
-   * The banner in place of the header row, or the Reset confirm in its place.
+   * The banner in place of the header row.
    * @returns The banner template.
    */
   #banner() {
-    if (this.#confirmReset) {
-      // An alertdialog because focus moves into it, onto Cancel: the safe answer, and the Reset
-      // button that asked has just left the page.
-      return html`
-        <div class="banner" role="alertdialog" aria-label=${this.#t('umbraDesktop_arrangeResetConfirm')} @keydown=${this.#confirmKey}>
-          <span class="banner-text">${this.#t('umbraDesktop_arrangeResetConfirm')}</span>
-          <button class="ctl primary reset-yes" @click=${this.#reset}>${this.#t('umbraDesktop_arrangeReset')}</button>
-          <button class="ctl reset-no" @click=${this.#cancelReset}>${this.#t('umbraDesktop_arrangeCancel')}</button>
-        </div>
-      `;
-    }
     return html`
       <div class="banner">
         <span class="banner-text">${this.#t('umbraDesktop_arrangeBanner')}</span>
@@ -315,46 +330,25 @@ export class UmbraDesktopArrangeController {
           @click=${() => this.#set(() => (this.#showPalette = !this.#showPalette))}>
           ${this.#t(this.#showPalette ? 'umbraDesktop_arrangeBackToLayout' : 'umbraDesktop_arrangeAddApps')}
         </button>
-        <button
-          class="ctl reset"
-          @click=${() =>
-            this.#set(() => {
-              this.#confirmReset = true;
-              this.#focusNext = '.ctl.reset-no';
-            })}>
-          ${this.#t('umbraDesktop_arrangeReset')}
-        </button>
+        <button class="ctl reset" @click=${this.#reset}>${this.#t('umbraDesktop_arrangeReset')}</button>
         <button class="ctl primary done" @click=${() => this.#actions.done()}>${this.#t('umbraDesktop_arrangeDone')}</button>
       </div>
     `;
   }
 
-  /** Leave the Reset confirm unanswered, with focus back on the Reset button that asked. */
-  #cancelReset = () =>
-    this.#set(() => {
-      this.#confirmReset = false;
-      this.#focusNext = '.ctl.reset';
-    });
-
   /**
-   * Escape in the Reset confirm answers it the safe way, as Cancel does, and stops there: a
-   * dialog's Escape closes the dialog, not the launcher around it, which the taskbar would do if
-   * the key reached the document.
-   * @param e The key event.
+   * Reset, once the user has said yes in a modal (design D11). Pins stay (design D10). The modal
+   * rather than a confirm in the banner's place: that swapped the banner's buttons for two others
+   * in almost the same spot, and read as the Reset button having moved rather than as a question.
+   * Asked of the latest state, and applied to the state as it is once answered.
    */
-  #confirmKey = (e: KeyboardEvent) => {
-    if (e.key !== 'Escape') return;
-    e.preventDefault();
-    e.stopPropagation();
-    this.#cancelReset();
-  };
-
-  /** Reset, after the confirm. Pins stay (design D10). Focus lands on Done, where the confirm was. */
-  #reset = () => {
-    this.#confirmReset = false;
-    this.#focusNext = '.ctl.done';
-    this.#actions.commit(resetLayout(this.#state!.arrangement));
-    this.#host.requestUpdate();
+  #reset = async () => {
+    const confirmed = await this.#actions.confirm({
+      headline: this.#t('umbraDesktop_arrangeResetHeadline'),
+      content: this.#t('umbraDesktop_arrangeResetConfirm'),
+      confirmLabel: this.#t('umbraDesktop_arrangeReset'),
+    });
+    if (confirmed && this.#state) this.#actions.commit(resetLayout(this.#state.arrangement));
   };
 
   /**
@@ -388,8 +382,16 @@ export class UmbraDesktopArrangeController {
   #groupCard(group: UmbraDesktopLauncherViewGroup) {
     const state = this.#state!;
     const name = state.label(group.label);
+    const key = groupMenuKey(group.id);
+    const open = this.#menuFor === key;
+    // The gap the landing bar sits in the middle of, on the card a dragged group would land beside.
+    const over = state.dragging === 'group' && state.over?.kind === 'group' && state.over.groupId === group.id ? state.over : undefined;
     return html`
-      <div class="card agroup ${dropClassFor(state.over, group.id)}" data-drop="group" data-group=${group.id}>
+      <div
+        class="card agroup ${dropClassFor(state.over, group.id, undefined, state.dragging)}"
+        style=${over ? `--launcher-drop-gap: ${over.gap}px` : nothing}
+        data-drop="group"
+        data-group=${group.id}>
         <div class="gh">
           <button
             class="handle"
@@ -414,6 +416,17 @@ export class UmbraDesktopArrangeController {
             @click=${() => this.#deleteGroup(group.id)}>
             <umb-icon name="icon-trash"></umb-icon>
           </button>
+          <button
+            class="edit mv"
+            data-menu=${key}
+            title=${this.#t('umbraDesktop_arrangeGroupOptions')}
+            aria-label=${this.#named('umbraDesktop_arrangeGroupOptionsNamed', name)}
+            aria-haspopup="menu"
+            aria-expanded=${open ? 'true' : 'false'}
+            @click=${() => this.#toggleMenu(key)}>
+            ${DOTS}
+          </button>
+          ${open ? this.#groupMenu(group, name) : ''}
         </div>
         <div class="grid">${repeat(group.apps, (a) => a.alias, (a) => this.#tile(a, group.id, group.apps))}</div>
       </div>
@@ -421,7 +434,7 @@ export class UmbraDesktopArrangeController {
   }
 
   /**
-   * One tile in arrange mode: it does not launch; it drags, and carries − and ⋯.
+   * One tile in arrange mode: it does not launch; it drags, and carries remove and ⋯.
    * @param app The app.
    * @param groupId Its group, or the Pinned id.
    * @param siblings The apps drawn beside it, for the arrow keys.
@@ -430,7 +443,7 @@ export class UmbraDesktopArrangeController {
   #tile(app: UmbraDesktopApp, groupId: string, siblings: ReadonlyArray<UmbraDesktopApp>) {
     const state = this.#state!;
     const name = this.#name(app);
-    const key = `${groupId}|${app.alias}`;
+    const key = tileMenuKey(groupId, app.alias);
     const open = this.#menuFor === key;
     return html`
       <div
@@ -456,7 +469,7 @@ export class UmbraDesktopArrangeController {
             this.#focusNext = this.#afterTileLeaves(app, groupId);
             this.#actions.commit(removeApp(state.inputs, state.arrangement, app));
           }}>
-          ${MINUS}
+          <umb-icon name="icon-trash"></umb-icon>
         </button>
         <button
           class="edit mv"
@@ -512,10 +525,49 @@ export class UmbraDesktopArrangeController {
   }
 
   /**
-   * Open or close a tile's Move to list, focusing its first item when it opens.
-   * @param key The tile, as `group|alias`.
+   * A group's own menu, the way to do without a drag what the handle does with one: move the group
+   * to the start, one place earlier, one place later or to the end, offering only the moves that
+   * would change something; and delete it, like the button beside it. For keyboard and touch users,
+   * as Move to is for a tile: the arrow keys on the handle only help someone who knows they are
+   * there.
+   * @param group The group.
+   * @param name Its name as shown.
+   * @returns The list.
    */
-  #toggleMenu(key: string): void {
+  #groupMenu(group: UmbraDesktopLauncherViewGroup, name: string) {
+    const state = this.#state!;
+    const ids = state.view.groups.map((g) => g.id);
+    const at = ids.indexOf(group.id);
+    const title = this.#named('umbraDesktop_arrangeGroupOptionsNamed', name);
+    const focus = `[data-menu="${CSS.escape(groupMenuKey(group.id))}"]`;
+    const move = (before: string | undefined) => this.#fromMenu(moveGroup(state.inputs, state.arrangement, group.id, before), focus);
+    const item = (kind: string, term: string, before: string | undefined) =>
+      html`<button class="mmi ${kind}" role="menuitem" @click=${() => move(before)}>${this.#t(term)}</button>`;
+    return html`
+      <div class="movemenu" role="menu" aria-label=${title} @keydown=${this.#menuKey}>
+        <div class="mmh">${title}</div>
+        ${at > 1 ? item('first', 'umbraDesktop_arrangeMoveFirst', ids[0]) : ''}
+        ${at > 0 ? item('earlier', 'umbraDesktop_arrangeMoveEarlier', ids[at - 1]) : ''}
+        ${at < ids.length - 1 ? item('later', 'umbraDesktop_arrangeMoveLater', ids[at + 2]) : ''}
+        ${at < ids.length - 2 ? item('last', 'umbraDesktop_arrangeMoveLast', undefined) : ''}
+        <button
+          class="mmi rmv"
+          role="menuitem"
+          @click=${() => {
+            this.#menuFor = undefined;
+            this.#deleteGroup(group.id);
+          }}>
+          ${this.#t('umbraDesktop_arrangeDeleteGroupItem')}
+        </button>
+      </div>
+    `;
+  }
+
+  /**
+   * Open or close a menu, focusing its first item when it opens.
+   * @param key The tile's or the group's menu.
+   */
+  #toggleMenu(key: UmbraDesktopMenuKey): void {
     this.#set(() => {
       this.#menuFor = this.#menuFor === key ? undefined : key;
       if (this.#menuFor) this.#focusNext = '.movemenu .mmi';
@@ -537,7 +589,7 @@ export class UmbraDesktopArrangeController {
   }
 
   /**
-   * Where focus goes when a tile leaves its place, by − or by Move to > Remove: the next tile, else
+   * Where focus goes when a tile leaves its place, by remove or by Move to > Remove: the next tile, else
    * the previous one, else the group's name, which is the next thing a keyboard user would reach.
    * Pinned has no name field, so an emptied Pinned sends focus to Done.
    * @param app The app leaving.
@@ -556,7 +608,7 @@ export class UmbraDesktopArrangeController {
 
   /**
    * Delete a group, and send focus to the next group's handle, else the previous one's, else New
-   * group, since the delete button that took the click goes with the group.
+   * group, since the delete button or menu item that took the click goes with the group.
    * @param groupId The group.
    */
   #deleteGroup(groupId: string): void {
@@ -834,7 +886,8 @@ export class UmbraDesktopArrangeController {
                     this.#focusNext = this.#afterPaletteAdd(groups, index);
                     this.#actions.commit(addGroup(state.inputs, state.arrangement, p.group.alias));
                   }}>
-                  ${this.#t(p.onLauncher ? 'umbraDesktop_arrangeAddAll' : 'umbraDesktop_arrangeAddGroup')}
+                  ${PLUS}
+                  <span>${this.#t(p.onLauncher ? 'umbraDesktop_arrangeAddAll' : 'umbraDesktop_arrangeAddGroup')}</span>
                 </button>
               </div>
               ${p.apps.map(
@@ -946,18 +999,63 @@ export const arrangeStyles = css`
       display: none;
     }
     .palette .prow {
-      cursor: grab;
+      cursor: move;
     }
   }
   /* Wraps so Pinned's hint can drop onto a line of its own when it and the heading do not fit side by
      side, as Dutch does in the narrow themes. A group card's row never wraps: its name field starts
      from no width at all, so the row always fits. */
   .gh {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--uui-size-space-2);
     margin: 0 0 var(--uui-size-space-3);
+  }
+  /* A group's menu opens under its heading row, whatever height the name field gives that row. */
+  .gh > .movemenu {
+    top: 100%;
+  }
+  /* Where a dragged group would land: a bar in the middle of the gap before or after the card it
+     would go beside. Down the card's side when the cards sit side by side, across its top or bottom
+     when they are stacked (drop-stacked). The gap is the theme's to size, so the drag measures it and
+     sets --launcher-drop-gap on that card; a theme with none puts the bar on the card's edge. Half
+     the gap out, less half the bar's 2px. Above the card's contents, and above a heading a theme
+     lifts, as Umbraco 4 lifts its sticky strips to 2, but below an open menu at 10. */
+  .agroup {
+    position: relative;
+  }
+  .agroup.drop-before::before,
+  .agroup.drop-after::after {
+    content: '';
+    position: absolute;
+    z-index: 5;
+    top: 0;
+    bottom: 0;
+    border-left: var(--umbradesktop-launcher-drop-outline, 2px solid var(--uui-color-focus, #3544b1));
+    pointer-events: none;
+  }
+  .agroup.drop-before::before {
+    left: calc(var(--launcher-drop-gap, 0px) / -2 - 1px);
+  }
+  .agroup.drop-after::after {
+    right: calc(var(--launcher-drop-gap, 0px) / -2 - 1px);
+  }
+  .agroup.drop-stacked::before,
+  .agroup.drop-stacked::after {
+    top: auto;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    border-left: none;
+    border-top: var(--umbradesktop-launcher-drop-outline, 2px solid var(--uui-color-focus, #3544b1));
+  }
+  .agroup.drop-stacked.drop-before::before {
+    top: calc(var(--launcher-drop-gap, 0px) / -2 - 1px);
+  }
+  .agroup.drop-stacked.drop-after::after {
+    bottom: calc(var(--launcher-drop-gap, 0px) / -2 - 1px);
   }
   /* Starts from its text's width rather than none, or it never pushes the hint onto the next line: it
      shrinks to nothing instead and its text prints over the hint's. */
@@ -996,16 +1094,24 @@ export const arrangeStyles = css`
     border: none;
     background: transparent;
     color: var(--umbradesktop-launcher-text-muted, var(--umbradesktop-launcher-text, var(--uui-color-text)));
-    cursor: grab;
+    cursor: move;
   }
   .handle:hover,
   .gdel:hover,
   .edit:hover {
     background: var(--umbradesktop-launcher-hover-background, var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05)));
   }
-  .edit svg {
+  .edit svg,
+  .addall svg {
+    flex-shrink: 0;
     width: 12px;
     height: 12px;
+  }
+  /* The remove icon, the same trash as a group's delete beside it. Scoped to the tile, so it outranks
+     the rule that sizes the app's own icon in the tile, which a theme restates at its own size. */
+  .tile.arr .edit umb-icon,
+  .gdel umb-icon {
+    font-size: 13px;
   }
   .rename {
     flex: 1;
@@ -1023,7 +1129,7 @@ export const arrangeStyles = css`
     flex-direction: column;
     align-items: center;
     gap: var(--uui-size-space-1);
-    /* The icon starts below the − and ⋯ buttons in the top corners rather than between them: a tile
+    /* The icon starts below the remove and ⋯ buttons in the top corners rather than between them: a tile
        narrower than the icon plus both buttons (the default theme's are, at a 1920px screen) put
        them over the icon. Themes that make tiles rows put the buttons in the flow and set their own
        padding. */
@@ -1033,7 +1139,7 @@ export const arrangeStyles = css`
     color: var(--umbradesktop-launcher-text, var(--uui-color-text));
     font-family: inherit;
     text-align: center;
-    cursor: grab;
+    cursor: move;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
@@ -1146,6 +1252,7 @@ export const arrangeStyles = css`
     min-width: 0;
   }
   .addall {
+    gap: var(--uui-size-space-1);
     min-height: ${unsafeCSS(EDIT_BUTTON_PX)}px;
     padding: 0 var(--uui-size-space-2);
   }
@@ -1160,7 +1267,7 @@ export const arrangeStyles = css`
     color: var(--umbradesktop-launcher-text, var(--uui-color-text));
     font-size: var(--uui-type-small-size);
     /* A row drags only while the layout is beside it to drop on; the container query above turns
-       the grab cursor on for exactly that case, and the + button adds in either. */
+       the move cursor on for exactly that case, and the + button adds in either. */
     cursor: default;
     user-select: none;
     -webkit-user-select: none;

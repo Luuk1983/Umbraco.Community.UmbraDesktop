@@ -189,20 +189,22 @@ for (const theme of ROW_THEMES) {
       mount.remove();
     }
   });
+}
 
-  it(`${theme.name}: a lifted row follows the pointer as a compact row, not a copy as wide as the list`, async function () {
+for (const theme of UMBRADESKTOP_THEMES) {
+  it(`${theme.name}: a lifted tile follows the pointer as its icon alone, with nothing drawn behind it`, async function () {
     this.timeout(TIMEOUT_MS);
     const mount = await mountLauncher({ apps: APPS, groups: GROUPS, theme });
     await adoptIconStandIn(mount);
     try {
       const source = mount.root.querySelector<HTMLElement>('.cards .tile[data-alias="content"]')!;
-      const row = source.getBoundingClientRect();
+      const tile = source.getBoundingClientRect();
       await startDrag(mount, source);
       const ghosts = mount.root.querySelectorAll<HTMLElement>('.drag-ghost');
       expect(ghosts.length, 'the drag draws its copy').to.equal(1);
-      const label = ghosts[0].querySelector<HTMLElement>('.tlb')!;
-      expect(ghosts[0].getBoundingClientRect().width, 'the copy is narrower than the row it was lifted from').to.be.below(row.width / 2);
-      expect(label.scrollWidth, 'and still shows the whole name').to.be.at.most(label.clientWidth + 1);
+      expect(ghosts[0].localName, 'the copy is the icon').to.equal('umb-icon');
+      expect(getComputedStyle(ghosts[0]).backgroundColor, 'with no card behind it').to.equal('rgba(0, 0, 0, 0)');
+      expect(ghosts[0].getBoundingClientRect().width, 'no wider than an icon').to.be.below(Math.min(tile.width, 64));
       await endDrag(mount);
     } finally {
       mount.remove();
@@ -317,12 +319,90 @@ for (const theme of UMBRADESKTOP_THEMES) {
     await adoptIconStandIn(mount);
     try {
       const row = mount.root.querySelector<HTMLElement>('.hdr')!.getBoundingClientRect();
+      const panel = mount.launcher.getBoundingClientRect();
       mount.root.querySelector<HTMLElement>('.ctl.arrange')!.click();
       await mount.settle();
       const banner = mount.root.querySelector<HTMLElement>('.banner')!.getBoundingClientRect();
+      // Measured from the panel's right edge, which a narrow theme moves as arrange mode widens it.
+      const widened = mount.launcher.getBoundingClientRect();
       expect(banner.top, 'the banner starts where the header row did').to.be.closeTo(row.top, EPSILON_PX);
       expect(banner.left, 'at the same inset from the left').to.be.closeTo(row.left, EPSILON_PX);
-      expect(banner.right, 'and from the right').to.be.closeTo(row.right, EPSILON_PX);
+      expect(widened.right - banner.right, 'and from the right').to.be.closeTo(panel.right - row.right, EPSILON_PX);
+    } finally {
+      mount.remove();
+    }
+  });
+}
+
+for (const theme of ROW_THEMES) {
+  it(`${theme.name}: arrange mode widens so the palette sits beside the layout`, async function () {
+    this.timeout(TIMEOUT_MS);
+    const mount = await mountLauncher({ apps: APPS, groups: GROUPS, theme });
+    try {
+      const normal = mount.launcher.getBoundingClientRect().width;
+      mount.root.querySelector<HTMLElement>('.ctl.arrange')!.click();
+      await mount.settle();
+      const drawn = (selector: string) => (mount.root.querySelector(selector)?.getClientRects().length ?? 0) > 0;
+      expect(drawn('.palette'), 'the palette is on screen').to.equal(true);
+      expect(drawn('.layout-pane'), 'beside the layout').to.equal(true);
+      expect(drawn('.ctl.add-apps'), 'so there is nothing to switch between').to.equal(false);
+      mount.root.querySelector<HTMLElement>('.ctl.done')!.click();
+      await mount.settle();
+      expect(mount.launcher.getBoundingClientRect().width, 'and goes back to its own width after').to.be.closeTo(normal, 0.5);
+    } finally {
+      mount.remove();
+    }
+  });
+}
+
+for (const theme of UMBRADESKTOP_THEMES) {
+  it(`${theme.name}: the bar where a dragged group lands is drawn over the group's heading`, async function () {
+    this.timeout(TIMEOUT_MS);
+    const groups = [...GROUPS, { alias: 'diagnostics', label: 'Diagnostics', weight: 40 }];
+    const apps = [...APPS, stubApp('logs', 'diagnostics', 10)];
+    const mount = await arranging({ theme, apps, groups });
+    try {
+      const handle = mount.root.querySelector<HTMLElement>('.handle[data-handle="diagnostics"]')!;
+      await startDrag(mount, handle);
+      const card = mount.root.querySelector<HTMLElement>('.agroup[data-group="editing"]')!;
+      const box = card.getBoundingClientRect();
+      window.dispatchEvent(pointer('pointermove', box.left + 10, box.top + 10));
+      await mount.settle();
+      expect(card.classList.contains('drop-before'), 'the drag is over the first group').to.equal(true);
+      // Both sit in the card's stacking context, so their z-indexes decide which paints on top; a
+      // theme that lifts its headings, as Umbraco 4 does for its sticky strips, hid the bar under one.
+      const level = (value: string) => (value === 'auto' ? 0 : Number(value));
+      const bar = level(getComputedStyle(card, '::before').zIndex);
+      const heading = level(getComputedStyle(card.querySelector('.gh')!).zIndex);
+      expect(bar, 'the bar paints above the heading').to.be.above(heading);
+      await endDrag(mount);
+    } finally {
+      mount.remove();
+    }
+  });
+}
+
+for (const theme of UMBRADESKTOP_THEMES) {
+  it(`${theme.name}: the header row fits the search placeholder on one line beside All apps and Arrange`, async function () {
+    this.timeout(TIMEOUT_MS);
+    const mount = await mountLauncher({ apps: APPS, groups: GROUPS, theme });
+    await adoptIconStandIn(mount);
+    try {
+      const label = mount.root.querySelector<HTMLElement>('.hdr .search span')!;
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      // A rect per line the text takes; the Start menu themes wrapped it onto five. Where the row
+      // is short of room it ends in an ellipsis rather than wrapping, which on this 800px page is
+      // macOS, whose row is a band in the middle of the screen.
+      // Counted by distinct tops, since Lit's marker beside the text can add a rect on the same line.
+      const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+      expect(lines.size, 'the placeholder takes one line').to.equal(1);
+      if (theme !== UMBRADESKTOP_MACOS_THEME) {
+        expect(label.scrollWidth, 'and all of it shows').to.be.at.most(label.clientWidth + 1);
+      }
+      for (const control of mount.root.querySelectorAll<HTMLElement>('.hdr .ctl')) {
+        expect(control.scrollWidth, `${control.className} keeps its label inside it`).to.be.at.most(control.clientWidth + 1);
+      }
     } finally {
       mount.remove();
     }

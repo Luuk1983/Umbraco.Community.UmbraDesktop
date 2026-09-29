@@ -280,28 +280,6 @@ export default css`
   .tile.drop-after::after {
     bottom: -1px;
   }
-  /* The copy under the pointer is the row it was lifted from, square and level: nothing in Win98
-     tilts, and a row keeps its menu look already, since the row rules above are not scoped to a
-     card. It is no wider than what it shows: the drag gives the copy the width of the row it was
-     lifted from, which here is the whole menu, and a copy that wide covers the remove pane's text it
-     is being dragged to. A maximum rather than a width, so it can only ever shrink the copy. */
-  .drag-ghost {
-    border-radius: 0;
-    transform: translate(-50%, -50%);
-    max-width: max-content;
-  }
-  /* A lifted row is drawn selected, in the menu's navy with white text. With no shadow in this
-     theme, a grey row over the grey menu would otherwise have nothing to set it apart from the
-     rows beneath it. The group handle's copy is a push button and stays one. */
-  .tile.drag-ghost,
-  .prow.drag-ghost {
-    background: var(--umbradesktop-launcher-hover-background, ${unsafeCSS(WIN98_MENU_HILIGHT)});
-  }
-  .tile.drag-ghost.arr,
-  .tile.drag-ghost .launch,
-  .prow.drag-ghost {
-    color: ${unsafeCSS(WIN98_MENU_HILIGHT_TEXT)};
-  }
   /* Move to is a context menu: a raised panel of rows with a groove above its last two. */
   .movemenu {
     border: none;

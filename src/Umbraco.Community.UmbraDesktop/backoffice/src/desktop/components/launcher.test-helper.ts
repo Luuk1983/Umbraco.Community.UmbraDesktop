@@ -88,7 +88,9 @@ export interface UmbraDesktopLauncherMountOptions {
   width?: number;
   /**
    * The launcher's own width in px, set through `--umbradesktop-launcher-width` the way a theme
-   * does. The wrapper's width does not size the launcher; this does.
+   * does, and through `--umbradesktop-launcher-arrange-width` too, so a test that asks for a width
+   * gets it in arrange mode as well, whatever the theme widens to there. The wrapper's width does
+   * not size the launcher; this does.
    */
   launcherWidth?: number;
   /**
@@ -169,6 +171,7 @@ export async function mountLauncher(options: UmbraDesktopLauncherMountOptions): 
   const launcher = document.createElement('umbradesktop-launcher') as UmbraDesktopLauncherElement;
   if (options.launcherWidth !== undefined) {
     launcher.style.setProperty('--umbradesktop-launcher-width', `${options.launcherWidth}px`);
+    launcher.style.setProperty('--umbradesktop-launcher-arrange-width', `${options.launcherWidth}px`);
   }
   wrapper.appendChild(launcher);
   const settle = async () => {

@@ -16,6 +16,7 @@ import { taskbarRowFeatures } from '../taskbar/features/index.js';
 import type { UmbraDesktopFullscreenState, UmbraDesktopTaskbarFeatureContext } from '../taskbar/features/types';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import './launcher.element.js';
+import type { UmbraDesktopLauncherConfirm, UmbraDesktopLauncherElement } from './launcher.element.js';
 import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import { noticeIconName, windowNotices, worstSeverity } from '../notices/notices.js';
 import type { UmbraDesktopNoticeSeverity } from '../notices/types.js';
@@ -25,6 +26,19 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbConfirmModal, umbOpenModal } from '@umbraco-cms/backoffice/modal';
 import { UMB_SEARCH_MODAL } from '@umbraco-cms/backoffice/search';
 import { UMB_CURRENT_USER_MODAL } from '@umbraco-cms/backoffice/current-user';
+
+/**
+ * Whether keyboard focus is inside an iframe on this page, which is where it goes when the user
+ * clicks into one of the desktop's windows. Walked down through shadow roots, because the document
+ * only reports the outermost host of whatever has focus, and a window's iframe sits several shadow
+ * roots deep.
+ * @returns True when the focused element is an iframe.
+ */
+function focusIsInFrame(): boolean {
+  let active: Element | null = document.activeElement;
+  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+  return active instanceof HTMLIFrameElement;
+}
 
 /**
  * The bottom panel: Umbraco-logo start button (opens the app launcher), running-window
@@ -249,13 +263,15 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   /**
    * Open or close the launcher, wiring up the dismiss listeners to match. While open we listen
    * for a pointer down outside the launcher/start button, a window blur (a click landing inside
-   * an iframe window steals focus without bubbling a pointer event to us), and the Escape key —
-   * any of which closes the launcher. Listeners are removed as soon as it closes.
+   * an iframe window steals focus without bubbling a pointer event to us), and the Escape key.
+   * What each of them does is in its handler: the launcher can hold itself open, and Escape steps
+   * back before it closes. Listeners are removed as soon as it closes.
    * @param open Whether the launcher should be open.
    */
   #setLauncherOpen(open: boolean) {
     if (open === this._launcherOpen) return;
     this._launcherOpen = open;
+    if (!open) this.#launcherAsking = false;
     if (open) {
       // Capture phase so we see the pointer down before anything inside can stop it.
       document.addEventListener('pointerdown', this.#onOutsidePointerDown, true);
@@ -268,23 +284,78 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     }
   }
 
+  /**
+   * Whether a question the launcher asked is on screen, in a modal this element opened for it. The
+   * launcher is held open until it is answered: a press inside the modal is outside the launcher,
+   * and so is the Escape that closes the modal, and closing the launcher under its own question
+   * would leave the answer nowhere to go.
+   */
+  #launcherAsking = false;
+
+  /** The launcher, while it is open. */
+  get #launcher(): UmbraDesktopLauncherElement | null {
+    return this.shadowRoot?.querySelector<UmbraDesktopLauncherElement>('umbradesktop-launcher') ?? null;
+  }
+
+  /**
+   * Whether the launcher stays open whatever the user does outside it: while it is asking a
+   * question, and while it says it holds itself open, as arrange mode does.
+   * @returns True to leave it open.
+   */
+  #launcherHeld(): boolean {
+    return this.#launcherAsking || !!this.#launcher?.holdsOpen;
+  }
+
   /** Close the launcher when a pointer goes down outside both the launcher panel and start button. */
   #onOutsidePointerDown = (e: PointerEvent) => {
     const path = e.composedPath();
-    const launcher = this.shadowRoot?.querySelector('.launcher');
+    const launcher = this.#launcher;
     const start = this.shadowRoot?.querySelector('.start');
     if ((launcher && path.includes(launcher)) || (start && path.includes(start))) return;
+    if (this.#launcherHeld()) return;
     this.#setLauncherOpen(false);
   };
 
-  /** Close the launcher on Escape. */
+  /**
+   * Escape steps back a level, from All apps or arrange mode to the launcher, and closes the
+   * launcher only from there. While the launcher's own question is open the Escape is the modal's.
+   */
   #onLauncherKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') this.#setLauncherOpen(false);
+    if (e.key !== 'Escape' || this.#launcherAsking) return;
+    if (this.#launcher?.back()) return;
+    this.#setLauncherOpen(false);
   };
 
-  /** Close the launcher when focus leaves the window (e.g. a click landing inside an iframe). */
+  /**
+   * Close the launcher when focus has gone into one of the desktop's windows: a click inside a
+   * window's iframe takes focus without a pointer event ever reaching this document, and a window
+   * blur is the only sign of it. Not when the browser as a whole lost focus to another program,
+   * which blurs the window just the same: switching away and back closed the launcher every time.
+   * Focus is still on the page then, so the iframe is what tells the two apart.
+   */
   #onWindowBlur = () => {
+    if (this.#launcherHeld() || !focusIsInFrame()) return;
     this.#setLauncherOpen(false);
+  };
+
+  /**
+   * Put the launcher's question to the user in a confirm modal owned here, where a click inside it
+   * cannot unmount the element that opened it, and hold the launcher open until it is answered.
+   * @param e The launcher's `confirm` event.
+   */
+  #onLauncherConfirm = async (e: CustomEvent<UmbraDesktopLauncherConfirm>) => {
+    e.preventDefault();
+    const { headline, content, confirmLabel, answer } = e.detail;
+    this.#launcherAsking = true;
+    let confirmed = true;
+    try {
+      await umbConfirmModal(this, { headline, content, confirmLabel, color: 'danger' });
+    } catch {
+      confirmed = false;
+    } finally {
+      this.#launcherAsking = false;
+    }
+    answer(confirmed);
   };
 
   /**
@@ -352,7 +423,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         @search=${this.#onSearch}
         @profile=${this.#onProfile}
         @settings=${this.#onSettings}
-        @exit=${this.#onExit}></umbradesktop-launcher>
+        @exit=${this.#onExit}
+        @confirm=${this.#onLauncherConfirm}></umbradesktop-launcher>
     `;
   }
 
