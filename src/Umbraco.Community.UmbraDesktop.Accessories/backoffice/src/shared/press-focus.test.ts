@@ -1,4 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
+import { sendMouse } from '@web/test-runner-commands';
 import '../calculator/calculator.element.js';
 import '../character-map/character-map.element.js';
 import '../disk-cleanup/disk-cleanup.element.js';
@@ -7,7 +8,7 @@ import '../paint/paint.element.js';
 import '../screensaver/screensaver-panel.element.js';
 import '../sticky-notes/sticky-notes.element.js';
 import '../system-info/system-info.element.js';
-import { keepFocusOnPress } from './press-focus.js';
+import { PRESSED_FOCUS, keepFocusOnPress } from './press-focus.js';
 
 /**
  * Every app's buttons keep keyboard focus where it was when the mouse presses them.
@@ -77,3 +78,45 @@ it('covers what is inside a button, such as its icon', async () => {
   host.addEventListener('mousedown', keepFocusOnPress);
   expect(mousedown(host.querySelector('path')!)).to.equal(true);
 });
+
+it('marks a select the mouse pressed until it loses focus, and still lets it open', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div><select><option>a</option></select></div>`);
+  host.addEventListener('mousedown', keepFocusOnPress);
+  const select = host.querySelector('select')!;
+  select.focus();
+  expect(mousedown(select), 'a select opens on mousedown').to.equal(false);
+  expect(select.hasAttribute(PRESSED_FOCUS)).to.equal(true);
+  select.blur();
+  expect(select.hasAttribute(PRESSED_FOCUS), 'unmarked once focus leaves').to.equal(false);
+});
+
+/**
+ * A text field or text area clicked with the mouse draws no ring, in every app that has one.
+ *
+ * Chrome rings a field however it was focused, because typing into it is keyboard use. On this
+ * desktop that put the accent ring round Notepad's page, its name box, Paint's name box and Character
+ * Map's fields the moment they were clicked, which nothing in the desktop's own chrome does. The
+ * accent is set because the test has no palette, and without it the ring's colour is invalid and the
+ * outline computes to none whatever the state. Real mouse, since only the browser's own input takes
+ * this path; Sticky Notes has its own rule, and fields only once a note exists.
+ */
+for (const tag of ['umbradesktop-notepad', 'umbradesktop-paint', 'umbradesktop-character-map']) {
+  it(`${tag} draws no ring round a field the mouse clicks`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div style="width: 800px; height: 600px"></div>`);
+    const element = document.createElement(tag) as HTMLElement & { updateComplete: Promise<unknown> };
+    element.style.setProperty('--umbradesktop-app-accent', 'rgb(0, 0, 128)');
+    wrapper.appendChild(element);
+    await element.updateComplete;
+    const fields = [...element.shadowRoot!.querySelectorAll<HTMLElement>('textarea, input:not([type="checkbox"])')].filter(
+      (field) => field.getBoundingClientRect().width > 0,
+    );
+    expect(fields.length, 'fields to click').to.be.greaterThan(0);
+    for (const field of fields) {
+      const box = field.getBoundingClientRect();
+      await sendMouse({ type: 'click', position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)] });
+      const name = field.outerHTML.slice(0, 60);
+      expect(field.matches(':focus'), `${name} took focus`).to.equal(true);
+      expect(getComputedStyle(field).outlineStyle, `a ring round ${name}`).to.equal('none');
+    }
+  });
+}

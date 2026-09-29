@@ -1,4 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
+import { sendKeys, sendMouse } from '@web/test-runner-commands';
 import './screensaver-panel.element.js';
 import type { ScreensaverPanelElement } from './screensaver-panel.element.js';
 import { SCREENSAVER_WINDOW } from './constants.js';
@@ -101,4 +102,30 @@ it('runs the chosen saver full screen on Preview, until it is dismissed', async 
   expect(fullScreen()?.getAttribute('saver')).to.equal('mystify');
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   expect(fullScreen()).to.equal(null);
+});
+
+/**
+ * A dropdown opened with the mouse draws no focus ring; one reached with Tab still does.
+ *
+ * Chrome gives a clicked select `:focus-visible` straight away, with no key pressed at all, unlike a
+ * button. So choosing a screen saver left the accent ring round the list for as long as the window
+ * kept focus. The accent is set because the test has no palette, and without it the ring's colour
+ * is invalid and the outline computes to none whatever the state. Real mouse and keyboard, since
+ * only the browser's own input takes this path.
+ */
+it('draws no ring round a dropdown opened with the mouse, and one when Tab reaches it', async () => {
+  const { element } = await panel({ enabled: true });
+  element.style.setProperty('--umbradesktop-app-accent', 'rgb(0, 0, 128)');
+  const select = field(element, 'saver');
+  const box = select.getBoundingClientRect();
+  await sendMouse({ type: 'click', position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)] });
+  await sendKeys({ press: 'Escape' });
+  expect(select.matches(':focus'), 'the click focused the list').to.equal(true);
+  expect(getComputedStyle(select).outlineStyle, 'a ring after a click').to.equal('none');
+  await sendKeys({ press: 'Tab' });
+  await sendKeys({ down: 'Shift' });
+  await sendKeys({ press: 'Tab' });
+  await sendKeys({ up: 'Shift' });
+  expect(select.matches(':focus'), 'Tab came back to the list').to.equal(true);
+  expect(getComputedStyle(select).outlineStyle, "the keyboard's ring").to.equal('solid');
 });

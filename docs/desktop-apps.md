@@ -675,7 +675,11 @@ focus on a mouse press in the first place: cancel the `mousedown` default on you
 still fires, `:active` still draws the press, and Tab still reaches the button and still shows its
 ring. It also keeps typing where it was, so a Word wrap toggle does not swallow the next keystroke.
 Leave a `draggable` button alone, because a cancelled mousedown never starts an HTML drag, and leave
-selects and fields alone. The Accessories package does this for every app in one function,
+selects and text fields out of it, since they have to take focus to open or to take the caret. They
+are worse, not better: Chrome rings a clicked select, text field or text area with no key pressed at
+all. Mark one on mousedown, clear the mark on blur, and turn the outline off for a marked field,
+Chrome's own `outline: auto` included, with enough weight to beat your own field rules. The Accessories
+package does all of this for every app in one function,
 `shared/press-focus.ts`. The other half: if your app listens for shortcuts on its host, a click must
 leave focus somewhere inside it. A click on something that cannot take focus, such as a canvas, moves
 focus to the nearest ancestor that can, and with none it lands on the page. Paint's Ctrl+Z did

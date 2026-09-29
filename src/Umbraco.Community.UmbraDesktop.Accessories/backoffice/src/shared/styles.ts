@@ -58,6 +58,15 @@ export const accessoryStyles = css`
     outline-offset: -2px;
   }
 
+  /* No ring on a field the mouse focused, the browser's own included: Chrome rings a clicked select,
+     text field or text area with no key pressed at all. The attribute is PRESSED_FOCUS in
+     press-focus.ts, which marks the field until focus leaves it, so one reached with Tab keeps its
+     ring. :host is there for weight alone: it puts this above each app's own field ring, such as
+     Notepad's .page:focus-visible, which comes later in the cascade. */
+  :host [data-pressed-focus]:focus-visible {
+    outline: none;
+  }
+
   /* A control that is switched on: the pencil tool while it is the pencil, word wrap while it
      wraps. The accent and its own text colour, because white is unreadable on some themes' accent
      and that is the reason accent-text exists. */

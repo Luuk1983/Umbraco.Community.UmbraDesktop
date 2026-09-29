@@ -935,18 +935,15 @@ export class PaintElement extends UmbLitElement {
       }
 
       /* A swatch is a colour, not a control face, so it keeps its own fill under every theme and
-         takes only the theme's guaranteed boundary line round it. */
+         takes only the theme's guaranteed boundary line round it. The chosen one is not ringed: the
+         current-colours chips show it, as MS Paint's did, and a ring in the accent read as a focus
+         ring. Only the keyboard's own ring below draws round a swatch. */
       .swatch {
         padding: 0;
         border: none;
         border-radius: 0;
         box-shadow: 0 0 0 1px var(--umbradesktop-app-border, var(--uui-color-text-alt));
         cursor: pointer;
-      }
-
-      .swatch[aria-pressed='true'] {
-        outline: 2px solid var(--umbradesktop-app-accent, var(--uui-color-selected));
-        outline-offset: 1px;
       }
 
       .swatch:focus-visible {

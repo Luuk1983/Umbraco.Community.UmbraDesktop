@@ -149,6 +149,23 @@ it('paints in the colour picked from the palette', async () => {
   expect(pixel(element, 5, 5)).to.deep.equal(RED);
 });
 
+/**
+ * The chosen colour is shown in the current-colours chips, as MS Paint shows it, and not by a ring
+ * round its swatch, which read as a focus ring. The swatch still says it is chosen to a screen
+ * reader. The accent is set because the test has no palette, and without it a ring's colour is
+ * invalid and the outline computes to none whatever the state.
+ */
+it('shows the chosen colour in the chips, with no ring round its swatch', async () => {
+  const { element } = await paint();
+  element.style.setProperty('--umbradesktop-app-accent', 'rgb(0, 0, 128)');
+  await click(element, '[data-colour="#ff0000"]');
+  const swatch = element.shadowRoot!.querySelector<HTMLElement>('[data-colour="#ff0000"]')!;
+  expect(swatch.getAttribute('aria-pressed')).to.equal('true');
+  expect(getComputedStyle(swatch).outlineStyle, 'a ring round the chosen swatch').to.equal('none');
+  const chip = element.shadowRoot!.querySelector<HTMLElement>('.chip.foreground')!;
+  expect(getComputedStyle(chip).backgroundColor, 'the foreground chip').to.equal('rgb(255, 0, 0)');
+});
+
 /** Left button paints the foreground and right button the background, as MS Paint always has. */
 it('paints the background colour with the right button', async () => {
   const { element } = await paint();
