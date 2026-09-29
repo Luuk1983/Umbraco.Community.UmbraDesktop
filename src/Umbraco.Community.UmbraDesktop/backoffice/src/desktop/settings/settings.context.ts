@@ -2,6 +2,7 @@ import type {
   UmbraDesktopClockCycle,
   UmbraDesktopLauncherLayout,
   UmbraDesktopLocaleSource,
+  UmbraDesktopReopenWindows,
   UmbraDesktopSettings,
   UmbraDesktopWallpaperRef,
 } from './types';
@@ -82,6 +83,9 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
 
   /** Whether landing on the backoffice root should open the desktop. */
   public readonly bootIntoDesktop = this.#settings.asObservablePart((settings) => settings.bootIntoDesktop);
+
+  /** When the desktop reopens the windows this user had open: never, after a refresh, or also after the browser closes. */
+  public readonly reopenWindows = this.#settings.asObservablePart((settings) => settings.reopenWindows);
 
   /**
    * How this user wants dates and times formatted: which culture, and any clock override.
@@ -336,6 +340,16 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    */
   public setBootIntoDesktop(enabled: boolean): void {
     this.#update({ bootIntoDesktop: enabled });
+  }
+
+  /**
+   * Choose when the desktop reopens this user's windows. Persists, and the windows open now stay
+   * open either way: what changes at once is where their layout is kept (see
+   * `windows/layout.controller.ts`), and what changes next time is whether they come back.
+   * @param mode Never, after a refresh, or also after the browser closes.
+   */
+  public setReopenWindows(mode: UmbraDesktopReopenWindows): void {
+    this.#update({ reopenWindows: mode });
   }
 
   /**

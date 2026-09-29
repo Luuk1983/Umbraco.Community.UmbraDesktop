@@ -27,6 +27,7 @@ it('round-trips settings through serialise and parse', () => {
     taskbarFeatures: { 'ai-chat': false },
     wallpaperFollowsTheme: true,
     locale: { source: 'browser', hourCycle: 'h23' },
+    reopenWindows: 'off',
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -45,6 +46,7 @@ it('reads back each wallpaper kind unchanged', () => {
           theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
           pinned: [],
           bootIntoDesktop: false,
+          reopenWindows: 'persistent',
           taskbarFeatures: {},
           wallpaperFollowsTheme: false,
           locale: { source: 'backoffice', hourCycle: 'auto' },
@@ -99,6 +101,7 @@ it('round-trips a pinned list', () => {
     taskbarFeatures: {},
     wallpaperFollowsTheme: false,
     locale: { source: 'backoffice', hourCycle: 'auto' },
+    reopenWindows: 'session',
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -303,6 +306,24 @@ it('never returns the shared default locale, so a caller cannot mutate it', () =
   const first = parseSettings(null);
   first.locale.hourCycle = 'h12';
   expect(parseSettings(null).locale.hourCycle).to.equal('auto');
+});
+
+/**
+ * Reopening your windows after a refresh is the default: nobody expects F5 to close everything they
+ * had open. Keeping them after the browser closes is the opt-in, and so is switching it off.
+ */
+it('reopens windows after a refresh by default, including for settings stored before the preference existed', () => {
+  expect(parseSettings(null).reopenWindows).to.equal('session');
+  expect(parseSettings(JSON.stringify({ v: 1, theme: 'win98' })).reopenWindows).to.equal('session');
+});
+
+it('keeps each stored choice of when to reopen windows, and ignores anything else', () => {
+  for (const mode of ['off', 'session', 'persistent'] as const) {
+    expect(parseSettings(JSON.stringify({ v: 1, reopenWindows: mode })).reopenWindows, mode).to.equal(mode);
+  }
+  for (const junk of [true, false, 'yes', 1]) {
+    expect(parseSettings(JSON.stringify({ v: 1, reopenWindows: junk })).reopenWindows, String(junk)).to.equal('session');
+  }
 });
 
 describe('the launcher layout', () => {

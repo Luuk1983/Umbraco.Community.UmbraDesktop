@@ -206,6 +206,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    */
   #stopPathWatch?: () => void;
 
+  /** Stops following the frame's router for the window layout; see `#startLocationWatch`. */
+  #stopLocationWatch?: () => void;
+
   /**
    * Stops the current frame's notification watcher and takes it off the centre's list of sources.
    * Replaced and released on the same occasions as {@link #stopDirtyWatch}, for the same reason.
@@ -289,6 +292,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.#stopDirtyWatch = undefined;
     this.#stopPathWatch?.();
     this.#stopPathWatch = undefined;
+    this.#stopLocationWatch?.();
+    this.#stopLocationWatch = undefined;
     this.#stopNotificationWatch?.();
     this.#stopNotificationWatch = undefined;
   }
@@ -341,6 +346,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     injectChromeStyles(iframe, this.window.app.chromeProfile, () => (this._loading = false));
     this.#startDirtyWatch(iframe);
     this.#startPathWatch(iframe);
+    this.#startLocationWatch(iframe);
     this.#startNotificationWatch(iframe);
     // A frame boots on the stored alias, so it is normally already right — but a theme changed
     // while it was still loading would have been missed, and the reload path lands here too.
@@ -383,6 +389,45 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * whatever the frame held a moment ago, it has just been re-fetched from the server.
    * @param iframe The window's freshly loaded frame.
    */
+  /**
+   * Follow the page the frame is on, for the window layout to reopen the window there.
+   *
+   * The address, not the crumbs: the path strip's watcher reads the workspace's structure, which
+   * says what the page is but not how to get back to it. Reported once on load, then on each of the
+   * frame router's `changestate` events and the browser's `popstate`. Restarted on each load, like
+   * the other watches, because a reload replaces the frame's window and its listeners with it. Every
+   * backoffice window reports, strip or not, since every one of them can be reopened.
+   * @param iframe The window's freshly loaded frame.
+   */
+  #startLocationWatch(iframe: HTMLIFrameElement) {
+    this.#stopLocationWatch?.();
+    this.#stopLocationWatch = undefined;
+    const frame = iframe.contentWindow;
+    if (!frame || !iframe.contentDocument) return;
+    const report = () => {
+      const w = this.window;
+      if (!w) return;
+      let location: string;
+      try {
+        const { pathname, search, hash } = frame.location;
+        location = pathname + search + hash;
+      } catch {
+        // The frame has gone cross-origin, which a backoffice frame never does. Nothing to record.
+        return;
+      }
+      if (location.startsWith('/')) this.#manager?.setLocation(w.id, location);
+    };
+    report();
+    // Umbraco's router fires changestate on the frame's window whenever it changes the route, and
+    // popstate covers the browser's own back and forward.
+    frame.addEventListener('changestate', report);
+    frame.addEventListener('popstate', report);
+    this.#stopLocationWatch = () => {
+      frame.removeEventListener('changestate', report);
+      frame.removeEventListener('popstate', report);
+    };
+  }
+
   /**
    * Watch the freshly loaded frame for where it is, so the path strip can say so.
    *

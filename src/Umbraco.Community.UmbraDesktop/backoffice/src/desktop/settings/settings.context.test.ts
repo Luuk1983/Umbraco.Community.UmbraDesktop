@@ -195,6 +195,18 @@ it('changes the format source and the clock override independently', async () =>
   expect(localeOf(context)).to.deep.equal({ source: 'browser', hourCycle: 'h23' });
 });
 
+it('changes when windows are reopened', async () => {
+  const context = await contextOnHost();
+  let reopen: string | undefined;
+  const subscription = context.reopenWindows.subscribe((value) => (reopen = value));
+  expect(reopen, 'after a refresh until the user says otherwise').to.equal('session');
+  context.setReopenWindows('persistent');
+  expect(reopen).to.equal('persistent');
+  context.setReopenWindows('off');
+  expect(reopen).to.equal('off');
+  subscription.unsubscribe();
+});
+
 describe('the launcher arrangement', () => {
   const LAYOUT = { groups: [{ id: 'editing', label: null, apps: ['media'] }], removed: ['profiling'], deletedGroups: [] };
 

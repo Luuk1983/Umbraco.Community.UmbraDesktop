@@ -14,6 +14,7 @@ import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
 import { UmbraDesktopServerEventController } from '../conflict/server-event.controller.js';
 import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
+import { UmbraDesktopWindowLayoutController } from '../windows/layout.controller.js';
 import type { UmbraDesktopWallpaperView } from '../settings/wallpaper-view.js';
 import { UmbraDesktopThemeContext } from '../theme/theme.context.js';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -101,6 +102,13 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   private _settingsLoaded = false;
 
   /**
+   * Whether this user's windows are being reopened, which holds the desktop like loading settings
+   * does. See {@link reportWindowsRestoring}.
+   */
+  @state()
+  private _windowsRestoring = false;
+
+  /**
    * Whether a one-time migration is showing a screen over the desktop, and which one.
    *
    * Idle for everybody except somebody whose settings are still in this browser rather than on their
@@ -119,9 +127,17 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   constructor() {
     super();
-    // Instantiating (without keeping a reference) is enough to provide the
-    // catalogue context to the desktop subtree; nothing here consumes it directly.
-    new UmbraDesktopAppCatalogueContext(this);
+    // Instantiating is enough to provide the catalogue context to the desktop subtree. The one
+    // reference kept is for the window layout below, which reopens windows by their apps.
+    const catalogue = new UmbraDesktopAppCatalogueContext(this);
+    // Reopens this user's windows once their settings have loaded, and keeps the layout saved. The
+    // desktop holds its first paint while it does; see `reportWindowsRestoring`.
+    const layout = new UmbraDesktopWindowLayoutController(this, {
+      manager: this.#manager,
+      settings: this.#settings,
+      apps: catalogue.apps,
+    });
+    this.observe(layout.restoring, (restoring) => this.reportWindowsRestoring(restoring === true));
     // Adopts the active theme's desktop-surface stylesheet into this element's shadow root.
     new UmbraDesktopThemeStyles(this, 'desktop');
     // Consumed once here, not per window: see the class doc on why.
@@ -154,6 +170,32 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     if (this._settingsLoaded === loaded) return;
     this._settingsLoaded = loaded;
     if (!loaded) return;
+    this.#handOverWhenReady();
+  }
+
+  /**
+   * Record whether this user's windows are being reopened, and hold the desktop while they are.
+   *
+   * The hold is the same one settings get, for the same kind of reason: nobody should start using a
+   * desktop that is about to change under them, and windows appearing one after another under the
+   * pointer is exactly that. Only the placing is waited for, never the windows' frames, which each
+   * have their own loader. Public for the same reason as {@link reportSettingsLoaded}: it lets a
+   * test drive the hold without a signed-in user.
+   * @param restoring Whether a restore is running (`windows/layout.controller.ts`).
+   */
+  public reportWindowsRestoring(restoring: boolean): void {
+    if (this._windowsRestoring === restoring) return;
+    this._windowsRestoring = restoring;
+    if (!restoring) this.#handOverWhenReady();
+  }
+
+  /** Whether the hand-off from the splash has started, so it runs once however often it is asked. */
+  #handingOver = false;
+
+  /** Start the hand-off once settings have loaded and no windows are still being reopened. */
+  #handOverWhenReady(): void {
+    if (this.#handingOver || !this._settingsLoaded || this._windowsRestoring) return;
+    this.#handingOver = true;
     void this.#handOverFromSplash();
   }
 
@@ -163,11 +205,20 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    * Clearing the boot marker is part of the hand-off rather than a step before it: the marker means
    * "a boot was attempted and never finished", so it may only be cleared at the point where the
    * desktop is genuinely on screen.
+   *
+   * A restore can be reported while the wallpaper is still being waited for, since both start from
+   * the settings report. So the hold is checked again at the end, and a hand-off that finds windows
+   * still being reopened stands down for {@link reportWindowsRestoring} to start again.
    */
   async #handOverFromSplash(): Promise<void> {
     bootTrace('desktop mounted, settings resolved; waiting for the wallpaper');
     await this.updateComplete;
     await waitForWallpaper(this._wallpaper?.background.url ?? null);
+    if (this._windowsRestoring) {
+      this.#handingOver = false;
+      bootTrace('windows are still being reopened; the splash stays up');
+      return;
+    }
     clearBootAttempt();
     lowerBootSplash();
     bootTrace('splash lowered; the desktop has the screen');
@@ -335,10 +386,10 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   }
 
   override render() {
-    if (!this._settingsLoaded) {
+    if (!this._settingsLoaded || this._windowsRestoring) {
       // A neutral hold: no palette, no wallpaper, no chrome. During a boot the splash is over this,
       // and the point is that when the splash lifts the only thing underneath is this user's own
-      // desktop — never a default one that then changes.
+      // desktop — never a default one that then changes, and never one with windows still arriving.
       return html`<div class="booting" aria-busy="true"></div>`;
     }
 

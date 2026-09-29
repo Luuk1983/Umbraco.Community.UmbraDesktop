@@ -124,7 +124,7 @@ export default {
     groupLanguage: 'Language and region',
     groupTaskbar: 'Taskbar',
     groupAppearanceAbout: 'The theme and the wallpaper behind your windows',
-    groupGeneralAbout: 'How the desktop starts, and where you land when you sign in',
+    groupGeneralAbout: 'How the desktop starts, and which windows come back',
     groupLanguageAbout: 'The language the backoffice speaks, and how the desktop writes dates and times',
     groupTaskbarAbout: 'What the taskbar keeps beside the launcher button',
     groupSite: 'Site',
@@ -193,6 +193,12 @@ export default {
     bootIntoDesktop: 'Open the desktop when I sign in',
     bootDescription:
       'Takes effect the next time you open the backoffice, not right now. A link straight to a document still opens that document. Add ?desktop=off to the backoffice address to skip it once.',
+    reopenWindows: 'Remember my open windows',
+    reopenWindowsOff: "Don't remember",
+    reopenWindowsSession: 'This session',
+    reopenWindowsPersistent: 'Always',
+    reopenWindowsDescription:
+      'This session keeps your windows when you reload the page or leave the desktop and come back, until you close the tab. Always also brings them back the next time you open the backoffice. Backoffice windows reopen at the page they were showing; unsaved changes are not kept.',
     // desktop settings — language and region. The first row is the odd one out and its hint says so:
     // it changes the whole backoffice, and it is the only setting here that needs a reload.
     backofficeLanguage: 'Backoffice language',
@@ -389,6 +395,7 @@ export default {
       'Managing connections needs access to the Settings section here. Ask an administrator of this instance.',
     // the boot splash, which only speaks when a load runs long, and the two ways settings fail to save
     bootLoadingSettings: 'Loading your desktop',
+    bootReopeningWindows: 'Reopening your windows',
     migrationSettingsToAccount: 'Moving your desktop settings to your account',
     // the migration screen, shown once over the desktop while settings move to the account
     migrationTitle: 'Setting up your desktop',

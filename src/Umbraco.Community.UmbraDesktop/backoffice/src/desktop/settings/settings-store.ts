@@ -2,6 +2,7 @@ import type {
   UmbraDesktopLauncherLayout,
   UmbraDesktopLauncherLayoutGroup,
   UmbraDesktopLocaleSettings,
+  UmbraDesktopReopenWindows,
   UmbraDesktopSettings,
   UmbraDesktopWallpaperRef,
 } from './types';
@@ -30,6 +31,7 @@ export const UMBRADESKTOP_DEFAULT_SETTINGS: UmbraDesktopSettings = {
   theme: UMBRADESKTOP_DEFAULT_THEME_ID,
   pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
   bootIntoDesktop: false,
+  reopenWindows: 'session',
   taskbarFeatures: {},
   wallpaperFollowsTheme: false,
   locale: { source: 'backoffice', hourCycle: 'auto' },
@@ -105,6 +107,19 @@ function isFeatureMap(value: unknown): value is Record<string, boolean> {
  */
 function isBootPreference(value: unknown): value is boolean {
   return typeof value === 'boolean';
+}
+
+/**
+ * Whether a decoded value is one of the three answers to when windows are reopened.
+ *
+ * Strict, and a stored boolean is not one of them: an early build of this setting stored `true` or
+ * `false`, and reading those as anything but the default would guess at what somebody meant by a
+ * switch that no longer exists.
+ * @param value The decoded `reopenWindows` property.
+ * @returns True when the value is a usable choice.
+ */
+function isReopenWindows(value: unknown): value is UmbraDesktopReopenWindows {
+  return value === 'off' || value === 'session' || value === 'persistent';
 }
 
 /**
@@ -218,6 +233,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
     bootIntoDesktop: UMBRADESKTOP_DEFAULT_SETTINGS.bootIntoDesktop,
+    reopenWindows: UMBRADESKTOP_DEFAULT_SETTINGS.reopenWindows,
     taskbarFeatures: {},
     wallpaperFollowsTheme: UMBRADESKTOP_DEFAULT_SETTINGS.wallpaperFollowsTheme,
     locale: { ...UMBRADESKTOP_DEFAULT_SETTINGS.locale },
@@ -240,6 +256,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     pinned?: unknown;
     theme?: unknown;
     bootIntoDesktop?: unknown;
+    reopenWindows?: unknown;
     taskbarFeatures?: unknown;
     wallpaperFollowsTheme?: unknown;
     locale?: unknown;
@@ -252,6 +269,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
   if (isThemeId(payload.theme)) settings.theme = payload.theme;
   if (isPinnedList(payload.pinned)) settings.pinned = payload.pinned;
   if (isBootPreference(payload.bootIntoDesktop)) settings.bootIntoDesktop = payload.bootIntoDesktop;
+  if (isReopenWindows(payload.reopenWindows)) settings.reopenWindows = payload.reopenWindows;
   if (isFeatureMap(payload.taskbarFeatures)) settings.taskbarFeatures = { ...payload.taskbarFeatures };
   if (isWallpaperFollowsTheme(payload.wallpaperFollowsTheme)) {
     settings.wallpaperFollowsTheme = payload.wallpaperFollowsTheme;

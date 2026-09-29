@@ -114,3 +114,53 @@ it('observes the surface for clamping once it exists', async () => {
   await desktop.updateComplete;
   expect(desktop.observedSurfaceForTest).to.equal(desktop.renderRoot.querySelector('.surface'));
 });
+
+/**
+ * Reopening windows happens behind the hold, so nobody starts using a desktop that windows are
+ * still appearing on. The windows' frames are not waited for: each window has its own loader.
+ */
+describe('while windows are being reopened', () => {
+  it('holds the surface after settings have loaded, until the windows are back', async () => {
+    const desktop = await mountDesktop();
+    desktop.reportWindowsRestoring(true);
+    desktop.reportSettingsLoaded(true);
+    await desktop.updateComplete;
+    expect(desktop.renderRoot.querySelector('.surface') === null, 'no surface while reopening').to.equal(true);
+    expect(desktop.renderRoot.querySelector('umbradesktop-taskbar') === null, 'no chrome while reopening').to.equal(true);
+
+    desktop.reportWindowsRestoring(false);
+    await desktop.updateComplete;
+    expect(desktop.renderRoot.querySelector('.surface') === null, 'the surface once they are').to.equal(false);
+  });
+
+  it('keeps the boot splash up until the windows are back', async () => {
+    raiseBootSplash(document, 60_000);
+    const desktop = await mountDesktop();
+    desktop.reportWindowsRestoring(true);
+    desktop.reportSettingsLoaded(true);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(document.getElementById(UMBRADESKTOP_SPLASH_ELEMENT_ID) === null, 'still up while reopening').to.equal(false);
+
+    desktop.reportWindowsRestoring(false);
+    await until(
+      () => document.getElementById(UMBRADESKTOP_SPLASH_ELEMENT_ID) === null,
+      'the splash should be lowered once the windows are back',
+    );
+  });
+
+  /** The restore can start a moment after settings report in, and must still be waited for. */
+  it('waits for a restore reported after settings, while the hand-off is still under way', async () => {
+    raiseBootSplash(document, 60_000);
+    const desktop = await mountDesktop();
+    desktop.reportSettingsLoaded(true);
+    desktop.reportWindowsRestoring(true);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(document.getElementById(UMBRADESKTOP_SPLASH_ELEMENT_ID) === null, 'still up while reopening').to.equal(false);
+
+    desktop.reportWindowsRestoring(false);
+    await until(
+      () => document.getElementById(UMBRADESKTOP_SPLASH_ELEMENT_ID) === null,
+      'the splash should be lowered once the windows are back',
+    );
+  });
+});

@@ -717,3 +717,63 @@ describe('fixed-size apps', () => {
     expect(windowsOf(ctx)[0].state).to.equal('maximized');
   });
 });
+
+/**
+ * Reopening a saved window, for the window layout (`windows/layout.ts`), and recording where a
+ * backoffice window's frame is, which is what lets it reopen at that page.
+ */
+describe('restoring saved windows', () => {
+  const SECTION: UmbraDesktopApp = { ...APP, alias: 'section', content: { kind: 'iframe', url: '/umbraco/section/content' } };
+
+  it('reopens a window at its saved rectangle, state and snap, without taking focus', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    ctx.restoreWindow(
+      {
+        app: 'section',
+        rect: { x: 40, y: 50, w: 600, h: 400 },
+        state: 'maximized',
+        z: 7,
+        active: true,
+        snapped: 'left',
+        restoreRect: { x: 1, y: 2, w: 300, h: 200 },
+      },
+      SECTION,
+    );
+    const restored = windowsOf(ctx).find((w) => w.app.alias === 'section')!;
+    expect(restored.rect).to.eql({ x: 40, y: 50, w: 600, h: 400 });
+    expect(restored.state).to.equal('maximized');
+    expect(restored.snapped).to.equal('left');
+    expect(restored.restoreRect).to.eql({ x: 1, y: 2, w: 300, h: 200 });
+    expect(restored.active, 'focus is the restorer’s to give, once every window is back').to.equal(false);
+  });
+
+  it('stacks restored windows above what is open, in the order they are restored', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    ctx.restoreWindow({ app: 'section', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 1, active: false }, SECTION);
+    ctx.restoreWindow({ app: 'section', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 2, active: false }, SECTION);
+    const [first, second, third] = windowsOf(ctx);
+    expect(second.z).to.be.greaterThan(first.z);
+    expect(third.z).to.be.greaterThan(second.z);
+  });
+
+  it('opens a restored backoffice window at the page it was showing', () => {
+    const ctx = manager();
+    ctx.restoreWindow(
+      { app: 'section', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 1, active: false, location: '/umbraco/section/content/workspace/document/edit/abc' },
+      SECTION,
+    );
+    const [restored] = windowsOf(ctx);
+    expect(restored.app.content).to.eql({ kind: 'iframe', url: '/umbraco/section/content/workspace/document/edit/abc' });
+    expect(restored.location).to.equal('/umbraco/section/content/workspace/document/edit/abc');
+  });
+
+  it('records where a window’s frame is', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+    ctx.setLocation(id, '/umbraco/section/media');
+    expect(windowsOf(ctx)[0].location).to.equal('/umbraco/section/media');
+  });
+});
