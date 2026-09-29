@@ -594,12 +594,29 @@ to redo some of the setup in a later version.
 
 It needs nothing installed on the other instance. You create an API user there, in the Users
 section, which is Umbraco's own feature for exactly this, and paste its client ID and secret into
-Desktop settings. For what ships today the API user needs no sections at all, and whoever owns that
-instance can revoke it whenever they like. Credentials are stored encrypted on the instance you add
-them to, so that should be one you own rather than a client's.
+Desktop settings. For Connection status the API user needs no sections at all; for Remote content
+it needs to be able to read content and media there. Whoever owns that instance can revoke it
+whenever they like. Credentials are stored encrypted on the instance you add them to, so that should
+be one you own rather than a client's.
 
-Nothing appears until you add a connection, and what appears then is one app: Connection status,
-listing this instance along with every one you connected, with what each reports about itself.
+Nothing appears until you add a connection, and what appears then is two apps in the Experimental
+group:
+
+- **Connection status** lists this instance along with every one you connected, with what each
+  reports about itself.
+- **Remote content** shows another instance's content tree, documents and media, read-only, with
+  Umbraco's own editors, so a block grid or a picker looks exactly as it does on that site. A
+  switcher at the top picks the instance, in the colour you gave it. Nothing can be saved, published
+  or deleted, whatever that instance's API user is allowed to do: the desktop only ever reads from it,
+  and hides every action that would change something. Custom property editors show properly when the
+  same package is installed here too.
+
+Remote content runs this instance's backoffice in the window and sends its reads to the other
+instance through the desktop, so the other site needs nothing installed and the browser never holds
+its credentials. It warns before opening an instance on a different Umbraco version, because its
+content is shown with the editors installed here. It does not update live: a change on the other
+site shows the next time you open that item. Preview and the other site's front end are not
+available from it.
 
 It is deliberately not the environments feature. Test, acceptance and production of one solution
 share content and keys, and moving or comparing things between them is uSync and Deploy's job;
@@ -733,7 +750,9 @@ Connecting other Umbraco instances is experimental, and
 [`docs/connections.md`](docs/connections.md) is its guide: creating the API user on the instance you
 want to read, what each field in Desktop settings wants, what the five connection statuses mean and
 who fixes each one, where the credentials are stored and the limits of that, and what the feature
-deliberately refuses to do.
+deliberately refuses to do. How Remote content redirects a backoffice and keeps it read-only, and
+what that cannot reach, is in
+[`docs/design/2026-09-29-remote-content-viewer-design.md`](docs/design/2026-09-29-remote-content-viewer-design.md).
 
 Installing the backoffice as an app is described above. The reasoning behind it, including the
 browser behaviour it depends on and the fixture that proves it, is in

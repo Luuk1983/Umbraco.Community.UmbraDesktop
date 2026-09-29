@@ -343,6 +343,22 @@ export default {
     connectionStatusManage: 'Manage connections',
     connectionStatusRefresh: 'Refresh',
     connectionStatusLoadFailed: 'Could not read the connection status.',
+    // the remote content app, which shows another instance's content read-only
+    appRemoteContent: 'Remote content',
+    remoteContentConnection: 'Instance',
+    remoteContentReadOnly: 'Read-only',
+    remoteContentConnecting: 'Reaching %0%',
+    remoteContentLoading: 'Loading %0%',
+    remoteContentNotUsable: "%0% can't be opened: %1%.",
+    remoteContentLoadFailed: '%0% did not finish loading.',
+    remoteContentLeaked:
+      "Some requests reached this instance instead of %0%, so what would be shown here may not be %0%'s content.",
+    remoteContentVersionTitle: 'Different Umbraco version',
+    remoteContentVersionBody:
+      '%0% runs Umbraco %1% and this instance runs %2%. Its content is shown with the editors installed here, so some properties may not display correctly.',
+    remoteContentOpenAnyway: 'Open anyway',
+    remoteContentTryAgain: 'Try again',
+    remoteContentNoConnections: 'There are no connected instances.',
     // the permission card, shown in place of whatever could not be read
     permissionNeeded: 'Permission needed',
     permissionNeededRemote:

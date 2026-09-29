@@ -1,0 +1,8 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>remote viewer frame fixture</title>
+<script>
+  // Runs while the document is still loading, before any module script would, and records whether
+  // the patch made on the blank frame is still in place. install-shim.test.ts reads the answer.
+  window.fetchWasPatchedAtStart = window.fetch.__remoteViewerShim === true;
+</script>

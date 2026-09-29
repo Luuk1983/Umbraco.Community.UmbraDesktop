@@ -61,7 +61,10 @@ export interface MetaUmbraDesktopApp {
  * available, which for a game is right: reaching the desktop at all is already gated by the
  * desktop section's permission.
  */
-export interface ManifestUmbraDesktopApp extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions {
+export interface ManifestUmbraDesktopApp
+  // Typed with Umbraco's full condition union, as its own header apps are, so a condition's own
+  // config (a section condition's `match`, say) is accepted. The bare default only knows `alias`.
+  extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions<UmbExtensionConditionConfig> {
   type: 'umbraDesktopApp';
   meta: MetaUmbraDesktopApp;
   /**
