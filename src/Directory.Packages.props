@@ -4,16 +4,16 @@
     <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Extension package dependencies -->
-    <PackageVersion Include="Umbraco.Cms.Api.Common" Version="[17.0.0,18.0.0)" />
-    <PackageVersion Include="Umbraco.Cms.Api.Management" Version="[17.0.0,18.0.0)" />
-    <PackageVersion Include="Umbraco.Cms.Core" Version="[17.0.0,18.0.0)" />
-    <PackageVersion Include="Umbraco.Cms.Infrastructure" Version="[17.0.0,18.0.0)" />
+    <!-- Extension package dependencies. The ceiling is UmbraDesktopUmbracoMajorCeiling from
+         Directory.Build.props, 17.99999999, rather than an exclusive 18.0.0: NuGet orders
+         18.0.0-rc.1 before 18.0.0, so "[17.0.0,18.0.0)" admits every Umbraco 18 prerelease, and the
+         next major's betas are exactly what this package has never been tested against. The same
+         property bounds every add-on's dependency on the host, so the two cannot drift apart. -->
+    <PackageVersion Include="Umbraco.Cms.Api.Common" Version="[17.0.0,$(UmbraDesktopUmbracoMajorCeiling)]" />
+    <PackageVersion Include="Umbraco.Cms.Api.Management" Version="[17.0.0,$(UmbraDesktopUmbracoMajorCeiling)]" />
+    <PackageVersion Include="Umbraco.Cms.Core" Version="[17.0.0,$(UmbraDesktopUmbracoMajorCeiling)]" />
+    <PackageVersion Include="Umbraco.Cms.Infrastructure" Version="[17.0.0,$(UmbraDesktopUmbracoMajorCeiling)]" />
     <PackageVersion Include="Umbraco.Community.AdvancedPermissions" Version="17.3.0" />
-    <!-- The Entertainment add-on's dependency on the host package. A range, not the exact version
-         it is built beside, so a host release does not force an Entertainment release (design D13).
-         Central package management means the version lives here rather than in that csproj. -->
-    <PackageVersion Include="Umbraco.Community.UmbraDesktop" Version="[17.0.0,18.0.0)" />
     <PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
     <!-- Build-time only: versioning and source-link -->
     <PackageVersion Include="MinVer" Version="7.0.0" />

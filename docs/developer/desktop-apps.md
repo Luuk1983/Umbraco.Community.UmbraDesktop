@@ -17,6 +17,9 @@ desktop opens it, themes it and closes it, and your package never depends on any
 the manifest type. Minesweeper was the first one and Snake the second, both in the Entertainment package; a
 calculator, a colour picker or a notepad would work the same way.
 
+The Accessories package is the fullest example: Notepad, Paint, Sticky Notes, Calculator, Character
+Map, Clock, Screen Saver, Disk Cleanup and System Information are each one of these.
+
 ---
 
 ## 1. Is your app registerable, or does it belong in the catalogue?
@@ -481,6 +484,10 @@ together and the desktop knows nothing about either. An app naming a group nobod
 the reserved More group, which is honest rather than a failure. [package-catalogues.md](package-catalogues.md)
 §4 lists the desktop's groups and their weights, for placing one of your own among them.
 
+The Accessories add-on does the same for its Accessories group, at 55: after System and just before
+Games, which is where Windows put Start > Programs > Accessories. A tool of your own may name
+`accessories` too, and lands under More wherever that package is not installed.
+
 Most of the launcher then works on your app for nothing. Its tile and its taskbar button come from
 being in the app list at all. Pinning does key off `alias`, which is why §2 makes such a point of
 that field being stable: a pin is stored as an alias and resolved with a lookup over the app list,
@@ -534,6 +541,22 @@ Teardown is the browser's own. `disconnectedCallback` is the whole contract: can
 `requestAnimationFrame` there, clear your intervals, drop your listeners. There is no desktop signal
 to subscribe to and none is needed.
 
+**Tell the desktop about unsaved work with one attribute.** While your app holds work that closing
+the window would lose, put `data-umbradesktop-dirty` on your own element, and take it off once the
+work is saved or discarded:
+
+```ts
+this.toggleAttribute('data-umbradesktop-dirty', this.hasUnsavedWork);
+```
+
+That is the whole contract, and it buys everything a backoffice page gets: the unsaved dot on the
+titlebar and the taskbar button, a question before the close button throws the work away, and a
+count in the prompt before someone leaves the desktop. Presence is what counts, and the value is
+ignored. Write it wherever your state changes (Lit's `updated()` is a good place), and never set it
+for state that is not lost on close, such as a game in progress: a question nobody needed trains
+people to click through the one that matters. Notepad and Paint in the Accessories package are the
+worked examples.
+
 **There is no reload or restart control on an app window.** The titlebar draws three buttons —
 minimize, maximize, close — where an iframe window draws four. Reload exists for the iframe kind
 because re-fetching a booting backoffice in place, with the window keeping the route the user
@@ -578,6 +601,51 @@ So, if your app takes keyboard input:
   away: the way back gives focus to the same element, so "press a key to carry on" works on the
   first press.
 - Iframe windows are never handed focus this way: a backoffice window's focus is its frame's own.
+
+### 7.2 Formatting dates and times like the desktop
+
+The taskbar clock follows two of the user's desktop settings: which culture formats times (the
+backoffice's or the browser's) and whether to force a 12 or 24 hour clock. An app that shows a time
+should follow the same two, or the user who asked for 24 hour sees "2:30 PM" in your window and
+"14:30" a few centimetres below it. `this.localize.date` does not know about either setting.
+
+The desktop publishes them through the context it provides to everything inside it, apps included.
+**This is public API**: the alias, the two members below and their behaviour are kept stable.
+
+| | |
+|---|---|
+| Context alias | `'UmbraDesktopSettingsContext'` |
+| `formatDateTime(date, options)` | Formats `date` with `Intl.DateTimeFormat` options, exactly as the taskbar clock does: the user's culture, their hour override when `options` asks for an hour, and the hour padded to suit the cycle. Returns a string |
+| `locale` | An observable that emits whenever either setting changes. Observe it and redraw; its value is the desktop's own and not something to read |
+
+As with the manifest type (§2), nothing is imported from the host. Declare the shape you use and a
+token with the same alias, and consume it:
+
+```ts
+import { UmbContextToken } from '@umbraco-cms/backoffice/context-api';
+import type { UmbContextMinimal } from '@umbraco-cms/backoffice/context-api';
+import type { Observable } from '@umbraco-cms/backoffice/external/rxjs';
+
+// UmbContextMinimal, because UmbContextToken requires it; the desktop's context is one.
+interface DesktopDateTime extends UmbContextMinimal {
+  formatDateTime(date: Date, options: Intl.DateTimeFormatOptions): string;
+  readonly locale: Observable<unknown>;
+}
+
+const DESKTOP_SETTINGS = new UmbContextToken<DesktopDateTime>('UmbraDesktopSettingsContext');
+
+// In your element:
+this.consumeContext(DESKTOP_SETTINGS, (desktop) => {
+  this.#desktop = desktop;
+  if (desktop) this.observe(desktop.locale, () => this.requestUpdate());
+});
+// …and when rendering, falling back to the backoffice's own formatting:
+const time = this.#desktop?.formatDateTime(now, options) ?? this.localize.date(now, options);
+```
+
+**Keep the fallback.** The context is absent in your own tests, and would be under a desktop older
+than this contract, and an app that renders nothing there is worse than one that follows the
+backoffice culture alone. The Accessories Clock is the worked example.
 
 ---
 
@@ -632,6 +700,30 @@ Same ring, follows the same `border-radius`, costs no layout, needs no arithmeti
 the size you declare is exact under every theme including the ones that do not exist yet. Controls
 of a fixed size (`box-sizing: border-box`) are unaffected and should keep using a border, which is
 what §4's example does.
+
+**A button the mouse clicked grows a focus ring at the next keypress.** Chrome focuses a clicked
+`<button>` and, correctly, shows no `:focus-visible` ring for it. The moment any key is pressed, it
+decides the person is using the keyboard and draws the ring after all. Any key counts, Shift, Ctrl
+or the Windows key on their own included, so a screenshot shortcut or a switch between windows is
+enough. The Accessories apps all shipped with this: a tab or toolbar button someone had clicked wore
+the accent ring the next time they touched the keyboard, while nothing on the desktop's own chrome
+did, because none of it takes focus on a click. Your `:focus-visible` rule is not wrong, and it
+should stay, since it is the keyboard's only way to see where it is. What fixes it is not taking
+focus on a mouse press in the first place: cancel the `mousedown` default on your buttons. The click
+still fires, `:active` still draws the press, and Tab still reaches the button and still shows its
+ring. It also keeps typing where it was, so a Word wrap toggle does not swallow the next keystroke.
+Leave a `draggable` button alone, because a cancelled mousedown never starts an HTML drag, and leave
+selects and text fields out of it, since they have to take focus to open or to take the caret. They
+are worse, not better: Chrome rings a clicked select, text field or text area with no key pressed at
+all. Mark one on mousedown, clear the mark on blur, and turn the outline off for a marked field,
+Chrome's own `outline: auto` included, with enough weight to beat your own field rules. The Accessories
+package does all of this for every app in one function,
+`shared/press-focus.ts`. The other half: if your app listens for shortcuts on its host, a click must
+leave focus somewhere inside it. A click on something that cannot take focus, such as a canvas, moves
+focus to the nearest ancestor that can, and with none it lands on the page. Paint's Ctrl+Z did
+nothing after a real stroke until its host got `tabIndex = -1` and `outline: none`. Neither the
+ring nor this one shows up when a unit test dispatches its own events. Only real input shows them,
+through `sendMouse` and `sendKeys` from `@web/test-runner-commands`.
 
 **Read the theme id in CSS, not in your constructor.** The attribute is set on your element after it
 is constructed and before it is inserted. A CSS rule is therefore always safe: CSS is declarative and
@@ -706,6 +798,8 @@ booting second backoffice inside an iframe and there is not one here. Your eleme
 - [ ] Your `alias` is namespaced and final: it is what pins a favourite
 - [ ] `meta.label` is a localisation token and your package ships the dictionary for it
 - [ ] `disconnectedCallback` cancels every timer, frame and listener your app started
+- [ ] If closing your window can lose work, your element carries `data-umbradesktop-dirty` while it
+      would (§7), and only then
 - [ ] Minimizing your window and restoring it leaves your app's state intact
 - [ ] Switching theme mid-use recolours your app without resetting it
 - [ ] `meta.defaultSize` and `meta.minSize` are **your content box** with no titlebar allowance
