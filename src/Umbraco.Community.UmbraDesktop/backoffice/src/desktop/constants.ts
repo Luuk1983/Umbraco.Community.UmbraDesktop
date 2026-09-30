@@ -16,6 +16,15 @@ export const UMBRADESKTOP_DEFAULT_ICON = 'icon-box';
 export const UMBRADESKTOP_SECTION_PATHNAME = 'umbradesktop';
 
 /**
+ * The alias prefix of a section's uncertified fallback app: `section:<section alias>`.
+ *
+ * One constant because three places must agree on it. Derivation mints the alias, pin resolution
+ * reads it so that a pin can follow its section to the entry that replaces the fallback (design
+ * D15), and package catalogue validation reserves it so that no package entry collides with one.
+ */
+export const UMBRADESKTOP_FALLBACK_ALIAS_PREFIX = 'section:';
+
+/**
  * The attribute carrying the active chrome theme's id onto a self-contained app.
  *
  * A published contract, not an implementation detail: an app branches on it with
@@ -44,6 +53,16 @@ export const UMBRADESKTOP_THEME_ATTRIBUTE = 'data-umbradesktop-theme';
  * and the CSS fallback stay a single source rather than two literals to keep in sync by hand.
  */
 export const UMBRADESKTOP_TASKBAR_HEIGHT = 50;
+
+/**
+ * How far the desktop label sits from the edges of the desktop, in pixels.
+ *
+ * One number for every theme and every corner: from the top and the sides as it is, and from the
+ * bottom on top of the taskbar reserve, which is what keeps it clear of a floating dock without a
+ * special case. The label's CSS reads it, and so does the test that measures where each theme
+ * really puts the label, so the two cannot disagree.
+ */
+export const UMBRADESKTOP_DESKTOP_LABEL_INSET = 20;
 
 /** Reserved group alias that collects uncurated / fallback apps. */
 export const UMBRADESKTOP_MORE_GROUP_ALIAS = 'umbradesktop-more';
@@ -174,6 +193,13 @@ export const UMBRADESKTOP_TITLEBAR_BORDER = 1;
 export const UMBRADESKTOP_PATH_HEIGHT = 28;
 
 /**
+ * How wide a dock zone is, in px: the band just inside an owner window's edge that a floating
+ * attached window can be dropped on to dock there. Capped at a third of the owner's width so the two
+ * zones never meet and most of the window is never a target. Wide enough to find without aiming.
+ */
+export const UMBRADESKTOP_DOCK_ZONE_WIDTH = 160;
+
+/**
  * What must stay inside the desktop while dragging, under the Umbraco theme.
  *
  * `trailing` is the non-draggable band at the titlebar's right end, measured from the window's own
@@ -258,3 +284,62 @@ export const UMBRADESKTOP_DEFAULT_METRICS: UmbraDesktopThemeMetrics = {
  * own edges and reads identically under all five.
  */
 export const UMBRADESKTOP_SNAP_EDGE = 8;
+
+/**
+ * The stacking order inside the desktop, as one list rather than literals spread across files.
+ *
+ * These were three numbers in two files until a review found that the migration screen, at 100, sat
+ * *under* the taskbar at 1,000,000: `.desktop` is `position: relative` with no `z-index`, so it
+ * opens no stacking context and its children compete directly. The screen that was supposed to
+ * cover the desktop left the taskbar clickable, and with it the settings dialog, during a migration
+ * that was rewriting those very settings.
+ *
+ * Ordered low to high, each derived from the one below, so the relationship is the thing that is
+ * written down and a new layer cannot be inserted by guessing a bigger number.
+ */
+
+/**
+ * The snap preview: over every window, deliberately under the taskbar. A preview that covered the
+ * taskbar would hide the thing the window is being snapped alongside.
+ */
+export const UMBRADESKTOP_Z_SNAP_GHOST = 999_999;
+
+/**
+ * The desktop's notifications: over every window and the snap preview, and under the taskbar, so the
+ * scrollback panel opened from the clock is never covered by the toasts it lists.
+ */
+export const UMBRADESKTOP_Z_TOASTS = UMBRADESKTOP_Z_SNAP_GHOST + 1;
+
+/** The taskbar: the highest thing on the desktop proper. */
+export const UMBRADESKTOP_Z_TASKBAR = UMBRADESKTOP_Z_TOASTS + 1;
+
+/**
+ * A system screen, above everything the desktop itself draws.
+ *
+ * Only the one-time migration screen uses this. It is not desktop chrome: it is the machine
+ * reporting on itself, and it must cover the desktop completely, because the desktop underneath is
+ * mid-change and its controls would otherwise let somebody edit the settings being migrated.
+ */
+export const UMBRADESKTOP_Z_SYSTEM_SCREEN = UMBRADESKTOP_Z_TASKBAR + 1;
+
+/**
+ * How long a migration may run before the screen gives up on it, in milliseconds.
+ *
+ * A **last resort**, like the splash's own lift timeout and for the same reason: the running state
+ * deliberately has no button, so a request that hangs rather than fails — a proxy holding the
+ * connection, an app pool asleep — would leave somebody behind a full-screen cover with no way out
+ * and nothing to click. Reaching this means something is broken rather than merely slow: the work
+ * itself is two requests.
+ *
+ * The migration is not cancelled when this fires, because it cannot be: it may already have written
+ * to the account. It is left to finish while the person is shown the failed screen, which is honest
+ * — their settings are still in this browser either way — and the ledger makes repeating it safe.
+ */
+export const UMBRADESKTOP_MIGRATION_TIMEOUT_MS = 30_000;
+
+/**
+ * The id the launcher uses for the Pinned place wherever it needs a group-shaped id: drop targets
+ * and Move to. Starts with `@` because a layout group id is a catalogue alias or `custom-…`, and a
+ * package could otherwise register a group called `pinned`.
+ */
+export const UMBRADESKTOP_PINNED_GROUP_ID = '@pinned';

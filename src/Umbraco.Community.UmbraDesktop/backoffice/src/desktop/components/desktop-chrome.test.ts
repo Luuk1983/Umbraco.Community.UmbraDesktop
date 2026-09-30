@@ -143,10 +143,10 @@ describe('the notice badge on a task button', () => {
    * severity that a hue alone could not. Queried as `umb-icon.notice-badge` specifically, so the
    * `info` dot — the same class, a bare span — cannot satisfy an assertion about a severity glyph.
    */
-  const badge = () => taskbar.renderRoot.querySelector('.task umb-icon.notice-badge');
+  const badge = () => taskbar.renderRoot.querySelector('.running .task umb-icon.notice-badge');
 
   /** The `info` dot on the first task button, if any. */
-  const dot = () => taskbar.renderRoot.querySelector('.task .notice-badge-dot');
+  const dot = () => taskbar.renderRoot.querySelector('.running .task .notice-badge-dot');
 
   it('draws a dot, and no glyph, for a window with ordinary unsaved changes', async function () {
     this.timeout(MOUNT_TIMEOUT_MS);
@@ -217,7 +217,7 @@ describe('the notice badge on a task button', () => {
     const id = await showWindow();
     manager.setDirty(id, true);
     await taskbar.updateComplete;
-    const button = taskbar.renderRoot.querySelector('.task') as HTMLElement;
+    const button = taskbar.renderRoot.querySelector('.running .task') as HTMLElement;
     // As below: no localization manifest is registered in this isolated mount, so the raw key
     // (`umbraDesktop_unsavedChanges`) is what lands in the title. Matching on "unsaved" pins it
     // under both that and the English wording.
@@ -231,7 +231,7 @@ describe('the notice badge on a task button', () => {
     manager.setDirty(id, true);
     manager.setServerState(id, { changedElsewhere: true });
     await taskbar.updateComplete;
-    const button = taskbar.renderRoot.querySelector('.task') as HTMLElement;
+    const button = taskbar.renderRoot.querySelector('.running .task') as HTMLElement;
     // No localization manifest is registered in this isolated mount, so `localize.term` falls back
     // to the raw key (`umbraDesktop_noticeChangedTitle`) rather than the English sentence a booted
     // backoffice would show — the same reason `window-dirty.test.ts` checks a marker's title for

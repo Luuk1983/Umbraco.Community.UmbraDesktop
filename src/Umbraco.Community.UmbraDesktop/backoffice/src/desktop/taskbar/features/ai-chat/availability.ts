@@ -24,7 +24,7 @@ export const UMBRADESKTOP_AI_CHAT_APP_ALIAS = 'copilot-workspace';
  * belongs to whoever manages its users. One apologetic line covering both would send half of the
  * people reading it to the wrong colleague.
  * @param apps The apps this user may launch.
- * @param isRefRegistered Whether a curated `ref` is registered on this install.
+ * @param isRefRegistered Whether a catalogue `ref`, ours or a package's, is registered on this install.
  * @param ref The chat's catalogue `ref`, or undefined when the entry has gone.
  * @returns The verdict, with a reason key when it is negative.
  */
@@ -34,9 +34,10 @@ export function aiChatAvailability(
   ref: string | undefined,
 ): UmbraDesktopFeatureAvailability {
   if (apps.some((app) => app.alias === UMBRADESKTOP_AI_CHAT_APP_ALIAS)) return { available: true };
-  // No entry to reference is not a state a shipped build can reach — `availability.test.ts` asserts
-  // the entry is still there — but "cannot be installed" is the honest answer for a lookup that
-  // found nothing, and it keeps the registry probe from being handed an empty alias.
+  // No ref to probe happens when a package has replaced the entry with a `url` one (package
+  // catalogues design D3); our own entry always has one, which `availability.test.ts` asserts.
+  // "Cannot be installed" is the honest answer for a lookup that found nothing, and it keeps the
+  // registry probe from being handed an empty alias.
   if (ref && isRefRegistered(ref)) return { available: false, reasonKey: 'umbraDesktop_taskbarAiChatNoPermission' };
   return { available: false, reasonKey: 'umbraDesktop_taskbarAiChatNotInstalled' };
 }

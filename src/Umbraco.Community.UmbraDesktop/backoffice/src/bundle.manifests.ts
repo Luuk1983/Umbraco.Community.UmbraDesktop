@@ -5,8 +5,10 @@ import { manifests as desktop } from './desktop/manifest';
 import { manifests as desktopSettings } from './desktop/settings/manifest';
 import { manifests as headerApps } from './headerapps/manifest';
 import { manifests as desktopLocalization } from './desktop/localization/manifest';
+import { manifests as desktopIcons } from './desktop/icons/manifest';
 import { manifests as desktopAi } from './desktop/ai/manifest';
 import { manifests as desktopConnections } from './desktop/connections/manifest';
+import { manifests as desktopRemoteViewer } from './desktop/remote-viewer/manifest';
 import { backofficePathFromBaseHref } from './desktop/boot/backoffice-path';
 import { bootLanding } from './desktop/boot/landing';
 import { hasBootAttempt, isBootSuppressed, readBootHint } from './desktop/boot/boot-storage';
@@ -53,6 +55,8 @@ export const manifests: Array<UmbExtensionManifest> = [
   ...desktopSettings,
   ...headerApps,
   ...desktopLocalization,
+  ...desktopIcons,
   ...desktopAi,
   ...desktopConnections,
+  ...desktopRemoteViewer,
 ];

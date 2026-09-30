@@ -25,7 +25,13 @@
 		"strict": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-		"noFallthroughCasesInSwitch": true
+		"noFallthroughCasesInSwitch": true,
+
+		/* A test-only type shim: the package's own types drag in @types/node and break the DOM's
+		   timer types. types/web-test-runner-commands.d.ts says why. */
+		"paths": {
+			"@web/test-runner-commands": [ "./types/web-test-runner-commands.d.ts" ]
+		}
 	},
 	"include": [ "src" ]
 }

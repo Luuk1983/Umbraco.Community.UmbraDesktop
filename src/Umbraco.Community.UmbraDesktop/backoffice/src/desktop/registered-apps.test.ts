@@ -198,3 +198,63 @@ it('keeps a manifest whose element is a class constructor', () => {
 it('drops a manifest whose element is an empty string', () => {
   expect(normaliseRegisteredApps([manifest({ element: '' })]).apps).to.deep.equal([]);
 });
+
+/** `resizable` comes through as written, and an unset one stays unset so the default applies. */
+it('carries resizable through from the manifest', () => {
+  const [fixed] = normaliseRegisteredApps([manifest({ meta: { label: 'x', resizable: false } })]).apps;
+  expect(fixed.resizable).to.equal(false);
+  const [unset] = normaliseRegisteredApps([manifest()]).apps;
+  expect(unset.resizable, 'unset is not an opinion, so it must not become one').to.be.undefined;
+});
+
+/**
+ * A static `umbraco-package.json` is type-checked by nothing, so a manifest can carry a number where
+ * the type says string. A non-string name used to reach the `localeCompare` tie-break in `groupApps`
+ * and throw, which stops every recompute after it (design D9 of the package catalogues design).
+ */
+it('uses the manifest name when meta.label is not text, and reports the label', () => {
+  const { apps, ignored } = normaliseRegisteredApps([
+    manifest({ name: 'Minesweeper', meta: { label: 42 as unknown as string } }),
+  ]);
+  expect(apps[0].name).to.equal('Minesweeper');
+  expect(ignored).to.deep.equal([{ alias: 'Pkg.Minesweeper', field: 'meta.label' }]);
+});
+
+it('ignores wrongly typed optional fields instead of passing them on', () => {
+  const { apps, ignored } = normaliseRegisteredApps([
+    manifest({
+      weight: '1000' as unknown as number,
+      meta: {
+        label: '#pkg_minesweeper',
+        icon: 7 as unknown as string,
+        group: ['games'] as unknown as string,
+        defaultSize: { w: 'wide', h: 10 } as unknown as { w: number; h: number },
+        allowMultiple: 'yes' as unknown as boolean,
+        resizable: 1 as unknown as boolean,
+      },
+    }),
+  ]);
+  const app = apps[0];
+  expect(app.icon).to.equal('icon-box');
+  expect(app.group).to.equal(undefined);
+  expect(app.weight).to.equal(undefined);
+  expect(app.defaultSize).to.equal(undefined);
+  expect(app.allowMultiple).to.equal(undefined);
+  expect(app.resizable).to.equal(undefined);
+  expect(ignored.map((field) => field.field).sort()).to.deep.equal([
+    'meta.allowMultiple',
+    'meta.defaultSize',
+    'meta.group',
+    'meta.icon',
+    'meta.resizable',
+    'weight',
+  ]);
+});
+
+it('never hands the launcher a name it cannot sort', () => {
+  const { apps } = normaliseRegisteredApps([
+    manifest({ alias: 'Pkg.A', name: 5 as unknown as string, meta: { label: 1 as unknown as string } }),
+    manifest({ alias: 'Pkg.B', name: 6 as unknown as string, meta: { label: 2 as unknown as string } }),
+  ]);
+  expect(() => groupApps(deriveApps([], [], [], apps), [])).to.not.throw();
+});

@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { groupApps } from './group-apps';
+import { catalogueGroupOf, groupApps, launcherGroupOrder } from './group-apps';
 import { UMBRADESKTOP_MORE_GROUP_ALIAS } from './constants';
 import type { UmbraDesktopApp, UmbraDesktopGroup } from './types';
 
@@ -41,4 +41,37 @@ it('routes apps with no/unknown group into the reserved More group, always last'
 it('drops empty groups', () => {
   const result = groupApps([app('content', { group: 'editing' })], groups);
   expect(result.map((g) => g.group.alias)).to.deep.equal(['editing']);
+});
+
+/**
+ * A name that is not text must not stop the launcher. An app's name can be inherited from another
+ * package's extension label, and a static `umbraco-package.json` is type-checked by nothing, so a
+ * number or an object can arrive here; `localeCompare` on one throws, and a throw in the recompute
+ * that calls this freezes the launcher (package catalogues design D9, found by the branch review).
+ */
+it('sorts apps and groups whose names are not text without throwing', () => {
+  const odd = (value: unknown) => value as string;
+  expect(() =>
+    groupApps(
+      [
+        app('a', { group: 'editing', weight: 10, name: odd(42) }),
+        app('b', { group: 'editing', weight: 10, name: odd({ en: 'Reports' }) }),
+      ],
+      [...groups, { alias: 'x', label: odd(7), weight: 10 }, { alias: 'y', label: odd(8), weight: 10 }],
+    ),
+  ).to.not.throw();
+});
+
+it('orders the catalogue groups by weight with the reserved More group last', () => {
+  const order = launcherGroupOrder([
+    { alias: 'late', label: 'Late', weight: 50 },
+    { alias: 'early', label: 'Early', weight: 5 },
+  ]);
+  expect(order.map((g) => g.alias)).to.deep.equal(['early', 'late', UMBRADESKTOP_MORE_GROUP_ALIAS]);
+});
+
+it("names an app's catalogue group, and More when its group is unset or unknown", () => {
+  expect(catalogueGroupOf(app('logs', { group: 'diagnostics' }), groups)).to.equal('diagnostics');
+  expect(catalogueGroupOf(app('stray', { group: 'nowhere' }), groups)).to.equal(UMBRADESKTOP_MORE_GROUP_ALIAS);
+  expect(catalogueGroupOf(app('bare'), groups)).to.equal(UMBRADESKTOP_MORE_GROUP_ALIAS);
 });

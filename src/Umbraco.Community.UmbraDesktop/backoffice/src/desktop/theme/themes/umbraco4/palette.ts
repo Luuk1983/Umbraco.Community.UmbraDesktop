@@ -3,6 +3,8 @@ import {
   U4_PATH_HEIGHT,
   U4_CONTROL_WIDTH,
   U4_LAUNCHER_TOP_CLEARANCE,
+  U4_LAUNCHER_ARRANGE_WIDTH,
+  U4_LAUNCHER_BORDER_PX,
   U4_LAUNCHER_WIDTH,
   U4_TASKBAR_HEIGHT,
   U4_TITLEBAR_HEIGHT,
@@ -127,6 +129,12 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-path-link': U4_TEXT,
   '--umbradesktop-path-link-hover-background': U4_SELECT,
   '--umbradesktop-path-separator': U4_EDGE,
+  // The strip's toolbar buttons: the era's pale selection blue on hover, and the same blue inside
+  // its darker line while toggled on, as the old tree drew its selected node.
+  '--umbradesktop-strip-button-hover-background': U4_SELECT,
+  '--umbradesktop-strip-button-on-background': U4_SELECT,
+  '--umbradesktop-strip-button-on-text': U4_TEXT,
+  '--umbradesktop-strip-button-on-shadow': `inset 0 0 0 1px ${U4_SELECT_LINE}`,
   '--umbradesktop-path-font-size': '11px',
   '--umbradesktop-titlebar-background': U4_RAISED,
   '--umbradesktop-titlebar-border-bottom': `1px solid ${U4_LINE}`,
@@ -161,13 +169,14 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-start-hover-background': `linear-gradient(180deg, ${U4_WELL} 0%, #efede8 100%)`,
   '--umbradesktop-start-active-background': U4_PRESSED,
   '--umbradesktop-launcher-width': `${U4_LAUNCHER_WIDTH}px`,
+  '--umbradesktop-launcher-arrange-width': `min(${U4_LAUNCHER_ARRANGE_WIDTH}px, 92vw)`,
   // Hard against the left edge, directly above the bar — where v4 put its Sections panel, and
   // the reason this theme needs no repositioning at all.
   '--umbradesktop-launcher-left': '0',
   '--umbradesktop-launcher-max-height': `calc(100vh - ${U4_TASKBAR_HEIGHT + U4_LAUNCHER_TOP_CLEARANCE}px)`,
   '--umbradesktop-launcher-background': U4_PANEL,
   '--umbradesktop-launcher-backdrop': 'none',
-  '--umbradesktop-launcher-border': `1px solid ${U4_EDGE_STRONG}`,
+  '--umbradesktop-launcher-border': `${U4_LAUNCHER_BORDER_PX}px solid ${U4_EDGE_STRONG}`,
   '--umbradesktop-launcher-radius': '3px',
   '--umbradesktop-launcher-shadow': '0 8px 24px rgba(25, 35, 50, 0.34)',
   '--umbradesktop-launcher-text': U4_TEXT,
@@ -177,13 +186,37 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-card-border': `1px solid ${U4_LINE_SOFT}`,
   '--umbradesktop-launcher-card-radius': '0',
   '--umbradesktop-launcher-border-emphasis': U4_SELECT_LINE,
-  '--umbradesktop-launcher-pin-hover-background': U4_FACE,
+  // The launcher's controls and arrange mode. A control is a raised v4 button, the same gradient
+  // and edge as the footer's and the taskbar's, and a pressed or default one takes the pale blue
+  // selection, whose dark text is restated in launcher.css.ts because the base writes white on it.
+  '--umbradesktop-launcher-control-background': U4_RAISED,
+  '--umbradesktop-launcher-control-border': `1px solid ${U4_EDGE}`,
+  '--umbradesktop-launcher-control-text': U4_TEXT,
+  '--umbradesktop-launcher-control-active-background': U4_SELECT,
+  '--umbradesktop-launcher-letter-text': U4_TEXT,
+  '--umbradesktop-launcher-letter-border': `1px solid ${U4_LINE_SOFT}`,
+  // v4's own secondary text grey, which is what it wrote hints in; the edge greys are for lines.
+  '--umbradesktop-launcher-text-muted': U4_TEXT_SOFT,
+  '--umbradesktop-launcher-banner-background': U4_SELECT,
+  '--umbradesktop-launcher-banner-border': `1px solid ${U4_SELECT_LINE}`,
+  '--umbradesktop-launcher-banner-text': U4_TEXT,
+  '--umbradesktop-launcher-divider': `1px solid ${U4_LINE_SOFT}`,
+  '--umbradesktop-launcher-drop-background': U4_SELECT,
+  '--umbradesktop-launcher-drop-outline': `2px solid ${U4_SELECT_LINE}`,
+  '--umbradesktop-launcher-ghost-shadow': '0 4px 12px rgba(25, 35, 50, 0.3)',
+  '--umbradesktop-launcher-remove-background': '#fbe9e7',
+  '--umbradesktop-launcher-remove-border': '2px dashed #c0392b',
+  '--umbradesktop-launcher-remove-text': '#8e2a1f',
   '--umbradesktop-desktop-background-color': U4_DESKTOP,
   '--umbradesktop-desktop-background-image': U4_DESKTOP_IMAGE,
   // No scrim: the wallpaper here is a flat gradient rather than a photograph, and the chrome is
   // opaque enough to read against it without dimming anything.
   '--umbradesktop-desktop-scrim': 'transparent',
   '--umbradesktop-desktop-watermark-opacity': '0.09',
+  // The desktop label in this theme's own lettering. Its ink and halo are the same under every
+  // theme, because the wallpaper behind it is the user's choice rather than this pale desktop.
+  '--umbradesktop-desktop-label-font': U4_FONT,
+  '--umbradesktop-desktop-label-weight': '700',
 
   // Apps. A single hairline edge rather than a two-tone bevel: Umbraco 4's controls were outlined,
   // not chiselled, so `edge-light` is the same white it uses to lift a panel and `edge-dark` is its

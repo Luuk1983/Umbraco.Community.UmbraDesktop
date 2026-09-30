@@ -3,6 +3,7 @@ import {
   WIN98_PATH_HEIGHT,
   WIN98_CONTROL_WIDTH,
   WIN98_LAUNCHER_TOP_CLEARANCE,
+  WIN98_LAUNCHER_ARRANGE_WIDTH,
   WIN98_LAUNCHER_WIDTH,
   WIN98_TASKBAR_HEIGHT,
   WIN98_TITLEBAR_HEIGHT,
@@ -151,7 +152,18 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-path-text': WIN98_TEXT,
   '--umbradesktop-path-link': '#000080',
   '--umbradesktop-path-link-hover-background': '#000080',
+  // White on the selection navy, as the Start menu and every list in this theme draw a selection.
+  '--umbradesktop-path-link-hover-text': '#ffffff',
   '--umbradesktop-path-separator': '#404040',
+  // The strip's toolbar buttons, as the era's flat toolbars drew them: no edge at rest, a thin
+  // raised edge on the grey face on hover, and pushed in over a dithered face while toggled on.
+  // Not the navy selection a crumb hovers in, which is a link's highlight and not a button's.
+  '--umbradesktop-strip-button-hover-background': WIN98_FACE,
+  '--umbradesktop-strip-button-hover-text': WIN98_TEXT,
+  '--umbradesktop-strip-button-hover-shadow': `inset -1px -1px ${WIN98_SHADOW}, inset 1px 1px ${WIN98_HILIGHT}`,
+  '--umbradesktop-strip-button-on-background': `repeating-conic-gradient(${WIN98_HILIGHT} 0 25%, ${WIN98_FACE} 0 50%) 0 0 / 2px 2px`,
+  '--umbradesktop-strip-button-on-text': WIN98_TEXT,
+  '--umbradesktop-strip-button-on-shadow': `inset -1px -1px ${WIN98_HILIGHT}, inset 1px 1px ${WIN98_SHADOW}`,
   '--umbradesktop-path-font-size': '11px',
   '--umbradesktop-titlebar-background': WIN98_ACTIVE_CAPTION,
   '--umbradesktop-titlebar-border-bottom': 'none',
@@ -175,6 +187,13 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-taskbar-reserve': `${WIN98_TASKBAR_HEIGHT}px`,
   '--umbradesktop-taskbar-margin': '0',
   '--umbradesktop-taskbar-radius': '0',
+  // The box around a window and its floating attached windows: a sunken groove on the face colour,
+  // the way Windows 98 grouped anything in a panel, rather than a rounded outline it never drew.
+  '--umbradesktop-task-group-radius': '0',
+  '--umbradesktop-strip-button-radius': '0',
+  '--umbradesktop-dock-zone-radius': '0',
+  '--umbradesktop-task-group-border': '2px groove #fff',
+  '--umbradesktop-task-group-background': 'transparent',
   '--umbradesktop-taskbar-background': WIN98_FACE,
   '--umbradesktop-taskbar-background-opaque': WIN98_FACE,
   // 1998 had no compositor. An opaque bar over the wallpaper is the point, not a limitation.
@@ -189,6 +208,7 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-start-hover-background': WIN98_FACE,
   '--umbradesktop-start-active-background': WIN98_FACE,
   '--umbradesktop-launcher-width': `${WIN98_LAUNCHER_WIDTH}px`,
+  '--umbradesktop-launcher-arrange-width': `min(${WIN98_LAUNCHER_ARRANGE_WIDTH}px, 92vw)`,
   // Hard against the left edge, directly above the bar, the way the Start menu opens.
   '--umbradesktop-launcher-left': '0',
   '--umbradesktop-launcher-max-height': `calc(100vh - ${WIN98_TASKBAR_HEIGHT + WIN98_LAUNCHER_TOP_CLEARANCE}px)`,
@@ -207,7 +227,36 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-card-background': WIN98_FACE,
   '--umbradesktop-launcher-card-border': 'none',
   '--umbradesktop-launcher-card-radius': '0',
-  '--umbradesktop-launcher-pin-hover-background': WIN98_FACE,
+  // The launcher's controls and arrange mode. Every button is a push button in button-face grey,
+  // pressed or not, because a Win98 button shows a press with its bevel rather than a fill; the
+  // bevels themselves are drawn in `launcher.css.ts`, so the borders here are none.
+  '--umbradesktop-launcher-control-background': WIN98_FACE,
+  '--umbradesktop-launcher-control-border': 'none',
+  '--umbradesktop-launcher-control-text': WIN98_TEXT,
+  '--umbradesktop-launcher-control-active-background': WIN98_FACE,
+  '--umbradesktop-launcher-letter-text': WIN98_TEXT,
+  '--umbradesktop-launcher-letter-border': 'none',
+  // Win98's disabled grey is its only quiet text colour, and the one it has that stays readable on
+  // the face: the shadow grey is under 2:1 there.
+  '--umbradesktop-launcher-text-muted': WIN98_GRAY_TEXT,
+  // The arrange banner as a tooltip: the pale yellow and black frame Win98 drew every one in.
+  '--umbradesktop-launcher-banner-background': '#ffffe1',
+  '--umbradesktop-launcher-banner-border': `1px solid ${WIN98_TEXT}`,
+  '--umbradesktop-launcher-banner-text': WIN98_TEXT,
+  '--umbradesktop-launcher-divider': `1px solid ${WIN98_SHADOW}`,
+  // A drop lands where the dotted focus rectangle is, which is how Win98 marked any target; there
+  // is no tint and no shadow in a system without either.
+  '--umbradesktop-launcher-drop-background': 'transparent',
+  '--umbradesktop-launcher-drop-outline': `1px dotted ${WIN98_TEXT}`,
+  '--umbradesktop-launcher-ghost-shadow': 'none',
+  '--umbradesktop-launcher-remove-background': WIN98_FACE,
+  '--umbradesktop-launcher-remove-border': `2px dotted ${WIN98_TEXT}`,
+  '--umbradesktop-launcher-remove-text': WIN98_TEXT,
+  // The scrollback's rows take the launcher's navy selection bar, and need its white text with it.
+  '--umbradesktop-scrollback-hover-text': WIN98_MENU_HILIGHT_TEXT,
+  // A toast is a small raised panel here, and a Win98 panel has square corners like every other.
+  '--umbradesktop-toast-radius': '0',
+  '--umbradesktop-scrollback-radius': '0',
   '--umbradesktop-desktop-background-color': WIN98_DESKTOP,
   // Flat teal, with no gradient: this is the desktop of a machine nobody has personalised yet.
   '--umbradesktop-desktop-background-image': 'none',
@@ -215,6 +264,9 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   // not to need the help.
   '--umbradesktop-desktop-scrim': 'transparent',
   '--umbradesktop-desktop-watermark-opacity': '0.08',
+  // The desktop label in the lettering of 1998, at its bold.
+  '--umbradesktop-desktop-label-font': WIN98_FONT,
+  '--umbradesktop-desktop-label-weight': '700',
 
   // Apps. Win98 is the theme the app token group was shaped around: `edge-width: 2px` with
   // `radius: 0` is what makes a plain app stylesheet render as a bevelled control here and as a

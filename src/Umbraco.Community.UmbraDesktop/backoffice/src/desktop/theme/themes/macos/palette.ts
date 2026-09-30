@@ -95,6 +95,13 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-path-link': '#4d4d4d',
   '--umbradesktop-path-link-hover-background': 'rgba(0, 0, 0, 0.07)',
   '--umbradesktop-path-separator': '#9a9a9e',
+  // The strip's toolbar buttons, as a Finder toolbar draws them: no face until hovered, and a
+  // darker rounded fill while toggled on, in the ordinary text colour rather than an accent.
+  '--umbradesktop-strip-button-radius': '5px',
+  '--umbradesktop-strip-button-hover-background': 'rgba(0, 0, 0, 0.06)',
+  '--umbradesktop-strip-button-hover-text': '#1d1d1f',
+  '--umbradesktop-strip-button-on-background': 'rgba(0, 0, 0, 0.11)',
+  '--umbradesktop-strip-button-on-text': '#1d1d1f',
   '--umbradesktop-titlebar-background': 'linear-gradient(#f8f8f8, #e8e8e8)',
   '--umbradesktop-titlebar-border-bottom': `${MACOS_TITLEBAR_BORDER}px solid #cfcfcf`,
   '--umbradesktop-titlebar-text': '#4d4d4d',
@@ -150,11 +157,48 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-card-background': 'rgba(255, 255, 255, 0.1)',
   '--umbradesktop-launcher-card-border': '1px solid rgba(255, 255, 255, 0.16)',
   '--umbradesktop-launcher-card-radius': '12px',
+  // The launcher's own controls and arrange mode, as frosted pills on the dimmed surface like the
+  // cards. A pressed or default control is filled with the accent that carries white text, not the
+  // brighter one, because the base writes white on it; see {@link MACOS_ACCENT}.
+  '--umbradesktop-launcher-control-background': 'rgba(255, 255, 255, 0.12)',
+  '--umbradesktop-launcher-control-border': '1px solid rgba(255, 255, 255, 0.18)',
+  '--umbradesktop-launcher-control-text': '#ffffff',
+  '--umbradesktop-launcher-control-active-background': MACOS_ACCENT,
+  '--umbradesktop-launcher-letter-text': '#ffffff',
+  '--umbradesktop-launcher-letter-border': '1px solid rgba(255, 255, 255, 0.16)',
+  '--umbradesktop-launcher-text-muted': 'rgba(255, 255, 255, 0.6)',
+  '--umbradesktop-launcher-banner-background': 'rgba(255, 255, 255, 0.14)',
+  '--umbradesktop-launcher-banner-border': '1px solid rgba(255, 255, 255, 0.22)',
+  '--umbradesktop-launcher-banner-text': '#ffffff',
+  '--umbradesktop-launcher-divider': '1px solid rgba(255, 255, 255, 0.16)',
+  // Where a drop lands carries no text, so it takes the bright accent, which is the one that reads
+  // on this dark surface; the wash is the same blue at low alpha.
+  '--umbradesktop-launcher-drop-background': 'rgba(10, 132, 255, 0.18)',
+  '--umbradesktop-launcher-drop-outline': `2px solid ${MACOS_ACCENT_DARK}`,
+  '--umbradesktop-launcher-ghost-shadow': '0 12px 32px rgba(0, 0, 0, 0.45)',
+  '--umbradesktop-launcher-remove-background': 'rgba(255, 69, 58, 0.22)',
+  '--umbradesktop-launcher-remove-border': '2px dashed #ff453a',
+  '--umbradesktop-launcher-remove-text': '#ffffff',
+  // Notifications arrive at the top right on a Mac, under the menu bar, and stack downwards. There
+  // is no menu bar here, so the stack hangs from the top of the desktop instead. The surface is
+  // Launchpad's, rounded the way macOS rounds a notification, which the square full-screen
+  // Launchpad panel never needed.
+  '--umbradesktop-toasts-top': '12px',
+  '--umbradesktop-toasts-bottom': 'auto',
+  '--umbradesktop-toasts-direction': 'column',
+  '--umbradesktop-toast-radius': '14px',
+  '--umbradesktop-toast-border': '1px solid rgba(255, 255, 255, 0.16)',
+  '--umbradesktop-toast-shadow': '0 10px 30px rgba(0, 0, 0, 0.3)',
+  '--umbradesktop-scrollback-radius': '14px',
   '--umbradesktop-desktop-background-color': '#3b6ea5',
   '--umbradesktop-desktop-background-image':
     'linear-gradient(155deg, #4a3f78 0%, #3b6ea5 55%, #2f8f96 100%)',
   '--umbradesktop-desktop-scrim': 'rgba(0, 0, 0, 0.1)',
   '--umbradesktop-desktop-watermark-opacity': '0.05',
+  // The desktop label in San Francisco, at 800 rather than the base's 900, whose heaviest cut
+  // reads as a headline rather than as the system's own lettering.
+  '--umbradesktop-desktop-label-font': MACOS_FONT,
+  '--umbradesktop-desktop-label-weight': '800',
 
   // Apps. No bevel at all: `edge-width: 0` is the point, so all a raised control has to separate it
   // from its ground is the fill step between these surfaces. `edge-dark` matches the window border
@@ -213,6 +257,11 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   '--umbradesktop-path-link': '#d0d0d2',
   '--umbradesktop-path-link-hover-background': 'rgba(255, 255, 255, 0.1)',
   '--umbradesktop-path-separator': '#8e8e93',
+  '--umbradesktop-strip-button-radius': '5px',
+  '--umbradesktop-strip-button-hover-background': 'rgba(255, 255, 255, 0.08)',
+  '--umbradesktop-strip-button-hover-text': '#ffffff',
+  '--umbradesktop-strip-button-on-background': 'rgba(255, 255, 255, 0.16)',
+  '--umbradesktop-strip-button-on-text': '#ffffff',
   '--umbradesktop-titlebar-border-bottom': `${MACOS_TITLEBAR_BORDER}px solid rgba(0, 0, 0, 0.5)`,
   '--umbradesktop-titlebar-text': '#d0d0d2',
   '--umbradesktop-control-color': '#d0d0d2',

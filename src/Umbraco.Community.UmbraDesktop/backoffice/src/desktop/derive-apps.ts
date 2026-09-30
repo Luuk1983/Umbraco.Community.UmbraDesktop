@@ -5,7 +5,11 @@ import type {
   UmbraDesktopSectionInfo,
 } from './types';
 import { inferUrl } from './url-inference';
-import { UMBRADESKTOP_DEFAULT_ICON, UMBRADESKTOP_MORE_GROUP_ALIAS } from './constants';
+import {
+  UMBRADESKTOP_DEFAULT_ICON,
+  UMBRADESKTOP_FALLBACK_ALIAS_PREFIX,
+  UMBRADESKTOP_MORE_GROUP_ALIAS,
+} from './constants';
 
 /**
  * Turn resolved catalogue entries, registered app manifests and the current user's permitted
@@ -43,10 +47,17 @@ export function deriveApps(
       defaultSize: e.defaultSize,
       minSize: e.minSize,
       allowMultiple: e.allowMultiple,
+      resizable: e.resizable,
       weight: e.weight,
       group: e.group,
       sourceSection: r.gateSectionAlias ?? undefined,
       confidence: 'certified',
+      // Only on a section's own app, and absent rather than `undefined` everywhere else, so an app
+      // either covers a section or does not carry the field at all (design D15). Only the first such
+      // app per section: a package tile for a section we already have (design D7) shows beside ours,
+      // and two apps covering one section would both read as pinned through one fallback pin while
+      // Favourites listed just one of them.
+      ...(r.isSectionRoot && !coveredSections.has(r.gateSectionAlias) ? { coversSection: r.gateSectionAlias } : {}),
     });
     if (r.isSectionRoot) coveredSections.add(r.gateSectionAlias);
   }
@@ -67,6 +78,7 @@ export function deriveApps(
       defaultSize: app.defaultSize,
       minSize: app.minSize,
       allowMultiple: app.allowMultiple,
+      resizable: app.resizable,
       weight: app.weight,
       group: app.group,
       confidence: 'certified',
@@ -80,7 +92,7 @@ export function deriveApps(
     const url = inferUrl({ type: 'section', pathname: s.pathname });
     if (!url) continue;
     apps.push({
-      alias: `section:${s.alias}`,
+      alias: `${UMBRADESKTOP_FALLBACK_ALIAS_PREFIX}${s.alias}`,
       name: s.label,
       icon: UMBRADESKTOP_DEFAULT_ICON,
       content: { kind: 'iframe', url },

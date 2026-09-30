@@ -162,6 +162,17 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
   load?: ElementLoaderProperty;
 
   /**
+   * Properties to assign onto the app element before it connects, from its content's `props`.
+   *
+   * How an attached window's body learns what it belongs to: the feature opening it knows the owner
+   * and the document, and a constructor takes no arguments, so they are handed over as properties.
+   * Assigned before the element reaches the DOM, so its first render already has them. Not a reason
+   * to remount: only `load` is, and props that change later are assigned onto the app in place.
+   */
+  @property({ attribute: false })
+  props?: Readonly<Record<string, unknown>>;
+
+  /**
    * The app's manifest alias, set by the window alongside `load`, and read only when a load fails.
    *
    * A plain field rather than a `@property`, which is the whole point of it being here at all: this
@@ -288,6 +299,7 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
     // a base class gaining a `willUpdate` in an Umbraco minor would otherwise break silently.
     super.willUpdate(changed);
     if (changed.has('load')) this.#mounting = this.#mount();
+    else if (changed.has('props') && this.props && this._app) Object.assign(this._app, this.props);
     if (changed.has('chromeThemeId')) this.#stampTheme(this._app);
   }
 
@@ -361,6 +373,7 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
         // the theme paints correctly the first time instead of painting unstyled and correcting
         // itself a frame later. Assigning `_app` first is what would put it in the DOM.
         this.#stampTheme(app);
+        if (this.props) Object.assign(app, this.props);
         this._pending = false;
         this._app = app;
       } catch (error) {

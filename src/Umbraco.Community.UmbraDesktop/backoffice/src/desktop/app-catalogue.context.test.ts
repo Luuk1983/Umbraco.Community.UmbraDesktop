@@ -1,7 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { UmbraDesktopAppCatalogueContext } from './app-catalogue.context';
-import type { UmbraDesktopApp, UmbraDesktopCatalogue } from './types';
+import type { UmbraDesktopApp, UmbraDesktopCatalogue, UmbraDesktopGroup } from './types';
 import { catalogue } from './catalogue/index.js';
+import { UMBRADESKTOP_SECTION_ALIAS, UMBRADESKTOP_SECTION_PATHNAME } from './constants';
 import { UmbExtensionRegistry } from '@umbraco-cms/backoffice/extension-api';
 import type { UmbConditionConfigBase } from '@umbraco-cms/backoffice/extension-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
@@ -166,6 +167,8 @@ async function setup(
   });
   let apps: UmbraDesktopApp[] = [];
   const subscription = context.apps.subscribe((value) => (apps = value));
+  let catalogueGroups: UmbraDesktopGroup[] = [];
+  const groupSubscription = context.catalogueGroups.subscribe((value) => (catalogueGroups = value));
 
   return {
     /** The context itself, for cases about its own accessors rather than its output. */
@@ -176,6 +179,8 @@ async function setup(
     warnings,
     aliases: () => apps.map((app) => app.alias),
     app: (alias: string) => apps.find((a) => a.alias === alias),
+    /** The merged catalogue's groups, for the cases about a package bringing a group of its own. */
+    catalogueGroups: () => catalogueGroups,
     /** Only the desktop's own warnings, so an unrelated Umbraco line cannot fail an assertion. */
     desktopWarnings: () => warnings.filter((w) => w.includes('[UmbraDesktop]')),
     teardown: () => {
@@ -183,6 +188,7 @@ async function setup(
       window.requestAnimationFrame = realRequestAnimationFrame;
       window.cancelAnimationFrame = realCancelAnimationFrame;
       subscription.unsubscribe();
+      groupSubscription.unsubscribe();
       context.destroy();
     },
   };
@@ -197,6 +203,43 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
  * runner, while still finishing in well under a second.
  */
 const settleDiagnostics = () => new Promise((resolve) => setTimeout(resolve, TEST_DIAGNOSTIC_DELAY_MS * 4));
+
+/** A section a test package owns. */
+const PKG_SECTION = { type: 'section', alias: 'Pkg.Section', name: 'Pkg', meta: { label: 'Pkg', pathname: 'pkg' } };
+
+/** The desktop's own section, for the cases about not opening a desktop inside itself. */
+const DESKTOP_SECTION = {
+  type: 'section',
+  alias: UMBRADESKTOP_SECTION_ALIAS,
+  name: 'Desktop',
+  meta: { label: 'Desktop', pathname: UMBRADESKTOP_SECTION_PATHNAME },
+};
+
+/**
+ * Register a package catalogue the way a package's bundle would.
+ * @param registry The registry under test.
+ * @param alias The catalogue manifest's alias.
+ * @param meta What it defines. Untyped on purpose: several cases send JSON that is wrong.
+ * @param over Extra manifest fields, such as `weight` or `conditions`.
+ */
+function registerCatalogue(
+  registry: UmbExtensionRegistry<UmbExtensionManifest>,
+  alias: string,
+  meta: unknown,
+  over: Record<string, unknown> = {},
+) {
+  registry.register({ type: 'umbraDesktopCatalogue', alias, name: alias, meta, ...over } as unknown as UmbExtensionManifest);
+}
+
+/**
+ * Register a default-kind menu item, the kind whose URL the desktop infers from an entity type.
+ * @param registry The registry under test.
+ * @param alias The menu item's alias.
+ * @param entityType Its workspace entity type.
+ */
+function registerMenuItem(registry: UmbExtensionRegistry<UmbExtensionManifest>, alias: string, entityType: string) {
+  registry.register({ type: 'menuItem', alias, name: alias, meta: { entityType } } as unknown as UmbExtensionManifest);
+}
 
 /**
  * A catalogue whose single entry is a misconfiguration only its author could have made: a `url`
@@ -697,24 +740,14 @@ it('tells a registered app dropped for using "js" that "js" is why', async () =>
 });
 
 /**
- * Registry uniqueness holds only within the registered set, so a manifest is free to claim an alias
- * the curated catalogue already uses. Two apps under one alias is not a cosmetic duplicate: an
- * alias is the key a pinned favourite is stored under, and `launcher.element.ts` resolves a pin with
- * a `find`, so which of the two a pin opens would come down to derivation order. The curated entry
- * keeps the alias (it is the one whose URL and chrome profile this repository has verified) and the
- * registered app is dropped with a diagnostic, because a package cannot fix a collision nothing
- * tells it about.
+ * A registered app that reuses a curated alias now takes it over (design D4), where it used to be
+ * dropped. One alias still means one app, since a pin is stored under it, and the console says what
+ * was replaced, because an app replacing a deep link is never like-for-like (D13).
  */
-it('drops a registered app whose alias a curated entry already owns, and says so', async () => {
+it('lets a registered app take over an alias a curated entry owns, and says so', async () => {
   const harness = await setup();
   try {
-    // The curated `usync` entry's own ref, so the collision is between two apps that both exist.
-    harness.registry.register({
-      type: 'menuItem',
-      alias: 'usync.menu.item',
-      name: 'uSync',
-      meta: { entityType: 'usync-root' },
-    } as unknown as UmbExtensionManifest);
+    registerMenuItem(harness.registry, 'usync.menu.item', 'usync-root');
     harness.registry.register({
       type: 'umbraDesktopApp',
       alias: 'usync',
@@ -724,12 +757,422 @@ it('drops a registered app whose alias a curated entry already owns, and says so
     await settleDiagnostics();
 
     expect(harness.aliases().filter((a) => a === 'usync'), 'one alias, one app').to.have.lengthOf(1);
-    expect(harness.app('usync')!.content.kind, 'the curated entry keeps the alias').to.equal('iframe');
-    const collision = harness.warnings.filter((w) => w.includes('"usync"') && w.includes('curated'));
-    expect(collision).to.have.lengthOf(1);
+    expect(harness.app('usync')!.content.kind, 'the package wins').to.equal('element');
+    expect(harness.desktopWarnings().filter((w) => w.includes('"usync"') && w.includes('replaces'))).to.have.lengthOf(1);
   } finally {
     harness.teardown();
   }
+});
+
+describe('package catalogues', () => {
+  it('shows the group and section entry a catalogue defines, instead of the fallback tile', async () => {
+    const harness = await setup(CATALOGUE, [SETTINGS_SECTION, PKG_SECTION]);
+    try {
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', {
+        groups: [{ alias: 'pkg', label: '#pkg_group', weight: 22 }],
+        entries: [{ alias: 'Pkg.App', ref: 'Pkg.Section', icon: 'icon-rocket', group: 'pkg' }],
+      });
+      await settle();
+
+      const app = harness.app('Pkg.App');
+      expect(app, 'a package entry resolves like a curated one').to.not.equal(undefined);
+      expect(app!.content).to.deep.equal({ kind: 'iframe', url: '/umbraco/section/pkg' });
+      expect(app!.coversSection).to.equal('Pkg.Section');
+      expect(harness.aliases(), 'the section needs no fallback tile any more').to.not.contain('section:Pkg.Section');
+      expect(harness.catalogueGroups().map((group) => group.alias)).to.contain('pkg');
+      expect(app!.group, 'and its app is in it').to.equal('pkg');
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  it('replaces a curated entry that shares its alias, silently when it opens the same screen', async () => {
+    const harness = await setup();
+    try {
+      registerMenuItem(harness.registry, 'usync.menu.item', 'usync-root');
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', {
+        entries: [{ alias: 'usync', ref: 'usync.menu.item', section: 'Umb.Section.Settings', chromeProfile: 'bare' }],
+      });
+      await settleDiagnostics();
+
+      expect(harness.app('usync')!.chromeProfile, "the package's definition is used").to.equal('bare');
+      expect(harness.desktopWarnings(), 'a like-for-like replacement is the feature working').to.deep.equal([]);
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  it('reports a replacement that opens something else', async () => {
+    const harness = await setup();
+    try {
+      registerMenuItem(harness.registry, 'Pkg.MenuItem', 'pkg-root');
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', {
+        entries: [{ alias: 'usync', ref: 'Pkg.MenuItem', section: 'Umb.Section.Settings' }],
+      });
+      await settleDiagnostics();
+
+      expect(harness.desktopWarnings().some((w) => w.includes('replaces the desktop\'s own app "usync"'))).to.equal(true);
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  /**
+   * The recursion trap (design D16): a package entry introduces a ref nothing watched, and the
+   * context subscribes it from inside a recompute. Marking after subscribing, with the callbacks free
+   * to recompute, loops until the stack overflows, and RxJS swallows the overflow: measured, the case
+   * still finishes, with the right app, after a couple of hundred nested subscriptions. So it counts
+   * the subscriptions rather than trusting that it finished.
+   */
+  it('picks up a catalogue before the extension its entry points at, and again when that registers', async () => {
+    const harness = await setup();
+    try {
+      let observations = 0;
+      const byAlias = harness.registry.byAlias.bind(harness.registry);
+      harness.registry.byAlias = ((alias: string) => {
+        if (alias === 'Pkg.MenuItem') observations++;
+        return byAlias(alias);
+      }) as typeof harness.registry.byAlias;
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', {
+        entries: [{ alias: 'Pkg.Tool', ref: 'Pkg.MenuItem', section: 'Umb.Section.Settings' }],
+      });
+      await settle();
+      expect(harness.aliases(), 'nothing to open yet').to.not.contain('Pkg.Tool');
+      expect(observations, 'the new ref is observed once, not once per nested recompute').to.equal(1);
+
+      registerMenuItem(harness.registry, 'Pkg.MenuItem', 'pkg-tool');
+      await settle();
+      expect(harness.app('Pkg.Tool')!.content).to.deep.equal({
+        kind: 'iframe',
+        url: '/umbraco/section/settings/workspace/pkg-tool',
+      });
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  it("keeps the curated entry while a catalogue's condition is unmet", async () => {
+    const harness = await setup();
+    try {
+      registerMenuItem(harness.registry, 'usync.menu.item', 'usync-root');
+      registerCatalogue(
+        harness.registry,
+        'Pkg.Catalogue',
+        { entries: [{ alias: 'usync', ref: 'usync.menu.item', section: 'Umb.Section.Settings', chromeProfile: 'bare' }] },
+        { conditions: [{ alias: 'Pkg.Condition.Never' }] },
+      );
+      await settle();
+
+      expect(harness.app('usync')!.chromeProfile, 'a catalogue not in effect claims nothing (D5)').to.equal('full-section');
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  it('gives the curated entry back when the catalogue goes away', async () => {
+    const harness = await setup();
+    try {
+      registerMenuItem(harness.registry, 'usync.menu.item', 'usync-root');
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', {
+        entries: [{ alias: 'usync', ref: 'usync.menu.item', section: 'Umb.Section.Settings', chromeProfile: 'bare' }],
+      });
+      await settle();
+      expect(harness.app('usync')!.chromeProfile).to.equal('bare');
+
+      harness.registry.unregister('Pkg.Catalogue');
+      await settle();
+      expect(harness.app('usync')!.chromeProfile).to.equal('full-section');
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  /** The review's blocker, end to end: one broken package must not freeze the launcher (D9). */
+  it('never throws on a malformed catalogue, and keeps listening', async () => {
+    const harness = await setup();
+    try {
+      registerCatalogue(harness.registry, 'Pkg.Broken', {
+        entries: { alias: 'x', ref: 'y' },
+        groups: [null, 7, { alias: 'g', label: 3 }],
+      });
+      harness.registry.register({
+        type: 'umbraDesktopApp',
+        alias: 'Pkg.NumberLabel',
+        element: async () => ({}),
+        meta: { label: 42 },
+      } as unknown as UmbExtensionManifest);
+      await settle();
+
+      registerMenuItem(harness.registry, 'Pkg.MenuItem', 'pkg-tool');
+      registerCatalogue(harness.registry, 'Pkg.Good', {
+        entries: [{ alias: 'Pkg.Tool', ref: 'Pkg.MenuItem', section: 'Umb.Section.Settings' }],
+      });
+      await settleDiagnostics();
+
+      expect(harness.aliases(), 'the next catalogue still arrives').to.contain('Pkg.Tool');
+      expect(harness.desktopWarnings().some((w) => w.includes('"Pkg.Broken"'))).to.equal(true);
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  it('refuses a url that leaves the backoffice, and keeps one that does not', async () => {
+    const harness = await setup();
+    try {
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', {
+        entries: [
+          { alias: 'Pkg.Evil', url: 'javascript:alert(1)', section: 'Umb.Section.Settings' },
+          { alias: 'Pkg.Fine', url: '/umbraco/section/settings/workspace/pkg-root', section: 'Umb.Section.Settings' },
+        ],
+      });
+      await settleDiagnostics();
+
+      expect(harness.aliases()).to.not.contain('Pkg.Evil');
+      expect(harness.aliases()).to.contain('Pkg.Fine');
+      expect(harness.desktopWarnings().some((w) => w.includes('"Pkg.Evil"'))).to.equal(true);
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  it("does not open a dashboard that lives in the desktop's own section", async () => {
+    const harness = await setup(CATALOGUE, [SETTINGS_SECTION, DESKTOP_SECTION]);
+    try {
+      harness.registry.register({
+        type: 'dashboard',
+        alias: 'Pkg.Dashboard',
+        name: 'Pkg dashboard',
+        meta: { label: 'Pkg', pathname: 'pkg' },
+        conditions: [{ alias: 'Umb.Condition.SectionAlias', match: UMBRADESKTOP_SECTION_ALIAS }],
+      } as unknown as UmbExtensionManifest);
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', { entries: [{ alias: 'Pkg.Dash', ref: 'Pkg.Dashboard' }] });
+      await settleDiagnostics();
+
+      expect(harness.aliases()).to.not.contain('Pkg.Dash');
+      expect(harness.desktopWarnings().some((w) => w.includes('desktop inside'))).to.equal(true);
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  it("brings a section's fallback back when an app replaces its section-root entry", async () => {
+    const harness = await setup({ groups: [], entries: [{ alias: 'settings', ref: 'Umb.Section.Settings' }], excludedSections: [] });
+    try {
+      await settle();
+      expect(harness.aliases()).to.not.contain('section:Umb.Section.Settings');
+
+      harness.registry.register({
+        type: 'umbraDesktopApp',
+        alias: 'settings',
+        element: async () => ({}),
+        meta: { label: '#pkg_settings' },
+      } as unknown as UmbExtensionManifest);
+      await settle();
+
+      expect(harness.app('settings')!.content.kind).to.equal('element');
+      expect(harness.aliases(), 'nothing else opens the section now').to.contain('section:Umb.Section.Settings');
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  it('names the package in a diagnostic about its entry, and asks for a missing section', async () => {
+    const harness = await setup();
+    try {
+      registerMenuItem(harness.registry, 'Pkg.MenuItem', 'pkg-root');
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', {
+        entries: [
+          { alias: 'Pkg.Ungated', url: '/umbraco/section/settings/workspace/x' },
+          { alias: 'Pkg.Sectionless', ref: 'Pkg.MenuItem' },
+        ],
+      });
+      await settleDiagnostics();
+
+      const warnings = harness.desktopWarnings();
+      expect(warnings.some((w) => w.includes('"Pkg.Ungated" from "Pkg.Catalogue"'))).to.equal(true);
+      expect(warnings.some((w) => w.includes('"Pkg.Sectionless"') && w.includes('Add "section"'))).to.equal(true);
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  /**
+   * Design D7's hint, printed once. A later, unrelated catalogue recomputes the whole list again, and
+   * the hint must survive that as one line rather than one per recompute.
+   */
+  it('says once that a package entry opens a screen the desktop already has a tile for', async () => {
+    const harness = await setup();
+    try {
+      registerMenuItem(harness.registry, 'usync.menu.item', 'usync-root');
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', {
+        entries: [{ alias: 'Pkg.Usync', ref: 'usync.menu.item', section: 'Umb.Section.Settings' }],
+      });
+      await settle();
+      registerCatalogue(harness.registry, 'Pkg.Other', { groups: [] });
+      await settleDiagnostics();
+
+      expect(harness.aliases(), 'both tiles show').to.contain('usync').and.to.contain('Pkg.Usync');
+      expect(harness.desktopWarnings().filter((w) => w.includes('both appear'))).to.have.lengthOf(1);
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  /**
+   * The lifecycle half of design D16, as far as it can be seen from outside: nothing is subscribed
+   * while the desktop is closed, and a catalogue that arrived meanwhile is picked up, its ref
+   * observed exactly once, when the desktop opens again. The narrower case, a ref first named by the
+   * initializer's own flush during `hostDisconnected`, is closed off by `#watchRefs` refusing to
+   * subscribe while stopped; it cannot be staged reliably from a test.
+   */
+  it('subscribes nothing while the desktop is closed, and catches up once when it reopens', async () => {
+    const harness = await setup();
+    try {
+      let observations = 0;
+      const byAlias = harness.registry.byAlias.bind(harness.registry);
+      harness.registry.byAlias = ((alias: string) => {
+        if (alias === 'Pkg.MenuItem') observations++;
+        return byAlias(alias);
+      }) as typeof harness.registry.byAlias;
+
+      harness.host.remove();
+      registerMenuItem(harness.registry, 'Pkg.MenuItem', 'pkg-tool');
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', {
+        entries: [{ alias: 'Pkg.Tool', ref: 'Pkg.MenuItem', section: 'Umb.Section.Settings' }],
+      });
+      await settle();
+      expect(observations, 'nothing subscribes while the desktop is closed').to.equal(0);
+
+      document.body.appendChild(harness.host);
+      await settleDiagnostics();
+      expect(observations, 'and exactly once when it reopens').to.equal(1);
+      expect(harness.aliases()).to.contain('Pkg.Tool');
+    } finally {
+      harness.host.remove();
+      harness.teardown();
+    }
+  });
+
+  /**
+   * Design D9 reaches past the catalogue itself: a tile with no `name` inherits the label of the
+   * extension it points at, and a fallback tile takes its section's label, both from manifests any
+   * package wrote, which a static `umbraco-package.json` can make a number. Found by the branch
+   * review; a non-text name used to reach `groupApps` and throw.
+   */
+  it('names a tile by its alias when the extension it points at has a label that is not text', async () => {
+    const harness = await setup();
+    try {
+      harness.registry.register({
+        type: 'menuItem',
+        alias: 'Pkg.MenuItem',
+        name: 'Pkg menu item',
+        meta: { entityType: 'pkg-root', label: 42, icon: 7 },
+      } as unknown as UmbExtensionManifest);
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', {
+        entries: [{ alias: 'Pkg.Tool', ref: 'Pkg.MenuItem', section: 'Umb.Section.Settings' }],
+      });
+      await settle();
+
+      const app = harness.app('Pkg.Tool');
+      expect(app!.name, 'a label that is not text is not a name').to.equal('Pkg menu item');
+      expect(app!.icon).to.equal('icon-box');
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  it("names a section's fallback tile by its alias when the section's label is not text", async () => {
+    const odd = { type: 'section', alias: 'Pkg.Odd', name: 42, meta: { label: { en: 'Odd' }, pathname: 'odd' } };
+    const harness = await setup(CATALOGUE, [SETTINGS_SECTION, odd]);
+    try {
+      await settle();
+      expect(harness.app('section:Pkg.Odd')!.name).to.equal('Pkg.Odd');
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  it('keeps listening after a dashboard whose conditions are not a list', async () => {
+    const harness = await setup();
+    try {
+      harness.registry.register({
+        type: 'dashboard',
+        alias: 'Pkg.Dashboard',
+        name: 'Pkg dashboard',
+        meta: { label: 'Pkg', pathname: 'pkg' },
+        conditions: 'Umb.Condition.SectionAlias',
+      } as unknown as UmbExtensionManifest);
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', { entries: [{ alias: 'Pkg.Dash', ref: 'Pkg.Dashboard' }] });
+      await settle();
+
+      registerMenuItem(harness.registry, 'Pkg.MenuItem', 'pkg-tool');
+      registerCatalogue(harness.registry, 'Pkg.Good', {
+        entries: [{ alias: 'Pkg.Tool', ref: 'Pkg.MenuItem', section: 'Umb.Section.Settings' }],
+      });
+      await settle();
+      expect(harness.aliases(), 'a later catalogue still arrives').to.contain('Pkg.Tool');
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  /** A host feature that needs an entry's ref asks the merged catalogue, not the static one. */
+  it("answers an entry's ref from the merged catalogue", async () => {
+    const harness = await setup();
+    try {
+      expect(harness.context.getEntryRef('usync')).to.equal('usync.menu.item');
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', {
+        entries: [{ alias: 'usync', ref: 'Pkg.MenuItem', section: 'Umb.Section.Settings' }],
+      });
+      await settle();
+      expect(harness.context.getEntryRef('usync')).to.equal('Pkg.MenuItem');
+    } finally {
+      harness.teardown();
+    }
+  });
+
+  /**
+   * The teardown guard. With an app registered and permitted, an extension initializer reports an
+   * empty list from inside `super.destroy()`, and without `#destroyed` the recompute that follows
+   * would empty the list and re-track entries on a gate that is already gone. The app still being
+   * listed afterwards is how this case knows that recompute was swallowed. It first shipped without
+   * the registered app, where nothing had been permitted, so no empty list was ever reported and the
+   * case passed with the guard deleted (found by the branch review).
+   */
+  it('publishes the merged catalogue groups, including groups a package brings', async () => {
+    const { context, registry, teardown } = await setup();
+    try {
+      registerCatalogue(registry, 'Pkg.Catalogue', { groups: [{ alias: 'pkg', label: 'Package', weight: 80 }], entries: [] });
+      await settle();
+      await settle();
+      let groups: ReadonlyArray<{ alias: string }> = [];
+      context.catalogueGroups.subscribe((value) => (groups = value)).unsubscribe();
+      expect(groups.map((g) => g.alias)).to.include.members(['synchronisation', 'pkg']);
+    } finally {
+      teardown();
+    }
+  });
+
+  it('does nothing once destroyed', async () => {
+    const harness = await setup();
+    try {
+      harness.registry.register({
+        type: 'umbraDesktopApp',
+        alias: 'Pkg.App',
+        element: async () => ({}),
+        meta: { label: '#pkg_app' },
+      } as unknown as UmbExtensionManifest);
+      await settle();
+      expect(harness.aliases()).to.contain('Pkg.App');
+
+      harness.context.destroy();
+      registerCatalogue(harness.registry, 'Pkg.Catalogue', { entries: [{ alias: 'Pkg.Other', ref: 'Pkg.Section' }] });
+      await settle();
+      expect(harness.aliases(), 'no recompute ran after destroy').to.contain('Pkg.App');
+    } finally {
+      harness.teardown();
+    }
+  });
 });
 
 /**

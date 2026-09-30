@@ -110,6 +110,11 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	  <PackageReference Include="Umbraco.Cms.Api.Common" />
 	  <PackageReference Include="Umbraco.Cms.Api.Management" />
 	  <PackageReference Include="Umbraco.Cms.Core" />
+	  <!-- For UserDataFilter: the concrete IUserDataFilter the per-user cleanup handler hands to
+	       IUserDataService. The interface ships in Core despite its Infrastructure namespace; the
+	       class does not. It already arrived transitively through Api.Management, so this declares a
+	       dependency the package genuinely has rather than adding a new one. -->
+	  <PackageReference Include="Umbraco.Cms.Infrastructure" />
 	  <!-- Build-time only: generates appsettings-schema.*.json for editor IntelliSense. Nothing
 	       reads it at runtime, so PrivateAssets keeps it out of the published dependency list —
 	       which also removes the unbounded ">= 0.4.3" floor a floating "0.*" would otherwise pack. -->
@@ -118,5 +123,11 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 
 	<ItemGroup>
 	  <Folder Include="backoffice\wallpapers-src\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The test project asserts on a couple of internals, such as the user-data cleanup page size,
+		     which are implementation details rather than something a consumer should bind to. -->
+		<InternalsVisibleTo Include="Umbraco.Community.UmbraDesktop.Tests" />
 	</ItemGroup>
 </Project>

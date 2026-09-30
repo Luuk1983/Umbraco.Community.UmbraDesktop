@@ -1,5 +1,30 @@
 import { MINESWEEPER_CONTENT_SIZE, MINESWEEPER_MIN_CONTENT_SIZE } from './minesweeper/constants.js';
+import { SNAKE_CONTENT_SIZE, SNAKE_MIN_CONTENT_SIZE } from './snake/constants.js';
 import { manifests as localizationManifests } from './localization/manifest.js';
+
+/**
+ * The Games group, defined by the package whose games fill it.
+ *
+ * The host used to reserve `games` on this package's behalf, which made it the one group on the
+ * desktop that existed only for somebody else's apps. A catalogue manifest lets the package own its
+ * heading as well as its games, so the host now knows nothing about games at all (design D10 of
+ * `docs/design/2026-09-25-package-catalogues-design.md`).
+ *
+ * This weight is on the launcher's own scale, lower first, unlike the games' root `weight` below,
+ * which is Umbraco's. 60 places Games after the host's System (50) and before its Experimental (70),
+ * the slot it always had; the host publishes those weights for exactly this (design D11).
+ *
+ * No `entries`: an entry deep-links one of the package's own backoffice screens, and this package has
+ * none.
+ */
+const catalogue: UmbExtensionManifest = {
+  type: 'umbraDesktopCatalogue',
+  alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Catalogue',
+  name: 'UmbraDesktop Entertainment catalogue',
+  meta: {
+    groups: [{ alias: 'games', label: '#umbraDesktopEntertainment_groupGames', weight: 60 }],
+  },
+};
 
 /**
  * Minesweeper, as one `umbraDesktopApp` manifest.
@@ -31,7 +56,7 @@ const minesweeper: UmbExtensionManifest = {
   alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Minesweeper',
   name: 'Minesweeper',
   element: () => import('./minesweeper/minesweeper.element.js'),
-  // 1000 rather than 100, with the next game expected at 900: the numbers are a sort key inside one
+  // 1000 rather than 100, with the next game at 900: the numbers are a sort key inside one
   // launcher group and nothing reads their magnitude, so leaving a hundred between them means
   // Solitaire can land beside this without renumbering anything. Set explicitly rather than left
   // off, because unset is not "no opinion": the launcher sorts on `weight ?? 0` and zero is a
@@ -42,8 +67,7 @@ const minesweeper: UmbExtensionManifest = {
     label: '#umbraDesktopEntertainment_minesweeper',
     // A native Umbraco icon alias. Anything else falls back to icon-box.
     icon: 'icon-bomb',
-    // The host owns this group, its label and its localisation; this package owns what goes in it.
-    // Nothing in the host puts an app in `games`, which is what lets the two release separately.
+    // The group this package's catalogue above defines, label and localisation included.
     group: 'games',
     // The app's **content** box, derived from the board rather than typed, so it cannot come to
     // disagree with the grid it has to hold. The host adds the active theme's chrome, which is the
@@ -58,6 +82,37 @@ const minesweeper: UmbExtensionManifest = {
     // the game is shared between two instances (every mutable thing is a field on the element, and
     // `rules.ts` is pure), so there is nothing to protect by saying no.
     allowMultiple: true,
+    // Fixed, as it was on every Windows up to XP: a 9x9 grid does not reflow, so resizing or
+    // maximizing only ever put empty space around it. The window still moves and minimizes.
+    resizable: false,
+  },
+};
+
+/**
+ * Snake, the second game, registered exactly the way Minesweeper is.
+ *
+ * Every field below follows Minesweeper's, for the reasons given there: `element` as a lazy loader,
+ * a namespaced `alias` that is final once shipped, sizes that are the content box derived from the
+ * board, and multiple windows allowed because every piece of game state lives on the element.
+ */
+const snake: UmbExtensionManifest = {
+  type: 'umbraDesktopApp',
+  alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Snake',
+  name: 'Snake',
+  element: () => import('./snake/snake.element.js'),
+  // Just below Minesweeper, which keeps the first game first in the launcher. This is the 900
+  // Minesweeper's comment had in mind for Solitaire; a later game can take 800.
+  weight: 900,
+  meta: {
+    label: '#umbraDesktopEntertainment_snake',
+    // No snake in Umbraco's icon set, so the generic game icon.
+    icon: 'icon-game',
+    group: 'games',
+    defaultSize: SNAKE_CONTENT_SIZE,
+    minSize: SNAKE_MIN_CONTENT_SIZE,
+    allowMultiple: true,
+    // Fixed for the same reason as Minesweeper: the board is a set number of pixels.
+    resizable: false,
   },
 };
 
@@ -65,7 +120,8 @@ const minesweeper: UmbExtensionManifest = {
  * The bundle Umbraco loads for this package, and the only entry point it has.
  *
  * `UmbExtensionManifest` is a global type from `@umbraco-cms/backoffice/extension-types`, wired up
- * in tsconfig's `types`, so there is nothing to import for it. The `umbraDesktopApp` arm of that
- * union is contributed by `umbradesktop-app.d.ts` in this folder, for the reason given there.
+ * in tsconfig's `types`, so there is nothing to import for it. The `umbraDesktopApp` and
+ * `umbraDesktopCatalogue` arms of that union are contributed by `umbradesktop-app.d.ts` in this
+ * folder, for the reason given there.
  */
-export const manifests: Array<UmbExtensionManifest> = [minesweeper, ...localizationManifests];
+export const manifests: Array<UmbExtensionManifest> = [catalogue, minesweeper, snake, ...localizationManifests];

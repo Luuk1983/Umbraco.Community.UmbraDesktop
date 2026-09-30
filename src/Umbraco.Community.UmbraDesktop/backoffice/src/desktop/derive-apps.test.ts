@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { deriveApps } from './derive-apps';
-import { UMBRADESKTOP_MORE_GROUP_ALIAS } from './constants';
+import { UMBRADESKTOP_FALLBACK_ALIAS_PREFIX, UMBRADESKTOP_MORE_GROUP_ALIAS } from './constants';
 import type {
   UmbraDesktopApp,
   UmbraDesktopCatalogueEntry,
@@ -176,4 +176,59 @@ it('carries the loader through to content.element by reference, not a wrapper', 
       MINESWEEPER_LOADER,
     );
   }
+});
+
+/**
+ * `resizable: false` reaches the window from both places an app can come from: a package's
+ * manifest and the curated catalogue. Being "available to any app" is only true if both carry it.
+ */
+it('carries resizable through for registered and curated apps alike', () => {
+  const apps = deriveApps(
+    [resolved({ entry: entry({ alias: 'curated-fixed', resizable: false }) })],
+    SECTIONS,
+    [],
+    [{ ...MINESWEEPER, resizable: false }],
+  );
+  expect(apps.find((a) => a.alias === 'curated-fixed')!.resizable, 'curated').to.equal(false);
+  expect(apps.find((a) => a.alias === 'Pkg.Minesweeper')!.resizable, 'registered').to.equal(false);
+});
+
+/** Design D15: the one fact pin resolution needs to follow a section to the entry that covers it. */
+it('marks a certified section-root app with the section it covers, and no other app', () => {
+  const apps = deriveApps(
+    [
+      resolved({
+        entry: entry({ alias: 'Pkg.App' }),
+        url: '/umbraco/section/content',
+        gateSectionAlias: 'Umb.Section.Content',
+        isSectionRoot: true,
+      }),
+      resolved({
+        entry: entry({ alias: 'Pkg.Tool' }),
+        url: '/umbraco/section/settings/workspace/x',
+        gateSectionAlias: 'Umb.Section.Settings',
+      }),
+    ],
+    SECTIONS,
+  );
+  expect(apps.find((a) => a.alias === 'Pkg.App')!.coversSection).to.equal('Umb.Section.Content');
+  expect(apps.find((a) => a.alias === 'Pkg.Tool')!.coversSection).to.equal(undefined);
+  expect(apps.some((a) => a.alias === `${UMBRADESKTOP_FALLBACK_ALIAS_PREFIX}Umb.Section.Settings`)).to.equal(true);
+});
+
+/**
+ * One section, one covering app. A package entry for a section we already have a tile for shows both
+ * (design D7); only the first may cover the section, or a pin on its fallback would mark both tiles
+ * pinned while the Favourites list showed one of them. Found by the branch review.
+ */
+it('lets only the first app for a section cover it', () => {
+  const apps = deriveApps(
+    [
+      resolved({ entry: entry({ alias: 'ours' }), url: '/umbraco/section/content', gateSectionAlias: 'Umb.Section.Content', isSectionRoot: true }),
+      resolved({ entry: entry({ alias: 'Pkg.Twin' }), url: '/umbraco/section/content', gateSectionAlias: 'Umb.Section.Content', isSectionRoot: true }),
+    ],
+    SECTIONS,
+  );
+  expect(apps.find((a) => a.alias === 'ours')!.coversSection).to.equal('Umb.Section.Content');
+  expect(apps.find((a) => a.alias === 'Pkg.Twin')!.coversSection).to.equal(undefined);
 });

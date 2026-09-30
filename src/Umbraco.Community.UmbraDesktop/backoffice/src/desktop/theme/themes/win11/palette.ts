@@ -74,6 +74,12 @@ export const W11_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-path-link': W11_ACCENT,
   '--umbradesktop-path-link-hover-background': 'rgba(0, 0, 0, 0.05)',
   '--umbradesktop-path-separator': 'rgba(0, 0, 0, 0.35)',
+  // The strip's toolbar buttons, as a command bar draws them: a subtle fill on hover, and a tint
+  // of the accent with accent text while toggled on.
+  '--umbradesktop-strip-button-radius': '4px',
+  '--umbradesktop-strip-button-hover-background': 'rgba(0, 0, 0, 0.05)',
+  '--umbradesktop-strip-button-on-background': `color-mix(in srgb, ${W11_ACCENT} 13%, transparent)`,
+  '--umbradesktop-strip-button-on-text': W11_ACCENT,
   // Mica: the caption is the same plane as the window body, with no gradient and no divider.
   '--umbradesktop-titlebar-background': '#f3f3f3',
   '--umbradesktop-titlebar-border-bottom': 'none',
@@ -128,13 +134,35 @@ export const W11_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-card-background': 'transparent',
   '--umbradesktop-launcher-card-border': 'none',
   '--umbradesktop-launcher-card-radius': '0',
-  '--umbradesktop-launcher-pin-hover-background': 'rgba(0, 0, 0, 0.08)',
+  // The launcher's own controls and arrange mode: Start's subtle buttons, a white fill with a
+  // hairline on the acrylic, and the accent for a pressed or default one, which carries the white
+  // text the base writes on it.
+  '--umbradesktop-launcher-control-background': 'rgba(255, 255, 255, 0.7)',
+  '--umbradesktop-launcher-control-border': '1px solid rgba(0, 0, 0, 0.08)',
+  '--umbradesktop-launcher-control-text': '#1a1a1a',
+  '--umbradesktop-launcher-control-active-background': W11_ACCENT,
+  '--umbradesktop-launcher-letter-text': '#1a1a1a',
+  '--umbradesktop-launcher-letter-border': 'none',
+  '--umbradesktop-launcher-text-muted': 'rgba(0, 0, 0, 0.6)',
+  '--umbradesktop-launcher-banner-background': 'rgba(255, 255, 255, 0.7)',
+  '--umbradesktop-launcher-banner-border': '1px solid rgba(0, 0, 0, 0.08)',
+  '--umbradesktop-launcher-banner-text': '#1a1a1a',
+  '--umbradesktop-launcher-divider': '1px solid rgba(0, 0, 0, 0.08)',
+  '--umbradesktop-launcher-drop-background': 'rgba(0, 0, 0, 0.04)',
+  '--umbradesktop-launcher-drop-outline': `2px solid ${W11_ACCENT}`,
+  '--umbradesktop-launcher-ghost-shadow': '0 8px 24px rgba(0, 0, 0, 0.22)',
+  '--umbradesktop-launcher-remove-background': 'rgba(196, 43, 28, 0.08)',
+  '--umbradesktop-launcher-remove-border': `2px dashed ${W11_CLOSE}`,
+  '--umbradesktop-launcher-remove-text': W11_CLOSE,
   '--umbradesktop-desktop-background-color': '#1c4b8a',
   // The bloom Windows 11 ships as its default wallpaper, as a gradient rather than the artwork.
   '--umbradesktop-desktop-background-image':
     'radial-gradient(120% 100% at 50% 42%, #4aa3e8 0%, #2464b4 42%, #14265e 100%)',
   '--umbradesktop-desktop-scrim': 'transparent',
   '--umbradesktop-desktop-watermark-opacity': '0.06',
+  // The desktop label in Segoe, at its bold, which is as heavy as Windows itself ever sets it.
+  '--umbradesktop-desktop-label-font': W11_FONT,
+  '--umbradesktop-desktop-label-weight': '700',
 
   // Apps. Mica's flat planes, so no bevel; the raised surface is a step *lighter* than the ground,
   // which is the inverse of Win98 and is why an app should read these rather than assume a
@@ -203,6 +231,10 @@ export const W11_DARK: UmbraDesktopPalette = {
   '--umbradesktop-path-link': W11_ACCENT_DARK,
   '--umbradesktop-path-link-hover-background': 'rgba(255, 255, 255, 0.08)',
   '--umbradesktop-path-separator': 'rgba(255, 255, 255, 0.4)',
+  '--umbradesktop-strip-button-radius': '4px',
+  '--umbradesktop-strip-button-hover-background': 'rgba(255, 255, 255, 0.08)',
+  '--umbradesktop-strip-button-on-background': `color-mix(in srgb, ${W11_ACCENT_DARK} 18%, transparent)`,
+  '--umbradesktop-strip-button-on-text': W11_ACCENT_DARK,
   '--umbradesktop-titlebar-text': '#ffffff',
   '--umbradesktop-control-color': '#ffffff',
   '--umbradesktop-control-hover-background': 'rgba(255, 255, 255, 0.08)',
@@ -225,7 +257,27 @@ export const W11_DARK: UmbraDesktopPalette = {
   '--umbradesktop-launcher-text': '#ffffff',
   '--umbradesktop-launcher-hover-background': 'rgba(255, 255, 255, 0.07)',
   '--umbradesktop-launcher-border-emphasis': W11_ACCENT_DARK,
-  '--umbradesktop-launcher-pin-hover-background': 'rgba(255, 255, 255, 0.1)',
+  // The launcher's controls and arrange mode on the dark acrylic. The pressed or default fill stays
+  // the light palette's accent rather than taking the lighter one every other marker here uses: the
+  // base writes white text on it, and white on the lighter accent is under 2:1. Windows writes black
+  // on it instead, which would need a text token the launcher does not have.
+  '--umbradesktop-launcher-control-background': 'rgba(255, 255, 255, 0.06)',
+  '--umbradesktop-launcher-control-border': '1px solid rgba(255, 255, 255, 0.08)',
+  '--umbradesktop-launcher-control-text': '#ffffff',
+  '--umbradesktop-launcher-letter-text': '#ffffff',
+  '--umbradesktop-launcher-text-muted': 'rgba(255, 255, 255, 0.6)',
+  '--umbradesktop-launcher-banner-background': 'rgba(255, 255, 255, 0.06)',
+  '--umbradesktop-launcher-banner-border': '1px solid rgba(255, 255, 255, 0.08)',
+  '--umbradesktop-launcher-banner-text': '#ffffff',
+  '--umbradesktop-launcher-divider': '1px solid rgba(255, 255, 255, 0.08)',
+  '--umbradesktop-launcher-drop-background': 'rgba(255, 255, 255, 0.06)',
+  '--umbradesktop-launcher-drop-outline': `2px solid ${W11_ACCENT_DARK}`,
+  '--umbradesktop-launcher-ghost-shadow': '0 8px 24px rgba(0, 0, 0, 0.5)',
+  // Windows' own danger red lightened for a dark ground, since the light palette's red is too dim
+  // to read here.
+  '--umbradesktop-launcher-remove-background': 'rgba(255, 153, 164, 0.12)',
+  '--umbradesktop-launcher-remove-border': '2px dashed #ff99a4',
+  '--umbradesktop-launcher-remove-text': '#ff99a4',
   '--umbradesktop-desktop-background-color': '#0b1b3a',
   '--umbradesktop-desktop-background-image':
     'radial-gradient(120% 100% at 50% 42%, #1f5c96 0%, #12356e 45%, #060f2b 100%)',

@@ -1,5 +1,11 @@
 import { expect } from '@open-wc/testing';
-import { UMBRADESKTOP_SPLASH_ELEMENT_ID, isBootSplashRaised, lowerBootSplash, raiseBootSplash } from './splash';
+import {
+  UMBRADESKTOP_SPLASH_ELEMENT_ID,
+  isBootSplashRaised,
+  lowerBootSplash,
+  raiseBootSplash,
+  setBootSplashStatus,
+} from './splash';
 
 afterEach(() => lowerBootSplash());
 
@@ -96,4 +102,64 @@ it('does not let a spent timeout lift a splash raised after it', async () => {
   raiseBootSplash(document, 5000);
   await new Promise((resolve) => setTimeout(resolve, 80));
   expect(isBootSplashRaised()).to.equal(true);
+});
+
+it('says nothing by default, so a normal boot is just the mark', () => {
+  raiseBootSplash();
+
+  expect(document.querySelector(`#${UMBRADESKTOP_SPLASH_ELEMENT_ID} .status`)).to.equal(null);
+});
+
+it('shows a status line under the wordmark', () => {
+  raiseBootSplash();
+
+  setBootSplashStatus('Moving your desktop settings to your account');
+
+  const status = document.querySelector(`#${UMBRADESKTOP_SPLASH_ELEMENT_ID} .status`);
+  expect(status?.textContent).to.equal('Moving your desktop settings to your account');
+});
+
+it('replaces the status line rather than stacking them', () => {
+  raiseBootSplash();
+
+  setBootSplashStatus('first');
+  setBootSplashStatus('second');
+
+  expect(document.querySelectorAll(`#${UMBRADESKTOP_SPLASH_ELEMENT_ID} .status`).length).to.equal(1);
+  expect(document.querySelector(`#${UMBRADESKTOP_SPLASH_ELEMENT_ID} .status`)?.textContent).to.equal('second');
+});
+
+it('takes the status line away again', () => {
+  raiseBootSplash();
+
+  setBootSplashStatus('first');
+  setBootSplashStatus(null);
+
+  expect(document.querySelector(`#${UMBRADESKTOP_SPLASH_ELEMENT_ID} .status`)).to.equal(null);
+});
+
+it('sets the status as text, never as markup', () => {
+  // The string comes from a localization dictionary, which is data this package does not author in
+  // every culture. Setting it as markup would make a translation a script injection point.
+  raiseBootSplash();
+
+  setBootSplashStatus('<img src=x onerror="window.__splashXss = true">');
+
+  expect(document.querySelector(`#${UMBRADESKTOP_SPLASH_ELEMENT_ID} img`)).to.equal(null);
+});
+
+it('ignores a status set when no splash is up', () => {
+  // The desktop is reached two ways: booted into, which raises a splash, and clicked into from the
+  // section menu, which does not. The same load path drives both.
+  expect(() => setBootSplashStatus('anything')).to.not.throw();
+});
+
+it('loses its status when it is lowered', () => {
+  raiseBootSplash();
+  setBootSplashStatus('first');
+
+  lowerBootSplash();
+  raiseBootSplash();
+
+  expect(document.querySelector(`#${UMBRADESKTOP_SPLASH_ELEMENT_ID} .status`)).to.equal(null);
 });

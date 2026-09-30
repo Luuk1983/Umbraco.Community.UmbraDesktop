@@ -194,3 +194,39 @@ it('changes the format source and the clock override independently', async () =>
   context.setClockHourCycle('h23');
   expect(localeOf(context)).to.deep.equal({ source: 'browser', hourCycle: 'h23' });
 });
+
+it('changes when windows are reopened', async () => {
+  const context = await contextOnHost();
+  let reopen: string | undefined;
+  const subscription = context.reopenWindows.subscribe((value) => (reopen = value));
+  expect(reopen, 'after a refresh until the user says otherwise').to.equal('session');
+  context.setReopenWindows('persistent');
+  expect(reopen).to.equal('persistent');
+  context.setReopenWindows('off');
+  expect(reopen).to.equal('off');
+  subscription.unsubscribe();
+});
+
+describe('the launcher arrangement', () => {
+  const LAYOUT = { groups: [{ id: 'editing', label: null, apps: ['media'] }], removed: ['profiling'], deletedGroups: [] };
+
+  it('writes the pins and the layout together', async () => {
+    const context = await contextOnHost();
+    context.setLauncherArrangement(['content'], LAYOUT);
+    let seen: { pinned: string[]; layout?: unknown } | undefined;
+    context.settings.subscribe((s) => (seen = { pinned: s.pinned, layout: s.layout })).unsubscribe();
+    expect(seen).to.deep.equal({ pinned: ['content'], layout: LAYOUT });
+  });
+
+  it('clears the layout and keeps the pins when handed no layout, which is Reset', async () => {
+    const context = await contextOnHost();
+    context.setLauncherArrangement(['content'], LAYOUT);
+    context.setLauncherArrangement(['content'], undefined);
+    let layout: unknown = 'unset';
+    let pinned: string[] = [];
+    context.layout.subscribe((value) => (layout = value)).unsubscribe();
+    context.pinned.subscribe((value) => (pinned = value)).unsubscribe();
+    expect(layout).to.equal(undefined);
+    expect(pinned).to.deep.equal(['content']);
+  });
+});

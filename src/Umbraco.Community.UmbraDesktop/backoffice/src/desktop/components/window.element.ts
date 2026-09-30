@@ -1,8 +1,11 @@
-import type { Rect, UmbraDesktopWindow } from '../types';
+import type { Rect, UmbraDesktopPane, UmbraDesktopWindow } from '../types';
 import type { UmbraDesktopResizeEdges } from '../window-model';
-import { clampResizeOrigin, clampWindowPosition, resizeRect, restoreDragPosition } from '../window-model';
+import { clampResizeOrigin, clampWindowPosition, isResizable, resizeRect, restoreDragPosition } from '../window-model';
 import { injectChromeStyles } from '../chrome-injector';
 import { watchWorkspaceDirtyState } from '../dirty-watcher.js';
+import { watchNotifications } from '../notifications/notification-watcher.js';
+import { UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT } from '../notifications/notification-centre.context-token.js';
+import type { UmbraDesktopNotificationCentreContext } from '../notifications/notification-centre.context.js';
 import { resolveThemeSync, syncThemeStylesheet } from '../iframe-theme.js';
 import type { UmbraDesktopThemeManifest } from '../iframe-theme.js';
 import {
@@ -15,6 +18,7 @@ import {
   UMBRADESKTOP_WINDOW_BORDER,
   UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
   UMBRADESKTOP_WINDOW_MIN_SIZE,
+  UMBRADESKTOP_PATH_HEIGHT,
 } from '../constants';
 import { minWindowSizeForContent } from '../window-chrome.js';
 import { buildCrumbs, windowShowsPath } from '../path/crumbs.js';
@@ -33,7 +37,7 @@ import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-t
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import { UMBRADESKTOP_THEME_CONTEXT } from '../theme/theme.context-token.js';
-import { css, customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
+import { css, customElement, html, keyed, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 // Side-effect import: registering `<umbradesktop-app-host>` is what makes the element branch of
 // `#renderBody` resolve to something. Nothing else in the bundle imports that module, so without
@@ -45,6 +49,11 @@ import './app-host.element.js';
 // paints nothing without complaining — which on this one would look exactly like a window that
 // loaded instantly, right up until a slow one showed a blank cover instead.
 import './loader.element.js';
+import './window-pane.element.js';
+import type { UmbraDesktopPaneDragDetail } from './window-pane.element.js';
+import { attachedKind, paneTotal } from '../window-group.js';
+import { previewTargetFromPath } from '../preview/preview-target.js';
+import { createPreviewApp, UMBRADESKTOP_PREVIEW_APP_ALIAS } from '../preview/preview-model.js';
 import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
 import { UMB_THEME_CONTEXT, UMB_THEME_LIGHT_ALIAS } from '@umbraco-cms/backoffice/themes';
 
@@ -66,6 +75,16 @@ const RESIZE_HANDLES: ReadonlyArray<{ dir: string; edges: UmbraDesktopResizeEdge
  * would shrink the window out from under the user.
  */
 const RESTORE_DRAG_THRESHOLD = 5;
+
+/**
+ * How far a pane's header must be dragged, in any direction, before the pane tears off into a
+ * floating window: a short, deliberate pull, the way a browser tab comes away from its strip. More
+ * than {@link RESTORE_DRAG_THRESHOLD}, because that one only separates a click from a drag, and a
+ * pane that popped out whenever a click on its header wobbled would be worse than one that needs
+ * pulling. The first version waited for the pointer to leave the window altogether, which on a wide
+ * window was most of the way across the screen.
+ */
+const PANE_TEAR_OFF_THRESHOLD = 12;
 
 /**
  * A single draggable desktop window. Its body is whichever kind the app's `content` names: a
@@ -132,6 +151,29 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   private _crumbs: UmbraDesktopPathCrumb[] = [];
 
   /**
+   * Whether the frame is showing a document, which is what offers a preview of it.
+   *
+   * From the dirty watcher's subjects, the one place that already knows what the frame's workspaces
+   * are showing. Cleared on every frame load along with them.
+   */
+  @state()
+  private _document = false;
+
+  /**
+   * Bumped by an attached window's reload, and the key its body is committed under, so a reload
+   * remounts the content. See `#renderBody`.
+   */
+  @state()
+  private _bodyGeneration = 0;
+
+  /**
+   * Every dock zone on offer; this window draws the ones that are its own. See the manager's
+   * `dockZones` for why the owner draws them rather than the desktop.
+   */
+  @state()
+  private _dockZones: ReadonlyArray<{ side: string; rect: Rect; active: boolean; ownerId: string }> = [];
+
+  /**
    * The active theme's geometry, which is what turns the app's **content** minimum into the
    * window minimum this element writes into its own inline style.
    *
@@ -164,6 +206,18 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    */
   #stopPathWatch?: () => void;
 
+  /** Stops following the frame's router for the window layout; see `#startLocationWatch`. */
+  #stopLocationWatch?: () => void;
+
+  /**
+   * Stops the current frame's notification watcher and takes it off the centre's list of sources.
+   * Replaced and released on the same occasions as {@link #stopDirtyWatch}, for the same reason.
+   */
+  #stopNotificationWatch?: () => void;
+
+  /** Where this window's notifications go instead of into its own frame. */
+  #notifications?: UmbraDesktopNotificationCentreContext;
+
   #startPointer = { x: 0, y: 0 };
   #startRect = { x: 0, y: 0 };
   #startSurface = { left: 0, top: 0, w: 0, h: 0 };
@@ -192,6 +246,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     new UmbraDesktopThemeStyles(this, 'window');
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
+      if (ctx) this.observe(ctx.dockZones, (zones) => (this._dockZones = zones ?? []), '_umbraDesktopDockZones');
+    });
+    this.consumeContext(UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT, (ctx) => {
+      this.#notifications = ctx ?? undefined;
     });
     this.consumeContext(UMB_THEME_CONTEXT, (context) => {
       if (!context) return;
@@ -234,6 +292,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.#stopDirtyWatch = undefined;
     this.#stopPathWatch?.();
     this.#stopPathWatch = undefined;
+    this.#stopLocationWatch?.();
+    this.#stopLocationWatch = undefined;
+    this.#stopNotificationWatch?.();
+    this.#stopNotificationWatch = undefined;
   }
 
   /**
@@ -284,6 +346,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     injectChromeStyles(iframe, this.window.app.chromeProfile, () => (this._loading = false));
     this.#startDirtyWatch(iframe);
     this.#startPathWatch(iframe);
+    this.#startLocationWatch(iframe);
+    this.#startNotificationWatch(iframe);
     // A frame boots on the stored alias, so it is normally already right — but a theme changed
     // while it was still loading would have been missed, and the reload path lands here too.
     this.#applyFrameTheme();
@@ -326,6 +390,45 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * @param iframe The window's freshly loaded frame.
    */
   /**
+   * Follow the page the frame is on, for the window layout to reopen the window there.
+   *
+   * The address, not the crumbs: the path strip's watcher reads the workspace's structure, which
+   * says what the page is but not how to get back to it. Reported once on load, then on each of the
+   * frame router's `changestate` events and the browser's `popstate`. Restarted on each load, like
+   * the other watches, because a reload replaces the frame's window and its listeners with it. Every
+   * backoffice window reports, strip or not, since every one of them can be reopened.
+   * @param iframe The window's freshly loaded frame.
+   */
+  #startLocationWatch(iframe: HTMLIFrameElement) {
+    this.#stopLocationWatch?.();
+    this.#stopLocationWatch = undefined;
+    const frame = iframe.contentWindow;
+    if (!frame || !iframe.contentDocument) return;
+    const report = () => {
+      const w = this.window;
+      if (!w) return;
+      let location: string;
+      try {
+        const { pathname, search, hash } = frame.location;
+        location = pathname + search + hash;
+      } catch {
+        // The frame has gone cross-origin, which a backoffice frame never does. Nothing to record.
+        return;
+      }
+      if (location.startsWith('/')) this.#manager?.setLocation(w.id, location);
+    };
+    report();
+    // Umbraco's router fires changestate on the frame's window whenever it changes the route, and
+    // popstate covers the browser's own back and forward.
+    frame.addEventListener('changestate', report);
+    frame.addEventListener('popstate', report);
+    this.#stopLocationWatch = () => {
+      frame.removeEventListener('changestate', report);
+      frame.removeEventListener('popstate', report);
+    };
+  }
+
+  /**
    * Watch the freshly loaded frame for where it is, so the path strip can say so.
    *
    * Restarted rather than reused on each load, exactly as the dirty watch is: a reload replaces the
@@ -355,6 +458,69 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     });
   }
 
+  /**
+   * Open a preview of the document this window is showing, or close the one already open (#21).
+   *
+   * A toggle, because the strip's Preview button shows as pressed while a preview is open, pane or
+   * floating, and pressing a pressed button is how you let it go. The document and variant are read
+   * off the frame's route at the moment the editor asks, because the route is the one place that says
+   * which variant is being edited; the window's subjects know the document but not the language.
+   * Titled after the document, from the strip's own current crumb.
+   */
+  #onPreview = () => {
+    const w = this.window;
+    if (!w || !this.#manager) return;
+    const open = attachedKind(this.#manager.getWindows(), w.id, UMBRADESKTOP_PREVIEW_APP_ALIAS);
+    if (open) {
+      this.#manager.closeAttached(w.id, open.kind === 'pane' ? open.pane.id : open.window.id);
+      return;
+    }
+    const iframe = this.renderRoot.querySelector('iframe.body') as HTMLIFrameElement | null;
+    let pathname = '';
+    try {
+      pathname = iframe?.contentWindow?.location.pathname ?? '';
+    } catch {
+      // A frame that navigated cross-origin has no readable route, and nothing to preview.
+    }
+    const target = previewTargetFromPath(pathname);
+    if (!target) return;
+    const current = this._crumbs.find((c) => c.current)?.label ?? w.app.name;
+    const title = this.localize.term('umbraDesktop_previewTitle', this.localize.string(current));
+    this.#manager.openAttached(w.id, createPreviewApp(w.id, target, title), 'right');
+  };
+
+  /**
+   * Take the freshly loaded frame's notifications over, so they show once on the desktop rather than
+   * inside this window, and register the frame as where a notification can be raised again.
+   *
+   * Restarted on each load, as the other two watchers are, which is what makes a reloaded window
+   * watched again: the reload replaces the document and with it the context being listened to.
+   *
+   * **No centre, no watcher.** A watcher hides the frame's toasts once it is listening, so starting
+   * one with nowhere to send what it hears would swallow every notification in the window. A window
+   * outside a desktop keeps drawing its own, which is the direction to fail in.
+   * @param iframe The window's freshly loaded frame.
+   */
+  #startNotificationWatch(iframe: HTMLIFrameElement) {
+    this.#stopNotificationWatch?.();
+    this.#stopNotificationWatch = undefined;
+    const id = this.window?.id;
+    const doc = iframe.contentDocument;
+    const centre = this.#notifications;
+    if (!id || !doc || !centre) return;
+    const watch = watchNotifications(doc, {
+      // The app's name as the catalogue has it, possibly a `#key`: the centre localizes it when it is
+      // drawn, so an entry follows a language change rather than keeping the one it arrived in.
+      onRaised: (notification) => centre.raise(notification, { sourceId: id, source: this.window?.app.name ?? '' }),
+      onClosed: (key) => centre.closed(id, key),
+    });
+    const unregister = centre.registerSource(id, watch);
+    this.#stopNotificationWatch = () => {
+      unregister();
+      watch.stop();
+    };
+  }
+
   #startDirtyWatch(iframe: HTMLIFrameElement) {
     this.#stopDirtyWatch?.();
     this.#stopDirtyWatch = undefined;
@@ -367,9 +533,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     // new watcher's first report a server event could match a document this window is no longer
     // showing.
     this.#manager?.setSubjects(id, []);
+    this._document = false;
     this.#stopDirtyWatch = watchWorkspaceDirtyState(doc, (state) => {
       this.#manager?.setDirty(id, state.dirty);
       this.#manager?.setSubjects(id, state.subjects);
+      this.#manager?.setSaves(id, state.saves);
+      this._document = state.subjects.some((s) => s.entityType === 'document');
     });
   }
 
@@ -473,14 +642,17 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * @returns The minimum window size under the active theme.
    */
   #minWindowSize(w: UmbraDesktopWindow) {
-    return minWindowSizeForContent(
+    const own = minWindowSizeForContent(
       w.app.minSize,
       UMBRADESKTOP_WINDOW_MIN_SIZE,
       this._metrics,
       // Same term the manager spends when it opens the window, from the same predicate, so the
       // size a window opens at and the size it may be dragged to cannot disagree about the strip.
-      windowShowsPath(w.app) ? this._metrics.pathbarHeight : 0,
+      (windowShowsPath(w.app) ? this._metrics.pathbarHeight : 0) + (w.owner ? this._metrics.pathbarHeight : 0),
     );
+    // Plus every pane at the width it has, from the same function the manager's floor uses, so a
+    // resize squeezes the window's own content and never a pane out of it.
+    return { w: own.w + paneTotal(w), h: own.h };
   }
 
   /**
@@ -596,12 +768,38 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (this.window) this.#manager?.commitSnap(this.window.id);
     this._dragging = false;
     this.#pendingRestore = false;
+    this.#release(e);
+  };
+
+  /**
+   * End a titlebar drag the browser took back before the pointer was released.
+   *
+   * The browser sends this instead of `pointerup` when it claims a pointer mid-gesture: an
+   * operating-system gesture, a touch it decides is a pan, a lost capture. Without it the drag stayed
+   * switched on with no `pointerup` coming to end it, and the next `pointermove` over the titlebar,
+   * even a mouse passing by with no button down, carried on dragging the window. Unlike a release it
+   * withdraws the snap on offer rather than taking it: nobody let go over that edge. The window
+   * stays wherever the drag had already put it, since every move was applied as it happened.
+   * @param e The cancelled pointer's event.
+   */
+  #onTitlePointerCancel = (e: PointerEvent) => {
+    this.#manager?.clearSnapPreview();
+    this._dragging = false;
+    this.#pendingRestore = false;
+    this.#release(e);
+  };
+
+  /**
+   * Give up the pointer capture a gesture took, and carry on if there was none.
+   * @param e The event that ended the gesture, whose target took capture in `#capture`.
+   */
+  #release(e: PointerEvent) {
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
     } catch {
       // Nothing was captured — see `#capture`.
     }
-  };
+  }
 
   #onResizeDown = (e: PointerEvent, edges: UmbraDesktopResizeEdges) => {
     if (!this.window || this.window.state !== 'normal') return;
@@ -626,13 +824,18 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.#manager?.resize(this.window.id, rect);
   };
 
-  #onResizeUp = (e: PointerEvent) => {
+  /**
+   * End a resize, whether the pointer was released or the browser cancelled it.
+   *
+   * One handler for both because a resize has nothing to commit: every move already resized the
+   * window, so ending it is only a matter of switching it off. Listening for `pointercancel` too is
+   * what stops a cancelled resize carrying on under the next pointer to cross the handle. See
+   * `#onTitlePointerCancel`.
+   * @param e The `pointerup` or `pointercancel` event.
+   */
+  #onResizeEnd = (e: PointerEvent) => {
     this.#resizing = false;
-    try {
-      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
-    } catch {
-      // Nothing was captured — see `#capture`.
-    }
+    this.#release(e);
   };
 
   #onFocus = () => {
@@ -755,9 +958,13 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.#wasActive = active;
   }
 
-  /** Double-clicking the titlebar toggles maximize/restore, as on Windows/GNOME/KDE. */
+  /**
+   * Double-clicking the titlebar toggles maximize/restore, as on Windows/GNOME/KDE. Does nothing for
+   * a `resizable: false` window, as on Windows, where double-clicking Minesweeper's titlebar did not
+   * maximize it either. The manager would refuse anyway; this just does not ask.
+   */
   #onTitleDblClick = () => {
-    if (!this.window) return;
+    if (!this.window || !isResizable(this.window)) return;
     const maximized = this.window.state === 'maximized';
     this.#manager?.setState(this.window.id, maximized ? 'normal' : 'maximized');
   };
@@ -831,14 +1038,214 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    */
   #renderBody(w: UmbraDesktopWindow) {
     if (w.app.content.kind === 'element') {
-      return html`<umbradesktop-app-host
+      const host = html`<umbradesktop-app-host
         class="body"
         data-umbradesktop-theme=${this._chromeThemeId || nothing}
         .alias=${w.app.alias}
+        .props=${w.app.content.props}
         .load=${w.app.content.element}></umbradesktop-app-host>`;
+      // Keyed only for attached content, whose reload is a remount: it fetches what it shows when it
+      // connects. An ordinary element app keeps the plain commit this method's doc argues for, and a
+      // window never changes between the two, so neither path ever remounts the other's app.
+      return w.owner ? keyed(this._bodyGeneration, host) : host;
     }
     return html`<iframe class="body" src=${w.app.content.url} @load=${this.#onIframeLoad}></iframe>`;
   }
+
+  /**
+   * The strip under a floating attached window's titlebar: what it belongs to, in words, and the
+   * button that docks it back there.
+   *
+   * The desktop's rather than the content's, so every kind of attached content has it without
+   * drawing its own, and in the same place and at the same height as a pane's header, because it is
+   * that header's other half: pop out lives there while docked, dock lives here while floating. It
+   * replaced a link glyph before the title, which nobody could have been expected to read.
+   * @param w The window.
+   * @returns The strip, or nothing on a window that is not attached to anything.
+   */
+  #renderAttachedStrip(w: UmbraDesktopWindow) {
+    if (!w.owner || !this.#manager) return nothing;
+    const owner = this.#manager.getWindows().find((o) => o.id === w.owner);
+    const ownerName = owner ? this.localize.string(owner.app.name) : '';
+    const canDock = this.#manager.canDock(w.id);
+    return html`<div class="attached-strip">
+      <span class="attached-strip-text"
+        >${this.localize.term('umbraDesktop_attachedTo')} <span class="attached-strip-owner">${ownerName}</span></span
+      >
+      <button
+        class="attached-dock"
+        type="button"
+        ?disabled=${!canDock}
+        title=${canDock ? this.localize.term('umbraDesktop_dock') : this.localize.term('umbraDesktop_dockNoRoom', ownerName)}
+        @click=${() => this.#manager?.dock(w.id)}>
+        <!-- A frame with its side panel filled in, on the side it will dock to: the pane this window
+             becomes. The pane header's pop-out glyph is the same frame with a small window in its
+             corner, so the two buttons read as each other's opposite. -->
+        <svg class="attached-dock-glyph" data-side=${w.dockSide ?? 'right'} viewBox="0 0 16 16" aria-hidden="true">
+          <rect x="1.5" y="2.5" width="13" height="11" rx="1"></rect>
+          <rect class="attached-dock-glyph-fill" x=${w.dockSide === 'left' ? 3 : 9} y="4" width="4" height="8"></rect>
+        </svg>
+        <span>${this.localize.term('umbraDesktop_dock')}</span>
+      </button>
+    </div>`;
+  }
+
+  /**
+   * The dock zones that are this window's own, while one of its attached windows is dragged: drawn
+   * inside its frame, in the frame's own coordinates, with a label saying what letting go there does.
+   * @param w The window.
+   * @returns The zones, or nothing.
+   */
+  #renderDockZones(w: UmbraDesktopWindow) {
+    const mine = this._dockZones.filter((z) => z.ownerId === w.id);
+    if (!mine.length) return nothing;
+    // The frame is positioned at its rect, or at the surface's corner when maximized, and the zones
+    // arrive in surface coordinates, so they are drawn relative to that corner.
+    const origin = w.state === 'maximized' ? { x: 0, y: 0 } : { x: w.rect.x, y: w.rect.y };
+    return mine.map(
+      (zone) => html`<div
+        class="dock-zone ${zone.active ? 'active' : ''}"
+        data-side=${zone.side}
+        aria-hidden="true"
+        style="left:${zone.rect.x - origin.x}px; top:${zone.rect.y - origin.y}px; width:${zone.rect.w}px; height:${zone.rect.h}px;">
+        <span class="dock-zone-label"
+          >${this.localize.term(zone.active ? 'umbraDesktop_dockRelease' : 'umbraDesktop_dockHere')}</span
+        >
+      </div>`,
+    );
+  }
+
+  /**
+   * The panes on one side of the window's own content, each behind a splitter.
+   *
+   * The left side is drawn outermost first, so on either side the pane opened last is the one
+   * furthest from the content, which is where the manager's dock ghost promised it would go.
+   * @param w The window.
+   * @param side Which side to draw.
+   * @returns The panes' template.
+   */
+  #renderPanes(w: UmbraDesktopWindow, side: 'left' | 'right') {
+    const panes = (w.panes ?? []).filter((p) => p.side === side);
+    const ordered = side === 'left' ? [...panes].reverse() : panes;
+    return ordered.map((pane) => {
+      const splitter = html`<div
+        class="splitter"
+        @pointerdown=${(e: PointerEvent) => this.#onSplitterDown(e, pane)}
+        @pointermove=${this.#onSplitterMove}
+        @pointerup=${this.#onSplitterUp}></div>`;
+      const body = html`<umbradesktop-window-pane
+        class="pane"
+        style="width:${pane.width}px"
+        .pane=${pane}
+        .ownerId=${w.id}
+        .themeId=${this._chromeThemeId}
+        ?inactive=${!w.active}></umbradesktop-window-pane>`;
+      return side === 'left' ? html`${body}${splitter}` : html`${splitter}${body}`;
+    });
+  }
+
+  /**
+   * A pane being pulled out by its header, carried by this window because the pane itself is gone
+   * the moment it undocks. Until the pointer has travelled {@link PANE_TEAR_OFF_THRESHOLD} nothing
+   * has happened; after that `floatingId` is the window the pane became, and the drag moves it.
+   */
+  #paneDrag?: {
+    paneId: string;
+    pointerId: number;
+    clientX: number;
+    clientY: number;
+    grabX: number;
+    grabY: number;
+    surface: { left: number; top: number; w: number; h: number };
+    floatingId?: string;
+    origin?: { x: number; y: number };
+    startPointer?: { x: number; y: number };
+  };
+
+  #onPaneDragStart = (e: CustomEvent<UmbraDesktopPaneDragDetail>) => {
+    const frame = this.renderRoot.querySelector('.frame') as HTMLElement | null;
+    if (!frame) return;
+    this.#paneDrag = { ...e.detail, surface: this.#surfaceRect() };
+    try {
+      frame.setPointerCapture(e.detail.pointerId);
+    } catch {
+      // No capture; the drag runs uncaptured rather than not at all. See `#capture`.
+    }
+  };
+
+  #onPaneDragMove = (e: PointerEvent) => {
+    const drag = this.#paneDrag;
+    const w = this.window;
+    if (!drag || !w || !this.#manager) return;
+    const pointer = { x: e.clientX - drag.surface.left, y: e.clientY - drag.surface.top };
+    if (!drag.floatingId) {
+      const pressed = { x: drag.clientX - drag.surface.left, y: drag.clientY - drag.surface.top };
+      const travelled = Math.max(Math.abs(pointer.x - pressed.x), Math.abs(pointer.y - pressed.y));
+      if (travelled < PANE_TEAR_OFF_THRESHOLD) return;
+      const at = { x: pointer.x - drag.grabX, y: pointer.y - drag.grabY };
+      drag.floatingId = this.#manager.undock(w.id, drag.paneId, at);
+      drag.origin = at;
+      drag.startPointer = pointer;
+      return;
+    }
+    const floating = this.#manager.getWindows().find((f) => f.id === drag.floatingId);
+    if (!floating || !drag.origin || !drag.startPointer) return;
+    const { x, y } = clampWindowPosition(
+      {
+        ...floating.rect,
+        x: drag.origin.x + (pointer.x - drag.startPointer.x),
+        y: drag.origin.y + (pointer.y - drag.startPointer.y),
+      },
+      drag.surface,
+      this.#manager.keep,
+    );
+    this.#manager.move(floating.id, x, y);
+    // So it can go straight back: near the owner's edge the dock ghost is on offer, as for any drag
+    // of a floating attached window.
+    this.#manager.previewSnap(floating.id, pointer);
+  };
+
+  #onPaneDragUp = (e: PointerEvent) => {
+    const drag = this.#paneDrag;
+    if (!drag) return;
+    this.#paneDrag = undefined;
+    if (drag.floatingId) this.#manager?.commitSnap(drag.floatingId);
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    } catch {
+      // Nothing was captured; see `#capture`.
+    }
+  };
+
+  /** The splitter drag in progress: which pane, where the pointer started, and its width then. */
+  #splitter?: { paneId: string; side: 'left' | 'right'; startX: number; startWidth: number };
+
+  #onSplitterDown = (e: PointerEvent, pane: UmbraDesktopPane) => {
+    e.stopPropagation();
+    // A drag across the window must not drag a text selection with it; see the pane header's own.
+    e.preventDefault();
+    if (this.window) this.#manager?.focus(this.window.id);
+    this.#splitter = { paneId: pane.id, side: pane.side, startX: e.clientX, startWidth: pane.width };
+    this.#capture(e);
+  };
+
+  #onSplitterMove = (e: PointerEvent) => {
+    const drag = this.#splitter;
+    if (!drag || !this.window) return;
+    // A pane on the right grows as its splitter moves left, one on the left as it moves right.
+    const dx = e.clientX - drag.startX;
+    const width = drag.side === 'right' ? drag.startWidth - dx : drag.startWidth + dx;
+    this.#manager?.setPaneWidth(this.window.id, drag.paneId, width);
+  };
+
+  #onSplitterUp = (e: PointerEvent) => {
+    this.#splitter = undefined;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    } catch {
+      // Nothing was captured; see `#capture`.
+    }
+  };
 
   override render() {
     const w = this.window;
@@ -848,6 +1255,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     // an app's number must not be able to push a window control off the end of the titlebar.
     const min = this.#minWindowSize(w);
     const maximized = w.state === 'maximized';
+    const resizable = isResizable(w);
     // One button, two meanings, so the label has to say which. On the iframe path a reload
     // re-fetches and keeps whatever route the user navigated to inside the frame, so nothing of
     // theirs is lost; on the element path the instance is discarded, and for a game that is the
@@ -864,12 +1272,16 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         style=${style}
         ?hidden=${w.state === 'minimized'}
         @pointerdown=${this.#onFocus}
-        @mousedown=${this.#onFrameMouseDown}>
+        @mousedown=${this.#onFrameMouseDown}
+        @pointermove=${this.#onPaneDragMove}
+        @pointerup=${this.#onPaneDragUp}
+        @umbradesktop-pane-drag=${this.#onPaneDragStart}>
         <div
           class="titlebar"
           @pointerdown=${this.#onTitlePointerDown}
           @pointermove=${this.#onTitlePointerMove}
           @pointerup=${this.#onTitlePointerUp}
+          @pointercancel=${this.#onTitlePointerCancel}
           @dblclick=${this.#onTitleDblClick}>
           <span class="title">
             <umb-icon class="app-icon" name=${w.app.icon}></umb-icon>
@@ -918,12 +1330,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
                  titlebar from apps whose windows are small enough to need every pixel: a
                  nine-by-nine game asks for a 274px window, and four controls plus its own name
                  wanted 311px of it. -->
-            ${w.app.content.kind === 'iframe'
+            ${w.app.content.kind === 'iframe' || w.owner
               ? html`<button
                   class="ctrl ctrl-reload ${this._loading || w.refreshing ? 'busy' : ''}"
                   title="Reload"
                   aria-label="Reload"
-                  @click=${() => this.#onReloadClick()}>
+                  @click=${() => (w.app.content.kind === 'iframe' ? this.#onReloadClick() : (this._bodyGeneration += 1))}>
                   ${this.#controlGlyph('reload')}
                 </button>`
               : nothing}
@@ -934,13 +1346,20 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
               @click=${() => this.#manager?.setState(w.id, 'minimized')}>
               ${this.#controlGlyph('minimize')}
             </button>
-            <button
-              class="ctrl ctrl-maximize"
-              title=${maximized ? 'Restore' : 'Maximize'}
-              aria-label=${maximized ? 'Restore' : 'Maximize'}
-              @click=${() => this.#manager?.setState(w.id, maximized ? 'normal' : 'maximized')}>
-              ${this.#controlGlyph(maximized ? 'restore' : 'maximize')}
-            </button>
+            <!-- Left out entirely for a resizable: false window, as Windows does for a window that
+                 cannot be maximized, rather than drawn disabled. Every theme lays these controls out
+                 in flex, so the rest close up. The theme's controls-width metric then over-counts by
+                 one button, which errs the safe way: the drag clamp keeps a little more titlebar on
+                 screen than it strictly has to. -->
+            ${resizable
+              ? html`<button
+                  class="ctrl ctrl-maximize"
+                  title=${maximized ? 'Restore' : 'Maximize'}
+                  aria-label=${maximized ? 'Restore' : 'Maximize'}
+                  @click=${() => this.#manager?.setState(w.id, maximized ? 'normal' : 'maximized')}>
+                  ${this.#controlGlyph(maximized ? 'restore' : 'maximize')}
+                </button>`
+              : nothing}
             <!-- 'close' is kept alongside 'ctrl-close' because '.ctrl.close:hover' still keys off
                  it for the red hover state — dropping it would silently kill that hover. -->
             <button
@@ -956,10 +1375,22 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
              its content is, while a notice is something that happened to that content. Ordering
              them the other way round would put a strip describing the content between the content
              and the thing warning about it. -->
+        <!-- The window's own content is a column, and its panes sit beside it from the titlebar
+             down. The path strip and the notices are in the column because both are about the
+             column's content, not the pane's. Rendered on every window, panes or not: adding the
+             wrapper only once a pane opens would recreate the frame below it and reload the
+             document the editor is working in. -->
+        <div class="main">
+          ${this.#renderPanes(w, 'left')}
+          <div class="column">
+            ${this.#renderAttachedStrip(w)}
         ${windowShowsPath(w.app)
           ? html`<umbradesktop-window-path
               .busy=${this._loading}
               .crumbs=${this._crumbs}
+              .previewable=${this._document && !w.owner}
+              .previewActive=${attachedKind(this.#manager?.getWindows() ?? [], w.id, UMBRADESKTOP_PREVIEW_APP_ALIAS) !== undefined}
+              @umbradesktop-path-preview=${this.#onPreview}
               @umbradesktop-path-navigate=${this.#onCrumbNavigate}></umbradesktop-window-path>`
           : nothing}
         <umbradesktop-window-notices .window=${w}></umbradesktop-window-notices>
@@ -978,13 +1409,18 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
             : ''}
           ${this._loading ? html`<div class="loading"><umbradesktop-loader></umbradesktop-loader></div>` : ''}
         </div>
-        ${w.state === 'normal'
+          </div>
+          ${this.#renderPanes(w, 'right')}
+        </div>
+        ${this.#renderDockZones(w)}
+        ${w.state === 'normal' && resizable
           ? RESIZE_HANDLES.map(
               (rh) => html`<div
                 class="rh rh-${rh.dir}"
                 @pointerdown=${(e: PointerEvent) => this.#onResizeDown(e, rh.edges)}
                 @pointermove=${this.#onResizeMove}
-                @pointerup=${this.#onResizeUp}></div>`,
+                @pointerup=${this.#onResizeEnd}
+                @pointercancel=${this.#onResizeEnd}></div>`,
             )
           : ''}
       </div>
@@ -1036,6 +1472,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         );
         cursor: move;
         user-select: none;
+        /* The titlebar is the drag handle, so a finger on it drags the window rather than panning
+           the page. Without this a touchscreen (or DevTools' device mode) takes the first few
+           pixels of a drag for a pan and sends 'pointercancel', and the window never moves. The
+           resize handles below have the same rule for the same reason. Taps on the controls still
+           arrive as clicks: this stops panning and zooming, not tapping. */
+        touch-action: none;
       }
       .frame:not(.active) .title,
       .frame:not(.active) .controls {
@@ -1318,6 +1760,142 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         height: 12px;
         z-index: 4;
         cursor: nesw-resize;
+      }
+      /* The row under the titlebar: the window's own content column, and its panes beside it. Both
+         are always here, panes or not, so opening a pane never recreates the frame in the column. */
+      .main {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+      .column {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .pane {
+        flex: none;
+      }
+      /* The splitter between the content and a pane. Its width and colours are tokens, so a theme
+         that draws its dividers as a bevel or a hairline restyles this one with them. */
+      .splitter {
+        flex: none;
+        width: var(--umbradesktop-pane-splitter-width, 5px);
+        cursor: ew-resize;
+        background: var(--umbradesktop-pane-splitter-background, var(--uui-color-divider));
+      }
+      .splitter:hover {
+        background: var(--umbradesktop-pane-splitter-hover-background, var(--uui-color-divider-emphasis));
+      }
+      /* A place a floating attached window can dock, drawn inside this window for as long as one
+         of its attached windows is dragged. Dashed while it is only on offer, solid and filled once
+         the pointer is in it. Above this window's own
+         body, catcher and resize handles; below every window stacked above this one, which is what
+         lets the window being dragged pass over it. */
+      .dock-zone {
+        position: absolute;
+        z-index: 6;
+        box-sizing: border-box;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: var(--umbradesktop-dock-zone-border, 2px dashed rgba(255, 255, 255, 0.7));
+        border-radius: var(--umbradesktop-dock-zone-radius, 6px);
+        background: var(--umbradesktop-dock-zone-background, rgba(27, 38, 79, 0.25));
+      }
+      /* The zone the pointer is in. Its own tokens rather than the snap ghost's: the ghost is drawn
+         over the wallpaper and is a translucent white for that, which over a white window is
+         nothing at all, so the zone went from visible to invisible at the one moment it mattered.
+         Solid and in the backoffice's own interactive colour, so aiming at it is unmistakable. */
+      .dock-zone.active {
+        border: var(--umbradesktop-dock-zone-active-border, 3px solid var(--uui-color-interactive-emphasis, #2152a3));
+        background: var(
+          --umbradesktop-dock-zone-active-background,
+          color-mix(in srgb, var(--uui-color-interactive, #3544b1) 30%, transparent)
+        );
+      }
+      .dock-zone.active .dock-zone-label {
+        background: var(--umbradesktop-dock-zone-active-label-background, var(--uui-color-interactive-emphasis, #2152a3));
+      }
+      .dock-zone-label {
+        padding: 6px 12px;
+        border-radius: var(--umbradesktop-dock-zone-radius, 6px);
+        background: var(--umbradesktop-dock-zone-label-background, rgba(0, 0, 0, 0.6));
+        color: var(--umbradesktop-dock-zone-label-text, #ffffff);
+        font-size: 13px;
+      }
+      /* The strip under a floating attached window's titlebar. Drawn from the pane header's tokens,
+         because it is the same strip in its other place, and those fall back to the path strip's,
+         because in both places it sits where a section window's path strip does. So a theme that has
+         styled its path strip has styled this, and one that has not gets the same neutral strip in
+         both. The height is the path strip's too, which is the theme's pathbarHeight and what the
+         window sizing pays for it at. */
+      .attached-strip {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-sizing: border-box;
+        height: var(--umbradesktop-path-height, ${UMBRADESKTOP_PATH_HEIGHT}px);
+        padding: 0 4px 0 var(--umbradesktop-path-padding, 8px);
+        background: var(--umbradesktop-pane-header-background, var(--umbradesktop-path-background, var(--uui-color-surface-alt)));
+        border-bottom: var(
+          --umbradesktop-pane-header-border,
+          var(--umbradesktop-path-border-bottom, 1px solid var(--uui-color-divider))
+        );
+        color: var(--umbradesktop-pane-header-text, var(--umbradesktop-path-text, var(--uui-color-text)));
+        font-size: var(--umbradesktop-pane-header-font-size, var(--umbradesktop-path-font-size, 12px));
+      }
+      .attached-strip-owner {
+        font-weight: 600;
+      }
+      .attached-strip-text {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      /* A toolbar button, as the pane header's controls and the path strip's Preview are: no face
+         and no border until hovered, then the theme's strip-button hover. A bordered white button
+         here read as a form control dropped onto the chrome, in every theme. */
+      .attached-dock {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 0;
+        border-radius: var(--umbradesktop-strip-button-radius, 3px);
+        padding: 2px 6px;
+        background: none;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+      .attached-dock:hover:not([disabled]) {
+        background: var(
+          --umbradesktop-strip-button-hover-background,
+          var(--umbradesktop-path-link-hover-background, var(--uui-color-surface-emphasis))
+        );
+        color: var(--umbradesktop-strip-button-hover-text, var(--umbradesktop-path-text, var(--uui-color-text)));
+        box-shadow: var(--umbradesktop-strip-button-hover-shadow, none);
+      }
+      .attached-dock[disabled] {
+        cursor: default;
+        opacity: 0.55;
+      }
+      .attached-dock-glyph {
+        width: 12px;
+        height: 12px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.5;
+      }
+      .attached-dock-glyph-fill {
+        fill: currentColor;
+        stroke: none;
       }
     `,
   ];

@@ -45,7 +45,16 @@ export type UmbraDesktopChromeProfile = 'full-section' | 'workspace-only' | 'bar
  */
 export type UmbraDesktopAppContent =
   | { kind: 'iframe'; url: string }
-  | { kind: 'element'; element: ElementLoaderProperty };
+  | {
+      kind: 'element';
+      element: ElementLoaderProperty;
+      /**
+       * Properties assigned onto the element before it connects. Set by a feature opening an
+       * attached window, to tell its body which window and document it belongs to; never by a
+       * catalogue or package app, which has nothing to be told.
+       */
+      props?: Readonly<Record<string, unknown>>;
+    };
 
 /** A launchable app: what its window body is, plus how to frame and present it. */
 export interface UmbraDesktopApp {
@@ -79,12 +88,24 @@ export interface UmbraDesktopApp {
   minSize?: { w: number; h: number };
   /** Whether more than one instance may open (default: allowed). */
   allowMultiple?: boolean;
+  /**
+   * Whether the window may be resized or maximized (default: allowed). `false` keeps it at the
+   * size it opened at; the window manager enforces it, so every route to a new size is covered.
+   */
+  resizable?: boolean;
   /** Sort weight within its group (ascending). */
   weight?: number;
   /** Curatorial group alias; undefined → the reserved "More" group. */
   group?: string;
   /** Source section alias — permission gate + default-group hint. */
   sourceSection?: string;
+  /**
+   * The section this app opens as its root, when it is that section's certified app; absent for
+   * everything else. A pin stored on the section's uncertified fallback tile resolves to the app that
+   * covers the section now, which is how a pin survives a package shipping its own entry for its
+   * section (design D15).
+   */
+  coversSection?: string;
   /** Confidence tier (always set by derivation; optional for back-compat). */
   confidence?: UmbraDesktopConfidence;
 }
@@ -120,6 +141,8 @@ export interface UmbraDesktopRegisteredApp {
   minSize?: { w: number; h: number };
   /** Whether more than one window may open. */
   allowMultiple?: boolean;
+  /** The manifest's `meta.resizable`: whether the window may be resized or maximized. */
+  resizable?: boolean;
 }
 
 /** A position/size rectangle in desktop pixels. */
@@ -234,6 +257,80 @@ export interface UmbraDesktopWindow {
    * router and by the banner's discard action. Design D7.
    */
   refreshing?: boolean;
+
+  /**
+   * How many times this window's document has had a new saved version since it loaded: its own save
+   * or publish, or a refresh after somebody else saved. Written by the dirty watcher through the
+   * manager, and read by whatever has to follow the saved version, which today is an attached
+   * preview. It changes only on a save, so carrying it on the render model costs a re-render per
+   * save and nothing per keystroke.
+   */
+  saves?: number;
+
+  /**
+   * The page a backoffice window's frame is showing, as a path on this site with its query and hash.
+   *
+   * Reported by the window as the frame's router moves, so the window layout can reopen the window
+   * where the editor was rather than at its section's start page (see `windows/layout.ts`). Absent
+   * until the frame has loaded, and always absent on an app window, which has no address.
+   */
+  location?: string;
+
+  /**
+   * The id of the window this one is attached to, when it is a floating attached window.
+   *
+   * A floating attached window belongs to its owner: the two rise as one layer, minimizing the owner
+   * takes it along, closing the owner closes it, and its taskbar button sits inside the owner's
+   * group. Absent on every ordinary window and on every owner, because a group is one owner and its
+   * attached windows and nothing nests. The group itself is never stored: it is derived from this
+   * field (see `window-group.ts`), so it cannot disagree with the list.
+   */
+  owner?: string;
+
+  /**
+   * The attached content this window draws as panes inside itself, beside its own content.
+   *
+   * On the owner rather than as windows of their own, because a pane is not a window: it has no
+   * titlebar, no taskbar button and no position, and it goes wherever its window goes. Absent on a
+   * window with none. Design: `docs/design/2026-09-27-attached-windows-design.md`.
+   */
+  panes?: ReadonlyArray<UmbraDesktopPane>;
+
+  /**
+   * Whether this floating attached window was minimized because its owner was, rather than on its
+   * own. Restoring the owner brings back exactly these, and not a window the editor had put away.
+   */
+  minimizedWithOwner?: boolean;
+
+  /**
+   * Which side of its owner a floating attached window docks back to, from its Dock button: the side
+   * it was on as a pane, or the side its feature asked for when it opened floating.
+   */
+  dockSide?: 'left' | 'right';
+}
+
+/**
+ * Attached content drawn inside its owner window, beside the owner's own content, behind a splitter.
+ *
+ * Docking and undocking move one app between a pane and a floating attached window; its {@link id}
+ * survives the move, so the two forms are one thing to the manager.
+ */
+export interface UmbraDesktopPane {
+  /** Stable id, kept when the content moves between pane and floating window. */
+  id: string;
+  /** The content: an element app, the same one either way. */
+  app: UmbraDesktopApp;
+  /** Which side of the owner's content it sits on. */
+  side: 'left' | 'right';
+  /** Its width in px, which the splitter adjusts. */
+  width: number;
+  /**
+   * How much the window grew to make room for this pane, which is what closing or undocking it gives
+   * back. Zero when the pane took its width from the editor instead, beside a window that could not
+   * grow. Recorded rather than recomputed, because the splitter may have moved since and the
+   * window's rect is not the place to read the difference from.
+   */
+  grew?: number;
 }
 
 /** Whether an app was maintainer-certified or auto-derived as an untested fallback. */
@@ -252,8 +349,10 @@ export interface UmbraDesktopGroup {
 }
 
 /**
- * One curated catalogue entry. Links to a destination via `ref` (URL inferred from
- * the registry) or `url` (explicit escape hatch), plus display placement.
+ * One catalogue entry: a curated one in `catalogue/`, or, published as `UmbraDesktopPackageEntry`,
+ * one a package registers (see `catalogue.extension.ts`, whose rule that the published type only
+ * ever gains optional fields applies to this one too). Links to a destination via `ref` (URL
+ * inferred from the registry) or `url` (explicit escape hatch), plus display placement.
  */
 export interface UmbraDesktopCatalogueEntry {
   /** Stable app id. */
@@ -279,6 +378,8 @@ export interface UmbraDesktopCatalogueEntry {
   minSize?: { w: number; h: number };
   /** Whether more than one instance may open. */
   allowMultiple?: boolean;
+  /** Whether the window may be resized or maximized (default: allowed). */
+  resizable?: boolean;
   /** Sort weight within its group (ascending). */
   weight?: number;
   /** Curatorial group alias (see catalogue/groups.ts). */
@@ -353,4 +454,17 @@ export interface UmbraDesktopLauncherGroup {
   group: UmbraDesktopGroup;
   /** Apps in this group, sorted. */
   apps: UmbraDesktopApp[];
+}
+
+/**
+ * One thing the catalogue pipeline wants a developer to know, keyed so it prints once.
+ *
+ * Produced by the pure validation and merge units and printed by the context through its
+ * quiet-window diagnostics, so the units stay testable by calling them and never touch the console.
+ */
+export interface UmbraDesktopCatalogueReport {
+  /** Deduplication key: a key already printed during this desktop visit is not printed again. */
+  key: string;
+  /** The whole console line, `[UmbraDesktop]` prefix included. */
+  message: string;
 }

@@ -1,4 +1,11 @@
-import type { UmbraDesktopLocaleSettings, UmbraDesktopSettings, UmbraDesktopWallpaperRef } from './types';
+import type {
+  UmbraDesktopLauncherLayout,
+  UmbraDesktopLauncherLayoutGroup,
+  UmbraDesktopLocaleSettings,
+  UmbraDesktopReopenWindows,
+  UmbraDesktopSettings,
+  UmbraDesktopWallpaperRef,
+} from './types';
 import { UMBRADESKTOP_DEFAULT_WALLPAPER_ID } from './wallpapers.generated';
 import { UMBRADESKTOP_DEFAULT_THEME_ID } from '../theme/themes/index';
 
@@ -24,6 +31,7 @@ export const UMBRADESKTOP_DEFAULT_SETTINGS: UmbraDesktopSettings = {
   theme: UMBRADESKTOP_DEFAULT_THEME_ID,
   pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
   bootIntoDesktop: false,
+  reopenWindows: 'session',
   taskbarFeatures: {},
   wallpaperFollowsTheme: false,
   locale: { source: 'backoffice', hourCycle: 'auto' },
@@ -102,6 +110,19 @@ function isBootPreference(value: unknown): value is boolean {
 }
 
 /**
+ * Whether a decoded value is one of the three answers to when windows are reopened.
+ *
+ * Strict, and a stored boolean is not one of them: an early build of this setting stored `true` or
+ * `false`, and reading those as anything but the default would guess at what somebody meant by a
+ * switch that no longer exists.
+ * @param value The decoded `reopenWindows` property.
+ * @returns True when the value is a usable choice.
+ */
+function isReopenWindows(value: unknown): value is UmbraDesktopReopenWindows {
+  return value === 'off' || value === 'session' || value === 'persistent';
+}
+
+/**
  * Whether a decoded value is a wallpaper-follows-theme preference this version understands.
  *
  * Strict about the type for the same reason {@link isBootPreference} is: a coercion would let a
@@ -152,6 +173,44 @@ function readLocale(value: unknown): UmbraDesktopLocaleSettings {
 }
 
 /**
+ * The strings in a decoded list, or an empty list when it is not one.
+ * @param value A decoded property that should be a list of strings.
+ * @returns Its string entries, in order.
+ */
+function stringsIn(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+}
+
+/**
+ * Read a stored launcher layout, recovering what it can.
+ *
+ * Anything that is not an object with a list of groups is **absent**, which costs the user their
+ * arrangement and nothing else: the launcher falls back to the catalogue's grouping, and the
+ * wallpaper, theme and pins beside it are read independently. Within a readable layout a broken
+ * group is dropped on its own and a stray non-string is filtered out on its own, so one bad entry
+ * never costs the rest.
+ * @param value The decoded `layout` property.
+ * @returns A usable layout, or `undefined`.
+ */
+function readLayout(value: unknown): UmbraDesktopLauncherLayout | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const stored = value as { groups?: unknown; removed?: unknown; deletedGroups?: unknown };
+  if (!Array.isArray(stored.groups)) return undefined;
+
+  const seen = new Set<string>();
+  const groups: UmbraDesktopLauncherLayoutGroup[] = [];
+  for (const candidate of stored.groups) {
+    if (typeof candidate !== 'object' || candidate === null) continue;
+    const group = candidate as { id?: unknown; label?: unknown; apps?: unknown };
+    if (typeof group.id !== 'string' || group.id.length === 0 || seen.has(group.id)) continue;
+    if (group.label !== null && typeof group.label !== 'string') continue;
+    seen.add(group.id);
+    groups.push({ id: group.id, label: group.label, apps: stringsIn(group.apps) });
+  }
+  return { groups, removed: stringsIn(stored.removed), deletedGroups: stringsIn(stored.deletedGroups) };
+}
+
+/**
  * Decode a stored payload into settings. Never throws, and never returns something partially
  * valid: anything unreadable — absent, malformed, or a version this build predates — yields a
  * fresh copy of the defaults. A silently reset preference is a far better failure than a blank
@@ -174,6 +233,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
     pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
     bootIntoDesktop: UMBRADESKTOP_DEFAULT_SETTINGS.bootIntoDesktop,
+    reopenWindows: UMBRADESKTOP_DEFAULT_SETTINGS.reopenWindows,
     taskbarFeatures: {},
     wallpaperFollowsTheme: UMBRADESKTOP_DEFAULT_SETTINGS.wallpaperFollowsTheme,
     locale: { ...UMBRADESKTOP_DEFAULT_SETTINGS.locale },
@@ -196,9 +256,11 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     pinned?: unknown;
     theme?: unknown;
     bootIntoDesktop?: unknown;
+    reopenWindows?: unknown;
     taskbarFeatures?: unknown;
     wallpaperFollowsTheme?: unknown;
     locale?: unknown;
+    layout?: unknown;
   };
   if (payload.v !== 1) return fallback();
 
@@ -207,13 +269,48 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
   if (isThemeId(payload.theme)) settings.theme = payload.theme;
   if (isPinnedList(payload.pinned)) settings.pinned = payload.pinned;
   if (isBootPreference(payload.bootIntoDesktop)) settings.bootIntoDesktop = payload.bootIntoDesktop;
+  if (isReopenWindows(payload.reopenWindows)) settings.reopenWindows = payload.reopenWindows;
   if (isFeatureMap(payload.taskbarFeatures)) settings.taskbarFeatures = { ...payload.taskbarFeatures };
   if (isWallpaperFollowsTheme(payload.wallpaperFollowsTheme)) {
     settings.wallpaperFollowsTheme = payload.wallpaperFollowsTheme;
   }
   // Assigned rather than guarded, because this one reads each field separately — see readLocale.
   settings.locale = readLocale(payload.locale);
+  // Assigned only when readable: an absent layout is the ordinary case, not a default to write.
+  const layout = readLayout(payload.layout);
+  if (layout) settings.layout = layout;
   return settings;
+}
+
+/**
+ * Whether a stored payload is one this build can actually read, as opposed to one
+ * {@link parseSettings} would silently hand back the defaults for.
+ *
+ * {@link parseSettings} cannot answer this, and deliberately: it returns the defaults for anything
+ * unreadable, which is right for painting a desktop and wrong for deciding whether something is
+ * worth copying. The migration needs the distinction, because copying an unreadable payload means
+ * writing *defaults* onto the account and recording the migration as done — and the browser's copy
+ * is then overwritten by the account's, so the original is gone.
+ *
+ * The case that matters is not a corrupt payload, it is a payload from a **later** build: `v: 2`
+ * reads as unreadable here, and somebody moving between builds would have their real settings
+ * replaced by defaults with nothing having failed.
+ * @param raw The raw string from storage, or `null` when nothing is stored.
+ * @returns True when this build understands the payload well enough to move it.
+ */
+export function isReadableSettingsPayload(raw: string | null): boolean {
+  if (!raw) return false;
+
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(raw);
+  } catch {
+    return false;
+  }
+
+  if (typeof decoded !== 'object' || decoded === null || Array.isArray(decoded)) return false;
+
+  return (decoded as { v?: unknown }).v === 1;
 }
 
 /**

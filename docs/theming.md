@@ -289,16 +289,22 @@ prefix is for:
 
 | Group | What it covers |
 |---|---|
-| `desktop-*` | Wallpaper fallback colour and gradient, the image scrim, the watermark's opacity |
+| `desktop-*` | Wallpaper fallback colour and gradient, the image scrim, the watermark's opacity, and the desktop label's font and weight. The label is the site's name written large in a corner, and a theme sets its lettering only: its ink is the same white with a dark halo under every theme, because the ground behind it is whatever wallpaper the user picked, not yours |
 | `window-*` | The frame: background, body background, border, radius, resting and active shadows |
 | `titlebar-*` | Height, background, bottom border, text colour, the inactive-frame opacity, and the unsaved-changes marker's colour and size |
 | `control-*` | The window buttons: width, glyph colour, hover fills, and close's own hover pair |
 | `taskbar-*` | The bar itself: height, reserve, margin, radius, background (plus an opaque fallback), backdrop filter, top border, shadow, two text colours |
 | `start-*`, `task-*` | The buttons inside the bar: hover and active fills, and the running-window marker |
-| `launcher-*` | The panel: geometry, background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills |
-| `path-*` | The path strip under a section window's caption: its height, padding, background, bottom border, text and link colours, the hover fill behind a crumb, the separator's colour and the strip's font size |
+| `launcher-*` | The panel: geometry (including its width in arrange mode), background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills, the All apps/Arrange controls' own rest, border, text and active fills, the drawer's letter headings, muted text for a group handle and the like, the drop target and insertion slot, the drag ghost's shadow, the remove pane and the arrange banner, and the palette's divider |
+| `path-*` | The path strip under a section window's caption: its height, padding, background, bottom border, text and link colours, the hover fill and text behind a crumb, the separator's colour and the strip's font size |
 | `snap-ghost-*` | The outline showing where a window dragged into a desktop edge will land: its fill, its border shorthand and its corner radius. It stands in for the window that is about to be there, so the obvious value for the radius is your own `window-radius`, and Windows 98 shows what to do when your design has no translucency to lend it |
 | `notice-*` | The overwrite guard: the titlebar marker and taskbar badge colours at `info`/`warning`/`error`, the marker and badge sizes, and the banner's own background, text and leading-edge width |
+| `pane-*` | A docked pane ([attached windows](attached-windows.md)): its background, its header's background, bottom border, text and font size, and the splitter's width and fills. The header tokens fall back to the `path-*` ones, because the header sits on the same row as the path strip and is drawn as its continuation, so a theme that styled its path strip has styled the header too |
+| `strip-button-*` | The toolbar buttons in those strips: the path strip's Preview, the pane header's controls and a floating attached window's Dock. Corner radius, the hover fill, text and shadow, and the pressed fill, text and shadow. Separate from a crumb's hover, because a crumb is a link and these are buttons: Windows 98 hovers a crumb in navy and raises a button. A theme that styles the path strip must set the pressed pair, or it gets Umbraco's own "you are here" pink |
+| `dock-zone-*` | The zones inside an owner window where a dragged attached window can dock: border, radius, fill and label colours, and an `active` border, fill and label for the zone under the pointer. Keep the active one strong: it is drawn over a window, often a white one |
+| `task-group-*` | The box on the taskbar around a window's button and its floating attached windows' buttons: gap, padding, border, radius and background |
+| `toasts-*`, `toast-*` | The desktop's notifications ([design](design/2026-09-27-desktop-notifications-design.md)). `toasts-*` places the stack: its `top`, `right`, `bottom` and `left` offsets and its flex `direction`. The default hangs it above the taskbar at the trailing edge and grows it upwards; macOS sets `top`, clears `bottom` to `auto` and turns the direction to `column`, which is all a theme with its bar or a menu bar at the top needs. `toast-*` is one toast's surface: width, background, backdrop, text, border, radius and shadow, each falling back to the matching `launcher-*` token, so a theme that styled its launcher has styled its toasts. `toast-positive-color` is the success edge; the other severities read the `notice-*` colours |
+| `scrollback-*` | The list behind the clock. It is drawn on the `launcher-*` surface outright, so it has only its gap above the bar (`scrollback-bottom`), its radius, and `scrollback-hover-text` for a theme whose launcher hover fill is a selection bar that needs its own text colour, as Windows 98's navy does. There is no horizontal token: the list hangs from wherever your theme puts the clock, measured, so a dock that carries its clock mid-screen needs nothing. The toasts stand aside while it is open |
 | `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent with the text that reads on it, and the UI font |
 
 The two groups are checked differently, which is why they are two lists rather than one. The
@@ -518,6 +524,12 @@ own classes are all namespaced (`.path-bar`, `.path-crumb`, `.path-current`, `.p
 by `components/window-path.test.ts`), but a bare `button` or `nav` rule you wrote for the frame will
 land in it too.
 
+Two more strips are drawn at this height: a docked pane's header, and the strip under a floating
+attached window's titlebar. Neither has a metric of its own. The window sizing pays for the second
+at `pathbarHeight`, and both read `--umbradesktop-path-height`, so the one constant you already have
+covers them. Your `window` sheet is adopted into the pane as well, where every class is prefixed
+`pane-`.
+
 ### Then measure it
 
 Deriving makes the sum consistent with itself. It cannot make it consistent with what the browser
@@ -619,7 +631,8 @@ icon in the caption entirely, and while both shared one selector that rule hid t
 
 **Never scope a `.task` rule to `.running`.** The taskbar draws task buttons in two places now: the
 window list inside `.running`, and the fixed feature row inside `.features`, which sits between the
-start button and the window list and holds the AI chat button and the user's pinned apps. Both use
+start button and the window list and holds the full screen button, the AI chat button and the user's
+pinned apps. Both use
 the **same** `.task` class, and that is the whole reason a theme gets the feature row for free —
 your bevels, your dock tiles, your Windows 11 squares apply to it without a line of new CSS.
 
@@ -633,6 +646,14 @@ The row's buttons carry no `.task-label`, deliberately: they are icon-only every
 launch button that never stands in for a window has no title to carry. If your theme shows labels,
 your `.task` padding and gap are what size an icon-only button, so check one — a rule tuned for
 `icon + label` can leave a lone icon sitting off-centre.
+
+**Leave a greyed-out button greyed out.** The full screen button greys out while the browser itself
+is full screen, after F11 or the browser's menu, because no page can leave that, and its tooltip
+says which key does. The base stylesheet draws the greyed-out state on `.task[aria-disabled='true']`
+as a fade and a plain cursor on top of your button face, so your theme gets it with no CSS of its
+own. For a different fade, set `--umbradesktop-task-disabled-opacity` from your palette. Do not
+declare `opacity` or `cursor` on a `.task` rule: that can undo the fade, and
+`theme/taskbar-features.test.ts` fails a sheet that does.
 
 **If you hide labels, you owe the bar a way to tell the two lists apart.** Both lists draw the same
 icon for the same app, so with labels on it is the title that separates them — a window button
@@ -788,6 +809,54 @@ This is the single most common way a new theme gets its geometry wrong: it has n
 Umbraco 4 twice — the caption and the bar — and Windows 11 once, in three consecutive themes, and
 in every case the only thing that noticed was `metrics.test.ts`. Write that file first.
 
+### 6.4 Arrange mode in a narrow theme
+
+Arrange mode's layout and its palette of what is missing sit side by side when there is room, and
+stack when there is not: a container query on the arrange-mode container switches at
+`UMBRADESKTOP_LAUNCHER_SPLIT_MIN`, in `launcher/geometry.ts`, which every theme reads rather than
+restates. Below that width the palette becomes its own view, reached from an "Add apps" button in
+the banner, and the plus, Add all and Add group buttons still do the adding once you are looking at
+it. A launcher narrower than the split minimum gets this for free; nothing in the theme has to ask
+for it.
+
+That fallback works, but switching between the layout and the palette to move things across is
+the least pleasant way to arrange, so a narrow theme should rather widen in arrange mode. Set
+`--umbradesktop-launcher-arrange-width` in the palette: the launcher takes that width while
+arranging and goes back to `--umbradesktop-launcher-width` on Done. Derive it with
+`arrangeWidthFor(yourWidth, chrome)` from `launcher/geometry.ts`, which gives your width plus the
+palette's and never less than the split minimum plus `chrome`, the border and padding your
+launcher draws around the arrange area on both sides together. Windows 98 and Umbraco 4 both do
+this, in their `metrics.ts`, and cap it at `92vw` so a small screen still falls back to the
+stacked view. Left unset, arrange mode keeps the launcher's own width.
+
+A heading you lift with `z-index`, as Umbraco 4 does for its sticky group strips, must stay below
+5, which is where the bar showing a dragged group's landing place is drawn.
+
+A menu-row theme, one whose launcher is a single column rather than a card grid, still has to say
+where a tile's own buttons go once that tile is also a row: Windows 98 and Umbraco 4 both place
+`.tile.arr .edit` back in the row's flow, after the name, so the button sits at the row's end
+instead of pinned to a corner that no longer means anything once the tile is not a card.
+
+The drag ghost, what follows the pointer while you drag, is the dragged tile's icon alone, an
+`umb-icon` with the class `drag-ghost`, drawn beside the pointer so the landing bar under it stays in
+sight. It is not part of the layout it was lifted from: it is put in the top layer as a manual
+popover, so a panel with a blur or a backdrop filter cannot become its containing block and clip it.
+That also means a rule scoped under `.cards .card` never reaches it, on purpose: style `.drag-ghost`
+directly for its size or colour. Its shadow is `launcher-ghost-shadow`, used as a CSS `drop-shadow()`
+so it follows the icon's outline, which means the token takes an offset, a blur and a colour but no
+spread; `none` turns it off, as Windows 98 does.
+
+And a theme may decide that scrolling belongs to an element other than the one the base launcher
+scrolls. The base scrolls the panel body itself, but nothing requires that: Umbraco 4 keeps its
+Favourites row fixed at the top and scrolls only the tree of groups underneath it, so its body never
+scrolls and its tree does. The drag does not assume either answer. It asks the launcher's own
+candidates, outermost first, which one actually has `overflow-y: auto` or `scroll` on it right now,
+and scrolls that one near the pointer, in `launcher/drag-scroller.ts`. A theme that moves scrolling
+inward to one of the candidates that file already lists (the body or its `.cards` in the launcher,
+the layout pane or its `.cards` in arrange mode) needs no plumbing to announce it; the drag finds it
+by asking the browser the same question you would. Scrolling some other element means adding it to
+that list, or the drag will not scroll near the edges at all.
+
 ---
 
 ## 7. Checklist before you open a PR
@@ -801,14 +870,28 @@ has shipped a green test run and a red build, and the reverse.
       to a component without adding it to `UMBRADESKTOP_TOKENS`, or the reverse, and
       `app-tokens.test.ts`, which fails if your palette answers the chrome group but misses an app
       token — a theme can pass the first and fail the second
-- [ ] Every launcher affordance still *works*: search, tiles, pinning, the user button, Desktop
-      settings, Exit. A theme may restyle, never remove (design §1.1)
+- [ ] Every launcher affordance still *works*: search, All apps, Arrange, the tiles, the drag
+      targets (Pinned and the remove pane), arrange mode's controls (the banner, handles, rename
+      fields, a tile's remove and ⋯, a group's ⋯, Move to, the palette), the user button, Desktop
+      settings, Exit. A theme may restyle, never remove (design §1.1). Two tests hold most of that
+      for every theme: `theme/themes/launcher-controls.test.ts` renders each control under your
+      palette and sheet and checks it is visible, inside the panel, legible and what a press at its
+      centre actually hits, and `theme/themes/launcher-geometry.test.ts` measures what a drag and
+      arrange mode do to the layout. Both loop over every registered theme, so yours is in them
+      the moment it is in `theme/themes/index.ts`
 - [ ] Your theme's `metrics` are measured and not merely derived — a `metrics.test.ts` (§4),
       `chromeWidth` and `chromeHeight` included, since those are what every registered app's window
       is sized from
 - [ ] Windows dragged hard against all four screen edges stay grabbable
 - [ ] Switching to your theme with windows open pulls stranded windows back into reach
 - [ ] The backoffice's light, dark and high-contrast settings all render something sane
+- [ ] Notifications look right: raise a success and a warning, open the list from the clock, and
+      check that the stack clears your taskbar or dock and the list reads on your launcher surface.
+      No test measures either against your chrome
+- [ ] The desktop label looks right in your lettering. You set only its font and weight, and
+      `desktop-label.element.test.ts` checks each corner against your `taskbarReserve`. No test
+      can see a picture, so turn the label on under Desktop settings, Site, and look at your font
+      over your own wallpaper and over a photo too
 - [ ] Your theme has a `descriptionKey`, and the string behind it exists in every localization file
 - [ ] Your theme declares a `wallpaper` (§1.1). `{ kind: 'none' }` counts and is the right answer for
       a theme whose own ground is the point; leaving the field off is the one option that is wrong,

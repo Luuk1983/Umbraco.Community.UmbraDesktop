@@ -17,7 +17,7 @@ It also does something the backoffice does not do at all. When two people have t
 ![The UmbraDesktop desktop: several backoffice sections open at once as separate, overlapping windows. The taskbar along the bottom carries a titled button for each of them, and beside the launcher button a row of icons for the pinned apps.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png)
 
 > **New: games on the desktop.** [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment)
-> is an optional add-on that puts Minesweeper in the launcher's Games group, in a window of its own
+> is an optional add-on that puts Minesweeper and Snake in the launcher's Games group, each in a window of its own
 > and themed along with everything else. Install it if you want it; the desktop is unchanged
 > without it. See [Games](#games).
 
@@ -29,23 +29,30 @@ It also does something the backoffice does not do at all. When two people have t
 - Always says where you are. A window that holds a whole section carries a path under its title bar, Media library / Campaigns / hero.jpg, and every step of the way back is one click. In the plain backoffice you climb back out of a tree by clicking the section name in the header, and a window has no header, so this is where that goes.
 - Never loses your work. A window holding unsaved changes shows a dot in its title bar and on its taskbar button, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
 - Warns before you overwrite someone. If somebody else saves or bins a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. Deletion is warned about even when you have nothing unsaved, because there is no version left to refresh to. The plain backoffice does not warn about this at all.
-- A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus Games once a package puts an app there. Empty groups never show.
+- See the page while you edit it. Press Preview in a document window's path and the rendered page opens beside the editor, inside the same window, and reloads every time you save. It works for headless sites too, using the same preview URL as Save and preview. Pop it out into a window of its own and it stays grouped with its document on the taskbar. See [Live preview](#live-preview).
+- A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus any heading a package brings along, such as the Entertainment add-on's Games. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
-- Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are remembered per user, in that browser.
-- A taskbar. Every open window gets a button: click to focus, click again to minimise.
-- The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: the AI chat, then your pinned apps. Both are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
-- Choose your wallpaper. Ten backgrounds ship with the package, or pick any image from your own Media Library. The choice is per user, in that browser.
-- Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, in that browser. See [Starting in the desktop](#starting-in-the-desktop).
+- Arrange it your way. Drag a tile to move it, drop it on Pinned to pin it, or drop it on the remove pane to take it off. Arrange mode edits groups (reorder, rename, delete, create) and keeps a place to add anything you removed back. There, taking an app off, moving it to another group or to Pinned, adding it back and every group edit has a button, and reordering tiles or groups works with a drag or the arrow keys. All apps lists everything alphabetically with a filter. New apps land in their group on their own. On upgrade your pinned apps (by default Content editor, Media library and Log Viewer) move out of their groups into Pinned, because an app now lives in one place; otherwise the launcher stays as it ships until you arrange it. See [Arranging the launcher](#arranging-the-launcher).
+- Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, instead of in their group, and on the taskbar as icons. One pin, shown in two places. Your pins are stored on your Umbraco account, so they follow you to any browser you sign in on.
+- A taskbar. Every open window gets a button: click to focus, click again to minimise. A preview you popped out gets its own button, in one box with its document's.
+- Told once, not once per window. A notification raised in any window, a save, an error, a package's license warning, shows once on the desktop instead of inside the window, however many windows raised it. Click it to go to the window it came from. The clock keeps the last twenty, with who said it, how often and when, and shows a dot while any of them is a warning or an error. See [Notifications](#notifications).
+- The apps you live in, one click away. Beside the launcher button the taskbar carries a fixed row: a full screen button, then the AI chat, then your pinned apps. All three are on by default and each is a single switch in Desktop settings, Taskbar. Nothing on the taskbar pins or reorders anything, and the row never stands in for a window, so a second click opens a second window exactly as the launcher does. See [On the taskbar](#on-the-taskbar).
+- Choose your wallpaper. Ten backgrounds ship with the package, or pick any image from your own Media Library. The choice is stored on your Umbraco account, so it follows you.
+- Start in the desktop. Turn on one setting and opening the backoffice takes you straight to the desktop, behind a boot screen rather than a flash of the classic interface. A link straight to a document still opens that document, and Exit still gets you out. Per user, with one wrinkle on a browser you have never opened the desktop in. See [Starting in the desktop](#starting-in-the-desktop).
+- Pick up where you left off. Reload the page and the windows you had open come back where you left them, maximised, minimised or snapped as they were, each backoffice window at the page it was showing. On by default for the tab you are in; one setting keeps them after you close the browser too, and another turns it off. The layout is kept in your browser. See [Reopening your windows](#reopening-your-windows).
 - Speaks your language, and writes the time your way. The desktop follows your Umbraco backoffice language, so a Danish backoffice gets a Danish clock rather than whatever your browser happens to be set to, and you can change that language from Desktop settings without needing access to the Users section. If your culture and your habits disagree, one switch forces a 12 or 24 hour clock without giving up anything else about how your language writes a time. See [Language and region](#language-and-region).
 - Looks like Umbraco. The desktop, launcher and window chrome are built from Umbraco's own design tokens, so it reads as part of the backoffice rather than bolted on. A window waiting for its content shows the Umbraco mark with a turning ring, the same animation the boot screen uses, so the wait belongs to the desktop rather than looking like the page has stalled.
 - Or looks like something else. Pick a theme and the chrome is restyled around the same backoffice. Five ship: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98. Adding your own is a folder of CSS and one catalogue entry.
 - Light, dark and high contrast, in the same place. Umbraco's own colour schemes are normally set in the user menu, three clicks from the theme that sits beside them. Appearance now has a row for them too, listing whatever themes the backoffice has registered rather than a fixed three, so a site shipping its own gets it here for free. One setting, two ways in: change it here and the user menu agrees, and the other way round. See [The backoffice's own colours](#the-backoffices-own-colours).
 - Let the wallpaper follow. Turn on one toggle in the theme picker and each theme brings its own background with it, so switching to Windows 98 gives you its bare teal and switching to macOS gives you a sunrise. Off by default, and choosing a wallpaper yourself turns it back off. See [Matching the wallpaper to the theme](#matching-the-wallpaper-to-the-theme).
+- Your desk follows you. Wallpaper, theme, pins, taskbar switches and language are stored on your Umbraco account rather than in one browser, so signing in from another machine, another browser or a private window gives you the desktop you set up, and clearing site data does not lose it. Settings you already had are moved across once, the first time you open the desktop after updating, behind a screen that tells you it is happening rather than doing it behind your back. See [Your settings follow you](#your-settings-follow-you).
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
+- Tiles your packages bring themselves. A package with backoffice screens of its own can give them proper tiles, the right window and a heading of its own in the launcher, from its own release. A package that reuses the alias of the desktop's own tile for them replaces it, pins included, so the package that owns the screens decides how they open. See [Custom and third-party apps](#custom-and-third-party-apps).
 - Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
 - Install it as an app. The backoffice declares a web app manifest, so your browser can install or pin it. It opens straight on the desktop in its own window, with no address bar and no tabs, and carries your site's own name and icon rather than a generic browser tile. Both are settings, so an agency running ten sites gets ten distinguishable apps. See [Installing the backoffice as an app](#installing-the-backoffice-as-an-app).
+- Know which site you are on. Switch it on and the site's name is written large in a corner of the desktop, behind the windows, with the domain under it if you like. Local, staging and production otherwise look identical, and a full-screen desktop or an installed app shows no address bar at all. See [Showing the site's name on the desktop](#showing-the-sites-name-on-the-desktop).
 - Nothing new to learn. The windows contain the backoffice you already know, with the same trees, the same editors and the same shortcuts.
 
 ## Installation & configuration
@@ -73,7 +80,7 @@ That single grant does two things: it makes the desktop reachable, and it reveal
 
 UmbraDesktop grants no access of its own. Every app that opens a piece of the backoffice is gated on the section it comes from, so a user only ever sees apps for sections they could already reach. Give an editor access to Content and Media and those are the apps they get.
 
-The exception is a self-contained app registered by a package, which has no backing section to be permitted to and so is gated by nothing beyond its own manifest conditions and reaching the desktop at all. Minesweeper is one: everyone who can open the desktop can open it. An app of that kind holds no backoffice data, so there is nothing behind it to leak; if you need one restricted, the condition belongs on its own manifest.
+The exception is a self-contained app registered by a package, which has no backing section to be permitted to and so is gated by nothing beyond its own manifest conditions and reaching the desktop at all. Minesweeper and Snake are two: everyone who can open the desktop can open them. An app of that kind holds no backoffice data, so there is nothing behind it to leak; if you need one restricted, the condition belongs on its own manifest.
 
 ## How to use it
 
@@ -88,17 +95,26 @@ Most people are probably familiar with the concept of a desktop and will have no
 From the launcher:
 
 - Click an app to open it in a window.
-- Hover an app and click the pin to add it to Pinned, which sits at the top.
+- Drag a tile to move it, pin it or take it off the launcher, and use All apps or Arrange in the header for everything else. See [Arranging the launcher](#arranging-the-launcher).
 - Drag a title bar to move a window, drag an edge or corner to resize, double-click the title bar to maximise.
 - Drag a window into the left or right edge of the desktop to snap it to that half, or into the top edge to maximise it. An outline appears while you are over an edge, showing where the window will go. Drag a snapped window away and it returns to the size it had before.
-- Use the taskbar at the bottom to switch between open windows. The icons to the left of them, beside the launcher button, are the fixed row: the AI chat and your pinned apps, one click from anywhere. See [On the taskbar](#on-the-taskbar).
+- Use the taskbar at the bottom to switch between open windows. The icons to the left of them, beside the launcher button, are the fixed row: full screen, the AI chat and your pinned apps, one click from anywhere. See [On the taskbar](#on-the-taskbar).
 - The path under a section window's title bar says where that window is. Click any step to go back to it; the first step returns the window to whatever it opened at. If the window has unsaved changes it asks before leaving, the same way closing it does.
+- A window showing a document has a Preview button at the right of its path. It opens the page beside the editor and shows as pressed while it is open; press it again to close it. See [Live preview](#live-preview).
 - A dot in a title bar means that window has unsaved changes, and the same dot appears on its taskbar button so a minimised window still says so. Closing or reloading it asks before discarding them; saving clears the dot.
 - While a window is fetching its content, whether you have just opened it or just reloaded it, it shows the Umbraco mark with a ring turning around it. It covers the window until the content is ready, so you never see a half-drawn backoffice assembling itself.
 - Choose Exit in the launcher's footer to return to the classic backoffice. If you start in the desktop, exiting keeps you in the classic backoffice until you close the tab.
 - Open Desktop settings from the cog in the launcher's footer, as a panel from the right. It opens on a list of categories — General for how the desktop starts, Language and region for the backoffice language and how times are written, Appearance for your theme, your wallpaper and the backoffice's own colours, Taskbar for what sits beside the launcher button — and the desktop stays in view behind it, so you can see a change as you make it.
 
 Several apps can be open at once, and some of them (the content editor and media library, for instance) can be opened more than once, so you can compare two documents side by side.
+
+## Arranging the launcher
+
+Until you change it, the launcher is the one the catalogue builds: every app sits in the group its catalogue puts it in, nothing hidden and nothing to opt out of. The one thing an upgrade changes is Pinned. An app now lives in one place, so your pinned apps (by default Content editor, Media library and Log Viewer) move out of their groups and are shown under Pinned only. Everything below is optional, and a package that adds apps of its own keeps working the same way after you have arranged as it did before: a new app still turns up in its group by itself.
+
+- **Drag a tile** to move it. Drop it on another tile to place it before or after that one, on a group's empty space to add it there, or on **Pinned** to pin it: an empty Pinned appears at the top of the launcher the moment you start a drag, even if you have never pinned anything. Drop it on the **remove pane**, which covers the footer for as long as the drag lasts, to take it off the launcher. Nothing is deleted: a removed app still shows up in All apps, and in Arrange's list of what is missing.
+- **All apps**, next to Search, lists everything you can open, A to Z, with a filter. It has no groups and nothing drags there; it is for finding something by name.
+- **Arrange**, next to All apps, is where groups get edited: reorder them, rename one, delete one (its apps wait in a "Not on your launcher" list rather than disappearing) or create a new one. Move a tile to another group or to Pinned with a drag or with its own button, which lists Pinned and every other group. Add something back from "Not on your launcher" with a click, or bring its whole group back in one. Taking an app off, moving it to another group or to Pinned, adding it back and the group edits all have buttons. Reordering tiles within a group, and moving a group, is by drag, or with the arrow keys once the tile or the group's handle has focus; a group's own ⋯ button moves it or deletes it without either. **Reset to default** puts the groups back the way the catalogue built them and asks first; it leaves your pins alone. In the narrow themes, Windows 98 and Umbraco 4, the launcher widens while you arrange so the list of what is missing sits beside it. Arrange mode stays open until you press **Done**, so a click that misses does not throw you out of it, and Escape steps back from Arrange or All apps to the launcher before it closes it. The launcher also stays open when you switch to another program and back.
 
 ## A note on screen size
 
@@ -138,6 +154,52 @@ window turns read-only the moment it catches up with that, than when it has been
 where there is nothing left to save to.
 
 Every theme carries it in its own idiom, and no theme is allowed to remove it.
+
+## Live preview
+
+Press Preview at the right of a document window's path and the page opens beside the editor, the
+way Save and preview would show it, without leaving the desktop and without saving.
+
+![A content editor window on the desktop with the preview docked inside it on the right: the editor's fields on the left, the rendered homepage on the right, and the Preview button in the path shown as pressed.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/live-preview.png)
+
+- **It shows the last saved version.** While the editor has unsaved changes, a line above the
+  page says so. Each save or publish reloads the preview, and so does somebody else saving the
+  same document. Typing does not.
+- **Docked or floating.** When there is room, the preview opens docked: a pane inside the document
+  window, and the window grows to make room so the editor keeps its width. Drag the divider to
+  resize it. On a desktop too narrow for both, it opens as a window of its own instead. The pane
+  header has reload, pop out and close. Drag the header a little way to pull it out into a window,
+  as you would a browser tab.
+- **As a window of its own**, it has the usual controls, and a strip under its title saying which
+  window it belongs to, with a Dock button to put it back. You can also drag it into the document
+  window: zones appear inside its left and right edges, and letting go on one docks it there. Its
+  taskbar button sits in one box with the document's, and each button works on its own.
+- **It belongs to its document.** It rises, minimizes and closes with the document window, and it
+  closes when that window moves to a different document.
+- **Phone, tablet and desktop widths** resize the preview to a device's width when it shows a
+  headless front end. Umbraco's own preview page has a device switcher of its own in its footer, so
+  there the buttons stay out of its way. If your site offers more than one way to preview, as extra entries under Save and
+  preview, a picker chooses between them.
+- **Open in a new browser tab** is always there, for when you want the page full size, or when it
+  cannot be shown inside the desktop.
+
+### Headless sites
+
+The preview asks Umbraco for the same URL the Save and preview button opens, from the same URL
+provider. A headless site that registers its own provider for its front end gets its front end in
+the preview, with nothing to configure in the desktop.
+
+The front end does have to let itself be shown inside the backoffice. The preview is an iframe, so:
+
+- Allow the backoffice's origin in `Content-Security-Policy: frame-ancestors`.
+- Do not send `X-Frame-Options: DENY`, or `SAMEORIGIN` when the front end is on a different origin
+  from the backoffice.
+- If previewing depends on a cookie and the front end is on a different site from the backoffice,
+  that cookie has to be `SameSite=None; Secure`. A browser does not send `Lax` or `Strict` cookies
+  to a frame from another site.
+
+When a front end refuses, the browser shows an empty or error page in the frame, and the desktop
+cannot tell that apart from a page that loaded. Open in a new browser tab still works.
 
 ## Background Jobs
 
@@ -210,18 +272,22 @@ The launcher is the right way in for thirty-five apps. It is the wrong way in fo
 use all day, where every launch is two clicks and a scan of a panel you had to open first.
 
 So the taskbar carries a fixed row immediately to the right of the launcher button, before the open
-window buttons. Two things sit in it, in that order:
+window buttons. Three things sit in it, in that order:
 
+- **Full screen**, which takes the desktop full screen, as F11 does, and brings it back. Its arrows
+  turn inward while the desktop is full screen, and it notices when you leave with Esc instead. If
+  you went full screen with the browser's own key, such as F11, the button greys out and its tooltip
+  names the key that gets you back, because no web page can leave the browser's own full screen.
 - **AI chat**, a single button that opens the Copilot Workspace. It is there if you have Umbraco AI
   installed and can reach it, and it is simply absent if you cannot.
 - **Pinned apps**, your pins as icon-only buttons, in the order the launcher shows them.
 
-Both are on from the start, and each is one switch in Desktop settings, Taskbar. Switching one off
+All three are on from the start, and each is one switch in Desktop settings, Taskbar. Switching one off
 closes its space and moves nothing else: the order is fixed, so a button you have learned the
 position of stays where it is.
 
-**Pinning does not change.** You pin in the launcher, exactly as before, and switching the row on
-simply draws that same list in a second place. There is no pin-to-where question to answer, because
+**You pin in the launcher.** Drag a tile onto Pinned, or choose Pinned from the tile's Move to in
+Arrange, and switching the row on simply draws that same list in a second place. There is no pin-to-where question to answer, because
 there is only one list, and nothing on the taskbar pins, unpins or reorders anything.
 
 **The row launches, it does not switch windows.** A button there does precisely what the app's tile
@@ -231,13 +297,16 @@ windows you already have is the job of the buttons on the other side of the bar,
 That is why nothing in the row needs a running indicator, a modifier click or a right-click menu.
 
 Switched on and showing nothing is a normal state, not a fault: that is Pinned apps before you have
-pinned anything, and AI chat on a site without the AI package. Desktop settings still lists both,
+pinned anything, and AI chat on a site without the AI package. Desktop settings still lists them,
 with the switch disabled and the reason given, because settings is where you find out what the
 product can do.
 
 The row works under all five themes, taking each one's own button style, and it is not a system
-tray: it sits on the launching half of the bar, beside the launcher button, and everything in it
-opens something.
+tray: it sits on the launching half of the bar, beside the launcher button. Everything in it opens
+something, apart from full screen, which sits there because it is a control you reach for rather
+than an icon that reports on something. Full screen comes first because every install has it, and
+pinned apps come last because they are the one part that grows and shrinks, so pinning something
+never moves another button.
 
 Three of the themes need nothing else to keep the row and your open windows apart, because a window
 button there carries its window's title and a row button never carries anything. The two that show
@@ -245,6 +314,35 @@ icons without labels say it another way. Both put a separator between the two gr
 also marks each open window with a small bar under its icon, grey for open and its blue accent for
 the one you are in. So on those themes a bare icon launches something and a marked one is already
 open.
+
+## Notifications
+
+Umbraco raises a notification in the backoffice it happened in, and every window on the desktop is a
+backoffice of its own. Left alone, five open windows would show a package's license warning five
+times, each inside its own window. So the desktop takes them over: a notification raised in any
+window is shown once, on the desktop, and not inside the window.
+
+- **Once.** The same message from several windows is one notification with a count on it, not one
+  per window.
+- **For as long as its sender asked.** A notification goes away after the time the sender chose, and
+  one the sender asked to keep stays until you close it. Point at it to hold it while you read.
+- **Click it to go there.** Clicking a notification brings forward the window that raised it, and
+  restores it if it was minimised. An error that carries buttons of its own, such as Full Error
+  Message, is shown again inside its window, where those buttons work.
+- **The clock remembers.** Click the clock for the last twenty, newest first, each with the window
+  that raised it, how many times and when it last did. A repeat updates its line rather than taking
+  a new one, so one noisy message cannot push the others out.
+- **A dot by the clock** means a warning or an error is in the list, red when one is an error. It is
+  not an unread count, so looking does not clear it. It goes when the last warning or error drops
+  off the end of the list, or when you press Clear, which empties the list.
+- **Per tab.** The list survives reloading the desktop and is gone when you close the tab, and two
+  tabs are two desktops with a list each. Windows do not survive a reload, so after one the lines
+  that pointed at a window stay readable but can no longer be clicked.
+
+Every theme draws them its own way. Under macOS they arrive at the top right, as they do on a Mac;
+the others put them above the clock.
+
+![The desktop with a content and a media window open and the notification list open from the taskbar clock: a document published, a scheduled publishing warning raised twice, and a media save, each with the window it came from and the time. A dot by the clock says a warning is in the list.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/notifications.png)
 
 ## Changing the theme
 
@@ -273,7 +371,7 @@ Five ship today:
 
 ![The Windows 98 theme: grey window frames with navy title bars, the launcher as a Start menu open in the corner listing the app catalogue by group, a taskbar button for each open window, and the bare teal desktop this theme brings with it.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-win98.png)
 
-Your choice applies immediately and is remembered per user, in that browser. Themes follow the
+Your choice applies immediately and is stored on your Umbraco account, so it follows you between machines. Themes follow the
 backoffice's own Light and Dark settings; under High contrast a theme uses its darkest colours,
 while window content switches to Umbraco's real high-contrast styling. Umbraco 4 and Windows 98
 ship a single palette on purpose: their grey is the design rather than a light-mode choice, so
@@ -346,7 +444,7 @@ so you can try a few and watch the desktop change behind the panel.
 
 ![Desktop settings open over the desktop, showing the theme in use above the wallpaper in use, with the wallpaper picker open beside it: every background that ships with the package, named, alongside None for the plain gradient and a tile for choosing your own image from the Media Library.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/choose-background.png)
 
-Your choice applies immediately and is remembered per user, in that browser.
+Your choice applies immediately and is stored on your Umbraco account, so it follows you between machines.
 
 ### Using your own backgrounds
 
@@ -355,6 +453,22 @@ There is nothing to configure and nothing to deploy. Upload the image to the Med
 Umbraco resizes it for you: the desktop asks for a copy with no side longer than 2560px, so a large upload never reaches the browser at full size and the resized copy is cached server-side. You do not need to optimise anything first.
 
 If you pick something that is not an image, the desktop tells you and leaves your current wallpaper alone.
+
+## Your settings follow you
+
+Your wallpaper, theme, pinned apps, taskbar switches and language preferences are stored on your Umbraco user account rather than in the browser you happened to set them in. Sign in from another machine, another browser or a private window and you get the desktop you built. Clearing site data does not lose it either.
+
+If you already had settings in a browser, they move onto your account the first time you open the desktop after updating, and only that once. The desktop tells you while it happens: a screen comes up over it explaining what is moving, and when it is finished it waits for you to close it rather than disappearing on a timer. A brand new user never sees it, because there is nothing to move.
+
+Nothing is deleted. The browser keeps a copy, which from then on is a cache of what is on your account rather than the original, so rolling the package back still finds settings it understands. Settings this version cannot read are left untouched rather than moved, so a desktop set up in a newer version is never overwritten by an older one.
+
+Three cases worth knowing:
+
+- If you had set the desktop up in two different browsers before updating, whichever one you open first wins. The other adopts what is by then on your account.
+- If the server cannot be reached, the desktop still opens, using what this browser remembers. Changes made in that state apply for the rest of the session and are then forgotten, which is exactly what has always happened in a browser that refuses to store anything. You are told when a setting could not be saved.
+- "Open the desktop when I sign in" is the one setting a browser does not pick up straight away. See [Starting in the desktop](#starting-in-the-desktop).
+
+There is nothing to configure and no new permission to grant. The settings live in Umbraco's own per-user storage, and a user can only ever read and write their own.
 
 ## Starting in the desktop
 
@@ -371,7 +485,33 @@ Two ways out:
 
 That second one is worth knowing before you need it. The desktop hides the backoffice header while it is open, so if a future version of the desktop ever breaks on your setup, that address is how you get back to a normal backoffice and turn the setting off. The desktop also skips the startup jump by itself if the last attempt did not finish, so a bad boot does not repeat.
 
-The setting is stored per user, in that browser, alongside your theme and wallpaper. Signing in on another machine starts in the classic backoffice until you turn it on there too.
+This one setting behaves slightly differently from the rest. It is stored on your Umbraco account like your theme and wallpaper, but the decision to open the desktop is made before the backoffice has asked the server anything — it has to be, or you would get a flash of the classic interface while it waited. So a browser reads its own copy of the setting, and a browser that has never opened the desktop does not have one yet. Turn it on at home and the first sign-in at the office still starts in the classic backoffice; open the desktop once there and every load after that starts in it. Turning it off elsewhere takes effect on this machine the same way, one load later.
+
+## Reopening your windows
+
+Reload the page and the desktop reopens the windows you had open:
+
+- each one where it was and the size it was, pulled back into view if your screen is smaller now
+- maximised, minimised or snapped to a half, as it was
+- in the same order, with the same window in front
+- each backoffice window at the page it was showing, a document, a media folder, a settings screen, rather than at its section's start page
+
+The desktop waits behind its loading screen until your windows are back in place, so nothing appears under your pointer once you can use it. It does not wait for each window to finish loading: those show their own spinner.
+
+"Remember my open windows" in Desktop settings, General, has three choices:
+
+- **This session**, the default. Reloading the page, Exit and back, or signing in again in the same tab brings your windows back. Close the tab and they are gone. Each tab keeps its own, so two tabs never mix up their windows.
+- **Always.** Close the browser and come back tomorrow and your windows are still there. A new tab starts from the layout you changed last, whichever tab that was in.
+- **Don't remember.** The desktop starts empty every time and keeps nothing about your windows.
+
+Some things do not come back, by design:
+
+- **Unsaved changes.** The desktop already asks before you leave with any, and a reload cannot bring them back. Plain Umbraco loses them on a reload too.
+- **An app's own state.** Apps such as Minesweeper start fresh, so you get a new board.
+- **Windows you can no longer open.** A package that has been uninstalled, or a section your account has lost access to, is skipped and forgotten. The desktop gives a package five seconds to load its apps before deciding, so on a very slow connection a window from a slow package can occasionally be lost too. Reopen it from the launcher and it is kept again.
+- **A preview or other window attached to another.** Attached windows and panes are left out for now; the window they belong to reopens on its own.
+
+The layout is kept in this browser, for your user, rather than on your Umbraco account. It changes every time a window moves, so saving it to the server each time would be excessive for what is a convenience, and a layout belongs to a screen anyway: one from your laptop would be little use on a large monitor. It is saved a moment after you stop moving things, so a drag is one save, not hundreds, and straight away when you leave the page. Only your choice of when to reopen windows is on your account, with your other settings. Switching to "Don't remember" forgets what was kept, and switching from "Always" back to "This session" forgets the copy kept for your next visit.
 
 ## Language and region
 
@@ -385,7 +525,7 @@ It cannot take effect where it stands: every window is a frame with its own copy
 
 **Clock** forces 12 or 24 hour when your language and your habits disagree. Umbraco offers no British English, so an English backoffice is a 12 hour one whether you like it or not; this is how you get 24 hour without giving up anything else. It overrides only the hour, so Dutch still writes p.m. its own way, Danish keeps its dot, and Japanese and Korean keep their own markers in their own places. Left on Automatic, your language decides.
 
-Regional format and Clock are stored per user, in that browser, alongside your theme and wallpaper. The backoffice language is stored on your Umbraco user, so it follows you to any machine you sign in on.
+Regional format and Clock are stored on your Umbraco account, alongside your theme and wallpaper, so they follow you to any browser you sign in on. So does the backoffice language, which Umbraco has always kept on your user.
 
 ## Installing the backoffice as an app
 
@@ -406,7 +546,7 @@ Both are site-wide, live in the desktop's own Settings under **Site**, and are v
 **Icon.** Two choices:
 
 - **UmbraDesktop** — the mark shipped with the package: the Umbraco logo inside the desktop's own loading ring, so an installed backoffice looks like the thing it opens.
-- **Choose an image** — any image from your Media Library. Umbraco resizes it for you, so one upload covers every size a browser asks for. The picker uploads too: drop a file into it and the image is added to the library and selected in one go. The screen shows a preview of the result at roughly the size a taskbar uses.
+- **Your own image** — any image from your Media Library. Umbraco resizes it for you, so one upload covers every size a browser asks for. The picker uploads too: drop a file into it and the image is added to the library and selected in one go. The **Preview** box at the top of the screen shows the result at roughly the size a taskbar uses.
 
 What to upload:
 
@@ -439,23 +579,44 @@ Both can be pinned in `appsettings.json`, which is the better option when you wa
 
 `Mode` is `Default` or `Custom`; `Custom` also needs a `MediaKey`. The two pin independently, so setting the name in configuration leaves the icon editable in the backoffice.
 
-This matters most if you restore databases between environments. The backoffice setting lives in the database and travels with a restore, so staging recovered from production comes back wearing production's name. A configured value does not.
+This matters most if you restore databases between environments. The backoffice setting lives in the database and travels with a restore, so staging recovered from production comes back wearing production's name. A configured value does not. That goes for the name on the desktop too, since it is the same App name.
+
+## Showing the site's name on the desktop
+
+Turn on **Show the name on the desktop** under Desktop settings, **Site**, and the site's name is written large in a corner of the desktop. It sits on the wallpaper behind the windows, like the faint Umbraco logo, so you see it when you land and a maximised window covers it. It is off by default.
+
+The name is the **App name** from the same screen, the one the installed app uses, so there is one name to set rather than two. Empty means your site's name from `Umbraco:CMS:Hosting:SiteName`, and if that is not set either, the label shows the domain instead.
+
+Two more choices sit under the switch, greyed out until it is on:
+
+- **Corner.** Top right by default, the one corner nothing else on the desktop uses: new windows open top left, the launcher is bottom left, and the clock and the desktop's notifications are bottom right. Under macOS notifications arrive at the top right, over the label, and go again. The other three are there if you want them.
+- **Show the domain underneath.** Off by default. Useful full screen or in an installed app, where no address bar shows it.
+
+The **Preview** box at the top of the Site screen shows the result on a small copy of your own desktop, in your theme and over your wallpaper, with the installed app's icon beside it.
+
+Everyone on the site sees the label, editors with no access to the Settings section included. Only users with that access can change it, like everything else under Site.
+
+It is white with a dark edge around the letters, so it reads on any wallpaper, dark or pale, your own photos included. Each theme draws it in its own lettering: Verdana under Umbraco 4, MS Sans Serif under Windows 98, and so on.
+
+If you copy databases between environments, set the name in configuration. The switches, and a name set in the backoffice, live in the database, so a copy carries them along: copy staging to production and production says Staging. `AppName` in `appsettings.json` stays with each environment, as [Setting them from configuration instead](#setting-them-from-configuration-instead) describes. The domain line cannot be wrong, because it comes from the browser.
 
 ## Games
 
-Minesweeper, in a window, under whichever theme you picked. It ships in its own package rather than this one, because a desktop and a minesweeper are not the same product and nobody should have to take the second to get the first:
+Minesweeper and Snake, each in a window, under whichever theme you picked. They ship in their own package rather than this one, because a desktop and a minesweeper are not the same product and nobody should have to take the second to get the first:
 
 ```bash
 dotnet add package Umbraco.Community.UmbraDesktop.Entertainment
 ```
 
-![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher's Games group highlighted in the Start menu and the game's own taskbar button below.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-minesweeper.png)
+![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher open down to its Games group, which lists Minesweeper and Snake, and the game's own taskbar button below.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-minesweeper.png)
+
+![Snake open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with its score, New game button and best score above the board, and the launcher open down to its Games group, which lists Minesweeper and Snake.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-snake.png)
 
 That is the whole installation. There is no section to grant and no dashboard to enable: the games appear in a Games group in the launcher for anyone who can already reach the desktop, and the group is not there at all if the package is not installed.
 
 The add-on is released from the same tag as this package and always carries the same version number, so matching versions are the compatibility answer. Its dependency on the desktop is a version range rather than an exact pin, so upgrading the desktop on its own is fine.
 
-Nothing in that package is privileged. It reaches the desktop through the same public `umbraDesktopApp` manifest any package can register, which makes its source the worked example for [Custom and third-party apps](#custom-and-third-party-apps).
+Nothing in that package is privileged. It reaches the desktop through the same public manifests any package can register, a `umbraDesktopApp` for each game and a catalogue for the Games group, which makes its source the worked example for [Custom and third-party apps](#custom-and-third-party-apps).
 
 ## Connecting other Umbraco instances (experimental)
 
@@ -469,12 +630,29 @@ to redo some of the setup in a later version.
 
 It needs nothing installed on the other instance. You create an API user there, in the Users
 section, which is Umbraco's own feature for exactly this, and paste its client ID and secret into
-Desktop settings. For what ships today the API user needs no sections at all, and whoever owns that
-instance can revoke it whenever they like. Credentials are stored encrypted on the instance you add
-them to, so that should be one you own rather than a client's.
+Desktop settings. For Connection status the API user needs no sections at all; for Remote content
+it needs to be able to read content and media there. Whoever owns that instance can revoke it
+whenever they like. Credentials are stored encrypted on the instance you add them to, so that should
+be one you own rather than a client's.
 
-Nothing appears until you add a connection, and what appears then is one app: Connection status,
-listing this instance along with every one you connected, with what each reports about itself.
+Nothing appears until you add a connection, and what appears then is two apps in the Experimental
+group:
+
+- **Connection status** lists this instance along with every one you connected, with what each
+  reports about itself.
+- **Remote content** shows another instance's content tree, documents and media, read-only, with
+  Umbraco's own editors, so a block grid or a picker looks exactly as it does on that site. A
+  switcher at the top picks the instance, in the colour you gave it. Nothing can be saved, published
+  or deleted, whatever that instance's API user is allowed to do: the desktop only ever reads from it,
+  and hides every action that would change something. Custom property editors show properly when the
+  same package is installed here too.
+
+Remote content runs this instance's backoffice in the window and sends its reads to the other
+instance through the desktop, so the other site needs nothing installed and the browser never holds
+its credentials. It warns before opening an instance on a different Umbraco version, because its
+content is shown with the editors installed here. It does not update live: a change on the other
+site shows the next time you open that item. Preview and the other site's front end are not
+available from it.
 
 It is deliberately not the environments feature. Test, acceptance and production of one solution
 share content and keys, and moving or comparing things between them is uSync and Deploy's job;
@@ -511,11 +689,15 @@ A window should not show the entire backoffice shell inside a small frame. Becau
 | `workspace-only` | Just the workspace | Self-contained editors: Log Viewer, Webhooks |
 | `bare` | The target view only | Single-focus dashboards: Examine, Health Check, Profiling, Background Jobs |
 
+Every profile also hides the toasts inside the window, once the desktop is listening to that
+window's notification context and not before, and the desktop draws them itself. The design and the
+reasoning are in [the notifications design doc](docs/design/2026-09-27-desktop-notifications-design.md).
+
 ### The app catalogue
 
 The launcher fills from two sources. The first, and the one that provides everything you see out of the box, is a curated catalogue in `backoffice/src/desktop/catalogue/`. Each entry points at a registered extension by alias, so its URL is inferred from the registry rather than hardcoded, and carries display detail: name, icon, group, chrome profile, default and minimum window size, whether multiple instances are allowed, and sort weight.
 
-The second is apps other packages register for themselves, covered below.
+The second is what other packages register for themselves: self-contained apps, and catalogues of their own that add tiles and groups or replace ours. Both are covered below.
 
 ### Umbraco's commercial packages
 
@@ -564,9 +746,9 @@ Beyond that there are two paths, and which one you take depends on what your app
 
 **A self-contained app you register yourself.** If your app is its own custom element, with no backoffice route behind it, register a `umbraDesktopApp` extension manifest and you are done. It gets a launcher tile, a group, a window, pinning, a taskbar button and the active theme's colours, and your package never talks to this repository. There is nothing for anyone here to verify: an element in a box cannot point at the wrong URL or pick the wrong chrome profile. This is how games and small tools get onto the desktop. [`docs/desktop-apps.md`](docs/desktop-apps.md) is the guide.
 
-**Curated placement for a backoffice surface.** If your app *is* a backoffice page (a custom icon, a friendly name, a specific group, a chrome profile or window sizing for a section or dashboard), it needs an entry in `backoffice/src/desktop/catalogue/`, which means opening a pull request against this repository. That is deliberate rather than a gap: a deep link needs its URL checked and its chrome profile chosen, and getting either wrong ships a broken window whose blame lands on the desktop. The manifest type has no `url`, `section` or `chromeProfile` field, so the split is structural and not a rule anyone has to remember.
+**Tiles for your own backoffice screens.** If your app *is* a backoffice page, a section, dashboard or workspace your package registers, register a `umbraDesktopCatalogue` manifest with an entry for it: a name, an icon, a group, a chrome profile and window sizing, resolved exactly like the desktop's own entries. The same manifest can define launcher groups of your own. It ships with your package, so nothing waits on a release of this one. If the desktop already has an entry for your screens, reuse its alias and yours is used instead, pins included. [`docs/package-catalogues.md`](docs/package-catalogues.md) is the guide.
 
-A curated entry for a third-party package points at its extension by alias rather than by URL, so it resolves only where that package is registered and stays silently absent everywhere else. No flag is needed and none exists: any package can unregister any extension, so no entry is ever guaranteed to resolve. uSync ships this way: install it and a uSync app appears in the Synchronisation group, opening its whole workspace without the Settings tree beside it. Not unconditionally, though, and that is the point of the mechanism. An install that runs uSync in its own section instead gates that entry out, and uSync turns up as an ordinary uncertified app in More.
+The desktop's own entry for a third-party package points at its extension by alias rather than by URL, so it resolves only where that package is registered and stays silently absent everywhere else. No flag is needed and none exists: any package can unregister any extension, so no entry is ever guaranteed to resolve. uSync ships this way: install it and a uSync app appears in the Synchronisation group, opening its whole workspace without the Settings tree beside it. Not unconditionally, though, and that is the point of the mechanism. An install that runs uSync in its own section instead gates that entry out, and uSync turns up as an ordinary uncertified app in More.
 
 ## Documentation
 
@@ -581,6 +763,12 @@ ids are a published API, what the desktop does to your element over its lifetime
 cost real time. The reasoning is in
 [`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md).
 
+Putting your package's own backoffice screens on the desktop is one catalogue manifest.
+[`docs/package-catalogues.md`](docs/package-catalogues.md) is the guide: the entry and group fields,
+the desktop's published group weights, how replacing one of its tiles works, and what the console
+tells you. The reasoning is in
+[`docs/design/2026-09-25-package-catalogues-design.md`](docs/design/2026-09-25-package-catalogues-design.md).
+
 Building a theme of your own is a folder of CSS and one catalogue entry, with no change to the
 chrome itself. [`docs/theming.md`](docs/theming.md) is the guide: what a theme folder holds, the
 two channels a theme reaches the chrome through, the geometry it has to publish and why that must
@@ -588,15 +776,28 @@ be measured rather than typed, the traps that cost real time, worked examples fr
 shipped themes, and a checklist to run before you open a PR. The system behind it is described in
 [`docs/design/2026-09-04-theming-system-design.md`](docs/design/2026-09-04-theming-system-design.md).
 
+Showing something beside a window, the way the live preview does, is a building block of its own
+called attached windows. [`docs/attached-windows.md`](docs/attached-windows.md) is the guide for a
+feature that wants one: when to use it and when not, how to open it, what your element must do,
+what the desktop already handles for you, and the traps the preview hit. The reasoning is in
+[`docs/design/2026-09-27-attached-windows-design.md`](docs/design/2026-09-27-attached-windows-design.md).
+
 Connecting other Umbraco instances is experimental, and
 [`docs/connections.md`](docs/connections.md) is its guide: creating the API user on the instance you
 want to read, what each field in Desktop settings wants, what the five connection statuses mean and
 who fixes each one, where the credentials are stored and the limits of that, and what the feature
-deliberately refuses to do.
+deliberately refuses to do. How Remote content redirects a backoffice and keeps it read-only, and
+what that cannot reach, is in
+[`docs/design/2026-09-29-remote-content-viewer-design.md`](docs/design/2026-09-29-remote-content-viewer-design.md).
 
 Installing the backoffice as an app is described above. The reasoning behind it, including the
 browser behaviour it depends on and the fixture that proves it, is in
 [`docs/design/2026-09-13-web-app-manifest-design.md`](docs/design/2026-09-13-web-app-manifest-design.md).
+
+Showing the site's name on the desktop is described above too. Why it is a watermark in a corner
+rather than a badge on the taskbar, why the name is the App name rather than a second one, and why
+the domain comes from the browser, is in
+[`docs/design/2026-09-27-desktop-label-design.md`](docs/design/2026-09-27-desktop-label-design.md).
 
 ## License
 

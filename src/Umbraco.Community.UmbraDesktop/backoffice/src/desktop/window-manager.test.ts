@@ -626,3 +626,154 @@ describe('snapping', () => {
     expect(w.snapped).to.equal(undefined);
   });
 });
+
+/**
+ * `resizable: false`: an app whose window stays the size it opened at, the way Minesweeper's did on
+ * every Windows up to XP. The rule is the manager's, not the titlebar's, because a window can be
+ * maximized or resized from more places than one button: a double-click, a drag into an edge, a
+ * resize handle. Enforced here, every one of them is covered at once, and any later route that goes
+ * through the manager inherits it.
+ */
+describe('fixed-size apps', () => {
+  /** The desktop these cases would snap into, if the window were allowed to. */
+  const BOUNDS = { w: 1200, h: 800 };
+
+  /** An app that asked to keep its size. */
+  const FIXED: UmbraDesktopApp = { ...APP, alias: 'fixed', resizable: false };
+
+  /**
+   * A manager with one fixed-size window open, and that window's id.
+   * @returns The manager and the window id.
+   */
+  function fixedWindow(): { ctx: ProbeManager; id: string } {
+    const ctx = manager();
+    ctx.clampToBounds(BOUNDS);
+    ctx.open(FIXED);
+    return { ctx, id: windowsOf(ctx)[0].id };
+  }
+
+  /**
+   * The manager's current ghost rectangle.
+   * @param ctx The manager to read.
+   * @returns The preview rect, or undefined when no snap is on offer.
+   */
+  function previewOf(ctx: UmbraDesktopWindowManagerContext) {
+    let rect: { x: number; y: number; w: number; h: number } | undefined;
+    ctx.snapPreview.subscribe((value) => (rect = value)).unsubscribe();
+    return rect;
+  }
+
+  it('will not maximize', () => {
+    const { ctx, id } = fixedWindow();
+    ctx.setState(id, 'maximized');
+    expect(windowsOf(ctx)[0].state).to.equal('normal');
+  });
+
+  it('still minimizes and restores, which change nothing about its size', () => {
+    const { ctx, id } = fixedWindow();
+    ctx.setState(id, 'minimized');
+    expect(windowsOf(ctx)[0].state).to.equal('minimized');
+    ctx.setState(id, 'normal');
+    expect(windowsOf(ctx)[0].state).to.equal('normal');
+  });
+
+  it('ignores a resize', () => {
+    const { ctx, id } = fixedWindow();
+    const before = windowsOf(ctx)[0].rect;
+    ctx.resize(id, { ...before, w: before.w + 200, h: before.h + 100 });
+    expect(windowsOf(ctx)[0].rect).to.eql(before);
+  });
+
+  it('still moves', () => {
+    const { ctx, id } = fixedWindow();
+    const before = windowsOf(ctx)[0].rect;
+    ctx.move(id, before.x + 40, before.y + 30);
+    expect(windowsOf(ctx)[0].rect).to.eql({ ...before, x: before.x + 40, y: before.y + 30 });
+  });
+
+  it('offers no snap at a side edge, and commits none', () => {
+    const { ctx, id } = fixedWindow();
+    const before = windowsOf(ctx)[0].rect;
+    ctx.previewSnap(id, { x: 0, y: 400 });
+    expect(previewOf(ctx), 'no ghost: a half of the desktop is a resize').to.equal(undefined);
+    ctx.commitSnap(id);
+    expect(windowsOf(ctx)[0].snapped).to.equal(undefined);
+    expect(windowsOf(ctx)[0].rect).to.eql(before);
+  });
+
+  it('offers no snap at the top edge either, which would maximize it', () => {
+    const { ctx, id } = fixedWindow();
+    ctx.previewSnap(id, { x: 600, y: 0 });
+    expect(previewOf(ctx)).to.equal(undefined);
+    ctx.commitSnap(id);
+    expect(windowsOf(ctx)[0].state).to.equal('normal');
+  });
+
+  it('leaves every other app resizable, since the default is allowed', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+    ctx.setState(id, 'maximized');
+    expect(windowsOf(ctx)[0].state).to.equal('maximized');
+  });
+});
+
+/**
+ * Reopening a saved window, for the window layout (`windows/layout.ts`), and recording where a
+ * backoffice window's frame is, which is what lets it reopen at that page.
+ */
+describe('restoring saved windows', () => {
+  const SECTION: UmbraDesktopApp = { ...APP, alias: 'section', content: { kind: 'iframe', url: '/umbraco/section/content' } };
+
+  it('reopens a window at its saved rectangle, state and snap, without taking focus', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    ctx.restoreWindow(
+      {
+        app: 'section',
+        rect: { x: 40, y: 50, w: 600, h: 400 },
+        state: 'maximized',
+        z: 7,
+        active: true,
+        snapped: 'left',
+        restoreRect: { x: 1, y: 2, w: 300, h: 200 },
+      },
+      SECTION,
+    );
+    const restored = windowsOf(ctx).find((w) => w.app.alias === 'section')!;
+    expect(restored.rect).to.eql({ x: 40, y: 50, w: 600, h: 400 });
+    expect(restored.state).to.equal('maximized');
+    expect(restored.snapped).to.equal('left');
+    expect(restored.restoreRect).to.eql({ x: 1, y: 2, w: 300, h: 200 });
+    expect(restored.active, 'focus is the restorer’s to give, once every window is back').to.equal(false);
+  });
+
+  it('stacks restored windows above what is open, in the order they are restored', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    ctx.restoreWindow({ app: 'section', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 1, active: false }, SECTION);
+    ctx.restoreWindow({ app: 'section', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 2, active: false }, SECTION);
+    const [first, second, third] = windowsOf(ctx);
+    expect(second.z).to.be.greaterThan(first.z);
+    expect(third.z).to.be.greaterThan(second.z);
+  });
+
+  it('opens a restored backoffice window at the page it was showing', () => {
+    const ctx = manager();
+    ctx.restoreWindow(
+      { app: 'section', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 1, active: false, location: '/umbraco/section/content/workspace/document/edit/abc' },
+      SECTION,
+    );
+    const [restored] = windowsOf(ctx);
+    expect(restored.app.content).to.eql({ kind: 'iframe', url: '/umbraco/section/content/workspace/document/edit/abc' });
+    expect(restored.location).to.equal('/umbraco/section/content/workspace/document/edit/abc');
+  });
+
+  it('records where a window’s frame is', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+    ctx.setLocation(id, '/umbraco/section/media');
+    expect(windowsOf(ctx)[0].location).to.equal('/umbraco/section/media');
+  });
+});

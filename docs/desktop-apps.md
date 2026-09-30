@@ -7,23 +7,23 @@
 
 A desktop app is one custom element in a window. You register it with an extension manifest, the
 desktop opens it, themes it and closes it, and your package never depends on anything here beyond
-the manifest type. Minesweeper is the first one; a calculator, a colour picker or a notepad would
-work the same way.
+the manifest type. Minesweeper was the first one and Snake the second, both in the Entertainment package; a
+calculator, a colour picker or a notepad would work the same way.
 
 ---
 
 ## 1. Is your app registerable, or does it belong in the catalogue?
 
-Two kinds of thing can sit in the launcher, and only one of them is yours to register.
+Two kinds of thing can sit in the launcher, and a package can register both.
 
 | Your app is | Path | Why |
 |---|---|---|
 | **Self-contained**: its own element, its own state, no backoffice route behind it | Register a `umbraDesktopApp` manifest. Nothing to ask anyone | There is nothing to verify. An element in a box cannot point at the wrong URL, and the worst it can do is be a bad app |
-| **A backoffice surface**: a section, a dashboard, a workspace, anything with a URL | A pull request against `catalogue/` in this repository | A deep link needs its URL checked and a chrome profile chosen, and getting either wrong ships a broken window whose blame lands on the desktop |
+| **A backoffice surface**: a section, a dashboard, a workspace, anything with a URL | A `umbraDesktopCatalogue` entry. See [package-catalogues.md](package-catalogues.md) | Your package ships in step with its own screens, so it is the right place for their tiles |
 
-The manifest enforces this rather than describing it. `umbraDesktopApp` has no `url`, no `section`
-and no `chromeProfile` field, so a deep-linked entry is not expressible through it even if you want
-one.
+The two manifests split the work by what they describe. `umbraDesktopApp` has no `url`, `section`
+or `chromeProfile`, because an element in a box has none of them, and a catalogue entry has no
+`element`, because a deep link is a page someone else renders.
 
 If your package registers a *section*, you already appear in the launcher with no work at all: any
 section a user can reach shows up automatically in the More group with a generic icon. Registering
@@ -47,6 +47,7 @@ an app is for the case where there is no section, because there is no route.
     defaultSize: { w: 360, h: 460 },                  // your app's box. The desktop adds the window
     minSize: { w: 320, h: 400 },                      // your app's box, again
     allowMultiple: true,
+    resizable: false,                                 // fixed size: no resizing, no maximize
   },
   conditions: [],
 }
@@ -55,7 +56,7 @@ an app is for the case where there is no section, because there is no route.
 | Field | Required | Notes |
 |---|---|---|
 | `type` | yes | Always `'umbraDesktopApp'` |
-| `alias` | yes | Unique, and it must not collide with a curated catalogue entry's alias: if it does, your app is dropped and the console says so. It is also what pins a favourite, so it has to be stable across releases, since renaming it loses the pin for every user who made one. Namespace it with your package id and both problems go away |
+| `alias` | yes | Unique. If it matches one of the desktop's own catalogue entries, your app replaces that entry and the console says so. It is also what pins a favourite, so it has to be stable across releases, since renaming it loses the pin for every user who made one. Namespace it with your package id and both problems go away |
 | `element` | in practice | The app itself. Four forms, all supported, and it is the **only** field the desktop resolves: see §3. Required differently from the rest of this column, see below |
 | `name` | yes | Developer-facing, and required by `ManifestBase` rather than by anything here: omit it and `tsc` fails with `TS2741`, and Umbraco's own package schema rejects it too. The desktop reads it only as the window title, if `meta.label` is missing at runtime |
 | `weight` | no | **Higher sorts first.** See §8 |
@@ -65,6 +66,7 @@ an app is for the case where there is no section, because there is no route.
 | `meta.defaultSize` | no | **Your app's own box** in px, not the window around it. The desktop adds its titlebar, its frame and whatever else the active theme's chrome costs. See §2.1 |
 | `meta.minSize` | no | The smallest box your app can work in, again yours rather than the window's. Falls back to the desktop's global minimum, and is **floored** at what the chrome itself needs. See §2.1 |
 | `meta.allowMultiple` | no | Whether two windows of your app may be open at once. Defaults to allowed, and leaving it there is almost always right: every other app on this desktop opens as many windows as the user asks for, so `false` makes yours the one tile that quietly refocuses instead. Set it only if a second instance genuinely cannot work — module-level state, an exclusive resource — and note that two instances of an app whose state lives in its own element share nothing at all |
+| `meta.resizable` | no | Whether the user may resize or maximize your window. Defaults to allowed. `false` keeps the window at `defaultSize` for its whole life, the way Minesweeper's was on every Windows up to XP: no resize handles, no snapping to a screen edge, a titlebar double-click does nothing, and there is no maximize button, which is left out rather than greyed, as Windows does. The window still moves, minimizes and closes. The window manager enforces it, not the titlebar, so every route to a new size is covered. Worth setting only when your content does not reflow and a bigger window would just be empty margin; both Entertainment games set it |
 | `conditions` | no | Umbraco's own conditions, and they are honoured: the desktop observes these manifests through `UmbExtensionsManifestInitializer`, so an app whose conditions are unmet never reaches the launcher, and does so **silently**: nothing is logged, because a condition doing its job is not a fault (§8). **No conditions means always available**, which is usually right: reaching the desktop at all already requires the Desktop section |
 
 **`element` is required in a different sense from everything else marked required here**, and the
@@ -111,8 +113,11 @@ Two consequences worth knowing:
   whichever is larger. An app asking for 282px used to get a titlebar too narrow for its own close
   button. So a very small `minSize` is safe to declare and will simply stop mattering.
 - **Your app can be given a box larger than it asked for**, because the user can maximize the
-  window and `defaultSize` is a starting size rather than a fixed one. Decide what a fixed-size app
-  does with the extra room. Minesweeper centres its board with `margin: auto` on a single wrapper,
+  window and `defaultSize` is a starting size rather than a fixed one — unless you set
+  `meta.resizable: false`, which is the direct answer for content that cannot use the room. Even
+  then, keep a plan for a slightly larger box: the window is floored at what the theme's chrome
+  needs, which can be wider than a small app. Decide what a fixed-size app does with the extra
+  room. Minesweeper centres its board with `margin: auto` on a single wrapper,
   which is a two-line answer; auto margins never resolve negative, so it also cannot centre the
   board into a clip if the box is ever the tighter of the two.
 
@@ -461,21 +466,13 @@ never the other way round. A sixth theme must not be able to break your app.
 
 ---
 
-## 6. Groups, and the `games` contract
+## 6. Groups
 
-`meta.group` is a launcher group alias. The host owns the list, and an app naming a group that does
-not exist falls into the reserved More group, which is the same thing that happens to any uncurated
-app and is honest rather than a failure.
-
-`games` is reserved for exactly this purpose, and the way it is split is worth stating because it is
-a contract between two packages:
-
-- **This repository owns the group**: the alias, the label and its localisation.
-- **Your package owns the apps in it.** Nothing in this repository puts an app in `games`.
-
-So the host can ship a Games group with no games in it, your package can ship games without the host
-knowing which, and neither release has to wait for the other. If you want a different heading,
-name a different group and land in More until one exists.
+`meta.group` is a launcher group alias: one of the desktop's own, or one a package defines in its
+catalogue. The Entertainment add-on does exactly that for Games, so its games and their heading ship
+together and the desktop knows nothing about either. An app naming a group nobody defines lands in
+the reserved More group, which is honest rather than a failure. [package-catalogues.md](package-catalogues.md)
+§4 lists the desktop's groups and their weights, for placing one of your own among them.
 
 Most of the launcher then works on your app for nothing. Its tile and its taskbar button come from
 being in the app list at all. Pinning does key off `alias`, which is why §2 makes such a point of
@@ -517,6 +514,14 @@ and restart your app.
 **Minimizing does not unmount, so a game keeps running and keeps its board.** That is usually what
 you want. If your app should idle out of sight, watch your own visibility: the desktop hides the
 window's frame rather than telling you about it.
+
+A real-time game is the case where it is not what you want. Minesweeper's clock ticking on while
+minimised is fair, since the board waits for the player, but Snake's snake does not: left running,
+it hits a wall unseen and the player restores the window to a finished game. Snake's answer is to
+pause whenever its playfield loses focus. That covers minimising, because minimising takes focus
+with it, and it also covers the player clicking into another window, which a visibility check would
+not catch. If your app takes keyboard input, the same pattern is the natural fit: make one element
+focusable, focus it in `firstUpdated`, and treat `focusout` as "the player has looked away".
 
 Teardown is the browser's own. `disconnectedCallback` is the whole contract: cancel your
 `requestAnimationFrame` there, clear your intervals, drop your listeners. There is no desktop signal
@@ -654,15 +659,15 @@ positive Umbraco weight is a negative one on that scale, which is the whole poin
 above. The by-name tiebreak only ever settles peers that are both sitting on zero. So if you ship
 more than one app and care about their order, give every one of them a number.
 
-**An alias a curated entry already owns loses.** Registry uniqueness only holds among registered
-extensions, and the desktop's aliases are a single namespace shared with the curated catalogue. A
-manifest whose alias matches a catalogue entry's is dropped rather than allowed to produce a second
-app with the same alias, because alias is the key a pinned favourite resolves through and two tiles
-sharing one would mean a pin silently opening the wrong app. The curated entry wins, and the console
-gets a line naming your alias and telling you to rename it.
+**An alias a curated entry already owns is taken over.** The desktop's aliases are one namespace,
+shared with its catalogue, because an alias is what a pin is stored under and one alias must mean
+one app. A manifest whose alias matches one of the desktop's entries replaces that entry, and the
+console prints a line saying what it replaced, since swapping a deep link for an app is rarely an
+accident you want to miss. If two packages claim one alias, the one whose manifest has the higher
+weight keeps it and the console names both.
 
-**Three things can make your app not appear, and only two of them say so.** A colliding alias, this
-one. A manifest the desktop found no `element` in, which includes the case where you wrote `js`
+**Three things can make your app not appear, and only two of them say so.** An alias another
+package's manifest also claims, with the higher weight. A manifest the desktop found no `element` in, which includes the case where you wrote `js`
 instead (§3). Both print a line naming your alias. The third is an **unmet `condition`** (§2), and
 it is silent by design: an app whose condition is unmet is doing exactly what the manifest asked, so
 there is nothing to warn about, and Umbraco removes it from the list before the desktop sees it.
@@ -696,4 +701,5 @@ booting second backoffice inside an iframe and there is not one here. Your eleme
       subtracted from either (§2.1)
 - [ ] Your app at `meta.minSize` is still usable, since that is the smallest box a user can leave it
 - [ ] Your app does something sensible with a box **larger** than `defaultSize`, because a maximized
-      window is one (§2.1)
+      window is one — or it sets `meta.resizable: false`, if a bigger window is only empty margin
+      (§2.1)

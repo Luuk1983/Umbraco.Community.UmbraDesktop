@@ -1,6 +1,7 @@
 import type { ManifestUmbraDesktopApp } from './app.extension';
 import type { UmbraDesktopRegisteredApp } from './types';
 import { UMBRADESKTOP_DEFAULT_ICON } from './constants';
+import { isBoolean, isFiniteNumber, isNonEmptyString, isRecord, isSize } from './manifest-values';
 
 /** One manifest this pass refused, and what was wrong with it. */
 export interface UmbraDesktopDroppedApp {
@@ -17,12 +18,22 @@ export interface UmbraDesktopDroppedApp {
   reason: string;
 }
 
+/** A field a registered app's manifest carried with the wrong type, which was ignored. */
+export interface UmbraDesktopIgnoredField {
+  /** The manifest alias. */
+  alias: string;
+  /** The field as the author wrote it, such as `meta.icon`. */
+  field: string;
+}
+
 /** What {@link normaliseRegisteredApps} produces: the apps it kept, and what it refused. */
 export interface UmbraDesktopNormalisedApps {
   /** The normalised apps, in registry order. */
   apps: UmbraDesktopRegisteredApp[];
   /** The manifests that yielded no app, for the caller to report. */
   dropped: UmbraDesktopDroppedApp[];
+  /** Fields that had the wrong type and were ignored, for the caller to report. */
+  ignored: UmbraDesktopIgnoredField[];
 }
 
 /**
@@ -64,6 +75,11 @@ export interface UmbraDesktopNormalisedApps {
  * here: it would mean adopting a slice of Umbraco's element-loading surface into this contract, and
  * the same argument then applies to `elementName` and `kind`. Naming the field costs nothing and
  * settles nothing, which is the right size for a diagnostic.
+ *
+ * Every other field is read defensively as well, because a static `umbraco-package.json` is
+ * type-checked by nothing. A field with the wrong type is left out and reported rather than passed
+ * on: a non-string name used to reach `groupApps`' `localeCompare` tie-break and throw, and one throw
+ * there stops every recompute after it, freezing the launcher for everyone on the install.
  * @param manifests The permitted manifests, in registry order.
  * @returns The normalised apps in the same order, plus every manifest that yielded none.
  */
@@ -72,6 +88,7 @@ export function normaliseRegisteredApps(
 ): UmbraDesktopNormalisedApps {
   const apps: UmbraDesktopRegisteredApp[] = [];
   const dropped: UmbraDesktopDroppedApp[] = [];
+  const ignored: UmbraDesktopIgnoredField[] = [];
   for (const manifest of manifests) {
     // Falsiness is the whole test, and deliberately not a shape test: every arm of the union is
     // legal, so the only thing that genuinely cannot yield an element is a nullish value or the
@@ -86,12 +103,29 @@ export function normaliseRegisteredApps(
       });
       continue;
     }
+    const meta: Record<string, unknown> = isRecord(manifest.meta) ? manifest.meta : {};
+    /**
+     * One optional field: its value when valid, otherwise `undefined`, reported when it was present.
+     * @param value The field's value, as sent.
+     * @param valid The check it must pass.
+     * @param field The field's name, as the author wrote it.
+     * @returns The value, or `undefined`.
+     */
+    const read = <T>(value: unknown, valid: (candidate: unknown) => candidate is T, field: string): T | undefined => {
+      if (value === undefined) return undefined;
+      if (valid(value)) return value;
+      ignored.push({ alias: manifest.alias, field });
+      return undefined;
+    };
+    const weight = read(manifest.weight, isFiniteNumber, 'weight');
     apps.push({
       alias: manifest.alias,
-      name: manifest.meta?.label ?? manifest.name ?? manifest.alias,
-      icon: manifest.meta?.icon ?? UMBRADESKTOP_DEFAULT_ICON,
+      name:
+        read(meta.label, isNonEmptyString, 'meta.label') ??
+        (isNonEmptyString(manifest.name) ? manifest.name : String(manifest.alias)),
+      icon: read(meta.icon, isNonEmptyString, 'meta.icon') ?? UMBRADESKTOP_DEFAULT_ICON,
       element: manifest.element,
-      group: manifest.meta?.group,
+      group: read(meta.group, isNonEmptyString, 'meta.group'),
       // Negated, because the two scales run opposite ways and an author only ever sees one of them.
       // A manifest's root `weight` is Umbraco's, and Umbraco sorts extensions descending
       // (`(b.weight || 0) - (a.weight || 0)` in its own registry), so `weight: 1000` is how you say
@@ -104,11 +138,12 @@ export function normaliseRegisteredApps(
       //
       // Conditional rather than `-(manifest.weight ?? 0)` so an unset weight stays unset and the
       // launcher's own default applies, instead of becoming an explicit `-0` that reads as a choice.
-      weight: manifest.weight === undefined ? undefined : -manifest.weight,
-      defaultSize: manifest.meta?.defaultSize,
-      minSize: manifest.meta?.minSize,
-      allowMultiple: manifest.meta?.allowMultiple,
+      weight: weight === undefined ? undefined : -weight,
+      defaultSize: read(meta.defaultSize, isSize, 'meta.defaultSize'),
+      minSize: read(meta.minSize, isSize, 'meta.minSize'),
+      allowMultiple: read(meta.allowMultiple, isBoolean, 'meta.allowMultiple'),
+      resizable: read(meta.resizable, isBoolean, 'meta.resizable'),
     });
   }
-  return { apps, dropped };
+  return { apps, dropped, ignored };
 }

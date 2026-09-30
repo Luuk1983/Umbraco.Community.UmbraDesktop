@@ -27,12 +27,24 @@
     "quick launch",
     "pinned apps",
     "taskbar",
+    "session restore",
+    "full screen",
     "side by side",
+    "preview",
+    "live preview",
+    "headless",
+    "headless preview",
+    "docking",
+    "attached windows",
     "window snapping",
     "snap",
     "tiling",
     "workspace",
     "unsaved changes",
+    "notifications",
+    "notification center",
+    "notification history",
+    "toasts",
     "editor tools",
     "breadcrumb",
     "navigation",
@@ -43,6 +55,10 @@
     "colour scheme",
     "accessibility",
     "wallpapers",
+    "roaming settings",
+    "user settings",
+    "settings sync",
+    "per user preferences",
     "startup",
     "boot into desktop",
     "landing page",
@@ -65,6 +81,7 @@
     "apps",
     "games",
     "extensibility",
+    "package integration",
     "concurrency",
     "collaboration",
     "overwrite protection",
@@ -79,6 +96,7 @@
     "retro",
     "dashboard",
     "minesweeper",
+    "snake",
     "language",
     "localization",
     "translation",
@@ -94,7 +112,13 @@
     "web-app-manifest",
     "installable",
     "standalone",
-    "app-icon"
+    "app-icon",
+    "site name",
+    "environment name",
+    "environment label",
+    "watermark",
+    "Customisable launcher",
+    "Drag and drop"
   ],
   "Screenshots": [
     {
@@ -104,6 +128,14 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/unsaved-changes-guard.png",
       "Caption": "Your work, guarded three ways at once: a dot for unsaved changes, a warning when someone else saved over you, and an error when they binned it. Every marker is repeated on the taskbar, so it reaches a window you minimised an hour ago."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/live-preview.png",
+      "Caption": "Live preview: the page opens beside the editor, inside the same window, and reloads every time you save. Headless front ends too, from the same preview URL as Save and preview."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/notifications.png",
+      "Caption": "Notifications, once: a message raised in any window shows on the desktop instead, however many windows raised it. The clock keeps the last twenty, and a dot beside it says a warning or an error is among them."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png",
@@ -142,7 +174,7 @@
     {
       "PackageId": "Umbraco.Community.UmbraDesktop.Entertainment",
       "GroupTitle": "Optional add-ons",
-      "Description": "Games for the desktop, starting with Minesweeper. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
+      "Description": "Games for the desktop: Minesweeper and Snake. Released from the same tag and always the same version. Entirely optional: the desktop is unchanged without it."
     }
   ]
 }

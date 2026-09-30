@@ -13,9 +13,14 @@ import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-toke
 import type { UmbraDesktopLocaleSettings } from '../settings/types';
 import { UMBRADESKTOP_DEFAULT_SETTINGS } from '../settings/settings-store.js';
 import { taskbarRowFeatures } from '../taskbar/features/index.js';
-import type { UmbraDesktopTaskbarFeatureContext } from '../taskbar/features/types';
+import type { UmbraDesktopFullscreenState, UmbraDesktopTaskbarFeatureContext } from '../taskbar/features/types';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import './launcher.element.js';
+import type { UmbraDesktopLauncherConfirm, UmbraDesktopLauncherElement } from './launcher.element.js';
+import './scrollback.element.js';
+import { UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT } from '../notifications/notification-centre.context-token.js';
+import type { UmbraDesktopNotificationCentreContext } from '../notifications/notification-centre.context.js';
+import { attentionCount } from '../notifications/scrollback.js';
 import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import { noticeIconName, windowNotices, worstSeverity } from '../notices/notices.js';
 import type { UmbraDesktopNoticeSeverity } from '../notices/types.js';
@@ -25,6 +30,19 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbConfirmModal, umbOpenModal } from '@umbraco-cms/backoffice/modal';
 import { UMB_SEARCH_MODAL } from '@umbraco-cms/backoffice/search';
 import { UMB_CURRENT_USER_MODAL } from '@umbraco-cms/backoffice/current-user';
+
+/**
+ * Whether keyboard focus is inside an iframe on this page, which is where it goes when the user
+ * clicks into one of the desktop's windows. Walked down through shadow roots, because the document
+ * only reports the outermost host of whatever has focus, and a window's iframe sits several shadow
+ * roots deep.
+ * @returns True when the focused element is an iframe.
+ */
+function focusIsInFrame(): boolean {
+  let active: Element | null = document.activeElement;
+  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+  return active instanceof HTMLIFrameElement;
+}
 
 /**
  * The bottom panel: Umbraco-logo start button (opens the app launcher), running-window
@@ -43,11 +61,37 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   @state()
   private _windows: UmbraDesktopWindow[] = [];
 
+  /**
+   * Which of the taskbar's two panels is open, if either: the launcher from the start button, or the
+   * scrollback from the clock. One field rather than two flags, because they share one set of dismiss
+   * listeners and opening one closes the other, so two open at once is not a state worth being able
+   * to represent.
+   */
   @state()
-  private _launcherOpen = false;
+  private _panel?: 'launcher' | 'scrollback';
+
+  /** How many distinct warnings and errors the scrollback holds, and whether any is an error. */
+  @state()
+  private _attention: { count: number; error: boolean } = { count: 0, error: false };
 
   @state()
   private _clock = '';
+
+  /**
+   * Whether the page is full screen, and whose full screen it is, for the full screen feature's
+   * button. Read from the browser whenever either of its two reports changes, never set on a click,
+   * because leaving with Esc or with the browser's own control happens without the button and must
+   * still turn it back.
+   */
+  @state()
+  private _fullscreen: UmbraDesktopFullscreenState = 'off';
+
+  /**
+   * The browser's report of its own full screen, from F11 or its menu, which the Fullscreen API
+   * cannot see: only this media query changes. Asked for on connect rather than at construction so
+   * a test can stand in for it, and kept so the listener can be taken off again.
+   */
+  #displayModeFullscreen?: MediaQueryList;
 
   /**
    * How this user wants the clock formatted.
@@ -98,6 +142,16 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       this.#manager = ctx ?? undefined;
       if (ctx) this.observe(ctx.windows, (list) => (this._windows = list));
     });
+    this.consumeContext(UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT, (ctx) => {
+      this.#notifications = ctx ?? undefined;
+      if (!ctx) return;
+      // The entries rather than the centre's own count, because the count's colour needs to know
+      // whether an error is among them, and both answers have to come from the same list.
+      this.observe(ctx.entries, (entries) => {
+        const count = attentionCount(entries);
+        this._attention = { count, error: entries.some((e) => e.color === 'danger') };
+      });
+    });
     this.consumeContext(UMBRADESKTOP_APP_CATALOGUE_CONTEXT, (ctx) => {
       this.#catalogue = ctx ?? undefined;
       if (ctx) this.observe(ctx.apps, (apps) => (this._apps = apps));
@@ -125,19 +179,54 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     // in the background would otherwise show the minute it was last allowed to paint, which on this
     // taskbar is a minute next to the operating system's own correct one.
     document.addEventListener('visibilitychange', this.#onVisibilityChange);
+    document.addEventListener('fullscreenchange', this.#onFullscreenChange);
+    this.#displayModeFullscreen = window.matchMedia('(display-mode: fullscreen)');
+    this.#displayModeFullscreen.addEventListener('change', this.#onFullscreenChange);
+    this._fullscreen = this.#readFullscreen();
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     if (this.#timer) window.clearTimeout(this.#timer);
     document.removeEventListener('visibilitychange', this.#onVisibilityChange);
-    this.#setLauncherOpen(false);
+    document.removeEventListener('fullscreenchange', this.#onFullscreenChange);
+    this.#displayModeFullscreen?.removeEventListener('change', this.#onFullscreenChange);
+    this.#setPanel(undefined);
   }
 
   /** Repaint the clock when the tab comes back, since its timer may have been throttled away. */
   #onVisibilityChange = () => {
     if (!document.hidden) this.#tick();
   };
+
+  /** Either kind of full screen started or ended, by the button or otherwise: follow it. */
+  #onFullscreenChange = () => {
+    this._fullscreen = this.#readFullscreen();
+  };
+
+  /**
+   * Which full screen the page is in, if any.
+   *
+   * The page's own is asked first, and the order is the point: Chrome matches `display-mode:
+   * fullscreen` during the page's own full screen as well as after F11, so a match alone cannot
+   * tell the two apart, while a `fullscreenElement` can only be the page's.
+   * @returns The state the full screen button draws.
+   */
+  #readFullscreen(): UmbraDesktopFullscreenState {
+    if (document.fullscreenElement) return 'page';
+    return this.#displayModeFullscreen?.matches ? 'browser' : 'off';
+  }
+
+  /**
+   * Take the whole page full screen, or bring it back. The page rather than the desktop element,
+   * for the reason the full screen feature gives: the backoffice's own overlays stay in view.
+   * Refusals are swallowed, since the browser already tells the user when it declines, and the
+   * button follows the browser's state rather than assuming the request worked.
+   */
+  #toggleFullscreen(): void {
+    const request = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    void request?.catch(() => undefined);
+  }
 
   /**
    * The clock, formatted the way this user asked for it, and then scheduled again for the moment the
@@ -174,14 +263,25 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
    */
   override updated(changed: PropertyValues) {
     super.updated(changed);
+    // Every render, not only the one that opened it: on the macOS dock a window opening or closing
+    // moves the clock, and the list has to follow.
+    if (this._panel === 'scrollback') this.#placeScrollback();
     const culture = this.localize.lang();
     if (culture === this.#culture) return;
     this.#culture = culture;
     this.#tick();
   }
 
+  /** The notification centre, told whenever the list behind the clock opens or closes. */
+  #notifications?: UmbraDesktopNotificationCentreContext;
+
   #toggleLauncher() {
-    this.#setLauncherOpen(!this._launcherOpen);
+    this.#setPanel(this._panel === 'launcher' ? undefined : 'launcher');
+  }
+
+  /** Open the scrollback from the clock, or close it again. */
+  #toggleScrollback() {
+    this.#setPanel(this._panel === 'scrollback' ? undefined : 'scrollback');
   }
 
   /**
@@ -189,6 +289,40 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
    * window, otherwise bring it to the front (restoring it if minimized). See `taskActivation`.
    * @param w The window whose taskbar button was clicked.
    */
+  /**
+   * One running-window button.
+   *
+   * Every window gets the same button, an owner's and a floating attached window's alike, and it
+   * behaves the same: it focuses its own window, or minimizes it when that window already has focus.
+   * What differs for a group is only that its buttons share a box.
+   * @param w The window the button stands for.
+   * @returns The button.
+   */
+  #renderTask(w: UmbraDesktopWindow) {
+    const notices = windowNotices(w);
+    // Every severity reaches the taskbar, and the *shape* says which; see `#renderBadge`. Design D4
+    // kept `info` off it originally; the reasoning that put a conflict here in the first place
+    // applies to unsaved work too, because a window you minimized an hour ago is exactly the one
+    // whose state you cannot see.
+    const worst = worstSeverity(notices);
+    const name = this.localize.string(w.app.name);
+    // The words, not just the shape: this is the accessible name and the tooltip, so the state is
+    // readable to a screen reader and on a monochrome display. `notices[0]` is the worst notice,
+    // which is the one the badge is drawing.
+    const label = worst ? `${name} — ${this.localize.term(notices[0].title)}` : name;
+    return html`
+      <button
+        class="task window ${w.active ? 'active' : ''}"
+        title=${label}
+        aria-label=${label}
+        @click=${() => this.#onTaskClick(w)}>
+        <umb-icon class="task-icon" name=${w.app.icon}></umb-icon>
+        <span class="task-label">${name}</span>
+        ${this.#renderBadge(worst)}
+      </button>
+    `;
+  }
+
   #onTaskClick(w: UmbraDesktopWindow) {
     if (!this.#manager) return;
     if (taskActivation(w) === 'minimize') this.#manager.setState(w.id, 'minimized');
@@ -196,44 +330,131 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   }
 
   /**
-   * Open or close the launcher, wiring up the dismiss listeners to match. While open we listen
-   * for a pointer down outside the launcher/start button, a window blur (a click landing inside
-   * an iframe window steals focus without bubbling a pointer event to us), and the Escape key —
-   * any of which closes the launcher. Listeners are removed as soon as it closes.
-   * @param open Whether the launcher should be open.
+   * Open one of the two panels, or close whichever is open, wiring up the dismiss listeners to
+   * match. While a panel is open we listen for a pointer down outside it and its own button, a window
+   * blur (a click landing inside an iframe window steals focus without bubbling a pointer event to
+   * us), and the Escape key. What each of them does is in its handler: the launcher can hold itself
+   * open, and Escape steps back inside it before it closes. Listeners are removed as soon as the
+   * panel closes, and switching straight from one panel to the other keeps them.
+   * @param panel The panel to open, or undefined to close.
    */
-  #setLauncherOpen(open: boolean) {
-    if (open === this._launcherOpen) return;
-    this._launcherOpen = open;
-    if (open) {
+  #setPanel(panel: 'launcher' | 'scrollback' | undefined) {
+    if (panel === this._panel) return;
+    const wasOpen = this._panel !== undefined;
+    this._panel = panel;
+    if (panel !== 'launcher') this.#launcherAsking = false;
+    this.#notifications?.setListOpen(panel === 'scrollback');
+    if (wasOpen === (panel !== undefined)) return;
+    if (panel) {
       // Capture phase so we see the pointer down before anything inside can stop it.
       document.addEventListener('pointerdown', this.#onOutsidePointerDown, true);
       document.addEventListener('keydown', this.#onLauncherKeydown);
       window.addEventListener('blur', this.#onWindowBlur);
+      window.addEventListener('resize', this.#placeScrollback);
     } else {
       document.removeEventListener('pointerdown', this.#onOutsidePointerDown, true);
       document.removeEventListener('keydown', this.#onLauncherKeydown);
       window.removeEventListener('blur', this.#onWindowBlur);
+      window.removeEventListener('resize', this.#placeScrollback);
     }
   }
 
-  /** Close the launcher when a pointer goes down outside both the launcher panel and start button. */
+  /**
+   * Whether a question the launcher asked is on screen, in a modal this element opened for it. The
+   * launcher is held open until it is answered: a press inside the modal is outside the launcher,
+   * and so is the Escape that closes the modal, and closing the launcher under its own question
+   * would leave the answer nowhere to go.
+   */
+  #launcherAsking = false;
+
+  /** The launcher, while it is open. */
+  get #launcher(): UmbraDesktopLauncherElement | null {
+    return this.shadowRoot?.querySelector<UmbraDesktopLauncherElement>('umbradesktop-launcher') ?? null;
+  }
+
+  /**
+   * Whether the open panel stays open whatever the user does outside it: the launcher while it is
+   * asking a question, and while it says it holds itself open, as arrange mode does.
+   * @returns True to leave it open.
+   */
+  #panelHeld(): boolean {
+    return this._panel === 'launcher' && (this.#launcherAsking || !!this.#launcher?.holdsOpen);
+  }
+
+  /**
+   * Hang the list from the clock that opened it: its trailing edge lined up with the clock's, as far
+   * as the screen allows.
+   *
+   * Measured rather than written into CSS, because where the clock is belongs to the theme. Four
+   * themes pin it to the trailing end of a full-width bar, where a fixed offset from the screen edge
+   * would do, and macOS carries it at the end of a centred dock whose width changes with every
+   * window, where no fixed offset can. Measuring is also what lets anything else that ever opens
+   * from the clock's end of the bar hang from its own button the same way.
+   *
+   * The distance is handed to CSS as a custom property and clamped there, so keeping the list on
+   * screen is one rule rather than arithmetic here that has to know the list's width.
+   */
+  #placeScrollback = () => {
+    const list = this.shadowRoot?.querySelector<HTMLElement>('.scrollback');
+    const clock = this.shadowRoot?.querySelector<HTMLElement>('.clock');
+    if (!list || !clock) return;
+    const fromEnd = this.getBoundingClientRect().right - clock.getBoundingClientRect().right;
+    list.style.setProperty('--scrollback-anchor', `${Math.max(0, fromEnd)}px`);
+  };
+
+  /** Close the open panel when a pointer goes down outside both it and the button that opened it. */
   #onOutsidePointerDown = (e: PointerEvent) => {
     const path = e.composedPath();
-    const launcher = this.shadowRoot?.querySelector('.launcher');
-    const start = this.shadowRoot?.querySelector('.start');
-    if ((launcher && path.includes(launcher)) || (start && path.includes(start))) return;
-    this.#setLauncherOpen(false);
+    const [panelSelector, buttonSelector] =
+      this._panel === 'scrollback' ? ['.scrollback', '.clock'] : ['.launcher', '.start'];
+    const panel = this.shadowRoot?.querySelector(panelSelector);
+    const button = this.shadowRoot?.querySelector(buttonSelector);
+    if ((panel && path.includes(panel)) || (button && path.includes(button))) return;
+    if (this.#panelHeld()) return;
+    this.#setPanel(undefined);
   };
 
-  /** Close the launcher on Escape. */
+  /**
+   * Escape closes the open panel, except in the launcher, where it first steps back a level, from
+   * All apps or arrange mode to the launcher itself. While the launcher's own question is open the
+   * Escape is the modal's.
+   */
   #onLauncherKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') this.#setLauncherOpen(false);
+    if (e.key !== 'Escape' || this.#launcherAsking) return;
+    if (this._panel === 'launcher' && this.#launcher?.back()) return;
+    this.#setPanel(undefined);
   };
 
-  /** Close the launcher when focus leaves the window (e.g. a click landing inside an iframe). */
+  /**
+   * Close the open panel when focus has gone into one of the desktop's windows: a click inside a
+   * window's iframe takes focus without a pointer event ever reaching this document, and a window
+   * blur is the only sign of it. Not when the browser as a whole lost focus to another program,
+   * which blurs the window just the same: switching away and back closed the launcher every time.
+   * Focus is still on the page then, so the iframe is what tells the two apart.
+   */
   #onWindowBlur = () => {
-    this.#setLauncherOpen(false);
+    if (this.#panelHeld() || !focusIsInFrame()) return;
+    this.#setPanel(undefined);
+  };
+
+  /**
+   * Put the launcher's question to the user in a confirm modal owned here, where a click inside it
+   * cannot unmount the element that opened it, and hold the launcher open until it is answered.
+   * @param e The launcher's `confirm` event.
+   */
+  #onLauncherConfirm = async (e: CustomEvent<UmbraDesktopLauncherConfirm>) => {
+    e.preventDefault();
+    const { headline, content, confirmLabel, answer } = e.detail;
+    this.#launcherAsking = true;
+    let confirmed = true;
+    try {
+      await umbConfirmModal(this, { headline, content, confirmLabel, color: 'danger' });
+    } catch {
+      confirmed = false;
+    } finally {
+      this.#launcherAsking = false;
+    }
+    answer(confirmed);
   };
 
   /**
@@ -245,7 +466,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
    * @param modal The modal token to open.
    */
   async #openFromLauncher(modal: Parameters<typeof umbOpenModal>[1]) {
-    this.#setLauncherOpen(false);
+    this.#setPanel(undefined);
     await umbOpenModal(this, modal).catch(() => undefined);
   }
 
@@ -293,15 +514,16 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   };
 
   #renderLauncher() {
-    if (!this._launcherOpen) return '';
+    if (this._panel !== 'launcher') return '';
     return html`
       <umbradesktop-launcher
         class="launcher"
-        @launched=${() => this.#setLauncherOpen(false)}
+        @launched=${() => this.#setPanel(undefined)}
         @search=${this.#onSearch}
         @profile=${this.#onProfile}
         @settings=${this.#onSettings}
-        @exit=${this.#onExit}></umbradesktop-launcher>
+        @exit=${this.#onExit}
+        @confirm=${this.#onLauncherConfirm}></umbradesktop-launcher>
     `;
   }
 
@@ -353,8 +575,12 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       apps: this._apps,
       pinned: this._pinned,
       isRefRegistered: (ref) => this.#catalogue?.isRefRegistered(ref) ?? false,
+      entryRef: (alias) => this.#catalogue?.getEntryRef(alias),
       open: (app) => this.#manager?.open(app),
       localize: (value) => this.localize.string(value),
+      fullscreen: this._fullscreen,
+      canFullscreen: document.fullscreenEnabled,
+      toggleFullscreen: () => this.#toggleFullscreen(),
     };
   }
 
@@ -363,7 +589,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
    * buttons.
    *
    * **This is not the system tray.** Windows separates the two and so does this: the launcher side
-   * launches things, while the notification area by the clock reports on things. Keeping them apart
+   * launches things, with full screen at its head as the one control among them, while the
+   * notification area by the clock reports on things. Keeping them apart
    * is what lets the row stay silent about windows — no running indicator, no modifier click, no
    * context menu — because it never stands in for one.
    *
@@ -419,13 +646,55 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     return this.#needsDivider ? html`<div class="divider" aria-hidden="true"></div>` : nothing;
   }
 
+  /**
+   * The clock, which is also the way into the scrollback, and the dot that says something in there
+   * is worth a look.
+   *
+   * A dot and not a number. Every operating system that puts a number by its clock means "unread,
+   * and gone once you look", and this list deliberately has no read state, so a number here reads as
+   * a count that should clear itself and never does. GNOME puts a dot by its clock for the same job.
+   * It takes the colour of the worst entry held, the way a window's badge takes its worst notice's,
+   * and goes when the last warning or error rolls off or the list is cleared. Design D7.
+   * @returns The clock's template.
+   */
+  #renderClock() {
+    const { count, error } = this._attention;
+    const label =
+      count > 0
+        ? this.localize.term('umbraDesktop_notificationsClockAttention')
+        : this.localize.term('umbraDesktop_notificationsClock');
+    const severity = error ? 'error' : 'warning';
+    return html`<button
+      class="clock ${this._panel === 'scrollback' ? 'active' : ''}"
+      title=${label}
+      aria-label="${this._clock}, ${label}"
+      aria-expanded=${this._panel === 'scrollback' ? 'true' : 'false'}
+      @click=${this.#toggleScrollback}>
+      ${count > 0 ? html`<span class="clock-dot" data-severity=${severity} aria-hidden="true"></span>` : nothing}
+      <span class="clock-time">${this._clock}</span>
+    </button>`;
+  }
+
+  /**
+   * The scrollback, when it is open. Closes itself once an entry has been acted on, which focuses a
+   * window: the panel has done its job at that point, as the launcher has once an app is launched.
+   * @returns The panel, or nothing.
+   */
+  #renderScrollback() {
+    if (this._panel !== 'scrollback') return nothing;
+    return html`<umbradesktop-scrollback
+      class="scrollback"
+      .formatTime=${(ms: number) => formatClock(new Date(ms), this._locale, { backoffice: this.localize.lang() })}
+      @activated=${() => this.#setPanel(undefined)}></umbradesktop-scrollback>`;
+  }
+
   override render() {
     return html`
-      ${this.#renderLauncher()}
+      ${this.#renderLauncher()} ${this.#renderScrollback()}
       <div class="bar">
         <div class="cluster">
           <button
-            class="start ${this._launcherOpen ? 'active' : ''}"
+            class="start ${this._panel === 'launcher' ? 'active' : ''}"
             title="Open apps"
             aria-label="Open apps"
             @click=${this.#toggleLauncher}>
@@ -434,36 +703,24 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           ${this.#renderFeatures()} ${this.#renderDivider()}
           <div class="running">
             ${repeat(
-              this._windows,
+              // Owners and ordinary windows only: a floating attached window is drawn inside its
+              // owner's group, right after the owner, and never on its own.
+              this._windows.filter((w) => !w.owner || !this._windows.some((o) => o.id === w.owner)),
               (w) => w.id,
               (w) => {
-                const notices = windowNotices(w);
-                // Every severity reaches the taskbar, and the *shape* says which — see `#renderBadge`.
-                // Design D4 kept `info` off it originally; the reasoning that put a conflict here in
-                // the first place applies to unsaved work too, because a window you minimized an
-                // hour ago is exactly the one whose state you cannot see.
-                const worst = worstSeverity(notices);
-                const name = this.localize.string(w.app.name);
-                // The words, not just the shape: this is the accessible name and the tooltip, so the
-                // state is readable to a screen reader and on a monochrome display. `notices[0]` is
-                // the worst notice, which is the one the badge is drawing.
-                const label = worst ? `${name} — ${this.localize.term(notices[0].title)}` : name;
-                return html`
-                  <button
-                    class="task window ${w.active ? 'active' : ''}"
-                    title=${label}
-                    aria-label=${label}
-                    @click=${() => this.#onTaskClick(w)}>
-                    <umb-icon class="task-icon" name=${w.app.icon}></umb-icon>
-                    <span class="task-label">${name}</span>
-                    ${this.#renderBadge(worst)}
-                  </button>
-                `;
+                const floating = this._windows.filter((a) => a.owner === w.id);
+                if (floating.length === 0) return this.#renderTask(w);
+                // One box around the owner and its floating windows, each still its own button. The
+                // box is the signal that they belong together, not the labels, so it survives the
+                // themes that draw icon-only tiles. Design D6.
+                return html`<div class="task-group" role="group" aria-label=${this.localize.string(w.app.name)}>
+                  ${[w, ...floating].map((member) => this.#renderTask(member))}
+                </div>`;
               },
             )}
           </div>
         </div>
-        <div class="clock">${this._clock}</div>
+        ${this.#renderClock()}
       </div>
     `;
   }
@@ -627,6 +884,22 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         overflow: hidden;
         margin-left: var(--uui-size-space-1);
       }
+      /* The box around an owner and its floating attached windows. Every value is a token, because
+         each theme draws a group in its own idiom: a bordered box here, a tray on a dock, a sunken
+         groove on Windows 98. A theme may restyle it and may not remove it: the box is the only thing
+         on the bar that says these windows belong together. Its buttons are ordinary '.task' buttons,
+         so every theme's button styling reaches them with no rule of its own. */
+      .task-group {
+        display: flex;
+        align-items: stretch;
+        flex: none;
+        box-sizing: border-box;
+        gap: var(--umbradesktop-task-group-gap, 2px);
+        padding: var(--umbradesktop-task-group-padding, 2px);
+        border: var(--umbradesktop-task-group-border, 1px solid color-mix(in srgb, currentColor 35%, transparent));
+        border-radius: var(--umbradesktop-task-group-radius, 6px);
+        background: var(--umbradesktop-task-group-background, color-mix(in srgb, currentColor 5%, transparent));
+      }
       /* '.window' marks a button that stands for an open window, which '.task' alone no longer does:
          the fixed row's buttons are '.task' too, and they launch rather than switch. Nothing in this
          sheet uses it — with labels on, the title is what tells the two apart — but a theme that
@@ -686,6 +959,15 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       .task.active {
         color: var(--umbradesktop-taskbar-text-emphasis, var(--uui-color-header-contrast-emphasis));
         box-shadow: inset 0 -3px 0 var(--umbradesktop-task-active-marker, var(--uui-color-current, #f5c1bc));
+      }
+      /* A task button that cannot act right now: the full screen button while the browser itself is
+         full screen. Faded as a whole and without the pointer, on top of whatever face the theme
+         draws, so every theme gets it with no CSS of its own. A theme that wants a different fade
+         sets the token from its palette; restating 'opacity' or 'cursor' on a '.task' rule could undo
+         this, and 'theme/taskbar-features.test.ts' fails a sheet that does. */
+      .task[aria-disabled='true'] {
+        cursor: default;
+        opacity: var(--umbradesktop-task-disabled-opacity, 0.5);
       }
       /* Drawn INSIDE the button's own box, deliberately. '.running' keeps 'overflow: hidden' in the
          base stylesheet and in every one of the five themes, so anything drawn outside the button is
@@ -760,19 +1042,70 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           var(--umbradesktop-titlebar-dirty-color, var(--umbradesktop-taskbar-text, var(--uui-color-header-contrast)))
         );
       }
+      /* A button now, because it opens the scrollback, so the UA's button face is taken off first and
+         the clock still looks like the clock under every theme that styles '.clock'. The font is
+         inherited and then sized, so a theme's own font-size rule on '.clock' still lands. */
       .clock {
         flex-shrink: 0;
-        padding-right: var(--uui-size-space-2);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--uui-size-space-2);
+        align-self: stretch;
+        margin: 0;
+        padding: 0 var(--uui-size-space-2);
+        border: 0;
+        background: none;
+        font: inherit;
         font-size: var(--uui-type-small-size);
         color: var(--umbradesktop-taskbar-text, var(--uui-color-header-contrast));
         opacity: 0.85;
         font-variant-numeric: tabular-nums;
+        cursor: pointer;
+        border-radius: var(--uui-border-radius);
+      }
+      .clock:hover,
+      .clock.active {
+        background: var(--umbradesktop-task-hover-background, rgba(255, 255, 255, 0.1));
+      }
+      .clock:focus-visible {
+        outline: 2px solid var(--uui-color-focus);
+        outline-offset: -2px;
+      }
+      /* The same size as the unsaved dot on a title bar and a task button, so the desktop has one
+         size of dot, in the severity colours the window notices already use. */
+      .clock-dot {
+        flex: none;
+        width: var(--umbradesktop-notice-marker-size, ${UMBRADESKTOP_UNSAVED_MARKER_SIZE}px);
+        height: var(--umbradesktop-notice-marker-size, ${UMBRADESKTOP_UNSAVED_MARKER_SIZE}px);
+        border-radius: 50%;
+        background: var(--umbradesktop-notice-warning-color, var(--uui-color-warning-standalone));
+      }
+      .clock-dot[data-severity='error'] {
+        background: var(--umbradesktop-notice-error-color, var(--uui-color-danger-standalone));
       }
       /* Positioning only — the panel's own surface (background/border/shadow/size) is
          owned by <umbradesktop-launcher> itself. */
       /* --umbradesktop-taskbar-reserve isn't set anywhere in this file — it's defined on
          the desktop element's root (how much of the bottom edge the bar/dock occupies)
          and inherits in through the shadow boundary. 50px is just the fallback until then. */
+      /* The scrollback hangs from the clock: '--scrollback-anchor' is the distance from the bar's
+         trailing end to the clock's, measured by '#placeScrollback'. Clamped so the list never
+         leaves the screen at either end, which matters on a theme whose clock sits too far towards
+         the leading edge for a list this wide to end under it. The toasts stand aside while it is
+         open, so it no longer has to line up with them.
+
+         Every variable here carries a fallback, which most rules in this file do not bother with. A
+         missing one makes the whole 'clamp()' invalid, and an invalid 'right' drops the list to its
+         static position at the far leading edge: found in a test page without UUI's tokens loaded. */
+      .scrollback {
+        position: absolute;
+        right: clamp(
+          0px,
+          var(--scrollback-anchor, var(--uui-size-space-3, 12px)),
+          calc(100% - var(--umbradesktop-toast-width, 360px) - var(--uui-size-space-3, 12px))
+        );
+        bottom: var(--umbradesktop-scrollback-bottom, var(--umbradesktop-taskbar-reserve, 50px));
+      }
       .launcher {
         position: absolute;
         left: var(--umbradesktop-launcher-left, var(--uui-size-space-3));

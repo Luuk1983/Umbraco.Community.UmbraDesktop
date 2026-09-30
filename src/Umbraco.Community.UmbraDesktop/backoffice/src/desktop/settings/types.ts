@@ -49,6 +49,56 @@ export interface UmbraDesktopLocaleSettings {
 }
 
 /**
+ * When the desktop reopens the windows a user had open.
+ *
+ * - `off`: never. Nothing about the windows is kept anywhere.
+ * - `session`: after a refresh, Exit and back, or signing in again in the same tab. Kept in the
+ *   tab's `sessionStorage`, so it ends with the tab and two tabs never touch each other's windows.
+ *   The default, because nobody expects F5 to close everything they had open.
+ * - `persistent`: also after the browser has been closed. The tab still works from its own copy;
+ *   `localStorage` is written as well, and read only by a tab that has no copy yet.
+ *
+ * Three values rather than a boolean plus a checkbox, because `off` and `persistent` are not
+ * two ends of one switch: the middle one is where nearly everybody belongs.
+ */
+export type UmbraDesktopReopenWindows = 'off' | 'session' | 'persistent';
+
+/**
+ * One group on a launcher the user has arranged.
+ *
+ * A group that came from the catalogue keeps the catalogue group's alias as its `id` and a `null`
+ * label, so its name is looked up (see `launcher/group-labels.ts`) and follows the backoffice
+ * language. Only a group the user named carries literal text.
+ */
+export interface UmbraDesktopLauncherLayoutGroup {
+  /** A catalogue group alias, or `custom-…` for a group the user created. */
+  id: string;
+  /** `null` to look the name up by `id`; otherwise the user's own text. */
+  label: string | null;
+  /**
+   * App aliases in the user's order. Never pruned: an alias this user cannot open right now is
+   * skipped when the launcher is drawn and comes back in the same place when they can.
+   */
+  apps: string[];
+}
+
+/**
+ * The user's changes to the launcher, and only those (design D2).
+ *
+ * Absent until the user first changes a group, so a launcher nobody has arranged is always the
+ * catalogue's own grouping and follows it when a release regroups apps. New apps are placed by
+ * `launcher/resolve-launcher.ts`, not stored here, which is what lets them keep arriving (D3).
+ */
+export interface UmbraDesktopLauncherLayout {
+  /** The user's groups, in their order. */
+  groups: UmbraDesktopLauncherLayoutGroup[];
+  /** Apps the user took off the launcher. They wait in the palette and in All apps. */
+  removed: string[];
+  /** Catalogue groups the user deleted, so their new apps wait in the palette instead of returning. */
+  deletedGroups: string[];
+}
+
+/**
  * One user's desktop settings, as persisted. Versioned from the start so a future shape change
  * has somewhere to hang a migration rather than silently discarding preferences.
  */
@@ -95,6 +145,15 @@ export interface UmbraDesktopSettings {
    */
   bootIntoDesktop: boolean;
   /**
+   * When the desktop reopens the windows this user had open: never, after a refresh of the same tab,
+   * or also after the browser has been closed. See {@link UmbraDesktopReopenWindows}.
+   *
+   * Stored here, on the account, so the choice follows the user. The layout itself never does: it
+   * is kept in the browser (`windows/layout-persistence.ts`), because it changes whenever a window
+   * moves and belongs to one screen.
+   */
+  reopenWindows: UmbraDesktopReopenWindows;
+  /**
    * Whether changing the theme should also change the wallpaper to the one that theme declares.
    *
    * Off by default. Switching it on is the user asking for their wallpaper to be managed, which is
@@ -113,6 +172,13 @@ export interface UmbraDesktopSettings {
    * showed whatever the browser's language happened to be.
    */
   locale: UmbraDesktopLocaleSettings;
+
+  /**
+   * The user's changes to the launcher. Absent means never arranged: the launcher is the catalogue's
+   * grouping. Optional rather than defaulted, and the payload stays at `v: 1`, for the reason
+   * `parseSettings` gives: an unknown optional field costs an older build nothing (design D14).
+   */
+  layout?: UmbraDesktopLauncherLayout;
 }
 
 /** What the desktop element needs in order to paint a wallpaper. */

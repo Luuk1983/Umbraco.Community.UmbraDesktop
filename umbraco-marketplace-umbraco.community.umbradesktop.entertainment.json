@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop Entertainment",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "Games for UmbraDesktop. An optional add-on that puts Minesweeper on the desktop, in a window of its own and themed along with the rest of it.",
+  "Description": "Games for UmbraDesktop. An optional add-on that puts Minesweeper and Snake on the desktop, each in a window of its own and themed along with the rest of it.",
   "PackageType": "Package",
   "LicenseTypes": [
     "Free"
@@ -19,6 +19,7 @@
   "Tags": [
     "games",
     "minesweeper",
+    "snake",
     "entertainment",
     "umbradesktop",
     "desktop",
@@ -41,6 +42,10 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-minesweeper.png",
       "Caption": "Minesweeper in a window of its own, under the Windows 98 theme. It arrives in the launcher's Games group and gets a taskbar button like any other app."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-snake.png",
+      "Caption": "Snake, the second game, under the same theme. Arrow keys to steer, a score and a best score, and it pauses itself when its window loses focus."
     }
   ]
 }

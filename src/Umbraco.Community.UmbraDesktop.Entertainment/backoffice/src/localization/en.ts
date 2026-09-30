@@ -1,10 +1,9 @@
 /**
  * English (en) strings for the `umbraDesktopEntertainment` area.
  *
- * This package's own dictionary, and deliberately only this package's: the `games` launcher group's
- * heading belongs to the host and already ships in both locales there, per the contract in
- * `docs/desktop-apps.md` §6. What lives here is the app's name, which the manifest points at
- * through `meta.label`, and everything the game itself says.
+ * This package's own dictionary: the Games group's heading, which this package's catalogue manifest
+ * defines, each game's name, which its manifest points at through `meta.label`, and everything the
+ * games themselves say.
  *
  * The element passes each of these to `localize.termOrDefault` with the same English as its
  * fallback, so a backoffice where this dictionary failed to load renders words rather than raw
@@ -13,6 +12,8 @@
  */
 export default {
   umbraDesktopEntertainment: {
+    // The launcher group this package's catalogue manifest defines (bundle.manifests.ts).
+    groupGames: 'Games',
     // The window title, taskbar label and launcher tile text, all from meta.label.
     minesweeper: 'Minesweeper',
     // In-game chrome.
@@ -28,5 +29,15 @@ export default {
     minesweeperFlagged: 'flagged',
     minesweeperMine: 'mine',
     minesweeperEmpty: 'empty',
+    // Snake: the window title, then everything the game says.
+    snake: 'Snake',
+    snakeNewGame: 'New game',
+    snakeScore: 'Score',
+    snakeBest: 'Best',
+    snakeBoard: 'Snake board. Use the arrow keys to steer',
+    snakeStart: 'Press an arrow key to start',
+    snakePaused: 'Paused. Press space to carry on',
+    snakeOver: 'Game over. Press space to play again',
+    snakeWon: 'You filled the board!',
   },
 };

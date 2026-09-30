@@ -4,10 +4,9 @@ import type { ManifestElement, ManifestWithDynamicConditions } from '@umbraco-cm
  * What a `umbraDesktopApp` manifest carries beyond the extension basics.
  *
  * Note what is **absent**: no `url`, no `section`, no `chromeProfile`. A self-contained app points
- * at nothing, is gated by nothing, and has no backoffice chrome to strip. Their absence is what
- * keeps the design's boundary structural rather than advisory: a package cannot express a
- * deep-linked catalogue entry through this type even if it wants to, so deep links stay curated in
- * this repository where their URL and chrome profile can be verified.
+ * at nothing, is gated by nothing, and has no backoffice chrome to strip, so none of those fields
+ * exist here. A package that wants a tile for one of its backoffice screens registers a
+ * `umbraDesktopCatalogue` instead (`catalogue.extension.ts`), which is where deep links live.
  *
  * Ordering is absent too, and on purpose: it lives on the manifest's root `weight`, where Umbraco
  * puts it, rather than being duplicated here as a second knob for one thing. See
@@ -41,6 +40,16 @@ export interface MetaUmbraDesktopApp {
   minSize?: { w: number; h: number };
   /** Whether more than one window of this app may be open at once. Default: allowed. */
   allowMultiple?: boolean;
+  /**
+   * Whether the user may resize or maximize the window. Default: allowed.
+   *
+   * `false` keeps the window at `defaultSize` for its whole life, the way Minesweeper's window was
+   * fixed on every Windows up to XP: no resize handles, no snapping to an edge, and no maximize
+   * button, which is left out rather than greyed as Windows does. It still moves, minimizes and
+   * closes. Meant for an
+   * app whose content does not reflow, where a bigger window is only a bigger empty margin.
+   */
+  resizable?: boolean;
 }
 
 /**
@@ -52,7 +61,10 @@ export interface MetaUmbraDesktopApp {
  * available, which for a game is right: reaching the desktop at all is already gated by the
  * desktop section's permission.
  */
-export interface ManifestUmbraDesktopApp extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions {
+export interface ManifestUmbraDesktopApp
+  // Typed with Umbraco's full condition union, as its own header apps are, so a condition's own
+  // config (a section condition's `match`, say) is accepted. The bare default only knows `alias`.
+  extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions<UmbExtensionConditionConfig> {
   type: 'umbraDesktopApp';
   meta: MetaUmbraDesktopApp;
   /**
