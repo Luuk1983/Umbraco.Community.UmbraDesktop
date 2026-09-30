@@ -1,3 +1,10 @@
+---
+id: attached-windows
+title: Attached windows
+description: Show content beside a document window, as a docked pane or a grouped window.
+sidebar_position: 6
+---
+
 # Attached windows
 
 How to show something beside a document window: a preview of it, what changed in it, its copy on
@@ -6,7 +13,7 @@ a window. The other is an AI agent building a feature or an add-on on this deskt
 able to build a consumer from this page without reading the window manager.
 
 The reasoning behind each rule is in the design doc,
-[`design/2026-09-27-attached-windows-design.md`](design/2026-09-27-attached-windows-design.md). This
+[`design/2026-09-27-attached-windows-design.md`](../design/2026-09-27-attached-windows-design.md). This
 page is what the built code does, and what it expects from you.
 
 ---
@@ -128,6 +135,10 @@ between the two.
   route. The preview reads its path with `previewTargetFromPath` (`preview/preview-target.ts`), which
   understands `/workspace/document/edit/{id}/{variant}`, including split views and invariant
   documents.
+- **Take the keyboard yourself if you need it.** The desktop never moves focus into a pane. When the
+  window becomes active the keyboard goes to the owner's own app, if the owner is an app window, and
+  a click in your pane is left to you, as in any window body. Floating, you are an ordinary app
+  window and get what `docs/developer/desktop-apps.md` §7.1 describes.
 
 ## 5. What the desktop does for you
 
@@ -146,7 +157,7 @@ Do not re-implement any of these. Each is tested, and a second copy would drift.
   document does not.
 - The taskbar group box.
 - Theming. The pane header and the strip take the path strip's height and tokens, and their buttons
-  take the `strip-button-*` tokens. See `docs/theming.md` §3.
+  take the `strip-button-*` tokens. See `docs/developer/theming.md` §3.
 
 ## 6. Traps the build found
 

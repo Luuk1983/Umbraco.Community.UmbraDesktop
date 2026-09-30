@@ -243,7 +243,7 @@ already opens. One dialog, per D3.
 A `<span class="dirty">` after the title text inside `.title`, carrying a localized
 `title`/`aria-label` so it is not a decoration that only sighted users can read.
 
-Two tokens, both added to `UMBRADESKTOP_TOKENS` and to the `docs/theming.md` table:
+Two tokens, both added to `UMBRADESKTOP_TOKENS` and to the `docs/developer/theming.md` table:
 
 | Token | Default | Why it has one |
 | --- | --- | --- |
@@ -302,7 +302,7 @@ clean console.
 - `README.md` names the guard in the Features list and in the windows section.
 - `umbraco-marketplace.json` names it in `Description` and `Tags` — it is a reason to choose the
   package, and a data-loss guard missing from the summary is a feature nobody knows exists.
-- `docs/theming.md` gains both tokens in its table.
+- `docs/developer/theming.md` gains both tokens in its table.
 - This document records the `getHasUnpersistedChanges()` finding (§3.1) and the provide-event
   technique (§4), which are the two things the next person cannot read off the code.
 - The §4.2 timing assumption is verified in a browser, and the result written down here. **Done**

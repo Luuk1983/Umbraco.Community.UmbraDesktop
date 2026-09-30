@@ -27,6 +27,7 @@ it('round-trips settings through serialise and parse', () => {
     taskbarFeatures: { 'ai-chat': false },
     wallpaperFollowsTheme: true,
     locale: { source: 'browser', hourCycle: 'h23' },
+    reopenWindows: 'off',
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -45,6 +46,7 @@ it('reads back each wallpaper kind unchanged', () => {
           theme: UMBRADESKTOP_DEFAULT_SETTINGS.theme,
           pinned: [],
           bootIntoDesktop: false,
+          reopenWindows: 'persistent',
           taskbarFeatures: {},
           wallpaperFollowsTheme: false,
           locale: { source: 'backoffice', hourCycle: 'auto' },
@@ -99,6 +101,7 @@ it('round-trips a pinned list', () => {
     taskbarFeatures: {},
     wallpaperFollowsTheme: false,
     locale: { source: 'backoffice', hourCycle: 'auto' },
+    reopenWindows: 'session',
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -303,4 +306,97 @@ it('never returns the shared default locale, so a caller cannot mutate it', () =
   const first = parseSettings(null);
   first.locale.hourCycle = 'h12';
   expect(parseSettings(null).locale.hourCycle).to.equal('auto');
+});
+
+/**
+ * Reopening your windows after a refresh is the default: nobody expects F5 to close everything they
+ * had open. Keeping them after the browser closes is the opt-in, and so is switching it off.
+ */
+it('reopens windows after a refresh by default, including for settings stored before the preference existed', () => {
+  expect(parseSettings(null).reopenWindows).to.equal('session');
+  expect(parseSettings(JSON.stringify({ v: 1, theme: 'win98' })).reopenWindows).to.equal('session');
+});
+
+it('keeps each stored choice of when to reopen windows, and ignores anything else', () => {
+  for (const mode of ['off', 'session', 'persistent'] as const) {
+    expect(parseSettings(JSON.stringify({ v: 1, reopenWindows: mode })).reopenWindows, mode).to.equal(mode);
+  }
+  for (const junk of [true, false, 'yes', 1]) {
+    expect(parseSettings(JSON.stringify({ v: 1, reopenWindows: junk })).reopenWindows, String(junk)).to.equal('session');
+  }
+});
+
+describe('the launcher layout', () => {
+  /** A layout with one of everything, for the round trip. */
+  const LAYOUT = {
+    groups: [
+      { id: 'editing', label: null, apps: ['content', 'media'] },
+      { id: 'custom-abc', label: 'Daily', apps: ['forms'] },
+    ],
+    removed: ['profiling'],
+    deletedGroups: ['advanced-security'],
+  };
+
+  it('has no layout when nothing is stored, so the launcher is built from the catalogue', () => {
+    expect(parseSettings(null).layout).to.equal(undefined);
+  });
+
+  it('round-trips a layout through serialise and parse', () => {
+    const settings = { ...parseSettings(null), layout: LAYOUT };
+    expect(parseSettings(serialiseSettings(settings)).layout).to.deep.equal(LAYOUT);
+  });
+
+  it('reads a layout that is not an object as absent, and keeps every other field', () => {
+    const raw = JSON.stringify({ v: 1, theme: 'win98', pinned: ['media'], layout: 'nonsense' });
+    const settings = parseSettings(raw);
+    expect(settings.layout).to.equal(undefined);
+    expect(settings.theme).to.equal('win98');
+    expect(settings.pinned).to.deep.equal(['media']);
+  });
+
+  it('reads a layout whose groups are not a list as absent', () => {
+    const raw = JSON.stringify({ v: 1, layout: { groups: {}, removed: [], deletedGroups: [] } });
+    expect(parseSettings(raw).layout).to.equal(undefined);
+  });
+
+  it('drops a group without a usable id or label, and keeps the rest', () => {
+    const raw = JSON.stringify({
+      v: 1,
+      layout: {
+        groups: [
+          { id: '', label: null, apps: [] },
+          { label: null, apps: ['a'] },
+          { id: 'labelled-wrong', label: 7, apps: ['b'] },
+          { id: 'no-label', apps: ['c'] },
+          { id: 'kept', label: null, apps: ['d'] },
+        ],
+      },
+    });
+    expect(parseSettings(raw).layout?.groups).to.deep.equal([{ id: 'kept', label: null, apps: ['d'] }]);
+  });
+
+  it('keeps the first of two groups with the same id', () => {
+    const raw = JSON.stringify({
+      v: 1,
+      layout: {
+        groups: [
+          { id: 'editing', label: null, apps: ['content'] },
+          { id: 'editing', label: 'Again', apps: ['media'] },
+        ],
+      },
+    });
+    expect(parseSettings(raw).layout?.groups).to.deep.equal([{ id: 'editing', label: null, apps: ['content'] }]);
+  });
+
+  it('filters non-strings out of every list and treats a missing list as empty', () => {
+    const raw = JSON.stringify({
+      v: 1,
+      layout: { groups: [{ id: 'editing', label: null, apps: ['content', 3, null] }], removed: ['a', {}] },
+    });
+    expect(parseSettings(raw).layout).to.deep.equal({
+      groups: [{ id: 'editing', label: null, apps: ['content'] }],
+      removed: ['a'],
+      deletedGroups: [],
+    });
+  });
 });

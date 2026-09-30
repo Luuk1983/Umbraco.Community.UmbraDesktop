@@ -6,8 +6,8 @@ using Umbraco.Community.UmbraDesktop.Connections;
 namespace Umbraco.Community.UmbraDesktop.Composing;
 
 /// <summary>
-/// Wires up connections to other Umbraco instances: the store, the token provider, the read client
-/// and the status service.
+/// Wires up connections to other Umbraco instances: the store, the token provider, the read client,
+/// the status service and the proxy the remote content viewer reads through.
 /// </summary>
 public sealed class ConnectionsComposer : IComposer
 {
@@ -30,5 +30,6 @@ public sealed class ConnectionsComposer : IComposer
         builder.Services.AddSingleton<DesktopConnectionTokenProvider>();
         builder.Services.AddSingleton<DesktopConnectionApiClient>();
         builder.Services.AddSingleton<DesktopConnectionStatusService>();
+        builder.Services.AddSingleton<DesktopConnectionProxy>();
     }
 }

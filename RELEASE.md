@@ -72,10 +72,14 @@ Nothing in CI can do these.
   environment claim, not as an approval gate. The `v*.*.*` tag pattern is the only guard, which is
   specific enough that publishing by accident means pushing a genuinely release-shaped tag.
 - **Screenshots.** Need a running backoffice and a login, which is why they are always the last
-  thing. They live in `docs/screenshots/`, and both the README and the marketplace files reference
-  them by `raw.githubusercontent.com/.../main/...` URL, so they resolve only once the commit is on
-  `main`. Nothing validates those URLs: a filename typo silently 404s on the live Marketplace, and
-  a broken image is worse than a missing one, so an entry is added only after the file exists.
+  thing. They live in `docs/screenshots/`. The READMEs and docs reference them by relative path,
+  which the docs check validates, and packing pins the README's copies to the release commit
+  (`PinPackedReadme` in `src/Directory.Build.targets`), so they resolve once that commit is pushed.
+  The marketplace files reference them by `raw.githubusercontent.com/.../main/...` URL, so those
+  resolve only once the commit is on `main`, and nothing validates them: a filename typo silently
+  404s on the live Marketplace, and a broken image is worse than a missing one, so an entry is
+  added only after the file exists. Never move or delete a screenshot that has shipped: the NuGet
+  pages of versions packed before the pinning point at it on `main`.
 
   Settled 2026-09-09. Nine entries below, ten files — `theme-wallpaper-match.png` was added
   2026-09-13 with the theme-matched wallpapers, and is the only shot added since the set was called

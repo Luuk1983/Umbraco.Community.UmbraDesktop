@@ -1,13 +1,13 @@
 import type {
   UmbraDesktopClockCycle,
+  UmbraDesktopLauncherLayout,
   UmbraDesktopLocaleSource,
+  UmbraDesktopReopenWindows,
   UmbraDesktopSettings,
   UmbraDesktopWallpaperRef,
 } from './types';
 import type { UmbraDesktopWallpaperView } from './wallpaper-view';
 import { resolveWallpaper, wallpaperThumbUrl } from './wallpaper';
-import { togglePinnedApp } from './pinned';
-import type { UmbraDesktopApp } from '../types';
 import { withFeatureEnabled } from '../taskbar/features/enabled';
 import { UMBRADESKTOP_DEFAULT_SETTINGS } from './settings-store';
 import { browserSettingsCache } from './settings-cache';
@@ -68,6 +68,9 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   /** Aliases of the apps pinned to Favourites, in pin order. */
   public readonly pinned = this.#settings.asObservablePart((settings) => settings.pinned);
 
+  /** The user's changes to the launcher; `undefined` when they have never arranged it. */
+  public readonly layout = this.#settings.asObservablePart((settings) => settings.layout);
+
   /** Id of the user's chosen chrome theme. */
   public readonly theme = this.#settings.asObservablePart((settings) => settings.theme);
 
@@ -81,6 +84,9 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
 
   /** Whether landing on the backoffice root should open the desktop. */
   public readonly bootIntoDesktop = this.#settings.asObservablePart((settings) => settings.bootIntoDesktop);
+
+  /** When the desktop reopens the windows this user had open: never, after a refresh, or also after the browser closes. */
+  public readonly reopenWindows = this.#settings.asObservablePart((settings) => settings.reopenWindows);
 
   /**
    * How this user wants dates and times formatted: which culture, and any clock override.
@@ -268,11 +274,17 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   }
 
   /**
-   * Pin an app to Favourites, or unpin it if any stored pin stands for it (see `togglePinnedApp`).
-   * @param app The app whose pin was clicked.
+   * Store the result of one launcher action: the pins and the layout, in one write.
+   *
+   * One method for both because a single drag can change both (pinning an app takes it out of its
+   * group), and two writes would put two round trips on the account for one gesture. The launcher
+   * computes the result with `launcher/layout-edits.ts`, since it has the catalogue and this context
+   * deliberately does not. Passing `undefined` as the layout is Reset.
+   * @param pinned The new pinned aliases.
+   * @param layout The new layout, or `undefined` for the catalogue's grouping.
    */
-  public togglePin(app: UmbraDesktopApp): void {
-    this.#update({ pinned: togglePinnedApp(this.#settings.getValue().pinned, app) });
+  public setLauncherArrangement(pinned: ReadonlyArray<string>, layout: UmbraDesktopLauncherLayout | undefined): void {
+    this.#update({ pinned: [...pinned], layout });
   }
 
   /**
@@ -349,6 +361,16 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    */
   public setBootIntoDesktop(enabled: boolean): void {
     this.#update({ bootIntoDesktop: enabled });
+  }
+
+  /**
+   * Choose when the desktop reopens this user's windows. Persists, and the windows open now stay
+   * open either way: what changes at once is where their layout is kept (see
+   * `windows/layout.controller.ts`), and what changes next time is whether they come back.
+   * @param mode Never, after a refresh, or also after the browser closes.
+   */
+  public setReopenWindows(mode: UmbraDesktopReopenWindows): void {
+    this.#update({ reopenWindows: mode });
   }
 
   /**

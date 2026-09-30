@@ -1,8 +1,15 @@
+---
+id: package-catalogues
+title: Package catalogues
+description: Give your package's own backoffice screens proper tiles and launcher groups.
+sidebar_position: 5
+---
+
 # Putting your package's screens on the desktop
 
 > How a package gives its own backoffice screens proper tiles, and its own headings in the
 > launcher, without a pull request to this repository. For why it is shaped this way, see
-> [the design](design/2026-09-25-package-catalogues-design.md).
+> [the design](../design/2026-09-25-package-catalogues-design.md).
 
 ---
 

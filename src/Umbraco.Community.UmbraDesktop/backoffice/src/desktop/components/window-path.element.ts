@@ -184,7 +184,7 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
       /* The height is interpolated from a constant rather than typed, because the same number is
          reported by every theme as 'metrics.pathbarHeight' and spent by the window sizing. A strip
          that measured one height and was paid for at another would leave every section window's app
-         that many pixels short. See docs/theming.md §4. */
+         that many pixels short. See docs/developer/theming.md §4. */
       .path-bar {
         display: flex;
         align-items: center;

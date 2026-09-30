@@ -1,7 +1,14 @@
+---
+id: theming
+title: Adding a theme
+description: Build a new skin for the desktop's chrome, the launcher, taskbar and windows.
+sidebar_position: 3
+---
+
 # Adding a theme
 
 > How to build a new skin for the UmbraDesktop chrome — launcher, taskbar, windows. For *why* the
-> system is shaped the way it is, see [the design](design/2026-09-04-theming-system-design.md);
+> system is shaped the way it is, see [the design](../design/2026-09-04-theming-system-design.md);
 > this document is the practical companion to it.
 
 A theme is a folder of CSS plus one entry in a catalogue. It never touches the four chrome
@@ -28,7 +35,7 @@ Every file except `index.ts` is optional. The **Umbraco** theme is one `index.ts
 palette and no sheets at all — every chrome token carries today's value as its CSS fallback, and an
 app token's fallback is carried by the app itself (§3), so setting nothing renders exactly what
 shipped before theming existed. Read
-[`themes/umbraco/index.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/umbraco/index.ts)
+[`themes/umbraco/index.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/umbraco/index.ts)
 first; it is the shortest complete theme there can be.
 
 Then register it, and that is the only file outside your folder you touch:
@@ -56,7 +63,7 @@ wallpaper: { kind: 'builtin', id: 'first-light' },
 Two kinds are meaningful, and the difference between them matters:
 
 - `{ kind: 'builtin', id }` names one of the images the package ships. The id is a slug from
-  [`wallpapers.generated.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/settings/wallpapers.generated.ts),
+  [`wallpapers.generated.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/settings/wallpapers.generated.ts),
   which the build writes from the files in `backoffice/wallpapers-src/`.
 - `{ kind: 'none' }` says *your theme's own ground is the wallpaper* — your
   `--umbradesktop-desktop-background-color` and `--umbradesktop-desktop-background-image`, with no
@@ -282,7 +289,7 @@ repository.
 
 A palette is `Partial<Record<UmbraDesktopPaletteToken, string>>`, so **a typo is a compile error**,
 and it covers two token groups rather than one. The normative source is two lists in
-[`theme/types.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/types.ts):
+[`theme/types.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/types.ts):
 `UMBRADESKTOP_TOKENS`, the chrome group, and `UMBRADESKTOP_APP_TOKENS`, the app group. Read those
 lists rather than a count here, which would only go stale the next time either grows. What each
 prefix is for:
@@ -295,7 +302,7 @@ prefix is for:
 | `control-*` | The window buttons: width, glyph colour, hover fills, and close's own hover pair |
 | `taskbar-*` | The bar itself: height, reserve, margin, radius, background (plus an opaque fallback), backdrop filter, top border, shadow, two text colours |
 | `start-*`, `task-*` | The buttons inside the bar: hover and active fills, and the running-window marker |
-| `launcher-*` | The panel: geometry, background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills |
+| `launcher-*` | The panel: geometry (including its width in arrange mode), background, backdrop, border, radius, shadow, text — and its contents: search radius, card background/border/radius, hover fills, the All apps/Arrange controls' own rest, border, text and active fills, the drawer's letter headings, muted text for a group handle and the like, the drop target and insertion slot, the drag ghost's shadow, the remove pane and the arrange banner, and the palette's divider |
 | `path-*` | The path strip under a section window's caption: its height, padding, background, bottom border, text and link colours, the hover fill and text behind a crumb, the separator's colour and the strip's font size |
 | `snap-ghost-*` | The outline showing where a window dragged into a desktop edge will land: its fill, its border shorthand and its corner radius. It stands in for the window that is about to be there, so the obvious value for the radius is your own `window-radius`, and Windows 98 shows what to do when your design has no translucency to lend it |
 | `notice-*` | The overwrite guard: the titlebar marker and taskbar badge colours at `info`/`warning`/`error`, the marker and badge sizes, and the banner's own background, text and leading-edge width |
@@ -303,7 +310,7 @@ prefix is for:
 | `strip-button-*` | The toolbar buttons in those strips: the path strip's Preview, the pane header's controls and a floating attached window's Dock. Corner radius, the hover fill, text and shadow, and the pressed fill, text and shadow. Separate from a crumb's hover, because a crumb is a link and these are buttons: Windows 98 hovers a crumb in navy and raises a button. A theme that styles the path strip must set the pressed pair, or it gets Umbraco's own "you are here" pink |
 | `dock-zone-*` | The zones inside an owner window where a dragged attached window can dock: border, radius, fill and label colours, and an `active` border, fill and label for the zone under the pointer. Keep the active one strong: it is drawn over a window, often a white one |
 | `task-group-*` | The box on the taskbar around a window's button and its floating attached windows' buttons: gap, padding, border, radius and background |
-| `toasts-*`, `toast-*` | The desktop's notifications ([design](design/2026-09-27-desktop-notifications-design.md)). `toasts-*` places the stack: its `top`, `right`, `bottom` and `left` offsets and its flex `direction`. The default hangs it above the taskbar at the trailing edge and grows it upwards; macOS sets `top`, clears `bottom` to `auto` and turns the direction to `column`, which is all a theme with its bar or a menu bar at the top needs. `toast-*` is one toast's surface: width, background, backdrop, text, border, radius and shadow, each falling back to the matching `launcher-*` token, so a theme that styled its launcher has styled its toasts. `toast-positive-color` is the success edge; the other severities read the `notice-*` colours |
+| `toasts-*`, `toast-*` | The desktop's notifications ([design](../design/2026-09-27-desktop-notifications-design.md)). `toasts-*` places the stack: its `top`, `right`, `bottom` and `left` offsets and its flex `direction`. The default hangs it above the taskbar at the trailing edge and grows it upwards; macOS sets `top`, clears `bottom` to `auto` and turns the direction to `column`, which is all a theme with its bar or a menu bar at the top needs. `toast-*` is one toast's surface: width, background, backdrop, text, border, radius and shadow, each falling back to the matching `launcher-*` token, so a theme that styled its launcher has styled its toasts. `toast-positive-color` is the success edge; the other severities read the `notice-*` colours |
 | `scrollback-*` | The list behind the clock. It is drawn on the `launcher-*` surface outright, so it has only its gap above the bar (`scrollback-bottom`), its radius, and `scrollback-hover-text` for a theme whose launcher hover fill is a selection bar that needs its own text colour, as Windows 98's navy does. There is no horizontal token: the list hangs from wherever your theme puts the clock, measured, so a dock that carries its clock mid-screen needs nothing. The toasts stand aside while it is open |
 | `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent with the text that reads on it, and the UI font |
 
@@ -459,7 +466,7 @@ metrics: {
 Get these wrong and windows clamp wrong at the screen edges — a window dragged into a corner
 becomes unreachable. **Derive them, never type them.** `leadingControlsWidth` shipped once as a
 hand-computed `124` describing CSS that rendered `102`; it is now computed in
-[`themes/macos/metrics.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/macos/metrics.ts)
+[`themes/macos/metrics.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/macos/metrics.ts)
 from the same constants the CSS interpolates:
 
 ```ts
@@ -542,7 +549,7 @@ ring plus the caption's hairline, and `taskbarReserve` by the dock's, whose `hei
 
 So each theme with geometry of its own ships a `metrics.test.ts` that mounts the real chrome,
 measures the rendered boxes and holds the published metrics against them — see
-[`themes/macos/metrics.test.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/macos/metrics.test.ts)
+[`themes/macos/metrics.test.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/macos/metrics.test.ts)
 and its Win98 and Umbraco counterparts. `themes/mount-themed.ts` does the mounting for you; a
 useful habit is to measure one span across the whole band (frame edge to control edge) rather than
 summing parts, so a margin nobody folded into the sum cannot hide from the test too.
@@ -809,6 +816,54 @@ This is the single most common way a new theme gets its geometry wrong: it has n
 Umbraco 4 twice — the caption and the bar — and Windows 11 once, in three consecutive themes, and
 in every case the only thing that noticed was `metrics.test.ts`. Write that file first.
 
+### 6.4 Arrange mode in a narrow theme
+
+Arrange mode's layout and its palette of what is missing sit side by side when there is room, and
+stack when there is not: a container query on the arrange-mode container switches at
+`UMBRADESKTOP_LAUNCHER_SPLIT_MIN`, in `launcher/geometry.ts`, which every theme reads rather than
+restates. Below that width the palette becomes its own view, reached from an "Add apps" button in
+the banner, and the plus, Add all and Add group buttons still do the adding once you are looking at
+it. A launcher narrower than the split minimum gets this for free; nothing in the theme has to ask
+for it.
+
+That fallback works, but switching between the layout and the palette to move things across is
+the least pleasant way to arrange, so a narrow theme should rather widen in arrange mode. Set
+`--umbradesktop-launcher-arrange-width` in the palette: the launcher takes that width while
+arranging and goes back to `--umbradesktop-launcher-width` on Done. Derive it with
+`arrangeWidthFor(yourWidth, chrome)` from `launcher/geometry.ts`, which gives your width plus the
+palette's and never less than the split minimum plus `chrome`, the border and padding your
+launcher draws around the arrange area on both sides together. Windows 98 and Umbraco 4 both do
+this, in their `metrics.ts`, and cap it at `92vw` so a small screen still falls back to the
+stacked view. Left unset, arrange mode keeps the launcher's own width.
+
+A heading you lift with `z-index`, as Umbraco 4 does for its sticky group strips, must stay below
+5, which is where the bar showing a dragged group's landing place is drawn.
+
+A menu-row theme, one whose launcher is a single column rather than a card grid, still has to say
+where a tile's own buttons go once that tile is also a row: Windows 98 and Umbraco 4 both place
+`.tile.arr .edit` back in the row's flow, after the name, so the button sits at the row's end
+instead of pinned to a corner that no longer means anything once the tile is not a card.
+
+The drag ghost, what follows the pointer while you drag, is the dragged tile's icon alone, an
+`umb-icon` with the class `drag-ghost`, drawn beside the pointer so the landing bar under it stays in
+sight. It is not part of the layout it was lifted from: it is put in the top layer as a manual
+popover, so a panel with a blur or a backdrop filter cannot become its containing block and clip it.
+That also means a rule scoped under `.cards .card` never reaches it, on purpose: style `.drag-ghost`
+directly for its size or colour. Its shadow is `launcher-ghost-shadow`, used as a CSS `drop-shadow()`
+so it follows the icon's outline, which means the token takes an offset, a blur and a colour but no
+spread; `none` turns it off, as Windows 98 does.
+
+And a theme may decide that scrolling belongs to an element other than the one the base launcher
+scrolls. The base scrolls the panel body itself, but nothing requires that: Umbraco 4 keeps its
+Favourites row fixed at the top and scrolls only the tree of groups underneath it, so its body never
+scrolls and its tree does. The drag does not assume either answer. It asks the launcher's own
+candidates, outermost first, which one actually has `overflow-y: auto` or `scroll` on it right now,
+and scrolls that one near the pointer, in `launcher/drag-scroller.ts`. A theme that moves scrolling
+inward to one of the candidates that file already lists (the body or its `.cards` in the launcher,
+the layout pane or its `.cards` in arrange mode) needs no plumbing to announce it; the drag finds it
+by asking the browser the same question you would. Scrolling some other element means adding it to
+that list, or the drag will not scroll near the edges at all.
+
 ---
 
 ## 7. Checklist before you open a PR
@@ -822,8 +877,15 @@ has shipped a green test run and a red build, and the reverse.
       to a component without adding it to `UMBRADESKTOP_TOKENS`, or the reverse, and
       `app-tokens.test.ts`, which fails if your palette answers the chrome group but misses an app
       token — a theme can pass the first and fail the second
-- [ ] Every launcher affordance still *works*: search, tiles, pinning, the user button, Desktop
-      settings, Exit. A theme may restyle, never remove (design §1.1)
+- [ ] Every launcher affordance still *works*: search, All apps, Arrange, the tiles, the drag
+      targets (Pinned and the remove pane), arrange mode's controls (the banner, handles, rename
+      fields, a tile's remove and ⋯, a group's ⋯, Move to, the palette), the user button, Desktop
+      settings, Exit. A theme may restyle, never remove (design §1.1). Two tests hold most of that
+      for every theme: `theme/themes/launcher-controls.test.ts` renders each control under your
+      palette and sheet and checks it is visible, inside the panel, legible and what a press at its
+      centre actually hits, and `theme/themes/launcher-geometry.test.ts` measures what a drag and
+      arrange mode do to the layout. Both loop over every registered theme, so yours is in them
+      the moment it is in `theme/themes/index.ts`
 - [ ] Your theme's `metrics` are measured and not merely derived — a `metrics.test.ts` (§4),
       `chromeWidth` and `chromeHeight` included, since those are what every registered app's window
       is sized from
@@ -856,4 +918,4 @@ And the part that is easiest to skip, because the code already works without it:
       and §6 is here because a theme hit it first, and the next author should not have to
 
 The wider version of that last group, for any feature rather than a theme, is in
-[`CLAUDE.md`](../CLAUDE.md) at the repository root.
+[`CLAUDE.md`](../../CLAUDE.md) at the repository root.

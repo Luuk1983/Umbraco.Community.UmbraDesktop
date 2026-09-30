@@ -70,6 +70,7 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-task-active-marker',
   '--umbradesktop-task-disabled-opacity',
   '--umbradesktop-launcher-width',
+  '--umbradesktop-launcher-arrange-width',
   '--umbradesktop-launcher-height',
   '--umbradesktop-launcher-max-height',
   '--umbradesktop-launcher-left',
@@ -86,7 +87,23 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-launcher-card-background',
   '--umbradesktop-launcher-card-border',
   '--umbradesktop-launcher-card-radius',
-  '--umbradesktop-launcher-pin-hover-background',
+  '--umbradesktop-launcher-control-background',
+  '--umbradesktop-launcher-control-border',
+  '--umbradesktop-launcher-control-text',
+  '--umbradesktop-launcher-control-active-background',
+  '--umbradesktop-launcher-letter-text',
+  '--umbradesktop-launcher-letter-border',
+  '--umbradesktop-launcher-text-muted',
+  '--umbradesktop-launcher-drop-background',
+  '--umbradesktop-launcher-drop-outline',
+  '--umbradesktop-launcher-ghost-shadow',
+  '--umbradesktop-launcher-remove-background',
+  '--umbradesktop-launcher-remove-border',
+  '--umbradesktop-launcher-remove-text',
+  '--umbradesktop-launcher-banner-background',
+  '--umbradesktop-launcher-banner-border',
+  '--umbradesktop-launcher-banner-text',
+  '--umbradesktop-launcher-divider',
   '--umbradesktop-desktop-background-color',
   '--umbradesktop-desktop-background-image',
   '--umbradesktop-desktop-scrim',
@@ -281,7 +298,7 @@ export const UMBRADESKTOP_APP_TOKEN_FALLBACKS = {
   // because Umbraco publishes no surface trio with more, and a boundary that meets WCAG 1.4.11's
   // 3:1 is not something a fallback can invent while still being the Umbraco look. That is the
   // separate problem the design doc's §6.1 settles on the app side: rule a tiled grid with the
-  // grid's own `edge-dark` ground showing through a 1px gap (`docs/desktop-apps.md` §4).
+  // grid's own `edge-dark` ground showing through a 1px gap (`docs/developer/desktop-apps.md` §4).
   '--umbradesktop-app-surface-raised': 'var(--uui-color-surface-emphasis)',
   '--umbradesktop-app-surface-sunken': 'var(--uui-color-background)',
   '--umbradesktop-app-edge-light': 'transparent',

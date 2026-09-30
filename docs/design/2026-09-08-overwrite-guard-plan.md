@@ -2942,7 +2942,7 @@ Replace the marker template in `render()`:
               const worst = worstSeverity(windowNotices(w));
               if (!worst) return '';
               // One slot, three severities. The class stays `.dirty` because all five themes style
-              // it, `unsaved-marker.test.ts` keys off it and `docs/theming.md` documents it for
+              // it, `unsaved-marker.test.ts` keys off it and `docs/developer/theming.md` documents it for
               // readers outside this repository: renaming it would silently drop every theme's
               // styling. Severity arrives as a modifier instead.
               const label =
@@ -3551,7 +3551,7 @@ cd src/Umbraco.Community.UmbraDesktop && npm run build && npm test
 **Files:**
 - Modify: `README.md` (repository root)
 - Modify: `umbraco-marketplace.json` (repository root)
-- Modify: `docs/theming.md`
+- Modify: `docs/developer/theming.md`
 
 - [ ] **Step 1: README, in both places it belongs**
 
@@ -3612,7 +3612,7 @@ banner into `docs/screenshots/` and add it to the `Screenshots` array.
 
 - [ ] **Step 3: The theming guide**
 
-In `docs/theming.md`, add the eight tokens to its table, in the same style as the rows already there:
+In `docs/developer/theming.md`, add the eight tokens to its table, in the same style as the rows already there:
 
 | Token | What it paints |
 | --- | --- |
@@ -3714,7 +3714,7 @@ goes where the next person will hit it, not in a commit message.
 - [ ] `README.md` names the feature in the Features list **and** in its own section, Markdown only
 - [ ] `umbraco-marketplace.json` names it in `Description` and `Tags`, with a screenshot if the
       package's appearance changed
-- [ ] `docs/theming.md` carries the eight tokens and both traps
+- [ ] `docs/developer/theming.md` carries the eight tokens and both traps
 - [ ] Phase 2 (§10, the diff panel) deliberately not started
 - [ ] Work left uncommitted for review
 
@@ -3751,7 +3751,7 @@ code. They are listed so that a reader who trusts a step's code block knows whic
    Every existing comment in these stylesheets uses single quotes, and now the reason is written
    down.
 5. Task 13's Windows 98 CSS omits `unsafeCSS(...)` around every interpolated string constant.
-   `docs/theming.md` §2 already says a plain string in a `css` interpolation throws at import time;
+   `docs/developer/theming.md` §2 already says a plain string in a `css` interpolation throws at import time;
    the step's own code contradicted it.
 6. Task 11's `win()` test helper omits `app.chromeProfile`, which is required, and the `as` cast
    cannot bridge it. `npm test` would never have caught it, because the test runner does not
