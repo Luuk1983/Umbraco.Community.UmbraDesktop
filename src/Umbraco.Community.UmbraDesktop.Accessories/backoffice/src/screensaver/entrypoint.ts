@@ -1,6 +1,6 @@
 import type { UmbEntryPointOnInit, UmbEntryPointOnUnload } from '@umbraco-cms/backoffice/extension-api';
 import { ScreensaverWatcher } from './watcher.js';
-import { UmbraDesktopAccessoriesSettingsController } from '../settings/settings.source.js';
+import { UmbraDesktopAccessoriesSettingsController, releaseSharedSettingsStore } from '../settings/settings.source.js';
 
 /** The one watcher, kept so {@link onUnload} can stop it. */
 let watcher: ScreensaverWatcher | undefined;
@@ -14,7 +14,9 @@ let watcher: ScreensaverWatcher | undefined;
  * second, which does nothing until the setting is on and the desktop is showing.
  *
  * The settings controller hangs off the backoffice's own host, so it is there for as long as the
- * backoffice is, and it follows changes made in the Screen Saver window.
+ * backoffice is, and it follows changes made in the Screen Saver window. Being first to ask, it is
+ * also what makes the page's settings store, on that same long-lived host, and starts its read of
+ * the user's account. Until that read answers the screensaver counts as off, the default.
  * @param host The backoffice's root element.
  */
 export const onInit: UmbEntryPointOnInit = (host) => {
@@ -23,8 +25,9 @@ export const onInit: UmbEntryPointOnInit = (host) => {
   watcher.start();
 };
 
-/** Stop watching, when the backoffice unloads this package. */
+/** Stop watching, and let go of the settings store, when the backoffice unloads this package. */
 export const onUnload: UmbEntryPointOnUnload = () => {
   watcher?.stop();
   watcher = undefined;
+  releaseSharedSettingsStore();
 };

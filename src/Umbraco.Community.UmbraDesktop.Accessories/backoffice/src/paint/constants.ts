@@ -44,22 +44,14 @@ export const PAINT_MAX_IMAGE_EDGE_PX = 4096;
 export const PAINT_UNDO_DEPTH = 20;
 
 /**
- * The memory Undo may use, in bytes. Every undo step is a whole copy of the picture, four bytes a
- * pixel, so the step count is derived from this and the picture's size rather than fixed.
+ * The memory Undo may use, in bytes, across every Paint window in the page together (`undo.ts`).
+ * Every undo step is a whole copy of the picture, four bytes a pixel, so how many steps a window
+ * keeps follows from this, the size of its picture and what the other windows hold, rather than
+ * being fixed. Shared rather than per window because Paint allows several windows: 256 MB is four
+ * steps of the largest picture Paint opens (4096 x 4096 x 4 bytes is 64 MB), and several windows
+ * each holding that much would be a tab of a gigabyte or more.
  */
 export const PAINT_UNDO_BUDGET_BYTES = 256 * 1024 * 1024;
-
-/**
- * How many undo steps a picture of this size gets: {@link PAINT_UNDO_DEPTH} for a sketch, fewer for a
- * large photograph, never none.
- * @param width The picture's width.
- * @param height Its height.
- * @returns The number of steps.
- */
-export function undoDepthFor(width: number, height: number): number {
-  const perStep = width * height * 4;
-  return Math.max(1, Math.min(PAINT_UNDO_DEPTH, Math.floor(PAINT_UNDO_BUDGET_BYTES / perStep)));
-}
 
 /** One palette swatch's edge, in px. */
 export const PAINT_SWATCH_PX = 18;

@@ -4,7 +4,7 @@ import type { Observable } from '@umbraco-cms/backoffice/external/rxjs';
 
 /**
  * The part of the desktop's settings context an app may use: formatting dates and times the way the
- * user has asked the desktop to, as its taskbar clock does. `docs/desktop-apps.md` §7.1 is the
+ * user has asked the desktop to, as its taskbar clock does. `docs/developer/desktop-apps.md` §7.2 is the
  * contract.
  *
  * Declared here rather than imported, for the reason `umbradesktop-app.d.ts` in the Entertainment

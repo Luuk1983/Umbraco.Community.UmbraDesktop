@@ -59,7 +59,7 @@ export class SystemInfoElement extends UmbLitElement {
 
   /**
    * The active theme's id, which the desktop stamps on every app and restamps when it changes
-   * (`docs/desktop-apps.md` §5). Read here as a fact to report, not only as a style hook.
+   * (`docs/developer/desktop-apps.md` §5). Read here as a fact to report, not only as a style hook.
    */
   @property({ attribute: 'data-umbradesktop-theme' })
   theme?: string;

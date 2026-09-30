@@ -24,4 +24,31 @@
 			<None Include="$(_PinnedReadmePath)" Pack="true" PackagePath="\" />
 		</ItemGroup>
 	</Target>
+
+	<!-- Bounds an add-on's dependency on the host in its packed nuspec. Here rather than in one
+	     add-on's csproj so every add-on in this repository gets it by referencing the host, and none
+	     can forget it.
+
+	     An add-on references the host as a ProjectReference, never a PackageReference: it is then
+	     compiled against the host from the same commit, and its packed floor is this release, which
+	     is what it needs, since it can register things only this release's host understands. But
+	     NuGet packs a ProjectReference as a bare minimum, ">= the version built beside it", with no
+	     ceiling, so on its own every add-on would claim to support host 18, 19 and anything after.
+	     This caps it at UmbraDesktopUmbracoMajorCeiling (Directory.Build.props), the same ceiling
+	     the Umbraco ranges use, giving "[<this release>, 17.99999999.0]". The floor stays what NuGet
+	     computed: the host's own MinVer version from this build, the same number as the add-on's
+	     because both are versioned off one tag (design D13).
+
+	     Filtered to the host by file name, so it does nothing in the host itself, in the test
+	     projects, or to any other project reference an add-on might gain. `_GetProjectReferenceVersions`
+	     is a private NuGet target and could change under an SDK update without warning, so the
+	     build-packages action checks every add-on's packed range and fails the run if this ever
+	     stops applying. -->
+	<Target Name="BoundHostRange" AfterTargets="_GetProjectReferenceVersions">
+		<ItemGroup>
+			<_ProjectReferencesWithVersions Condition="'%(Filename)' == 'Umbraco.Community.UmbraDesktop'">
+				<ProjectVersion>[%(ProjectVersion), $(UmbraDesktopUmbracoMajorCeiling)]</ProjectVersion>
+			</_ProjectReferencesWithVersions>
+		</ItemGroup>
+	</Target>
 </Project>

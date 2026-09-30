@@ -78,8 +78,20 @@ export class ScreensaverWatcher {
   /** Whether the watcher is running. */
   #running = false;
 
-  /** Every listener added, with the window it is on, so {@link stop} can take them all off again. */
-  #listeners: { target: Window; listener: () => void }[] = [];
+  /**
+   * The listener on each window listened to, so {@link stop} can take them all off again. Keyed by
+   * window, so a frame that navigates replaces its entry rather than adding one per page, and
+   * pruned of closed frames on every search, so a closed window's entry does not keep it alive for
+   * as long as the backoffice tab lives.
+   */
+  #listeners = new Map<Window, () => void>();
+
+  /**
+   * Whether the last look found the screensaver switched on and the desktop showing. The first
+   * look that finds both after either was false searches for frames at once, rather than at the
+   * next scheduled search.
+   */
+  #watching = false;
 
   #now: () => number;
   #onDesktop: () => boolean;
@@ -106,15 +118,9 @@ export class ScreensaverWatcher {
   stop(): void {
     this.#running = false;
     window.clearInterval(this.#timer);
-    for (const { target, listener } of this.#listeners) {
-      // A frame that has since been removed has no window to take listeners off, and needs none.
-      try {
-        for (const type of ACTIVITY_EVENTS) target.removeEventListener(type, listener, true);
-      } catch {
-        // Gone.
-      }
-    }
-    this.#listeners = [];
+    for (const [target, listener] of this.#listeners) this.#unlisten(target, listener);
+    this.#listeners.clear();
+    this.#watching = false;
     this.#heard = new WeakSet();
     this.#showing?.remove();
     this.#showing = undefined;
@@ -127,12 +133,23 @@ export class ScreensaverWatcher {
   tick(): void {
     if (!this.#running) return;
     const now = this.#now();
-    if (now - this.#lastScan >= SCREENSAVER_FRAME_SCAN_INTERVAL_MS) {
+    const { enabled, saver, waitMinutes } = this.options.settings.value.screensaver;
+    // Checked before the frame search, which walks every shadow root on the page: switched off, or
+    // anywhere but the desktop, there is nothing its answer would be used for. Until the user's
+    // stored settings have loaded, `enabled` is the default, off, so this is where "not loaded
+    // yet" stops as well.
+    if (!enabled || !this.#onDesktop()) {
+      this.#watching = false;
+      return;
+    }
+    if (this.#showing?.isConnected) return;
+    // Frames opened while it was not watching have not been heard, so the first look after it
+    // starts watching listens to them before judging anybody idle.
+    if (!this.#watching || now - this.#lastScan >= SCREENSAVER_FRAME_SCAN_INTERVAL_MS) {
+      this.#watching = true;
       this.#lastScan = now;
       this.#scanFrames();
     }
-    const { enabled, saver, waitMinutes } = this.options.settings.value.screensaver;
-    if (!enabled || this.#showing?.isConnected || !this.#onDesktop()) return;
     // One started by hand from Preview is not this watcher's, but it is still a screensaver running.
     if (document.body.querySelector(':scope > umbradesktop-screensaver:not([preview])')) return;
     // A hidden tab has nobody to show a screensaver to, and would only burn battery drawing one.
@@ -162,13 +179,43 @@ export class ScreensaverWatcher {
    * @param target The window.
    */
   #listen(target: Window): void {
+    // A window already listened to has navigated: the old listener went with its old document, and
+    // taking it off the window now would find the new document, which never had it. Replacing the
+    // entry is all that is needed.
     const listener = (): void => this.#onActivity(target);
-    this.#listeners.push({ target, listener });
+    this.#listeners.set(target, listener);
     for (const type of ACTIVITY_EVENTS) target.addEventListener(type, listener, { capture: true, passive: true });
   }
 
-  /** Listen in every same-origin frame whose current document has not been heard from yet. */
+  /**
+   * Take one window's listener off.
+   * @param target The window.
+   * @param listener Its listener.
+   */
+  #unlisten(target: Window, listener: () => void): void {
+    // A frame that has since been removed has no window to take listeners off, and needs none.
+    try {
+      for (const type of ACTIVITY_EVENTS) target.removeEventListener(type, listener, true);
+    } catch {
+      // Gone.
+    }
+  }
+
+  /**
+   * How many windows are being listened to, the page included. Public so a test can see that
+   * closed frames are let go of.
+   */
+  get listening(): number {
+    return this.#listeners.size;
+  }
+
+  /**
+   * Listen in every same-origin frame whose current document has not been heard from yet, and let
+   * go of every frame that has closed since the last search. A removed iframe's window reports
+   * `closed`; nothing on it can fire again, so its entry would only keep it in memory.
+   */
   #scanFrames(): void {
+    for (const target of this.#listeners.keys()) if (target !== window && target.closed) this.#listeners.delete(target);
     for (const frame of framesIn(document)) {
       let frameDocument: Document | null = null;
       try {

@@ -56,7 +56,7 @@ export const UMBRADESKTOP_THEME_ATTRIBUTE = 'data-umbradesktop-theme';
  * imported from this package, the same reason the theme id reaches an app as an attribute: a
  * `toggleAttribute` is all an app writes, and the state is readable at any moment rather than only
  * when a change happens to be heard. Presence is what counts; the value is ignored. Published in
- * `docs/desktop-apps.md` §7.
+ * `docs/developer/desktop-apps.md` §7.
  */
 export const UMBRADESKTOP_DIRTY_ATTRIBUTE = 'data-umbradesktop-dirty';
 

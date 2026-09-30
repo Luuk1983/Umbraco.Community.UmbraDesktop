@@ -5,8 +5,8 @@ import { UNSAVED_ATTRIBUTE } from '../shared/unsaved.js';
 import { fileNameFor, isTextFile } from '../shared/media-files.js';
 import { createMediaOpener } from '../shared/media-open.js';
 import type { MediaOpener } from '../shared/media-open.js';
-import { createMediaSaver } from '../shared/media-save.js';
-import type { MediaSaver } from '../shared/media-save.js';
+import { createMediaSaver, createOverwriteQuestion } from '../shared/media-save.js';
+import type { MediaSaver, OverwriteQuestion } from '../shared/media-save.js';
 import { createSaveFolderPicker } from '../shared/save-location.js';
 import type { SaveFolderPicker } from '../shared/save-location.js';
 import { NOTEPAD_BAR_HEIGHT_PX, NOTEPAD_PADDING_PX } from './constants.js';
@@ -63,6 +63,13 @@ export class NotepadElement extends UmbLitElement {
   @property({ attribute: false })
   openFromMedia?: MediaOpener;
 
+  /**
+   * Asks whether to overwrite a file somebody changed in the media library since it was opened.
+   * Umbraco's confirm dialog unless a test says otherwise.
+   */
+  @property({ attribute: false })
+  confirmOverwrite?: OverwriteQuestion;
+
   /** The document. */
   @state()
   private _text = '';
@@ -84,6 +91,12 @@ export class NotepadElement extends UmbLitElement {
 
   /** The media item this document came from or was last saved as, which the next save overwrites. */
   #mediaUnique?: string;
+
+  /**
+   * When that media item was last changed as far as this document knows: as it was opened, or as
+   * this document last saved it. A save that finds a later date asks before overwriting.
+   */
+  #updateDate?: string | null;
 
   /** The last thing worth telling the person: a save, or why an open or a save did not happen. */
   @state()
@@ -177,6 +190,7 @@ export class NotepadElement extends UmbLitElement {
       return;
     }
     this.#load(await result.blob.text(), result.name, result.extension || NEW_DOCUMENT_EXTENSION, result.unique);
+    this.#updateDate = result.updateDate;
   }
 
   /**
@@ -185,6 +199,11 @@ export class NotepadElement extends UmbLitElement {
    *
    * The text and name that were saved are what "saved" is measured against, not the text when the
    * save finished: a save takes a round trip, and typing during it must still read as unsaved.
+   *
+   * A file somebody changed in the media library since this document opened or last saved it is
+   * not overwritten without asking: the saver answers with a conflict, and a yes saves again with
+   * `force`. A no saves nothing and leaves the work unsaved, so the person can look at the other
+   * version before deciding.
    */
   async save(): Promise<void> {
     let folder = this.#folder ?? null;
@@ -196,17 +215,30 @@ export class NotepadElement extends UmbLitElement {
     const untitled = this.#term('notepadUntitled', 'Untitled');
     const text = this._text;
     const name = this._name;
-    const result = await (this.saveToMedia ?? createMediaSaver(this))({
+    const saver = this.saveToMedia ?? createMediaSaver(this);
+    const request = {
       file: new File([text], fileNameFor(name, untitled, this.#extension), { type: 'text/plain;charset=utf-8' }),
       name: name.trim() || untitled,
       folder,
       existing: this.#mediaUnique,
-    });
+      expectedUpdateDate: this.#updateDate,
+    };
+    let result = await saver(request);
+    if (!result.ok && result.conflict) {
+      // Named as the media library knows it, which is the name it was opened or last saved under.
+      const label = this._savedName.trim() || untitled;
+      if (!(await (this.confirmOverwrite ?? createOverwriteQuestion(this))(label))) {
+        this._notice = this.#term('overwriteDeclined', `Not saved: ${label} was changed in the media library.`, label);
+        return;
+      }
+      result = await saver({ ...request, force: true });
+    }
     if (!result.ok) {
       this._notice = this.#term('saveFailed', `Not saved. ${result.message ?? ''}`, result.message ?? '');
       return;
     }
     this.#mediaUnique = result.unique;
+    this.#updateDate = result.updateDate;
     this.#folder = folder;
     this._savedText = text;
     this._savedName = name;
@@ -227,6 +259,7 @@ export class NotepadElement extends UmbLitElement {
     this._savedName = name;
     this.#extension = extension;
     this.#mediaUnique = unique;
+    this.#updateDate = undefined;
     this.#folder = undefined;
     this._caret = 0;
     this._notice = '';

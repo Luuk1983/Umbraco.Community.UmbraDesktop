@@ -18,10 +18,34 @@ Lockstep is a decision, not an accident: design D13 in
 §8.3, and Accessories follows it unchanged
 ([`docs/design/2026-09-24-accessories-design.md`](docs/design/2026-09-24-accessories-design.md)).
 All three publish on **every** release, changed or not — a gap in an add-on's version history
-reads like a broken pipeline, where a version with no changes reads like Umbraco. The one place
-lockstep must not leak is the dependency: each add-on depends on the host by **range**
-(`[17.0.0,18.0.0)` in `src/Directory.Packages.props`), never as a `ProjectReference`, or every host
-release forces an add-on release and breaks anyone who upgraded the host in between.
+reads like a broken pipeline, where a version with no changes reads like Umbraco.
+
+**Every add-on requires this release of the host, or any later 17.** Each add-on references the
+host as a `ProjectReference`, never a `PackageReference`: it is then compiled against the host from
+the same commit, and its packed dependency is `[<this release>, 17.99999999.0]`. The floor is the
+release itself because an add-on registers things only this release's host understands (package
+catalogues; for Accessories also the unsaved-work attribute and the settings context's
+`formatDateTime`). The add-ons used to take the host by package range, floored at 17.0.0, which
+compiled against 17.0.0 and let consumers keep a host that silently lacked them: on such a host the
+Accessories Clock threw on every render and Notepad closed over unsaved work without asking.
+Upgrading the host on its own within 17 is still fine; the ceiling is why. There is deliberately no
+central `PackageVersion` for the host any more, so an add-on written with a `PackageReference` fails
+restore with NU1010 instead of shipping the old range.
+
+A `ProjectReference` does not give that range by itself. NuGet packs it as a bare minimum,
+`>= <version built beside it>`, with no ceiling at all, so an add-on would claim to support host 18
+and every major after it. The `BoundHostRange` target in `src/Directory.Build.targets` rewrites it
+after NuGet computes it, for every project that references the host, so a new add-on gets it
+without doing anything. The ceiling is one property, `UmbraDesktopUmbracoMajorCeiling` in
+`src/Directory.Build.props`, which the Umbraco ranges in `src/Directory.Packages.props` use too.
+The target hooks NuGet's private `_GetProjectReferenceVersions`, which an SDK update can change
+without a word, so `.github/actions/build-packages` reads the nuspec of every packed add-on (every
+`Umbraco.Community.UmbraDesktop.*` package other than the host) and fails the run unless its host
+dependency is exactly `[<host package version>, 17.99999999.0]`. The floor comes from the host
+project's own MinVer version, the same number as the add-on's because both are versioned off one
+tag. **Raise the ceiling with the major**: the release that moves to Umbraco 18 changes
+`UmbraDesktopUmbracoMajorCeiling` to `18.99999999`, which moves the Umbraco ranges' and the add-ons'
+ceilings together.
 
 `Umbraco.Community.UmbraDesktop.TestInstance` and `.Tests` are never published.
 
@@ -131,6 +155,13 @@ Nothing in CI can do these.
   `src/Directory.Packages.props` is a bounded range for that reason. `Umbraco.JsonSchema.Extensions`
   sidesteps it differently: it is build-time only, so it carries `PrivateAssets="all"` and never
   reaches the dependency list at all.
+- **`[17.0.0,18.0.0)` admits Umbraco 18's prereleases.** NuGet orders `18.0.0-rc.1` before
+  `18.0.0`, so an exclusive `18.0.0` ceiling lets every 18 beta and RC in, which is exactly the
+  code a 17 package has never been tested against. Bound Umbraco references at `17.99999999`
+  instead (`[17.0.0,17.99999999]`), which stops below every 18 version, prerelease or not, and is
+  a plain stable number so it pushes cleanly (see `-0` below). The ceiling is one property,
+  `UmbraDesktopUmbracoMajorCeiling` in `src/Directory.Build.props`, shared with the add-ons' host
+  dependency.
 - **`-0` as an upper bound** (`[17.0.0,18.0.0-0)`) packs fine and then fails
   `dotnet nuget push` with `400 BadRequest: invalid Version`. Use plain stable bounds.
 - **`dotnet test` against a directory or a solution** silently matches nothing and reports green.

@@ -233,7 +233,7 @@ describe('the launcher arrangement', () => {
 
 /**
  * Apps format times through the context, so they follow the same two settings the taskbar clock
- * does and change when the user changes them. Public API: see `docs/desktop-apps.md`.
+ * does and change when the user changes them. Public API: see `docs/developer/desktop-apps.md`.
  */
 it('formats a time for apps the way the taskbar clock does, following the clock setting', async () => {
   const context = await contextOnHost();

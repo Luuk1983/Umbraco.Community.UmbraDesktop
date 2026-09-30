@@ -80,6 +80,7 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
     [ProducesResponseType(typeof(StickyNoteResponseModel), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public IActionResult CreateNote(CreateStickyNoteRequestModel model)
     {
         if (!CanUseDesktop(out var author))
@@ -87,21 +88,24 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
             return Forbid();
         }
 
-        try
+        return Guarded(() =>
         {
-            var note = store.Create(model.Text, model.Colour, author);
-            return StatusCode(StatusCodes.Status201Created, StickyNoteResponseModel.From(note));
-        }
-        catch (StickyNoteBoardFullException exception)
-        {
-            return BadRequest(new ProblemDetails
+            try
             {
-                Type = "StickyNoteBoardFull",
-                Title = "The board is full",
-                Detail = exception.Message,
-                Status = StatusCodes.Status400BadRequest,
-            });
-        }
+                var note = store.Create(model.Text, model.Colour, author);
+                return StatusCode(StatusCodes.Status201Created, StickyNoteResponseModel.From(note));
+            }
+            catch (StickyNoteBoardFullException exception)
+            {
+                return BadRequest(new ProblemDetails
+                {
+                    Type = "StickyNoteBoardFull",
+                    Title = "The board is full",
+                    Detail = exception.Message,
+                    Status = StatusCodes.Status400BadRequest,
+                });
+            }
+        });
     }
 
     /// <summary>Edit a note, if nobody else has since the caller read it.</summary>
@@ -114,6 +118,7 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public IActionResult UpdateNote(Guid key, UpdateStickyNoteRequestModel model)
     {
         if (!CanUseDesktop(out var author))
@@ -121,19 +126,22 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
             return Forbid();
         }
 
-        var result = store.Update(key, model.Text, model.Colour, model.Version, author);
-        return result.Status switch
+        return Guarded(() =>
         {
-            StickyNoteWriteStatus.Saved => Ok(StickyNoteResponseModel.From(result.Note!)),
-            StickyNoteWriteStatus.Conflict => Conflict(new ProblemDetails
+            var result = store.Update(key, model.Text, model.Colour, model.Version, author);
+            return result.Status switch
             {
-                Type = "StickyNoteConflict",
-                Title = "Somebody else changed this note",
-                Status = StatusCodes.Status409Conflict,
-                Extensions = { [ConflictNoteExtension] = StickyNoteResponseModel.From(result.Note!) },
-            }),
-            _ => NotFound(),
-        };
+                StickyNoteWriteStatus.Saved => Ok(StickyNoteResponseModel.From(result.Note!)),
+                StickyNoteWriteStatus.Conflict => Conflict(new ProblemDetails
+                {
+                    Type = "StickyNoteConflict",
+                    Title = "Somebody else changed this note",
+                    Status = StatusCodes.Status409Conflict,
+                    Extensions = { [ConflictNoteExtension] = StickyNoteResponseModel.From(result.Note!) },
+                }),
+                _ => NotFound(),
+            };
+        });
     }
 
     /// <summary>Take a note off the board.</summary>
@@ -144,6 +152,7 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public IActionResult DeleteNote(Guid key)
     {
         if (!CanUseDesktop(out _))
@@ -151,7 +160,7 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
             return Forbid();
         }
 
-        return store.Delete(key) ? Ok() : NotFound();
+        return Guarded(() => store.Delete(key) ? Ok() : NotFound());
     }
 
     /// <summary>Move a note on the board, to sit before another or at the end.</summary>
@@ -163,6 +172,7 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public IActionResult MoveNote(Guid key, MoveStickyNoteRequestModel model)
     {
         if (!CanUseDesktop(out _))
@@ -170,7 +180,31 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
             return Forbid();
         }
 
-        return store.Move(key, model.Before) ? Ok() : NotFound();
+        return Guarded(() => store.Move(key, model.Before) ? Ok() : NotFound());
+    }
+
+    /// <summary>
+    /// Run a write, answering a board the store refused to write over with problem details rather
+    /// than a bare 500, so the window can say why nothing was saved.
+    /// </summary>
+    /// <param name="write">The write.</param>
+    /// <returns>The write's own result, or a 500 carrying <c>StickyNoteBoardUnreadable</c>.</returns>
+    private IActionResult Guarded(Func<IActionResult> write)
+    {
+        try
+        {
+            return write();
+        }
+        catch (StickyNoteBoardUnreadableException exception)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Type = "StickyNoteBoardUnreadable",
+                Title = "The shared board could not be read",
+                Detail = exception.Message,
+                Status = StatusCodes.Status500InternalServerError,
+            });
+        }
     }
 
     /// <summary>Whether the current user has the Desktop section, and their name if so.</summary>

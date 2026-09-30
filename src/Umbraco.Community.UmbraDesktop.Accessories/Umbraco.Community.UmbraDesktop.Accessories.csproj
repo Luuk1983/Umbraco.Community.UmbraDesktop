@@ -10,8 +10,8 @@
 	  <Product>Umbraco.Community.UmbraDesktop.Accessories</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop.Accessories</PackageId>
 	  <Title>UmbraDesktop Accessories</Title>
-	  <Description>The small tools for UmbraDesktop. An optional add-on that puts Notepad, Paint, Sticky Notes, Calculator and Clock on the desktop, each in a window of its own and themed along with the rest of it.</Description>
-	  <PackageTags>umbraco;backoffice;desktop;accessories;notepad;paint;sticky-notes;calculator;clock;umbradesktop;apps;umbraco-marketplace</PackageTags>
+	  <Description>The small tools for UmbraDesktop. An optional add-on that puts Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information on the desktop, each in a window of its own and themed along with the rest of it.</Description>
+	  <PackageTags>umbraco;backoffice;desktop;accessories;notepad;paint;sticky-notes;calculator;clock;character-map;screensaver;disk-cleanup;system-information;umbradesktop;apps;umbraco-marketplace</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop.Accessories</RootNamespace>
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>
@@ -93,6 +93,9 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
     <Content Remove="backoffice\**" />
     <Content Remove="package.json" />
     <Content Remove="package-lock.json" />
+    <!-- The add-on's docs are read on GitHub (and later by the desktop's Help app), never from
+         the package: without this, docs/product.json packs as content at the package root. -->
+    <Content Remove="docs\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -106,17 +109,20 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	<ItemGroup>
 	  <PackageReference Include="MinVer" PrivateAssets="all" />
 	  <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
-	  <!-- The host, by version range and never as a ProjectReference: a ProjectReference packs the
-	       exact version built alongside it, which would force an Accessories release for every
-	       host release and break anyone who upgraded the host in between (design D13). -->
-	  <PackageReference Include="Umbraco.Community.UmbraDesktop" />
-	  <!-- The Sticky Notes API (StickyNotes/) is a management API controller, the only server-side
-	       code in this package. Referenced directly rather than reached through the host, because the
-	       host's range resolves to its lowest version for this package's own restore, and 17.0.0 of
-	       the host does not bring Umbraco's management API with it. Same central ranges as the host's
-	       own references, so the two can never ask for different Umbraco versions. -->
-	  <PackageReference Include="Umbraco.Cms.Api.Common" />
-	  <PackageReference Include="Umbraco.Cms.Api.Management" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <!-- The host, as the project built beside this one rather than a package from nuget.org. A
+	       package range compiles against the lowest host in range, so this add-on would be built
+	       against 17.0.0 and ship claiming to work with a host that lacks what it relies on: the
+	       package catalogue that defines its launcher group, the unsaved-work attribute Notepad,
+	       Paint and Sticky Notes set, and the settings context's formatDateTime the Clock uses.
+	       Built from the same commit, the two cannot disagree.
+	       It also brings Umbraco.Cms.Api.Management, the Sticky Notes controller's base class and
+	       backoffice route, and Umbraco.Cms.Core transitively.
+	       The packed range, "[<this release>, 17.99999999.0]", comes from the BoundHostRange target
+	       in src/Directory.Build.targets, which every add-on referencing the host picks up. -->
+	  <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />
 	</ItemGroup>
 
 </Project>

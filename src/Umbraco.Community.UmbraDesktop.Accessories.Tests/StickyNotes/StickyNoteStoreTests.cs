@@ -23,7 +23,7 @@ public class StickyNoteStoreTests
     {
         var values = new InMemoryKeyValueService();
         var clock = new FakeTimeProvider(Start);
-        return (new StickyNoteStore(values, clock), values, clock);
+        return (new StickyNoteStore(values, RecordingScopeProvider.Create(values.Calls), clock), values, clock);
     }
 
     /// <summary>A board nobody has written on is empty rather than missing.</summary>
@@ -58,7 +58,7 @@ public class StickyNoteStoreTests
         var (store, values, clock) = Create();
         var note = store.Create("Shared", "green", "Ada");
 
-        var elsewhere = new StickyNoteStore(values, clock);
+        var elsewhere = new StickyNoteStore(values, RecordingScopeProvider.Create(values.Calls), clock);
 
         Assert.Equal(note, Assert.Single(elsewhere.GetAll()));
     }
@@ -171,7 +171,52 @@ public class StickyNoteStoreTests
         var (_, values, clock) = Create();
         values.SetValue(StickyNoteStore.StorageKey, "not json");
 
-        Assert.Empty(new StickyNoteStore(values, clock).GetAll());
+        Assert.Empty(new StickyNoteStore(values, RecordingScopeProvider.Create(values.Calls), clock).GetAll());
+    }
+
+    /// <summary>
+    /// ...but never written over. Reading it as empty is right for showing the board; saving that
+    /// empty board back would delete every note a newer version wrote, the moment anyone added one.
+    /// </summary>
+    [Fact]
+    public void Refuses_to_write_over_a_board_it_cannot_read()
+    {
+        var (store, values, _) = Create();
+        values.SetValue(StickyNoteStore.StorageKey, "not json");
+
+        Assert.Throws<StickyNoteBoardUnreadableException>(() => store.Create("New", "yellow", "Ada"));
+        Assert.Throws<StickyNoteBoardUnreadableException>(() => store.Update(Guid.NewGuid(), "x", "yellow", 1, "Ada"));
+        Assert.Throws<StickyNoteBoardUnreadableException>(() => store.Delete(Guid.NewGuid()));
+        Assert.Throws<StickyNoteBoardUnreadableException>(() => store.Move(Guid.NewGuid(), null));
+        Assert.Equal("not json", values.Values[StickyNoteStore.StorageKey]);
+    }
+
+    /// <summary>
+    /// Every write holds Umbraco's key-value lock from before the read until after the write, so two
+    /// servers of a load-balanced site cannot both read the same board and the later write erase the
+    /// earlier one's note. The lock is a database lock, which a lock in this process could never be.
+    /// </summary>
+    [Fact]
+    public void Holds_the_key_value_lock_from_the_read_to_the_write()
+    {
+        var (store, values, _) = Create();
+
+        store.Create("Locked", "yellow", "Ada");
+
+        Assert.Equal(
+            ["scope", $"lock:{Umbraco.Cms.Core.Constants.Locks.KeyValues}", "get", "set", "complete", "dispose"],
+            values.Calls);
+    }
+
+    /// <summary>A write that changes nothing, such as deleting a note that is already gone, writes nothing.</summary>
+    [Fact]
+    public void Writes_nothing_when_nothing_changed()
+    {
+        var (store, values, _) = Create();
+
+        Assert.False(store.Delete(Guid.NewGuid()));
+
+        Assert.DoesNotContain("set", values.Calls);
     }
 
     /// <summary>The texts on the board, in board order, for asserting on order.</summary>

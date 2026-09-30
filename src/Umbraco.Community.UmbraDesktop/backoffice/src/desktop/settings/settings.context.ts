@@ -100,7 +100,7 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    * Format a date or time the way this user has asked for it, exactly as the taskbar clock does:
    * their choice of culture, backoffice or browser, and their 12 or 24 hour override.
    *
-   * **Public API for apps**, documented in `docs/desktop-apps.md` §7.1, which is why it is a method
+   * **Public API for apps**, documented in `docs/developer/desktop-apps.md` §7.2, which is why it is a method
    * here rather than something an app reimplements: an app in another package cannot import
    * `clock-format.ts`, and a copy of its rules would drift. Pair it with {@link locale}, which emits
    * when either setting changes, so an app can redraw.

@@ -20,7 +20,7 @@ import './system-info/system-info.element.js';
  * and overflowed its minimum box by 40px, under every theme, with every other test green.
  *
  * The theme ids are stamped as attributes only, with no palette behind them, so what this measures
- * is each app's own per-theme branches. That is exactly the part `docs/desktop-apps.md` §8 warns can
+ * is each app's own per-theme branches. That is exactly the part `docs/developer/desktop-apps.md` §8 warns can
  * change an app's size under one theme alone. The palettes themselves are the host's, and every
  * accessory reads them only for colours, radii and bevels drawn as shadows, none of which take
  * layout.
@@ -39,7 +39,7 @@ const TAGS: Record<string, string> = {
   SystemInfo: 'umbradesktop-system-info',
 };
 
-/** The published theme ids (`docs/desktop-apps.md` §5), plus no theme at all. */
+/** The published theme ids (`docs/developer/desktop-apps.md` §5), plus no theme at all. */
 const THEMES = [undefined, 'umbraco', 'umbraco4', 'macos', 'win11', 'win98'];
 
 /** A registered app, as far as this test reads it. */

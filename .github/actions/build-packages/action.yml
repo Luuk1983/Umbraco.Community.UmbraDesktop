@@ -117,3 +117,37 @@ runs:
           echo "$pkg: $count static web assets"
           [ "$count" -gt 0 ] || { echo "::error::$pkg ships no frontend"; exit 1; }
         done
+
+    # Every add-on has to require this release of the host, up to the last 17: "[<host version>,
+    # 17.99999999.0]". NuGet packs a ProjectReference as a bare ">= version" with no ceiling, and the
+    # bound comes from src/Directory.Build.targets, which hooks NuGet's private
+    # `_GetProjectReferenceVersions`. An SDK update can rename or reshape that target without a word,
+    # and the pack would carry on succeeding with an unbounded dependency. This is where that shows.
+    # An add-on is every Umbraco.Community.UmbraDesktop.* package other than the host, so a new one is
+    # checked without anyone remembering to list it here. The ceiling is read from the property the
+    # target uses rather than typed a second time, and given the ".0" NuGet normalises a two-part
+    # version to in a nuspec.
+    - name: Verify each add-on's host dependency range
+      shell: bash
+      run: |
+        out="${{ inputs.output }}"
+        shopt -s nullglob
+        hosts=("$out"/Umbraco.Community.UmbraDesktop.[0-9]*.nupkg)
+        [ "${#hosts[@]}" -eq 1 ] || { echo "::error::expected exactly one host package in $out, found ${#hosts[@]}: ${hosts[*]}"; exit 1; }
+        addons=()
+        for pkg in "$out"/Umbraco.Community.UmbraDesktop.*.nupkg; do
+          [ "$pkg" = "${hosts[0]}" ] || addons+=("$pkg")
+        done
+        [ "${#addons[@]}" -gt 0 ] || { echo "::error::no add-on packages in $out"; exit 1; }
+        host_version=$(unzip -p "${hosts[0]}" '*.nuspec' | sed -n 's:.*<version>\(.*\)</version>.*:\1:p')
+        [ -n "$host_version" ] || { echo "::error::could not read the version from ${hosts[0]}"; exit 1; }
+        ceiling=$(dotnet msbuild src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj -getProperty:UmbraDesktopUmbracoMajorCeiling)
+        [[ "$ceiling" =~ ^[0-9]+\.[0-9]+$ ]] && ceiling="$ceiling.0"
+        expected="[$host_version, $ceiling]"
+        failed=0
+        for pkg in "${addons[@]}"; do
+          actual=$(unzip -p "$pkg" '*.nuspec' | sed -n 's:.*<dependency id="Umbraco.Community.UmbraDesktop" version="\([^"]*\)".*:\1:p')
+          echo "$pkg: host dependency '$actual', expected '$expected'"
+          [ "$actual" = "$expected" ] || { echo "::error::$pkg depends on the host as '$actual', expected '$expected'"; failed=1; }
+        done
+        exit "$failed"

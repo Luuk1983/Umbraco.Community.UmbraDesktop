@@ -8,17 +8,16 @@ namespace Umbraco.Community.UmbraDesktop.Accessories.StickyNotes;
 /// Registers the sticky note board, the first server-side code in the Accessories package.
 /// </summary>
 /// <remarks>
-/// A singleton, as the host's own key-value stores are: Umbraco registers <c>IKeyValueService</c> as
-/// a singleton that opens its own scope per call, and the store's write lock only serialises writes
-/// if every request shares the one instance. <c>TimeProvider</c> is registered only if nothing else
-/// has, so a site or a test that supplies its own keeps it.
+/// A singleton, as the host's own key-value stores are: it holds no state of its own, and its
+/// writes are serialised by a database lock rather than by sharing an instance. The store's <c>TimeProvider</c> and
+/// <c>ICoreScopeProvider</c> are Umbraco's own, so nothing else is registered here: a clock of this
+/// package's would replace the one the site chose.
 /// </remarks>
 public sealed class StickyNotesComposer : IComposer
 {
     /// <inheritdoc />
     public void Compose(IUmbracoBuilder builder)
     {
-        builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<StickyNoteStore>();
     }
 }

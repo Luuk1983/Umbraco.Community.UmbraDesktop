@@ -18,9 +18,35 @@ namespace Umbraco.Community.UmbraDesktop.Accessories.Tests.StickyNotes;
 /// </remarks>
 public class StickyNotesControllerTests
 {
+    /// <summary>The key-value store behind <see cref="_store"/>, so a test can put an unreadable board in it.</summary>
+    private readonly InMemoryKeyValueService _values = new();
+
     /// <summary>The store the controller writes to, shared with the assertions.</summary>
-    private readonly StickyNoteStore _store =
-        new(new InMemoryKeyValueService(), new FakeTimeProvider(new DateTimeOffset(2026, 9, 24, 10, 0, 0, TimeSpan.Zero)));
+    private readonly StickyNoteStore _store;
+
+    /// <summary>Builds the store over <see cref="_values"/>.</summary>
+    public StickyNotesControllerTests() =>
+        _store = new(
+            _values,
+            RecordingScopeProvider.Create(_values.Calls),
+            new FakeTimeProvider(new DateTimeOffset(2026, 9, 24, 10, 0, 0, TimeSpan.Zero)));
+
+    /// <summary>
+    /// A board this version cannot read refuses the write with problem details the window can show,
+    /// rather than a bare 500 or, worse, saving over the notes it could not read.
+    /// </summary>
+    [Fact]
+    public void Answers_a_write_to_an_unreadable_board_with_problem_details()
+    {
+        _values.SetValue(StickyNoteStore.StorageKey, "not json");
+
+        var result = Assert.IsType<ObjectResult>(As().CreateNote(new CreateStickyNoteRequestModel("Hi", "blue")));
+
+        Assert.Equal(StatusCodes.Status500InternalServerError, result.StatusCode);
+        var problem = Assert.IsType<ProblemDetails>(result.Value);
+        Assert.Equal("StickyNoteBoardUnreadable", problem.Type);
+        Assert.Equal("not json", _values.Values[StickyNoteStore.StorageKey]);
+    }
 
     /// <summary>A controller acting for a user with the given name and sections.</summary>
     /// <param name="name">The user's name.</param>

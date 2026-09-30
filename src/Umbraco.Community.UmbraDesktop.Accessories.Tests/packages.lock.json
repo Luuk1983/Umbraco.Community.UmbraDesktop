@@ -1367,17 +1367,24 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "umbraco.community.umbradesktop": {
+        "type": "Project",
+        "dependencies": {
+          "Umbraco.Cms.Api.Common": "[17.0.0, 17.99999999.0]",
+          "Umbraco.Cms.Api.Management": "[17.0.0, 17.99999999.0]",
+          "Umbraco.Cms.Core": "[17.0.0, 17.99999999.0]",
+          "Umbraco.Cms.Infrastructure": "[17.0.0, 17.99999999.0]"
+        }
+      },
       "umbraco.community.umbradesktop.accessories": {
         "type": "Project",
         "dependencies": {
-          "Umbraco.Cms.Api.Common": "[17.0.0, 18.0.0)",
-          "Umbraco.Cms.Api.Management": "[17.0.0, 18.0.0)",
-          "Umbraco.Community.UmbraDesktop": "[17.0.0, 18.0.0)"
+          "Umbraco.Community.UmbraDesktop": "[1.0.0, )"
         }
       },
       "Umbraco.Cms.Api.Common": {
         "type": "CentralTransitive",
-        "requested": "[17.0.0, 18.0.0)",
+        "requested": "[17.0.0, 17.99999999.0]",
         "resolved": "17.0.0",
         "contentHash": "WM43vpWH6p75IdocPGvwesybdJl+rMPlSayKE4kU62jDUM6/jUNe3/bgJwNokHvh2EXgqgOB6GR7k+IqrXcaaA==",
         "dependencies": {
@@ -1392,7 +1399,7 @@
       },
       "Umbraco.Cms.Api.Management": {
         "type": "CentralTransitive",
-        "requested": "[17.0.0, 18.0.0)",
+        "requested": "[17.0.0, 17.99999999.0]",
         "resolved": "17.0.0",
         "contentHash": "G7xO9Oa77+qOzf6j9QU44Q1r0RwjevXMqZIgn3m+EP9u6sybdKaVxwv/lDK+FWHx1xrq7AhEYo+lfD7FlbanVw==",
         "dependencies": {
@@ -1406,7 +1413,7 @@
       },
       "Umbraco.Cms.Core": {
         "type": "CentralTransitive",
-        "requested": "[17.0.0, 18.0.0)",
+        "requested": "[17.0.0, 17.99999999.0]",
         "resolved": "17.0.0",
         "contentHash": "XmwzNfoXJkT/QkK48ePr73PPZGTaJF2Z2vljKVdZMbMMaZqY3SForO8Uy9LcmFYqX9+VaPiyFEqF+0l/D6J0rw==",
         "dependencies": {
@@ -1425,7 +1432,7 @@
       },
       "Umbraco.Cms.Infrastructure": {
         "type": "CentralTransitive",
-        "requested": "[17.0.0, 18.0.0)",
+        "requested": "[17.0.0, 17.99999999.0]",
         "resolved": "17.0.0",
         "contentHash": "35L5XwCAqu/xQIkupt4jspqY302FkGC/eKTJwAa67T+uH65bRdQ9DKC4LJN3wQOK93zaWYGglhbpqFYXKVtxcw==",
         "dependencies": {
@@ -1456,23 +1463,6 @@
           "Umbraco.Cms.Core": "[17.0.0, 18.0.0)",
           "ncrontab": "3.4.0"
         }
-      },
-      "Umbraco.Community.UmbraDesktop": {
-        "type": "CentralTransitive",
-        "requested": "[17.0.0, 18.0.0)",
-        "resolved": "17.0.0",
-        "contentHash": "AyqHRZ/9dRQvxr2IeOWbqDoTnJGT+DDZZPx7GTpAQs92mIbynPBDSvFL1RIZobJ8ACkOVdMrBwQwtjBNHqIYcA==",
-        "dependencies": {
-          "Umbraco.Cms.Api.Common": "[17.0.0, 18.0.0)",
-          "Umbraco.Cms.Core": "[17.0.0, 18.0.0)",
-          "Umbraco.JsonSchema.Extensions": "0.4.3"
-        }
-      },
-      "Umbraco.JsonSchema.Extensions": {
-        "type": "CentralTransitive",
-        "requested": "[0.*, )",
-        "resolved": "0.4.3",
-        "contentHash": "mD2YeEJVuhegGZ14JnbhjqvQnh3UTIt2TvZx8Mba7l8SMSk05sqX52RRvs8voa2gw2AlPvqXlVmCmDii/tE03Q=="
       }
     }
   }

@@ -17,8 +17,7 @@ Everything about its layout, versioning and release is Entertainment's, unchange
 - Razor SDK project, a Vite-built bundle under `App_Plugins/Umbraco.Community.UmbraDesktop.Accessories`,
   and `umbraco-package.json` stamped with the MinVer version at build time.
 - Lockstep on one tag (D13): same `v*` tags, same version, published on every release. The host
-  dependency is the same `[17.0.0,18.0.0)` range from `src/Directory.Packages.props`, never a
-  `ProjectReference`.
+  is a `ProjectReference`, packed as `[<this release>, 17.99999999.0]` (§10, and `RELEASE.md`).
 - Its own Marketplace listing, `umbraco-marketplace-umbraco.community.umbradesktop.accessories.json`,
   cross-linked with `RelatedPackages` to the host and to Entertainment.
 - Built, tested and packed by the shared `build-packages` action, so CI and the release cannot
@@ -106,9 +105,8 @@ it, it is a host feature for other packages rather than part of Accessories. Its
 `2026-09-25-settings-category-extension-design.md`, which arrives with that pull request. This one
 leaves the host's settings panel exactly as `main` has it.
 
-The package's settings (now the screensaver alone) are stored per user in `localStorage`, the same
-scope as every other desktop setting, under the add-on's own key. Controllers in open windows hear a
-change through a `window` event, because `storage` events only reach other documents.
+The package's settings (now the screensaver alone) are stored on the user's account, in Umbraco's
+`umbracoUserData`, as the desktop's own settings are (§10).
 
 **A media save goes through the backoffice's own repositories**, never a hand-built Management API
 call, so authentication, permissions and error messages are the backoffice's. A new item follows the
@@ -125,7 +123,7 @@ an edit and a rename were saved back (one item, renamed, its file read back with
 Paint opened `Untitled.png` at its own 480 × 300, drew on it and saved it back (the saved file read
 back with the new pixels).
 
-## 5. Sticky Notes: one board for everyone
+## 5. Sticky Notes: one board for everyone (superseded in part by §10)
 
 Sticky Notes is the one app here with a server behind it, and the package's first C#. Decided with
 the repository owner: one shared board, no private notes, anyone may edit or delete any note, and
@@ -280,12 +278,12 @@ unsaved work, `<umbradesktop-app-host>` watches that one attribute with a `Mutat
 the window passes it to the same `setDirty` the iframe path uses. So the titlebar marker, the
 taskbar marker, the close guard and the leave-the-desktop prompt all cover app windows with no
 app-specific code in any of them. An attribute rather than an event, because it needs nothing
-imported from the host and can be read at any moment. Documented in `docs/desktop-apps.md` §7.
+imported from the host and can be read at any moment. Documented in `docs/developer/desktop-apps.md` §7.
 
 **Closed: Clock follows the desktop's regional format and 12/24-hour setting.** The host now
 publishes them: its settings context has a public `formatDateTime(date, options)` with the taskbar
 clock's rules, and a `locale` observable that emits when either setting changes, both documented
-with the context's alias in `docs/desktop-apps.md` §7.1. Clock declares that shape and a token with
+with the context's alias in `docs/developer/desktop-apps.md` §7.2. Clock declares that shape and a token with
 the same alias (nothing is imported from the host), formats its time and date through it, and falls
 back to `this.localize.date` where there is no desktop around it, as in its own tests.
 
@@ -296,7 +294,7 @@ back to `this.localize.date` where there is no desktop around it, as in its own 
   SQL Server LocalDB and carries Umbraco Engage, which refuses SQLite, so it cannot boot outside
   Windows. A throwaway site in a scratch folder can: a `Microsoft.NET.Sdk.Web` project with
   `Umbraco.Cms` (same version as the TestInstance), `ProjectReference`s to the host and the add-on,
-  the host package with `ExcludeAssets="all"` as in the TestInstance, the TestInstance's
+  the TestInstance's
   `Program.cs` minus `UseHttpsRedirection`, and an `appsettings.json` with a SQLite connection
   string (`Microsoft.Data.Sqlite`) and an unattended install. Drive it with `puppeteer-core` from
   any package's `node_modules`, pointed at the preinstalled Chromium with `--no-sandbox`. Two
@@ -365,3 +363,50 @@ back to `this.localize.date` where there is no desktop around it, as in its own 
   `collection` (the built-in Folder and every list-view type do), or by already having children;
   `isSaveFolder` in `shared/save-location.ts` is that rule, passed as the picker's
   `pickableFilter`. The root is an item of its own with a null key once `hideTreeRoot` is false.
+
+## 10. Review changes (2026-09-30)
+
+Made while reviewing the PR against current main. Each is a decision of the owner's or a fix the
+review found; the sections above describe the first version and are kept as its record.
+
+- **Sticky Notes has personal and shared notes.** A single shared board was not what people expect
+  from Sticky Notes, and the window said so only in one grey line. **New note** makes a yellow note
+  only its author sees, stored as one JSON document in Umbraco's per-user data
+  (`shared/user-data.ts`, group `Umbraco.Community.UmbraDesktop.Accessories`, identifier
+  `StickyNotes`), with no server code. A save merges three ways with what is stored, against what
+  the window last read (`mergePersonal`), because a live test found a tab that loaded early saving
+  its list over two notes written in another browser. **New shared
+  note** makes a blue note on the board of §5, which keeps its API, versioning and conflict handling.
+  The kind decides the paper, and there is no colour choice. The board shows two groups, the user's
+  own first, and reordering works within a group. Only the shared board polls, and not while the
+  page is hidden or the window minimised.
+- **Note dragging follows the launcher's arrange mode** (#59): the same pointer-event drag, the same
+  thresholds and the same look (the lifted note faded in place, a copy under the pointer, an accent
+  bar where it will land, Escape cancels), drawn with the app tokens because the add-on imports
+  nothing from the host. The launcher does not use `UmbSorterController`, so there was no public API
+  to share.
+- **The screensaver setting lives on the user's account**, not in `localStorage`, so it follows them
+  to any browser. It stays in its own window: moving it into Desktop settings needs the settings
+  category extension point, a host change for a PR of its own. Other tabs of the same browser hear a
+  change over a `BroadcastChannel`, and a failed save keeps the choice and says so in the window.
+- **The shared board is written under Umbraco's key-value database lock**, from before the read
+  until after the write, so two servers of a load-balanced site cannot erase each other's notes. The
+  per-process lock is gone. **A board this version cannot read is never written over**: writes
+  answer `StickyNoteBoardUnreadable` problem details and leave it untouched.
+- **The add-on no longer registers `TimeProvider`.** Umbraco registers one, and the add-on's would
+  have replaced whatever clock the site chose.
+- **The host is a `ProjectReference`, packed as `[<this release>, 17.99999999.0]`**, for this add-on
+  and for Entertainment. With the old `[17.0.0,18.0.0)` range an Accessories install could keep a
+  host without the package catalogue, the unsaved-work attribute or `formatDateTime`: the Clock threw
+  on every render, and Notepad and Paint closed over unsaved work without asking. The mechanism is
+  the umbraCoffee branch's `BoundHostRange` target, ported unchanged, and `RELEASE.md` explains it.
+  The Clock also checks that `formatDateTime` exists before calling it.
+- **Saving over a media item someone changed since it was opened asks first.** The item's update
+  date is remembered when it is opened and after each save, and a different one on save brings up
+  Umbraco's confirm dialog. The check and the write are two requests, so a change landing between
+  them still wins.
+- **Paint's undo budget is shared by all Paint windows**: one 256 MB pool, the oldest step of any
+  window dropped first, instead of 256 MB each.
+- **The screensaver's frame watch does nothing while it is off**: the switch and the desktop check
+  come before the frame scan, and entries for closed frames are pruned. Measured before the change,
+  the scan took under a millisecond every five seconds, so this is tidiness rather than a fix.

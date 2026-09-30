@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Umbraco.Cms.Core;
+using Umbraco.Cms.Core.Scoping;
 using Umbraco.Cms.Core.Services;
 
 namespace Umbraco.Community.UmbraDesktop.Accessories.StickyNotes;
@@ -14,14 +16,18 @@ namespace Umbraco.Community.UmbraDesktop.Accessories.StickyNotes;
 /// restore like any other site data.
 /// </para>
 /// <para>
-/// Every write is a read-modify-write under a lock, so two editors on one server cannot interleave.
-/// The lock is per process: on a load-balanced site two servers can still race, and then the later
-/// write wins that race. The version check still stops the common case, an edit made against a note
-/// somebody else has since changed, because that check runs on whatever the store holds when the
-/// write lands.
+/// Every write is a read-modify-write inside one Umbraco scope holding the key-value write lock, from
+/// before the read until after the write. That lock is a database lock, so it serialises writers on
+/// every server of a load-balanced site as well as on one: without it, two servers could read the
+/// same board and the later write would erase a note the earlier one had just added. Umbraco's own
+/// <c>SetValue</c> takes the same lock inside the scope it joins.
+/// </para>
+/// <para>
+/// A board this version cannot read is shown as empty, but never written over: see
+/// <see cref="StickyNoteBoardUnreadableException"/>.
 /// </para>
 /// </remarks>
-public sealed class StickyNoteStore(IKeyValueService keyValueService, TimeProvider timeProvider)
+public sealed class StickyNoteStore(IKeyValueService keyValueService, ICoreScopeProvider scopeProvider, TimeProvider timeProvider)
 {
     /// <summary>The key-value store key holding the board.</summary>
     public const string StorageKey = "Umbraco.Community.UmbraDesktop.Accessories.StickyNotes";
@@ -45,9 +51,6 @@ public sealed class StickyNoteStore(IKeyValueService keyValueService, TimeProvid
     /// <summary>JSON shape of the stored board. Web defaults, so the stored document reads like the API.</summary>
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    /// <summary>Serialises every read-modify-write on this server.</summary>
-    private static readonly Lock WriteLock = new();
-
     /// <summary>Every note, in the order they were added.</summary>
     /// <returns>The board.</returns>
     public IReadOnlyList<StickyNote> GetAll() => Read();
@@ -60,9 +63,9 @@ public sealed class StickyNoteStore(IKeyValueService keyValueService, TimeProvid
     /// <exception cref="StickyNoteBoardFullException">The board already holds <see cref="MaxNotes"/> notes.</exception>
     public StickyNote Create(string text, string colour, string author)
     {
-        lock (WriteLock)
+        using (var scope = BeginWrite())
         {
-            var notes = Read().ToList();
+            var notes = ReadForWrite().ToList();
             if (notes.Count >= MaxNotes)
             {
                 throw new StickyNoteBoardFullException();
@@ -71,7 +74,7 @@ public sealed class StickyNoteStore(IKeyValueService keyValueService, TimeProvid
             var note = new StickyNote(
                 Guid.NewGuid(), Clean(text), CleanColour(colour), author, timeProvider.GetUtcNow(), 1);
             notes.Add(note);
-            Write(notes);
+            Write(notes, scope);
             return note;
         }
     }
@@ -85,9 +88,9 @@ public sealed class StickyNoteStore(IKeyValueService keyValueService, TimeProvid
     /// <returns>How it went, with the note as it now stands.</returns>
     public StickyNoteWriteResult Update(Guid key, string text, string colour, int expectedVersion, string author)
     {
-        lock (WriteLock)
+        using (var scope = BeginWrite())
         {
-            var notes = Read().ToList();
+            var notes = ReadForWrite().ToList();
             var index = notes.FindIndex(note => note.Key == key);
             if (index < 0)
             {
@@ -109,7 +112,7 @@ public sealed class StickyNoteStore(IKeyValueService keyValueService, TimeProvid
                 Version = current.Version + 1,
             };
             notes[index] = updated;
-            Write(notes);
+            Write(notes, scope);
             return new StickyNoteWriteResult(StickyNoteWriteStatus.Saved, updated);
         }
     }
@@ -119,13 +122,13 @@ public sealed class StickyNoteStore(IKeyValueService keyValueService, TimeProvid
     /// <returns>Whether there was a note to take off.</returns>
     public bool Delete(Guid key)
     {
-        lock (WriteLock)
+        using (var scope = BeginWrite())
         {
-            var notes = Read().ToList();
+            var notes = ReadForWrite().ToList();
             var removed = notes.RemoveAll(note => note.Key == key) > 0;
             if (removed)
             {
-                Write(notes);
+                Write(notes, scope);
             }
 
             return removed;
@@ -145,9 +148,9 @@ public sealed class StickyNoteStore(IKeyValueService keyValueService, TimeProvid
     /// <returns>Whether there was a note to move.</returns>
     public bool Move(Guid key, Guid? before)
     {
-        lock (WriteLock)
+        using (var scope = BeginWrite())
         {
-            var notes = Read().ToList();
+            var notes = ReadForWrite().ToList();
             var index = notes.FindIndex(note => note.Key == key);
             if (index < 0)
             {
@@ -158,7 +161,7 @@ public sealed class StickyNoteStore(IKeyValueService keyValueService, TimeProvid
             notes.RemoveAt(index);
             var target = before is null ? -1 : notes.FindIndex(other => other.Key == before);
             notes.Insert(target < 0 ? notes.Count : target, note);
-            Write(notes);
+            Write(notes, scope);
             return true;
         }
     }
@@ -199,8 +202,49 @@ public sealed class StickyNoteStore(IKeyValueService keyValueService, TimeProvid
         }
     }
 
-    /// <summary>Write the board.</summary>
+    /// <summary>
+    /// Read the board to change it. Unlike <see cref="Read"/>, a payload that cannot be read stops the
+    /// write, because the change would be saved over it and every note in it would be gone.
+    /// </summary>
+    /// <returns>The notes.</returns>
+    /// <exception cref="StickyNoteBoardUnreadableException">The stored board cannot be read.</exception>
+    private IReadOnlyList<StickyNote> ReadForWrite()
+    {
+        var raw = keyValueService.GetValue(StorageKey);
+        if (string.IsNullOrEmpty(raw))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<StickyNote>>(raw, Json) ?? [];
+        }
+        catch (JsonException exception)
+        {
+            throw new StickyNoteBoardUnreadableException(exception);
+        }
+    }
+
+    /// <summary>
+    /// Open the scope one read-modify-write happens in, holding the key-value write lock before
+    /// anything is read. A scope that is disposed without <see cref="Write"/> having completed it, as
+    /// when a note is not found or the board is unreadable, simply writes nothing.
+    /// </summary>
+    /// <returns>The scope, for the caller to dispose.</returns>
+    private ICoreScope BeginWrite()
+    {
+        var scope = scopeProvider.CreateCoreScope();
+        scope.WriteLock(Constants.Locks.KeyValues);
+        return scope;
+    }
+
+    /// <summary>Write the board and complete the scope the change was made in.</summary>
     /// <param name="notes">Every note.</param>
-    private void Write(IReadOnlyList<StickyNote> notes) =>
+    /// <param name="scope">The scope from <see cref="BeginWrite"/>.</param>
+    private void Write(IReadOnlyList<StickyNote> notes, ICoreScope scope)
+    {
         keyValueService.SetValue(StorageKey, JsonSerializer.Serialize(notes, Json));
+        scope.Complete();
+    }
 }

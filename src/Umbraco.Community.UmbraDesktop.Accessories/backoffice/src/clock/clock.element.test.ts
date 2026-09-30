@@ -73,7 +73,7 @@ it('stops its timer when the window closes', async () => {
 /**
  * Inside the desktop the time and date come from the desktop's own formatting, so they follow the
  * same culture and 12/24 hour setting as the taskbar clock and change when the user changes them.
- * `docs/desktop-apps.md` §7.1 is the contract; this is a stand-in for the desktop's context.
+ * `docs/developer/desktop-apps.md` §7.2 is the contract; this is a stand-in for the desktop's context.
  */
 describe('inside the desktop', () => {
   /** What each case mounted, removed after it. */
@@ -87,19 +87,23 @@ describe('inside the desktop', () => {
    * A clock under a stand-in for the desktop's settings context.
    * @param cycle The hour setting the stand-in starts on.
    */
-  async function inDesktop(cycle = 'h23') {
+  async function inDesktop(cycle = 'h23', older = false) {
     const settings = new UmbObjectState({ hourCycle: cycle });
     // Built by hand, not with fixture(), which waits for an animation frame a background tab never
     // gets when the whole suite runs at once.
     const host = document.createElement('div');
-    const desktop = {
-      // Umbraco's context consumer asks a provided instance for its host, as every real context
-      // (the desktop's included) can answer; a plain object without this is not found at all.
-      getHostElement: () => host,
-      locale: settings.asObservable(),
-      formatDateTime: (date: Date, options: Intl.DateTimeFormatOptions) =>
-        `${options.hour ? 'time' : 'date'} ${settings.getValue().hourCycle} ${date.getSeconds()}`,
-    };
+    // An older desktop has the settings context, under the same alias, but neither member the
+    // contract later made public, so the stand-in for it is the host lookup alone.
+    const desktop = older
+      ? { getHostElement: () => host }
+      : {
+          // Umbraco's context consumer asks a provided instance for its host, as every real context
+          // (the desktop's included) can answer; a plain object without this is not found at all.
+          getHostElement: () => host,
+          locale: settings.asObservable(),
+          formatDateTime: (date: Date, options: Intl.DateTimeFormatOptions) =>
+            `${options.hour ? 'time' : 'date'} ${settings.getValue().hourCycle} ${date.getSeconds()}`,
+        };
     document.body.appendChild(host);
     after.push(() => host.remove());
     new UmbContextProvider(host, 'UmbraDesktopSettingsContext', desktop).hostConnected();
@@ -125,5 +129,16 @@ describe('inside the desktop', () => {
     settings.setValue({ hourCycle: 'h12' });
     await element.updateComplete;
     expect(read(element, '.time')).to.equal('time h12 8');
+  });
+
+  /**
+   * A desktop older than the §7.2 contract provides a settings context without `formatDateTime` or
+   * `locale`. Calling the missing method threw on every render and left the window blank; the clock
+   * must fall back to the backoffice's own formatting, as it does with no context at all.
+   */
+  it('falls back to the backoffice formatting under a desktop older than the contract', async () => {
+    const { element } = await inDesktop('h23', true);
+    expect(read(element, '.time')).to.contain('10').and.to.contain('20').and.to.contain('08');
+    expect(read(element, '.date')).to.contain('24').and.to.contain('2026');
   });
 });

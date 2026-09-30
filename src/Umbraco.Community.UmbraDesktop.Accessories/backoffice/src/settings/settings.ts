@@ -1,6 +1,7 @@
 /**
- * The Accessories package's settings, and how they are stored. One today, the screensaver, set in
- * the Screen Saver window; the record is kept as a record so a later setting has somewhere to go.
+ * The Accessories package's settings, and how they are written down. One today, the screensaver,
+ * set in the Screen Saver window; the record is kept as a record so a later setting has somewhere
+ * to go. They are stored in the signed-in user's account; `settings.source.ts` does the storing.
  *
  * Pure functions over strings, with no storage and no DOM, for the reason the host's own
  * `settings-store.ts` gives: the fallback for every kind of unreadable payload is then a table a test
@@ -46,19 +47,6 @@ export interface AccessoriesSettings {
 export const UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS: AccessoriesSettings = Object.freeze({
   screensaver: Object.freeze({ enabled: false, saver: 'starfield', waitMinutes: 10 }),
 });
-
-/** Prefix of the per-user `localStorage` key. Namespaced apart from the host's own settings key. */
-const STORAGE_KEY_PREFIX = 'umbradesktop-accessories:settings';
-
-/**
- * The `localStorage` key holding one user's settings. Per user, as the host's are, so two accounts
- * sharing a browser do not share one person's choices.
- * @param userUnique The current user's key.
- * @returns The storage key.
- */
-export function settingsStorageKey(userUnique: string): string {
-  return `${STORAGE_KEY_PREFIX}:${userUnique}`;
-}
 
 /**
  * Read stored settings.

@@ -1,4 +1,5 @@
 import { extensionOf } from './media-files.js';
+import { updateDateOf } from './media-save.js';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UMB_MEDIA_PICKER_MODAL, UmbMediaDetailRepository } from '@umbraco-cms/backoffice/media';
 import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
@@ -13,6 +14,12 @@ export interface OpenedMedia {
   blob: Blob;
   /** The file's extension, without the dot, kept so a save writes the same kind of file. */
   extension: string;
+  /**
+   * When the media item was last changed, as it was opened. A save hands it back, so a file
+   * somebody replaced in the Media section meanwhile is asked about rather than overwritten.
+   * Undefined when the backoffice did not say.
+   */
+  updateDate?: string | null;
 }
 
 /** How opening went. */
@@ -62,7 +69,14 @@ export function createMediaOpener(host: UmbControllerHost): MediaOpener {
     try {
       const response = await fetch(value.src, { credentials: 'same-origin' });
       if (!response.ok) return { status: 'failed', name };
-      return { status: 'opened', unique, name: name ?? '', blob: await response.blob(), extension: extensionOf(value.src) };
+      return {
+        status: 'opened',
+        unique,
+        name: name ?? '',
+        blob: await response.blob(),
+        extension: extensionOf(value.src),
+        updateDate: updateDateOf(data),
+      };
     } catch {
       return { status: 'failed', name };
     }

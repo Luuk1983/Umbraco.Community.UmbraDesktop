@@ -22,6 +22,8 @@ interface Recorded {
   confirms: number;
   /** How many times Save asked where. */
   picks: number;
+  /** The name each overwrite question was asked about. */
+  overwrites: string[];
 }
 
 /** What the fake media library answers. */
@@ -34,6 +36,8 @@ interface Fakes {
   discard?: boolean;
   /** Where Save As is told to put a new document. */
   picked?: SaveFolderChoice;
+  /** What the question about overwriting a file changed in the media library answers. */
+  overwrite?: boolean;
 }
 
 /**
@@ -42,7 +46,7 @@ interface Fakes {
  * @returns The element and what it asked for.
  */
 async function notepad(fakes: Fakes = {}): Promise<{ element: NotepadElement; recorded: Recorded }> {
-  const recorded: Recorded = { saves: [], confirms: 0, picks: 0 };
+  const recorded: Recorded = { saves: [], confirms: 0, picks: 0, overwrites: [] };
   const answers = fakes.saved ?? [{ ok: true, unique: 'media-1' }];
   const element = await fixture<NotepadElement>(html`<umbradesktop-notepad
     .confirmDiscard=${async () => {
@@ -58,13 +62,24 @@ async function notepad(fakes: Fakes = {}): Promise<{ element: NotepadElement; re
       return answers.length > 1 ? answers.shift()! : answers[0];
     }}
     .openFromMedia=${async () => fakes.opened ?? { status: 'cancelled' }}
+    .confirmOverwrite=${async (name: string) => {
+      recorded.overwrites.push(name);
+      return fakes.overwrite ?? true;
+    }}
   ></umbradesktop-notepad>`);
   return { element, recorded };
 }
 
-/** A text file in the media library, as the opener returns it. */
-function textFile(text: string, name = 'Changelog', extension = 'md'): MediaOpenResult {
-  return { status: 'opened', unique: 'existing-1', name, blob: new Blob([text], { type: 'text/markdown' }), extension };
+/** A text file in the media library, as the opener returns it, last changed at `updateDate`. */
+function textFile(text: string, name = 'Changelog', extension = 'md', updateDate = '2026-09-01T10:00:00'): MediaOpenResult {
+  return {
+    status: 'opened',
+    unique: 'existing-1',
+    name,
+    blob: new Blob([text], { type: 'text/markdown' }),
+    extension,
+    updateDate,
+  };
 }
 
 /** The page. */
@@ -254,6 +269,56 @@ describe('opening from the media library', () => {
  * saved, or empty, is a dialog with one sensible answer, and those train people to click through the
  * one that matters.
  */
+/**
+ * Somebody may replace the file in the Media section while it is open here. A save then must not
+ * quietly overwrite their version: the saver is told which version was opened, answers with a
+ * conflict when it has changed, and Notepad asks before overwriting it.
+ */
+describe('a file changed in the media library after it was opened', () => {
+  const CONFLICT: MediaSaveResult = { ok: false, conflict: true };
+
+  it('tells the saver which version it opened, and then which version it saved', async () => {
+    const { element, recorded } = await notepad({
+      opened: textFile('# Changes'),
+      saved: [{ ok: true, unique: 'existing-1', updateDate: '2026-09-02T09:00:00' }],
+    });
+    await click(element, 'open');
+    await write(element, 'one');
+    await click(element, 'save');
+    await write(element, 'two');
+    await click(element, 'save');
+    expect(recorded.saves.map((save) => save.expectedUpdateDate)).to.deep.equal([
+      '2026-09-01T10:00:00',
+      '2026-09-02T09:00:00',
+    ]);
+  });
+
+  it('asks before overwriting it, and overwrites it on yes', async () => {
+    const { element, recorded } = await notepad({
+      opened: textFile('# Changes'),
+      saved: [CONFLICT, { ok: true, unique: 'existing-1', updateDate: '2026-09-03T08:00:00' }],
+    });
+    await click(element, 'open');
+    await write(element, 'mine');
+    await click(element, 'save');
+    expect(recorded.overwrites).to.deep.equal(['Changelog']);
+    expect(recorded.saves.map((save) => save.force ?? false)).to.deep.equal([false, true]);
+    expect(await textOf(recorded.saves[1])).to.equal('mine');
+    expect(element.dirty).to.equal(false);
+    expect(notice(element)).to.contain('Saved');
+  });
+
+  it('saves nothing on no, keeps the work unsaved, and says why', async () => {
+    const { element, recorded } = await notepad({ opened: textFile('# Changes'), saved: [CONFLICT], overwrite: false });
+    await click(element, 'open');
+    await write(element, 'mine');
+    await click(element, 'save');
+    expect(recorded.saves).to.have.length(1);
+    expect(element.dirty).to.equal(true);
+    expect(notice(element)).to.contain('Changelog').and.to.contain('changed in the media library');
+  });
+});
+
 it('asks before throwing away unsaved work, and only then', async () => {
   const { element, recorded } = await notepad();
   await click(element, 'new');

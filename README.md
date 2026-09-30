@@ -45,6 +45,10 @@ UmbraDesktop grants no access of its own. A user only sees apps for the sections
 
 [Installation](docs/user/getting-started/installation.md) has the details, and [First steps](docs/user/getting-started/first-steps.md) shows you around.
 
+## Small tools, if you want them
+
+[`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories) is an optional add-on with the tools Windows kept under Accessories: Notepad and Paint that edit files in your media library, Sticky Notes of your own and shared with your team, Calculator, Character Map, Clock, a screen saver, Disk Cleanup and System Information. The desktop is unchanged without it.
+
 ## Games, if you want them
 
 [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment) is an optional add-on that puts Minesweeper and Snake on the desktop, each in a window of its own and themed along with everything else. The desktop is unchanged without it.

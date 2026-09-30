@@ -4,7 +4,6 @@ import {
   UMBRADESKTOP_SCREENSAVER_WAIT_CHOICES,
   parseSettings,
   serializeSettings,
-  settingsStorageKey,
 } from './settings.js';
 
 /**
@@ -58,9 +57,4 @@ it('falls back field by field for anything it cannot read', () => {
     parseSettings(JSON.stringify({ screensaver: { enabled: true } })).screensaver,
     'a partial screensaver keeps what it has',
   ).to.deep.equal({ ...DEFAULT_SCREENSAVER, enabled: true });
-});
-
-it('keeps each user’s choice under their own key', () => {
-  expect(settingsStorageKey('user-1')).to.not.equal(settingsStorageKey('user-2'));
-  expect(settingsStorageKey('user-1')).to.contain('user-1');
 });

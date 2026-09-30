@@ -15,6 +15,9 @@ src/Umbraco.Community.UmbraDesktop/
   backoffice/scripts/docs/      the docs check and the pack-time README pinning
 src/Umbraco.Community.UmbraDesktop.Entertainment/
   docs/                         the add-on's own docs, kept apart as an external add-on's would be
+src/Umbraco.Community.UmbraDesktop.Accessories/
+  docs/                         the same, for the Accessories add-on
+  StickyNotes/                  its one piece of server code, tested by .Accessories.Tests
 docs/                           UmbraDesktop's docs root (product.json)
   user/<category>/              the user guide, one page per feature
   developer/                    how it works, theming, apps, catalogues, attached windows

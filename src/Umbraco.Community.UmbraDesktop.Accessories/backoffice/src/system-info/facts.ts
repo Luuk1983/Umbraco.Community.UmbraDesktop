@@ -23,7 +23,7 @@ export interface InstalledPackage {
 }
 
 /**
- * The published theme ids (`docs/desktop-apps.md` §5) and their names as the theme picker shows
+ * The published theme ids (`docs/developer/desktop-apps.md` §5) and their names as the theme picker shows
  * them. An id added after this was written is shown as itself, which is a normal event, not a fault.
  */
 const THEME_NAMES: Record<string, string> = {

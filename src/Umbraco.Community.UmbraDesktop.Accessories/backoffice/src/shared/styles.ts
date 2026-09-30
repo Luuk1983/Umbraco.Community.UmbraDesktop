@@ -9,7 +9,7 @@ import { css } from '@umbraco-cms/backoffice/external/lit';
  * Calculator's keys are the same control under the same theme. So this is ordinary code reuse: one
  * stylesheet each element adopts next to its own, and nothing else.
  *
- * Every rule reads the app tokens with the fallbacks `docs/desktop-apps.md` §4 publishes, so the
+ * Every rule reads the app tokens with the fallbacks `docs/developer/desktop-apps.md` §4 publishes, so the
  * apps render as the Umbraco theme with no theme set. The guide's traps all apply and are honoured
  * here rather than repeated per app: `background`, never `background-color`, since a surface token
  * may carry a gradient; lines between controls in `border`, not `edge-dark`, since only `border`

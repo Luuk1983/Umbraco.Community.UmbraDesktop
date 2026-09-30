@@ -118,7 +118,7 @@ it('measures from the moment it is given, so a late timer corrects itself', () =
 
 /**
  * The same rules for any time or date an app shows, not only the taskbar's hours and minutes: this
- * is what the settings context publishes to apps (see `docs/desktop-apps.md`), so a clock app with
+ * is what the settings context publishes to apps (see `docs/developer/desktop-apps.md`), so a clock app with
  * seconds reads exactly as the taskbar does.
  */
 describe('formatDateTime', () => {

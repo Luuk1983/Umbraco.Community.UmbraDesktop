@@ -97,14 +97,16 @@ export function saved(local: LocalNote[], confirmed: StickyNote, sentText: strin
 
 /**
  * Move a note to sit before another, exactly as the server does, so the window shows the new order
- * at once and the next refresh confirms it rather than moving anything back.
+ * at once and the next refresh confirms it rather than moving anything back. Any list of keyed notes,
+ * because a person's own notes are reordered by the same rule, with no server to confirm it.
+ * @typeParam T The kind of note.
  * @param local The window's copy.
  * @param key The note to move.
  * @param before The note it should go before; undefined, or a note that is not on the board, means
  *   the end.
  * @returns The reordered board, or the same one when the note is not on it.
  */
-export function moveNote(local: LocalNote[], key: string, before: string | undefined): LocalNote[] {
+export function moveNote<T extends { key: string }>(local: T[], key: string, before: string | undefined): T[] {
   const note = local.find((each) => each.key === key);
   if (!note) return local;
   const rest = local.filter((each) => each.key !== key);

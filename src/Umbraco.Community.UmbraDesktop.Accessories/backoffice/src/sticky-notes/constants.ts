@@ -2,16 +2,19 @@
  * Every number Sticky Notes needs in more than one place. Separate from the element so the manifest
  * can read the content size without pulling the app into the bundle's main chunk.
  *
- * The limits on text and on the number of notes are deliberately **not** here: they are the
- * server's (`StickyNoteStore.cs`), sent with the board, so the window never holds a copy of a
- * number another language owns.
+ * The shared board's limits on text and on the number of notes are deliberately **not** read from
+ * here: they are the server's (`StickyNoteStore.cs`), sent with the board, so the shared board never
+ * holds a copy of a number another language owns. A person's own notes have no server of this
+ * package's behind them, so their caps are here, as the same two numbers
+ * ({@link STICKY_NOTES_PERSONAL_MAX_NOTES}, {@link STICKY_NOTES_PERSONAL_MAX_TEXT_LENGTH}).
  */
 
 /**
- * How often an open board asks the server for changes, in ms: fifteen seconds, as agreed for this
- * board. Often enough that a note somebody just wrote turns up while the reader is still looking,
- * and rare enough that a desktop with the window left open all day costs the server nothing to
- * speak of. It also refreshes whenever the window is focused, which is when a reader is looking.
+ * How often an open board asks the server for changes to the shared notes, in ms: fifteen seconds,
+ * as agreed for this board. Often enough that a note somebody just wrote turns up while the reader
+ * is still looking, and rare enough that a desktop with the window left open all day costs the
+ * server nothing to speak of. It also refreshes whenever the window is focused, which is when a
+ * reader is looking, and it does not poll at all while nobody can see the board.
  */
 export const STICKY_NOTES_POLL_INTERVAL_MS = 15_000;
 
@@ -47,17 +50,71 @@ export const STICKY_NOTES_PADDING_PX = 10;
 export const STICKY_NOTES_TOOLBAR_HEIGHT_PX = 32;
 
 /**
- * The paper every note is drawn on: yellow, as Windows' Sticky Notes were. This app's domain colour,
- * like Paint's palette, so a note is yellow under every theme. Text on it is always
+ * The paper a person's own notes are drawn on: yellow, as Windows' Sticky Notes were. This app's
+ * domain colour, like Paint's palette, so a note is yellow under every theme. Text on it is always
  * {@link STICKY_NOTES_INK}.
  *
- * There used to be five colours to choose from. The choice went, and every note is drawn on this
- * paper whatever colour the server holds for it; the server's colour field is left as it is.
+ * The kind of note decides its paper, and nothing else does. There used to be five colours to
+ * choose from; the choice went, so that yellow and blue can mean "mine" and "everyone's".
  */
 export const STICKY_NOTES_PAPER = '#fff7b1';
 
-/** The colour name new notes are created with, which is the server's name for {@link STICKY_NOTES_PAPER}. */
-export const STICKY_NOTES_COLOUR = 'yellow';
+/**
+ * The paper shared notes are drawn on: a pale blue, as far from {@link STICKY_NOTES_PAPER} as a
+ * sticky note gets, so a note everyone can see never passes for one of the reader's own. Drawn for
+ * every shared note whatever colour the server holds for it.
+ */
+export const STICKY_NOTES_SHARED_PAPER = '#cde6f7';
+
+/**
+ * The colour name shared notes are sent to the server with: the server's name for
+ * {@link STICKY_NOTES_SHARED_PAPER}, from its allowed list in `StickyNoteStore.cs`. The server
+ * turns a name it does not know into its default, yellow, so this must be one it lists.
+ */
+export const STICKY_NOTES_SHARED_COLOUR = 'blue';
+
+/**
+ * The most notes of their own a person keeps: the shared board's number (`StickyNoteStore.MaxNotes`),
+ * so a note does not change what it may hold by changing kind, and one person's list stays a small
+ * row in `umbracoUserData`.
+ */
+export const STICKY_NOTES_PERSONAL_MAX_NOTES = 100;
+
+/** The most text a note of one's own keeps: the shared board's number (`StickyNoteStore.MaxTextLength`). */
+export const STICKY_NOTES_PERSONAL_MAX_TEXT_LENGTH = 2000;
+
+/**
+ * The `umbracoUserData` identifier of the one document holding a person's own notes, within the
+ * package's group. Final: renaming it would lose every user's notes.
+ */
+export const STICKY_NOTES_USER_DATA_IDENTIFIER = 'StickyNotes';
+
+/**
+ * Movement, in px, that turns a press on a note's handle into a drag: the launcher's number
+ * (`UMBRADESKTOP_DRAG_THRESHOLD_PX` in the host), so a drag starts the same way in both places.
+ */
+export const STICKY_NOTES_DRAG_THRESHOLD_PX = 4;
+
+/**
+ * How far, in px, the drag ghost sits below and right of a mouse or pen pointer: the launcher's
+ * number, and beside the pointer for its reason, so the landing bar being aimed at stays in sight.
+ */
+export const STICKY_NOTES_DRAG_GHOST_OFFSET_PX = 12;
+
+/** How far, in px, the ghost's bottom edge sits above a touch point, so the finger does not hide it. */
+export const STICKY_NOTES_DRAG_GHOST_TOUCH_LIFT_PX = 40;
+
+/** The drag ghost's size, in px: a note in miniature, about as big as a launcher tile's icon and label. */
+export const STICKY_NOTES_DRAG_GHOST_SIZE = { w: 64, h: 48 } as const;
+
+/** Distance, in px, from the board's top or bottom edge at which a drag scrolls it. The launcher's. */
+export const STICKY_NOTES_DRAG_SCROLL_BAND_PX = 40;
+
+/** How far, in px, the board scrolls per animation frame while a drag is in that band. The launcher's. */
+export const STICKY_NOTES_DRAG_SCROLL_STEP_PX = 12;
+
+/** The width of the landing bar a drag shows between two notes, in px. The launcher's. */
+export const STICKY_NOTES_DROP_BAR_PX = 2;
 
 /**
  * One ruled line of a note, in px: the text's line height and the spacing of the lines drawn behind

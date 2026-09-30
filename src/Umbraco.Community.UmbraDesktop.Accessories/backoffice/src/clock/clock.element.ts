@@ -34,11 +34,11 @@ const GEOMETRY = {
  * The time and date are formatted by the desktop, through its settings context, so they follow the
  * same two settings as the taskbar clock: the user's culture, backoffice or browser, and their 12 or
  * 24 hour override. They change when the user changes either. That is public API, documented in
- * `docs/desktop-apps.md` §7.1; this clock is its worked example.
+ * `docs/developer/desktop-apps.md` §7.2; this clock is its worked example.
  *
  * Outside the desktop, in a test or under a desktop older than that contract, there is no such
- * context and the clock falls back to `this.localize.date`, which follows the backoffice culture and
- * its own hour cycle. It used to do only that, and the Clock window then read "2:30 PM" under a
+ * context, or one without `formatDateTime`, and the clock falls back to `this.localize.date`, which
+ * follows the backoffice culture and its own hour cycle. It used to do only that, and the Clock window then read "2:30 PM" under a
  * taskbar clock the user had set to "14:30".
  */
 @customElement('umbradesktop-clock')
@@ -57,16 +57,26 @@ export class ClockElement extends UmbLitElement {
   /** The pending tick's `setTimeout` handle, or undefined when stopped. */
   #timer?: number;
 
-  /** The desktop's date and time formatting, when the clock is inside a desktop that provides it. */
+  /**
+   * The desktop's date and time formatting, when the clock is inside a desktop that provides it.
+   * Undefined outside a desktop and under one older than the contract, which is when the clock
+   * formats for itself.
+   */
   #desktop?: DesktopDateTime;
 
   constructor() {
     super();
     this.consumeContext(DESKTOP_SETTINGS_CONTEXT, (desktop) => {
-      this.#desktop = desktop ?? undefined;
+      // Feature-detected, not just null-checked: a desktop older than the §7.2 contract provides a
+      // context under the same alias without these members, and calling the missing method threw on
+      // every render. Such a desktop is treated as no desktop at all.
+      this.#desktop = typeof desktop?.formatDateTime === 'function' ? desktop : undefined;
       // Redrawn on a change rather than at the next tick, which is up to a second away.
-      if (desktop) this.observe(desktop.locale, () => this.requestUpdate(), '_desktopLocale');
-      else this.requestUpdate();
+      if (this.#desktop?.locale) this.observe(this.#desktop.locale, () => this.requestUpdate(), '_desktopLocale');
+      else {
+        this.removeUmbControllerByAlias('_desktopLocale');
+        this.requestUpdate();
+      }
     });
   }
 

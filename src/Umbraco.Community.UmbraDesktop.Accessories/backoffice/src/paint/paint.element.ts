@@ -1,3 +1,4 @@
+import { paintUndoPool } from './undo.js';
 import { accessoryStyles } from '../shared/styles.js';
 import { keepFocusOnPress } from '../shared/press-focus.js';
 import { AREA } from '../shared/area.js';
@@ -5,8 +6,8 @@ import { UNSAVED_ATTRIBUTE } from '../shared/unsaved.js';
 import { editableImageType, fileNameFor } from '../shared/media-files.js';
 import { createMediaOpener } from '../shared/media-open.js';
 import type { MediaOpener } from '../shared/media-open.js';
-import { createMediaSaver } from '../shared/media-save.js';
-import type { MediaSaver } from '../shared/media-save.js';
+import { createMediaSaver, createOverwriteQuestion } from '../shared/media-save.js';
+import type { MediaSaver, OverwriteQuestion } from '../shared/media-save.js';
 import { createSaveFolderPicker } from '../shared/save-location.js';
 import type { SaveFolderPicker } from '../shared/save-location.js';
 import {
@@ -21,7 +22,6 @@ import {
   PAINT_SWATCH_PX,
   PAINT_TOOLBAR_HEIGHT_PX,
   PAINT_WELL_PADDING_PX,
-  undoDepthFor,
 } from './constants.js';
 import { floodFill, linePoints, parseColour, resizeImage, stamp } from './raster.js';
 import { css, customElement, html, nothing, property, query, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
@@ -113,6 +113,13 @@ export class PaintElement extends UmbLitElement {
   @property({ attribute: false })
   openFromMedia?: MediaOpener;
 
+  /**
+   * Asks whether to overwrite an image somebody changed in the media library since it was opened.
+   * Umbraco's confirm dialog unless a test says otherwise.
+   */
+  @property({ attribute: false })
+  confirmOverwrite?: OverwriteQuestion;
+
   /** The folder this picture was saved into, once it has been: null for the root. */
   #folder?: string | null;
 
@@ -142,6 +149,12 @@ export class PaintElement extends UmbLitElement {
    * Forgotten by New, which starts a new picture.
    */
   #mediaUnique?: string;
+
+  /**
+   * When that media item was last changed as far as this picture knows: as it was opened, or as
+   * this picture last saved it. A save that finds a later date asks before overwriting.
+   */
+  #updateDate?: string | null;
 
   /** What the left button paints. */
   @state()
@@ -187,8 +200,19 @@ export class PaintElement extends UmbLitElement {
   /** The picture's pixels, the one copy the tools change. Created on first render. */
   #image?: ImageData;
 
-  /** Copies of the picture from before each stroke, newest last. */
-  #history: ImageData[] = [];
+  /**
+   * Copies of the picture from before each stroke, drawing on the memory every Paint window
+   * shares. Another window's stroke can take the oldest of them, and says so, so the Undo button
+   * follows.
+   */
+  #history = paintUndoPool.history((depth) => (this._undoDepth = depth));
+
+  /**
+   * Strokes made since the picture was opened or started, counted apart from {@link #history},
+   * whose length also falls when another window takes its steps and stops growing at the undo
+   * depth. Save compares it before and after to know whether a stroke landed meanwhile.
+   */
+  #strokes = 0;
 
   /** The stroke in progress: its last point and its colour. Undefined between strokes. */
   #stroke?: { x: number; y: number; colour: string };
@@ -216,9 +240,15 @@ export class PaintElement extends UmbLitElement {
     this.addEventListener('keydown', this.#onKeyDown);
   }
 
-  /** Stop listening. The whole of teardown: there is no timer here. */
+  /**
+   * Stop listening, and give the undo memory back to the other Paint windows. There is no timer
+   * here. A window that is only moved in the page connects again with no steps to take back, and
+   * its next stroke takes it back into the pool.
+   */
   override disconnectedCallback(): void {
     this.removeEventListener('keydown', this.#onKeyDown);
+    this.#history.release();
+    this._undoDepth = 0;
     super.disconnectedCallback();
   }
 
@@ -261,9 +291,10 @@ export class PaintElement extends UmbLitElement {
   #adopt(unique: string | undefined, name: string, type: string, extension: string): void {
     const { w, h } = this._pictureSize;
     this.#image = this.#context.getImageData(0, 0, w, h);
-    this.#history = [];
+    this.#history.clear();
     this._undoDepth = 0;
     this.#mediaUnique = unique;
+    this.#updateDate = undefined;
     this.#folder = undefined;
     this._name = name;
     this.#savedName = name;
@@ -281,8 +312,8 @@ export class PaintElement extends UmbLitElement {
   /** Keep a copy of the picture as it is, so the stroke about to happen can be undone. */
   #remember(): void {
     if (!this.#image) return;
+    this.#strokes++;
     this.#history.push(new ImageData(new Uint8ClampedArray(this.#image.data), this.#image.width, this.#image.height));
-    if (this.#history.length > undoDepthFor(this.#image.width, this.#image.height)) this.#history.shift();
     this._undoDepth = this.#history.length;
   }
 
@@ -446,11 +477,16 @@ export class PaintElement extends UmbLitElement {
     // A type the canvas cannot write (a GIF, a BMP) saves as PNG, so its file takes that extension.
     const extension = type === result.blob.type ? result.extension || 'png' : 'png';
     this.#adopt(result.unique, result.name, type, extension);
+    this.#updateDate = result.updateDate;
   }
 
   /**
    * Save the picture to the media library: over the item it came from, or, the first time, as a new
    * item in the folder Save As is told. Cancelling Save As saves nothing.
+   *
+   * An image somebody changed in the media library since this picture opened or last saved it is
+   * not overwritten without asking, as in Notepad: the saver answers with a conflict, a yes saves
+   * again with `force`, and a no saves nothing and leaves the picture unsaved.
    */
   async save(): Promise<void> {
     let folder = this.#folder ?? null;
@@ -463,22 +499,35 @@ export class PaintElement extends UmbLitElement {
     if (!blob) return;
     const untitled = this.#term('paintUntitled', 'Untitled');
     const name = this._name;
-    const drawnBefore = this.#history.length;
-    const result = await (this.saveToMedia ?? createMediaSaver(this))({
+    const drawnBefore = this.#strokes;
+    const saver = this.saveToMedia ?? createMediaSaver(this);
+    const request = {
       file: new File([blob], fileNameFor(name, untitled, this.#extension), { type: this.#type }),
       name: name.trim() || untitled,
       folder,
       existing: this.#mediaUnique,
-    });
+      expectedUpdateDate: this.#updateDate,
+    };
+    let result = await saver(request);
+    if (!result.ok && result.conflict) {
+      // Named as the media library knows it, which is the name it was opened or last saved under.
+      const label = this.#savedName.trim() || untitled;
+      if (!(await (this.confirmOverwrite ?? createOverwriteQuestion(this))(label))) {
+        this._notice = this.#term('overwriteDeclined', `Not saved: ${label} was changed in the media library.`, label);
+        return;
+      }
+      result = await saver({ ...request, force: true });
+    }
     if (!result.ok) {
       this._notice = this.#term('saveFailed', `Not saved. ${result.message ?? ''}`, result.message ?? '');
       return;
     }
     this.#mediaUnique = result.unique;
+    this.#updateDate = result.updateDate;
     this.#folder = folder;
     this.#savedName = name;
     // Strokes made while the save was on its way were not in it, and are still unsaved.
-    this.#setDirty(this.#history.length !== drawnBefore);
+    this.#setDirty(this.#strokes !== drawnBefore);
     this._notice = this.#term('savedToMedia', 'Saved to the media library.');
   }
 
@@ -782,7 +831,7 @@ export class PaintElement extends UmbLitElement {
       /* The area round the picture has to differ from the picture's white paper, or the edge of what
          can be drawn on disappears. Most themes' sunken surface is already a grey. Windows 98's and
          Umbraco 4's is white, so those two get a ground of their own here, which changes only how the
-         well looks and nothing about its size (docs/desktop-apps.md §8). Windows 98 gets the dark grey
+         well looks and nothing about its size (docs/developer/desktop-apps.md §8). Windows 98 gets the dark grey
          MS Paint put behind the picture, which is also that theme's shadow grey; Umbraco 4 gets its
          own border colour mixed into its white, so the grey is one from its palette. */
       :host([data-umbradesktop-theme='win98']) .well {

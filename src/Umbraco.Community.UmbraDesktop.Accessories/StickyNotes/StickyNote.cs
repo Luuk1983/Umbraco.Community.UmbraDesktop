@@ -45,3 +45,16 @@ public sealed record StickyNoteWriteResult(StickyNoteWriteStatus Status, StickyN
 /// <summary>Thrown when the board already holds <see cref="StickyNoteStore.MaxNotes"/> notes.</summary>
 public sealed class StickyNoteBoardFullException()
     : InvalidOperationException($"The sticky note board already holds {StickyNoteStore.MaxNotes} notes.");
+
+/// <summary>
+/// Thrown instead of writing when the stored board cannot be read, as after a rollback to a version
+/// that does not know a newer storage shape.
+/// </summary>
+/// <remarks>
+/// Reading such a board as empty is fine for showing it. Writing is not: the write would save the
+/// empty board over the stored one and every note in it would be gone. Refusing leaves the stored
+/// board untouched until a version that can read it is back.
+/// </remarks>
+/// <param name="inner">Why the board could not be read.</param>
+public sealed class StickyNoteBoardUnreadableException(Exception inner)
+    : InvalidOperationException("The stored sticky note board cannot be read, so nothing was saved over it.", inner);

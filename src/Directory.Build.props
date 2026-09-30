@@ -4,5 +4,12 @@
 		<!-- This is a package/plugin: it does not resolve the final dependency graph, so audit
 		     only our own direct dependencies. Transitive versions are the consuming app's call. -->
 		<NuGetAuditMode>direct</NuGetAuditMode>
+		<!-- The highest version any shipped dependency may reach: every Umbraco.Cms range in
+		     Directory.Packages.props and every add-on's range on the host (Directory.Build.targets).
+		     17.99999999 rather than "< 18.0.0": NuGet orders 18.0.0-rc.1 before 18.0.0, so an
+		     exclusive 18.0.0 admits every 18 prerelease, while this stops below every 18 version. A
+		     plain stable number, because a "-0" bound packs and then fails the push. Raise it with the
+		     major, to 18.99999999 for the release that moves to Umbraco 18 (RELEASE.md). -->
+		<UmbraDesktopUmbracoMajorCeiling>17.99999999</UmbraDesktopUmbracoMajorCeiling>
 	</PropertyGroup>
 </Project>

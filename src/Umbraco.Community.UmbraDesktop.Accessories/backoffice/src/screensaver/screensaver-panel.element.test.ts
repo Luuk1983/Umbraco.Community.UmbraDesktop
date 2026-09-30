@@ -129,3 +129,56 @@ it('draws no ring round a dropdown opened with the mouse, and one when Tab reach
   expect(select.matches(':focus'), 'Tab came back to the list').to.equal(true);
   expect(getComputedStyle(select).outlineStyle, "the keyboard's ring").to.equal('solid');
 });
+
+/**
+ * The choice lives in the user's account now, and a save can fail. The window says so in its own
+ * hint line, where the person who just made the choice is looking, rather than in a toast; and it
+ * says so when what shows is only the default because the account could not be read.
+ */
+describe('when the account does not answer', () => {
+  /**
+   * A mounted panel over settings whose status the test sets.
+   * @returns The element and a way to change the status.
+   */
+  async function failing() {
+    const settings = fixedSettings({ screensaver: { enabled: true, saver: 'starfield', waitMinutes: 10 } });
+    let status: 'unread' | 'unsaved' | undefined;
+    const source = {
+      get value() {
+        return settings.value;
+      },
+      get status() {
+        return status;
+      },
+      set: settings.set,
+      subscribe: settings.subscribe,
+    };
+    const element = await fixture<ScreensaverPanelElement>(
+      html`<umbradesktop-screensaver-panel .source=${source}></umbradesktop-screensaver-panel>`,
+    );
+    /** Change the status, and tell the window as the real store does. */
+    const become = async (next: typeof status) => {
+      status = next;
+      settings.set(settings.value);
+      await element.updateComplete;
+    };
+    return { element, become };
+  }
+
+  const hint = (element: ScreensaverPanelElement) => element.shadowRoot!.querySelector('.hint')!;
+
+  it('says a choice was not saved, in the window, and takes it back when a save works', async () => {
+    const { element, become } = await failing();
+    await become('unsaved');
+    expect(hint(element).textContent).to.contain('not saved');
+    expect(hint(element).getAttribute('role')).to.equal('status');
+    await become(undefined);
+    expect(hint(element).textContent).to.contain('left alone');
+  });
+
+  it('says what shows is the default when the account could not be read', async () => {
+    const { element, become } = await failing();
+    await become('unread');
+    expect(hint(element).textContent).to.contain('could not be read');
+  });
+});

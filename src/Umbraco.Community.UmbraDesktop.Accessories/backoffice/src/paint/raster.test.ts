@@ -90,17 +90,6 @@ it('ignores a fill outside the picture', () => {
 });
 
 /**
- * Undo keeps whole copies of the picture, so its depth is set by memory rather than a fixed count:
- * twenty copies of a small sketch cost nothing, twenty of a 4,000-pixel photograph are gigabytes.
- */
-it('keeps fewer undo steps for a larger picture, and always at least one', async () => {
-  const { undoDepthFor } = await import('./constants.js');
-  expect(undoDepthFor(480, 300)).to.equal(20);
-  expect(undoDepthFor(4000, 3000)).to.be.lessThan(20).and.at.least(1);
-  expect(undoDepthFor(20000, 20000)).to.equal(1);
-});
-
-/**
  * Resizing the picture: anchored at the top left, growing into a fill colour and shrinking by
  * cropping, as MS Paint's canvas handles do. Nothing that stays inside both sizes moves.
  */

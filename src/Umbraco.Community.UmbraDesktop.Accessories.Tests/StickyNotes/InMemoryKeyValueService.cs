@@ -11,8 +11,18 @@ internal sealed class InMemoryKeyValueService : IKeyValueService
     /// <summary>What has been stored, by key.</summary>
     public Dictionary<string, string> Values { get; } = new();
 
+    /// <summary>
+    /// Every read and plain write, in order, shared with a recording scope provider so a test can
+    /// check they happen inside the database lock rather than before it.
+    /// </summary>
+    public List<string> Calls { get; init; } = [];
+
     /// <inheritdoc />
-    public string? GetValue(string key) => Values.GetValueOrDefault(key);
+    public string? GetValue(string key)
+    {
+        Calls.Add("get");
+        return Values.GetValueOrDefault(key);
+    }
 
     /// <inheritdoc />
     public IReadOnlyDictionary<string, string?>? FindByKeyPrefix(string keyPrefix) =>
@@ -20,7 +30,11 @@ internal sealed class InMemoryKeyValueService : IKeyValueService
             .ToDictionary(pair => pair.Key, pair => (string?)pair.Value);
 
     /// <inheritdoc />
-    public void SetValue(string key, string value) => Values[key] = value;
+    public void SetValue(string key, string value)
+    {
+        Calls.Add("set");
+        Values[key] = value;
+    }
 
     /// <inheritdoc />
     public void SetValue(string key, string originValue, string newValue)

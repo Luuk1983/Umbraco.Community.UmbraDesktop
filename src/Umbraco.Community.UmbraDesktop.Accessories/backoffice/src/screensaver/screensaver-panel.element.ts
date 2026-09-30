@@ -35,9 +35,10 @@ const SAVER_NAMES: Record<AccessoriesScreensaverId, [key: string, english: strin
  * running the chosen saver, the list of savers with (None) at the top, "Wait _ minutes", and a
  * Preview button that runs it full screen.
  *
- * This window is the only place the screen saver is set; Desktop settings > Accessories holds the
- * save folder alone. Like every other setting on the desktop there is no OK or Apply: a choice
- * applies the moment it is made, and the idle watcher follows it without being told.
+ * This window is the only place the screen saver is set. Like every other setting on the desktop
+ * there is no OK or Apply: a choice applies the moment it is made, and the idle watcher follows it
+ * without being told. It is stored in the user's account, so it follows them to any browser; while
+ * a save has not gone through, the hint line says so.
  *
  * (None) switches the screensaver off and keeps the saver that was chosen, so switching it back on
  * later is one choice rather than two.
@@ -45,8 +46,8 @@ const SAVER_NAMES: Record<AccessoriesScreensaverId, [key: string, english: strin
 @customElement('umbradesktop-screensaver-panel')
 export class ScreensaverPanelElement extends UmbLitElement {
   /**
-   * Where the settings are read from and written to. The stored per-user settings unless a test
-   * says otherwise.
+   * Where the settings are read from and written to. The user's own, stored in their account,
+   * unless a test says otherwise.
    */
   @property({ attribute: false })
   source?: AccessoriesSettingsSource;
@@ -129,6 +130,33 @@ export class ScreensaverPanelElement extends UmbLitElement {
   }
 
   /**
+   * The line under the controls: what the screensaver does, or, when the account has not answered,
+   * that the choice on show is not the stored one. In this line rather than a toast, because the
+   * person who just made the choice is looking at this window, and in the same fixed-height slot, so
+   * a failure does not move the controls or change the window's size.
+   * @returns The text.
+   */
+  #hint(): string {
+    switch (this.#source!.status) {
+      case 'unsaved':
+        return this.#term(
+          'screensaverUnsaved',
+          'Your choice is not saved to your account yet. It holds here, and is saved with your next change.',
+        );
+      case 'unread':
+        return this.#term(
+          'screensaverUnread',
+          'Your saved choice could not be read, so this shows the default. Open this window again to retry.',
+        );
+      default:
+        return this.#term(
+          'screensaverAbout',
+          'Starts when the desktop has been left alone for the wait. Any key, click or real movement of the mouse brings it back.',
+        );
+    }
+  }
+
+  /**
    * The window.
    * @returns The monitor, the saver list with Preview, and the wait.
    */
@@ -162,12 +190,7 @@ export class ScreensaverPanelElement extends UmbLitElement {
         </select>
         <span>${this.#term('screensaverMinutes', 'minutes')}</span>
       </label>
-      <p class="hint muted">
-        ${this.#term(
-          'screensaverAbout',
-          'Starts when the desktop has been left alone for the wait. Any key, click or real movement of the mouse brings it back.',
-        )}
-      </p>
+      <p class="hint muted" role="status">${this.#hint()}</p>
     `;
   }
 

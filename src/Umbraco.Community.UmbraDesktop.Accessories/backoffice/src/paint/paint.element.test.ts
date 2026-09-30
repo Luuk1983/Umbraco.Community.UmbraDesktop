@@ -4,7 +4,7 @@ import './paint.element.js';
 import { PAINT_CANVAS_SIZE, PAINT_MAX_IMAGE_EDGE_PX } from './constants.js';
 import type { PaintElement } from './paint.element.js';
 import type { MediaOpenResult } from '../shared/media-open.js';
-import type { MediaSaveRequest } from '../shared/media-save.js';
+import type { MediaSaveRequest, MediaSaveResult } from '../shared/media-save.js';
 import type { SaveFolderChoice } from '../shared/save-location.js';
 
 /**
@@ -19,18 +19,24 @@ interface Recorded {
   saves: MediaSaveRequest[];
   /** How many times Save asked where. */
   picks: number;
+  /** The name each overwrite question was asked about. */
+  overwrites: string[];
 }
 
 /**
  * A mounted Paint over a fake media library whose Open finds `opened`.
  * @param opened What Open finds.
  * @param picked Where Save As is told to put a new picture.
+ * @param saved What each save answers, in turn, the last repeating. A success by default.
+ * @param overwrite What the question about overwriting a changed file answers.
  */
 async function paint(
   opened?: MediaOpenResult,
   picked: SaveFolderChoice = { status: 'chosen', folder: 'folder-1' },
+  saved: MediaSaveResult[] = [],
+  overwrite = true,
 ): Promise<{ element: PaintElement; recorded: Recorded }> {
-  const recorded: Recorded = { saves: [], picks: 0 };
+  const recorded: Recorded = { saves: [], picks: 0, overwrites: [] };
   const element = await fixture<PaintElement>(html`<umbradesktop-paint
     .confirmDiscard=${async () => true}
     .pickSaveFolder=${async () => {
@@ -39,9 +45,14 @@ async function paint(
     }}
     .saveToMedia=${async (request: MediaSaveRequest) => {
       recorded.saves.push(request);
-      return { ok: true, unique: request.existing ?? 'picture-1' };
+      const answer = saved.length > 1 ? saved.shift() : saved[0];
+      return answer ?? { ok: true, unique: request.existing ?? 'picture-1' };
     }}
     .openFromMedia=${async () => opened ?? { status: 'cancelled' }}
+    .confirmOverwrite=${async (name: string) => {
+      recorded.overwrites.push(name);
+      return overwrite;
+    }}
   ></umbradesktop-paint>`);
   return { element, recorded };
 }
@@ -205,6 +216,20 @@ it('takes a stroke back with Undo, and with Ctrl+Z', async () => {
   await element.updateComplete;
   expect(pixel(element, 5, 5)).to.deep.equal(WHITE);
   expect(event.defaultPrevented).to.equal(true);
+});
+
+/**
+ * Undo's memory is one budget shared by every open Paint window, so a window that closes gives its
+ * share back to the others rather than holding it until the tab is closed.
+ */
+it('gives its undo memory back to the other windows when it closes', async () => {
+  const { paintUndoPool } = await import('./undo.js');
+  const before = paintUndoPool.used;
+  const { element } = await paint();
+  await drag(element, [[5, 5]]);
+  expect(paintUndoPool.used, 'a stroke to take back').to.be.greaterThan(before);
+  element.remove();
+  expect(paintUndoPool.used).to.equal(before);
 });
 
 it('starts a new picture, at the default size', async () => {
@@ -498,4 +523,63 @@ it('hears Ctrl+Z after a real stroke, with no ring on the tool clicked first', a
   expect(pixel(element, 5, 5), 'Ctrl+Z took the stroke back').to.deep.equal(WHITE);
   expect(tool.matches(':focus-visible'), 'the clicked tool shows a focus ring').to.equal(false);
   expect(getComputedStyle(element).outlineStyle, 'a ring round the whole app').to.equal('none');
+});
+
+/**
+ * Somebody may replace the image in the Media section while it is open here. A save then asks
+ * before overwriting their version, as Notepad does: the saver is told which version was opened,
+ * and answers with a conflict when it has changed.
+ */
+describe('an image changed in the media library after it was opened', () => {
+  const CONFLICT: MediaSaveResult = { ok: false, conflict: true };
+
+  /** The red image, as last changed at `updateDate`. */
+  async function opened(updateDate = '2026-09-01T10:00:00'): Promise<MediaOpenResult> {
+    return { ...(await redImage(30, 20)), updateDate } as MediaOpenResult;
+  }
+
+  /** Open the image, draw on it, and save. */
+  async function drawAndSave(element: PaintElement, saves: () => number): Promise<void> {
+    await click(element, '[data-action="open"]');
+    await until(() => canvas(element).width === 30);
+    await drag(element, [[5, 5]]);
+    const before = saves();
+    await click(element, '[data-action="save"]');
+    await until(() => saves() > before);
+    for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+
+  it('tells the saver which version it opened, and then which version it saved', async () => {
+    const { element, recorded } = await paint(await opened(), undefined, [
+      { ok: true, unique: 'existing-1', updateDate: '2026-09-02T09:00:00' },
+    ]);
+    await drawAndSave(element, () => recorded.saves.length);
+    await drag(element, [[9, 9]]);
+    await click(element, '[data-action="save"]');
+    await until(() => recorded.saves.length === 2);
+    expect(recorded.saves.map((save) => save.expectedUpdateDate)).to.deep.equal([
+      '2026-09-01T10:00:00',
+      '2026-09-02T09:00:00',
+    ]);
+  });
+
+  it('asks before overwriting it, and overwrites it on yes', async () => {
+    const { element, recorded } = await paint(await opened(), undefined, [
+      CONFLICT,
+      { ok: true, unique: 'existing-1', updateDate: '2026-09-03T08:00:00' },
+    ]);
+    await drawAndSave(element, () => recorded.saves.length);
+    await until(() => recorded.saves.length === 2);
+    expect(recorded.overwrites).to.deep.equal(['Logo']);
+    expect(recorded.saves.map((save) => save.force ?? false)).to.deep.equal([false, true]);
+    expect(element.hasAttribute('data-umbradesktop-dirty')).to.equal(false);
+  });
+
+  it('saves nothing on no, keeps the picture unsaved, and says why', async () => {
+    const { element, recorded } = await paint(await opened(), undefined, [CONFLICT], false);
+    await drawAndSave(element, () => recorded.saves.length);
+    expect(recorded.saves).to.have.length(1);
+    expect(element.hasAttribute('data-umbradesktop-dirty')).to.equal(true);
+    expect(notice(element)).to.contain('Logo').and.to.contain('changed in the media library');
+  });
 });
