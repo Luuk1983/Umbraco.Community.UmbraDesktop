@@ -58,7 +58,34 @@ class QuietApp extends HTMLElement {
 customElements.define('focus-quiet-app', QuietApp);
 
 /**
- * An element app of one of the two stand-ins.
+ * A stand-in app with Minesweeper's focus model: nothing focusable on the element itself, only
+ * buttons inside its shadow root, and nothing focused until the player clicks one. So when its
+ * window becomes active, the desktop has nothing in it to give the keyboard to.
+ */
+class BoardApp extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' }).innerHTML = `<button class="cell">1</button><button class="cell">2</button>`;
+  }
+}
+customElements.define('focus-board-app', BoardApp);
+
+/** A stand-in for attached content with a text box of its own, as the app in a pane can have. */
+class NotesApp extends HTMLElement {
+  /** The text box. */
+  input: HTMLInputElement;
+
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    root.innerHTML = `<input class="note" style="width: 150px">`;
+    this.input = root.querySelector('input')!;
+  }
+}
+customElements.define('focus-notes-app', NotesApp);
+
+/**
+ * An element app of one of the stand-ins.
  * @param alias The app alias.
  * @param element The app's class.
  * @returns The app.
@@ -131,6 +158,7 @@ async function desktop() {
    * Open an app and return its window and the app element inside it.
    * @param which The app to open.
    * @param at Where to put its window, so windows do not overlap.
+   * @returns The window's id, its element, and its app element, which an iframe window has none of.
    */
   const open = async <T extends HTMLElement>(which: UmbraDesktopApp, at: { x: number; y: number }) => {
     manager.open(which);
@@ -138,7 +166,7 @@ async function desktop() {
     manager.move(id, at.x, at.y);
     await settle();
     const element = elements.get(id)!;
-    const appElement = element.shadowRoot!.querySelector('umbradesktop-app-host')!.firstElementChild as T;
+    const appElement = element.shadowRoot!.querySelector('umbradesktop-app-host')?.firstElementChild as T;
     return { id, element, app: appElement };
   };
 
@@ -148,6 +176,16 @@ async function desktop() {
 /** The centre of a part of a window, for clicking it. */
 function pointIn(element: UmbraDesktopWindowElement, selector: string): [number, number] {
   const box = element.shadowRoot!.querySelector(selector)!.getBoundingClientRect();
+  return [Math.round(box.left + box.width / 2), Math.round(box.top + box.height / 2)];
+}
+
+/**
+ * The centre of any element, for clicking it: a playfield inside an app, a text box in a pane.
+ * @param element The element to click.
+ * @returns Its centre, in viewport pixels.
+ */
+function centreOf(element: Element): [number, number] {
+  const box = element.getBoundingClientRect();
   return [Math.round(box.left + box.width / 2), Math.round(box.top + box.height / 2)];
 }
 
@@ -228,18 +266,25 @@ it('keeps the keyboard in the app when its own titlebar or edge is clicked', asy
   expect(a.app.keys).to.deep.equal([' ']);
 });
 
+/**
+ * Read at the window, after the press has bubbled past the frame: whether anything on the way
+ * stopped it moving focus. Whether a clicked button then takes focus is the browser's own rule, and
+ * Safari's differs from Chrome's, so that is not what this asserts. It also compares booleans rather
+ * than elements, because a failing element comparison hangs the runner while chai prints the DOM.
+ */
 it('leaves a click inside the app to the app', async function () {
   this.timeout(TIMEOUT_MS);
   const { open, settle } = await desktop();
   const a = await open<FocusProbeApp>(app('a', FocusProbeApp), { x: 20, y: 20 });
-  const newGame = a.app.shadowRoot!.querySelector<HTMLElement>('.new')!.getBoundingClientRect();
+  let prevented: boolean | undefined;
+  const record = (event: MouseEvent) => (prevented = event.defaultPrevented);
+  window.addEventListener('mousedown', record);
+  cleanup.push(() => window.removeEventListener('mousedown', record));
 
-  await click([Math.round(newGame.left + newGame.width / 2), Math.round(newGame.top + newGame.height / 2)]);
+  await click(centreOf(a.app.shadowRoot!.querySelector('.new')!));
   await settle();
 
-  expect(a.app.shadowRoot!.activeElement, 'the clicked button has focus, as it should').to.equal(
-    a.app.shadowRoot!.querySelector('.new'),
-  );
+  expect(prevented, 'the desktop stopped a press inside the app from moving focus').to.equal(false);
 });
 
 it('gives the keyboard to a newly opened app that takes it but does not focus itself', async function () {
@@ -250,4 +295,169 @@ it('gives the keyboard to a newly opened app that takes it but does not focus it
   await sendKeys({ press: 'x' });
 
   expect(quiet.app.keys).to.deep.equal(['x']);
+});
+
+/*
+ * Leaving a window. Pressing another window's titlebar or body used to move focus to the page
+ * body, so the app being left always lost the keyboard. Those presses no longer move focus, so the
+ * window being activated has to take it, even when its app has nothing to give it to. Otherwise
+ * Snake runs on behind the new window and keeps steering on its arrow keys.
+ */
+
+it('takes the keyboard from the app being left when the next window, clicked by its titlebar, has nothing to focus', async function () {
+  this.timeout(TIMEOUT_MS);
+  const { open, settle } = await desktop();
+  const board = await open<BoardApp>(app('board', BoardApp), { x: 500, y: 20 });
+  const game = await open<FocusProbeApp>(app('game', FocusProbeApp), { x: 20, y: 20 });
+  const blurs = game.app.blurs;
+
+  await click(pointIn(board.element, '.title-text'));
+  await settle();
+  await sendKeys({ press: 'ArrowUp' });
+
+  expect(game.app.keys, 'the game behind the new window still took the key').to.deep.equal([]);
+  expect(game.app.blurs - blurs, 'the game never lost focus, so Snake would run on').to.equal(1);
+});
+
+it('takes the keyboard from the app being left when the next window, clicked on its body, has nothing to focus', async function () {
+  this.timeout(TIMEOUT_MS);
+  const { open, settle } = await desktop();
+  const board = await open<BoardApp>(app('board', BoardApp), { x: 500, y: 20 });
+  const game = await open<FocusProbeApp>(app('game', FocusProbeApp), { x: 20, y: 20 });
+  const blurs = game.app.blurs;
+
+  await click(pointIn(board.element, '.focus-catcher'));
+  await settle();
+  await sendKeys({ press: 'ArrowUp' });
+
+  expect(game.app.keys, 'the game behind the new window still took the key').to.deep.equal([]);
+  expect(game.app.blurs - blurs, 'the game never lost focus, so Snake would run on').to.equal(1);
+});
+
+/**
+ * The same from a backoffice window, where it is worse than a game: the keys would go into the
+ * editor behind the window the user just brought forward. Its text box is focused directly, since a
+ * blank frame never boots the backoffice that lifts the window's loading cover. This is the case
+ * that differs by browser: Safari keeps focus in a frame whose element is blurred, which Chrome and
+ * Firefox do not, so this one has to pass in Safari too before a change to it is trusted.
+ */
+it('takes the keyboard out of an iframe window when the next window has nothing to focus', async function () {
+  this.timeout(TIMEOUT_MS);
+  const { open, settle } = await desktop();
+  const board = await open<BoardApp>(app('board', BoardApp), { x: 500, y: 20 });
+  const editor = await open<HTMLElement>(
+    {
+      alias: 'editor',
+      name: 'editor',
+      icon: 'icon-umbraco',
+      content: { kind: 'iframe', url: 'about:blank' },
+      chromeProfile: 'bare',
+      defaultSize: { w: 320, h: 200 },
+    },
+    { x: 20, y: 20 },
+  );
+  const frame = editor.element.shadowRoot!.querySelector('iframe')!;
+  for (let i = 0; i < 50 && frame.contentDocument?.readyState !== 'complete'; i++) await new Promise((r) => setTimeout(r, 20));
+  const text = frame.contentDocument!.createElement('textarea');
+  frame.contentDocument!.body.appendChild(text);
+  text.focus({ preventScroll: true });
+  await sendKeys({ type: 'a' });
+
+  await click(pointIn(board.element, '.title-text'));
+  await settle();
+  await sendKeys({ type: 'b' });
+
+  expect(text.value, 'what was typed after bringing the other window forward went into the editor behind it').to.equal('a');
+});
+
+/**
+ * Space on a taskbar control that leaves the window active, like Full screen: the window never
+ * stopped being active, so pressing its titlebar is the only route back, and that press no longer
+ * moves focus. Stood in for by a button that does nothing to the window.
+ */
+it('gives the keyboard back when the already active window is pressed after a taskbar control took it', async function () {
+  this.timeout(TIMEOUT_MS);
+  const { open, settle } = await desktop();
+  const game = await open<FocusProbeApp>(app('game', FocusProbeApp), { x: 20, y: 20 });
+
+  const control = document.createElement('button');
+  control.textContent = 'Full screen';
+  control.style.cssText = 'position: fixed; left: 20px; bottom: 20px;';
+  let presses = 0;
+  control.addEventListener('click', () => presses++);
+  document.body.appendChild(control);
+  cleanup.push(() => control.remove());
+
+  await click(centreOf(control));
+  await click(pointIn(game.element, '.title-text'));
+  await settle();
+  await sendKeys({ press: 'Space' });
+
+  expect(presses, 'Space pressed the taskbar control a second time').to.equal(1);
+  expect(game.app.keys, 'Space goes to the app, as the pause message asks').to.deep.equal([' ']);
+});
+
+/*
+ * Attached panes. A pane sits inside its owner's frame but holds content of its own, so a press in
+ * it is the pane's, like a press in the owner's app, and focus in it is the window's already.
+ */
+
+it('leaves a press inside an attached pane to the pane', async function () {
+  this.timeout(TIMEOUT_MS);
+  const { manager, open, settle } = await desktop();
+  const game = await open<FocusProbeApp>(app('game', FocusProbeApp), { x: 20, y: 20 });
+  manager.openAttached(game.id, app('notes', NotesApp), 'right');
+  await settle();
+  const paneHost = game.element.shadowRoot!.querySelector('umbradesktop-window-pane')!.shadowRoot!.querySelector<
+    HTMLElement & { mountComplete: Promise<void> }
+  >('umbradesktop-app-host')!;
+  await paneHost.mountComplete;
+  const notes = paneHost.firstElementChild as NotesApp;
+
+  await click(centreOf(notes.input));
+  await settle();
+
+  expect(notes.shadowRoot!.activeElement === notes.input, 'the text box in the pane took focus from the click').to.be.true;
+});
+
+/** A guard: the press on the owner's titlebar must not pull the keyboard out of its own pane. */
+it('keeps the keyboard in an attached pane when its window titlebar is pressed', async function () {
+  this.timeout(TIMEOUT_MS);
+  const { manager, open, settle } = await desktop();
+  const game = await open<FocusProbeApp>(app('game', FocusProbeApp), { x: 20, y: 20 });
+  manager.openAttached(game.id, app('notes', NotesApp), 'right');
+  await settle();
+  const paneHost = game.element.shadowRoot!.querySelector('umbradesktop-window-pane')!.shadowRoot!.querySelector<
+    HTMLElement & { mountComplete: Promise<void> }
+  >('umbradesktop-app-host')!;
+  await paneHost.mountComplete;
+  const notes = paneHost.firstElementChild as NotesApp;
+  notes.input.focus({ preventScroll: true });
+  await sendKeys({ type: 'a' });
+
+  await click(pointIn(game.element, '.title-text'));
+  await settle();
+  await sendKeys({ type: 'b' });
+
+  expect(notes.input.value, 'typing went on in the pane').to.equal('ab');
+  expect(game.app.keys, 'and none of it reached the window app').to.deep.equal([]);
+});
+
+/**
+ * What Snake's pause depends on. Pressing the window's own minimize button no longer moves focus,
+ * so the window takes the keyboard out itself as it is minimized, rather than leaving it to each
+ * browser to notice that the focused element is hidden: WebKit did not always notice in time.
+ */
+it('takes the keyboard from the app when its window is minimized by its own button', async function () {
+  this.timeout(TIMEOUT_MS);
+  const { open, settle } = await desktop();
+  const game = await open<FocusProbeApp>(app('game', FocusProbeApp), { x: 20, y: 20 });
+  const blurs = game.app.blurs;
+
+  await click(pointIn(game.element, '.ctrl-minimize'));
+  await settle();
+  await sendKeys({ press: 'ArrowUp' });
+
+  expect(game.app.blurs - blurs, 'the game never lost focus, so Snake would run on while minimized').to.equal(1);
+  expect(game.app.keys, 'the minimized game still took the key').to.deep.equal([]);
 });

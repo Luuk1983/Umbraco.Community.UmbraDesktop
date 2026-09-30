@@ -50,7 +50,7 @@ import './app-host.element.js';
 // loaded instantly, right up until a slow one showed a blank cover instead.
 import './loader.element.js';
 import './window-pane.element.js';
-import type { UmbraDesktopPaneDragDetail } from './window-pane.element.js';
+import { UmbraDesktopWindowPaneElement, type UmbraDesktopPaneDragDetail } from './window-pane.element.js';
 import { attachedKind, paneTotal } from '../window-group.js';
 import { previewTargetFromPath } from '../preview/preview-target.js';
 import { createPreviewApp, UMBRADESKTOP_PREVIEW_APP_ALIAS } from '../preview/preview-model.js';
@@ -852,6 +852,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   /** Whether the window was active and shown at the last update, to see it become so. */
   #wasActive = false;
 
+  /** Whether the window was minimized at the last update, to see it become so. */
+  #wasMinimized = false;
+
   /**
    * Remember what inside the app took focus. The first node of the composed path, so a control
    * inside the app's own shadow root is remembered rather than the app element around it.
@@ -863,20 +866,29 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   };
 
   /**
-   * Keep a click on the window's own chrome from taking focus out of the app.
+   * Keep a click on the window's own chrome from taking focus out of the app, and bring it back
+   * to the app when it was somewhere else.
    *
    * A mousedown's default moves focus to the nearest focusable ancestor of what was pressed, and
    * nothing in the titlebar, the frame's edges or the resize handles is one, so pressing any of
    * them put focus on the page body: an app that pauses when it loses focus paused on a resize, and
    * one that takes the keyboard lost it until it was clicked again. Preventing the default leaves
-   * focus where it was. A press inside the app itself is the app's business and is left alone, and
-   * so is every press in an iframe window, whose focus is its frame's own.
+   * focus where it was, which is only right when it was already in the app. When it was on something
+   * outside, a taskbar control say, the window does not change from inactive to active, so nothing
+   * else would hand the app the keyboard, and the next Space would press that control again.
+   *
+   * A press inside the app itself is the app's business and is left alone, and so is a press in an
+   * attached pane, whose content is its own, and every press in an iframe window, whose focus is its
+   * frame's own.
    * @param event The mousedown, anywhere on the frame.
    */
   #onFrameMouseDown = (event: MouseEvent) => {
     if (this.window?.app.content.kind !== 'element') return;
-    if (this.#appHost && event.composedPath().includes(this.#appHost)) return;
+    const path = event.composedPath();
+    if (this.#appHost && path.includes(this.#appHost)) return;
+    if (path.some((node) => node instanceof UmbraDesktopWindowPaneElement)) return;
     event.preventDefault();
+    void this.#giveAppFocus();
   };
 
   /**
@@ -911,15 +923,40 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   }
 
   /**
-   * Whether keyboard focus is already somewhere inside this window's app.
+   * Whether keyboard focus is already somewhere inside this window's app, or in one of its attached
+   * panes, where it is the pane's and giving it to the app would pull it out from under the user.
    * @param host The app host.
-   * @returns True when the focused element, however deep in shadow roots, is in the app.
+   * @returns True when the focused element, however deep in shadow roots, is in the app or a pane.
    */
   #focusIsInside(host: HTMLElement): boolean {
-    for (let active = document.activeElement; active; active = active.shadowRoot?.activeElement ?? null) {
-      if (host.contains(active)) return true;
-    }
-    return false;
+    // Focus anywhere under this window's shadow root, retargeted to the element in it that holds
+    // it: the app element for a control deep in the app's own shadow root, the pane for one in a pane.
+    const active = this.shadowRoot?.activeElement;
+    return !!active && (host.contains(active) || active instanceof UmbraDesktopWindowPaneElement);
+  }
+
+  /**
+   * Take keyboard focus from wherever it is, for a window whose app has nothing to take it.
+   *
+   * Pressing another window's titlebar or body used to move focus to the page body, so the app being
+   * left always lost the keyboard. Those presses no longer move focus, so without this the keyboard
+   * stayed where it was: in the window behind, where a game ran on and steered on the arrow keys and
+   * an editor took what was typed next. This leaves focus on the page body, as that press did.
+   *
+   * By way of this window's own frame, rather than by blurring whatever has focus, because of Safari:
+   * blurring an iframe element does not take focus out of the frame there, so a backoffice window
+   * behind kept every key (measured in Safari and in WebKit, 2026-09-30; Chrome and Firefox do let
+   * go). Focusing something in this document takes focus out of any frame in every browser, and
+   * blurring that leaves the page body. The frame is focusable only for that moment, so a click on
+   * the window's chrome never lands focus on it.
+   */
+  #blurFocused(): void {
+    const frame = this.shadowRoot?.querySelector<HTMLElement>('.frame');
+    if (!frame || !document.activeElement || document.activeElement === document.body) return;
+    frame.tabIndex = -1;
+    frame.focus({ preventScroll: true });
+    frame.blur();
+    frame.removeAttribute('tabindex');
   }
 
   /**
@@ -934,6 +971,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * This is what lets a keyboard app come back to where it was by every route into its window: a
    * click on its body (through the focus catcher), on its titlebar, or on its taskbar button, where
    * focus would otherwise stay on the button and the next Space would press it again.
+   *
+   * When the app takes nothing, focus is still taken from wherever it was, so the keyboard never
+   * stays with a window that is no longer active. See `#blurFocused`.
    */
   async #giveAppFocus(): Promise<void> {
     const host = this.#appHost as (HTMLElement & { mountComplete?: Promise<void> }) | undefined;
@@ -942,20 +982,39 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (!this.window?.active || this.window.state === 'minimized' || this.#focusIsInside(host)) return;
     const remembered = this.#lastFocus?.isConnected && host.contains(this.#hostOf(this.#lastFocus)) ? this.#lastFocus : undefined;
     (remembered ?? (host.firstElementChild as HTMLElement | null))?.focus({ preventScroll: true });
+    if (!this.#focusIsInside(host)) this.#blurFocused();
+  }
+
+  /**
+   * Take the keyboard out of this window as it is minimized.
+   *
+   * A hidden window must not keep the keyboard: a game that pauses when it loses focus would run on
+   * out of sight, and keys would go to something nobody can see. A press on the minimize button no
+   * longer moves focus (see `#onFrameMouseDown`), so without this it is left to the browser to notice
+   * that the focused element is hidden. Chrome, Firefox and Safari notice at once; WebKit did not
+   * always in time for the test that pins it (measured 2026-09-30). This does not wait for either.
+   */
+  #releaseFocus(): void {
+    let active = this.shadowRoot?.activeElement ?? null;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    if (active instanceof HTMLElement || active instanceof SVGElement) active.blur();
   }
 
   /**
    * Hand the app the keyboard whenever its window becomes active and shown: opened, clicked,
-   * brought forward from the taskbar or restored. Element windows only; an iframe window's focus is
-   * its frame's.
+   * brought forward from the taskbar or restored. Take it back when the window is minimized.
+   * Element windows only; an iframe window's focus is its frame's.
    * @param changed The properties this update is for.
    */
   override updated(changed: Map<string, unknown>) {
     super.updated(changed);
     const w = this.window;
     const active = !!w && w.app.content.kind === 'element' && w.active && w.state !== 'minimized';
+    const minimized = !!w && w.app.content.kind === 'element' && w.state === 'minimized';
     if (active && !this.#wasActive) void this.#giveAppFocus();
+    if (minimized && !this.#wasMinimized) this.#releaseFocus();
     this.#wasActive = active;
+    this.#wasMinimized = minimized;
   }
 
   /**
