@@ -209,7 +209,7 @@ export const UMBRADESKTOP_DOCK_ZONE_WIDTH = 160;
  * its own bottom hairline, measured from the window's top, because that is where a `rect.y` puts
  * it.
  *
- * Both are **derived, never typed**, for the reason `docs/theming.md` §4 gives: these numbers feed
+ * Both are **derived, never typed**, for the reason `docs/developer/theming.md` §4 gives: these numbers feed
  * `clampWindowPosition`, and one that disagrees with the CSS strands windows at the screen edges.
  * `trailing` was a hand-written `138` — three buttons — for as long as the titlebar has rendered
  * four, so a window dragged hard right kept 46px less draggable caption than `grab` asks for,

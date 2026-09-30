@@ -31,7 +31,7 @@ export const W11_CLOSE = '#c42b1c';
  * The half of the launcher's centring that CSS can do on its own. The Start panel is a fixed-width
  * card centred on the *viewport*, and `--umbradesktop-launcher-left` is the only geometry channel
  * the base rule reads — so rather than a sheet fighting the base over `left`/`right`/`width`
- * (the over-constraint trap in `docs/theming.md` §5), the offset is computed here from the width
+ * (the over-constraint trap in `docs/developer/theming.md` §5), the offset is computed here from the width
  * the palette itself declares. One token, no sheet rule, and the two can never disagree.
  */
 const W11_LAUNCHER_LEFT = `calc(50vw - ${W11_LAUNCHER_WIDTH / 2}px)`;

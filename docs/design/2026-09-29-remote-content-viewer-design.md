@@ -9,7 +9,7 @@
 - **Branch:** `worktree-remote-content-viewer`
 - **Issue:** [#105](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/105)
 - **Target:** Umbraco CMS **v17**, package `Umbraco.Community.UmbraDesktop`
-- **Builds on:** Connections (`docs/connections.md`), which already stores API users per instance
+- **Builds on:** Connections (`docs/user/external-connections/setting-up-connections.md`), which already stores API users per instance
 
 ---
 
@@ -119,7 +119,7 @@ The spike answers these before anything else is designed.
 ## 7. Documentation to write when built
 
 - `README.md`: the app, in the Features list and its own section.
-- `docs/connections.md`: the API user now needs the Content section, and why.
+- `docs/user/external-connections/setting-up-connections.md`: the API user now needs the Content section, and why.
 - `docs/remote-content-viewer.md`: the routing table, for contributors who add a route.
 - Marketplace: a tag. No screenshot until the experimental label comes off.
 
@@ -174,7 +174,7 @@ The four unknowns:
   harm. A viewer should keep a list of such packages, or an escape hatch per package.
 - The frame booted its data calls twice in one run, which is unexplained and worth a look.
 - An API user's client ID is stored, and must be sent to the token endpoint, with the prefix
-  `umbraco-back-office-`. The backoffice's own create modal adds it. `docs/connections.md` says the
+  `umbraco-back-office-`. The backoffice's own create modal adds it. `docs/user/external-connections/setting-up-connections.md` says the
   client ID is "the one you chose", which may leave the prefix out.
 - The proxy was a Node script here. The real one is a same-origin C# endpoint and needs the path
   guard the status client already has.

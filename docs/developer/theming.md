@@ -1,7 +1,14 @@
+---
+id: theming
+title: Adding a theme
+description: Build a new skin for the desktop's chrome, the launcher, taskbar and windows.
+sidebar_position: 3
+---
+
 # Adding a theme
 
 > How to build a new skin for the UmbraDesktop chrome — launcher, taskbar, windows. For *why* the
-> system is shaped the way it is, see [the design](design/2026-09-04-theming-system-design.md);
+> system is shaped the way it is, see [the design](../design/2026-09-04-theming-system-design.md);
 > this document is the practical companion to it.
 
 A theme is a folder of CSS plus one entry in a catalogue. It never touches the four chrome
@@ -28,7 +35,7 @@ Every file except `index.ts` is optional. The **Umbraco** theme is one `index.ts
 palette and no sheets at all — every chrome token carries today's value as its CSS fallback, and an
 app token's fallback is carried by the app itself (§3), so setting nothing renders exactly what
 shipped before theming existed. Read
-[`themes/umbraco/index.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/umbraco/index.ts)
+[`themes/umbraco/index.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/umbraco/index.ts)
 first; it is the shortest complete theme there can be.
 
 Then register it, and that is the only file outside your folder you touch:
@@ -56,7 +63,7 @@ wallpaper: { kind: 'builtin', id: 'first-light' },
 Two kinds are meaningful, and the difference between them matters:
 
 - `{ kind: 'builtin', id }` names one of the images the package ships. The id is a slug from
-  [`wallpapers.generated.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/settings/wallpapers.generated.ts),
+  [`wallpapers.generated.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/settings/wallpapers.generated.ts),
   which the build writes from the files in `backoffice/wallpapers-src/`.
 - `{ kind: 'none' }` says *your theme's own ground is the wallpaper* — your
   `--umbradesktop-desktop-background-color` and `--umbradesktop-desktop-background-image`, with no
@@ -282,7 +289,7 @@ repository.
 
 A palette is `Partial<Record<UmbraDesktopPaletteToken, string>>`, so **a typo is a compile error**,
 and it covers two token groups rather than one. The normative source is two lists in
-[`theme/types.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/types.ts):
+[`theme/types.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/types.ts):
 `UMBRADESKTOP_TOKENS`, the chrome group, and `UMBRADESKTOP_APP_TOKENS`, the app group. Read those
 lists rather than a count here, which would only go stale the next time either grows. What each
 prefix is for:
@@ -303,7 +310,7 @@ prefix is for:
 | `strip-button-*` | The toolbar buttons in those strips: the path strip's Preview, the pane header's controls and a floating attached window's Dock. Corner radius, the hover fill, text and shadow, and the pressed fill, text and shadow. Separate from a crumb's hover, because a crumb is a link and these are buttons: Windows 98 hovers a crumb in navy and raises a button. A theme that styles the path strip must set the pressed pair, or it gets Umbraco's own "you are here" pink |
 | `dock-zone-*` | The zones inside an owner window where a dragged attached window can dock: border, radius, fill and label colours, and an `active` border, fill and label for the zone under the pointer. Keep the active one strong: it is drawn over a window, often a white one |
 | `task-group-*` | The box on the taskbar around a window's button and its floating attached windows' buttons: gap, padding, border, radius and background |
-| `toasts-*`, `toast-*` | The desktop's notifications ([design](design/2026-09-27-desktop-notifications-design.md)). `toasts-*` places the stack: its `top`, `right`, `bottom` and `left` offsets and its flex `direction`. The default hangs it above the taskbar at the trailing edge and grows it upwards; macOS sets `top`, clears `bottom` to `auto` and turns the direction to `column`, which is all a theme with its bar or a menu bar at the top needs. `toast-*` is one toast's surface: width, background, backdrop, text, border, radius and shadow, each falling back to the matching `launcher-*` token, so a theme that styled its launcher has styled its toasts. `toast-positive-color` is the success edge; the other severities read the `notice-*` colours |
+| `toasts-*`, `toast-*` | The desktop's notifications ([design](../design/2026-09-27-desktop-notifications-design.md)). `toasts-*` places the stack: its `top`, `right`, `bottom` and `left` offsets and its flex `direction`. The default hangs it above the taskbar at the trailing edge and grows it upwards; macOS sets `top`, clears `bottom` to `auto` and turns the direction to `column`, which is all a theme with its bar or a menu bar at the top needs. `toast-*` is one toast's surface: width, background, backdrop, text, border, radius and shadow, each falling back to the matching `launcher-*` token, so a theme that styled its launcher has styled its toasts. `toast-positive-color` is the success edge; the other severities read the `notice-*` colours |
 | `scrollback-*` | The list behind the clock. It is drawn on the `launcher-*` surface outright, so it has only its gap above the bar (`scrollback-bottom`), its radius, and `scrollback-hover-text` for a theme whose launcher hover fill is a selection bar that needs its own text colour, as Windows 98's navy does. There is no horizontal token: the list hangs from wherever your theme puts the clock, measured, so a dock that carries its clock mid-screen needs nothing. The toasts stand aside while it is open |
 | `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent with the text that reads on it, and the UI font |
 
@@ -459,7 +466,7 @@ metrics: {
 Get these wrong and windows clamp wrong at the screen edges — a window dragged into a corner
 becomes unreachable. **Derive them, never type them.** `leadingControlsWidth` shipped once as a
 hand-computed `124` describing CSS that rendered `102`; it is now computed in
-[`themes/macos/metrics.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/macos/metrics.ts)
+[`themes/macos/metrics.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/macos/metrics.ts)
 from the same constants the CSS interpolates:
 
 ```ts
@@ -542,7 +549,7 @@ ring plus the caption's hairline, and `taskbarReserve` by the dock's, whose `hei
 
 So each theme with geometry of its own ships a `metrics.test.ts` that mounts the real chrome,
 measures the rendered boxes and holds the published metrics against them — see
-[`themes/macos/metrics.test.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/macos/metrics.test.ts)
+[`themes/macos/metrics.test.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/macos/metrics.test.ts)
 and its Win98 and Umbraco counterparts. `themes/mount-themed.ts` does the mounting for you; a
 useful habit is to measure one span across the whole band (frame edge to control edge) rather than
 summing parts, so a margin nobody folded into the sum cannot hide from the test too.
@@ -911,4 +918,4 @@ And the part that is easiest to skip, because the code already works without it:
       and §6 is here because a theme hit it first, and the next author should not have to
 
 The wider version of that last group, for any feature rather than a theme, is in
-[`CLAUDE.md`](../CLAUDE.md) at the repository root.
+[`CLAUDE.md`](../../CLAUDE.md) at the repository root.

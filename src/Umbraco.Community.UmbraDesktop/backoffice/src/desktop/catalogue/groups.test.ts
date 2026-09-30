@@ -48,7 +48,7 @@ it('does not define a games group of its own', () => {
 
 /**
  * These weights are published (package catalogues design D11): a package places its own group among
- * ours by number, and `docs/package-catalogues.md` §4 prints this table. Renumbering one is a
+ * ours by number, and `docs/developer/package-catalogues.md` §4 prints this table. Renumbering one is a
  * breaking change for somebody else's package, so this is where it has to be a decision.
  */
 it('keeps the published group weights', () => {

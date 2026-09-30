@@ -2,7 +2,7 @@
  * How a connection's reported status is put in front of a reader: what it is called, and how alarmed
  * to look about it.
  *
- * Pure and separate from any element, for the reason `docs/theming.md` §4 gives about numbers: this
+ * Pure and separate from any element, for the reason `docs/developer/theming.md` §4 gives about numbers: this
  * mapping is read by both the Status app and the Connections settings screen, and the two saying
  * different things about the same status is exactly the bug nobody notices until a client rings up.
  */

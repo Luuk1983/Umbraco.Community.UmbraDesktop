@@ -14,7 +14,7 @@
     "Url": "https://github.com/Luuk1983",
     "SyncContributorsFromRepository": true
   },
-  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop",
+  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/user/README.md",
   "IssueTrackerUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues",
   "Tags": [
     "desktop",
@@ -122,8 +122,8 @@
   ],
   "Screenshots": [
     {
-      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png",
-      "Caption": "Several backoffice sections open at once as separate windows, each with its own button on the taskbar, and the apps you pinned one click away beside the launcher button."
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/hero.png",
+      "Caption": "The content editor and the media library open side by side as real windows, each with its own button on the taskbar, and the site's name on the desktop so you always know which environment you are in."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/unsaved-changes-guard.png",
@@ -140,6 +140,10 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/launcher.png",
       "Caption": "The launcher: your pinned apps at the top, everything else grouped by what it does, including the commercial packages you have installed and a Games group from the optional add-on."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-gallery.png",
+      "Caption": "Five themes for the same desktop: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98, each with the wallpaper it brings. The backoffice inside the windows stays the one you know."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/theme-macos.png",

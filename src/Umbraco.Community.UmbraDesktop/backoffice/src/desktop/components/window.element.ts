@@ -1358,7 +1358,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
               // beside the dot.
               //
               // `info` keeps `.dirty` exactly as #20 shipped it, because all five themes style
-              // that class, `unsaved-marker.test.ts` keys off it and `docs/theming.md` documents
+              // that class, `unsaved-marker.test.ts` keys off it and `docs/developer/theming.md` documents
               // it for readers outside this repository — renaming it would silently drop every
               // theme's styling of the one state whose appearance must not change.
               //
