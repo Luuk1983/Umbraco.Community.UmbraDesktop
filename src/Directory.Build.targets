@@ -5,17 +5,20 @@
 	     it is. Pinning to the commit rather than to main keeps an older version's package page on
 	     that version's screenshots and docs. The rewrite is backoffice/scripts/docs/pin-readme.mjs,
 	     which has the tests. Needs node on the packing machine, which the frontend build already
-	     does. -->
+	     does. Every path goes through NormalizePath or NormalizeDirectory: CI packs on Linux, where a
+	     backslash is part of a file name rather than a separator, and a literal one here failed the
+	     first CI run with "Cannot find module". -->
 	<Target Name="PinPackedReadme" BeforeTargets="_GetPackageFiles" Condition="'$(PackageReadmeFile)' != ''">
 		<ItemGroup>
 			<_ReadmeToPin Include="@(None)" Condition="'%(None.Pack)' == 'true' and '%(Filename)%(Extension)' == '$(PackageReadmeFile)'" />
 		</ItemGroup>
 		<PropertyGroup>
 			<_ReadmeToPinPath>@(_ReadmeToPin->'%(FullPath)')</_ReadmeToPinPath>
-			<_PinnedReadmePath>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)pinned-readme\$(PackageReadmeFile)</_PinnedReadmePath>
+			<_PinnedReadmePath>$([MSBuild]::NormalizePath($(MSBuildProjectDirectory), $(IntermediateOutputPath), 'pinned-readme', $(PackageReadmeFile)))</_PinnedReadmePath>
+			<_PackReadmeScript>$([MSBuild]::NormalizePath($(MSBuildThisFileDirectory), 'Umbraco.Community.UmbraDesktop', 'backoffice', 'scripts', 'docs', 'pack-readme.mjs'))</_PackReadmeScript>
 		</PropertyGroup>
 		<Error Condition="'$(_ReadmeToPinPath)' == ''" Text="PinPackedReadme found no packed None item named $(PackageReadmeFile)." />
-		<Exec Command="node &quot;$(MSBuildThisFileDirectory)Umbraco.Community.UmbraDesktop\backoffice\scripts\docs\pack-readme.mjs&quot; --readme &quot;$(_ReadmeToPinPath)&quot; --out &quot;$(_PinnedReadmePath)&quot; --repo-url &quot;$(RepositoryUrl)&quot; --ref &quot;$(SourceRevisionId)&quot;" />
+		<Exec Command="node &quot;$(_PackReadmeScript)&quot; --readme &quot;$(_ReadmeToPinPath)&quot; --out &quot;$(_PinnedReadmePath)&quot; --repo-url &quot;$(RepositoryUrl)&quot; --ref &quot;$(SourceRevisionId)&quot;" />
 		<ItemGroup>
 			<None Remove="@(_ReadmeToPin)" />
 			<None Include="$(_PinnedReadmePath)" Pack="true" PackagePath="\" />
