@@ -11,7 +11,7 @@ import { W11_LAUNCHER_WIDTH } from './metrics.js';
  * Four themes, four different answers to where the launcher lives, which is a decent sign the
  * contract's geometry tokens were the right shape.
  *
- * The centring is worth understanding before changing it. `docs/theming.md` §5 warns that an
+ * The centring is worth understanding before changing it. `docs/developer/theming.md` §5 warns that an
  * absolutely positioned box given `left`, `right` and an inherited `width` silently drops
  * `right` — so rather than a sheet fighting the base rule over all three, the offset is computed
  * in the palette from the width the palette itself declares:
@@ -43,7 +43,7 @@ it('centres the panel on the viewport from the width it declares', function () {
     left,
     'the centring offset must be derived from the declared width, so the two cannot drift — and ' +
       'must stay in the palette rather than becoming a sheet rule that over-constrains left/' +
-      'right/width (docs/theming.md section 5)',
+      'right/width (docs/developer/theming.md section 5)',
   ).to.equal(`calc(50vw - ${W11_LAUNCHER_WIDTH / 2}px)`);
 });
 

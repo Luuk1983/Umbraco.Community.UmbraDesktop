@@ -15,7 +15,7 @@
   on another environment), [#38](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/38)
   (show what changed)
 - **Mockup:** [`mockups/attached-windows.html`](mockups/attached-windows.html)
-- **Guide:** [`../attached-windows.md`](../attached-windows.md), for a feature that wants to use this
+- **Guide:** [`../attached-windows.md`](../developer/attached-windows.md), for a feature that wants to use this
 - **Target:** Umbraco CMS **v17**, package `Umbraco.Community.UmbraDesktop`
 
 ---
@@ -197,7 +197,7 @@ without attached windows draw exactly as today.
 
 ## 5. The consumer contract
 
-What a feature builds to use this, and what `docs/attached-windows.md` explains to the next one:
+What a feature builds to use this, and what `docs/developer/attached-windows.md` explains to the next one:
 
 - An **element app**, opened with `openAttached`. The same element must work as a pane and as a
   floating window, because the editor decides which, and may change their mind.
@@ -308,7 +308,7 @@ The second round of browser testing, on the pane shape, changed less but still c
 - **The strips and their buttons were unthemed** (D15, D16).
 - **A reload on save made Umbraco's own preview page warn** that its connection was lost, because
   that page refreshes itself over its own hub. A body whose page refreshes itself must not also be
-  reloaded; `docs/attached-windows.md` lists this as a trap.
+  reloaded; `docs/developer/attached-windows.md` lists this as a trap.
 
 ---
 
@@ -348,8 +348,8 @@ by default.
 - [x] `npm run build` and `npm test` both pass
 - [x] `README.md`: describes attached content with its first visible consumer
 - [x] `umbraco-marketplace-*.json`: a tag and a screenshot with its first visible consumer
-- [x] `docs/theming.md`: the new token groups, and the strips drawn at `pathbarHeight`
-- [x] `docs/attached-windows.md`, a guide in the spirit of `docs/theming.md`, written for two readers:
+- [x] `docs/developer/theming.md`: the new token groups, and the strips drawn at `pathbarHeight`
+- [x] `docs/developer/attached-windows.md`, a guide in the spirit of `docs/developer/theming.md`, written for two readers:
       a contributor whose issue needs attached content, and an AI agent building a future add-on. It
       explains when a feature should use it and when it should not, how to open it, the contract in
       §5, the rules the desktop enforces so a consumer does not re-implement them, and the traps the

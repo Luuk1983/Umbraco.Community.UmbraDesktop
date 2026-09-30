@@ -165,7 +165,7 @@ it('draws two-tone bevels under the Windows 98 theme, read from CSS rather than 
  * Umbraco 4 themes a closed cell and an opened one rendered in the same colour. The cause was not
  * a mistake in either palette but a wrong assumption in this app, which drew the two states as
  * `surface-raised` against `surface-sunken` and took it on trust that a theme would put them far
- * enough apart to see. Nothing in the contract promises that, and `docs/desktop-apps.md` §4 is
+ * enough apart to see. Nothing in the contract promises that, and `docs/developer/desktop-apps.md` §4 is
  * explicit about which pairs *are* promised: text on the three surfaces, and `border` against all
  * three at 3:1. The gap between two surfaces is not on the list — Umbraco's own surface family
  * spans 1.07:1 at its widest — so an app that leans on it is relying on a number no theme ever
@@ -424,7 +424,7 @@ function expectFullyVisible(host: HTMLElement, element: MinesweeperElement, why:
  * Every theme id the desktop can stamp on this element, plus the moment before it has stamped one.
  *
  * Hardcoded, because there is nothing to import: the host's npm package is private and its NuGet
- * package ships JavaScript, so the five ids are published as prose in `docs/desktop-apps.md` §7 and
+ * package ships JavaScript, so the five ids are published as prose in `docs/developer/desktop-apps.md` §7 and
  * an app reads them from there. A sixth theme would not appear here, which is the honest limit of
  * this list — but it also could not break the assertion below, since the one rule that keys off an
  * id is a refinement on top of rules that hold for every theme.

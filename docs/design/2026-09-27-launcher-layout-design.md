@@ -364,7 +364,7 @@ Move to in every theme.
   column plus the body's padding on each side. There is no gap term, because the split has no gap:
   the palette sits against the layout pane behind a divider.
 - The container query and the tests read the constants. Then it is measured in a browser under all
-  five themes at 1920px and at a 768px tablet viewport, per `docs/theming.md` §4.
+  five themes at 1920px and at a 768px tablet viewport, per `docs/developer/theming.md` §4.
 
 ## 7. Components
 
@@ -455,7 +455,7 @@ One branch, one PR, ordered so the launcher stays usable at each step:
       unchanged.
 - [ ] **Marketplace screenshot:** an arrange-mode capture in `docs/screenshots/`, added to
       `Screenshots`. Left for the owner to take, since they review the look first.
-- [x] **Docs:** `docs/theming.md` lists the new tokens and how arrange mode behaves in a narrow
+- [x] **Docs:** `docs/developer/theming.md` lists the new tokens and how arrange mode behaves in a narrow
       theme.
 - [x] **`docs/design/`:** this file.
 - [x] **Not applicable:** `umbraco-package.json`, unchanged as expected.

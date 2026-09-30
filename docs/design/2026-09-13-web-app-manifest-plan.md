@@ -2353,7 +2353,7 @@ git commit -m "Let a site use its own image as the app icon"
 Create `docs/app-icon.md` covering: the three icon modes; the app name and where it falls back
 from; the two sources and why configuration wins; the appsettings shape; who can change it; that an
 icon in a folder under public access restriction will 403 for the install pipeline; and the fact
-that an install is not a second browser profile. Model it on `docs/theming.md`'s tone — written for
+that an install is not a second browser profile. Model it on `docs/developer/theming.md`'s tone — written for
 someone outside this repository.
 
 Name the file for what it covers now that it covers two things — `docs/installed-app.md` reads

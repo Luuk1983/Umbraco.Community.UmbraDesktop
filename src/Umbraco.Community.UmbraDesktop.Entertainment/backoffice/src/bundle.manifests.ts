@@ -33,7 +33,7 @@ const catalogue: UmbExtensionManifest = {
  * package exists: the seam it uses is verified inside the host by tests, but "a *second* package
  * can put an app on the desktop" is a claim only a second package can make.
  *
- * Written against `docs/desktop-apps.md` §2 field by field. Four of them are worth a sentence
+ * Written against `docs/developer/desktop-apps.md` §2 field by field. Four of them are worth a sentence
  * because each was a defect at some point in the seam's own build:
  *
  * - **`element`, never `js`.** `js` is the field every other Umbraco extension type uses for this,

@@ -9,7 +9,7 @@ import type { ManifestElement, ManifestWithDynamicConditions } from '@umbraco-cm
  * `catalogue.extension.ts` declare these types and register them in Umbraco's
  * `UmbExtensionManifestMap`, but those declarations reach nobody
  * outside its own project: the host's npm package is `private`, its NuGet package ships built
- * JavaScript rather than TypeScript, and `docs/desktop-apps.md` makes a virtue of the contract
+ * JavaScript rather than TypeScript, and `docs/developer/desktop-apps.md` makes a virtue of the contract
  * being structural, so nothing is imported from the host at all.
  *
  * The consequence is not a warning but a build failure, and one whose message points at the wrong

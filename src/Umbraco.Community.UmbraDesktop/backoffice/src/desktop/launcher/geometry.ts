@@ -1,6 +1,6 @@
 /**
  * The launcher's widths that both CSS and tests read (design §6.3). Derived here once, per
- * `docs/theming.md` §4, then measured in a browser under every theme, because deriving only makes a
+ * `docs/developer/theming.md` §4, then measured in a browser under every theme, because deriving only makes a
  * sum consistent with itself.
  */
 

@@ -298,7 +298,7 @@ export const UMBRADESKTOP_APP_TOKEN_FALLBACKS = {
   // because Umbraco publishes no surface trio with more, and a boundary that meets WCAG 1.4.11's
   // 3:1 is not something a fallback can invent while still being the Umbraco look. That is the
   // separate problem the design doc's §6.1 settles on the app side: rule a tiled grid with the
-  // grid's own `edge-dark` ground showing through a 1px gap (`docs/desktop-apps.md` §4).
+  // grid's own `edge-dark` ground showing through a 1px gap (`docs/developer/desktop-apps.md` §4).
   '--umbradesktop-app-surface-raised': 'var(--uui-color-surface-emphasis)',
   '--umbradesktop-app-surface-sunken': 'var(--uui-color-background)',
   '--umbradesktop-app-edge-light': 'transparent',

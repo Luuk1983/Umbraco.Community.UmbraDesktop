@@ -1,8 +1,15 @@
+---
+id: desktop-apps
+title: Building a desktop app
+description: Ship an app that opens in a desktop window from your own package.
+sidebar_position: 4
+---
+
 # Building a desktop app
 
 > How to ship an app that opens in an UmbraDesktop window from your own package, without touching
 > this repository. For *why* the seam is shaped this way, see
-> [the design](design/2026-09-06-desktop-apps-design.md); this document is the practical companion
+> [the design](../design/2026-09-06-desktop-apps-design.md); this document is the practical companion
 > to it.
 
 A desktop app is one custom element in a window. You register it with an extension manifest, the
@@ -235,7 +242,7 @@ Read them with a fallback, always. There are no host-side fallbacks for these an
 so the fallback in your CSS is what makes your app correct when no theme has set them. The values
 below are the contract, they are the Umbraco look, and an app that reads only these renders as the
 default theme by construction. They live as type-checked data in
-[`theme/types.ts`](../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/types.ts)
+[`theme/types.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/types.ts)
 as `UMBRADESKTOP_APP_TOKEN_FALLBACKS`, so this table cannot quietly go stale against them.
 
 | Token | What it is | Fallback to write |

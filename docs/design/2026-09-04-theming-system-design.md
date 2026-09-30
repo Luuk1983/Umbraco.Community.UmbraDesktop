@@ -201,7 +201,7 @@ export interface UmbraDesktopTheme {
 ```
 
 Adding a theme is a new folder plus one entry in `themes/index.ts` — the same shape as
-`catalogue/index.ts`. **[docs/theming.md](../theming.md) is the practical walkthrough**; this
+`catalogue/index.ts`. **[docs/developer/theming.md](../developer/theming.md) is the practical walkthrough**; this
 section is the contract it implements.
 
 What a theme *authors* and what the desktop *adopts* are deliberately different types. Themes write
