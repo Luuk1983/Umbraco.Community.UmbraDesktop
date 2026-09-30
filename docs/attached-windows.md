@@ -128,6 +128,10 @@ between the two.
   route. The preview reads its path with `previewTargetFromPath` (`preview/preview-target.ts`), which
   understands `/workspace/document/edit/{id}/{variant}`, including split views and invariant
   documents.
+- **Take the keyboard yourself if you need it.** The desktop never moves focus into a pane. When the
+  window becomes active the keyboard goes to the owner's own app, if the owner is an app window, and
+  a click in your pane is left to you, as in any window body. Floating, you are an ordinary app
+  window and get what `docs/desktop-apps.md` §7.1 describes.
 
 ## 5. What the desktop does for you
 
