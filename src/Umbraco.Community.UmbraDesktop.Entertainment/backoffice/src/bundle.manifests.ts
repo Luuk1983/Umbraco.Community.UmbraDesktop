@@ -1,5 +1,8 @@
 import { MINESWEEPER_CONTENT_SIZE, MINESWEEPER_MIN_CONTENT_SIZE } from './minesweeper/constants.js';
 import { SNAKE_CONTENT_SIZE, SNAKE_MIN_CONTENT_SIZE } from './snake/constants.js';
+import { SOLITAIRE_CONTENT_SIZE, SOLITAIRE_MIN_CONTENT_SIZE } from './solitaire/constants.js';
+import { backManifests, facesManifests } from './solitaire/backs.js';
+import type {} from './solitaire/extensions.js';
 import { manifests as localizationManifests } from './localization/manifest.js';
 
 /**
@@ -117,6 +120,28 @@ const snake: UmbExtensionManifest = {
 };
 
 /**
+ * Solitaire, registered as the other two games are. Resizable, unlike them: a card table has no
+ * fixed pixel size and the cards scale with the window (design D5). Weight 800 keeps it after
+ * Snake (900), the slot Snake's comment left for a later game.
+ */
+const solitaire: UmbExtensionManifest = {
+  type: 'umbraDesktopApp',
+  alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Solitaire',
+  name: 'Solitaire',
+  element: () => import('./solitaire/solitaire.element.js'),
+  weight: 800,
+  meta: {
+    label: '#umbraDesktopEntertainment_solitaire',
+    icon: 'icon-playing-cards',
+    group: 'games',
+    defaultSize: SOLITAIRE_CONTENT_SIZE,
+    minSize: SOLITAIRE_MIN_CONTENT_SIZE,
+    allowMultiple: true,
+    resizable: true,
+  },
+};
+
+/**
  * The bundle Umbraco loads for this package, and the only entry point it has.
  *
  * `UmbExtensionManifest` is a global type from `@umbraco-cms/backoffice/extension-types`, wired up
@@ -124,4 +149,12 @@ const snake: UmbExtensionManifest = {
  * `umbraDesktopCatalogue` arms of that union are contributed by `umbradesktop-app.d.ts` in this
  * folder, for the reason given there.
  */
-export const manifests: Array<UmbExtensionManifest> = [catalogue, minesweeper, snake, ...localizationManifests];
+export const manifests: Array<UmbExtensionManifest> = [
+  catalogue,
+  minesweeper,
+  snake,
+  solitaire,
+  ...backManifests,
+  ...facesManifests,
+  ...localizationManifests,
+];

@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import { manifests } from './bundle.manifests.js';
 import { MINESWEEPER_CONTENT_SIZE, MINESWEEPER_MIN_CONTENT_SIZE } from './minesweeper/constants.js';
 import { SNAKE_CONTENT_SIZE, SNAKE_MIN_CONTENT_SIZE } from './snake/constants.js';
+import { SOLITAIRE_CONTENT_SIZE, SOLITAIRE_MIN_CONTENT_SIZE } from './solitaire/constants.js';
 
 /**
  * What the manifest promises the desktop, asserted where it can be read without a desktop.
@@ -19,9 +20,13 @@ const minesweeper = apps.find((manifest) => manifest.alias === 'Umbraco.Communit
 /** Snake's manifest. */
 const snake = apps.find((manifest) => manifest.alias === 'Umbraco.Community.UmbraDesktop.Entertainment.Snake');
 
-it('registers Minesweeper and Snake as desktop apps, each with a lazy element loader', () => {
+/** Solitaire's manifest. */
+const solitaire = apps.find((manifest) => manifest.alias === 'Umbraco.Community.UmbraDesktop.Entertainment.Solitaire');
+
+it('registers Minesweeper, Snake and Solitaire as desktop apps, each with a lazy element loader', () => {
   expect(minesweeper, 'the package should register Minesweeper as a umbraDesktopApp').to.not.equal(undefined);
   expect(snake, 'the package should register Snake as a umbraDesktopApp').to.not.equal(undefined);
+  expect(solitaire, 'the package should register Solitaire as a umbraDesktopApp').to.not.equal(undefined);
   for (const app of apps) {
     // `element`, never `js`: `js` is the field every other Umbraco extension type uses for this, it
     // type-checks here, and the desktop does not read it.
@@ -37,6 +42,7 @@ it('puts every game in the games group, in a fixed order', () => {
   }
   // Umbraco's weight sorts higher first, so Minesweeper leads.
   expect(minesweeper?.weight ?? 0).to.be.greaterThan(snake?.weight ?? 0);
+  expect(snake?.weight ?? 0).to.be.greaterThan(solitaire?.weight ?? 0);
 });
 
 /**
@@ -82,13 +88,27 @@ it("asks for Snake's content size, leaving the chrome to the host", () => {
 });
 
 /**
- * Both games keep their windows the size they open at, as Minesweeper did on every Windows up to
- * XP. Neither board reflows, so a bigger window was only ever a bigger empty margin around it.
+ * Minesweeper and Snake keep their windows the size they open at, as Minesweeper did on every
+ * Windows up to XP. Neither board reflows, so a bigger window was only ever a bigger empty margin
+ * around it.
  */
-it('opens every game in a window that cannot be resized or maximized', () => {
-  for (const app of apps) {
-    expect((app as { meta?: { resizable?: boolean } }).meta?.resizable, app.alias).to.equal(false);
+it('keeps Minesweeper and Snake at a fixed size', () => {
+  for (const app of [minesweeper, snake]) {
+    expect((app as { meta?: { resizable?: boolean } }).meta?.resizable, app?.alias).to.equal(false);
   }
+});
+
+/** A card table has no fixed pixel size: the cards scale with the window (design D5). */
+it('lets Solitaire be resized, from its derived minimum', () => {
+  const meta = (solitaire as { meta?: { resizable?: boolean; defaultSize?: unknown; minSize?: unknown } }).meta;
+  expect(meta?.resizable).to.not.equal(false);
+  expect(meta?.defaultSize).to.deep.equal(SOLITAIRE_CONTENT_SIZE);
+  expect(meta?.minSize).to.deep.equal(SOLITAIRE_MIN_CONTENT_SIZE);
+});
+
+it('registers the built-in card backs and face set through their own manifest types', () => {
+  expect(manifests.filter((m) => m.type === 'umbraDesktopSolitaireBack').length).to.equal(5);
+  expect(manifests.filter((m) => m.type === 'umbraDesktopSolitaireFaces').length).to.equal(1);
 });
 
 /** The one catalogue this package registers. */

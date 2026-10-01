@@ -17,7 +17,7 @@ It also does something the backoffice does not do at all. When two people have t
 ![The UmbraDesktop desktop: several backoffice sections open at once as separate, overlapping windows. The taskbar along the bottom carries a titled button for each of them, and beside the launcher button a row of icons for the pinned apps.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png)
 
 > **New: games on the desktop.** [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment)
-> is an optional add-on that puts Minesweeper and Snake in the launcher's Games group, each in a window of its own
+> is an optional add-on that puts Minesweeper, Snake and Solitaire in the launcher's Games group, each in a window of its own
 > and themed along with everything else. Install it if you want it; the desktop is unchanged
 > without it. See [Games](#games).
 
@@ -49,7 +49,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Your desk follows you. Wallpaper, theme, pins, taskbar switches and language are stored on your Umbraco account rather than in one browser, so signing in from another machine, another browser or a private window gives you the desktop you set up, and clearing site data does not lose it. Settings you already had are moved across once, the first time you open the desktop after updating, behind a screen that tells you it is happening rather than doing it behind your back. See [Your settings follow you](#your-settings-follow-you).
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
 - Tiles your packages bring themselves. A package with backoffice screens of its own can give them proper tiles, the right window and a heading of its own in the launcher, from its own release. A package that reuses the alias of the desktop's own tile for them replaces it, pins included, so the package that owns the screens decides how they open. See [Custom and third-party apps](#custom-and-third-party-apps).
-- Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
+- Games, if you want them. The optional Entertainment add-on above brings Minesweeper, Snake and Solitaire, and is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
 - Install it as an app. The backoffice declares a web app manifest, so your browser can install or pin it. It opens straight on the desktop in its own window, with no address bar and no tabs, and carries your site's own name and icon rather than a generic browser tile. Both are settings, so an agency running ten sites gets ten distinguishable apps. See [Installing the backoffice as an app](#installing-the-backoffice-as-an-app).
 - Know which site you are on. Switch it on and the site's name is written large in a corner of the desktop, behind the windows, with the domain under it if you like. Local, staging and production otherwise look identical, and a full-screen desktop or an installed app shows no address bar at all. See [Showing the site's name on the desktop](#showing-the-sites-name-on-the-desktop).
@@ -80,7 +80,7 @@ That single grant does two things: it makes the desktop reachable, and it reveal
 
 UmbraDesktop grants no access of its own. Every app that opens a piece of the backoffice is gated on the section it comes from, so a user only ever sees apps for sections they could already reach. Give an editor access to Content and Media and those are the apps they get.
 
-The exception is a self-contained app registered by a package, which has no backing section to be permitted to and so is gated by nothing beyond its own manifest conditions and reaching the desktop at all. Minesweeper and Snake are two: everyone who can open the desktop can open them. An app of that kind holds no backoffice data, so there is nothing behind it to leak; if you need one restricted, the condition belongs on its own manifest.
+The exception is a self-contained app registered by a package, which has no backing section to be permitted to and so is gated by nothing beyond its own manifest conditions and reaching the desktop at all. Minesweeper, Snake and Solitaire are three: everyone who can open the desktop can open them. An app of that kind holds no backoffice data, so there is nothing behind it to leak; if you need one restricted, the condition belongs on its own manifest.
 
 ## How to use it
 
@@ -507,7 +507,7 @@ The desktop waits behind its loading screen until your windows are back in place
 Some things do not come back, by design:
 
 - **Unsaved changes.** The desktop already asks before you leave with any, and a reload cannot bring them back. Plain Umbraco loses them on a reload too.
-- **An app's own state.** Apps such as Minesweeper start fresh, so you get a new board.
+- **An app's own state.** Apps such as Minesweeper start fresh, so you get a new board. Solitaire is the exception: it keeps an unfinished game for the same browser tab, see [Games](#games).
 - **Windows you can no longer open.** A package that has been uninstalled, or a section your account has lost access to, is skipped and forgotten. The desktop gives a package five seconds to load its apps before deciding, so on a very slow connection a window from a slow package can occasionally be lost too. Reopen it from the launcher and it is kept again.
 - **A preview or other window attached to another.** Attached windows and panes are left out for now; the window they belong to reopens on its own.
 
@@ -602,7 +602,7 @@ If you copy databases between environments, set the name in configuration. The s
 
 ## Games
 
-Minesweeper and Snake, each in a window, under whichever theme you picked. They ship in their own package rather than this one, because a desktop and a minesweeper are not the same product and nobody should have to take the second to get the first:
+Minesweeper, Snake and Solitaire, each in a window, under whichever theme you picked. They ship in their own package rather than this one, because a desktop and a minesweeper are not the same product and nobody should have to take the second to get the first:
 
 ```bash
 dotnet add package Umbraco.Community.UmbraDesktop.Entertainment
@@ -611,6 +611,12 @@ dotnet add package Umbraco.Community.UmbraDesktop.Entertainment
 ![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher open down to its Games group, which lists Minesweeper and Snake, and the game's own taskbar button below.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-minesweeper.png)
 
 ![Snake open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with its score, New game button and best score above the board, and the launcher open down to its Games group, which lists Minesweeper and Snake.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-snake.png)
+
+![Solitaire open in its own window on the UmbraDesktop desktop: seven columns of cards on a felt table, the stock and waste at the top left, four foundations at the top right, and a toolbar with New game, score, time and moves and a settings button in the top right corner.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/solitaire.png)
+
+Solitaire is Klondike, the one everybody pictures. Draw one or draw three, Windows scoring with a timer, cards that glide rather than jump, double-click to send a card home, auto-finish once every card is face up, and the bouncing-card cascade when you win. The table follows your theme, and so does the card back by default (Match theme: each theme's own back, drawn from its wallpaper), with four original backs to pick instead: Rabbit, Codegarden, CodeCabin and Dutch Umbraco Alliance. A settings button in the top right corner sets the draw mode, the card back and the card faces. An unfinished game survives a refresh or a sign-out in the same browser tab.
+
+Court card artwork in Solitaire is by Dmitry Fomin, from the English pattern playing cards on Wikimedia Commons ([category](https://commons.wikimedia.org/wiki/Category:SVG_English_pattern_playing_cards)), released under CC0 1.0 and recoloured for this package. Per-file source URLs are in [`SOURCES.md`](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Entertainment/backoffice/art/fomin/SOURCES.md). The rank letters and figures on the cards are outlines of Roboto Slab Bold, `© 2018 The Roboto Slab Project Authors`, used under the Apache License 2.0; the full licence text is in [`THIRD-PARTY-NOTICES.md`](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Entertainment/THIRD-PARTY-NOTICES.md).
 
 That is the whole installation. There is no section to grant and no dashboard to enable: the games appear in a Games group in the launcher for anyone who can already reach the desktop, and the group is not there at all if the package is not installed.
 

@@ -26,3 +26,7 @@ Later mockups, one set per feature, named after the design doc they belong to:
   **[launcher-layout-arrange.html](./launcher-layout-arrange.html)**: the launcher you arrange
   yourself, for [`../2026-09-27-launcher-layout-design.md`](../2026-09-27-launcher-layout-design.md).
   The first one's normal-mode view predates Pinned being a place, which the second one shows.
+- **[2026-09-30-solitaire.html](./2026-09-30-solitaire.html)**: the Solitaire table, its settings
+  modal, the default deck and the card back per theme, for
+  [`../2026-09-30-solitaire-design.md`](../2026-09-30-solitaire-design.md). The wallpaper crops are
+  embedded, so the file opens on its own. Its court figures are placeholders.

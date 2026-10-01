@@ -10,8 +10,8 @@
 	  <Product>Umbraco.Community.UmbraDesktop.Entertainment</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop.Entertainment</PackageId>
 	  <Title>UmbraDesktop Entertainment</Title>
-	  <Description>Games for UmbraDesktop. An optional add-on that puts Minesweeper and Snake on the desktop, each in a window of its own and themed along with the rest of it.</Description>
-	  <PackageTags>umbraco;backoffice;desktop;games;minesweeper;snake;entertainment;umbradesktop;apps;umbraco-marketplace</PackageTags>
+	  <Description>Games for UmbraDesktop. An optional add-on that puts Minesweeper, Snake and Solitaire on the desktop, each in a window of its own and themed along with the rest of it.</Description>
+	  <PackageTags>umbraco;backoffice;desktop;games;minesweeper;snake;solitaire;card-game;klondike;entertainment;umbradesktop;apps;umbraco-marketplace</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop.Entertainment</RootNamespace>
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>
@@ -101,6 +101,9 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
     <!-- Update, not Include: the SDK's default None glob already matches this file, and including
          it a second time fails the pack with a duplicate-item error. -->
     <None Update="README.md" Pack="true" PackagePath="\" />
+    <!-- The Apache 2.0 licence text for the card rank outlines (Roboto Slab), which Apache 2.0 says
+         must reach everyone who receives the package. Update for the same reason as README.md. -->
+    <None Update="THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 	<ItemGroup>

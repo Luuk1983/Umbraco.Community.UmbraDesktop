@@ -20,6 +20,9 @@
     "games",
     "minesweeper",
     "snake",
+    "solitaire",
+    "card game",
+    "klondike",
     "entertainment",
     "umbradesktop",
     "desktop",
@@ -46,6 +49,10 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-snake.png",
       "Caption": "Snake, the second game, under the same theme. Arrow keys to steer, a score and a best score, and it pauses itself when its window loses focus."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/solitaire.png",
+      "Caption": "Solitaire, the third game: Klondike with draw one or draw three, on a table and with card backs that follow the theme. The settings button in the top right corner sets the draw mode, card back and card faces."
     }
   ]
 }
