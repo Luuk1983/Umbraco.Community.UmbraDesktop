@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop Entertainment",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "Games for UmbraDesktop. An optional add-on that puts Minesweeper and Snake on the desktop, each in a window of its own and themed along with the rest of it.",
+  "Description": "Games for UmbraDesktop. An optional add-on that puts Minesweeper, Snake and Solitaire on the desktop, each in a window of its own and themed along with the rest of it.",
   "PackageType": "Package",
   "LicenseTypes": [
     "Free"
@@ -14,7 +14,7 @@
     "Url": "https://github.com/Luuk1983",
     "SyncContributorsFromRepository": true
   },
-  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Entertainment/README.md",
+  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/user/games.md",
   "IssueTrackerUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues",
   "Tags": [
     "games",
@@ -39,19 +39,24 @@
       "PackageId": "Umbraco.Community.UmbraDesktop",
       "GroupTitle": "Requires",
       "Description": "The desktop itself. This package is an add-on to it and installs it as a dependency; the desktop works on its own without the games."
+    },
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop.Accessories",
+      "GroupTitle": "Optional add-ons",
+      "Description": "Notepad, Paint, Sticky Notes, Calculator, Disk Cleanup and the rest of Windows' Accessories for the desktop. Independent of this package: install either, both or neither."
     }
   ],
   "Screenshots": [
     {
-      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-minesweeper.png",
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/entertainment-games-minesweeper.png",
       "Caption": "Minesweeper in a window of its own, under the Windows 98 theme. It arrives in the launcher's Games group and gets a taskbar button like any other app."
     },
     {
-      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-snake.png",
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/entertainment-games-snake.png",
       "Caption": "Snake, the second game, under the same theme. Arrow keys to steer, a score and a best score, and it pauses itself when its window loses focus."
     },
     {
-      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/solitaire.png",
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/entertainment-games-solitaire.png",
       "Caption": "Solitaire, the third game: Klondike with draw one or draw three, on a table and with card backs that follow the theme. The settings button in the top right corner sets the draw mode, card back and card faces."
     }
   ]

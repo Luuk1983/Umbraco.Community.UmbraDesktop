@@ -2731,7 +2731,7 @@ export class SolitaireElement extends UmbLitElement {
   /** Whether to move instantly. Read at each move, never cached. */
   @property({ attribute: false }) reducedMotion: () => boolean = () =>
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  /** The active theme id, stamped by the desktop (docs/desktop-apps.md §5). */
+  /** The active theme id, stamped by the desktop (docs/developer/desktop-apps.md §5). */
   @property({ attribute: 'data-umbradesktop-theme' }) theme?: string;
 
   @state() private _game?: KlondikeGame;
@@ -3732,7 +3732,7 @@ Expected: `0`.
 
 **Files:** none new, unless a measurement forces a constant change (then the test for it first).
 
-Follow `docs/desktop-apps.md` §9's checklist and the repository's recipe for a worktree test
+Follow `docs/developer/desktop-apps.md` §9's checklist and the repository's recipe for a worktree test
 instance (a copy of the database per task, `npm run build` in both packages before `dotnet build`,
 revert the TestInstance lock-file bump afterwards). A hidden Browser pane never renders the
 backoffice; drive headless Chrome through the host's `puppeteer-core` as earlier features did.
@@ -3755,7 +3755,7 @@ backoffice; drive headless Chrome through the host's `puppeteer-core` as earlier
   themes. He asked for a final tuning pass on them; adjust focal points in
   `build-card-backs.mjs` and the Windows 98 SVG as he directs.
 - [ ] **Step 7:** Save one good screenshot (Umbraco theme, mid-game) to
-  `docs/screenshots/solitaire.png` at the size it should appear in the README.
+  `src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/entertainment-games-solitaire.png` at the size it should appear in the README.
 
 ---
 
@@ -3766,7 +3766,7 @@ backoffice; drive headless Chrome through the host's `puppeteer-core` as earlier
 - Modify: `src/Umbraco.Community.UmbraDesktop.Entertainment/README.md`
 - Modify: the Entertainment marketplace file at the repository root,
   `umbraco-marketplace-umbraco.community.umbradesktop.entertainment.json`
-- Create: `docs/solitaire-decks.md`
+- Create: `src/Umbraco.Community.UmbraDesktop.Entertainment/docs/developer/solitaire-decks.md`
 - Modify: `docs/design/2026-09-30-solitaire-design.md`
 
 - [ ] **Step 1: READMEs.** Search the root README for every place Minesweeper or Snake is named and
@@ -3777,7 +3777,7 @@ backoffice; drive headless Chrome through the host's `puppeteer-core` as earlier
   "What's in it".
 - [ ] **Step 2: Marketplace.** Add `solitaire`, `card game` and `klondike` to `Tags`, and the
   screenshot to `Screenshots`. Do not touch `Description`.
-- [ ] **Step 3: The guide.** `docs/solitaire-decks.md`, for package authors: the two manifest types
+- [ ] **Step 3: The guide.** `src/Umbraco.Community.UmbraDesktop.Entertainment/docs/developer/solitaire-decks.md`, for package authors: the two manifest types
   (copy the interfaces from `extensions.ts`), a complete example of registering a back with a
   per-theme image map, a complete example of a face set module (a `render` that returns SVG with
   viewBox `0 0 100 140`), and the three rules that bit during the build: ids unique per card,

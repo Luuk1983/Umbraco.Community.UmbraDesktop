@@ -93,6 +93,9 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
     <Content Remove="backoffice\**" />
     <Content Remove="package.json" />
     <Content Remove="package-lock.json" />
+    <!-- The add-on's docs are read on GitHub (and later by the desktop's Help app), never from
+         the package: without this, docs/product.json packs as content at the package root. -->
+    <Content Remove="docs\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -109,10 +112,16 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	<ItemGroup>
 	  <PackageReference Include="MinVer" PrivateAssets="all" />
 	  <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
-	  <!-- The host, by version range and never as a ProjectReference: a ProjectReference packs the
-	       exact version built alongside it, which would force an Entertainment release for every
-	       host release and break anyone who upgraded the host in between (design D13). -->
-	  <PackageReference Include="Umbraco.Community.UmbraDesktop" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <!-- The host, as the project built beside this one rather than a package from nuget.org. A
+	       package range compiles against the lowest host in range, so this add-on was built against
+	       17.0.0 and shipped claiming to work with a host that lacks the package catalogue it
+	       registers its Games group through. Built from the same commit, the two cannot disagree.
+	       The packed range, "[<this release>, 17.99999999.0]", comes from the BoundHostRange target
+	       in src/Directory.Build.targets, which every add-on referencing the host picks up. -->
+	  <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />
 	</ItemGroup>
 
 </Project>

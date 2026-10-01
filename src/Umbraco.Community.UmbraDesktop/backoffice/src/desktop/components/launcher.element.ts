@@ -661,7 +661,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
            UMBRADESKTOP_LAUNCHER_DEFAULT_WIDTH (1180, in launcher/geometry.ts) rather than exactly
            1118 so four columns get roughly 275px each instead of sitting at their 260px minimum.
            Ten groups now exist, so three columns (960px) read as cramped; measured in a browser
-           after picking 1180, per docs/theming.md §4. Windows 98, Windows 11 and Umbraco 4 each pin
+           after picking 1180, per docs/developer/theming.md §4. Windows 98, Windows 11 and Umbraco 4 each pin
            --umbradesktop-launcher-width in their own palette and are unaffected by this default. */
         width: var(--umbradesktop-launcher-width, min(${unsafeCSS(UMBRADESKTOP_LAUNCHER_DEFAULT_WIDTH)}px, 92vw));
         /* height/backdrop-filter/color below are dormant handles, not live behaviour: their

@@ -521,6 +521,20 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     };
   }
 
+  /**
+   * A registered app said whether it holds unsaved work, through the attribute its host watches.
+   *
+   * The app-window half of what {@link #startDirtyWatch} does for an iframe, and it lands on the
+   * same `setDirty`, which is the point: the titlebar marker, the taskbar marker and the close guard
+   * need no idea which kind of window they are guarding. No subjects to report, since an app's work
+   * is not a document the server can change underneath it.
+   * @param event The host's report.
+   */
+  #onAppDirty = (event: CustomEvent<{ dirty: boolean }>) => {
+    const id = this.window?.id;
+    if (id) this.#manager?.setDirty(id, event.detail.dirty);
+  };
+
   #startDirtyWatch(iframe: HTMLIFrameElement) {
     this.#stopDirtyWatch?.();
     this.#stopDirtyWatch = undefined;
@@ -1102,7 +1116,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         data-umbradesktop-theme=${this._chromeThemeId || nothing}
         .alias=${w.app.alias}
         .props=${w.app.content.props}
-        .load=${w.app.content.element}></umbradesktop-app-host>`;
+        .load=${w.app.content.element}
+        @umbradesktop-app-dirty=${this.#onAppDirty}></umbradesktop-app-host>`;
       // Keyed only for attached content, whose reload is a remount: it fetches what it shows when it
       // connects. An ordinary element app keeps the plain commit this method's doc argues for, and a
       // window never changes between the two, so neither path ever remounts the other's app.
@@ -1358,7 +1373,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
               // beside the dot.
               //
               // `info` keeps `.dirty` exactly as #20 shipped it, because all five themes style
-              // that class, `unsaved-marker.test.ts` keys off it and `docs/theming.md` documents
+              // that class, `unsaved-marker.test.ts` keys off it and `docs/developer/theming.md` documents
               // it for readers outside this repository — renaming it would silently drop every
               // theme's styling of the one state whose appearance must not change.
               //

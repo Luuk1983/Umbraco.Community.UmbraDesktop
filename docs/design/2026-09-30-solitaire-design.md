@@ -141,7 +141,7 @@ same on any table. A **back** is one image. The two combine freely, so a new fac
 of 52 fronts, never one per theme, and a new back works with every face set.
 
 "Match theme" is not special in the settings UI: it is a back whose image depends on the theme id,
-with a fallback for theme ids it does not know (`docs/desktop-apps.md` §5). A back registered by
+with a fallback for theme ids it does not know (`docs/developer/desktop-apps.md` §5). A back registered by
 another package may do the same.
 
 ### D8. The look

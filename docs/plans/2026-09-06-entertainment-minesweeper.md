@@ -10,7 +10,7 @@
 
 **Tech Stack:** TypeScript, Lit, `@umbraco-cms/backoffice` v17, `@open-wc/testing` in web-test-runner, Vite, MinVer.
 
-**Spec:** [`docs/design/2026-09-06-desktop-apps-design.md`](../design/2026-09-06-desktop-apps-design.md) §8 (the package) and §8.2 (why Minesweeper first). Author-facing contract: [`docs/desktop-apps.md`](../desktop-apps.md).
+**Spec:** [`docs/design/2026-09-06-desktop-apps-design.md`](../design/2026-09-06-desktop-apps-design.md) §8 (the package) and §8.2 (why Minesweeper first). Author-facing contract: [`docs/developer/desktop-apps.md`](../developer/desktop-apps.md).
 
 **Why this is the seam's real test.** Everything verified so far is automated tests inside the host package. Nothing has run in a browser, and the one defect this branch's tests structurally could not see (a missing side-effect import that Vite tree-shook away) would have shown only as a blank window body. A game inside the host package would exercise element mounting but not the thing the seam exists for: a **separate package** registering an app. Only a real second project tests that.
 
@@ -127,7 +127,7 @@ from `backoffice/`.
 
 - [ ] **Step 1: Read the contract first**
 
-[`docs/desktop-apps.md`](../desktop-apps.md) is the author-facing guide, written for exactly this job. Follow it rather than inferring from the host's source. Ten traps are listed there and every one was a real defect during the seam's build. In particular:
+[`docs/developer/desktop-apps.md`](../developer/desktop-apps.md) is the author-facing guide, written for exactly this job. Follow it rather than inferring from the host's source. Ten traps are listed there and every one was a real defect during the seam's build. In particular:
 
 - `background`, never `background-color`, because a surface token may carry a gradient.
 - Read the theme in **CSS**, not in the constructor. `:host([data-umbradesktop-theme='win98'])` is safe; `this.getAttribute(…)` in your own constructor reads nothing.
@@ -141,7 +141,7 @@ Behaviour through the DOM, not internals: clicking a cell reveals it; clicking a
 
 - [ ] **Step 3: Implement**
 
-Read the twelve app tokens for every colour, edge and radius, each with the fallback [`docs/desktop-apps.md`](../desktop-apps.md) documents. Digit colours (the classic 1-blue, 2-green, 3-red) are the app's **own** domain palette, not theme tokens: the design says an app owns its domain colours, so hardcode them and say so in a comment.
+Read the twelve app tokens for every colour, edge and radius, each with the fallback [`docs/developer/desktop-apps.md`](../developer/desktop-apps.md) documents. Digit colours (the classic 1-blue, 2-green, 3-red) are the app's **own** domain palette, not theme tokens: the design says an app owns its domain colours, so hardcode them and say so in a comment.
 
 One deliberate per-theme branch: `:host([data-umbradesktop-theme='win98'])` for real two-tone bevels. That is the branch the whole token contract was shaped around, and it is the visible proof the theme forwarding works.
 

@@ -7,7 +7,7 @@ import { W11_FONT } from './palette.js';
  *
  * Nothing here positions or sizes the panel. Its width, its centring offset and its clearance
  * above the bar are all palette tokens read by the base rules — see `palette.ts`, where the
- * centring is computed from the declared width so the two cannot drift, and `docs/theming.md` §5
+ * centring is computed from the declared width so the two cannot drift, and `docs/developer/theming.md` §5
  * for why a sheet setting `left`/`right`/`width` together would half-work instead.
  *
  * The group cards lose their fill and border through the palette rather than here, because

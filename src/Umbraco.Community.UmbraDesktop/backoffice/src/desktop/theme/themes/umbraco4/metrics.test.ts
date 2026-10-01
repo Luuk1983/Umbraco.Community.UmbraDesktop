@@ -23,7 +23,7 @@ import { measureChromeCost, UMBRADESKTOP_PROBE_WINDOW_RECT } from '../mount-them
  *
  * Where Win98's counterpart sums computed styles, these measure **one span end to end** with
  * `getBoundingClientRect` — frame edge to control edge, frame top to header bottom. It is the
- * habit `docs/theming.md` §4 recommends, and it is what makes the test able to catch a box that
+ * habit `docs/developer/theming.md` §4 recommends, and it is what makes the test able to catch a box that
  * was never folded into the derivation in the first place: a border, a margin or a padding
  * nobody thought to add is inside the span whether or not anyone remembered it.
  */

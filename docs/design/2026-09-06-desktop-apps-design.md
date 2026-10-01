@@ -344,9 +344,9 @@ so the day that theme sets one chrome token it does not silently start demanding
 from the one theme that must answer none.
 
 Two documents follow from this, one per audience, and each is the place to go from here.
-[`docs/theming.md`](../theming.md) §3 is the theme author's: what the two lists are, why they are
+[`docs/developer/theming.md`](../developer/theming.md) §3 is the theme author's: what the two lists are, why they are
 checked differently, and that a palette must answer the app group in full or not at all.
-[`docs/desktop-apps.md`](../desktop-apps.md) §4 is the app author's: the same thirteen tokens with the
+[`docs/developer/desktop-apps.md`](../developer/desktop-apps.md) §4 is the app author's: the same thirteen tokens with the
 fallback to write beside each one, and the three guarantees an app may rely on.
 
 **Answered: how a raised control gets a boundary on the flat themes.** This was left open because
@@ -371,7 +371,7 @@ makes it unanswerable. So the concern this section raised is real in practice, a
 place it shows. Neither of the two candidates above is what fixed it.
 
 **The app-side answer is the grid `gap`, and it is now the worked example in
-[`docs/desktop-apps.md`](../desktop-apps.md) §4.** The grid's own background shows through a 1px
+[`docs/developer/desktop-apps.md`](../developer/desktop-apps.md) §4.** The grid's own background shows through a 1px
 `gap`, so the board is ruled under every theme. It needs no arithmetic on a token and no per-theme
 branch for the four themes that keep the gap, which is the property that makes it the answer rather
 than a workaround: a sixth theme is ruled correctly without knowing this exists. What it explicitly
@@ -461,7 +461,7 @@ inferred:
 Opt-in by construction: an app that never writes that selector never learns the attribute exists.
 Win98 Minesweeper earns the hand-tuning because it is the one everybody will recognise; every other
 combination is correct from tokens alone, and a sixth theme breaks nothing (D10). The app author's
-version of all of this is [`docs/desktop-apps.md`](../desktop-apps.md) §5.
+version of all of this is [`docs/developer/desktop-apps.md`](../developer/desktop-apps.md) §5.
 
 ### 6.3 What this does to `tokens.test.ts`
 

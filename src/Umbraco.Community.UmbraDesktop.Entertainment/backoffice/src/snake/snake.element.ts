@@ -17,7 +17,7 @@ const AREA = 'umbraDesktopEntertainment';
 /**
  * The food's colour.
  *
- * Hardcoded deliberately, for the reason Minesweeper gives for its mine glyph: `docs/desktop-apps.md`
+ * Hardcoded deliberately, for the reason Minesweeper gives for its mine glyph: `docs/developer/desktop-apps.md`
  * §4 stops at the surface an app sits on, and a theme has no opinion about what an apple looks like.
  * Red because that is the colour a player is scanning the board for.
  */

@@ -109,7 +109,7 @@ start with `docs/`, `README.md` or `umbraco-marketplace-`.
 | `theme/themes/*/palette.ts`, `theme/themes/*/launcher.css.ts` | Token values, `.pin` rules removed, arrange styling |
 | `theme/themes/*/launcher.test.ts` | Prose about the pin toggle |
 | `components/launcher-long-names.test.ts` | Its catalogue stub gains `catalogueGroups` |
-| `README.md`, `umbraco-marketplace-umbraco.community.umbradesktop.json`, `docs/theming.md`, the design doc | Task 14 |
+| `README.md`, `umbraco-marketplace-umbraco.community.umbradesktop.json`, `docs/developer/theming.md`, the design doc | Task 14 |
 
 ---
 
@@ -4201,7 +4201,7 @@ it('splits only where one card column fits beside the palette', () => {
 
 it("states the body padding the launcher's CSS really has", () => {
   // The constant restates --uui-size-space-4 so the breakpoint can be computed; this is the check
-  // that the two still agree, measured rather than assumed (docs/theming.md §4).
+  // that the two still agree, measured rather than assumed (docs/developer/theming.md §4).
   const probe = document.createElement('div');
   probe.style.padding = 'var(--uui-size-space-4, 12px)';
   document.body.appendChild(probe);
@@ -4218,7 +4218,7 @@ Run: FAIL, the module does not exist.
 ```ts
 /**
  * The launcher's widths that both CSS and tests read (design §6.3). Derived here once, per
- * `docs/theming.md` §4, then measured in a browser (Task 13), because deriving only makes a sum
+ * `docs/developer/theming.md` §4, then measured in a browser (Task 13), because deriving only makes a sum
  * consistent with itself.
  */
 
@@ -5510,7 +5510,7 @@ Run: `npm run build && npm test`. Expected: both pass.
 
 Every theme gets a value for every new token, the two menu-row themes get arrange-mode styling, the
 pin rules are already gone (Task 10), and a cross-theme test proves no theme hides a new control.
-Read `docs/theming.md` §5 and §6.3 first: a backtick inside a CSS comment ends the stylesheet.
+Read `docs/developer/theming.md` §5 and §6.3 first: a backtick inside a CSS comment ends the stylesheet.
 
 **Files:**
 - Modify: `theme/themes/macos/palette.ts`, `win11/palette.ts` (light and dark), `win98/palette.ts`, `umbraco4/palette.ts`
@@ -5986,7 +5986,7 @@ Run: `npm run build && npm test`. Expected: both pass.
 
 ### Task 13: Measure in a real backoffice
 
-Deriving only makes a sum consistent with itself (`docs/theming.md` §4). This task looks.
+Deriving only makes a sum consistent with itself (`docs/developer/theming.md` §4). This task looks.
 
 - [ ] **Step 1: Run the test instance**
 
@@ -6035,7 +6035,7 @@ In `umbraco-marketplace-umbraco.community.umbradesktop.json`, add to `Tags`: `"C
 layout (Umbraco theme), save it to `docs/screenshots/launcher-arrange.png`, and add it to
 `Screenshots` in the same shape as the existing entries. Leave `Description` alone.
 
-- [ ] **Step 3: docs/theming.md**
+- [ ] **Step 3: docs/developer/theming.md**
 
 Add the new tokens wherever the launcher tokens are listed, remove
 `--umbradesktop-launcher-pin-hover-background`, and add a short subsection under §6 on arrange mode in
