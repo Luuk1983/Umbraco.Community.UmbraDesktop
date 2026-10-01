@@ -51,7 +51,7 @@ UmbraDesktop grants no access of its own. A user only sees apps for the sections
 
 ## Games, if you want them
 
-[`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment) is an optional add-on that puts Minesweeper and Snake on the desktop, each in a window of its own and themed along with everything else. The desktop is unchanged without it.
+[`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment) is an optional add-on that puts Minesweeper, Snake and Solitaire on the desktop, each in a window of its own and themed along with everything else. The desktop is unchanged without it.
 
 ## Documentation
 

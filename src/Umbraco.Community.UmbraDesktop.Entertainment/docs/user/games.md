@@ -1,13 +1,13 @@
 ---
 id: games
 title: Games
-description: Install the Entertainment add-on and play Minesweeper and Snake on the desktop.
+description: Install the Entertainment add-on and play Minesweeper, Snake and Solitaire on the desktop.
 sidebar_position: 1
 ---
 
 # Games
 
-UmbraDesktop Entertainment puts Minesweeper and Snake on the desktop, each in a window of its own,
+UmbraDesktop Entertainment puts Minesweeper, Snake and Solitaire on the desktop, each in a window of its own,
 under whichever theme is in use. So Minesweeper under the Windows 98 theme looks like Minesweeper, and
 under the macOS theme does not.
 
@@ -33,14 +33,14 @@ Prerequisites:
 
 ## Play
 
-To start a game, open the launcher and select **Minesweeper** or **Snake** in the Games group.
+To start a game, open the launcher and select **Minesweeper**, **Snake** or **Solitaire** in the Games group.
 
-Both open in a fixed-size window, the way Minesweeper did on Windows: the window can be moved and
-minimised, but not resized or maximised.
+Minesweeper and Snake open in a fixed-size window, the way Minesweeper did on Windows: the window can
+be moved and minimised, but not resized or maximised. Solitaire can be resized.
 
 ### Minesweeper
 
-![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher open down to its Games group, which lists Minesweeper and Snake, and the game's own taskbar button below.](../screenshots/entertainment-games-minesweeper.png)
+![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher open down to its Games group, which lists Minesweeper, Snake and Solitaire, and the game's own taskbar button below.](../screenshots/entertainment-games-minesweeper.png)
 
 The real one, with three difficulties, a mine counter and a timer.
 
@@ -49,7 +49,7 @@ The real one, with three difficulties, a mine counter and a timer.
 
 ### Snake
 
-![Snake open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with its score, New game button and best score above the board, and the launcher open down to its Games group, which lists Minesweeper and Snake.](../screenshots/entertainment-games-snake.png)
+![Snake open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with its score, New game button and best score above the board, and the launcher open down to its Games group, which lists Minesweeper, Snake and Solitaire.](../screenshots/entertainment-games-snake.png)
 
 Eat the food to grow longer, and do not hit the walls or your own tail.
 
@@ -61,8 +61,43 @@ Each piece of food is worth ten points, and the snake speeds up as it grows. The
 remembered in the browser. The game also pauses by itself when its window loses focus, so minimising
 it does not end the game.
 
-A game starts fresh when the desktop [reopens its windows](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/user/settings/reopening-windows.md)
+Minesweeper and Snake start fresh when the desktop [reopens its windows](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/user/settings/reopening-windows.md)
 after a reload.
+
+### Solitaire
+
+![Solitaire open in its own window on the UmbraDesktop desktop, a Klondike game on the card table with the stock, waste, four foundations and seven columns, and the settings button in the top right corner.](../screenshots/entertainment-games-solitaire.png)
+
+Klondike: build the four foundations up from ace to king in each suit, using the seven columns to
+move cards around.
+
+- To move a card or a run of cards, drag it onto a column or a foundation.
+- To draw from the stock, select it. When the stock is empty, select it again to turn the waste
+  pile back over.
+- To send a card to its foundation, double-click it.
+- To start again, select **New game**.
+
+When every card is face up, a **Finish** button appears. Select it to have the game play out the
+rest. When the last card reaches its foundation, the cards bounce across the table. To end the
+cascade, select anywhere or press a key.
+
+Scoring is the Windows scoring: points for each card that reaches a foundation or is turned face up,
+and 2 points off for every 10 seconds you take. Winning adds a time bonus.
+
+To change how the game plays or looks:
+
+1. In the Solitaire window, select the gear in the top right corner. The **Settings** window opens.
+2. Under **Game**, select **Draw one** or **Draw three**. A change here starts with your next game.
+3. Optional: select a **Card back**: **Match theme**, **Rabbit**, **Codegarden**, **CodeCabin** or
+   **Dutch Umbraco Alliance**. **Match theme** follows the desktop's theme.
+4. Optional: select **Card faces**. **Classic** is the one set that ships.
+5. Select **Done**.
+
+An unfinished game survives a refresh, and signing out and back in, in the same browser tab. It is
+forgotten when the window closes, when the game is won and when you select **New game**.
+
+Other packages can add card backs and card face sets. See
+[Adding a card back or a card face set to Solitaire](../developer/solitaire-decks.md).
 
 ## Versions
 
