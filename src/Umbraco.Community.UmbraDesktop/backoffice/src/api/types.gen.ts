@@ -774,6 +774,10 @@ export type DocTypePermissionEntryResponseModel = {
     isPriorityOverride: boolean;
 };
 
+export type DocsFilesResponseModel = {
+    files: Array<string>;
+};
+
 export type DocumentBlueprintItemResponseModel = {
     id: string;
     flags: Array<FlagModel>;
@@ -3753,3 +3757,40 @@ export type SetDesktopLabelResponses = {
 };
 
 export type SetDesktopLabelResponse = SetDesktopLabelResponses[keyof SetDesktopLabelResponses];
+
+export type GetDocsFilesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        path?: string;
+    };
+    url: '/umbraco/management/api/v1/umbradesktop/docs/files';
+};
+
+export type GetDocsFilesErrors = {
+    /**
+     * Bad Request
+     */
+    400: unknown;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: unknown;
+};
+
+export type GetDocsFilesResponses = {
+    /**
+     * OK
+     */
+    200: DocsFilesResponseModel;
+};
+
+export type GetDocsFilesResponse = GetDocsFilesResponses[keyof GetDocsFilesResponses];

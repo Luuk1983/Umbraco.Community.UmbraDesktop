@@ -378,6 +378,10 @@ FodyWeavers.xsd
 # every PNG here from the committed SVGs in backoffice/appicons-src/.
 **/backoffice/public/appicons/
 
+# The docs the Help app reads. Build output like the wallpapers: scripts/docs/copy-docs.mjs copies the
+# published pages from docs/ and recompresses the images they use, on every build.
+**/backoffice/public/docs/
+
 # App icon contact sheets. A judging aid, not a source and not build output: scripts/appicon-sheet.mjs
 # regenerates them on demand so an icon can be looked at rather than assumed. They sit beside the
 # SVGs in appicons-src/ because that is where you want them when you are working on the drawing.

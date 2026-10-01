@@ -175,11 +175,23 @@ const screensaverEntryPoint: UmbExtensionManifest = {
 };
 
 /**
+ * This package's docs, for the desktop's Help app. The build copies `docs/` into this package's own
+ * App_Plugins folder (see `vite.config.ts`), and this says where. The public route any add-on uses,
+ * as the host's `docs/developer/add-on-help.md` describes it.
+ */
+const docs: UmbExtensionManifest = {
+  type: 'umbraDesktopDocs',
+  alias: `${ALIAS}.Docs`,
+  name: 'UmbraDesktop Accessories docs',
+  meta: { path: '/App_Plugins/Umbraco.Community.UmbraDesktop.Accessories/docs' },
+};
+
+/**
  * The bundle Umbraco loads for this package, and the only entry point it has.
  *
  * `UmbExtensionManifest` is a global type from `@umbraco-cms/backoffice/extension-types`, wired up in
- * tsconfig's `types`. The `umbraDesktopApp` and `umbraDesktopCatalogue` arms of that union are
+ * tsconfig's `types`. The `umbraDesktopApp`, `umbraDesktopCatalogue` and `umbraDesktopDocs` arms of that union are
  * contributed by `umbradesktop-app.d.ts` in this folder, a copy of the Entertainment package's, for
  * the reason given there.
  */
-export const manifests: Array<UmbExtensionManifest> = [catalogue, ...apps, screensaverEntryPoint, ...localizationManifests];
+export const manifests: Array<UmbExtensionManifest> = [catalogue, ...apps, screensaverEntryPoint, docs, ...localizationManifests];

@@ -3,6 +3,7 @@ id: user-guide
 title: User guide
 description: How to install, use and set up the UmbraDesktop desktop.
 sidebar_position: 1
+image: ../screenshots/hero.png
 ---
 
 # User guide

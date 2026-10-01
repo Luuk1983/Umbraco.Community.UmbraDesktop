@@ -9,6 +9,7 @@ import { manifests as desktopIcons } from './desktop/icons/manifest';
 import { manifests as desktopAi } from './desktop/ai/manifest';
 import { manifests as desktopConnections } from './desktop/connections/manifest';
 import { manifests as desktopRemoteViewer } from './desktop/remote-viewer/manifest';
+import { manifests as desktopHelp } from './desktop/help/manifest';
 import { backofficePathFromBaseHref } from './desktop/boot/backoffice-path';
 import { bootLanding } from './desktop/boot/landing';
 import { hasBootAttempt, isBootSuppressed, readBootHint } from './desktop/boot/boot-storage';
@@ -59,4 +60,5 @@ export const manifests: Array<UmbExtensionManifest> = [
   ...desktopAi,
   ...desktopConnections,
   ...desktopRemoteViewer,
+  ...desktopHelp,
 ];

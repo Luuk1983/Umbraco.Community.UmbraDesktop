@@ -1,5 +1,7 @@
 {
   "id": "umbradesktop",
   "name": "UmbraDesktop",
-  "packageId": "Umbraco.Community.UmbraDesktop"
+  "packageId": "Umbraco.Community.UmbraDesktop",
+  "repository": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop",
+  "docsRoot": "docs"
 }

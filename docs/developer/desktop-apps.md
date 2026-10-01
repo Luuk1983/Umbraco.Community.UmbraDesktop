@@ -647,6 +647,38 @@ const time = this.#desktop?.formatDateTime(now, options) ?? this.localize.date(n
 than this contract, and an app that renders nothing there is worse than one that follows the
 backoffice culture alone. The Accessories Clock is the worked example.
 
+### 7.3 Remembering where your app is
+
+A backoffice window reopens at the page it was on after a reload. An app window can do the same for
+whatever "where" means to your app: a page, a tab, a document id. Nothing about it is required, and
+an app that never reports a location behaves exactly as before.
+
+1. **Report where you are** whenever it changes, with an event from your element:
+
+   ```ts
+   this.dispatchEvent(
+     new CustomEvent('umbradesktop-app-location', {
+       detail: { location: 'reports/2026' },
+       bubbles: true,
+       composed: true,
+     }),
+   );
+   ```
+
+2. **Read it back** from your element's `location` property. The desktop sets it before your element
+   connects, both when the window is reopened after a reload and when another feature opens your app
+   at a location. Declare it as a property, and go there when it is set:
+
+   ```ts
+   @property({ attribute: false })
+   location?: string;
+   ```
+
+A location is any short string you choose, up to 1,000 characters on one line; the desktop stores it
+and hands it back without reading it. Each window has its own, so an app that allows several windows
+can have each one somewhere else. The Help app is the first to use this: its location is the page it
+shows, such as `umbradesktop/snapping`.
+
 ---
 
 ## 8. Traps

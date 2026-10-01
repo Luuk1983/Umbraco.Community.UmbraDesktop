@@ -6,7 +6,7 @@
 	"scripts": {
 		"wallpapers": "cd backoffice && node scripts/build-wallpapers.mjs",
 		"watch": "cd backoffice && node scripts/build-wallpapers.mjs && node scripts/build-appicons.mjs && tsc && vite build --watch",
-		"build": "cd backoffice && node scripts/docs/check-docs.mjs && node scripts/build-wallpapers.mjs && node scripts/build-appicons.mjs && tsc && vite build",
+		"build": "cd backoffice && node scripts/docs/check-docs.mjs && node scripts/docs/copy-docs.mjs && node scripts/build-wallpapers.mjs && node scripts/build-appicons.mjs && tsc && vite build",
 		"docs:check": "cd backoffice && node scripts/docs/check-docs.mjs",
 		"generate-client": "node backoffice/scripts/generate-openapi.js https://localhost:44356/umbraco/swagger/management/swagger.json",
 		"test": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve",

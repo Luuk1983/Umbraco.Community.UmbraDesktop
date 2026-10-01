@@ -7,8 +7,8 @@ sidebar_position: 7
 
 # Writing documentation
 
-The same Markdown files are read in three places: on GitHub, in the desktop's Help app (planned), and
-possibly one day on a Docusaurus site. A page written to the rules on this page works in all three
+The same Markdown files are read in three places: on GitHub, in the desktop's
+[Help app](../user/apps/help.md), and possibly one day on a Docusaurus site. A page written to the rules on this page works in all three
 without being rewritten for any of them.
 
 ## Where things go
@@ -34,9 +34,15 @@ docs root:
 {
   "id": "umbradesktop",
   "name": "UmbraDesktop",
-  "packageId": "Umbraco.Community.UmbraDesktop"
+  "packageId": "Umbraco.Community.UmbraDesktop",
+  "repository": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop",
+  "docsRoot": "docs"
 }
 ```
+
+The `id` is what links into the Help app name the product by. `repository` and `docsRoot` let the
+Help app recognise a GitHub link into these docs from another product, and open a link to an
+unpublished file on GitHub. [Help for your add-on](add-on-help.md) describes every field.
 
 Only the `user/` and `developer/` folders inside a product's docs root are published. For UmbraDesktop
 that root is `docs/`, which is why `docs/design/` and `docs/plans/` can live beside them unpublished.
@@ -52,7 +58,8 @@ a product, links are always relative.
 The user guide is grouped into categories, one folder each. A category folder holds:
 
 - a `README.md`, the category's front page. It lists every page in the category with a sentence or
-  two about each, and nothing else
+  two about each, and nothing else, as `- [Snapping](snapping.md): what the page covers.` The Help
+  app shows that list as a column of blocks, one per page, so keep to that shape
 - a `_category_.json` with the category's label and its position in the guide:
 
   ```json
@@ -89,7 +96,12 @@ sidebar_position: 5
   product. Never rename one without searching for its uses.
 - **`title`** is the page's name in navigation. Repeat it as the page's `#` heading.
 - **`description`** is one sentence saying what the page covers. It feeds search and link previews.
-- **`sidebar_position`** orders the pages in a category. A category's `README.md` needs none.
+- **`sidebar_position`** orders the pages in a category. A category's `README.md` needs no
+  `sidebar_position`, since it is the category's front page, but it does need an `id` and a `title`
+  like every other page.
+- **`image`**, on a guide's front page only, is the picture on the guide's card on the Help app's
+  landing page: a relative path into `docs/screenshots/`. Docusaurus reads it as the social card.
+  Without one the card shows a generic picture.
 
 Values are flat `key: value` pairs. Quote a value that contains a colon.
 
@@ -146,6 +158,20 @@ package page then keeps that version's screenshots and docs.
 The rewrite is the `PinPackedReadme` target in `src/Directory.Build.targets`, which calls
 `backoffice/scripts/docs/pack-readme.mjs`. It needs node on the packing machine, which the frontend
 build already does. The README in the repository keeps its relative links, which are right on GitHub.
+
+## The copy for the Help app
+
+The Help app reads the docs from the package itself, so `npm run build` copies them there:
+`backoffice/scripts/docs/copy-docs.mjs` puts `product.json`, everything under `user/` and
+`developer/`, and only the images those pages use into `backoffice/public/docs/`, which ships as
+`/App_Plugins/Umbraco.Community.UmbraDesktop/docs/`. On the way it writes the commit being built into
+the copied `product.json` as `ref`, and recompresses PNG screenshots as palette PNGs, which keeps their
+names and takes the images to about a third of their size. The folder is gitignored and rebuilt every
+time; the docs in `docs/` are the source.
+
+So a page that is published is in the app after the next build, and an image a page does not use is
+not in the package at all. Entertainment copies its docs with the Vite lines in its own
+`vite.config.ts`, the way [Help for your add-on](add-on-help.md) shows.
 
 ## Writing style
 

@@ -1,7 +1,7 @@
 import type { ManifestElement, ManifestWithDynamicConditions } from '@umbraco-cms/backoffice/extension-api';
 
 /**
- * The desktop's manifest types, `umbraDesktopApp` and `umbraDesktopCatalogue`, declared here because
+ * The desktop's manifest types, `umbraDesktopApp`, `umbraDesktopCatalogue` and `umbraDesktopDocs`, declared here because
  * a consuming package cannot import them.
  *
  * **This file is a hand-written copy of a contract that lives in another package, and it exists
@@ -119,9 +119,23 @@ interface ManifestUmbraDesktopCatalogue extends ManifestWithDynamicConditions {
   meta: MetaUmbraDesktopCatalogue;
 }
 
+/** What a `umbraDesktopDocs` manifest carries. A copy of the host's `MetaUmbraDesktopDocs`. */
+interface MetaUmbraDesktopDocs {
+  /** The docs folder's URL path on the site, under `/App_Plugins/`. */
+  path: string;
+}
+
+/** A package's docs for the Help app, as data. Only ever gains optional fields, like the others. */
+interface ManifestUmbraDesktopDocs extends ManifestWithDynamicConditions {
+  /** Discriminates this manifest from every other extension type. */
+  type: 'umbraDesktopDocs';
+  /** Where the docs are. */
+  meta: MetaUmbraDesktopDocs;
+}
+
 declare global {
   /**
-   * Adds `umbraDesktopApp` and `umbraDesktopCatalogue` to Umbraco's own extension type map, which is
+   * Adds `umbraDesktopApp`, `umbraDesktopCatalogue` and `umbraDesktopDocs` to Umbraco's own extension type map, which is
    * what makes the manifests assignable to `UmbExtensionManifest` and so accepted in this package's
    * `manifests` array. Umbraco's own extension kinds declare themselves the same way, and so does
    * the host.
@@ -131,5 +145,7 @@ declare global {
     umbraDesktopApp: ManifestUmbraDesktopApp;
     /** This package's launcher groups. */
     umbraDesktopCatalogue: ManifestUmbraDesktopCatalogue;
+    /** This package's docs, for the Help app. */
+    umbraDesktopDocs: ManifestUmbraDesktopDocs;
   }
 }

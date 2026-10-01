@@ -4,6 +4,7 @@ import {
   extractLinks,
   githubSlug,
   headingAnchors,
+  headings,
   parseFrontMatter,
 } from '../../scripts/docs/markdown-docs.mjs';
 
@@ -51,6 +52,17 @@ describe('headingAnchors', () => {
   });
 });
 
+describe('headings', () => {
+  it('gives each heading its level, rendered text and anchor, in order', () => {
+    expect(headings('# Title\n\n## The `x` part\n\n### Notes\n\n### Notes\n')).to.deep.equal([
+      { level: 1, text: 'Title', anchor: 'title', line: 1 },
+      { level: 2, text: 'The x part', anchor: 'the-x-part', line: 3 },
+      { level: 3, text: 'Notes', anchor: 'notes', line: 5 },
+      { level: 3, text: 'Notes', anchor: 'notes-1', line: 7 },
+    ]);
+  });
+});
+
 describe('extractLinks', () => {
   it('finds links and images with the line they are on', () => {
     const links = extractLinks('Intro\n\nSee [themes](themes.md#umbraco-4).\n\n![Shot](../screenshots/a.png)\n');
@@ -73,6 +85,11 @@ describe('extractLinks', () => {
   it('drops a link title and keeps only the target', () => {
     const links = extractLinks('[a](b.md "Title")\n');
     expect(links.map((l) => l.target)).to.deep.equal(['b.md']);
+  });
+
+  it('finds the image front matter names, on its own line, and no other front matter value', () => {
+    const links = extractLinks('---\nid: a\nimage: ../screenshots/hero.png\ndescription: See [x](y.md)\n---\n\n# A\n');
+    expect(links).to.deep.equal([{ target: '../screenshots/hero.png', line: 3, image: true }]);
   });
 });
 
@@ -124,6 +141,12 @@ describe('checkDocs', () => {
   it('reports a link to a file that does not exist', () => {
     expect(run({ 'README.md': 'x\n[gone](docs/developer/theming.md)\n' })).to.deep.equal([
       'README.md:2 links to docs/developer/theming.md, which does not exist',
+    ]);
+  });
+
+  it('reports a front matter image that does not exist', () => {
+    expect(run({ 'docs/user/README.md': '---\nid: u\ntitle: U\nimage: ../screenshots/gone.png\n---\n\n# U\n' })).to.deep.equal([
+      'docs/user/README.md:4 links to docs/screenshots/gone.png, which does not exist',
     ]);
   });
 

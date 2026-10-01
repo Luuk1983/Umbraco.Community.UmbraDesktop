@@ -367,3 +367,19 @@ export const UMBRADESKTOP_MIGRATION_TIMEOUT_MS = 30_000;
  * package could otherwise register a group called `pinned`.
  */
 export const UMBRADESKTOP_PINNED_GROUP_ID = '@pinned';
+
+/**
+ * The event an app element dispatches to tell the desktop where it is, with `{ location: string }`
+ * in `detail`, bubbling and composed (Help design D7). The window records it on the manager, the
+ * layout saves it, and a reopened window hands it back as the app's `location` property. Public
+ * contract for any app, documented in `docs/developer/desktop-apps.md`.
+ */
+export const UMBRADESKTOP_APP_LOCATION_EVENT = 'umbradesktop-app-location';
+
+/**
+ * The event any package can dispatch to open Help at a page, with `{ target: string }` in `detail`,
+ * bubbling and composed (Help design D9). Target strings are `product/page/heading`. The desktop
+ * answers it in its own document and inside every backoffice window, which is what lets a package's
+ * own dashboard ask. Published API, documented in `docs/developer/add-on-help.md`.
+ */
+export const UMBRADESKTOP_OPEN_HELP_EVENT = 'umbradesktop-open-help';

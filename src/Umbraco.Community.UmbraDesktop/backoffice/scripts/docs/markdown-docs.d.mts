@@ -9,6 +9,9 @@ export declare function splitInlineCode(line: string): string[];
 /** The anchor GitHub and Docusaurus give a heading. */
 export declare function githubSlug(text: string): string;
 
+/** Every heading in a document: level, rendered text, anchor and line. */
+export declare function headings(text: string): { level: number; text: string; anchor: string; line: number }[];
+
 /** Every anchor a document's headings produce. */
 export declare function headingAnchors(text: string): Set<string>;
 
