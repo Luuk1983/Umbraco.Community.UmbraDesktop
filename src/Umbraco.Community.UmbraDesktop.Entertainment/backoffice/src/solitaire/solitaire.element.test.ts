@@ -29,7 +29,6 @@ export async function solitaire(
     store?: SavedGameStore;
     settings?: MemoryStorage;
     clockIntervalMs?: number;
-    random?: () => number;
     reducedMotion?: boolean;
   } = {},
 ): Promise<SolitaireElement> {
@@ -43,7 +42,6 @@ export async function solitaire(
     .settingsStorage=${() => settings}
     .clockIntervalMs=${options.clockIntervalMs ?? 1000}
     .reducedMotion=${() => options.reducedMotion ?? true}
-    .random=${options.random ?? (() => 0.9)}
   ></umbradesktop-solitaire>`);
   await waitUntil(
     () => cards(el).length === 52 && el.shadowRoot!.querySelector('.card.up .front svg') !== null,
@@ -567,16 +565,12 @@ describe('solitaire element: settings', () => {
   });
 });
 
-describe('solitaire element: easter eggs on the felt', () => {
-  /** One of the felt's hidden layers, by class. */
-  const layer = (el: SolitaireElement, name: string) => el.shadowRoot!.querySelector<HTMLElement>(`.${name}`);
+describe('solitaire element: felt layering', () => {
   /** The element a click at the centre of `target` would hit, as the browser decides it. */
   const hitAtCentre = (el: SolitaireElement, target: Element) => {
     const r = target.getBoundingClientRect();
     return el.shadowRoot!.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
   };
-  /** A bubbling double-click on an element, as the browser dispatches one. */
-  const dbl = (target: Element) => target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
 
   it('paints the noise beneath the table, so the felt grain never lies over a card', async () => {
     const el = await solitaire();
@@ -586,67 +580,10 @@ describe('solitaire element: easter eggs on the felt', () => {
   });
 
   it('keeps every click on the cards: a hit over a card finds the card, never a layer', async () => {
-    const el = await solitaire({ random: () => 0 });
+    const el = await solitaire();
     for (const card of [cardEl(el, '1S'), cardEl(el, '13C')]) {
       expect(hitAtCentre(el, card)?.closest('.card')).to.equal(card);
     }
-  });
-
-  it('puts a coffee ring on a new deal when the dice say so, and not otherwise', async () => {
-    const lucky = await solitaire({ random: () => 0 });
-    expect(layer(lucky, 'coffee')).to.not.equal(null);
-    expect(layer(lucky, 'coffee')!.getAttribute('aria-hidden')).to.equal('true');
-    const unlucky = await solitaire({ random: () => 0.9 });
-    expect(layer(unlucky, 'coffee')).to.equal(null);
-  });
-
-  it('rolls again at every new game', async () => {
-    let roll = 0.9;
-    const el = await solitaire({ random: () => roll });
-    expect(layer(el, 'coffee')).to.equal(null);
-    roll = 0;
-    el.shadowRoot!.querySelector<HTMLElement>('.new-game')!.click();
-    await waitUntil(() => layer(el, 'coffee') !== null, 'stain appears');
-    roll = 0.9;
-    el.shadowRoot!.querySelector<HTMLElement>('.new-game')!.click();
-    await waitUntil(() => layer(el, 'coffee') === null, 'stain gone with the old deal');
-  });
-
-  it('does not stain a game that was handed in, only a fresh deal', async () => {
-    const el = await solitaire({ random: () => 0, game: dealGame(1, identity) });
-    expect(layer(el, 'coffee')).to.equal(null);
-  });
-
-  it('rubs the stain out on a double-click, and only the painted ring takes the click', async () => {
-    const el = await solitaire({ random: () => 0 });
-    const ring = el.shadowRoot!.querySelector<SVGElement>('.coffee .ring')!;
-    expect(getComputedStyle(layer(el, 'coffee')!).pointerEvents).to.equal('none');
-    expect(getComputedStyle(ring).pointerEvents).to.equal('stroke');
-    dbl(ring);
-    await el.updateComplete;
-    expect(layer(el, 'coffee')).to.equal(null);
-  });
-
-  it('fades the stain out when motion is allowed', async () => {
-    const el = await solitaire({ random: () => 0, reducedMotion: false });
-    dbl(el.shadowRoot!.querySelector('.coffee .ring')!);
-    await el.updateComplete;
-    expect(layer(el, 'coffee')!.classList.contains('fading')).to.equal(true);
-    await waitUntil(() => layer(el, 'coffee') === null, 'removed after the fade');
-  });
-
-  it('still sends a double-clicked card home when a stain lies under it', async () => {
-    const el = await solitaire({ random: () => 0 });
-    const ace = cardEl(el, '1S');
-    const at = ace.getBoundingClientRect();
-    const table = el.shadowRoot!.querySelector('.table')!.getBoundingClientRect();
-    const coffee = layer(el, 'coffee')!;
-    coffee.style.left = `${at.left - table.left}px`;
-    coffee.style.top = `${at.top - table.top}px`;
-    const hit = hitAtCentre(el, ace)!;
-    expect(hit.closest('.card')).to.equal(ace);
-    dbl(hit);
-    await waitUntil(() => cardEl(el, '1S').dataset.pile!.startsWith('f'), 'ace flew home');
   });
 });
 

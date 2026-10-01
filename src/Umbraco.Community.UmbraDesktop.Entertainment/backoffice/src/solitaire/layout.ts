@@ -4,7 +4,6 @@
  */
 import {
   CARD_MAX_WIDTH_PX,
-  COFFEE_RING_RATIO,
   CARD_MIN_WIDTH_PX,
   CARD_RATIO,
   COLUMN_GAP_RATIO,
@@ -157,24 +156,4 @@ export function cardPositions(
   });
 
   return out;
-}
-
-/**
- * Where a coffee-ring stain's centre can sit: places the cards never cover at rest, so the stain is
- * seen but never competes with the game (design D13). Zone 0 is the top row's gap between the waste
- * and the first foundation, nudged right of centre to clear a fanned Draw 3 waste; zones 1 and 2 are
- * the bottom corners, below where the columns typically reach.
- * @param layout The geometry.
- * @param zone 0, 1 or 2.
- * @returns The stain's centre in px, relative to the table.
- */
-export function coffeeSpot(layout: TableLayout, zone: number): Point {
-  const r = (layout.cardW * COFFEE_RING_RATIO) / 2;
-  if (zone === 0) {
-    // The empty third column of the top row sits halfway between the waste's and the first foundation's.
-    const emptyColumn = (layout.slot('waste').x + layout.slot('f0').x) / 2;
-    return { x: emptyColumn + layout.cardW * 0.6, y: layout.slot('waste').y + layout.cardH / 2 };
-  }
-  const inset = TABLE_PADDING_PX + r;
-  return { x: zone === 1 ? inset : layout.width - inset, y: layout.height - inset };
 }

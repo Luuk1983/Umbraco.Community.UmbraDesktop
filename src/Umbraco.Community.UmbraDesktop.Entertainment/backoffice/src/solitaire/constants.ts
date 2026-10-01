@@ -115,19 +115,3 @@ export const SOLITAIRE_MIN_CONTENT_SIZE = {
   w: Math.ceil(tableWidthFor(CARD_MIN_WIDTH_PX)),
   h: Math.ceil(tableHeightFor(CARD_MIN_WIDTH_PX)),
 } as const;
-
-/** Chance that a fresh deal comes with a coffee-ring stain on the felt (design D13). */
-export const COFFEE_CHANCE = 1 / 6;
-/** The stain's diameter as a fraction of the card width: a mug base, a little smaller than a card is wide. */
-export const COFFEE_RING_RATIO = 0.62;
-/** How long a rubbed-out stain takes to fade, in ms. Instant under reduced motion. */
-export const COFFEE_FADE_MS = 700;
-/**
- * How strongly the coffee ring shows. Measured on the real table, not a preview: the first value,
- * 0.12 of a dark brown, was invisible on every felt, so nobody ever found the egg. A light coffee
- * tone at this strength reads as a stain on dark navy, green and blue felts and still sits well
- * below the cards.
- */
-export const COFFEE_OPACITY = 0.3;
-/** How many places a stain can land: the gap in the top row, and the two bottom corners. */
-export const COFFEE_ZONES = 3;

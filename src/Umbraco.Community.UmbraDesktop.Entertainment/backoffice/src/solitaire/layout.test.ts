@@ -1,10 +1,9 @@
 import { expect } from '@open-wc/testing';
-import { cardPositions, coffeeSpot, computeLayout, fanOffsets } from './layout.js';
+import { cardPositions, computeLayout, fanOffsets } from './layout.js';
 import {
   CARD_MAX_WIDTH_PX,
   CARD_MIN_WIDTH_PX,
   CARD_RATIO,
-  COFFEE_RING_RATIO,
   FAN_DOWN_RATIO,
   FAN_UP_MIN_RATIO,
   FAN_UP_RATIO,
@@ -104,20 +103,5 @@ describe('solitaire layout', () => {
     // Draw 1: top card always at offset 0.
     const pos1d = cardPositions({ ...game, drawCount: 1, waste: [game.stock[0]] }, layout);
     expect(pos1d.get(game.stock[0].id)!.x).to.be.closeTo(wasteX + 0 * step, 0.1);
-  });
-
-  it('keeps the coffee stain out of the cards at rest, in all three places', () => {
-    const layout = computeLayout(SOLITAIRE_CONTENT_SIZE.w, SOLITAIRE_CONTENT_SIZE.h);
-    const r = (layout.cardW * COFFEE_RING_RATIO) / 2;
-    const fanned = layout.slot('waste').x + layout.cardW * (1 + 2 * WASTE_FAN_RATIO);
-    const top = coffeeSpot(layout, 0);
-    expect(top.x - r, 'clear of a fanned waste').to.be.greaterThan(fanned);
-    expect(top.x + r, 'clear of the first foundation').to.be.lessThan(layout.slot('f0').x);
-    for (const zone of [1, 2]) {
-      const at = coffeeSpot(layout, zone);
-      expect(at.x - r).to.be.greaterThan(0);
-      expect(at.x + r).to.be.lessThan(layout.width);
-      expect(at.y + r).to.be.lessThan(layout.height);
-    }
   });
 });

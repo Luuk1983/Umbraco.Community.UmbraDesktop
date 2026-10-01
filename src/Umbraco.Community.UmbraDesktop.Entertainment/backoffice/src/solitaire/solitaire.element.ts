@@ -1,11 +1,6 @@
 import {
   AUTO_FINISH_STEP_MS,
   CARD_RADIUS_RATIO,
-  COFFEE_CHANCE,
-  COFFEE_FADE_MS,
-  COFFEE_OPACITY,
-  COFFEE_RING_RATIO,
-  COFFEE_ZONES,
   DEAL_STAGGER_MS,
   DRAG_THRESHOLD_PX,
   FLIP_MS,
@@ -18,7 +13,7 @@ import type { CascadeCard } from './cascade.js';
 import { CLASSIC_FACES_ALIAS, THEME_BACK_ALIAS, THEME_BACK_IMAGE } from './backs.js';
 import { backImageFor } from './extensions.js';
 import type { ManifestSolitaireBack, ManifestSolitaireFaces, SolitaireFaceSet } from './extensions.js';
-import { cardPositions, coffeeSpot, computeLayout } from './layout.js';
+import { cardPositions, computeLayout } from './layout.js';
 import type { TableLayout } from './layout.js';
 import { playFlip, snapshot } from './motion.js';
 import type { Snapshot } from './motion.js';
@@ -73,22 +68,6 @@ const NOISE_SVG =
   "<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/>" +
   "<feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter>" +
   "<rect width='100%' height='100%' filter='url(%23n)'/></svg>";
-
-/**
- * The coffee ring (design D13), in a 100-unit box: a thick, slightly broken and uneven brown ring,
- * a faint inner wash, a second thin edge line and one drip. Only `.ring` is hit-testable, so the
- * stain never catches a click meant for anything but itself.
- */
-const COFFEE_SVG =
-  '<svg viewBox="0 0 100 100" aria-hidden="true">' +
-  '<circle cx="50" cy="50" r="38" fill="#c49a6c" opacity=".35"/>' +
-  '<path class="ring" fill="none" stroke="#d8a873" stroke-width="5" stroke-linecap="round" ' +
-  'd="M50 8C73 7 92 27 91 51C90 74 71 93 48 92C26 91 8 73 9 49C10 28 27 9 49 8"/>' +
-  '<path fill="none" stroke="#d8a873" stroke-width="1.4" opacity=".7" ' +
-  'd="M50 13C70 12 87 29 86 50C85 71 68 88 47 87C29 86 14 70 14 51"/>' +
-  // Loose drops rather than a tail: a tail joined to the ring read as a magnifying glass.
-  '<circle cx="88" cy="86" r="3.2" fill="#d8a873"/><circle cx="94" cy="94" r="1.6" fill="#d8a873"/>' +
-  '</svg>';
 
 /** A drag in progress: which cards are lifted, where they came from, and how to stop listening. */
 interface Drag {
@@ -232,20 +211,6 @@ export class SolitaireElement extends UmbLitElement {
   @state()
   private _previews: ReadonlyMap<string, string> = new Map();
 
-  /**
-   * The coffee-ring stain on the felt, if this deal came with one (design D13): which of the
-   * {@link COFFEE_ZONES} places and how it is turned. Cleared by a new game or by rubbing it out.
-   */
-  @state()
-  private _coffee?: { readonly zone: number; readonly spin: number };
-
-  /** Whether the stain is fading out, so it keeps its place until the fade is done. */
-  @state()
-  private _coffeeFading = false;
-
-  /** The timer that removes the stain after its fade, so a new game can cancel it. */
-  #coffeeTimer?: number;
-
   /** This window's id in the saved-game store. Replaced by the claimed id when a game is resumed. */
   #id = `w${Math.random().toString(36).slice(2)}`;
 
@@ -257,13 +222,6 @@ export class SolitaireElement extends UmbLitElement {
 
   /** Watches the element's size, for the changes `relayout` cannot know about by itself. */
   #resize?: ResizeObserver;
-
-  /**
-   * Where chance comes from, for the coffee ring. A seam for tests, as `shuffle` is: they say what
-   * the dice rolled instead of hoping for it.
-   */
-  @property({ attribute: false })
-  random: () => number = Math.random;
 
   /** The drag in progress, if any. */
   #drag?: Drag;
@@ -300,7 +258,6 @@ export class SolitaireElement extends UmbLitElement {
         this._elapsed = claimed.saved.elapsedSeconds;
       } else {
         this._game = this.startingGame ?? deal(this._settings.drawCount, this.shuffle);
-        if (!this.startingGame) this.#rollCoffee();
       }
     }
     if (this._game.moves > 0) this.#startTimer();
@@ -329,7 +286,6 @@ export class SolitaireElement extends UmbLitElement {
     this.#drag = undefined;
     this.#stopCascade();
     this.#stopTimer();
-    window.clearTimeout(this.#coffeeTimer);
     this.store.remove(this.#id);
   }
 
@@ -774,43 +730,12 @@ export class SolitaireElement extends UmbLitElement {
     this._cascading = false;
     this._finishing = false;
     this._elapsed = 0;
-    this.#rollCoffee();
     const dealt = deal(this._settings.drawCount, this.shuffle);
     const all = [dealt.stock, ...dealt.tableau].flat().map((c) => ({ ...c, faceUp: false }));
     this._game = { ...dealt, stock: all, tableau: dealt.tableau.map(() => []) };
     await this.updateComplete;
     await this.#commit(dealt, DEAL_STAGGER_MS);
   }
-
-  /**
-   * Roll the dice for a coffee-ring stain on a fresh deal, and remove the old one either way: the
-   * stain belongs to the deal it came with. One chance in six, then a place and a turn.
-   */
-  #rollCoffee(): void {
-    window.clearTimeout(this.#coffeeTimer);
-    this._coffeeFading = false;
-    this._coffee =
-      this.random() < COFFEE_CHANCE
-        ? { zone: Math.min(COFFEE_ZONES - 1, Math.floor(this.random() * COFFEE_ZONES)), spin: this.random() * 360 }
-        : undefined;
-  }
-
-  /**
-   * Rub the stain out: a double-click on its painted ring. Fades it, then removes it; with reduced
-   * motion it just goes.
-   */
-  #rubOutCoffee = (): void => {
-    if (!this._coffee || this._coffeeFading) return;
-    if (this.reducedMotion()) {
-      this._coffee = undefined;
-      return;
-    }
-    this._coffeeFading = true;
-    this.#coffeeTimer = window.setTimeout(() => {
-      this._coffee = undefined;
-      this._coffeeFading = false;
-    }, COFFEE_FADE_MS);
-  };
 
   /**
    * Start the clock, once, at the first move.
@@ -983,9 +908,6 @@ export class SolitaireElement extends UmbLitElement {
           @dblclick=${this.#onDoubleClick}
           @pointerdown=${this.#onPointerDown}
         >
-          ${layout && this._coffee
-            ? this.#renderCoffee(layout, this._coffee)
-            : nothing}
           ${layout
             ? PILES.map((id) => {
                 const at = layout.slot(id);
@@ -1069,26 +991,6 @@ export class SolitaireElement extends UmbLitElement {
           : nothing}
       </div>
     `;
-  }
-
-  /**
-   * The coffee-ring stain, positioned and turned (design D13). Its box ignores the pointer; only the
-   * ring painted inside it takes the double-click that rubs it out.
-   * @param layout The geometry, for the stain's place and size.
-   * @param coffee Which place and how it is turned.
-   * @returns The stain.
-   */
-  #renderCoffee(layout: TableLayout, coffee: { readonly zone: number; readonly spin: number }) {
-    const size = layout.cardW * COFFEE_RING_RATIO;
-    const at = coffeeSpot(layout, coffee.zone);
-    return html`<div
-      class=${classMap({ coffee: true, fading: this._coffeeFading })}
-      aria-hidden="true"
-      style="left:${at.x - size / 2}px;top:${at.y - size / 2}px;width:${size}px;height:${size}px;transform:rotate(${coffee.spin}deg)"
-      @dblclick=${this.#rubOutCoffee}
-    >
-      ${unsafeSVG(COFFEE_SVG)}
-    </div>`;
   }
 
   /**
@@ -1207,23 +1109,6 @@ export class SolitaireElement extends UmbLitElement {
       inset: 0;
       z-index: 1;
       isolation: isolate;
-    }
-    .coffee {
-      position: absolute;
-      opacity: ${unsafeCSS(COFFEE_OPACITY)};
-      pointer-events: none;
-      transition: opacity ${unsafeCSS(COFFEE_FADE_MS)}ms ease;
-    }
-    .coffee.fading {
-      opacity: 0;
-    }
-    .coffee svg {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-    .coffee .ring {
-      pointer-events: stroke;
     }
     .slot {
       position: absolute;
