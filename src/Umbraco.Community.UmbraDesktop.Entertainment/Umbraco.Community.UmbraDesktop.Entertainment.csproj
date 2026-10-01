@@ -93,8 +93,9 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
     <Content Remove="backoffice\**" />
     <Content Remove="package.json" />
     <Content Remove="package-lock.json" />
-    <!-- The add-on's docs are read on GitHub (and later by the desktop's Help app), never from
-         the package: without this, docs/product.json packs as content at the package root. -->
+    <!-- The add-on's docs reach the package through the Vite build, which copies them into
+         wwwroot for the desktop's Help app: without this, docs/product.json would also pack as
+         content at the package root. -->
     <Content Remove="docs\**" />
   </ItemGroup>
 

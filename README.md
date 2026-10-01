@@ -21,6 +21,7 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 - **Five themes.** Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98, each with a wallpaper to match. [Appearance](docs/user/appearance/README.md)
 - **It follows you.** Your settings live on your Umbraco account, and your windows come back after a reload. [Settings](docs/user/settings/README.md)
 - **It knows your packages.** Forms, Deploy, Workflow, Commerce and the rest get proper apps, and Umbraco AI's chat sits in a window beside your pages. [Apps](docs/user/apps/README.md)
+- **Help on the desktop.** The documentation for the version you run, for the desktop and its add-ons, in a window of its own. [Help](docs/user/apps/help.md)
 - **Built to be extended.** Your own package can add apps, tiles, launcher groups and themes. [Developer guide](docs/developer/README.md)
 
 ![A content editor window with the rendered page docked beside it in the same window, and the Preview button in its path shown as pressed.](docs/screenshots/live-preview.png)

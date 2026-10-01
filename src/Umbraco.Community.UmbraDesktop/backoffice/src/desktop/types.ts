@@ -272,7 +272,13 @@ export interface UmbraDesktopWindow {
    *
    * Reported by the window as the frame's router moves, so the window layout can reopen the window
    * where the editor was rather than at its section's start page (see `windows/layout.ts`). Absent
-   * until the frame has loaded, and always absent on an app window, which has no address.
+   * until the frame has loaded.
+   *
+   * On an app window it is the app's own location instead, in whatever terms the app uses (Help's is
+   * a target string such as `umbradesktop/snapping`): set when the window is opened at one, and
+   * updated whenever the app reports a move with `umbradesktop-app-location`. Absent for an app
+   * that never reports one. The layout saves the two kinds in separate fields, since only one is a
+   * page on this site.
    */
   location?: string;
 

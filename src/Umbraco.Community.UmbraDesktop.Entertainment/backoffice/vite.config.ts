@@ -1,5 +1,29 @@
-import { readFileSync } from "node:fs";
-import { defineConfig } from "vite";
+import { cpSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { defineConfig, type Plugin } from "vite";
+
+/** One folder per package under App_Plugins, named after the package id. */
+const outDir = "../wwwroot/App_Plugins/Umbraco.Community.UmbraDesktop.Entertainment";
+
+/**
+ * Copies this package's docs into its App_Plugins folder, where the desktop's Help app reads them.
+ *
+ * After the bundle is written rather than before, because `emptyOutDir` empties the folder first.
+ * The whole of `docs/` is copied: it holds only what is published (`product.json`, `user/` and the
+ * screenshots those pages use), so there is nothing to leave out. These are the lines the host's
+ * add-on guide shows, used as written.
+ * @returns The Vite plugin.
+ */
+function copyDocs(): Plugin {
+  return {
+    name: "umbradesktop-copy-docs",
+    closeBundle() {
+      cpSync(fileURLToPath(new URL("../docs", import.meta.url)), fileURLToPath(new URL(`${outDir}/docs`, import.meta.url)), {
+        recursive: true,
+      });
+    },
+  };
+}
 
 /**
  * The Apache 2.0 notice for the card rank outlines, read from the `/*! ... *\/` block at the top of
@@ -15,6 +39,7 @@ const RANKS_NOTICE = (/^\/\*![\s\S]*?\*\//.exec(readFileSync(`src/solitaire/face
 
 export default defineConfig({
 	plugins: [
+		copyDocs(),
 		{
 			name: "umbradesktop-rank-outline-notice",
 			/** Prepends the notice to the chunk holding the outlines, and fails the build if none does. */
@@ -38,9 +63,8 @@ ${chunk.code}`;
 			entry: "src/bundle.manifests.ts",
 			formats: ["es"],
 		},
-		// One folder per package under App_Plugins, named after the package id, so two UmbraDesktop
-		// packages installed together never write over each other's assets.
-		outDir: "../wwwroot/App_Plugins/Umbraco.Community.UmbraDesktop.Entertainment",
+		// So two UmbraDesktop packages installed together never write over each other's assets.
+		outDir,
 		emptyOutDir: true,
 		sourcemap: true,
 		rollupOptions: {

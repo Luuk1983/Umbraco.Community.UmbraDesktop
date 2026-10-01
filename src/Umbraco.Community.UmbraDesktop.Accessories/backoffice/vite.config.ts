@@ -1,4 +1,29 @@
-import { defineConfig } from "vite";
+import { cpSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { defineConfig, type Plugin } from "vite";
+
+/** One folder per package under App_Plugins, named after the package id. */
+const outDir = "../wwwroot/App_Plugins/Umbraco.Community.UmbraDesktop.Accessories";
+
+/**
+ * Copies this package's docs into its App_Plugins folder, where the desktop's Help app reads them.
+ *
+ * After the bundle is written rather than before, because `emptyOutDir` empties the folder first.
+ * The whole of `docs/` is copied: it holds only what is published (`product.json`, `user/` and the
+ * screenshots those pages use). These are the lines the host's add-on guide shows, as Entertainment
+ * uses them too.
+ * @returns The Vite plugin.
+ */
+function copyDocs(): Plugin {
+	return {
+		name: "umbradesktop-copy-docs",
+		closeBundle() {
+			cpSync(fileURLToPath(new URL("../docs", import.meta.url)), fileURLToPath(new URL(`${outDir}/docs`, import.meta.url)), {
+				recursive: true,
+			});
+		},
+	};
+}
 
 export default defineConfig({
 	build: {
@@ -11,7 +36,7 @@ export default defineConfig({
 		},
 		// One folder per package under App_Plugins, named after the package id, so two UmbraDesktop
 		// packages installed together never write over each other's assets.
-		outDir: "../wwwroot/App_Plugins/Umbraco.Community.UmbraDesktop.Accessories",
+		outDir,
 		emptyOutDir: true,
 		sourcemap: true,
 		rollupOptions: {
@@ -20,5 +45,6 @@ export default defineConfig({
 			// contract is structural, so this bundle shares types with the host, not code.
 			external: [/^@umbraco/],
 		},
-	}
+	},
+	plugins: [copyDocs()],
 });

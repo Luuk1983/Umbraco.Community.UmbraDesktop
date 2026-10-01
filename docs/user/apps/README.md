@@ -13,6 +13,8 @@ description: The apps the desktop adds, and the packages it knows by name.
 - [Commercial packages](commercial-packages.md): the apps you get for Forms, Deploy, Workflow,
   Commerce, Engage, UI Builder, Automate and Umbraco AI, and what happens to sections the desktop
   does not know.
+- [Help](help.md): the documentation of the desktop and its add-ons, for the version installed, in
+  as many windows as you like, and how to link to a page of it.
 
 Games are not part of this package. They come with the optional
 [Entertainment add-on](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment),

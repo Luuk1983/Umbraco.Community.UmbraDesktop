@@ -3,6 +3,7 @@ id: games
 title: Games
 description: Install the Entertainment add-on and play Minesweeper, Snake and Solitaire on the desktop.
 sidebar_position: 1
+image: ../screenshots/entertainment-games-minesweeper.png
 ---
 
 # Games

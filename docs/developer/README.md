@@ -27,6 +27,9 @@ using the desktop, see the [user guide](../user/README.md).
   desktop already handles.
 - [Writing documentation](writing-documentation.md): how these docs are structured, the front
   matter and Markdown every page uses, and the writing style.
+- [Help for your add-on](add-on-help.md): ship your package's documentation so it appears in the
+  desktop's Help app, register it with a `umbraDesktopDocs` manifest, and open Help at your own pages
+  from your own screens.
 
 ## Design documents
 
@@ -45,3 +48,4 @@ are shaped the way they are. The ones the guides above rest on:
 | Installing the backoffice as an app, the browser behaviour it depends on, and the fixture that proves it | [2026-09-13-web-app-manifest-design.md](../design/2026-09-13-web-app-manifest-design.md) |
 | The site name on the desktop: why a watermark in a corner, why the App name, why the domain comes from the browser | [2026-09-27-desktop-label-design.md](../design/2026-09-27-desktop-label-design.md) |
 | Remote content: how it redirects a backoffice, keeps it read-only, and what that cannot reach | [2026-09-29-remote-content-viewer-design.md](../design/2026-09-29-remote-content-viewer-design.md) |
+| The Help app: why the server lists the files, why several windows, and how a target resolves | [2026-09-30-help-app-design.md](../design/2026-09-30-help-app-design.md) |

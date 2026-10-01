@@ -91,24 +91,35 @@ function renderedHeadingText(heading) {
 }
 
 /**
- * Every anchor a document's headings produce, in order, with GitHub's `-1`, `-2` suffixes for
- * repeated headings.
+ * Every heading in a document, in order: its level, the text it renders as, and the anchor GitHub
+ * gives it, with the `-1`, `-2` suffixes for repeats. The Help app builds its page outline and its
+ * heading ids from this, so they are the anchors the docs check has already verified.
+ * @param {string} text Markdown source.
+ * @returns {{ level: number, text: string, anchor: string, line: number }[]} The headings.
+ */
+export function headings(text) {
+  const found = [];
+  const seen = new Map();
+  classifyLines(text).forEach((line, index) => {
+    if (!line.prose) return;
+    const match = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line.text);
+    if (!match) return;
+    const rendered = renderedHeadingText(match[2]);
+    const base = githubSlug(rendered);
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+    found.push({ level: match[1].length, text: rendered, anchor: count === 0 ? base : `${base}-${count}`, line: index + 1 });
+  });
+  return found;
+}
+
+/**
+ * Every anchor a document's headings produce, in order.
  * @param {string} text Markdown source.
  * @returns {Set<string>} The anchors, without `#`.
  */
 export function headingAnchors(text) {
-  const anchors = new Set();
-  const seen = new Map();
-  for (const line of classifyLines(text)) {
-    if (!line.prose) continue;
-    const match = /^#{1,6}\s+(.*?)\s*#*\s*$/.exec(line.text);
-    if (!match) continue;
-    const base = githubSlug(renderedHeadingText(match[1]));
-    const count = seen.get(base) ?? 0;
-    seen.set(base, count + 1);
-    anchors.add(count === 0 ? base : `${base}-${count}`);
-  }
-  return anchors;
+  return new Set(headings(text).map((heading) => heading.anchor));
 }
 
 /** An image: `![alt](target "title")`. The title is optional and never part of the target. */
@@ -117,15 +128,28 @@ const IMAGE = /!\[[^\]]*\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/g;
 /** The target half of any link or image: `](target "title")`. */
 const TARGET = /\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/g;
 
+/** The front matter `image` line: the picture the Help landing page shows for a guide. */
+const FRONT_MATTER_IMAGE = /^image:\s*(["']?)([^"'\s]+)\1\s*$/;
+
 /**
  * Every link and image target in a document, with its line number. Images on a line come before
  * links on it, which puts a badge's image before the link wrapped round it.
+ *
+ * The front matter's `image` counts as an image too, so the check catches a dead one and the copy
+ * for Help takes it along. No other front matter value is a link.
  * @param {string} text Markdown source.
  * @returns {{ target: string, line: number, image: boolean }[]} The targets, in document order.
  */
 export function extractLinks(text) {
   const links = [];
-  classifyLines(text).forEach((line, index) => {
+  const lines = classifyLines(text);
+  if (lines[0]?.text === '---') {
+    for (let index = 1; index < lines.length && lines[index].text !== '---'; index++) {
+      const image = FRONT_MATTER_IMAGE.exec(lines[index].text);
+      if (image) links.push({ target: image[2], line: index + 1, image: true });
+    }
+  }
+  lines.forEach((line, index) => {
     if (!line.prose) return;
     const prose = splitInlineCode(line.text)
       .map((segment, i) => (i % 2 === 0 ? segment : ' '.repeat(segment.length)))
@@ -143,7 +167,7 @@ export function extractLinks(text) {
 
 /**
  * Reads a page's front matter. Only flat `key: value` pairs, which is all a docs page carries:
- * the fields Docusaurus reads (`id`, `title`, `description`, `sidebar_position`).
+ * the fields Docusaurus reads (`id`, `title`, `description`, `sidebar_position`, `image`).
  * @param {string} text Markdown source.
  * @returns {{ data: Record<string, string>, body: string }} The values, as strings, and the text
  *   after the closing `---`.

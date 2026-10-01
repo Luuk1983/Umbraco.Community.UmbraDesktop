@@ -19,6 +19,7 @@ import {
   UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
   UMBRADESKTOP_WINDOW_MIN_SIZE,
   UMBRADESKTOP_PATH_HEIGHT,
+  UMBRADESKTOP_OPEN_HELP_EVENT,
 } from '../constants';
 import { minWindowSizeForContent } from '../window-chrome.js';
 import { buildCrumbs, windowShowsPath } from '../path/crumbs.js';
@@ -209,6 +210,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   /** Stops following the frame's router for the window layout; see `#startLocationWatch`. */
   #stopLocationWatch?: () => void;
 
+  /** Stops passing the frame's requests for Help on; see `#startHelpRequests`. */
+  #stopHelpRequests?: () => void;
+
   /**
    * Stops the current frame's notification watcher and takes it off the centre's list of sources.
    * Replaced and released on the same occasions as {@link #stopDirtyWatch}, for the same reason.
@@ -294,6 +298,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.#stopPathWatch = undefined;
     this.#stopLocationWatch?.();
     this.#stopLocationWatch = undefined;
+    this.#stopHelpRequests?.();
+    this.#stopHelpRequests = undefined;
     this.#stopNotificationWatch?.();
     this.#stopNotificationWatch = undefined;
   }
@@ -347,6 +353,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.#startDirtyWatch(iframe);
     this.#startPathWatch(iframe);
     this.#startLocationWatch(iframe);
+    this.#startHelpRequests(iframe);
     this.#startNotificationWatch(iframe);
     // A frame boots on the stored alias, so it is normally already right — but a theme changed
     // while it was still loading would have been missed, and the reload path lands here too.
@@ -426,6 +433,31 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
       frame.removeEventListener('changestate', report);
       frame.removeEventListener('popstate', report);
     };
+  }
+
+  /**
+   * Pass requests for Help made inside the frame on to the desktop (Help design D9).
+   *
+   * A package's own screen runs in this frame, a document of its own where the desktop's Help
+   * context cannot be reached and where an event stops at the frame's window. So the window listens
+   * there and dispatches the request again on itself, in this document, where it bubbles to the
+   * desktop like any other. Only the target string is carried across: the detail object belongs to
+   * the frame's realm and is not handed on. Restarted on each load, like the other watches.
+   * @param iframe The window's freshly loaded frame.
+   */
+  #startHelpRequests(iframe: HTMLIFrameElement) {
+    this.#stopHelpRequests?.();
+    this.#stopHelpRequests = undefined;
+    const frame = iframe.contentWindow;
+    if (!frame) return;
+    const forward = (event: Event) => {
+      const target = (event as CustomEvent<{ target?: unknown }>).detail?.target;
+      if (typeof target !== 'string') return;
+      event.stopPropagation();
+      this.dispatchEvent(new CustomEvent(UMBRADESKTOP_OPEN_HELP_EVENT, { detail: { target }, bubbles: true, composed: true }));
+    };
+    frame.addEventListener(UMBRADESKTOP_OPEN_HELP_EVENT, forward);
+    this.#stopHelpRequests = () => frame.removeEventListener(UMBRADESKTOP_OPEN_HELP_EVENT, forward);
   }
 
   /**
@@ -1117,7 +1149,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         .alias=${w.app.alias}
         .props=${w.app.content.props}
         .load=${w.app.content.element}
-        @umbradesktop-app-dirty=${this.#onAppDirty}></umbradesktop-app-host>`;
+        @umbradesktop-app-dirty=${this.#onAppDirty}
+        @umbradesktop-app-location=${this.#onAppLocation}></umbradesktop-app-host>`;
       // Keyed only for attached content, whose reload is a remount: it fetches what it shows when it
       // connects. An ordinary element app keeps the plain commit this method's doc argues for, and a
       // window never changes between the two, so neither path ever remounts the other's app.
@@ -1125,6 +1158,19 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     }
     return html`<iframe class="body" src=${w.app.content.url} @load=${this.#onIframeLoad}></iframe>`;
   }
+
+  /**
+   * Records where an app says it is, for the layout to reopen it there (Help design D7): the app's
+   * half of what `#onIframeLoad` does for a frame. Stopped here, because the window is the one
+   * listener it is for, and a report that escaped would reach the desktop as if a window had moved.
+   * @param event The app's {@link UMBRADESKTOP_APP_LOCATION_EVENT}.
+   */
+  #onAppLocation = (event: Event): void => {
+    event.stopPropagation();
+    const location = (event as CustomEvent<{ location?: unknown }>).detail?.location;
+    const w = this.window;
+    if (w && typeof location === 'string' && location) this.#manager?.setLocation(w.id, location);
+  };
 
   /**
    * The strip under a floating attached window's titlebar: what it belongs to, in words, and the

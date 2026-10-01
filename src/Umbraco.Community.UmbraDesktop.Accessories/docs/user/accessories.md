@@ -3,6 +3,7 @@ id: accessories
 title: Accessories
 description: Install the Accessories add-on and find its nine tools in the launcher.
 sidebar_position: 1
+image: ../screenshots/accessories-desktop.png
 ---
 
 # Accessories

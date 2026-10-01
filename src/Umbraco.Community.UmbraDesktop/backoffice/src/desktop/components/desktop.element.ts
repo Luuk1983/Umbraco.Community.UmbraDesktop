@@ -15,6 +15,8 @@ import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
 import { UmbraDesktopServerEventController } from '../conflict/server-event.controller.js';
 import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
 import { UmbraDesktopWindowLayoutController } from '../windows/layout.controller.js';
+import { UmbraDesktopHelpContext } from '../help/help.context.js';
+import { takeHelpDeepLink } from '../help/help-deep-link.js';
 import type { UmbraDesktopWallpaperView } from '../settings/wallpaper-view.js';
 import { UmbraDesktopThemeContext } from '../theme/theme.context.js';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -42,6 +44,9 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   /** Owns this user's persisted desktop settings — wallpaper, pinned apps, chosen theme. */
   #settings = new UmbraDesktopSettingsContext(this);
+
+  /** Opens Help at a page. Set in the constructor, since it needs the catalogue created there. */
+  #help!: UmbraDesktopHelpContext;
 
   /**
    * Owns the chrome theme in force.
@@ -138,6 +143,8 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
       apps: catalogue.apps,
     });
     this.observe(layout.restoring, (restoring) => this.reportWindowsRestoring(restoring === true));
+    // Opens Help at a page, for the desktop's own code and for the event and deep link below.
+    this.#help = new UmbraDesktopHelpContext(this, { manager: this.#manager, apps: catalogue.apps });
     // Adopts the active theme's desktop-surface stylesheet into this element's shadow root.
     new UmbraDesktopThemeStyles(this, 'desktop');
     // Consumed once here, not per window: see the class doc on why.
@@ -222,6 +229,11 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     clearBootAttempt();
     lowerBootSplash();
     bootTrace('splash lowered; the desktop has the screen');
+    // A `?help=` deep link opens now, above the windows that were just reopened, so it is the window
+    // in front (Help design §6.2). Taken once per page load: Exit builds a new desktop, and that one
+    // must not open it again.
+    const target = takeHelpDeepLink();
+    if (target) this.#help.openWhenReady(target);
   }
 
   /**

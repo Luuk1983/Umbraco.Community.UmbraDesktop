@@ -136,3 +136,13 @@ it('defines the accessories group itself, after System and before Games', () => 
   expect(accessories!.weight).to.be.greaterThan(50);
   expect(accessories!.weight).to.be.lessThan(60);
 });
+
+/**
+ * The docs reach the desktop's Help app the way any add-on's do (the host's
+ * docs/developer/add-on-help.md): one `umbraDesktopDocs` entry naming the folder the build copies
+ * them to, inside this package's own App_Plugins folder.
+ */
+it('registers its docs for the Help app, in its own App_Plugins folder', () => {
+  const docs = manifests.filter((manifest) => manifest.type === 'umbraDesktopDocs') as unknown as Array<{ meta: { path: string } }>;
+  expect(docs.map((manifest) => manifest.meta.path)).to.deep.equal(['/App_Plugins/Umbraco.Community.UmbraDesktop.Accessories/docs']);
+});

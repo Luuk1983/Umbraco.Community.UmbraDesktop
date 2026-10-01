@@ -45,7 +45,7 @@ import {
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-token';
 import { minWindowSizeForContent, windowSizeForContent } from './window-chrome';
 import { windowShowsPath } from './path/crumbs.js';
-import { restoredUrl } from './windows/layout';
+import { appAtLocation, restoredUrl } from './windows/layout';
 import type { UmbraDesktopSavedWindow } from './windows/layout';
 import type { UmbraDesktopThemeMetrics } from './theme/types';
 import type { UmbraDesktopKeepVisible } from './window-model';
@@ -195,9 +195,16 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * `defaultSize` is the app's **content** box, so the active theme's chrome is added here rather
    * than being the app's problem: the app cannot read a titlebar height from another package, and
    * the one that tried guessed a single allowance for five different titlebars.
+   *
+   * An app window can be opened at a location (Help design D7): the app gets it as its `location`
+   * property before it connects, and the window records it, so the layout saves it and a feature can
+   * find the window showing it. The app's catalogue entry is not touched; the window gets a copy.
    * @param app The app to open.
+   * @param options Where an app window should open. Ignored for a backoffice window, which opens at
+   *   its own address.
+   * @param options.location The app's own location string.
    */
-  public open(app: UmbraDesktopApp): void {
+  public open(app: UmbraDesktopApp, options: { location?: string } = {}): void {
     const current = this.#windows.getValue();
     if (app.allowMultiple === false) {
       const existing = findAppWindow(current, app.alias);
@@ -216,14 +223,16 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
         windowShowsPath(app) ? this.#metrics.pathbarHeight : 0,
       ),
     );
+    const located = options.location !== undefined && app.content.kind === 'element';
     const win: UmbraDesktopWindow = {
       id: crypto.randomUUID(),
-      app,
+      app: located ? appAtLocation(app, options.location!) : app,
       rect,
       z: nextZIndex(current),
       active: true,
       state: 'normal',
     };
+    if (located) win.location = options.location;
     this.#windows.setValue(focusWindow([...current, win], win.id));
   }
 
@@ -242,17 +251,24 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   public restoreWindow(saved: UmbraDesktopSavedWindow, app: UmbraDesktopApp): void {
     const current = this.#windows.getValue();
     const url = restoredUrl(app, saved.location);
+    const appLocation = app.content.kind === 'element' ? saved.appLocation : undefined;
     const win: UmbraDesktopWindow = {
       id: crypto.randomUUID(),
-      // A copy with the stored page as its address, so the frame loads where the editor was. The
-      // app's own entry is left untouched: the launcher still opens it at its start page.
-      app: url && app.content.kind === 'iframe' && url !== app.content.url ? { ...app, content: { kind: 'iframe', url } } : app,
+      // A copy with the stored page as its address, so the frame loads where the editor was, or
+      // with an app's own stored location as its property. The app's own entry is left untouched:
+      // the launcher still opens it at its start.
+      app: appLocation
+        ? appAtLocation(app, appLocation)
+        : url && app.content.kind === 'iframe' && url !== app.content.url
+          ? { ...app, content: { kind: 'iframe', url } }
+          : app,
       rect: { ...saved.rect },
       z: nextZIndex(current),
       active: false,
       state: saved.state,
     };
     if (url && app.content.kind === 'iframe') win.location = url;
+    if (appLocation) win.location = appLocation;
     if (saved.snapped) win.snapped = saved.snapped;
     if (saved.restoreRect) win.restoreRect = { ...saved.restoreRect };
     const next = [...current, win];

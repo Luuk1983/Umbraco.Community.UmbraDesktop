@@ -61,13 +61,17 @@ describe('taking a snapshot', () => {
     expect(saved.restoreRect).to.deep.equal({ x: 1, y: 2, w: 3, h: 4 });
   });
 
-  it('keeps the page a backoffice window was showing, and none for an app', () => {
-    const layout = snapshotLayout([
-      win({ location: '/umbraco/section/content/workspace/document/edit/abc' }),
-      win({ id: 'g', app: GAME, location: '/should/not/matter' }),
-    ]);
+  it('keeps the page a backoffice window was showing as its location', () => {
+    const layout = snapshotLayout([win({ location: '/umbraco/section/content/workspace/document/edit/abc' })]);
     expect(layout.windows[0].location).to.equal('/umbraco/section/content/workspace/document/edit/abc');
-    expect(layout.windows[1].location).to.equal(undefined);
+    expect(layout.windows[0].appLocation).to.equal(undefined);
+  });
+
+  it('keeps an app window’s own location apart, since it is not a page on this site', () => {
+    const layout = snapshotLayout([win({ id: 'g', app: GAME, location: 'umbradesktop/snapping' }), win({ id: 'h', app: GAME })]);
+    expect(layout.windows[0].appLocation).to.equal('umbradesktop/snapping');
+    expect(layout.windows[0].location).to.equal(undefined);
+    expect(layout.windows[1].appLocation).to.equal(undefined);
   });
 
   /** Attached windows and panes are left for a later version: their owner ids do not survive a reload. */
@@ -112,6 +116,23 @@ describe('reading a stored layout', () => {
     for (const location of ['https://evil.example/umbraco', '//evil.example/x', 'javascript:alert(1)', 'relative/path', 42]) {
       const [saved] = parseLayout(JSON.stringify({ version: 1, windows: [{ ...base, location }] })).windows;
       expect(saved.location, String(location)).to.equal(undefined);
+    }
+  });
+});
+
+describe('reading an app window’s location', () => {
+  const base = { app: 'game', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 1, active: false };
+
+  it('reads back what an app reported', () => {
+    const [saved] = parseLayout(JSON.stringify({ version: 1, windows: [{ ...base, appLocation: 'umbradesktop/snapping/x' }] })).windows;
+    expect(saved.appLocation).to.equal('umbradesktop/snapping/x');
+  });
+
+  it('drops one that is not a short line of text, and keeps the window', () => {
+    for (const appLocation of [42, '', 'a'.repeat(1001), 'line\nbreak', { x: 1 }]) {
+      const windows = parseLayout(JSON.stringify({ version: 1, windows: [{ ...base, appLocation }] })).windows;
+      expect(windows.length, String(appLocation)).to.equal(1);
+      expect(windows[0].appLocation, String(appLocation)).to.equal(undefined);
     }
   });
 });

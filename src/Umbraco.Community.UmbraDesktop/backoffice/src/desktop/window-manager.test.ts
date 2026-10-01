@@ -412,6 +412,34 @@ describe('server state and its guards', () => {
  * as losing their chat: stacking a duplicate, replacing the window and taking its state with it,
  * leaving it buried behind whatever covered it, and leaving it minimized.
  */
+describe('opening an app window at a location', () => {
+  const HELP: UmbraDesktopApp = { ...APP, alias: 'help', content: { kind: 'element', element: HTMLElement } };
+
+  it('hands the location to the app as a property and records it on the window', () => {
+    const ctx = manager();
+    ctx.open(HELP, { location: 'umbradesktop/snapping' });
+    const [opened] = windowsOf(ctx);
+    expect(opened.app.content).to.eql({ kind: 'element', element: HTMLElement, props: { location: 'umbradesktop/snapping' } });
+    expect(opened.location).to.equal('umbradesktop/snapping');
+    expect(HELP.content, 'the catalogue’s own app is not touched').to.eql({ kind: 'element', element: HTMLElement });
+  });
+
+  it('opens a second window at another location rather than moving the first', () => {
+    const ctx = manager();
+    ctx.open(HELP, { location: 'a' });
+    ctx.open(HELP, { location: 'b' });
+    expect(windowsOf(ctx).map((w) => w.location)).to.eql(['a', 'b']);
+  });
+
+  it('opens as before without one', () => {
+    const ctx = manager();
+    ctx.open(HELP);
+    const [opened] = windowsOf(ctx);
+    expect(opened.app).to.equal(HELP);
+    expect(opened.location).to.equal(undefined);
+  });
+});
+
 describe('single-window apps', () => {
   /** A single-window app: the shape the chat catalogue entry uses. */
   const SOLO: UmbraDesktopApp = { ...APP, alias: 'solo', name: 'Solo', allowMultiple: false };
@@ -767,6 +795,19 @@ describe('restoring saved windows', () => {
     const [restored] = windowsOf(ctx);
     expect(restored.app.content).to.eql({ kind: 'iframe', url: '/umbraco/section/content/workspace/document/edit/abc' });
     expect(restored.location).to.equal('/umbraco/section/content/workspace/document/edit/abc');
+  });
+
+  it('hands a restored app window its saved location, as a property and as its location', () => {
+    const ctx = manager();
+    const HELP: UmbraDesktopApp = { ...APP, alias: 'help', content: { kind: 'element', element: HTMLElement, props: { keep: 1 } } };
+    ctx.restoreWindow(
+      { app: 'help', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 1, active: false, appLocation: 'umbradesktop/snapping' },
+      HELP,
+    );
+    const [restored] = windowsOf(ctx);
+    expect(restored.app.content).to.eql({ kind: 'element', element: HTMLElement, props: { keep: 1, location: 'umbradesktop/snapping' } });
+    expect(restored.location).to.equal('umbradesktop/snapping');
+    expect(HELP.content, 'the catalogue’s own app is not touched').to.eql({ kind: 'element', element: HTMLElement, props: { keep: 1 } });
   });
 
   it('records where a window’s frame is', () => {

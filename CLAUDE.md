@@ -11,8 +11,9 @@ src/Umbraco.Community.UmbraDesktop/
     components/                 desktop, taskbar, launcher, window elements
     catalogue/                  the curated app list, one file per group
     theme/themes/<id>/          one folder per theme
+    help/                       the Help app, and the umbraDesktopDocs manifest it reads
   backoffice/public/            umbraco-package.json (registers the one bundle)
-  backoffice/scripts/docs/      the docs check and the pack-time README pinning
+  backoffice/scripts/docs/      the docs check, the copy for Help, and the pack-time README pinning
 src/Umbraco.Community.UmbraDesktop.Entertainment/
   docs/                         the add-on's own docs, kept apart as an external add-on's would be
 src/Umbraco.Community.UmbraDesktop.Accessories/
@@ -32,7 +33,7 @@ umbraco-marketplace-*.json      what the Umbraco Marketplace shows, one file per
 Run from `src/Umbraco.Community.UmbraDesktop`:
 
 ```bash
-npm run build        # checks the docs' links, builds wallpapers, then tsc, then vite
+npm run build        # checks the docs' links, copies them for Help, builds wallpapers, then tsc, then vite
 npm test             # web-test-runner in a real Chrome
 npm run docs:check   # just the docs check
 ```
@@ -63,6 +64,10 @@ from a script, and it found three bugs in Sticky Notes that every test had passe
 - **Derive numbers, never type them.** Anything that appears in both CSS and JavaScript goes in one
   constant that both read. Then measure it in a browser, because deriving only makes a sum
   consistent with itself. See `docs/developer/theming.md` §4.
+- **A link the desktop renders for itself needs `data-router-slot="disabled"`.** Umbraco's router
+  takes every same-origin link click at the window, through shadow roots, and pushes the address
+  itself, which navigates the whole backoffice away from the desktop. Help's in-app links hit this;
+  see the Help design doc §10.
 - **A theme may restyle, never remove.** Same for any chrome change: an affordance that disappears
   under one theme is a bug, not a style.
 

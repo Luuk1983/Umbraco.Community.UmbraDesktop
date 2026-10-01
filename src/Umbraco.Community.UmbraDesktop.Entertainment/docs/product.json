@@ -1,5 +1,7 @@
 {
   "id": "entertainment",
   "name": "UmbraDesktop Entertainment",
-  "packageId": "Umbraco.Community.UmbraDesktop.Entertainment"
+  "packageId": "Umbraco.Community.UmbraDesktop.Entertainment",
+  "repository": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop",
+  "docsRoot": "src/Umbraco.Community.UmbraDesktop.Entertainment/docs"
 }

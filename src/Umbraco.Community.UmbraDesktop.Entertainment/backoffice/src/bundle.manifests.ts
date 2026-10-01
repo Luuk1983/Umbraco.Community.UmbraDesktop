@@ -142,6 +142,21 @@ const solitaire: UmbExtensionManifest = {
 };
 
 /**
+ * This package's docs, for the desktop's Help app.
+ *
+ * The build copies `docs/` into this package's own App_Plugins folder (see `vite.config.ts`), and
+ * this tells the Help app where to find it. Nothing more: the route is the public one any add-on
+ * uses, written the way `docs/developer/add-on-help.md` in the host describes it, so this package
+ * stays the proof that the route works from outside.
+ */
+const docs: UmbExtensionManifest = {
+  type: 'umbraDesktopDocs',
+  alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Docs',
+  name: 'UmbraDesktop Entertainment docs',
+  meta: { path: '/App_Plugins/Umbraco.Community.UmbraDesktop.Entertainment/docs' },
+};
+
+/**
  * The bundle Umbraco loads for this package, and the only entry point it has.
  *
  * `UmbExtensionManifest` is a global type from `@umbraco-cms/backoffice/extension-types`, wired up
@@ -154,6 +169,7 @@ export const manifests: Array<UmbExtensionManifest> = [
   minesweeper,
   snake,
   solitaire,
+  docs,
   ...backManifests,
   ...facesManifests,
   ...localizationManifests,
