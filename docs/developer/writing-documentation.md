@@ -2,7 +2,7 @@
 id: writing-documentation
 title: Writing documentation
 description: How the docs are structured, the front matter and Markdown every page uses, and the writing style.
-sidebar_position: 7
+sidebar_position: 8
 ---
 
 # Writing documentation

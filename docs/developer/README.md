@@ -22,6 +22,8 @@ using the desktop, see the [user guide](../user/README.md).
 - [Package catalogues](package-catalogues.md): give your package's own backoffice screens proper
   tiles and launcher groups with a `umbraDesktopCatalogue` manifest, the desktop's published group
   weights, replacing one of its tiles, and what the console tells you.
+- [Desktop contexts](desktop-contexts.md): run a package service on the desktop only with a
+  `umbraDesktopContext` manifest, and open another app from yours.
 - [Attached windows](attached-windows.md): show something beside a document window, the way the live
   preview does. When to use it and when not, how to open one, what your element must do, and what the
   desktop already handles.

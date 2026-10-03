@@ -10,9 +10,11 @@ Games for UmbraDesktop. Minesweeper, Snake and Solitaire, each in a window of it
 
 Install it and the launcher grows a Games group. Open a game and it gets a window like everything else, in whichever theme you picked, so Minesweeper under the Windows 98 theme looks like Minesweeper, and under macOS it does not.
 
-- **Minesweeper.** The real one: three difficulties, flags, flood fill, a mine counter and a timer.
+- **Minesweeper.** The real one: flags, flood fill, a mine counter and a timer.
 - **Snake.** The classic, with arrow keys or WASD, a snake that speeds up as it grows, and your best score remembered.
 - **Solitaire.** Klondike with draw one or draw three, Windows-style scoring, a bouncing cascade when you win, and a choice of card backs. A game you have not finished survives a refresh.
+
+Scores go to the Arcade leaderboards, with a notification when somebody takes first place from you.
 
 ![Solitaire open in its own window on the UmbraDesktop desktop, a Klondike game on the card table with the stock, waste, four foundations and seven columns, and the settings button in the top right corner.](docs/screenshots/entertainment-games-solitaire.png)
 

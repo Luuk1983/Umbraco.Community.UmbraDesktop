@@ -333,6 +333,20 @@ describe('solitaire element: finishing', () => {
     expect(el.shadowRoot!.querySelector('.win b')!.textContent).to.equal('110');
   });
 
+  it("submits the final score, time bonus included, to the board for the game's own draw mode", async () => {
+    const submitted: Array<[string, number]> = [];
+    const el = await solitaire({ game: { ...nearlyWon(), drawCount: 3 } });
+    el.scores = {
+      submit: async (b: string, v: number) => {
+        submitted.push([b, v]);
+        return true;
+      },
+    };
+    doubleClick(el, '13S');
+    await waitUntil(() => el.shadowRoot!.querySelector('.win'), 'won');
+    expect(submitted).to.deep.equal([['draw-3', 110]]);
+  });
+
   it('runs the cascade when motion is allowed, draws it, and a click ends it', async () => {
     const el = await solitaire({ game: nearlyWon() });
     allowCascade(el);

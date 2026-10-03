@@ -2,7 +2,7 @@
 id: add-on-help
 title: Help for your add-on
 description: Ship your package's documentation so it appears in the desktop's Help app, and link to it.
-sidebar_position: 8
+sidebar_position: 9
 ---
 
 # Help for your add-on

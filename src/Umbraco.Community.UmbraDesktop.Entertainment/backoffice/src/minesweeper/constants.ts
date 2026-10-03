@@ -130,3 +130,13 @@ export const MINESWEEPER_MIN_CONTENT_SIZE = MINESWEEPER_CONTENT_SIZE;
  * stops. Three, as on the original: `999` seconds is over sixteen minutes of a beginner board.
  */
 export const MINESWEEPER_DISPLAY_DIGITS = 3;
+
+/** This game's `umbraDesktopGame` alias, its identity on the Arcade. Final once shipped. */
+export const MINESWEEPER_GAME_ALIAS = 'Umbraco.Community.UmbraDesktop.Entertainment.Minesweeper.Game';
+
+/**
+ * The board the beginner layout scores on. Called `easy` rather than `beginner` because larger
+ * boards are coming and the owner named this one; each later board is one more leaderboard in the
+ * game manifest, and nobody's easy time moves (design D13).
+ */
+export const MINESWEEPER_EASY_BOARD = 'easy';

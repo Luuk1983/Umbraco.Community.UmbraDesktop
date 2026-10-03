@@ -1,13 +1,16 @@
 import {
   SNAKE_BOARD,
+  SNAKE_BOARD_ALIAS,
   SNAKE_CELL_SIZE_PX,
+  SNAKE_GAME_ALIAS,
   SNAKE_PADDING_PX,
   SNAKE_POINTS_PER_FOOD,
   SNAKE_STATUS_HEIGHT_PX,
   snakeTickInterval,
 } from './constants.js';
+import { ArcadeScores } from '../shared/arcade.js';
 import { createGame, moveFoodFrom, steer, step, togglePause } from './rules.js';
-import type { SnakeConfig, SnakeDirection, SnakeFoodPlacer, SnakeGame } from './rules.js';
+import type { SnakeConfig, SnakeDirection, SnakeFoodPlacer, SnakeGame, SnakeStatus } from './rules.js';
 import { css, customElement, html, nothing, property, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
@@ -25,6 +28,9 @@ const FOOD_COLOUR = '#e0302a';
 
 /**
  * Where the best score is kept, in this browser.
+ *
+ * Now the fallback for when the Arcade is absent (outside the desktop, or not installed) rather than
+ * the only record: with the Arcade present its best is shown when it is higher.
  *
  * `localStorage` rather than anything on the server, because a high score is a nicety and not data:
  * losing it to a cleared cache costs nothing, and storing it server-side would mean an API and a
@@ -119,6 +125,12 @@ export class SnakeElement extends UmbLitElement {
   @state()
   private _best = readBestScore();
 
+  /** The line to the Arcade; injectable for tests. Does nothing without the Arcade. */
+  scores: Pick<ArcadeScores, 'submit' | 'best'> = new ArcadeScores(this, SNAKE_GAME_ALIAS);
+
+  /** The status at the last update, to catch the one transition into a finished game. */
+  #lastStatus?: SnakeStatus;
+
   /** The pending tick's `setTimeout` handle, or undefined when the snake is not moving. */
   private _tick?: number;
 
@@ -129,6 +141,10 @@ export class SnakeElement extends UmbLitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     if (!this._game) this._game = createGame(this.config, this.placer);
+    // Ask the Arcade for the best; the browser's stays as the fallback, and nothing waits on this.
+    void this.scores.best(SNAKE_BOARD_ALIAS).then((best) => {
+      if (best !== undefined && best > this._best) this._best = best;
+    });
   }
 
   /** Stop the clock. Closing the window unmounts the element, and a tick must not outlive it. */
@@ -175,6 +191,11 @@ export class SnakeElement extends UmbLitElement {
     // render is genuine, not an accident: which cells the message covers is only known once it has
     // been laid out. A microtask still runs before the browser paints, so the food is never seen
     // under the message, and the guard makes it a no-op if a key or New game got there first.
+    const finished = game?.status === 'over' || game?.status === 'won';
+    if (finished && this.#lastStatus !== game.status && game.score > 0) {
+      void this.scores.submit(SNAKE_BOARD_ALIAS, game.score * SNAKE_POINTS_PER_FOOD);
+    }
+    this.#lastStatus = game?.status;
     if (game?.status === 'ready') {
       queueMicrotask(() => {
         if (this.isConnected && this._game === game) this.#uncoverFood(game);

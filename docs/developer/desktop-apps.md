@@ -479,8 +479,8 @@ never the other way round. A sixth theme must not be able to break your app.
 ## 6. Groups
 
 `meta.group` is a launcher group alias: one of the desktop's own, or one a package defines in its
-catalogue. The Entertainment add-on does exactly that for Games, so its games and their heading ship
-together and the desktop knows nothing about either. An app naming a group nobody defines lands in
+catalogue. The Arcade add-on does exactly that for Games, and every game package depends on the
+Arcade, so a game and its heading always ship together and the desktop knows nothing about either. An app naming a group nobody defines lands in
 the reserved More group, which is honest rather than a failure. [package-catalogues.md](package-catalogues.md)
 §4 lists the desktop's groups and their weights, for placing one of your own among them.
 
@@ -646,6 +646,8 @@ const time = this.#desktop?.formatDateTime(now, options) ?? this.localize.date(n
 **Keep the fallback.** The context is absent in your own tests, and would be under a desktop older
 than this contract, and an app that renders nothing there is worse than one that follows the
 backoffice culture alone. The Accessories Clock is the worked example.
+
+A service your app shares with others belongs in a [desktop context](desktop-contexts.md).
 
 ### 7.3 Remembering where your app is
 

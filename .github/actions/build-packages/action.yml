@@ -27,6 +27,7 @@ runs:
         cache: npm
         cache-dependency-path: |
           src/Umbraco.Community.UmbraDesktop/package-lock.json
+          src/Umbraco.Community.UmbraDesktop.Services.Arcade/package-lock.json
           src/Umbraco.Community.UmbraDesktop.Entertainment/package-lock.json
           src/Umbraco.Community.UmbraDesktop.Accessories/package-lock.json
 
@@ -39,7 +40,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: nuget-${{ runner.os }}-${{ hashFiles('src/Umbraco.Community.UmbraDesktop/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Entertainment/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories.Tests/packages.lock.json') }}
+        key: nuget-${{ runner.os }}-${{ hashFiles('src/Umbraco.Community.UmbraDesktop/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Entertainment/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/packages.lock.json') }}
         restore-keys: nuget-${{ runner.os }}-
 
     # Per project rather than by solution, and deliberately. The solution also holds the test
@@ -53,14 +54,17 @@ runs:
       run: |
         dotnet restore src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj
+        dotnet restore src/Umbraco.Community.UmbraDesktop.Services.Arcade/Umbraco.Community.UmbraDesktop.Services.Arcade.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Entertainment/Umbraco.Community.UmbraDesktop.Entertainment.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Accessories/Umbraco.Community.UmbraDesktop.Accessories.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Accessories.Tests/Umbraco.Community.UmbraDesktop.Accessories.Tests.csproj
+        dotnet restore src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests.csproj
 
     - name: Install frontend dependencies
       shell: bash
       run: |
         (cd src/Umbraco.Community.UmbraDesktop && npm ci)
+        (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && npm ci)
         (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm ci)
         (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm ci)
 
@@ -68,6 +72,7 @@ runs:
       shell: bash
       run: |
         (cd src/Umbraco.Community.UmbraDesktop && npm test)
+        (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && npm test)
         (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm test)
         (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm test)
 
@@ -77,6 +82,7 @@ runs:
       shell: bash
       run: |
         (cd src/Umbraco.Community.UmbraDesktop && npm run build)
+        (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && npm run build)
         (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm run build)
         (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm run build)
 
@@ -84,6 +90,7 @@ runs:
       shell: bash
       run: |
         dotnet build src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-restore
+        dotnet build src/Umbraco.Community.UmbraDesktop.Services.Arcade/ --configuration Release --no-restore
         dotnet build src/Umbraco.Community.UmbraDesktop.Entertainment/ --configuration Release --no-restore
         dotnet build src/Umbraco.Community.UmbraDesktop.Accessories/ --configuration Release --no-restore
 
@@ -94,6 +101,7 @@ runs:
       run: |
         dotnet test src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj --configuration Release --no-restore
         dotnet test src/Umbraco.Community.UmbraDesktop.Accessories.Tests/Umbraco.Community.UmbraDesktop.Accessories.Tests.csproj --configuration Release --no-restore
+        dotnet test src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests.csproj --configuration Release --no-restore
 
     # Every package, every release, changed or not: they share a version off one tag, and matching
     # versions are the compatibility answer instead of a matrix somebody has to maintain
@@ -102,6 +110,7 @@ runs:
       shell: bash
       run: |
         dotnet pack src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-build --output "${{ inputs.output }}"
+        dotnet pack src/Umbraco.Community.UmbraDesktop.Services.Arcade/ --configuration Release --no-build --output "${{ inputs.output }}"
         dotnet pack src/Umbraco.Community.UmbraDesktop.Entertainment/ --configuration Release --no-build --output "${{ inputs.output }}"
         dotnet pack src/Umbraco.Community.UmbraDesktop.Accessories/ --configuration Release --no-build --output "${{ inputs.output }}"
 
@@ -149,5 +158,29 @@ runs:
           actual=$(unzip -p "$pkg" '*.nuspec' | sed -n 's:.*<dependency id="Umbraco.Community.UmbraDesktop" version="\([^"]*\)".*:\1:p')
           echo "$pkg: host dependency '$actual', expected '$expected'"
           [ "$actual" = "$expected" ] || { echo "::error::$pkg depends on the host as '$actual', expected '$expected'"; failed=1; }
+        done
+        # An add-on that depends on another add-on (Entertainment on the Arcade) gets the same bound
+        # from the same target, so the same range is checked for it, against the Arcade package's own
+        # version, which is the host's because all packages are versioned off one tag. A package that
+        # does not depend on the Arcade has no such line, and is skipped. But if any package does
+        # depend on it, the Arcade has to be in this pack output too: a release that ships a
+        # dependent without the package it requires is uninstallable, so a missing Arcade fails here
+        # rather than the check quietly passing over it.
+        arcade_pkgs=("$out"/Umbraco.Community.UmbraDesktop.Services.Arcade.[0-9]*.nupkg)
+        arcade_expected=""
+        if [ "${#arcade_pkgs[@]}" -eq 1 ]; then
+          arcade_version=$(unzip -p "${arcade_pkgs[0]}" '*.nuspec' | sed -n 's:.*<version>\(.*\)</version>.*:\1:p')
+          arcade_expected="[$arcade_version, $ceiling]"
+        fi
+        for pkg in "${addons[@]}"; do
+          actual=$(unzip -p "$pkg" '*.nuspec' | sed -n 's:.*<dependency id="Umbraco.Community.UmbraDesktop.Services.Arcade" version="\([^"]*\)".*:\1:p')
+          [ -n "$actual" ] || continue
+          if [ -z "$arcade_expected" ]; then
+            echo "::error::$pkg depends on the Arcade but the Arcade package is not in $out (found ${#arcade_pkgs[@]}); a release has to ship both"
+            failed=1
+            continue
+          fi
+          echo "$pkg: Arcade dependency '$actual', expected '$arcade_expected'"
+          [ "$actual" = "$arcade_expected" ] || { echo "::error::$pkg depends on the Arcade as '$actual', expected '$arcade_expected'"; failed=1; }
         done
         exit "$failed"

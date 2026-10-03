@@ -272,3 +272,38 @@ describe('the best score', () => {
     expect(stored(), 'the earlier window scored less and must not win').to.equal('20');
   });
 });
+
+describe('the Arcade', () => {
+  beforeEach(() => window.localStorage.removeItem(BEST_SCORE_KEY));
+  afterEach(() => window.localStorage.removeItem(BEST_SCORE_KEY));
+
+  it('submits the score once when the game ends', async () => {
+    const probe = await game(foodAt(0), 1000);
+    const ahead = cells(probe).findIndex((cell) => cell.dataset.part === 'head') + 1;
+    probe.remove();
+    const submitted: Array<[string, number]> = [];
+    const element = await fixture<SnakeElement>(html`<umbradesktop-snake
+      .placer=${foodAt(ahead, 0)}
+      .tickInterval=${() => 10}
+      .scores=${{
+        submit: async (b: string, v: number) => {
+          submitted.push([b, v]);
+          return true;
+        },
+        best: async () => undefined,
+      }}
+    ></umbradesktop-snake>`);
+    await press(element, 'ArrowRight');
+    await waitUntil(() => status(element) === 'over', 'the snake should reach the wall', { timeout: 3000 });
+    await element.updateComplete;
+    expect(submitted).to.deep.equal([['default', 10]]);
+  });
+
+  it('shows the Arcade best when it is higher than the browser one', async () => {
+    window.localStorage.setItem(BEST_SCORE_KEY, '50');
+    const element = await fixture<SnakeElement>(html`<umbradesktop-snake
+      .scores=${{ submit: async () => true, best: async () => 300 }}
+    ></umbradesktop-snake>`);
+    await waitUntil(() => text(element, '.best') === '300', 'the Arcade best should be shown');
+  });
+});

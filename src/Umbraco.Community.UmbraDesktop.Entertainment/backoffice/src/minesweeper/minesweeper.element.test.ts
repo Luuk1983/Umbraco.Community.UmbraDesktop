@@ -611,3 +611,49 @@ it('cancels its clock when the window closes', async () => {
     window.clearInterval = nativeClear;
   }
 });
+
+describe('the Arcade', () => {
+  it('submits the exact time from first click to win, to the easy board, once', async () => {
+    const submitted: Array<[string, number]> = [];
+    let clock = 1000;
+    // Under WALL (column 4 mined, plus cell 8) two clicks win: SAFE_CORNER floods every cell left of
+    // the wall, and the bottom-right corner (80) floods every cell right of it, numbers included.
+    const element = await fixture<MinesweeperElement>(html`<umbradesktop-minesweeper
+      .placer=${placeAt(WALL)}
+      .now=${() => clock}
+      .scores=${{
+        submit: async (board: string, value: number) => {
+          submitted.push([board, value]);
+          return true;
+        },
+      }}
+    ></umbradesktop-minesweeper>`);
+    cells(element)[SAFE_CORNER].click();
+    await settled(element);
+    clock = 10_400;
+    cells(element)[80].click();
+    await settled(element);
+    cells(element)[0].click();
+    await settled(element);
+    expect(element.shadowRoot!.textContent).to.contain('Cleared.');
+    expect(submitted).to.deep.equal([['easy', 9_400]]);
+  });
+
+  it('does not submit a loss', async () => {
+    const submitted: unknown[] = [];
+    const element = await fixture<MinesweeperElement>(html`<umbradesktop-minesweeper
+      .placer=${placeAt(WALL)}
+      .scores=${{
+        submit: async (...a: unknown[]) => {
+          submitted.push(a);
+          return true;
+        },
+      }}
+    ></umbradesktop-minesweeper>`);
+    cells(element)[SAFE_CORNER].click();
+    await settled(element);
+    cells(element)[MINED_CELL].click();
+    await settled(element);
+    expect(submitted).to.deep.equal([]);
+  });
+});

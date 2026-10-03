@@ -8,7 +8,6 @@
  */
 export default {
   umbraDesktopEntertainment: {
-    groupGames: 'Spellen',
     minesweeper: 'Minesweeper',
     minesweeperNewGame: 'Nieuw spel',
     minesweeperMinesLeft: 'Mijnen over',
@@ -20,6 +19,7 @@ export default {
     minesweeperFlagged: 'gemarkeerd',
     minesweeperMine: 'mijn',
     minesweeperEmpty: 'leeg',
+    minesweeperEasy: 'Makkelijk',
     snake: 'Snake',
     snakeNewGame: 'Nieuw spel',
     snakeScore: 'Score',

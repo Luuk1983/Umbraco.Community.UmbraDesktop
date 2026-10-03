@@ -5,9 +5,12 @@ import {
   DRAG_THRESHOLD_PX,
   FLIP_MS,
   MOVE_MS,
+  SOLITAIRE_GAME_ALIAS,
+  solitaireBoard,
   STAGGER_MS,
   TOOLBAR_HEIGHT_PX,
 } from './constants.js';
+import { ArcadeScores } from '../shared/arcade.js';
 import { WinCascade } from './cascade.js';
 import type { CascadeCard } from './cascade.js';
 import { CLASSIC_FACES_ALIAS, THEME_BACK_ALIAS, THEME_BACK_IMAGE } from './backs.js';
@@ -104,6 +107,9 @@ interface Drag {
  */
 @customElement('umbradesktop-solitaire')
 export class SolitaireElement extends UmbLitElement {
+  /** The line to the Arcade; injectable for tests. Does nothing without the Arcade. */
+  scores: Pick<ArcadeScores, 'submit'> = new ArcadeScores(this, SOLITAIRE_GAME_ALIAS);
+
   /** How a new game is shuffled. A seam for tests, as Minesweeper's placer is. */
   @property({ attribute: false })
   shuffle: Shuffler = randomShuffle;
@@ -791,6 +797,10 @@ export class SolitaireElement extends UmbLitElement {
     const epoch = this.#epoch;
     this.#stopTimer();
     this._game = withTimeBonus(this._game!, this._elapsed);
+    // Before the cascade's awaits: a New game started mid-cascade bumps the epoch and returns early,
+    // and must not cost the player the score they just won. The game's own draw mode, never the
+    // settings', which only apply to the next deal.
+    void this.scores.submit(solitaireBoard(this._game.drawCount), this._game.score);
     this.store.remove(this.#id);
     this.#cascadeStopped = false;
     if (!this.reducedMotion() && this._layout) {

@@ -5,11 +5,12 @@ Repo-specific facts a generic checklist cannot know. Read this first, then work 
 
 ## What ships
 
-Three packages, from **one tag**, always at the **same version**:
+Four packages, from **one tag**, always at the **same version**:
 
 | Package | What it is |
 |---|---|
 | `Umbraco.Community.UmbraDesktop` | The desktop. The product. |
+| `Umbraco.Community.UmbraDesktop.Services.Arcade` | Service package. High scores and the Arcade hub. Never installed on its own: Entertainment, and any game add-on, depends on it. Has server code (EF Core tables and an API) and a C# test project. No Marketplace listing, on purpose. |
 | `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games add-on. |
 | `Umbraco.Community.UmbraDesktop.Accessories` | Optional tools add-on. Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information. It has server-side code of its own (the Sticky Notes API) and a C# test project beside it. |
 
@@ -17,7 +18,7 @@ Lockstep is a decision, not an accident: design D13 in
 [`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md)
 §8.3, and Accessories follows it unchanged
 ([`docs/design/2026-09-24-accessories-design.md`](docs/design/2026-09-24-accessories-design.md)).
-All three publish on **every** release, changed or not — a gap in an add-on's version history
+All four publish on **every** release, changed or not — a gap in an add-on's version history
 reads like a broken pipeline, where a version with no changes reads like Umbraco.
 
 **Every add-on requires this release of the host, or any later 17.** Each add-on references the
@@ -43,7 +44,9 @@ without a word, so `.github/actions/build-packages` reads the nuspec of every pa
 `Umbraco.Community.UmbraDesktop.*` package other than the host) and fails the run unless its host
 dependency is exactly `[<host package version>, 17.99999999.0]`. The floor comes from the host
 project's own MinVer version, the same number as the add-on's because both are versioned off one
-tag. **Raise the ceiling with the major**: the release that moves to Umbraco 18 changes
+tag. Entertainment also requires this release of the Arcade, bounded the same way, and the same
+check reads that dependency too; it fails if a package depends on the Arcade and the Arcade
+package is not in the pack output, because a release has to ship both. **Raise the ceiling with the major**: the release that moves to Umbraco 18 changes
 `UmbraDesktopUmbracoMajorCeiling` to `18.99999999`, which moves the Umbraco ranges' and the add-ons'
 ceilings together.
 
@@ -190,6 +193,12 @@ serving several packages suffixes the file with the **lowercased package ID**:
 - `umbraco-marketplace-umbraco.community.umbradesktop.entertainment.json` — the games add-on.
 - `umbraco-marketplace-umbraco.community.umbradesktop.accessories.json` — the tools add-on.
 
+**The Arcade has no listing, on purpose** (design D2,
+[`docs/design/2026-10-01-arcade-design.md`](docs/design/2026-10-01-arcade-design.md)). It is
+infrastructure that games depend on, not something to choose, so it carries no `umbraco-marketplace`
+NuGet tag and no `umbraco-marketplace-*.json`. Do not add one. Entertainment's listing carries the
+leaderboard tags instead.
+
 **Both are suffixed, deliberately.** An unsuffixed `umbraco-marketplace.json` is observed to keep
 serving the package that has no suffixed file of its own, and the host shipped that way for
 17.0.0 — but that fallback is nowhere in the documentation, which says only "create a JSON file for
@@ -215,8 +224,8 @@ is a separate thing you choose, not a variant of the desktop.
 it reaches `Umbraco.Cms.Core` transitively through the host. That is documented as sufficient but
 has not been observed for that package yet, so **check its listing appears and shows v17 after its
 first stable release**. If it does not, a direct `Umbraco.Cms.Core` reference is the fix.
-Accessories references `Umbraco.Cms.Api.Management` and `Umbraco.Cms.Api.Common` directly, for its
-Sticky Notes API, so it meets the rule either way.
+Accessories gets `Umbraco.Cms.Api.Management` and `Umbraco.Cms.Api.Common` for its Sticky Notes API
+through the host reference, so it meets the rule the same way.
 
 Note *stable*, not *first publish*: the Marketplace appears to track only stable versions, so a
 package whose only published version is a prerelease has nothing for it to list. `17.1.0-rc.1`

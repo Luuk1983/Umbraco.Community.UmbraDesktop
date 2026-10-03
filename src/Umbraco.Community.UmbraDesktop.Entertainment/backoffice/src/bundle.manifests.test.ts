@@ -111,22 +111,28 @@ it('registers the built-in card backs and face set through their own manifest ty
   expect(manifests.filter((m) => m.type === 'umbraDesktopSolitaireFaces').length).to.equal(1);
 });
 
-/** The one catalogue this package registers. */
-const catalogue = manifests.find((manifest) => manifest.type === 'umbraDesktopCatalogue');
+/** Every `umbraDesktopGame` this package registers, as the Arcade will read them. */
+const games = manifests.filter((m) => m.type === 'umbraDesktopGame') as unknown as Array<{
+  alias: string;
+  meta: { app: string; leaderboards: Array<{ alias: string; better: string; format: string }> };
+}>;
 
-/**
- * The Games group is this package's own now, label and all, so this is the only place that says it
- * exists. The bounds are literals because the host's list cannot be imported from here: after its
- * System (50) and before its Experimental (70), the weights the host publishes so packages can place
- * against them (package catalogues design D10, D11).
- */
-it('defines the games group itself, between System and Experimental', () => {
-  const groups =
-    (catalogue as { meta?: { groups?: Array<{ alias: string; label: string; weight?: number }> } } | undefined)?.meta
-      ?.groups ?? [];
-  const games = groups.find((group) => group.alias === 'games');
-  expect(games, 'the package must define the group its games name').to.not.equal(undefined);
-  expect(games!.label, "a token from this package's own dictionary").to.equal('#umbraDesktopEntertainment_groupGames');
-  expect(games!.weight).to.be.greaterThan(50);
-  expect(games!.weight).to.be.lessThan(70);
+it('puts all three games on the Arcade, each linked to its app', () => {
+  expect(games.map((g) => [g.alias, g.meta.app])).to.deep.equal([
+    ['Umbraco.Community.UmbraDesktop.Entertainment.Minesweeper.Game', 'Umbraco.Community.UmbraDesktop.Entertainment.Minesweeper'],
+    ['Umbraco.Community.UmbraDesktop.Entertainment.Snake.Game', 'Umbraco.Community.UmbraDesktop.Entertainment.Snake'],
+    ['Umbraco.Community.UmbraDesktop.Entertainment.Solitaire.Game', 'Umbraco.Community.UmbraDesktop.Entertainment.Solitaire'],
+  ]);
+});
+
+it('scores Minesweeper as a time, Snake and Solitaire as points', () => {
+  expect(games.map((g) => g.meta.leaderboards.map((b) => `${b.alias}:${b.better}:${b.format}`))).to.deep.equal([
+    ['easy:lower:time'],
+    ['default:higher:points'],
+    ['draw-1:higher:points', 'draw-3:higher:points'],
+  ]);
+});
+
+it('no longer defines the Games group, which the Arcade owns', () => {
+  expect(manifests.filter((m) => m.type === 'umbraDesktopCatalogue')).to.deep.equal([]);
 });

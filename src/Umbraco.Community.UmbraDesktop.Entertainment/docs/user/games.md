@@ -39,11 +39,18 @@ To start a game, open the launcher and select **Minesweeper**, **Snake** or **So
 Minesweeper and Snake open in a fixed-size window, the way Minesweeper did on Windows: the window can
 be moved and minimised, but not resized or maximised. Solitaire can be resized.
 
+### High scores
+
+Each game keeps your best score on the Arcade: your fastest win in Minesweeper, your highest score
+in Snake, and your highest winning score in Solitaire for each draw mode. The first time you finish
+a game, you are asked whether your scores may appear on the leaderboards. To see them, open
+**Arcade** in the Games group. See [Arcade](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Services.Arcade/docs/user/arcade.md).
+
 ### Minesweeper
 
 ![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher open down to its Games group, which lists Minesweeper, Snake and Solitaire, and the game's own taskbar button below.](../screenshots/entertainment-games-minesweeper.png)
 
-The real one, with three difficulties, a mine counter and a timer.
+The real one, on the beginner board, with a mine counter and a timer. The Arcade calls that board Easy.
 
 - To reveal a square, left-click it. An empty square reveals its neighbours too.
 - To flag a square, right-click it.
@@ -59,7 +66,7 @@ Eat the food to grow longer, and do not hit the walls or your own tail.
 - To start again, select **New game**.
 
 Each piece of food is worth ten points, and the snake speeds up as it grows. The best score is
-remembered in the browser. The game also pauses by itself when its window loses focus, so minimising
+kept on the Arcade, or in the browser without it. The game also pauses by itself when its window loses focus, so minimising
 it does not end the game.
 
 Minesweeper and Snake start fresh when the desktop [reopens its windows](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/user/settings/reopening-windows.md)

@@ -67,6 +67,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             src/Umbraco.Community.UmbraDesktop/package-lock.json
+            src/Umbraco.Community.UmbraDesktop.Services.Arcade/package-lock.json
             src/Umbraco.Community.UmbraDesktop.Entertainment/package-lock.json
             src/Umbraco.Community.UmbraDesktop.Accessories/package-lock.json
 
@@ -83,6 +84,7 @@ jobs:
       - name: Build frontends
         run: |
           (cd src/Umbraco.Community.UmbraDesktop && npm ci && npm run build)
+          (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && npm ci && npm run build)
           (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm ci && npm run build)
           (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm ci && npm run build)
 

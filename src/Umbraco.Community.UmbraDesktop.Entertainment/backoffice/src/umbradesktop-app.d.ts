@@ -133,9 +133,51 @@ interface ManifestUmbraDesktopDocs extends ManifestWithDynamicConditions {
   meta: MetaUmbraDesktopDocs;
 }
 
+/** One leaderboard a game keeps. A copy of the Arcade's definition; `better` and `format` are closed sets. */
+interface ArcadeLeaderboardDefinition {
+  /** Stable id within the game, final once scores exist. */
+  alias: string;
+  /** Tab text: a localisation token from this package's dictionary, or a literal. */
+  label: string;
+  /** Whether a higher or a lower score wins. */
+  better: 'higher' | 'lower';
+  /** How a score is shown: plain points, or milliseconds as a time. */
+  format: 'points' | 'time';
+  /** Smallest score the server accepts. */
+  min?: number;
+  /** Largest score the server accepts. */
+  max?: number;
+}
+
+/** What a `umbraDesktopGame` manifest carries. A copy of the Arcade's `MetaUmbraDesktopGame`. */
+interface MetaUmbraDesktopGame {
+  /** Alias of the `umbraDesktopApp` the hub's Play button opens. */
+  app: string;
+  /** The game's name in the hub: a localisation token or a literal. */
+  label: string;
+  /** Native Umbraco icon alias. */
+  icon?: string;
+  /** The boards the game keeps scores on. */
+  leaderboards: ArcadeLeaderboardDefinition[];
+}
+
+/** A game on the Arcade, as data. A copy of the Arcade's type; only ever gains optional fields. */
+interface ManifestUmbraDesktopGame extends ManifestWithDynamicConditions {
+  /** Discriminates this manifest from every other extension type. */
+  type: 'umbraDesktopGame';
+  /** Alias and name, from the extension basics; the alias is the game's identity in the Arcade's database. */
+  alias: string;
+  /** Human-readable name. */
+  name: string;
+  /** Position in the hub, higher first (Umbraco's scale). */
+  weight?: number;
+  /** The game's app link, label, icon and boards. */
+  meta: MetaUmbraDesktopGame;
+}
+
 declare global {
   /**
-   * Adds `umbraDesktopApp`, `umbraDesktopCatalogue` and `umbraDesktopDocs` to Umbraco's own extension type map, which is
+   * Adds `umbraDesktopApp`, `umbraDesktopCatalogue`, `umbraDesktopDocs` and `umbraDesktopGame` to Umbraco's own extension type map, which is
    * what makes the manifests assignable to `UmbExtensionManifest` and so accepted in this package's
    * `manifests` array. Umbraco's own extension kinds declare themselves the same way, and so does
    * the host.
@@ -147,5 +189,7 @@ declare global {
     umbraDesktopCatalogue: ManifestUmbraDesktopCatalogue;
     /** This package's docs, for the Help app. */
     umbraDesktopDocs: ManifestUmbraDesktopDocs;
+    /** This package's games, for the Arcade. */
+    umbraDesktopGame: ManifestUmbraDesktopGame;
   }
 }

@@ -2,7 +2,7 @@
 id: attached-windows
 title: Attached windows
 description: Show content beside a document window, as a docked pane or a grouped window.
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 # Attached windows

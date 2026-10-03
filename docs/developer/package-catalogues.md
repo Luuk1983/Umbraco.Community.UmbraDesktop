@@ -115,8 +115,8 @@ places your group among the desktop's, which are fixed so you can rely on them:
 | Experimental | 70 |
 | More, always last | 9999 |
 
-Accessories, from the Accessories add-on, sits at 55, and Games, from the Entertainment add-on, at
-60. A group without a weight sorts before Editing, so always give one. An entry naming a group nobody defines lands under More.
+Accessories, from the Accessories add-on, sits at 55, and Games, from the Arcade add-on that every game
+package brings, at 60. A group without a weight sorts before Editing, so always give one. An entry naming a group nobody defines lands under More.
 
 ## 5. Replacing one of the desktop's tiles
 

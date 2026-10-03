@@ -188,6 +188,35 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     super(host, UMBRADESKTOP_WINDOW_MANAGER_CONTEXT);
   }
 
+  /** Where `openApp` looks an alias up; the app catalogue's current list, set by the desktop. */
+  #appSource?: () => ReadonlyArray<UmbraDesktopApp>;
+
+  /**
+   * Tell the manager where launchable apps come from, so `openApp` can resolve an alias.
+   *
+   * A source rather than the catalogue context itself: the desktop element creates both, and handing
+   * one to the other at construction avoids a context lookup between two siblings on the same host.
+   * @param source Returns the apps the current user can launch right now.
+   */
+  public useApps(source: () => ReadonlyArray<UmbraDesktopApp>): void {
+    this.#appSource = source;
+  }
+
+  /**
+   * Open an app by its alias, as if from the launcher. **Published API**, for package apps that open
+   * another app (the Arcade's Play button): `open` takes the resolved app the launcher holds, which a
+   * package cannot build. An app hidden by a condition is not in the list, so it cannot be opened
+   * this way either.
+   * @param alias The app's manifest alias.
+   * @returns Whether a window was opened or focused.
+   */
+  public openApp(alias: string): boolean {
+    const app = this.#appSource?.().find((each) => each.alias === alias);
+    if (!app) return false;
+    this.open(app);
+    return true;
+  }
+
   /**
    * Open a new window for the given app and focus it. If the app forbids multiple
    * instances and one is already open, focus that instead of opening another.

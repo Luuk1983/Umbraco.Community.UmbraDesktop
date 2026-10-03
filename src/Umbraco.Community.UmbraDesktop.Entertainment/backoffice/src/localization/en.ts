@@ -1,8 +1,7 @@
 /**
  * English (en) strings for the `umbraDesktopEntertainment` area.
  *
- * This package's own dictionary: the Games group's heading, which this package's catalogue manifest
- * defines, each game's name, which its manifest points at through `meta.label`, and everything the
+ * This package's own dictionary: each game's name, which its manifest points at through `meta.label`, and everything the
  * games themselves say.
  *
  * The element passes each of these to `localize.termOrDefault` with the same English as its
@@ -12,8 +11,6 @@
  */
 export default {
   umbraDesktopEntertainment: {
-    // The launcher group this package's catalogue manifest defines (bundle.manifests.ts).
-    groupGames: 'Games',
     // The window title, taskbar label and launcher tile text, all from meta.label.
     minesweeper: 'Minesweeper',
     // In-game chrome.
@@ -29,6 +26,7 @@ export default {
     minesweeperFlagged: 'flagged',
     minesweeperMine: 'mine',
     minesweeperEmpty: 'empty',
+    minesweeperEasy: 'Easy',
     // Snake: the window title, then everything the game says.
     snake: 'Snake',
     snakeNewGame: 'New game',

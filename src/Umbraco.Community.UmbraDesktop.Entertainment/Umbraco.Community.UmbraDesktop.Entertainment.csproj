@@ -123,6 +123,10 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	       The packed range, "[<this release>, 17.99999999.0]", comes from the BoundHostRange target
 	       in src/Directory.Build.targets, which every add-on referencing the host picks up. -->
 	  <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />
+	  <!-- The Arcade, for high scores (docs/design/2026-10-01-arcade-design.md). Packed as a NuGet
+	       dependency, so installing the games installs the Arcade. Bounded to this release up to the
+	       last 17 by BoundHostRange in src/Directory.Build.targets, the same as the host. -->
+	  <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Services.Arcade\Umbraco.Community.UmbraDesktop.Services.Arcade.csproj" />
 	</ItemGroup>
 
 </Project>

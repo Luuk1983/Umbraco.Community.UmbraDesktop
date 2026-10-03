@@ -16,4 +16,6 @@
   <Project Path="src/Umbraco.Community.UmbraDesktop.Entertainment/Umbraco.Community.UmbraDesktop.Entertainment.csproj" />
   <Project Path="src/Umbraco.Community.UmbraDesktop.Accessories/Umbraco.Community.UmbraDesktop.Accessories.csproj" />
   <Project Path="src/Umbraco.Community.UmbraDesktop.Accessories.Tests/Umbraco.Community.UmbraDesktop.Accessories.Tests.csproj" />
+  <Project Path="src/Umbraco.Community.UmbraDesktop.Services.Arcade/Umbraco.Community.UmbraDesktop.Services.Arcade.csproj" />
+  <Project Path="src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests.csproj" />
 </Solution>

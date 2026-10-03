@@ -2,11 +2,14 @@ import {
   MINESWEEPER_BEGINNER,
   MINESWEEPER_CELL_SIZE_PX,
   MINESWEEPER_DISPLAY_DIGITS,
+  MINESWEEPER_EASY_BOARD,
+  MINESWEEPER_GAME_ALIAS,
   MINESWEEPER_GRID_GAP_PX,
   MINESWEEPER_OUTCOME_HEIGHT_PX,
   MINESWEEPER_PADDING_PX,
   MINESWEEPER_STATUS_HEIGHT_PX,
 } from './constants.js';
+import { ArcadeScores } from '../shared/arcade.js';
 import { createBoard, remainingMines, reveal, toggleFlag } from './rules.js';
 import type { MinesweeperBoard, MinesweeperConfig, MinesweeperPlacer } from './rules.js';
 import { css, customElement, html, nothing, property, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
@@ -144,6 +147,18 @@ export class MinesweeperElement extends UmbLitElement {
   @property({ attribute: false })
   placer?: MinesweeperPlacer;
 
+  /** The clock a game is timed on; injectable for tests. Milliseconds, monotonic. */
+  now: () => number = () => performance.now();
+
+  /** The line to the Arcade; injectable for tests. Does nothing without the Arcade. */
+  scores: Pick<ArcadeScores, 'submit'> = new ArcadeScores(this, MINESWEEPER_GAME_ALIAS);
+
+  /**
+   * When the current game's first click landed, by {@link now}. The on-screen clock counts whole
+   * seconds and the easy board ties constantly on them, so the Arcade gets this exact span instead.
+   */
+  #startedAt?: number;
+
   /** The game. Undefined only between construction and {@link connectedCallback}. */
   @state()
   private _board?: MinesweeperBoard;
@@ -212,6 +227,7 @@ export class MinesweeperElement extends UmbLitElement {
   #newGame(): void {
     this.#stopClock();
     this._elapsed = 0;
+    this.#startedAt = undefined;
     this._board = createBoard(this.config, this.placer);
   }
 
@@ -220,7 +236,15 @@ export class MinesweeperElement extends UmbLitElement {
    * @param index The cell the player clicked.
    */
   #onReveal(index: number): void {
-    if (this._board) this._board = reveal(this._board, index);
+    if (!this._board) return;
+    const before = this._board.status;
+    const clickedAt = this.now();
+    this._board = reveal(this._board, index);
+    // Only a click that actually started the game starts the timer: a first click on a flag does not.
+    if (before === 'ready' && this._board.status !== 'ready') this.#startedAt = clickedAt;
+    if (before !== 'won' && this._board.status === 'won' && this.#startedAt !== undefined) {
+      void this.scores.submit(MINESWEEPER_EASY_BOARD, Math.round(this.now() - this.#startedAt));
+    }
   }
 
   /**
