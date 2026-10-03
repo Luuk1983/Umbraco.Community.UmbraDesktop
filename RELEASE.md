@@ -62,11 +62,12 @@ A release supporting Umbraco 18 starts at `v18.0.0`.
 
 ## Cutting a release
 
-1. Everything for the release merged to `main`, including the README, `umbraco-marketplace*.json`,
-   `docs/` and the screenshots (see the Definition of done in [`CLAUDE.md`](CLAUDE.md)). `main` is
-   the trunk; check `origin/main`, not your local copy.
+1. Everything for the release merged to `main`, including the README, `umbraco-marketplace*.json`
+   and `docs/` (see the Definition of done in [`CLAUDE.md`](CLAUDE.md)). `main` is the trunk;
+   check `origin/main`, not your local copy.
 2. Branch `release/vX.Y.Z` from `origin/main`. From here `main` is free for the next release's
-   work, and only fixes for this release go on the branch.
+   work. Only this release's finishing touches go on the branch: fixes, and screenshots, which
+   need a running backoffice and so usually come last.
 3. Create the release on GitHub, with a new tag (`vX.Y.Z`) on the release branch and the notes
    written by hand. The owner does this step; nobody tags from the command line. Creating the tag
    there is a tag push like any other, so it triggers `publish.yml`, and the workflow's release step
@@ -74,19 +75,19 @@ A release supporting Umbraco 18 starts at `v18.0.0`.
    (observed on 17.2.0).
 4. `.github/workflows/publish.yml` does the rest: every frontend, every test suite, the C# tests,
    every pack, a payload check, NuGet trusted publishing, and a GitHub release.
-5. If the release branch got fixes of its own, bring them back to `main` with a pull request.
-   This repository allows squash merges only, so that brings the changes back but never the
-   tagged commit. As a result `main` never has the release tag in its history: MinVer versions a
-   commit from the newest tag among its ancestors, so `main`'s CI packages keep numbering
-   themselves as prereleases of the version just shipped (17.3.0-beta.1.N after 17.3.0) until the next release is tagged. Nothing
-   ships from those packages, so this is cosmetic. Do not "fix" it by tagging `main`: a tag push
-   is a publish. 17.2.0 and earlier were tagged on `main` itself, after squash-merging a
-   `release/` branch, which is why their tags are in `main`'s history and later ones are not.
+5. Merge the release branch into `main` straight away, with a pull request. The Marketplace reads
+   the listing files from `main`'s root and their screenshot URLs point at `main`, so until this
+   merge the listing still shows the old screenshots. NuGet does not wait for it: the packed
+   README's images are pinned to the tagged commit, which has them.
 
-Three things depend on `main` rather than the release branch, which is why step 1 comes first. The
-Marketplace reads the listing files from `main`'s root. Their screenshot URLs point at `main`. And
-the packed README's images are pinned to the tagged commit, so a screenshot that only reaches `main`
-after the branch is cut never appears on that version's NuGet page.
+   This repository allows squash merges only, so the merge brings the changes back but never the
+   tagged commit, and `main` never has the release tag in its history. MinVer versions a commit
+   from the newest tag among its ancestors, so `main`'s CI packages keep numbering themselves as
+   prereleases of the version just shipped (17.3.0-beta.1.N after 17.3.0) until the next release
+   is tagged. Nothing ships from those packages, so this is cosmetic. Do not "fix" it by tagging
+   `main`: a tag push is a publish. 17.2.0 and earlier were tagged on `main` itself, after
+   squash-merging a `release/` branch, which is why their tags are in `main`'s history and later
+   ones are not.
 
 ### Release notes
 
@@ -154,12 +155,13 @@ Nothing in CI can do these.
   | `ai-copilot-chat.png` | Umbraco AI's Copilot chat in a window. Needs the TestInstance's Umbraco.AI packages and an API key to retake. |
   | `help.png` | The Help app. Retake when the add-ons' docs change what its contents list shows. |
   | `unsaved-changes-guard.png` | Carries the whole guard story in one frame: the unsaved dot, the "someone else changed this" warning with both buttons, and the recycle-bin error, in three stacked windows with all three markers repeated on the taskbar. A separate overwrite-guard shot was planned and is not needed because this one covers it. Note the file arrived named `unsved-`, which would have 404ed silently on the Marketplace; check new filenames against the `ImageUrl` by eye, since nothing else will. |
-  | `launcher.png` | The whole launcher: the Pinned row, every group, the commercial packages, and the add-ons' Games and Accessories groups. Retake when a group is added or the launcher's layout changes; the caption names the Games group, so it must be in the frame. |
+  | `launcher.png` | The whole launcher: the Pinned row, every group, the commercial packages, and the add-ons' Games and Accessories groups. Retake when a group is added or the launcher's layout changes; the caption names the Games group, so it must be in the frame. Since 17.3.0 the launcher no longer fits 1920×1080, so it was taken in a 2400×1351 window at normal scale and shrunk to 1920×1081; a fractional device pixel ratio instead changes how labels wrap. The "Minesweepe/r" break in the Games tile is the product's own, not the capture's. |
   | `theme-macos.png`, `theme-win98.png` | Two of the five themes, deliberately not all five. A theme shot sells the idea that the chrome restyles; the Description naming all five does the rest, and five near-identical launchers would pad the listing without adding to it. `theme-win98.png` shows an older launcher and is kept as it is: it is there to show the theme, and the content behind it is not the subject. |
   | `choose-background.png` | Desktop settings with the wallpaper tray open. The one shot that proves any of this is *yours to change*: without it a reader can take the two theme shots for two screenshots of a product rather than a switch they flip, and the Media library button is the only place that capability appears in the gallery at all. Also the only shot that evidences the README's count of shipped backgrounds, since the tray names them all plus None. The theme row is clipped by the tray, so neither the caption nor the alt text claims all five are visible. **Retake when the tile count changes** — it was shot at eight and the package ships ten since Cobalt Beacon and First Light. The README's alt text deliberately names no number, so a stale shot never contradicts the prose, but it is still the shot that has to show them all. |
   | `theme-wallpaper-match.png` | The theme picker with **Match the wallpaper to the theme** on, every preview carrying its own background. The one frame that explains the feature without a caption: Windows 98's bare teal sitting beside macOS's sunrise says what "each theme brings its own wallpaper" means faster than the sentence does. Take it with the toggle **on** — off, the five previews are identical backgrounds and the shot shows nothing. |
   | `background-jobs-viewer.png` | The Distributed table only. The Recurring one is below the fold and the view does not fit a screen at any framing worth having, so the caption does not claim the split and the explanation at the top of the shot carries the point. |
-  | `entertainment-games-minesweeper.png` | In the add-on's `docs/screenshots/`. The add-on's opening image, so its NuGet page too. The alt text names every game in the Games group, so retake it when a game is added, with the group scrolled fully into view. The copy left in the host's `docs/screenshots/` is the shipped one and stays. |
+  | `entertainment-games.png` | In the add-on's `docs/screenshots/`. Every game open at once under the Umbraco theme, and since 17.3.0 the add-on's opening image, so its NuGet page too, and first in its listing. It replaced the Minesweeper shot there because that one's alt text had to name every game in a menu and went stale when Solitaire arrived. Retake it when a game is added; the alt text names the games, so check it with the shot. Solitaire freshly dealt, Snake before the first key press, Minesweeper mid-game. |
+  | `entertainment-games-minesweeper.png` | In the add-on's `docs/screenshots/`. Windows 98 with the Start menu open to Games. Now the Minesweeper section of the games page and the second listing entry; its alt text names no games, so a new one does not falsify it. The copy left in the host's `docs/screenshots/` is the shipped one and stays. |
   | `entertainment-games-solitaire.png` | In the add-on's `docs/screenshots/`. A game in progress with the settings button visible, in the add-on README and listing. |
   | `entertainment-games-snake.png` | In the add-on's `docs/screenshots/`, listing only. Framed to match Minesweeper's: Windows 98, the Games group open in the launcher. Take it **before** the first key press, so the start message is showing in the middle of the board and the snake is sitting a quarter of the way down above it, since that is the one moment the board says how to play. |
   | `header-entry-point.png` | Small and annotated on purpose. It answers one question, "where is the way in", and showing more screen would not answer it better. |
