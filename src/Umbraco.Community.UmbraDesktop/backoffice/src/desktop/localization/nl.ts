@@ -121,9 +121,9 @@ export default {
     wallpaperFollowsTheme: 'Achtergrond bij het thema laten passen',
     // bureaubladinstellingen — het thema van de backoffice zelf: een instelling van Umbraco, niet
     // van ons. Genoemd naar wat het verandert, want de rij erboven heet al Thema.
-    backofficeTheme: 'Backoffice-kleuren',
+    backofficeTheme: 'Backoffice-thema',
     backofficeThemeAbout: 'Het lichte, donkere en hoog-contrastthema van Umbraco zelf. Geldt voor de hele backoffice, dus ook voor wat er in elk venster staat.',
-    backofficeThemePickerTitle: 'Kies backoffice-kleuren',
+    backofficeThemePickerTitle: 'Kies een backoffice-thema',
     // één zin per thema, naast de voorvertoning in de kiezer: wat het *is*, niet wat het doet
     themeAboutUmbraco: 'Het bureaublad zoals het standaard is, opgebouwd uit de kleuren en maatvoering van Umbraco zelf.',
     themeAboutUmbraco4: 'De backoffice van 2009 als vensterrand: warmgrijze verlopen, haarfijne panelen en knoppen die indrukken.',
@@ -431,6 +431,29 @@ export default {
     migrationFailedBody:
       'Er is niets verloren gegaan. Je instellingen staan nog in deze browser en het bureaublad probeert het opnieuw de volgende keer dat je inlogt.',
     migrationContinue: 'Doorgaan',
+    // the welcome wizard, shown once to somebody new to the desktop
+    welcomeLabel: 'Je bureaublad instellen',
+    welcomeTitle: 'Welkom bij UmbraDesktop',
+    welcomeLead: 'Je bureaublad voor Umbraco. Drie snelle keuzes en het staat klaar.',
+    welcomeLanguageTitle: 'Kies je taal',
+    welcomeLanguageAbout:
+      'De backoffice en het bureaublad gebruiken deze taal. Waar het bureaublad nog niet vertaald is, staat het in het Engels. Je kunt dit later wijzigen in Bureaublad-instellingen.',
+    welcomeLanguageEnglish: 'Engels',
+    welcomeLanguageFallback:
+      'Het bureaublad is nog niet vertaald in het %0%, dus dat staat in het Engels. De backoffice in de vensters gebruikt het %0%.',
+    welcomeThemeTitle: "Kies je thema's",
+    welcomeThemeAbout: 'Eén voor het bureaublad, één voor de backoffice in de vensters. Je kunt ze allebei later wijzigen.',
+    welcomeDesktopTheme: 'Bureaubladthema',
+    welcomeDesktopThemeAbout: 'Het bureaublad rond je vensters: de taakbalk, de vensterranden en een bijpassende achtergrond.',
+    welcomeBackofficeThemeAbout: 'Alles in de vensters: het lichte, donkere of hoog-contrastthema van Umbraco zelf.',
+    welcomeSignInTitle: 'Beginnen in het bureaublad?',
+    welcomeSignInAbout: 'Sla de klassieke backoffice over en kom direct op je bureaublad.',
+    welcomeSignInHint:
+      'Werkt vanaf de volgende keer dat je de backoffice opent. Je kunt het altijd wijzigen in Bureaublad-instellingen.',
+    welcomeNext: 'Volgende',
+    welcomeBack: 'Vorige',
+    welcomeDone: 'Klaar',
+    welcomeStep: 'Stap %0% van %1%',
     settingsNotSaved:
       'Die instelling kon niet op je account opgeslagen worden. Hij geldt nu wel, maar deze browser vergeet hem.',
     // desktopmeldingen: de toasts, en de geschiedenis achter de klok

@@ -17,7 +17,7 @@ or catalogues of your own, see the [developer guide](../developer/README.md).
 | [Windows](windows/README.md) | Moving, resizing and snapping windows, and how the desktop protects your work. |
 | [Launcher](launcher/README.md) | Opening apps, and arranging the launcher the way you want it. |
 | [Taskbar](taskbar/README.md) | Switching between windows, the row of buttons beside the launcher, and notifications. |
-| [Appearance](appearance/README.md) | Themes, wallpapers and the backoffice's own colours. |
+| [Appearance](appearance/README.md) | Themes, wallpapers and the backoffice's own theme. |
 | [Settings](settings/README.md) | Desktop settings: how the desktop starts, which windows come back, language and region. |
 | [Site](site/README.md) | Site-wide settings: installing the backoffice as an app, and showing the site's name. |
 | [Apps](apps/README.md) | The apps the desktop adds or knows about: Background Jobs, Umbraco AI and the commercial packages. |

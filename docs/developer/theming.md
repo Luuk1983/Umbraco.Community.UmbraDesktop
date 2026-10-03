@@ -281,7 +281,7 @@ shipped once and only macOS showed it, being the one theme that states that colo
 
 Which of the three is in force is Umbraco's setting, not this package's, and this package does not
 store a copy of it: `theme.context.ts` reads core's `UMB_THEME_CONTEXT`, and Desktop settings →
-Appearance → **Backoffice colours** writes back to the same context, which is also what the
+Appearance → **Backoffice theme** writes back to the same context, which is also what the
 current-user modal writes to. So a theme can be tried under all three from one screen, and there is
 no second value to keep in step. The row lists whatever the extension registry holds under type
 `theme`, so a backoffice theme your own package registers shows up there without touching this

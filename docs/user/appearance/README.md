@@ -1,7 +1,7 @@
 ---
 id: appearance
 title: Appearance
-description: Themes, wallpapers and the backoffice's own colours.
+description: Themes, wallpapers and the backoffice's own theme.
 ---
 
 # Appearance
@@ -13,5 +13,5 @@ stored on your Umbraco account, so it follows you between machines.
   Windows 98, and let each theme bring its own wallpaper.
 - [Wallpaper](wallpaper.md): pick one of the ten backgrounds that ship with the package, or any
   image from your own Media Library.
-- [Backoffice colours](backoffice-colours.md): Umbraco's own Light, Dark and High contrast, which
+- [Backoffice theme](backoffice-colours.md): Umbraco's own Light, Dark and High contrast, which
   change the content inside every window too.
