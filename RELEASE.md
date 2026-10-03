@@ -65,7 +65,11 @@ A release supporting Umbraco 18 starts at `v18.0.0`.
 1. Everything merged to `main`. `main` is the trunk; check `origin/main`, not your local copy.
 2. Update the README, `umbraco-marketplace*.json` and `docs/` first — see the Definition of done in
    [`CLAUDE.md`](CLAUDE.md). The Marketplace description is the only thing most people read.
-3. Tag `main`: `git tag v17.1.0 && git push origin v17.1.0`.
+3. Create the release on GitHub, with a new tag (`v17.3.0`) on `main` and the notes written by
+   hand. The owner does this step; nobody tags from the command line. Creating the tag there is a
+   tag push like any other, so it triggers `publish.yml`, and the workflow's release step finds the
+   release already there and only attaches the packages, leaving the notes alone (observed on
+   17.2.0).
 4. `.github/workflows/publish.yml` does the rest: every frontend, every test suite, the C# tests,
    every pack, a payload check, NuGet trusted publishing, and a GitHub release.
 
@@ -96,7 +100,8 @@ Nothing in CI can do these.
   environment claim, not as an approval gate. The `v*.*.*` tag pattern is the only guard, which is
   specific enough that publishing by accident means pushing a genuinely release-shaped tag.
 - **Screenshots.** Need a running backoffice and a login, which is why they are always the last
-  thing. They live in `docs/screenshots/`. The READMEs and docs reference them by relative path,
+  thing. The host's live in `docs/screenshots/`, and each add-on's in its own
+  `docs/screenshots/` since #78 split the docs, the way an external add-on's would. The READMEs and docs reference them by relative path,
   which the docs check validates, and packing pins the README's copies to the release commit
   (`PinPackedReadme` in `src/Directory.Build.targets`), so they resolve once that commit is pushed.
   The marketplace files reference them by `raw.githubusercontent.com/.../main/...` URL, so those
@@ -105,10 +110,11 @@ Nothing in CI can do these.
   added only after the file exists. Never move or delete a screenshot that has shipped: the NuGet
   pages of versions packed before the pinning point at it on `main`.
 
-  Settled 2026-09-09. Nine entries below, ten files — `theme-wallpaper-match.png` was added
-  2026-09-13 with the theme-matched wallpapers, and is the only shot added since the set was called
-  complete. A feature earns a shot when a still frame explains it faster than the README sentence
-  does; most do not.
+  Reviewed for 17.3.0 on 2026-10-03. A feature earns a shot when a still frame explains it faster
+  than the README sentence does; most do not. A shot is retaken when its subject changes, not when
+  the chrome around it does: the full screen button and the arranged launcher appear on every frame
+  with a taskbar or launcher in it, and reshooting the theme and guard shots for that would not
+  make any of them explain its subject better.
 
   Note the ordering rule above cuts both ways. An entry must not reach `main` before its file, but
   preparing the entry on the same branch as the feature is how the two arrive together — what must
@@ -125,21 +131,27 @@ Nothing in CI can do these.
 
   | Shot | Notes |
   |---|---|
-  | `desktop-windows.png` | Three overlapping windows, and the opening image. Retaken 2026-09-13 for the taskbar feature row, which appears on every shot with a taskbar in it; the rest of the set was left alone, since three small icons beside the launcher button is not worth reshooting eight frames for. The caption named two windows and had to be rewritten with the shot — check the alt text, this table and the marketplace `Caption` together, because all three describe the same frame. |
+  | `hero.png` | The opening image of the README and the listing since #78: two windows side by side with the site's name on the wallpaper. Check the alt text, this table and the marketplace `Caption` together, because all three describe the same frame. |
+  | `desktop-windows.png` | The opening image until #78, now used only by the Windows page of the user guide and no longer in the listing. Kept, because shipped NuGet pages point at it. |
+  | `live-preview.png` | An editor with its page docked beside it, the first attached window. |
+  | `notifications.png` | The notification history under the clock. |
+  | `theme-gallery.png` | All five themes in one frame, in the README's "Make it yours". The listing keeps the macOS and Windows 98 shots beside it for a closer look at two of them. |
+  | `ai-copilot-chat.png` | Umbraco AI's Copilot chat in a window. Needs the TestInstance's Umbraco.AI packages and an API key to retake. |
+  | `help.png` | The Help app. Retake when the add-ons' docs change what its contents list shows. |
   | `unsaved-changes-guard.png` | Carries the whole guard story in one frame: the unsaved dot, the "someone else changed this" warning with both buttons, and the recycle-bin error, in three stacked windows with all three markers repeated on the taskbar. A separate overwrite-guard shot was planned and is not needed because this one covers it. Note the file arrived named `unsved-`, which would have 404ed silently on the Marketplace; check new filenames against the `ImageUrl` by eye, since nothing else will. |
-  | `launcher.png` | All twelve groups, Background Jobs under Diagnostics, the commercial packages and the Games group. |
+  | `launcher.png` | The whole launcher: the Pinned row, every group, the commercial packages, and the add-ons' Games and Accessories groups. Retake when a group is added or the launcher's layout changes; the caption names the Games group, so it must be in the frame. |
   | `theme-macos.png`, `theme-win98.png` | Two of the five themes, deliberately not all five. A theme shot sells the idea that the chrome restyles; the Description naming all five does the rest, and five near-identical launchers would pad the listing without adding to it. `theme-win98.png` shows an older launcher and is kept as it is: it is there to show the theme, and the content behind it is not the subject. |
   | `choose-background.png` | Desktop settings with the wallpaper tray open. The one shot that proves any of this is *yours to change*: without it a reader can take the two theme shots for two screenshots of a product rather than a switch they flip, and the Media library button is the only place that capability appears in the gallery at all. Also the only shot that evidences the README's count of shipped backgrounds, since the tray names them all plus None. The theme row is clipped by the tray, so neither the caption nor the alt text claims all five are visible. **Retake when the tile count changes** — it was shot at eight and the package ships ten since Cobalt Beacon and First Light. The README's alt text deliberately names no number, so a stale shot never contradicts the prose, but it is still the shot that has to show them all. |
   | `theme-wallpaper-match.png` | The theme picker with **Match the wallpaper to the theme** on, every preview carrying its own background. The one frame that explains the feature without a caption: Windows 98's bare teal sitting beside macOS's sunrise says what "each theme brings its own wallpaper" means faster than the sentence does. Take it with the toggle **on** — off, the five previews are identical backgrounds and the shot shows nothing. |
   | `background-jobs-viewer.png` | The Distributed table only. The Recurring one is below the fold and the view does not fit a screen at any framing worth having, so the caption does not claim the split and the explanation at the top of the shot carries the point. |
-  | `entertainment-games-minesweeper.png` | The add-on's first shot, also used in both readmes. Retaken with Snake so the Games group lists both games; the alt text names them, so retake it again when a game is added. |
-  | `entertainment-games-snake.png` | Snake's shot, framed to match Minesweeper's: Windows 98, the Games group open in the launcher. Also in both readmes. Take it **before** the first key press, so the start message is showing in the middle of the board and the snake is sitting a quarter of the way down above it, since that is the one moment the board says how to play. |
+  | `entertainment-games-minesweeper.png` | In the add-on's `docs/screenshots/`. The add-on's opening image, so its NuGet page too. The alt text names every game in the Games group, so retake it when a game is added, with the group scrolled fully into view. The copy left in the host's `docs/screenshots/` is the shipped one and stays. |
+  | `entertainment-games-solitaire.png` | In the add-on's `docs/screenshots/`. A game in progress with the settings button visible, in the add-on README and listing. |
+  | `entertainment-games-snake.png` | In the add-on's `docs/screenshots/`, listing only. Framed to match Minesweeper's: Windows 98, the Games group open in the launcher. Take it **before** the first key press, so the start message is showing in the middle of the board and the snake is sitting a quarter of the way down above it, since that is the one moment the board says how to play. |
   | `header-entry-point.png` | Small and annotated on purpose. It answers one question, "where is the way in", and showing more screen would not answer it better. |
 
-  **Accessories has no shot yet**, and its listing and both readmes deliberately reference none, per
-  the ordering rule above. When one is taken, the obvious frame is a few of its tools open side by
-  side under one theme with the launcher's Accessories group visible; add it to the add-on's
-  `Screenshots`, its README and the root README's Accessories section together.
+  **Accessories has one shot**, `accessories-desktop.png` in its own `docs/screenshots/`: a few of
+  its tools open side by side under Windows 98. It is the add-on's opening image and its only
+  listing entry.
 
 ## Traps this repository has actually hit
 
@@ -231,8 +243,6 @@ request a minute per package ID.
 
 ## Scope notes
 
-- The Entertainment design (§8.2) plans **Minesweeper and Solitaire** for its first release.
-  Solitaire was descoped — issue #8 was closed with Minesweeper only. Its first decision, before
-  any code, is how card faces are rendered (inline SVG, sprite sheet, or Unicode), because that
-  settles the whole rendering approach and whether cards participate in theming at all.
+- The Entertainment design (§8.2) planned **Minesweeper and Solitaire** for its first release.
+  Solitaire was descoped then and shipped in 17.3.0 (#116), with Snake added in between.
 - A Linux theme is deliberately not built. See `CLAUDE.md`.
