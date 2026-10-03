@@ -873,7 +873,8 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
            gives the whole panel a horizontal scrollbar. Dutch found it — "Documenttype-
            machtigingen" against "Document Type permissions" — but any language can, and so can an
            English app somebody else registers. The label below is what makes this safe rather than
-           merely narrow: it can break a word, so nothing here has a width it must have. */
+           merely narrow: it cuts a word that does not fit with an ellipsis, so nothing here has a
+           width it must have. */
         min-width: 0;
       }
       .launch {
@@ -906,16 +907,20 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         -webkit-line-clamp: 2;
         overflow: hidden;
         max-width: 100%;
-        /* Break inside a word when there is nowhere else to break, rather than overflowing the
-           tile. Without this, 'min-width: 0' on the tile would only move the problem: the column
-           would shrink and the word would spill out of it, clipped mid-letter with no ellipsis.
-           'anywhere' rather than 'break-word' because only the former also shrinks the element's
-           min-content width, which is the half that keeps the column honest.
-           Hyphenation first where the browser can (the backoffice sets the document language, so
-           it knows the rules), so "Documenttype-machtigingen" breaks at a sensible point rather
-           than mid-syllable; the break is the fallback when it cannot. */
+        /* A word wider than the tile. Hyphenate it where the browser can (the backoffice sets the
+           document language, so it knows the rules), so "Documenttype-machtigingen" breaks at a
+           sensible point. Where it cannot, cut the line with an ellipsis and let the tile's title
+           carry the full name. This used to fall back to 'overflow-wrap: anywhere', which broke
+           Minesweeper into "Minesweepe" / "r" because English hyphenation has no point in it at
+           this width (issue #121).
+           The column stays honest without 'anywhere': 'min-width: 0' on the tile lets it be
+           narrower than the word, and 'overflow: hidden' above gives this label an automatic
+           minimum of 0 in the themes that lay it out as a flex row. Before the ellipsis, that
+           combination clipped the word mid-letter; 'text-overflow' is what turns the clip into a
+           cut the reader can see. It applies to each line, so the two-line clamp still ends in its
+           own ellipsis too. */
         hyphens: auto;
-        overflow-wrap: anywhere;
+        text-overflow: ellipsis;
         font-size: var(--uui-type-small-size);
         line-height: 1.2;
         /* Reserve two lines so every tile is the same height whether the name wraps or not. */
