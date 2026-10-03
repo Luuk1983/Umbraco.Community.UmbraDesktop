@@ -62,16 +62,31 @@ A release supporting Umbraco 18 starts at `v18.0.0`.
 
 ## Cutting a release
 
-1. Everything merged to `main`. `main` is the trunk; check `origin/main`, not your local copy.
-2. Update the README, `umbraco-marketplace*.json` and `docs/` first — see the Definition of done in
-   [`CLAUDE.md`](CLAUDE.md). The Marketplace description is the only thing most people read.
-3. Create the release on GitHub, with a new tag (`v17.3.0`) on `main` and the notes written by
-   hand. The owner does this step; nobody tags from the command line. Creating the tag there is a
-   tag push like any other, so it triggers `publish.yml`, and the workflow's release step finds the
-   release already there and only attaches the packages, leaving the notes alone (observed on
-   17.2.0).
+1. Everything for the release merged to `main`, including the README, `umbraco-marketplace*.json`,
+   `docs/` and the screenshots (see the Definition of done in [`CLAUDE.md`](CLAUDE.md)). `main` is
+   the trunk; check `origin/main`, not your local copy.
+2. Branch `release/vX.Y.Z` from `origin/main`. From here `main` is free for the next release's
+   work, and only fixes for this release go on the branch.
+3. Create the release on GitHub, with a new tag (`vX.Y.Z`) on the release branch and the notes
+   written by hand. The owner does this step; nobody tags from the command line. Creating the tag
+   there is a tag push like any other, so it triggers `publish.yml`, and the workflow's release step
+   finds the release already there and only attaches the packages, leaving the notes alone
+   (observed on 17.2.0).
 4. `.github/workflows/publish.yml` does the rest: every frontend, every test suite, the C# tests,
    every pack, a payload check, NuGet trusted publishing, and a GitHub release.
+5. If the release branch got fixes of its own, bring them back to `main` with a pull request.
+   This repository allows squash merges only, so that brings the changes back but never the
+   tagged commit. As a result `main` never has the release tag in its history: MinVer versions a
+   commit from the newest tag among its ancestors, so `main`'s CI packages keep numbering
+   themselves as prereleases of the version just shipped (17.3.0-beta.1.N after 17.3.0) until the next release is tagged. Nothing
+   ships from those packages, so this is cosmetic. Do not "fix" it by tagging `main`: a tag push
+   is a publish. 17.2.0 and earlier were tagged on `main` itself, after squash-merging a
+   `release/` branch, which is why their tags are in `main`'s history and later ones are not.
+
+Three things depend on `main` rather than the release branch, which is why step 1 comes first. The
+Marketplace reads the listing files from `main`'s root. Their screenshot URLs point at `main`. And
+the packed README's images are pinned to the tagged commit, so a screenshot that only reaches `main`
+after the branch is cut never appears on that version's NuGet page.
 
 ### Release notes
 
