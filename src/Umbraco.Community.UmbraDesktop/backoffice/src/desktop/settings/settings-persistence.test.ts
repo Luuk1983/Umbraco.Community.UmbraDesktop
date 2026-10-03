@@ -165,6 +165,38 @@ it('gives the defaults when neither the account nor the cache has anything', asy
   expect(load.source).to.equal('defaults');
 });
 
+// What the account said, apart from where the settings came from. The welcome wizard needs the two
+// cases `source` collapses: an account that answered with nothing is a new user, and an account that
+// did not answer is somebody whose record the wizard could not write either.
+
+it('reports an account that has settings', async () => {
+  const load = await persistence({ account: serialiseSettings(theirs('macos')) }).subject.load();
+
+  expect(load.account).to.equal('present');
+});
+
+it('reports an account that answered with nothing', async () => {
+  const load = await persistence({}).subject.load();
+
+  expect(load.account).to.equal('empty');
+});
+
+it('reports an account that answered with nothing even when the cache has settings', async () => {
+  const load = await persistence({ cached: serialiseSettings(theirs('win98')) }).subject.load();
+
+  expect(load.account).to.equal('empty');
+});
+
+it('reports an account that could not be read', async () => {
+  const { subject, store } = persistence({});
+  store.failReads(true);
+
+  const load = await subject.load();
+
+  expect(load.account).to.equal('unreachable');
+  expect(load.source).to.equal('defaults');
+});
+
 it('writes nothing to the account for a user who has never set anything', async () => {
   // Load-bearing, and it looks like an omission. Seeding the account with defaults here would make
   // it non-empty, and an account that is not empty is one migration 0001 will never run against — so

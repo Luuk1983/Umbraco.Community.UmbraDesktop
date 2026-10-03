@@ -53,10 +53,9 @@ export default css`
      the word either: a string written in here is invisible to the localization files and would
      stay English in every language. The button already carries a title, which is its accessible
      name, so rendering that gives the visible label and the accessible name the same words, and
-     means the label follows the title wherever it comes from. Today the taskbar hardcodes an
-     English "Open apps"; localizing that one attribute would translate this label with no further
-     change here. Guarded by taskbar.test.ts, which compares the rendered label against the live
-     title rather than against an expected string. */
+     means the label follows the title wherever it comes from: the taskbar localizes it, so the
+     label is in the user's language with nothing here knowing. Guarded by taskbar.test.ts, which
+     compares the rendered label against the live title rather than against an expected string. */
   .start::after {
     content: attr(title);
     /* Capped, because a translation is free to be long and the running task list beside it is

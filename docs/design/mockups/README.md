@@ -30,3 +30,8 @@ Later mockups, one set per feature, named after the design doc they belong to:
   modal, the default deck and the card back per theme, for
   [`../2026-09-30-solitaire-design.md`](../2026-09-30-solitaire-design.md). The wallpaper crops are
   embedded, so the file opens on its own. Its court figures are placeholders.
+- **[2026-10-03-welcome-wizard.html](./2026-10-03-welcome-wizard.html)**: the welcome animation
+  as three stills, the language page in English and in Dutch, the theme page and the sign-in page,
+  for [`../2026-10-03-welcome-wizard-design.md`](../2026-10-03-welcome-wizard-design.md). The
+  wallpaper thumbnails are embedded, so the file opens on its own. The theme cards are drawn by
+  hand; the built page uses the theme picker's own miniatures.

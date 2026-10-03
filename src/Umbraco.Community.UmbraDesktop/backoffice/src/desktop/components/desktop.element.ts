@@ -30,6 +30,8 @@ import './taskbar.element.js';
 import './desktop-toasts.element.js';
 import '../desktop-label/desktop-label.element.js';
 import '../migrations/migration-screen.element.js';
+import '../welcome/welcome-screen.element.js';
+import type { UmbraDesktopWelcomeChoices } from '../welcome/choices';
 import type { UmbraDesktopMigrationScreenState } from '../migrations/types.js';
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -123,6 +125,13 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   private _migration: UmbraDesktopMigrationScreenState = { phase: 'idle' };
 
   /**
+   * Whether the welcome wizard is up, for somebody new to the desktop. Never at the same time as a
+   * migration: that needs settings in this browser, and a newcomer has none.
+   */
+  @state()
+  private _welcome = false;
+
+  /**
    * The surface currently under the resize observer, so it is attached exactly once per surface.
    *
    * Needed because the surface does not exist for the whole life of this element any more: it
@@ -157,6 +166,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     this.observe(this.#settings.loaded, (loaded) => this.reportSettingsLoaded(loaded === true));
     this.observe(this.#label.label, (label) => (this._label = label));
     this.observe(this.#settings.migration, (migration) => (this._migration = migration ?? { phase: 'idle' }));
+    this.observe(this.#settings.welcome, (welcome) => (this._welcome = welcome === true));
   }
 
   /**
@@ -417,7 +427,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         <!-- On the wallpaper, like the logo: after it, and before the surface so every window
              paints over it. It has no z-index, so this order is the whole of its stacking. -->
         <umbradesktop-desktop-label .label=${this._label}></umbradesktop-desktop-label>
-        <div class="surface" ?inert=${this.#migrationShowing}>
+        <div class="surface" ?inert=${this.#systemScreenShowing}>
           ${repeat(
             this._windows,
             (w) => w.id,
@@ -425,9 +435,9 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
           )}
           ${this.#renderSnapGhost()}
         </div>
-        <umbradesktop-toasts ?inert=${this.#migrationShowing}></umbradesktop-toasts>
-        <umbradesktop-taskbar ?inert=${this.#migrationShowing}></umbradesktop-taskbar>
-        ${this.#renderMigration()}
+        <umbradesktop-toasts ?inert=${this.#systemScreenShowing}></umbradesktop-toasts>
+        <umbradesktop-taskbar ?inert=${this.#systemScreenShowing}></umbradesktop-taskbar>
+        ${this.#renderMigration()} ${this.#renderWelcome()}
       </div>
     `;
   }
@@ -446,7 +456,8 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    * @returns The screen, or nothing when no migration is showing.
    */
   /**
-   * Whether the migration screen is up, and therefore whether the desktop behind it is inert.
+   * Whether the migration screen is up, one of the two screens that make the desktop behind them
+   * inert (see `#systemScreenShowing`).
    *
    * The screen covers the desktop visually via `UMBRADESKTOP_Z_SYSTEM_SCREEN`, but covering is not
    * blocking: without `inert` the windows and the taskbar stay in the tab order and reachable by
@@ -457,6 +468,33 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    */
   get #migrationShowing(): boolean {
     return this._migration.phase !== 'idle';
+  }
+
+  /**
+   * Whether a full-screen system screen is up, the migration screen or the welcome wizard, and
+   * therefore whether the desktop behind it is inert. The reasons are the migration screen's: covering
+   * is not blocking, and the taskbar's cog would open settings the wizard is about to write.
+   * @returns True while either screen is showing.
+   */
+  get #systemScreenShowing(): boolean {
+    return this.#migrationShowing || this._welcome;
+  }
+
+  /**
+   * The welcome wizard, when it is up.
+   *
+   * Here for the reasons the migration screen is: in the same pass as the desktop, because the
+   * settings context decides it before reporting the settings loaded, and inside the desktop, so it
+   * appears however somebody arrived, booted in under the splash or clicked in from the header.
+   * @returns The wizard, or nothing.
+   */
+  #renderWelcome() {
+    if (!this._welcome) return nothing;
+
+    return html`<umbradesktop-welcome-screen
+      @umbradesktop-welcome-finish=${(event: CustomEvent<UmbraDesktopWelcomeChoices>) =>
+        this.#settings.finishWelcome(event.detail)}
+      @umbradesktop-welcome-dismiss=${() => this.#settings.dismissWelcome()}></umbradesktop-welcome-screen>`;
   }
 
   #renderMigration() {

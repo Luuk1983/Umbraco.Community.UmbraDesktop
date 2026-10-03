@@ -38,6 +38,9 @@ import { UmbImagingRepository } from '@umbraco-cms/backoffice/imaging';
 import { UmbLocalizationController } from '@umbraco-cms/backoffice/localization-api';
 import { UMB_NOTIFICATION_CONTEXT } from '@umbraco-cms/backoffice/notification';
 import { formatDateTime } from '../clock-format';
+import { isNewcomer } from '../welcome/detection';
+import { welcomeSettings } from '../welcome/choices';
+import type { UmbraDesktopWelcomeChoices } from '../welcome/choices';
 
 /**
  * Owns the current user's desktop settings: the persisted preference, and the resolved view the
@@ -145,6 +148,22 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
 
   /** The migration screen's state, for the desktop to render. */
   public readonly migration = this.#migration.asObservable();
+
+  /**
+   * Whether the welcome wizard is up, for somebody new to the desktop.
+   *
+   * Decided by `welcome/detection.ts` from what the load found, and decided before `loaded` flips,
+   * for the reason the migration screen is: the wizard is then part of the first painted frame, and
+   * the boot splash lifts onto it rather than onto a desktop about to be covered.
+   *
+   * There is no "finished" flag behind it. The settings record that Done writes is the mark, and
+   * nothing else writes that record while the wizard is up: the desktop behind it is inert, and the
+   * migration that could has nothing to move for somebody with no browser cache.
+   */
+  #welcome = new UmbBooleanState(false);
+
+  /** Whether the welcome wizard is up, for the desktop to render. */
+  public readonly welcome = this.#welcome.asObservable();
 
   #imaging: UmbImagingRepository;
 
@@ -446,6 +465,7 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
     // whose run was cut short by the `#stale` guards below — would be inherited by this one, who
     // would arrive behind a screen belonging to somebody else's migration, with no button on it.
     this.#migration.setValue({ phase: 'idle' });
+    this.#welcome.setValue(false);
 
     // Quiet unless the boot runs long — see `boot/splash-status.ts`. Armed before the first request
     // rather than after it, so a slow *first* request is covered too.
@@ -468,6 +488,8 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
       if (pending.length > 0) {
         this.#migration.setValue({ phase: 'running', descriptionKey: pending[0].descriptionKey });
       }
+      // Never both: the migration needs a browser cache, and a newcomer has none.
+      this.#welcome.setValue(isNewcomer(load));
 
       await this.#refreshView(load.settings.wallpaper);
     } catch (error) {
@@ -611,6 +633,31 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    */
   public dismissMigration(): void {
     this.#migration.setValue({ phase: 'idle' });
+  }
+
+  /**
+   * Apply and save what the welcome wizard ended on: the theme, that theme's wallpaper, and the
+   * sign-in switch, in one write.
+   *
+   * Leaves the wizard up. It is fading out over the desktop at this point, and the theme applied
+   * here is what that fade reveals; {@link dismissWelcome} takes it away once the fade is done.
+   *
+   * A failed save is reported like any other, and leaves the choices applied for the session and no
+   * record on the account, so the wizard comes back next time. Correct: it never got to say it was
+   * finished.
+   * @param choices What the wizard ended on.
+   */
+  public finishWelcome(choices: UmbraDesktopWelcomeChoices): void {
+    const settings = welcomeSettings(this.#settings.getValue(), choices, UMBRADESKTOP_THEMES);
+    this.#paintWallpaper(settings.wallpaper, {
+      theme: settings.theme,
+      bootIntoDesktop: settings.bootIntoDesktop,
+    });
+  }
+
+  /** Take the welcome wizard away, once it has faded. */
+  public dismissWelcome(): void {
+    this.#welcome.setValue(false);
   }
 
   /**
