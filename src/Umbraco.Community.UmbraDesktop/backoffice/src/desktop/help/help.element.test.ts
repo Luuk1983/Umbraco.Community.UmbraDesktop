@@ -251,4 +251,18 @@ describe('umbradesktop-help', () => {
     const element = await mount(undefined, []);
     expect(root(element).querySelector('.empty')).to.not.equal(null);
   });
+
+  it('sets its small headings the way Umbraco does: as written, bold, and not spaced out', async () => {
+    const landing = await mount();
+    const article = await mount('umbradesktop/snapping');
+    const headings = [
+      root(landing).querySelector('.developers h2')!,
+      root(article).querySelector('.field-label')!,
+      root(article).querySelector('.toc h2')!,
+    ];
+    for (const heading of headings) {
+      const style = getComputedStyle(heading);
+      expect([heading.textContent, style.textTransform, style.letterSpacing, style.fontWeight]).to.deep.equal([heading.textContent, 'none', 'normal', '700']);
+    }
+  });
 });
