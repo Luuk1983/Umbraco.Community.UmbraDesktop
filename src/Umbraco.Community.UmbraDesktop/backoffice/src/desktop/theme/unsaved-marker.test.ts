@@ -6,10 +6,9 @@ import { UMBRADESKTOP_THEMES } from './themes/index.js';
  * five** themes, not just the three that mount a window to measure their caption geometry.
  *
  * Rendering every theme's window would be the stronger check, but mounting chrome components is
- * documented in `mount-themed.ts` as slow and intermittently flaky in this runner, and two themes
- * (Umbraco, macOS) have no window test file to hang it on — Umbraco ships no window stylesheet at
- * all, being the base. So the three that already have a mount assert what they paint, and this file
- * covers the whole set by reading what the themes actually declare.
+ * documented in `mount-themed.ts` as slow and intermittently flaky in this runner, and one theme
+ * (macOS) has no window test file to hang it on. So the ones that already have a mount assert what
+ * they paint, and this file covers the whole set by reading what the themes actually declare.
  *
  * It is not a proxy check for those three: hiding the marker and starving it are different failures
  * from painting it invisibly, and this catches the first two in every theme.

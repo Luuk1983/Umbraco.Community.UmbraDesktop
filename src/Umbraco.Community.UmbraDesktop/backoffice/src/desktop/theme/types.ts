@@ -279,23 +279,23 @@ export type UmbraDesktopAppToken = (typeof UMBRADESKTOP_APP_TOKENS)[number];
  * The published fallback contract for {@link UMBRADESKTOP_APP_TOKENS}: the value every app is
  * expected to write as its own CSS fallback (`var(--umbradesktop-app-surface, <this value>)`),
  * since there are no host-side fallbacks for these and there cannot be. The chrome puts each of
- * *its* tokens' fallback in the component that reads it, which is why the Umbraco identity theme
- * can ship an empty palette. An app's reader lives in another package, so it carries its own
+ * *its* tokens' fallback in the component that reads it, which is why a theme only has to set what
+ * it wants to change. An app's reader lives in another package, so it carries its own
  * fallback instead — and this is data, not prose, precisely so it cannot drift from the token list
  * above: `satisfies Record<UmbraDesktopAppToken, string>` makes a missing or extra key a compile
  * error, and `app-tokens.test.ts` asserts the same at runtime, since the test runner does not
  * type-check.
  *
  * These values are deliberately the Umbraco look. An app that reads only these therefore renders as
- * the identity theme by construction, which is the other half of why that theme's own palette can
- * stay empty: the chrome side is empty because each chrome component already carries the Umbraco
- * fallback, and the app side is empty because every app already carries this one.
+ * the Umbraco theme by construction, which is why that theme answers no app token: the chrome side
+ * is the theme's palette and sheets, and the app side is left to the fallback every app already
+ * carries.
  */
 export const UMBRADESKTOP_APP_TOKEN_FALLBACKS = {
   '--umbradesktop-app-surface': 'var(--uui-color-surface)',
   // Not `--uui-color-surface` again, which is what shipped and was a defect in this contract's own
-  // data: two tokens documented as distinct roles resolved to one value, so under the identity
-  // theme — whose palette is empty and whose values therefore *are* these fallbacks — a raised
+  // data: two tokens documented as distinct roles resolved to one value, so under the Umbraco
+  // theme — which answers no app token, so its values *are* these fallbacks — a raised
   // control was exactly the colour of the panel behind it. Minesweeper measured 1.00:1.
   //
   // `--uui-color-surface-emphasis` is Umbraco's own "a step off `surface`" token, and it is the

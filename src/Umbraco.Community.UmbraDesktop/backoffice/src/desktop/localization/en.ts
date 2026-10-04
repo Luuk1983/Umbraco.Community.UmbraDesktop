@@ -131,7 +131,7 @@ export default {
     backofficeThemeAbout: "Umbraco's own light, dark and high contrast. Applies to the whole backoffice, including what is inside every window.",
     backofficeThemePickerTitle: 'Choose a backoffice theme',
     // one sentence per theme, shown beside its preview in the picker: what it *is*, not what it does
-    themeAboutUmbraco: "The desktop as it ships, built from Umbraco's own colours and spacing.",
+    themeAboutUmbraco: "The backoffice's own header on the window in front, round buttons and a quiet taskbar, built from Umbraco's own colours.",
     themeAboutUmbraco4: 'The 2009 backoffice as desktop chrome: warm grey gradients, hairline panels and buttons that press in.',
     themeAboutMacos: 'Traffic lights on the left of every title bar, a floating dock, and a fullscreen blurred launcher.',
     themeAboutWin11: 'A flush acrylic taskbar with its buttons centred, rounded windows and square caption buttons.',

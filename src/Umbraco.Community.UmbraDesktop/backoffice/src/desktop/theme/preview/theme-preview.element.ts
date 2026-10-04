@@ -48,10 +48,9 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
  * to say something about its launcher has the chrome itself to say it in.
  *
  * **The fallbacks are the chrome's own, restated.** Every `var(--umbradesktop-…, …)` below carries
- * the same fallback the component that owns the token carries, because the Umbraco identity theme
- * ships an **empty palette** on purpose — its look lives entirely in those fallbacks — and a
- * miniature painted from palettes alone would render it as nothing at all. That is a second copy of
- * a number, so `theme-preview.test.ts` holds every one of them against the chrome's own CSS on each
+ * the same fallback the component that owns the token carries, because a palette is partial by
+ * design — every theme leaves most tokens to those fallbacks — and a miniature painted from
+ * palettes alone would render the rest as nothing at all. That is a second copy of a number, so `theme-preview.test.ts` holds every one of them against the chrome's own CSS on each
  * run. Change a fallback in `window.element` or `taskbar.element` and that test tells you this file
  * needs the same edit.
  */

@@ -150,8 +150,8 @@ it('never publishes an app token as a unitless number, which cannot survive a ca
  * The three surfaces are documented as three distinct roles — a panel ground, a control face, a
  * recessed well — so a fallback set that resolves two of them to one value is a defect in the
  * contract's own data rather than a matter of taste. It shipped as one: `surface` and
- * `surface-raised` were both `var(--uui-color-surface)`, and under the identity theme, whose
- * palette is empty and whose values therefore *are* these fallbacks, Minesweeper measured a closed
+ * `surface-raised` were both `var(--uui-color-surface)`, and under the Umbraco theme, which answers
+ * no app token and whose values therefore *are* these fallbacks, Minesweeper measured a closed
  * cell against the app ground behind it at 1.00:1 — the same colour, separated only by a 1.43:1
  * hairline.
  *
@@ -197,8 +197,9 @@ it('keeps the three surface fallbacks mutually distinguishable', () => {
 /**
  * A theme that answers the chrome tokens but not the app tokens would render a correct desktop
  * around an app painted in another theme's colours. The identity theme is the deliberate exception:
- * its palette is empty by design, and the fallbacks an app carries *are* the Umbraco look, so
- * requiring it to restate them here would duplicate the contract and break that guarantee.
+ * the fallbacks an app carries *are* the Umbraco look, so requiring it to restate them here would
+ * duplicate the contract. It does answer the chrome group now (see the next test), which is exactly
+ * why this is decided by id and not by whether its palette happens to be empty.
  */
 it('has every non-identity theme palette answer every app token', () => {
   const missing: string[] = [];
@@ -226,19 +227,26 @@ it('has every non-identity theme palette answer every app token', () => {
   ).to.deep.equal([]);
 });
 
-it('keeps the Umbraco identity theme palette empty', () => {
-  expect(
-    Object.keys(UMBRADESKTOP_UMBRACO_THEME.palettes.light),
-    'the identity theme renders today\'s look by setting nothing; app fallbacks are its values',
-  ).to.deep.equal([]);
-  // The dark half is checked here rather than nowhere. The coverage test above skips this theme
-  // outright, so a `palettes.dark` grown here later would be asserted by nothing at all: it would
-  // silently break the "sets nothing" guarantee in exactly the variant hardest to notice by eye.
-  expect(
-    Object.keys(UMBRADESKTOP_UMBRACO_THEME.palettes.dark ?? {}),
-    'the identity theme must not ship a dark palette either; its dark look comes from the --uui-* ' +
-      'fallbacks the chrome and the apps already carry',
-  ).to.deep.equal([]);
+it('keeps the Umbraco identity theme out of the app token group', () => {
+  // The identity theme used to set nothing at all, and now sets the chrome: a navy caption, round
+  // buttons, a rounder frame. What it must still never do is answer an *app* token, because an
+  // app's own fallback is the Umbraco look and a palette entry would silently fork the two. The
+  // contract's fallbacks are `var(--uui-*)` references with no colour of their own, which is also
+  // what makes an app follow the backoffice's light and dark setting for free.
+  //
+  // The dark half is checked as well. The coverage test above skips this theme outright, so a
+  // `palettes.dark` grown here later would be asserted by nothing at all.
+  const appTokens = new Set<string>(UMBRADESKTOP_APP_TOKENS);
+  for (const variant of ['light', 'dark'] as const) {
+    const answered = Object.keys(UMBRADESKTOP_UMBRACO_THEME.palettes[variant] ?? {}).filter((token) =>
+      appTokens.has(token),
+    );
+    expect(
+      answered,
+      `the identity theme (${variant}) answers app tokens, which forks its look from the fallbacks ` +
+        'every app already carries',
+    ).to.deep.equal([]);
+  }
 });
 
 /**
@@ -303,8 +311,8 @@ it('keeps every app text pair legible on the ground it is promised against', () 
   const unmeasurable: string[] = [];
 
   for (const theme of UMBRADESKTOP_THEMES) {
-    // Skipped for the same reason the coverage test skips it: its palette is empty by design, and
-    // the values an app would actually resolve are `--uui-*` references this helper cannot read.
+    // Skipped for the same reason the coverage test skips it: it answers no app token by design,
+    // and the values an app would actually resolve are `--uui-*` references this helper cannot read.
     if (theme.id === UMBRADESKTOP_UMBRACO_THEME.id) continue;
 
     for (const variant of ['light', 'dark'] as const) {
@@ -388,7 +396,7 @@ it('keeps the boundary token visible against every surface an app may draw it on
   const unmeasurable: string[] = [];
 
   for (const theme of UMBRADESKTOP_THEMES) {
-    // The identity theme sets nothing and its fallbacks are `var(--uui-*)` references with no
+    // The Umbraco theme sets no app token and its fallbacks are `var(--uui-*)` references with no
     // number in them, exactly as in the text test above.
     if (theme.id === UMBRADESKTOP_UMBRACO_THEME.id) continue;
 
