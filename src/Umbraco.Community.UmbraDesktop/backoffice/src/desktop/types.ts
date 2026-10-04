@@ -1,4 +1,5 @@
 import type { ElementLoaderProperty } from '@umbraco-cms/backoffice/extension-api';
+import type { UmbraDesktopWindowProgress } from './progress/progress';
 
 /**
  * How much of the backoffice shell a window keeps — a monotonic ladder, each rung stripping
@@ -179,6 +180,18 @@ export interface UmbraDesktopWindow {
    * the manager; read by the titlebar marker and by every guard that could throw the work away.
    */
   dirty?: boolean;
+
+  /**
+   * What the work this window is doing adds up to, or absent while it is doing nothing.
+   *
+   * Beside `dirty` because it is the same shape of problem — work that closing the window would
+   * throw away — and so it has the same readers: the title bar, the taskbar button, the close and
+   * reload guards and Exit. A summary rather than the tasks themselves, which the manager keeps off
+   * the model: every surface reads one answer, and two uploads ticking at different rates cost one
+   * render per change in the total rather than one per report. Written only by the manager, from
+   * `setTasks`. Issue #108, design D1.
+   */
+  progress?: UmbraDesktopWindowProgress;
 
   /**
    * Whether the server holds a version of this window's subject that neither this window's editor

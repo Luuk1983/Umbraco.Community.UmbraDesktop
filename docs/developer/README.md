@@ -25,6 +25,9 @@ using the desktop, see the [user guide](../user/README.md).
 - [Attached windows](attached-windows.md): show something beside a document window, the way the live
   preview does. When to use it and when not, how to open one, what your element must do, and what the
   desktop already handles.
+- [Showing work in progress](window-progress.md): report work your app is doing so its window shows
+  progress on its title bar and taskbar button, how the desktop reads Umbraco's own uploads, and how
+  a theme draws it.
 - [Writing documentation](writing-documentation.md): how these docs are structured, the front
   matter and Markdown every page uses, and the writing style.
 - [Help for your add-on](add-on-help.md): ship your package's documentation so it appears in the
@@ -49,3 +52,4 @@ are shaped the way they are. The ones the guides above rest on:
 | The site name on the desktop: why a watermark in a corner, why the App name, why the domain comes from the browser | [2026-09-27-desktop-label-design.md](../design/2026-09-27-desktop-label-design.md) |
 | Remote content: how it redirects a backoffice, keeps it read-only, and what that cannot reach | [2026-09-29-remote-content-viewer-design.md](../design/2026-09-29-remote-content-viewer-design.md) |
 | The Help app: why the server lists the files, why several windows, and how a target resolves | [2026-09-30-help-app-design.md](../design/2026-09-30-help-app-design.md) |
+| Busy windows: why progress sits beside `dirty`, how tasks are summed, and why the media placeholders were abandoned | [2026-10-03-window-progress-design.md](../design/2026-10-03-window-progress-design.md) |

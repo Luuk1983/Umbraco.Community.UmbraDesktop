@@ -818,3 +818,107 @@ describe('restoring saved windows', () => {
     expect(windowsOf(ctx)[0].location).to.equal('/umbraco/section/media');
   });
 });
+
+describe('work in progress', () => {
+  /** A manager whose dialogs are recorded answers, with the stop-work question told apart. */
+  class WorkProbe extends UmbraDesktopWindowManagerContext {
+    /** What any dialog answers. */
+    public answer = true;
+    /** Which dialogs were opened, in order, and for which window. */
+    public opened: string[] = [];
+
+    protected override async _askToDiscard(): Promise<boolean> {
+      this.opened.push('discard');
+      return this.answer;
+    }
+
+    protected override async _askToStopWork(w: UmbraDesktopWindow): Promise<boolean> {
+      this.opened.push(`stop:${w.dirty ? 'dirty' : 'clean'}`);
+      return this.answer;
+    }
+  }
+
+  let workHost: UmbElementControllerHost;
+  let work: WorkProbe;
+
+  beforeEach(() => {
+    workHost = new UmbElementControllerHost(document.createElement('div'));
+    work = new WorkProbe(workHost);
+    work.open(APP);
+  });
+
+  afterEach(() => {
+    workHost.destroy();
+  });
+
+  /** The one open window. */
+  const only = () => windowsOf(work)[0];
+
+  it('puts a summary of the reported tasks on the window', () => {
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running', completed: 14, total: 50 }]);
+    expect(only().progress?.state).to.equal('determinate');
+    expect(only().progress?.total).to.equal(50);
+  });
+
+  it('sums what two sources report into one state', () => {
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running', completed: 4, total: 10 }]);
+    work.setTasks(only().id, 'app', [{ id: 'a', state: 'running', completed: 10, total: 40 }]);
+    expect(only().progress?.completed).to.equal(14);
+    expect(only().progress?.total).to.equal(50);
+  });
+
+  it('clears the summary when the last source stops reporting, minimized or not', () => {
+    work.setState(only().id, 'minimized');
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running' }]);
+    work.setTasks(only().id, 'frame', []);
+    expect(only().progress).to.equal(undefined);
+  });
+
+  it('hands back the same list when a report changes nothing, so a repeat costs no render', () => {
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running', completed: 1, total: 2 }]);
+    const before = windowsOf(work);
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running', completed: 1, total: 2 }]);
+    expect(windowsOf(work)).to.equal(before);
+  });
+
+  it('asks before closing a window with work in flight', async () => {
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running' }]);
+    work.answer = false;
+    await work.requestClose(only().id);
+    expect(work.opened).to.deep.equal(['stop:clean']);
+    expect(windowsOf(work)).to.have.lengthOf(1);
+  });
+
+  it('asks once, not twice, for a window that is both busy and unsaved', async () => {
+    work.setDirty(only().id, true);
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running' }]);
+    await work.requestClose(only().id);
+    expect(work.opened).to.deep.equal(['stop:dirty']);
+    expect(windowsOf(work)).to.have.lengthOf(0);
+  });
+
+  it('closes a failed window without asking: nothing is left to stop', async () => {
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'failed', failed: 1 }]);
+    await work.requestClose(only().id);
+    expect(work.opened).to.deep.equal([]);
+    expect(windowsOf(work)).to.have.lengthOf(0);
+  });
+
+  it('counts busy windows for Exit, leaving failed and idle ones out', () => {
+    work.open({ ...APP, alias: 'b' });
+    work.open({ ...APP, alias: 'c' });
+    const [a, b] = windowsOf(work);
+    work.setTasks(a.id, 'frame', [{ id: 'x', state: 'running' }]);
+    work.setTasks(b.id, 'frame', [{ id: 'x', state: 'failed' }]);
+    expect(work.busyWindows().map((w) => w.id)).to.deep.equal([a.id]);
+  });
+
+  it('forgets a closed window tasks, so a window reopened later starts idle', () => {
+    const id = only().id;
+    work.setTasks(id, 'frame', [{ id: 'a', state: 'running' }]);
+    work.close(id);
+    work.setTasks(id, 'app', []);
+    expect(windowsOf(work)).to.have.lengthOf(0);
+    expect(work.busyWindows()).to.have.lengthOf(0);
+  });
+});

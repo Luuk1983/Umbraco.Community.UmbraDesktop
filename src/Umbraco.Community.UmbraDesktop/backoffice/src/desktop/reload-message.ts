@@ -1,4 +1,4 @@
-import { unsavedSentence } from './unsaved-message.js';
+import { busySentence, unsavedSentence } from './unsaved-message.js';
 import type { UmbraDesktopTerm } from './unsaved-message.js';
 
 /**
@@ -16,6 +16,7 @@ import type { UmbraDesktopTerm } from './unsaved-message.js';
  * @param unsavedCount How many of them are holding unsaved changes.
  * @param conflictedCount How many of those have also been changed by somebody else.
  * @param term The localizer, e.g. `this.localize.term` bound to the calling element.
+ * @param busyCount How many of them have work in flight, which the reload would stop.
  * @returns The dialog body.
  */
 export function reloadDialogContent(
@@ -23,12 +24,15 @@ export function reloadDialogContent(
   unsavedCount: number,
   conflictedCount: number,
   term: UmbraDesktopTerm,
+  busyCount = 0,
 ): string {
   const parts = [term('umbraDesktop_reloadSaved')];
   if (openCount === 1) parts.push(term('umbraDesktop_reloadClosesOne'));
   else if (openCount > 1) parts.push(term('umbraDesktop_reloadCloses', openCount));
   const unsaved = unsavedSentence(unsavedCount, conflictedCount, term);
   if (unsaved) parts.push(unsaved);
+  const busy = busySentence(busyCount, term);
+  if (busy) parts.push(busy);
   parts.push(term('umbraDesktop_reloadQuestion'));
   return parts.join(' ');
 }

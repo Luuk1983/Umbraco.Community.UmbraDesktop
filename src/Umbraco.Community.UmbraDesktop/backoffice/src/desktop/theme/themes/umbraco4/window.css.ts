@@ -1,4 +1,5 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
+import { progressStrip } from '../../../progress/progress-view.js';
 import {
   U4_EDGE,
   U4_FONT,
@@ -95,4 +96,9 @@ export default css`
     color: var(--umbradesktop-notice-text, #2b2b2b);
     border-bottom-width: 2px;
   }
+
+  /* Work in progress (#108): v4 had no such thing, so the nearest v4 shape stands in, a bevelled
+     bar along the caption's foot in the selection blue. Inside the caption's box, so its height is
+     unchanged. */
+  ${progressStrip('.titlebar', { height: 4 })}
 `;

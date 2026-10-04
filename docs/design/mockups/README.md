@@ -30,3 +30,7 @@ Later mockups, one set per feature, named after the design doc they belong to:
   modal, the default deck and the card back per theme, for
   [`../2026-09-30-solitaire-design.md`](../2026-09-30-solitaire-design.md). The wallpaper crops are
   embedded, so the file opens on its own. Its court figures are placeholders.
+- **[2026-10-03-window-progress.html](./2026-10-03-window-progress.html)**: a busy window's progress in
+  every theme, in four states, for
+  [`../2026-10-03-window-progress-design.md`](../2026-10-03-window-progress-design.md). The Umbraco
+  theme is drawn both ways that were considered; the ring round the icon is the one built.

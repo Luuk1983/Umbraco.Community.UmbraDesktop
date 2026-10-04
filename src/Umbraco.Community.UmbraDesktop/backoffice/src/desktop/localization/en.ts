@@ -267,6 +267,18 @@ export default {
     exitConflictedSole: 'That window has also been changed by someone else.',
     exitConflictedOne: 'One of them has also been changed by someone else.',
     exitConflictedMany: '%0% of them have also been changed by someone else.',
+    // work in progress (#108)
+    progressUploading: 'Uploading',
+    progressWorking: 'Working',
+    progressCount: '%0% of %1%',
+    progressFailed: 'Did not finish',
+    progressFailedCount: '%0% of %1% failed',
+    stopWorkHeadline: 'Stop what this window is doing?',
+    stopWorkQuestion: 'This window is still busy: %0%. If you go ahead, it stops before it finishes.',
+    stopWorkUnsaved: 'Its unsaved changes will be discarded too.',
+    stopWorkConfirm: 'Stop it',
+    exitBusyOne: 'One window is still busy, and will stop before it finishes.',
+    exitBusy: '%0% windows are still busy, and will stop before they finish.',
     // changed, trashed or deleted underneath a window
     noticeChangedTitle: 'Someone else changed this while you were editing it',
     noticeChangedBody: 'Saving now replaces their version with yours.',

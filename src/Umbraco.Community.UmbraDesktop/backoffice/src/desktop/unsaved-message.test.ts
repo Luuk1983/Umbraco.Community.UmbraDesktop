@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { unsavedSentence } from './unsaved-message.js';
+import { busySentence, unsavedSentence } from './unsaved-message.js';
 
 /**
  * The sentence two dialogs share. Its branches exist because a count reads as a counting error in
@@ -37,4 +37,21 @@ it('says nothing about conflicts when nothing is unsaved', () => {
   // A conflicted window with no unsaved work is the safe case: closing it keeps the other person's
   // version. There is nothing to warn about, so the count is not mentioned.
   expect(unsavedSentence(0, 2, term)).to.equal('');
+});
+
+describe('busySentence', () => {
+  /** Shows which key was asked for and with what. */
+  const key = (k: string, ...args: unknown[]) => (args.length ? `${k}(${args.join(',')})` : k);
+
+  it('is empty when nothing is running, so a caller can join it without checking', () => {
+    expect(busySentence(0, key)).to.equal('');
+  });
+
+  it('gives one window its own wording rather than a count of one', () => {
+    expect(busySentence(1, key)).to.equal('umbraDesktop_exitBusyOne');
+  });
+
+  it('counts several', () => {
+    expect(busySentence(3, key)).to.equal('umbraDesktop_exitBusy(3)');
+  });
 });

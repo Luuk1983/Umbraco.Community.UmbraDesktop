@@ -259,6 +259,18 @@ export default {
     exitConflictedSole: 'Dat venster is ook door iemand anders gewijzigd.',
     exitConflictedOne: 'Eén daarvan is ook door iemand anders gewijzigd.',
     exitConflictedMany: '%0% daarvan zijn ook door iemand anders gewijzigd.',
+    // werk dat nog loopt (#108)
+    progressUploading: 'Uploaden',
+    progressWorking: 'Bezig',
+    progressCount: '%0% van %1%',
+    progressFailed: 'Niet afgerond',
+    progressFailedCount: '%0% van %1% mislukt',
+    stopWorkHeadline: 'Stoppen waar dit venster mee bezig is?',
+    stopWorkQuestion: 'Dit venster is nog bezig: %0%. Als je doorgaat, stopt het voordat het klaar is.',
+    stopWorkUnsaved: 'De niet-opgeslagen wijzigingen gaan ook verloren.',
+    stopWorkConfirm: 'Stoppen',
+    exitBusyOne: 'Eén venster is nog bezig, en stopt voordat het klaar is.',
+    exitBusy: '%0% vensters zijn nog bezig, en stoppen voordat ze klaar zijn.',
     // gewijzigd, in de prullenbak of verwijderd onder een venster
     noticeChangedTitle: 'Iemand anders heeft dit gewijzigd terwijl je eraan werkte',
     noticeChangedBody: 'Als je nu opslaat, vervang je hun versie door de jouwe.',
