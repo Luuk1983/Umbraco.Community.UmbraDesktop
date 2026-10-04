@@ -1,5 +1,7 @@
 import type { Rect, UmbraDesktopWindow, UmbraDesktopWindowState } from './types';
 import { snapRect } from './snap';
+import { isBusy } from './progress/progress';
+import type { UmbraDesktopWindowProgress } from './progress/progress';
 
 const CASCADE_STEP = 28;
 const CASCADE_WRAP = 6;
@@ -317,6 +319,44 @@ export function unsavedWindows(
   windows: ReadonlyArray<UmbraDesktopWindow>,
 ): ReadonlyArray<UmbraDesktopWindow> {
   return windows.filter((w) => w.dirty === true);
+}
+
+/**
+ * Return a new list with `id`'s progress summary set, or **the same list** when it says what the
+ * window already said.
+ *
+ * Compared by value rather than by reference, because every report builds a fresh summary: an
+ * upload reports per file and per percent, and most of those reports leave the count and the
+ * fraction the window draws exactly where they were. Same reasoning as {@link setWindowDirty}. Pure.
+ * @param windows The current window list.
+ * @param id The window to update.
+ * @param progress The new summary, or undefined for a window doing nothing.
+ * @returns A new list, or the input list.
+ */
+export function setWindowProgress(
+  windows: UmbraDesktopWindow[],
+  id: string,
+  progress: UmbraDesktopWindowProgress | undefined,
+): UmbraDesktopWindow[] {
+  const target = windows.find((w) => w.id === id);
+  if (!target || JSON.stringify(target.progress) === JSON.stringify(progress)) return windows;
+  return windows.map((w) => {
+    if (w.id !== id) return w;
+    const next = { ...w, progress };
+    if (!progress) delete next.progress;
+    return next;
+  });
+}
+
+/**
+ * Every window with work in flight, in list order. The busy counterpart of {@link unsavedWindows},
+ * for the same callers: Exit and the language reload say how many windows they would stop. A
+ * failed window is not one, because nothing in it is left to stop. Pure.
+ * @param windows The current window list.
+ * @returns The busy windows.
+ */
+export function busyWindows(windows: ReadonlyArray<UmbraDesktopWindow>): ReadonlyArray<UmbraDesktopWindow> {
+  return windows.filter((w) => isBusy(w.progress));
 }
 
 /** The flags the server-event router writes; see {@link UmbraDesktopWindow}. */

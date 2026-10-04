@@ -39,3 +39,21 @@ export function unsavedSentence(unsavedCount: number, conflictedCount: number, t
         : term('umbraDesktop_exitConflictedMany', conflictedCount);
   return `${warning} ${conflict}`;
 }
+
+/**
+ * The sentence naming how many windows an action would stop mid-work, beside the one naming how
+ * much unsaved work it would discard.
+ *
+ * Its own sentence rather than a branch of {@link unsavedSentence}, because the two counts are
+ * independent: a busy window is often clean (an upload changes nothing a save would keep), and a
+ * window that is both is counted in both, which is true of it. Issue #108 D8.
+ *
+ * Empty when nothing is running, so a caller can join it without checking.
+ * @param busyCount How many open windows have work in flight.
+ * @param term The localizer.
+ * @returns The sentence, or an empty string.
+ */
+export function busySentence(busyCount: number, term: UmbraDesktopTerm): string {
+  if (busyCount < 1) return '';
+  return busyCount === 1 ? term('umbraDesktop_exitBusyOne') : term('umbraDesktop_exitBusy', busyCount);
+}

@@ -1,4 +1,12 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
+import { progressStrip } from '../../../progress/progress-view.js';
+
+/**
+ * The file transfer dialog's blocks, at the size a taskbar button can hold.
+ * @param colour The block colour.
+ * @returns The repeating gradient.
+ */
+const blocks = (colour: string) => `repeating-linear-gradient(90deg, ${colour} 0 4px, transparent 4px 5px)`;
 import {
   WIN98_BEVEL_PRESSED,
   WIN98_BEVEL_RAISED,
@@ -53,10 +61,9 @@ export default css`
      the word either: a string written in here is invisible to the localization files and would
      stay English in every language. The button already carries a title, which is its accessible
      name, so rendering that gives the visible label and the accessible name the same words, and
-     means the label follows the title wherever it comes from. Today the taskbar hardcodes an
-     English "Open apps"; localizing that one attribute would translate this label with no further
-     change here. Guarded by taskbar.test.ts, which compares the rendered label against the live
-     title rather than against an expected string. */
+     means the label follows the title wherever it comes from: the taskbar localizes it, so the
+     label is in the user's language with nothing here knowing. Guarded by taskbar.test.ts, which
+     compares the rendered label against the live title rather than against an expected string. */
   .start::after {
     content: attr(title);
     /* Capped, because a translation is free to be long and the running task list beside it is
@@ -151,4 +158,21 @@ export default css`
      The bevelled corner tile this replaced was an overlay drawn over the button's own bevel, which
      only existed because the badge used to be an overlay in every theme. So there is no
      '.notice-badge' rule here at all, deliberately. */
+
+  /* Work in progress (#108): a short run of the caption's blocks along the foot of the button,
+     inside its bevel, so the base's clipping of the running list cannot cut it off. */
+  ${progressStrip('.task', { height: 3, inset: 'auto 4px 3px 4px' })}
+  .task .progress {
+    background: ${unsafeCSS(blocks('var(--_progress-fill)'))} 0 0 / calc(var(--umbradesktop-progress-value, 0) * 100%) 100%
+        no-repeat,
+      var(--_progress-track);
+  }
+  .task .progress[data-state='indeterminate'] {
+    background: ${unsafeCSS(blocks('var(--_progress-fill)'))} 0 0 / 25% 100% no-repeat, var(--_progress-track);
+  }
+  .task .progress[data-state='failed'] {
+    background: ${unsafeCSS(blocks('var(--_progress-failed)'))} 0 0 / calc(var(--umbradesktop-progress-value, 1) * 100%) 100%
+        no-repeat,
+      var(--_progress-track);
+  }
 `;

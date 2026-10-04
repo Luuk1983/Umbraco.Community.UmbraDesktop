@@ -23,6 +23,17 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-titlebar-inactive-opacity',
   '--umbradesktop-titlebar-dirty-color',
   '--umbradesktop-titlebar-dirty-size',
+  // Progress (#108). The value is written by the chrome and read by a theme that draws its own
+  // shape; the rest a theme sets. See docs/developer/window-progress.md.
+  '--umbradesktop-progress-value',
+  '--umbradesktop-progress-thickness',
+  '--umbradesktop-progress-offset',
+  '--umbradesktop-titlebar-progress-fill',
+  '--umbradesktop-titlebar-progress-track',
+  '--umbradesktop-titlebar-progress-failed',
+  '--umbradesktop-taskbar-progress-fill',
+  '--umbradesktop-taskbar-progress-track',
+  '--umbradesktop-taskbar-progress-failed',
   '--umbradesktop-path-height',
   '--umbradesktop-path-link-hover-text',
   '--umbradesktop-path-padding',

@@ -559,6 +559,10 @@ for state that is not lost on close, such as a game in progress: a question nobo
 people to click through the one that matters. Notepad and Paint in the Accessories package are the
 worked examples.
 
+**Tell the desktop about long work with one event.** An export, a render or an upload your app runs
+can show on its window's title bar and taskbar button, and be guarded the way unsaved work is, by
+dispatching `umbradesktop-task` events. See [Showing work in progress](window-progress.md).
+
 **There is no reload or restart control on an app window.** The titlebar draws three buttons —
 minimize, maximize, close — where an iframe window draws four. Reload exists for the iframe kind
 because re-fetching a booting backoffice in place, with the window keeping the route the user

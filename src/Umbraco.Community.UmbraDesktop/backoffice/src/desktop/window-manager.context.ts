@@ -22,6 +22,8 @@ import {
   setWindowRect,
   setWindowDirty,
   unsavedWindows,
+  busyWindows,
+  setWindowProgress,
   clampWindowsToBounds,
   setWindowServerState,
   setWindowAcknowledged,
@@ -34,6 +36,8 @@ import {
   isResizable,
 } from './window-model';
 import { snapRect, snapTargetAt } from './snap';
+import { isBusy, progressCaption, summariseTasks } from './progress/progress';
+import type { UmbraDesktopTask } from './progress/progress';
 import type { UmbraDesktopSnapTarget } from './snap';
 import {
   UMBRADESKTOP_DEFAULT_METRICS,
@@ -88,6 +92,16 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * plain data. The router reads this on demand instead, which is the only access pattern it needs.
    */
   #subjects = new Map<string, ReadonlyArray<UmbraDesktopWorkspaceSubject>>();
+
+  /**
+   * The tasks each window's sources report, by window id and then by source.
+   *
+   * Off the model for the reason {@link #subjects} is: the model carries only the summary every
+   * surface reads, and keeping the raw reports here is what lets two sources — the frame watcher and
+   * an element app — each replace their own list without knowing the other exists. See
+   * {@link setTasks}.
+   */
+  #tasks = new Map<string, Map<string, ReadonlyArray<UmbraDesktopTask>>>();
 
   /**
    * The identity of the last **non-empty** subject set each window reported, so {@link setSubjects}
@@ -561,6 +575,7 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
       if (remaining.includes(gone)) continue;
       this.#subjects.delete(gone.id);
       this.#lastSubjectIdentity.delete(gone.id);
+      this.#tasks.delete(gone.id);
     }
     this.#windows.setValue(remaining);
   }
@@ -604,6 +619,42 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     const target = current.find((w) => w.id === id);
     if (!target || (target.saves ?? 0) === saves) return;
     this.#windows.setValue(current.map((w) => (w.id === id ? { ...w, saves } : w)));
+  }
+
+  /**
+   * Record the tasks one source reports for a window, replacing whatever that source said before,
+   * and put the summary of every source's tasks on the window.
+   *
+   * Per source, because a window has two and neither knows about the other: the frame watcher reads
+   * core's media uploads, and an element app reports its own work through the host. Each replaces
+   * only its own list, and the desktop sums them, so an app never has to average its work with work
+   * it cannot see. An empty list is how a source says it is done, which is what clears the marker —
+   * the same in a minimized window as in any other, since nothing here asks how the window looks.
+   *
+   * A window that is not open is ignored rather than resurrected: a frame can report once more while
+   * its window is closing.
+   * @param id The window.
+   * @param source Which source is reporting, e.g. `frame` or `app`.
+   * @param tasks Everything that source is doing now.
+   */
+  public setTasks(id: string, source: string, tasks: ReadonlyArray<UmbraDesktopTask>): void {
+    const current = this.#windows.getValue();
+    if (!current.some((w) => w.id === id)) return;
+    const sources = this.#tasks.get(id) ?? new Map<string, ReadonlyArray<UmbraDesktopTask>>();
+    if (tasks.length) sources.set(source, tasks);
+    else sources.delete(source);
+    if (sources.size) this.#tasks.set(id, sources);
+    else this.#tasks.delete(id);
+    const next = setWindowProgress(current, id, summariseTasks([...sources.values()].flat()));
+    if (next !== current) this.#windows.setValue(next);
+  }
+
+  /**
+   * Every open window with work in flight. Exit and the language reload count from this.
+   * @returns The busy windows, in list order.
+   */
+  public busyWindows(): ReadonlyArray<UmbraDesktopWindow> {
+    return busyWindows(this.#windows.getValue());
   }
 
   /**
@@ -814,9 +865,41 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   }
 
   /**
+   * Ask whether a window's work in flight may be stopped, saying what it is and, when the window is
+   * also holding unsaved changes, that those go too.
+   *
+   * One question for both, not the stop question followed by core's discard dialog: an editor asked
+   * twice about one click learns to click through dialogs. Our own wording rather than core's discard
+   * modal, whose sentence is about unsaved changes and would be untrue of an upload. It keeps that
+   * dialog's shape, though — say what is at stake, then ask — so it reads as the same guard. Split
+   * out, like {@link _askToDiscard}, so the decision is testable without a booted backoffice.
+   * @param w The window whose work is at stake.
+   * @returns True when the editor chose to stop it.
+   */
+  protected async _askToStopWork(w: UmbraDesktopWindow): Promise<boolean> {
+    const caption = progressCaption(
+      w.progress,
+      (key, ...args) => this.#localize.term(key, ...args),
+      (value) => this.#localize.string(value),
+    );
+    const body = this.#localize.term('umbraDesktop_stopWorkQuestion', caption);
+    try {
+      await umbConfirmModal(this, {
+        headline: this.#localize.term('umbraDesktop_stopWorkHeadline'),
+        content: w.dirty ? `${body} ${this.#localize.term('umbraDesktop_stopWorkUnsaved')}` : body,
+        confirmLabel: this.#localize.term('umbraDesktop_stopWorkConfirm'),
+        color: 'danger',
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Ask, if there is anything to lose, whether a window's unsaved changes may be discarded.
    *
-   * Answers without a dialog for a window that is clean — or one that is no longer open, so a
+   * Answers without a dialog for a window that is clean and idle — or one that is no longer open, so a
    * caller racing a close is not stranded. Reused rather than inlined into {@link requestClose}
    * because the titlebar's reload button needs the same question and then does something else
    * entirely with the answer: it reloads the frame in place rather than closing the window.
@@ -829,6 +912,9 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    */
   public async confirmDiscard(id: string): Promise<boolean> {
     const target = this.#windows.getValue().find((w) => w.id === id);
+    // Work in flight first, and in one question that also covers any unsaved changes: whatever the
+    // document's state, the act this guards stops the work, and that is the news. Issue #108 D8.
+    if (target && isBusy(target.progress)) return this._askToStopWork(target);
     if (!target?.dirty) return true;
     // A document that no longer exists cannot be saved to, so "discard your changes?" offers a
     // choice that does not exist. Closing is the only thing left and it asks nothing.

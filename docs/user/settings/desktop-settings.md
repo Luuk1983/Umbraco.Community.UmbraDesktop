@@ -15,7 +15,7 @@ change shows as it is made.
 | --- | --- | --- |
 | **General** | How the desktop starts, and which windows come back | [Starting in the desktop](starting-in-the-desktop.md), [Reopening windows](reopening-windows.md) |
 | **Language and region** | The language the backoffice speaks, and how the desktop writes dates and times | [Language and region](language-and-region.md) |
-| **Appearance** | The theme, the wallpaper and the backoffice's own colours | [Appearance](../appearance/README.md) |
+| **Appearance** | The theme, the wallpaper and the backoffice's own theme | [Appearance](../appearance/README.md) |
 | **Taskbar** | What the taskbar keeps beside the launcher button | [Using the taskbar](../taskbar/using-the-taskbar.md#the-fixed-row) |
 | **Site** | Settings that apply to everyone on the site. Only for users with access to the Settings section | [Site](../site/README.md) |
 | **Connections (experimental)** | Other Umbraco instances this desktop can read from | [External connections](../external-connections/README.md) |

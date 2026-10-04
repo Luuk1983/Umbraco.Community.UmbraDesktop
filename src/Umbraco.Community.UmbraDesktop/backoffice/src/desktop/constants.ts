@@ -68,6 +68,36 @@ export const UMBRADESKTOP_DIRTY_ATTRIBUTE = 'data-umbradesktop-dirty';
 export const UMBRADESKTOP_APP_DIRTY_EVENT = 'umbradesktop-app-dirty';
 
 /**
+ * The event a registered app dispatches from its own element to report work it is doing: start a
+ * task, update it, and end it. Published in `docs/developer/window-progress.md`.
+ *
+ * An event rather than an attribute, unlike {@link UMBRADESKTOP_DIRTY_ATTRIBUTE}, because the
+ * desktop sums several tasks and an attribute holds one value per app. It keeps what made the
+ * attribute the right channel, though: the name is a string, so an app imports nothing from this
+ * package. Dispatched with `bubbles` and `composed`, and `detail` is
+ * `{ id, state: 'running' | 'done' | 'failed', completed?, total?, failed?, label? }`.
+ * `<umbradesktop-app-host>` stops it there, so it never escapes the window. Issue #108, design D5.
+ */
+export const UMBRADESKTOP_TASK_EVENT = 'umbradesktop-task';
+
+/**
+ * The event `<umbradesktop-app-host>` fires with its app's current task list whenever a
+ * {@link UMBRADESKTOP_TASK_EVENT} changes it, and with an empty one when the app goes. Internal, the
+ * counterpart of {@link UMBRADESKTOP_APP_DIRTY_EVENT}: it is how the host tells its window.
+ */
+export const UMBRADESKTOP_APP_TASKS_EVENT = 'umbradesktop-app-tasks';
+
+/**
+ * The font size, in px, of a window's app icon in its title bar and on its taskbar button.
+ *
+ * One number because two stylesheets set it and a third thing is derived from it: the busy ring is
+ * drawn round that icon, and how far the icon shrinks to fit inside the ring is worked out from its
+ * size (`progress/progress-view.ts`). A literal in each stylesheet would let the ring and the icon it
+ * surrounds disagree the first time one of them changed.
+ */
+export const UMBRADESKTOP_CHROME_ICON_PX = 18;
+
+/**
  * Height of the taskbar/panel in pixels.
  *
  * The chrome no longer reads this directly — it takes its height from

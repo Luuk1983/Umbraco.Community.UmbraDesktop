@@ -172,7 +172,8 @@ export class UmbraDesktopSettingsAppearanceElement extends UmbLitElement {
           <umbradesktop-theme-preview
             slot="lead"
             .theme=${theme}
-            .variant=${this._theme?.variant ?? 'light'}></umbradesktop-theme-preview>
+            .variant=${this._theme?.variant ?? 'light'}
+            .highContrast=${this._theme?.highContrast ?? false}></umbradesktop-theme-preview>
         </umbradesktop-settings-row>
       </section>
       <section>

@@ -1,4 +1,5 @@
 import type { DeskView, UmbraDesktopLocalise } from './desk-snapshot';
+import { isBusy } from '../progress/progress.js';
 import type { UmbraDesktopWindow } from '../types';
 import { matchByLabel } from './name-match';
 
@@ -93,8 +94,12 @@ export function planCloseWindows(
     targets = [...found.values()];
   }
 
-  const closing = targets.filter((win) => !win.dirty);
+  // Work in flight is guarded the way unsaved work is: closing the window stops it as surely as it
+  // discards an edit, and this tool asks nobody. Unsaved wins the explanation when both are true,
+  // because that is the loss the user can do something about. Issue #108.
+  const closing = targets.filter((win) => !win.dirty && !isBusy(win.progress));
   const skipped = targets.filter((win) => win.dirty);
+  const working = targets.filter((win) => !win.dirty && isBusy(win.progress));
 
   const sentences: string[] = [];
   if (closing.length > 0) {
@@ -109,6 +114,13 @@ export function planCloseWindows(
       `Left ${list(skipped.map((win) => localise(win.app.name)))} open, because ${
         skipped.length === 1 ? 'it has' : 'they have'
       } unsaved changes. Tell the user to save or discard there first; this tool will not close over unsaved work.`,
+    );
+  }
+  if (working.length > 0) {
+    sentences.push(
+      `Left ${list(working.map((win) => localise(win.app.name)))} open, because ${
+        working.length === 1 ? 'it is' : 'they are'
+      } still working, and closing would stop that. Tell the user to let it finish first.`,
     );
   }
   if (unmatched.length > 0) {

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Window progress mock</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; background: #eceef2; color: #1f2230; font: 14px/1.45 Lato, "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lede { margin: 0 0 20px; color: #4a4f63; max-width: 860px; }
+  section { margin: 0 0 30px; background: #fff; border: 1px solid #d8dbe3; border-radius: 8px; padding: 16px 18px 18px; }
+  h2 { font-size: 16px; margin: 0 0 2px; }
+  h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #6a6f82; margin: 14px 0 8px; }
+  .note { margin: 0 0 6px; color: #4a4f63; max-width: 900px; }
+  .note b { color: #1f2230; }
+  .legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .legend div { font-size: 13px; color: #4a4f63; }
+  .legend b { display: block; color: #1f2230; }
+
+  /* Four states side by side; every theme uses the same columns so a state can be read down. */
+  .row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .cell { min-width: 0; }
+  .cap { font-size: 12px; color: #6a6f82; margin: 0 0 5px; }
+  .stage { padding: 14px 12px; border-radius: 6px; }
+  .tip { font-size: 11.5px; color: #6a6f82; margin-top: 6px; }
+
+  /* A window, cut down to its titlebar and the top of its body. */
+  .win { position: relative; overflow: hidden; }
+  .tb { position: relative; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .tb .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .bd { height: 34px; }
+  .ic { position: relative; display: inline-flex; flex: none; width: 16px; height: 16px; }
+  .ic svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.7; }
+  .ctls { display: inline-flex; gap: 2px; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+  /* ---- The base drawing: one element, a strip on the titlebar's bottom edge. ---- */
+  .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--track); overflow: hidden; }
+  .prog::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: calc(var(--p, 0) * 100%); background: var(--fill); }
+  .prog.ind::before { left: 38%; width: 28%; }
+  .prog.fail::before { background: var(--fail); }
+
+  /* ---- The ring: same element, drawn by a theme around the app icon instead. ---- */
+  .ring { position: absolute; inset: -4px; border-radius: 50%;
+    background: conic-gradient(var(--fill) calc(var(--p, 0) * 360deg), var(--track) 0);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px)); }
+  .ring.ind { background: conic-gradient(from 40deg, var(--fill) 0 90deg, var(--track) 0); }
+  .ring.fail { background: conic-gradient(var(--fail) calc(var(--p, 0) * 360deg), var(--track) 0); }
+
+  /* Taskbar buttons, one per state. */
+  .bar { display: flex; align-items: center; gap: 6px; padding: 0 10px; }
+  .task { position: relative; display: inline-flex; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; }
+  .task .lbl { overflow: hidden; text-overflow: ellipsis; }
+
+  /* ================= Umbraco ================= */
+  .t-umb .stage { background: radial-gradient(120% 140% at 20% 0%, #2a3a72, #121a3a 75%); }
+  .t-umb .win { background: #fff; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+  .t-umb .tb { height: 36px; padding: 0 10px; font-size: 13px; color: #303033; border-bottom: 1px solid #e6e7ea; }
+  .t-umb .bd { background: #f3f3f5; }
+  .t-umb .ctls span { width: 22px; text-align: center; color: #515054; font-size: 12px; }
+  .t-umb .dot { background: #303033; }
+  .t-umb { --fill: #3544b1; --track: #e3e6f5; --fail: #d42054; }
+  .t-umb .bar { height: 46px; background: #1b264f; border-radius: 6px; }
+  .t-umb .task { height: 34px; padding: 0 10px; border-radius: 4px; color: #fff; font-size: 12.5px; max-width: 132px; }
+  .t-umb .task.active { background: rgba(255,255,255,.14); }
+  .t-umb .task .dot { background: #fff; }
+  .t-umb .bar { --fill: #f5c1bc; --track: rgba(255,255,255,.18); --fail: #ff6b8b; }
+
+  /* ================= Umbraco 4 ================= */
+  .t-u4 .stage { background: linear-gradient(180deg, #dbe1e8 0%, #bcc6d3 100%); }
+  .t-u4 .win { background: #f8f7f4; border: 1px solid #9d988e; border-radius: 3px; }
+  .t-u4 .tb { height: 28px; padding: 0 8px; font: 12px Verdana, Geneva, Tahoma, sans-serif; color: #2c2a26;
+    background: linear-gradient(180deg, #f7f6f2 0%, #ebe8e2 45%, #dcd8d0 100%); border-bottom: 1px solid #b4afa4; }
+  .t-u4 .bd { background: #fff; }
+  .t-u4 .ctls span { width: 18px; height: 16px; border: 1px solid #b4afa4; border-radius: 2px; background: linear-gradient(180deg, #fbfaf7, #ddd9d0); }
+  .t-u4 .dot { background: #2c2a26; }
+  .t-u4 { --fill: linear-gradient(180deg, #a9c8e8, #7ba7d4); --track: #ddd9d0; --fail: linear-gradient(180deg, #d4574a, #b23a2d); }
+  .t-u4 .tb .prog { height: 4px; border-top: 1px solid #b4afa4; }
+  .t-u4 .bar { height: 34px; background: linear-gradient(180deg, #f7f6f2 0%, #ebe8e2 45%, #dcd8d0 100%); border: 1px solid #9d988e; border-radius: 3px; }
+  .t-u4 .task { height: 24px; padding: 0 8px 2px; border: 1px solid #b4afa4; border-radius: 2px; font: 11px Verdana, Geneva, Tahoma, sans-serif; color: #2c2a26; max-width: 132px;
+    background: linear-gradient(180deg, #fbfaf7 0%, #f1efea 48%, #ddd9d0 100%); }
+  .t-u4 .task.active { background: linear-gradient(180deg, #dbe6f2 0%, #c3d5ea 100%); border-color: #7ba7d4; }
+  .t-u4 .task .dot { background: #2c2a26; width: 6px; height: 6px; }
+  .t-u4 .task .prog { height: 3px; }
+
+  /* ================= macOS ================= */
+  .t-mac .stage { background: linear-gradient(160deg, #6f8fc9, #c48bb5 60%, #f0b48a); }
+  .t-mac .win { background: #fff; border-radius: 10px; box-shadow: 0 10px 26px rgba(0,0,0,.3); }
+  .t-mac .tb { height: 30px; padding: 0 10px; font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #4d4d4d;
+    background: #ececec; border-bottom: 1px solid #d6d6d6; }
+  .t-mac .tb .t { text-align: center; }
+  .t-mac .lights { display: inline-flex; gap: 7px; }
+  .t-mac .lights i { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; }
+  .t-mac .lights i:nth-child(2) { background: #febc2e; }
+  .t-mac .lights i:nth-child(3) { background: #28c840; }
+  .t-mac .tb .ic { display: none; }
+  .t-mac .dot { background: #0067cc; }
+  .t-mac { --fill: #0067cc; --track: transparent; --fail: #e0352b; }
+  .t-mac .tb .prog { height: 2px; }
+  .t-mac .bar { justify-content: center; height: 62px; background: rgba(246,246,246,.62); border: 1px solid rgba(255,255,255,.5); border-radius: 16px; gap: 10px; }
+  .t-mac .task { flex-direction: column; justify-content: center; width: 46px; height: 54px; overflow: visible; }
+  .t-mac .tile { position: relative; width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(180deg, #4b8df8, #2a64d6); color: #fff; display: grid; place-items: center; }
+  .t-mac .tile .ic { width: 24px; height: 24px; }
+  .t-mac .run { width: 4px; height: 4px; border-radius: 50%; background: #3c3c3e; margin-top: 3px; }
+  /* Finder's copy bar: a capsule laid over the foot of the icon. */
+  .t-mac .task .prog { left: 5px; right: 5px; bottom: 5px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.9); box-shadow: 0 0 0 1px rgba(0,0,0,.18); --track: rgba(255,255,255,.9); }
+  .t-mac .task .prog::before { border-radius: 3px; }
+  .t-mac .task .prog.ind::before { left: 0; width: 100%;
+    background: repeating-linear-gradient(-45deg, #0067cc 0 4px, #6aa6e8 4px 8px); }
+  .t-mac .badge { position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; background: #0067cc; box-shadow: 0 0 0 2px #f6f6f6; }
+
+  /* ================= Windows 11 ================= */
+  .t-w11 .stage { background: radial-gradient(120% 120% at 70% 30%, #a9c7f2, #3f6fc4 70%); }
+  .t-w11 .win { background: #fff; border-radius: 8px; border: 1px solid rgba(0,0,0,.1); box-shadow: 0 8px 22px rgba(0,0,0,.25); }
+  .t-w11 .tb { height: 32px; padding: 0 0 0 12px; font: 12px "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; color: #1a1a1a; background: #f3f3f3; }
+  .t-w11 .ctls span { width: 30px; text-align: center; font-size: 11px; color: #1a1a1a; }
+  .t-w11 .dot { background: #005fb8; }
+  .t-w11 { --fill: #0f7b0f; --track: transparent; --fail: #c42b1c; }
+  .t-w11 .tb .prog { height: 2px; }
+  .t-w11 .bar { justify-content: center; height: 48px; background: rgba(243,243,243,.86); border-radius: 6px; gap: 4px; }
+  .t-w11 .task { justify-content: center; width: 40px; height: 40px; border-radius: 4px; color: #1a1a1a; }
+  .t-w11 .task.active { background: rgba(255,255,255,.75); }
+  .t-w11 .task .ic { width: 22px; height: 22px; color: #1d6fd1; }
+  .t-w11 .mark { position: absolute; left: 50%; bottom: 3px; width: 6px; height: 3px; margin-left: -3px; border-radius: 2px; background: #8a8a8a; }
+  .t-w11 .task.active .mark { width: 16px; margin-left: -8px; background: #005fb8; }
+  /* Windows 11's own idiom: the running mark itself becomes the progress bar, in green. */
+  .t-w11 .task .prog { left: 8px; right: 8px; bottom: 3px; height: 3px; border-radius: 2px; background: rgba(0,0,0,.12); }
+  .t-w11 .task .prog::before { border-radius: 2px; }
+  .t-w11 .badge { position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: #005fb8; box-shadow: 0 0 0 2px #f3f3f3; }
+
+  /* ================= Windows 98 ================= */
+  .t-w98 .stage { background: #008080; }
+  .t-w98 .win { background: #c0c0c0; padding: 3px; box-shadow: inset -1px -1px #000, inset 1px 1px #dfdfdf, inset -2px -2px #808080, inset 2px 2px #fff; }
+  .t-w98 .tb { height: 18px; padding: 0 2px 0 3px; font: bold 11px Tahoma, "MS Sans Serif", sans-serif; color: #fff;
+    background: linear-gradient(90deg, #000080, #1084d0); gap: 4px; }
+  .t-w98 .tb .ic { width: 14px; height: 14px; }
+  .t-w98 .ctls span { width: 16px; height: 14px; background: #c0c0c0; color: #000; font-size: 9px; line-height: 14px; text-align: center;
+    box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080; }
+  .t-w98 .dot { background: #fff; width: 6px; height: 6px; border-radius: 0; }
+  .t-w98 .bd { background: #fff; margin-top: 2px; box-shadow: inset 1px 1px #808080; }
+  /* The file transfer dialog's bar: a sunken well, navy blocks with a pixel of grey between. */
+  .t-w98 { --fill: repeating-linear-gradient(90deg, #000080 0 8px, transparent 8px 10px); --track: #c0c0c0; --fail: repeating-linear-gradient(90deg, #800000 0 8px, transparent 8px 10px); }
+  .t-w98 .well { position: relative; flex: none; width: 64px; height: 12px; background: #c0c0c0; box-shadow: inset 1px 1px #808080, inset -1px -1px #fff; }
+  .t-w98 .well .prog { inset: 2px; height: auto; --fill: repeating-linear-gradient(90deg, #000080 0 5px, transparent 5px 6px); --fail: repeating-linear-gradient(90deg, #800000 0 5px, transparent 5px 6px); }
+  .t-w98 .bar { height: 30px; background: #c0c0c0; box-shadow: inset 0 1px #dfdfdf, inset 0 2px #fff; padding: 2px 4px; gap: 3px; }
+  .t-w98 .task { height: 22px; padding: 0 6px 3px 4px; font: 11px Tahoma, "MS Sans Serif", sans-serif; color: #000; max-width: 132px; background: #c0c0c0; gap: 4px;
+    box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf; }
+  .t-w98 .task.active { font-weight: bold; background: repeating-conic-gradient(#c0c0c0 0 25%, #fff 0 50%) 0 0 / 2px 2px;
+    box-shadow: inset -1px -1px #fff, inset 1px 1px #000, inset -2px -2px #dfdfdf, inset 2px 2px #808080; }
+  .t-w98 .task .ic { width: 14px; height: 14px; }
+  .t-w98 .task .prog { left: 3px; right: 3px; bottom: 3px; height: 3px; --fill: repeating-linear-gradient(90deg, #000080 0 4px, transparent 4px 5px); --fail: repeating-linear-gradient(90deg, #800000 0 4px, transparent 4px 5px); }
+  .t-w98 .task .dot { background: #000; width: 5px; height: 5px; border-radius: 0; }
+
+  .choice { display: inline-block; font-size: 11px; font-weight: 700; color: #3544b1; background: #e3e6f5; border-radius: 3px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
+  @media (max-width: 760px) { .row, .legend { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+<main>
+  <h1>A busy window says so on its own chrome</h1>
+  <p class="lede">Issue #108. Fifty images dropped into a Media window: the window keeps working, and both its title bar
+    and its taskbar button show how far the upload has got, so a minimized or buried window still says it is busy.
+    Every theme draws the <b>same element</b> in its own idiom. Movement (the sweep, the stripes) is shown as a still.</p>
+
+  <section>
+    <h2>The four states, in every row below</h2>
+    <div class="legend">
+      <div><b>Known total</b>14 of 50 files done. Draws as a proportion. Several uploads in one window are summed into one bar.</div>
+      <div><b>No known total</b>Something is running and nobody knows how much is left. Activity, never a made-up percentage.</div>
+      <div><b>Failed</b>The bar stops where it failed and turns the danger colour. Stays while core still shows the failed files, then clears.</div>
+      <div><b>Busy and unsaved</b>The unsaved dot keeps its place beside the title. Progress lives somewhere else, so the two never compete.</div>
+    </div>
+  </section>
+
+  <!-- ======================= UMBRACO ======================= -->
+  <section class="t-umb">
+    <h2>Umbraco</h2>
+    <p class="note">Two candidates for the title bar. <b>A</b> is the base drawing every theme inherits: a 3px strip on the
+      titlebar's bottom edge. <b>B</b> is a theme choice: the same element drawn as the window loader's turning ring,
+      round the app icon. The ring overhangs the 16px icon by 4px into the gap that is already there, so it costs no width.</p>
+
+    <h3>A · Edge strip <span class="choice">base</span></h3>
+    <div class="row">
+      <div class="cell"><div class="cap">Known total, 28%</div><div class="stage"><div class="win">
+        <div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="ctls"><span>↻</span><span>–</span><span>□</span><span>✕</span></span>
+          <i class="prog" style="--p:.28"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="cap">No known total</div><div class="stage"><div class="win">
+        <div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="ctls"><span>↻</span><span>–</span><span>□</span><span>✕</span></span>
+          <i class="prog ind"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="cap">Failed at 62%</div><div class="stage"><div class="win">
+        <div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="ctls"><span>↻</span><span>–</span><span>□</span><span>✕</span></span>
+          <i class="prog fail" style="--p:.62"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="cap">Busy and unsaved</div><div class="stage"><div class="win">
+        <div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media <span class="dot"></span></span><span class="ctls"><span>↻</span><span>–</span><span>□</span><span>✕</span></span>
+          <i class="prog" style="--p:.28"></i></div><div class="bd"></div></div></div></div>
+    </div>
+
+    <h3>B · Ring round the icon <span class="choice">theme</span></h3>
+    <div class="row">
+      <div class="cell"><div class="stage"><div class="win">
+        <div class="tb"><span class="ic"><i class="ring" style="--p:.28"></i><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">&nbsp;Media</span><span class="ctls"><span>↻</span><span>–</span><span>□</span><span>✕</span></span></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win">
+        <div class="tb"><span class="ic"><i class="ring ind"></i><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">&nbsp;Media</span><span class="ctls"><span>↻</span><span>–</span><span>□</span><span>✕</span></span></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win">
+        <div class="tb"><span class="ic"><i class="ring fail" style="--p:.62"></i><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">&nbsp;Media</span><span class="ctls"><span>↻</span><span>–</span><span>□</span><span>✕</span></span></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win">
+        <div class="tb"><span class="ic"><i class="ring" style="--p:.28"></i><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">&nbsp;Media <span class="dot"></span></span><span class="ctls"><span>↻</span><span>–</span><span>□</span><span>✕</span></span></div><div class="bd"></div></div></div></div>
+    </div>
+
+    <h3>Taskbar: the ring again, round the button's icon</h3>
+    <div class="stage" style="padding:12px"><div class="bar">
+      <span class="task"><span class="ic"><i class="ring" style="--p:.28"></i><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span></span>
+      <span class="task"><span class="ic"><i class="ring ind"></i><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span></span>
+      <span class="task"><span class="ic"><i class="ring fail" style="--p:.62"></i><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span></span>
+      <span class="task active"><span class="ic"><i class="ring" style="--p:.28"></i><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span><span class="dot"></span></span>
+    </div></div>
+    <p class="tip">Hovering a button reads "Media · Uploading 14 of 50", and a failure reads "Media · 3 of 50 failed to upload".</p>
+  </section>
+
+  <!-- ======================= UMBRACO 4 ======================= -->
+  <section class="t-u4">
+    <h2>Umbraco 4</h2>
+    <p class="note">The base strip, given v4's bevel: a 4px glossy blue bar under a hairline, the colour v4 used for a selection.</p>
+    <div class="row">
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="ctls"><span></span><span></span><span></span></span><i class="prog" style="--p:.28"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="ctls"><span></span><span></span><span></span></span><i class="prog ind"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="ctls"><span></span><span></span><span></span></span><i class="prog fail" style="--p:.62"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media <span class="dot"></span></span><span class="ctls"><span></span><span></span><span></span></span><i class="prog" style="--p:.28"></i></div><div class="bd"></div></div></div></div>
+    </div>
+    <h3>Taskbar: the same bar along the foot of the button</h3>
+    <div class="stage" style="padding:12px"><div class="bar">
+      <span class="task"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span><i class="prog" style="--p:.28"></i></span>
+      <span class="task"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span><i class="prog ind"></i></span>
+      <span class="task"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span><i class="prog fail" style="--p:.62"></i></span>
+      <span class="task active"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span><span class="dot"></span><i class="prog" style="--p:.28"></i></span>
+    </div></div>
+  </section>
+
+  <!-- ======================= macOS ======================= -->
+  <section class="t-mac">
+    <h2>macOS</h2>
+    <p class="note">A 2px accent line under the title bar, as Safari draws page loading. In the dock, Finder's copy bar:
+      a capsule laid over the foot of the icon, striped when there is no total. The unsaved dot keeps its corner of the tile.</p>
+    <div class="row">
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="ic"></span><span class="t">Media</span><span style="width:47px"></span><i class="prog" style="--p:.28"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="ic"></span><span class="t">Media</span><span style="width:47px"></span><i class="prog ind"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="ic"></span><span class="t">Media</span><span style="width:47px"></span><i class="prog fail" style="--p:.62"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="ic"></span><span class="t">Media <span class="dot"></span></span><span style="width:47px"></span><i class="prog" style="--p:.28"></i></div><div class="bd"></div></div></div></div>
+    </div>
+    <h3>Dock</h3>
+    <div class="stage" style="padding:12px"><div class="bar">
+      <span class="task"><span class="tile"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><i class="prog" style="--p:.28"></i></span><span class="run"></span></span>
+      <span class="task"><span class="tile"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><i class="prog ind"></i></span><span class="run"></span></span>
+      <span class="task"><span class="tile"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><i class="prog fail" style="--p:.62"></i></span><span class="run"></span></span>
+      <span class="task"><span class="tile"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><i class="prog" style="--p:.28"></i><span class="badge"></span></span><span class="run"></span></span>
+    </div></div>
+  </section>
+
+  <!-- ======================= WINDOWS 11 ======================= -->
+  <section class="t-w11">
+    <h2>Windows 11</h2>
+    <p class="note">Windows' own taskbar progress: the short mark under the icon grows into a green bar, red when it fails.
+      The title bar gets the same green as a 2px line.</p>
+    <div class="row">
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic" style="color:#1d6fd1"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="ctls"><span>–</span><span>□</span><span>✕</span></span><i class="prog" style="--p:.28"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic" style="color:#1d6fd1"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="ctls"><span>–</span><span>□</span><span>✕</span></span><i class="prog ind"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic" style="color:#1d6fd1"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="ctls"><span>–</span><span>□</span><span>✕</span></span><i class="prog fail" style="--p:.62"></i></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic" style="color:#1d6fd1"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media <span class="dot"></span></span><span class="ctls"><span>–</span><span>□</span><span>✕</span></span><i class="prog" style="--p:.28"></i></div><div class="bd"></div></div></div></div>
+    </div>
+    <h3>Taskbar: the running mark becomes the bar</h3>
+    <div class="stage" style="padding:12px"><div class="bar">
+      <span class="task"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><i class="prog" style="--p:.28"></i></span>
+      <span class="task"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><i class="prog ind"></i></span>
+      <span class="task"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><i class="prog fail" style="--p:.62"></i></span>
+      <span class="task active"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><i class="prog" style="--p:.28"></i><span class="badge"></span></span>
+      <span class="task"><span class="ic" style="color:#c46b00"><svg viewBox="0 0 24 24"><path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6"/></svg></span><span class="mark"></span></span>
+    </div></div>
+    <p class="tip">The last button is an idle window for comparison: its ordinary grey running mark.</p>
+  </section>
+
+  <!-- ======================= WINDOWS 98 ======================= -->
+  <section class="t-w98">
+    <h2>Windows 98</h2>
+    <p class="note">The file transfer dialog's bar: navy blocks in a sunken well, set into the caption before the
+      controls, where the caption is empty anyway. Maroon blocks when it fails. On the taskbar, a short run of the same blocks along the foot of the button.</p>
+    <div class="row">
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="well"><i class="prog" style="--p:.28"></i></span><span class="ctls"><span>_</span><span>□</span><span>×</span></span></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="well"><i class="prog ind"></i></span><span class="ctls"><span>_</span><span>□</span><span>×</span></span></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media</span><span class="well"><i class="prog fail" style="--p:.62"></i></span><span class="ctls"><span>_</span><span>□</span><span>×</span></span></div><div class="bd"></div></div></div></div>
+      <div class="cell"><div class="stage"><div class="win"><div class="tb"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="t">Media <span class="dot"></span></span><span class="well"><i class="prog" style="--p:.28"></i></span><span class="ctls"><span>_</span><span>□</span><span>×</span></span></div><div class="bd"></div></div></div></div>
+    </div>
+    <h3>Taskbar</h3>
+    <div class="stage" style="padding:12px"><div class="bar">
+      <span class="task"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span><i class="prog" style="--p:.28"></i></span>
+      <span class="task"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span><i class="prog ind"></i></span>
+      <span class="task"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span><i class="prog fail" style="--p:.62"></i></span>
+      <span class="task active"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span><span class="lbl">Media</span><span class="dot"></span><i class="prog" style="--p:.28"></i></span>
+    </div></div>
+    <p class="tip">The well takes width from the caption's empty middle, never height, so the window's geometry does not move when work starts.</p>
+  </section>
+</main>
+</body>
+</html>

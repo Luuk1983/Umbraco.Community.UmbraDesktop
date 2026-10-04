@@ -51,6 +51,29 @@ const apps = (manifests.filter((manifest) => manifest.type === 'umbraDesktopApp'
   (app) => app.name in TAGS,
 );
 
+/**
+ * How long the page's first painted frame may take. Measured 2026-10-03: the first frame that has
+ * anything to paint took 400 to 2,300ms, against 16ms for every frame after it, and on a loaded
+ * machine it went past the 5-second test timeout. The case that waited on it was always Notepad's,
+ * because Notepad is first in the list, so a cost of the page looked like a fault of one app. A
+ * bare frame does not take it: with nothing on the page yet, that frame comes back in 0ms.
+ */
+const FIRST_PAINT_TIMEOUT_MS = 30_000;
+
+/**
+ * Paints some plain text once before any case runs, so the page's first paint is paid here under
+ * its own limit and every case measures only its app under the usual 5 seconds. Measured with it:
+ * Notepad's first frame went from 367-438ms to 76-114ms, which is its own textarea, and every other
+ * app's stayed at a frame. The frame wait inside each case stays: that frame is where resize
+ * observers run, which is how Clock's overflow was found.
+ */
+before(async function () {
+  this.timeout(FIRST_PAINT_TIMEOUT_MS);
+  const warmUp = await fixture<HTMLDivElement>(html`<div style="width: 400px; height: 300px">Warming up</div>`);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  warmUp.remove();
+});
+
 for (const app of apps) {
   for (const which of ['defaultSize', 'minSize'] as const) {
     for (const theme of THEMES) {

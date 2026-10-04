@@ -1,4 +1,4 @@
-import { unsavedSentence } from './unsaved-message.js';
+import { busySentence, unsavedSentence } from './unsaved-message.js';
 import type { UmbraDesktopTerm } from './unsaved-message.js';
 
 export type { UmbraDesktopTerm };
@@ -18,14 +18,16 @@ export type { UmbraDesktopTerm };
  * @param unsavedCount How many open windows are holding unsaved changes.
  * @param conflictedCount How many of those have also been changed by somebody else.
  * @param term The localizer, e.g. `this.localize.term` bound to the calling element.
+ * @param busyCount How many open windows have work in flight, which leaving would stop. Last and
+ *   defaulted so the callers that predate it keep their meaning.
  * @returns The dialog body.
  */
 export function exitDialogContent(
   unsavedCount: number,
   conflictedCount: number,
   term: UmbraDesktopTerm,
+  busyCount = 0,
 ): string {
-  const question = term('umbraDesktop_exitQuestion');
-  const warning = unsavedSentence(unsavedCount, conflictedCount, term);
-  return warning ? `${warning} ${question}` : question;
+  const parts = [unsavedSentence(unsavedCount, conflictedCount, term), busySentence(busyCount, term)];
+  return [...parts.filter(Boolean), term('umbraDesktop_exitQuestion')].join(' ');
 }

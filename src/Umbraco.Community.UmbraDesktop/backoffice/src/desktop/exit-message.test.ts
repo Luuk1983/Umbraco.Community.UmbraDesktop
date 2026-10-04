@@ -59,3 +59,10 @@ describe('windows that also changed elsewhere', () => {
     expect(exitDialogContent(0, 2, term)).to.equal('umbraDesktop_exitQuestion');
   });
 });
+
+it('says how many windows are still busy, once, before the question', () => {
+  const content = exitDialogContent(1, 0, term, 2);
+  expect(content).to.equal(
+    `${term('umbraDesktop_exitUnsavedOne')} ${term('umbraDesktop_exitBusy', 2)} ${term('umbraDesktop_exitQuestion')}`,
+  );
+});

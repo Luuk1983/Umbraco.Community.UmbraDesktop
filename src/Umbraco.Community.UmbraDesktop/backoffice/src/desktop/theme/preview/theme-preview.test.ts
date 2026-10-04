@@ -245,3 +245,27 @@ it('reserves the taskbar the way the desktop does, so a bottom corner clears it'
   const { scene } = await previewOf(UMBRADESKTOP_THEMES[0]);
   expect(getComputedStyle(scene).getPropertyValue('--umbradesktop-taskbar-reserve').trim()).to.not.equal('');
 });
+
+it('splits the window black and white under high contrast, so the setting reads at this size', async () => {
+  // Umbraco's high contrast is a light scheme, so a preview painted from its tokens looked like
+  // Light under four themes and dark under macOS, which states its own. Neither said "contrast".
+  for (const theme of UMBRADESKTOP_THEMES) {
+    const element = await fixture<UmbraDesktopThemePreviewElement>(
+      html`<umbradesktop-theme-preview .theme=${theme} .variant=${'dark'} .highContrast=${true}></umbradesktop-theme-preview>`,
+    );
+    await element.updateComplete;
+
+    const image = getComputedStyle(element.shadowRoot!.querySelector('.body')!).backgroundImage;
+
+    expect(image, theme.name).to.contain('rgb(0, 0, 0)').and.contain('rgb(255, 255, 255)');
+  }
+});
+
+it('leaves the window body to the theme when contrast is not high', async () => {
+  const element = await fixture<UmbraDesktopThemePreviewElement>(
+    html`<umbradesktop-theme-preview .theme=${UMBRADESKTOP_THEMES[0]}></umbradesktop-theme-preview>`,
+  );
+  await element.updateComplete;
+
+  expect(getComputedStyle(element.shadowRoot!.querySelector('.body')!).backgroundImage).to.equal('none');
+});
