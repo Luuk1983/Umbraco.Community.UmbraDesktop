@@ -49,6 +49,7 @@ import {
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-token';
 import { minWindowSizeForContent, windowSizeForContent } from './window-chrome';
 import { windowShowsPath } from './path/crumbs.js';
+import { openDesktopSettings } from './settings/open-settings.js';
 import { appAtLocation, restoredUrl } from './windows/layout';
 import type { UmbraDesktopSavedWindow } from './windows/layout';
 import type { UmbraDesktopThemeMetrics } from './theme/types';
@@ -219,6 +220,12 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * @param options.location The app's own location string.
    */
   public open(app: UmbraDesktopApp, options: { location?: string } = {}): void {
+    // Every route to an app comes through here, so this is the one place a tile that opens settings
+    // has to be caught: no window is made, so the taskbar, reopen-windows and allowMultiple never see it.
+    if (app.opensSettings) {
+      this._openSettings(app.opensSettings);
+      return;
+    }
     const current = this.#windows.getValue();
     if (app.allowMultiple === false) {
       const existing = findAppWindow(current, app.alias);
@@ -830,6 +837,14 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Open Desktop settings at a package. A seam, like `_askToDiscard`, so tests need no modal manager.
+   * @param packageName The package's name.
+   */
+  protected _openSettings(packageName: string): void {
+    void openDesktopSettings(this, packageName);
   }
 
   /**

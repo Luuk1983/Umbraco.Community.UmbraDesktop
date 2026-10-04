@@ -94,6 +94,8 @@ export interface UmbraDesktopApp {
    * size it opened at; the window manager enforces it, so every route to a new size is covered.
    */
   resizable?: boolean;
+  /** Open Desktop settings at this package instead of a window. */
+  opensSettings?: string;
   /** Sort weight within its group (ascending). */
   weight?: number;
   /** Curatorial group alias; undefined → the reserved "More" group. */
@@ -144,6 +146,8 @@ export interface UmbraDesktopRegisteredApp {
   allowMultiple?: boolean;
   /** The manifest's `meta.resizable`: whether the window may be resized or maximized. */
   resizable?: boolean;
+  /** Open Desktop settings at this package instead of a window. */
+  opensSettings?: string;
 }
 
 /** A position/size rectangle in desktop pixels. */

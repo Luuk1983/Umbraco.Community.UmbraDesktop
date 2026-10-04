@@ -118,7 +118,10 @@ export function describeDesk(
   // and not the desktop: it cannot offer to open the Log Viewer, and it cannot turn a name the user
   // said out loud into something openable. The list is already gated by the user's permissions, so
   // naming an app here never promises something they cannot reach.
-  const apps = desk.getApps().map((app) => localise(app.name));
+  // A shortcut to Desktop settings is still openable by name, but it opens no window, so say so.
+  const apps = desk
+    .getApps()
+    .map((app) => (app.opensSettings ? `${localise(app.name)} (opens Desktop settings)` : localise(app.name)));
   if (apps.length > 0) {
     parts.push(`Apps that can be opened in a window: ${apps.join(', ')}.`);
   }

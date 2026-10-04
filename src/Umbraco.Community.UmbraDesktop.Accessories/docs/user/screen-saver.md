@@ -7,8 +7,9 @@ sidebar_position: 9
 
 # Screen Saver
 
-Screen Saver is Windows 98's Screen Saver tab in a window: a little monitor showing the screen saver
-you chose, a list to choose from, and how long it waits. There are three:
+Screen Saver is Windows 98's Screen Saver tab, in Desktop settings under **UmbraDesktop
+Accessories**: a little monitor showing the screen saver you chose, a list to choose from, and how
+long it waits. There are three:
 
 - **Starfield**, flying through space.
 - **Mystify**, two shapes bouncing off the edges of the screen, trailing echoes and slowly changing
@@ -19,10 +20,13 @@ It is off until you choose one.
 
 ## Turn it on
 
-1. Open **Screen Saver** from the **Accessories** group.
+1. To open the settings, select **Screen Saver** in the launcher's **Accessories** group. Desktop
+   settings opens at **UmbraDesktop Accessories**, with the screen saver in its **Screen Saver** box.
 2. Choose a screen saver in the list.
 3. Choose how many minutes it waits in **Wait**, from 1 to 30.
 4. Optional: to see it full screen, select **Preview**.
+
+The same box is in Desktop settings under **Add-ons** > **UmbraDesktop Accessories**.
 
 To turn it off, choose **(None)**. Your choice is stored on your Umbraco account, so it follows you
 to any browser you sign in on.

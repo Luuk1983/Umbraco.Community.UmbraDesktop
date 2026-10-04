@@ -199,6 +199,9 @@ export default {
     taskbarFullscreenBrowserMac: 'Je browser staat op volledig scherm. Druk op Control-Command-F om het te verlaten.',
     taskbarFullscreenBrowserChromeOs: 'Je browser staat op volledig scherm. Druk op de toets voor volledig scherm om het te verlaten.',
     settingsBack: 'Terug naar bureaubladinstellingen',
+    settingsAddOns: 'Add-ons',
+    settingsPackageAttribution: 'Deze instellingen komen uit de add-on %0%.',
+    settingsBoxLoadFailed: 'Dit deel van de instellingen kon niet worden geladen.',
     // desktop settings — startup
     bootIntoDesktop: 'Open het bureaublad als ik inlog',
     bootDescription:

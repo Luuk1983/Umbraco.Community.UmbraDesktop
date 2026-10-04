@@ -319,7 +319,7 @@ it('updates an existing row in place', async () => {
   expect(client.rows[0].value).to.equal('changed');
 });
 
-it('keeps the first of several duplicate rows and deletes the rest', async () => {
+it('keeps one of several duplicate rows, the lowest key, and deletes the rest', async () => {
   const client = fakeClient([
     row('settings', 'one', 'key-one'),
     row('settings', 'two', 'key-two'),
@@ -367,6 +367,74 @@ it('does not remember a value the server refused to store', async () => {
   await repository.write('settings', 'rejected');
 
   expect(await repository.read('settings')).to.equal('stored');
+});
+
+describe('two tabs, one account', () => {
+  // Each tab has its own repository and reads the group once, but the rows are one set on the
+  // server. Nothing tells a tab what another wrote, so every rule below is about a tab whose view of
+  // the group is out of date never making a second row, and every tab settling on the same row.
+
+  it('makes one row when two tabs each write an identifier neither had when it loaded', async () => {
+    const client = fakeClient();
+    const tabA = new UmbraDesktopUserDataRepository(GROUP, client);
+    const tabB = new UmbraDesktopUserDataRepository(GROUP, client);
+    await Promise.all([tabA.read('settings'), tabB.read('settings')]);
+
+    await tabA.write('settings', 'from A');
+    await tabB.write('settings', 'from B');
+
+    expect(client.rows.map((row) => row.value)).to.deep.equal(['from B']);
+  });
+
+  it('reads the group once for a first write that has only just read it', async () => {
+    // Looking again before a create costs a request; it is only worth it when the view is older
+    // than this write.
+    const client = fakeClient();
+    const repository = new UmbraDesktopUserDataRepository(GROUP, client);
+
+    await repository.write('settings', 'first');
+
+    expect(reads(client)).to.equal(1);
+  });
+
+  it('reads the lowest key of several duplicates, whatever order the server lists them in', async () => {
+    const client = fakeClient([row('settings', 'second', 'key-b'), row('settings', 'first', 'key-a')]);
+    const repository = new UmbraDesktopUserDataRepository(GROUP, client);
+
+    expect(await repository.read('settings')).to.equal('first');
+  });
+
+  it('keeps the lowest key of several duplicates, so every tab keeps the same one', async () => {
+    const client = fakeClient([row('settings', 'second', 'key-b'), row('settings', 'first', 'key-a')]);
+    const repository = new UmbraDesktopUserDataRepository(GROUP, client);
+
+    await repository.write('settings', 'winner');
+
+    expect(client.rows.map((row) => `${row.key}=${row.value}`)).to.deep.equal(['key-a=winner']);
+  });
+
+  it('moves to the row that survived when another tab removed its own as a duplicate', async () => {
+    const client = fakeClient([row('settings', 'mine', 'key-b')]);
+    const repository = new UmbraDesktopUserDataRepository(GROUP, client);
+    await repository.read('settings');
+    // Meanwhile another tab's row turned up with a lower key, and a third tab's save removed this
+    // tab's row as the duplicate.
+    client.rows.push(row('settings', 'theirs', 'key-a'));
+    client.rows.splice(client.rows.findIndex((candidate) => candidate.key === 'key-b'), 1);
+
+    expect(await repository.write('settings', 'latest')).to.equal(true);
+    expect(client.rows.map((row) => `${row.key}=${row.value}`)).to.deep.equal(['key-a=latest']);
+  });
+
+  it('does not create a row when an update is refused and its row is still there', async () => {
+    const client = fakeClient([row('settings', 'stored')]);
+    const repository = new UmbraDesktopUserDataRepository(GROUP, client);
+    await repository.read('settings');
+    client.failWrites(true);
+
+    expect(await repository.write('settings', 'refused')).to.equal(false);
+    expect(client.calls.some((call) => call.op === 'create')).to.equal(false);
+  });
 });
 
 it('serves a written value without reading the group again', async () => {

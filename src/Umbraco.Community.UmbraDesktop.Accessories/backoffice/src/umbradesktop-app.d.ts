@@ -1,8 +1,8 @@
 import type { ManifestElement, ManifestWithDynamicConditions } from '@umbraco-cms/backoffice/extension-api';
 
 /**
- * The desktop's manifest types, `umbraDesktopApp`, `umbraDesktopCatalogue` and `umbraDesktopDocs`, declared here because
- * a consuming package cannot import them.
+ * The desktop's manifest types, `umbraDesktopApp`, `umbraDesktopCatalogue`, `umbraDesktopDocs` and
+ * `umbraDesktopPackageSettings`, declared here because a consuming package cannot import them.
  *
  * **This file is a hand-written copy of a contract that lives in another package, and it exists
  * because there is currently no other way.** UmbraDesktop's own `app.extension.ts` and
@@ -42,6 +42,11 @@ interface MetaUmbraDesktopApp {
   allowMultiple?: boolean;
   /** Whether the window may be resized or maximized. Default: allowed. */
   resizable?: boolean;
+  /**
+   * A package name: choosing the tile opens Desktop settings at that package's row instead of a
+   * window, and `element` is then never loaded. How the Screen Saver tile still leads to its settings.
+   */
+  opensSettings?: string;
 }
 
 /**
@@ -133,12 +138,28 @@ interface ManifestUmbraDesktopDocs extends ManifestWithDynamicConditions {
   meta: MetaUmbraDesktopDocs;
 }
 
+/** Copy of the host's `MetaUmbraDesktopPackageSettings`. See the top of this file for why it is a copy. */
+interface MetaUmbraDesktopPackageSettings {
+  /** The package's name, plain text: the row it is shown under. */
+  package: string;
+  /** The box's heading, a localisation token or a literal. */
+  label: string;
+}
+
+/** One box of this package's settings in Desktop settings. Only ever gains optional fields, like the others. */
+interface ManifestUmbraDesktopPackageSettings extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions {
+  /** Discriminates this manifest from every other extension type. */
+  type: 'umbraDesktopPackageSettings';
+  /** Its package and heading. */
+  meta: MetaUmbraDesktopPackageSettings;
+}
+
 declare global {
   /**
-   * Adds `umbraDesktopApp`, `umbraDesktopCatalogue` and `umbraDesktopDocs` to Umbraco's own extension type map, which is
-   * what makes the manifests assignable to `UmbExtensionManifest` and so accepted in this package's
-   * `manifests` array. Umbraco's own extension kinds declare themselves the same way, and so does
-   * the host.
+   * Adds `umbraDesktopApp`, `umbraDesktopCatalogue`, `umbraDesktopDocs` and `umbraDesktopPackageSettings`
+   * to Umbraco's own extension type map, which is what makes the manifests assignable to
+   * `UmbExtensionManifest` and so accepted in this package's `manifests` array. Umbraco's own
+   * extension kinds declare themselves the same way, and so does the host.
    */
   interface UmbExtensionManifestMap {
     /** This package's desktop apps. */
@@ -147,5 +168,7 @@ declare global {
     umbraDesktopCatalogue: ManifestUmbraDesktopCatalogue;
     /** This package's docs, for the Help app. */
     umbraDesktopDocs: ManifestUmbraDesktopDocs;
+    /** This package's boxes in Desktop settings. */
+    umbraDesktopPackageSettings: ManifestUmbraDesktopPackageSettings;
   }
 }

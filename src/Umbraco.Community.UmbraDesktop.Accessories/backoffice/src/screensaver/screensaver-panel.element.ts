@@ -5,7 +5,7 @@ import {
   SCREENSAVER_PADDING_PX,
   SCREENSAVER_ROW_PX,
   SCREENSAVER_STAND_PX,
-  SCREENSAVER_WINDOW,
+  SCREENSAVER_MONITOR,
 } from './constants.js';
 import { AREA } from '../shared/area.js';
 import { accessoryStyles } from '../shared/styles.js';
@@ -31,14 +31,14 @@ const SAVER_NAMES: Record<AccessoriesScreensaverId, [key: string, english: strin
 };
 
 /**
- * The Screen Saver window: Windows 98's Screen Saver tab, one control for one control. A monitor
- * running the chosen saver, the list of savers with (None) at the top, "Wait _ minutes", and a
- * Preview button that runs it full screen.
+ * The screen saver's settings, as a box in Desktop settings under UmbraDesktop Accessories: Windows
+ * 98's Screen Saver tab, one control for one control. A monitor running the chosen saver, the list of
+ * savers with (None) at the top, "Wait _ minutes", and a Preview button that runs it full screen.
  *
- * This window is the only place the screen saver is set. Like every other setting on the desktop
- * there is no OK or Apply: a choice applies the moment it is made, and the idle watcher follows it
- * without being told. It is stored in the user's account, so it follows them to any browser; while
- * a save has not gone through, the hint line says so.
+ * Like every other setting on the desktop there is no OK or Apply: a choice applies the moment it is
+ * made, and the idle watcher follows it without being told. It is stored in the user's account
+ * through the desktop's package settings store; while a save has not gone through, the hint line
+ * says so.
  *
  * (None) switches the screensaver off and keeps the saver that was chosen, so switching it back on
  * later is one choice rather than two.
@@ -121,7 +121,7 @@ export class ScreensaverPanelElement extends UmbLitElement {
   /**
    * Run the chosen saver full screen, as the watcher would, until the first key, click or real
    * movement. Appended to the page rather than kept in this shadow root, so it covers the whole
-   * backoffice and not only this window.
+   * backoffice and not only this box.
    */
   #preview(): void {
     const element = document.createElement('umbradesktop-screensaver');
@@ -132,8 +132,8 @@ export class ScreensaverPanelElement extends UmbLitElement {
   /**
    * The line under the controls: what the screensaver does, or, when the account has not answered,
    * that the choice on show is not the stored one. In this line rather than a toast, because the
-   * person who just made the choice is looking at this window, and in the same fixed-height slot, so
-   * a failure does not move the controls or change the window's size.
+   * person who just made the choice is looking at this box, and in the same fixed-height slot, so
+   * a failure does not move the controls.
    * @returns The text.
    */
   #hint(): string {
@@ -146,7 +146,7 @@ export class ScreensaverPanelElement extends UmbLitElement {
       case 'unread':
         return this.#term(
           'screensaverUnread',
-          'Your saved choice could not be read, so this shows the default. Open this window again to retry.',
+          'Your saved choice could not be read, so this shows the default. Close Desktop settings and open them again to retry.',
         );
       default:
         return this.#term(
@@ -157,7 +157,7 @@ export class ScreensaverPanelElement extends UmbLitElement {
   }
 
   /**
-   * The window.
+   * The box.
    * @returns The monitor, the saver list with Preview, and the wait.
    */
   override render() {
@@ -202,7 +202,6 @@ export class ScreensaverPanelElement extends UmbLitElement {
     accessoryStyles,
     css`
       :host {
-        padding: ${SCREENSAVER_PADDING_PX}px;
         gap: ${SCREENSAVER_PADDING_PX}px;
         align-items: center;
       }
@@ -210,8 +209,8 @@ export class ScreensaverPanelElement extends UmbLitElement {
       .monitor {
         position: relative;
         flex-shrink: 0;
-        width: ${SCREENSAVER_WINDOW.monitor.w}px;
-        height: ${SCREENSAVER_WINDOW.monitor.h}px;
+        width: ${SCREENSAVER_MONITOR.monitor.w}px;
+        height: ${SCREENSAVER_MONITOR.monitor.h}px;
         padding: ${SCREENSAVER_BEZEL_PX}px;
         padding-bottom: ${SCREENSAVER_BEZEL_PX + SCREENSAVER_STAND_PX}px;
       }
@@ -242,8 +241,8 @@ export class ScreensaverPanelElement extends UmbLitElement {
       .screen {
         position: relative;
         z-index: 1;
-        width: ${SCREENSAVER_WINDOW.screen.w}px;
-        height: ${SCREENSAVER_WINDOW.screen.h}px;
+        width: ${SCREENSAVER_MONITOR.screen.w}px;
+        height: ${SCREENSAVER_MONITOR.screen.h}px;
         overflow: hidden;
         background: #000;
         box-shadow: 0 0 0 1px var(--umbradesktop-app-border, var(--uui-color-text-alt));

@@ -18,7 +18,8 @@ the manifest type. Minesweeper was the first one and Snake the second, both in t
 calculator, a colour picker or a notepad would work the same way.
 
 The Accessories package is the fullest example: Notepad, Paint, Sticky Notes, Calculator, Character
-Map, Clock, Screen Saver, Disk Cleanup and System Information are each one of these.
+Map, Clock, Disk Cleanup and System Information are each one of these. Its Screen Saver tile is an
+app too, but one that opens Desktop settings rather than a window (`meta.opensSettings`, below).
 
 ---
 
@@ -77,6 +78,7 @@ an app is for the case where there is no section, because there is no route.
 | `meta.minSize` | no | The smallest box your app can work in, again yours rather than the window's. Falls back to the desktop's global minimum, and is **floored** at what the chrome itself needs. See §2.1 |
 | `meta.allowMultiple` | no | Whether two windows of your app may be open at once. Defaults to allowed, and leaving it there is almost always right: every other app on this desktop opens as many windows as the user asks for, so `false` makes yours the one tile that quietly refocuses instead. Set it only if a second instance genuinely cannot work — module-level state, an exclusive resource — and note that two instances of an app whose state lives in its own element share nothing at all |
 | `meta.resizable` | no | Whether the user may resize or maximize your window. Defaults to allowed. `false` keeps the window at `defaultSize` for its whole life, the way Minesweeper's was on every Windows up to XP: no resize handles, no snapping to a screen edge, a titlebar double-click does nothing, and there is no maximize button, which is left out rather than greyed, as Windows does. The window still moves, minimizes and closes. The window manager enforces it, not the titlebar, so every route to a new size is covered. Worth setting only when your content does not reflow and a bigger window would just be empty margin; Minesweeper and Snake set it, while Solitaire stays resizable |
+| `meta.opensSettings` | no | A package name. Choosing the tile opens Desktop settings at that package's row instead of a window, and `element` is then not needed. For a tool whose settings live in Desktop settings. See [Package settings](package-settings.md#5-opening-your-settings) |
 | `conditions` | no | Umbraco's own conditions, and they are honoured: the desktop observes these manifests through `UmbExtensionsManifestInitializer`, so an app whose conditions are unmet never reaches the launcher, and does so **silently**: nothing is logged, because a condition doing its job is not a fault (§8). **No conditions means always available**, which is usually right: reaching the desktop at all already requires the Desktop section |
 
 **`element` is required in a different sense from everything else marked required here**, and the
@@ -806,9 +808,11 @@ accident you want to miss. If two packages claim one alias, the one whose manife
 weight keeps it and the console names both.
 
 **Three things can make your app not appear, and only two of them say so.** An alias another
-package's manifest also claims, with the higher weight. A manifest the desktop found no `element` in, which includes the case where you wrote `js`
-instead (§3). Both print a line naming your alias. The third is an **unmet `condition`** (§2), and
-it is silent by design: an app whose condition is unmet is doing exactly what the manifest asked, so
+package's manifest also claims, with the higher weight. A manifest the desktop found no `element`
+in, which includes the case where you wrote `js` instead (§3). Both print a line naming your alias.
+An app with `meta.opensSettings` needs no `element`, so the second does not apply to it (see
+[Package settings](package-settings.md#5-opening-your-settings)). The third is an **unmet
+`condition`** (§2), and it is silent by design: an app whose condition is unmet is doing exactly what the manifest asked, so
 there is nothing to warn about, and Umbraco removes it from the list before the desktop sees it.
 That makes it the one to suspect first when your tile is missing and the console has nothing in it,
 and the reason to reach for `conditions` only when you mean it.

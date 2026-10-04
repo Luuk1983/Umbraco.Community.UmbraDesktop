@@ -50,6 +50,12 @@ export interface MetaUmbraDesktopApp {
    * app whose content does not reflow, where a bigger window is only a bigger empty margin.
    */
   resizable?: boolean;
+  /**
+   * A package name: choosing this tile opens Desktop settings at that package's row instead of a
+   * window, and `element` is then not needed (design §6). For a tool whose settings moved into
+   * Desktop settings, such as the Accessories Screen Saver, so the tile people know still leads there.
+   */
+  opensSettings?: string;
 }
 
 /**

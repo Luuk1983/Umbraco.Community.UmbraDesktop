@@ -34,6 +34,18 @@ class ProbeManager extends UmbraDesktopWindowManagerContext {
     this.asked += 1;
     return this.answer;
   }
+
+  /** Package names settings were opened at, instead of a modal. */
+  public settingsOpened: string[] = [];
+
+  /**
+   * Record the request instead of opening the settings modal, which needs a booted backoffice's
+   * modal manager.
+   * @param packageName The package settings would have opened at.
+   */
+  protected override _openSettings(packageName: string): void {
+    this.settingsOpened.push(packageName);
+  }
 }
 
 /** Every host to tear down after a test. */
@@ -817,6 +829,13 @@ describe('restoring saved windows', () => {
     ctx.setLocation(id, '/umbraco/section/media');
     expect(windowsOf(ctx)[0].location).to.equal('/umbraco/section/media');
   });
+});
+
+it('opens settings instead of a window for an app that opens settings', () => {
+  const ctx = manager();
+  ctx.open({ ...APP, alias: 'shortcut', opensSettings: 'My Package' });
+  expect(windowsOf(ctx)).to.have.lengthOf(0);
+  expect(ctx.settingsOpened).to.deep.equal(['My Package']);
 });
 
 describe('work in progress', () => {
