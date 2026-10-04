@@ -86,7 +86,9 @@ progress, from where the list stood when the dropzone was last idle.
 The base drawing is the window loader's ring round the app's icon. A theme restyles the same element,
 `.progress`, which carries its state on `data-state` (`determinate`, `indeterminate` or `failed`) and
 its fraction on `--umbradesktop-progress-value`, from 0 to 1. It sits in `.progress-anchor`, the
-wrapper round the icon, on both surfaces.
+wrapper round the icon, on both surfaces. While the ring is drawn the icon inside it shrinks, by a
+transform derived from the icon's size (`UMBRADESKTOP_CHROME_ICON_PX`), so its corners clear the ring;
+a theme drawing a strip with `progressStrip` keeps the icon at full size.
 
 To draw a bar instead of a ring, interpolate `progressStrip` from `progress/progress-view.ts` into your
 sheet for that surface, with where the bar sits and how thick it is:

@@ -88,6 +88,16 @@ export const UMBRADESKTOP_TASK_EVENT = 'umbradesktop-task';
 export const UMBRADESKTOP_APP_TASKS_EVENT = 'umbradesktop-app-tasks';
 
 /**
+ * The font size, in px, of a window's app icon in its title bar and on its taskbar button.
+ *
+ * One number because two stylesheets set it and a third thing is derived from it: the busy ring is
+ * drawn round that icon, and how far the icon shrinks to fit inside the ring is worked out from its
+ * size (`progress/progress-view.ts`). A literal in each stylesheet would let the ring and the icon it
+ * surrounds disagree the first time one of them changed.
+ */
+export const UMBRADESKTOP_CHROME_ICON_PX = 18;
+
+/**
  * Height of the taskbar/panel in pixels.
  *
  * The chrome no longer reads this directly — it takes its height from

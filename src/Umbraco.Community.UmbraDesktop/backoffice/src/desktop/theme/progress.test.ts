@@ -175,6 +175,45 @@ for (const theme of UMBRADESKTOP_THEMES) {
       });
     }
 
+    /**
+     * Where a theme keeps the base ring round the icon, the ring has to fit between the icon and the
+     * label. It first ran through the icon's corners and touched the title, at a 4px offset round an
+     * unscaled 20px icon, which is what a look at a real backoffice showed. So: the icon's corners
+     * inside the ring's inner edge, and daylight between the ring and the words beside it.
+     * @param root The element's shadow root.
+     * @param label The text beside the icon.
+     * @param what The surface, for the message.
+     */
+    const expectRingFits = (root: ShadowRoot, label: string, what: string) => {
+      const anchor = root.querySelector('.progress-anchor') as HTMLElement;
+      if (getComputedStyle(anchor).position === 'static') {
+        // This theme draws a strip, so there is no ring to make room for and the icon keeps its size.
+        const icon = anchor.querySelector('umb-icon') as HTMLElement | null;
+        if (icon && getComputedStyle(icon).display !== 'none') {
+          expect(getComputedStyle(icon).transform, `${theme.name} ${what}: the icon is not shrunk for a strip`).to.equal('none');
+        }
+        return;
+      }
+      const ring = (root.querySelector('.progress-anchor .progress') as HTMLElement).getBoundingClientRect();
+      const icon = (anchor.querySelector('umb-icon') as HTMLElement).getBoundingClientRect();
+      const thickness = parseFloat(getComputedStyle(root.querySelector('.progress')!).getPropertyValue('--umbradesktop-progress-thickness')) || 2;
+      const inner = ring.width / 2 - thickness;
+      const halfDiagonal = Math.hypot(icon.width, icon.height) / 2;
+      expect(halfDiagonal, `${theme.name} ${what}: the icon's corners clear the ring`).to.be.below(inner);
+      const text = (root.querySelector(label) as HTMLElement).getBoundingClientRect();
+      expect(text.left - ring.right, `${theme.name} ${what}: the ring clears the label`).to.be.at.least(3);
+    };
+
+    it('fits the ring between the icon and the label, where it is drawn', async function () {
+      this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+      win.element.window = { ...base, progress: STATES.determinate };
+      await win.element.updateComplete;
+      expectRingFits(win.element.shadowRoot!, '.title-text', 'title bar');
+      bar.manager.setTasks(bar.manager.getWindows()[0].id, 'probe', [{ id: 'x', state: 'running' }]);
+      await bar.element.updateComplete;
+      expectRingFits(bar.element.shadowRoot!, '.task.window .task-label', 'taskbar');
+    });
+
     it('draws a failure differently from progress', async function () {
       this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
       const root = win.element.shadowRoot!;

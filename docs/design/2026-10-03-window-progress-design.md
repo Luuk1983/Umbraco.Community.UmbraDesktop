@@ -66,8 +66,13 @@ imported from this package. An attribute was the alternative and was rejected: a
 one state per app, and the issue wants the desktop, not the app, to sum several tasks.
 
 **D6. The base draws a ring round the app icon; themes restyle it.** The Umbraco theme is the base
-chrome, so its drawing is the default: the window loader's turning arc round the icon, which
-overhangs the 16px icon into the gap that is already there and so costs no width. The other themes
+chrome, so its drawing is the default: the window loader's turning arc round the icon, standing 2px
+off the icon's box into the gap that is already there, so it costs no width. While the ring is drawn
+the icon shrinks, by a scale derived from its size, the offset and the stroke, until its corners
+clear the ring's inside edge, the way the loader's mark sits inside its ring. The first build stood
+4px off an unscaled icon: the ring ran through the icon's corners and into the title text, which
+Luuk saw in the running backoffice; four candidates were rendered there and this one chosen. The
+shrink is a transform, so nothing beside the icon moves. The other themes
 restyle the same element into their own idiom: Umbraco 4 a bevelled strip, macOS a hairline and
 Finder's copy capsule, Windows 11 its green taskbar bar, Windows 98 the file transfer dialog's blocks
 in a well set into the caption. Nothing changes a window's height, so no metric moves.

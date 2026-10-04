@@ -24,6 +24,7 @@ import {
   UMBRADESKTOP_WINDOW_MIN_SIZE,
   UMBRADESKTOP_PATH_HEIGHT,
   UMBRADESKTOP_OPEN_HELP_EVENT,
+  UMBRADESKTOP_CHROME_ICON_PX,
 } from '../constants';
 import { minWindowSizeForContent } from '../window-chrome.js';
 import { buildCrumbs, windowShowsPath } from '../path/crumbs.js';
@@ -1683,7 +1684,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
          the app icon, because a macOS titlebar shows no icon at all, and a marker sharing that
          selector would be invisible in that theme. Every theme's rule was renamed with this one. */
       .title .app-icon {
-        font-size: 18px;
+        font-size: ${UMBRADESKTOP_CHROME_ICON_PX}px;
         /* The icon is the app's identity and is the same 18px at every width: the text beside it
            is what yields. */
         flex: 0 0 auto;

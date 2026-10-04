@@ -5,6 +5,7 @@ import {
   UMBRADESKTOP_RING_STROKE_PX,
   UMBRADESKTOP_RING_TRACK_OPACITY,
 } from '../loader-ring.js';
+import { UMBRADESKTOP_CHROME_ICON_PX } from '../constants.js';
 import type { UmbraDesktopWindowProgress } from './progress.js';
 
 /**
@@ -19,10 +20,14 @@ import type { UmbraDesktopWindowProgress } from './progress.js';
  */
 
 /**
- * How far the ring stands off the icon it surrounds, in px. Into the gap the caption and the task
- * button already leave round the icon, which is why the ring costs no width.
+ * How far the ring stands off the icon's box, in px. Into the gap the caption and the task button
+ * already leave between the icon and the label, which is why the ring costs no width.
+ *
+ * Two, not the four it started at. At four the ring ran into the title text, which sits 6px after
+ * the icon, and through the icon's own corners; both showed in a real backoffice and neither in the
+ * mock. `theme/progress.test.ts` measures both.
  */
-export const UMBRADESKTOP_PROGRESS_OFFSET_PX = 4;
+export const UMBRADESKTOP_PROGRESS_OFFSET_PX = 2;
 
 /**
  * The side of an icon in ems, as `uui-icon` sizes itself inside `umb-icon`. The ring is drawn round
@@ -32,6 +37,24 @@ export const UMBRADESKTOP_PROGRESS_OFFSET_PX = 4;
  * it exists.
  */
 const ICON_EM = 1.125;
+
+/** Air between the shrunken icon's corners and the ring's inside edge, in px. */
+const ICON_CLEARANCE_PX = 0.5;
+
+/**
+ * How far the icon shrinks while the ring is drawn round it, so its corners clear the ring's inside
+ * edge, as the window loader's mark sits inside its ring with room to spare.
+ *
+ * Derived rather than chosen. The icon is a square of `CHROME_ICON_PX * ICON_EM`; the ring's inside
+ * edge is the square's half-side plus the offset, less the stroke; and a square's corner is its
+ * half-side times the square root of two from its centre. Scale the corner in to the inside edge,
+ * less a hairline. Rounded to three places so the stylesheet carries a plain number.
+ */
+const ICON_RING_SCALE = (() => {
+  const side = UMBRADESKTOP_CHROME_ICON_PX * ICON_EM;
+  const inner = side / 2 + UMBRADESKTOP_PROGRESS_OFFSET_PX - UMBRADESKTOP_RING_STROKE_PX;
+  return Math.round(((inner - ICON_CLEARANCE_PX) / ((side / 2) * Math.SQRT2)) * 1000) / 1000;
+})();
 
 /**
  * The track a surface draws under the ring when its theme sets none: the fill's own colour, faint,
@@ -108,6 +131,11 @@ export const progressStyles = css`
   .progress-anchor > umb-icon {
     min-width: ${ICON_EM}em;
     min-height: ${ICON_EM}em;
+  }
+  /* Only while there is a ring to make room for, and as a transform, so the caption and the task
+     button lay out exactly as they do when the window is idle and nothing beside the icon moves. */
+  .progress-anchor:has(.progress) > umb-icon {
+    transform: scale(${ICON_RING_SCALE});
   }
   .progress {
     position: absolute;
@@ -194,6 +222,9 @@ export function progressStrip(surface: '.titlebar' | '.task', options: UmbraDesk
     }
     ${s} .progress-anchor {
       position: static;
+    }
+    ${s} .progress-anchor > umb-icon {
+      transform: none;
     }
     ${s} .progress {
       inset: ${inset};

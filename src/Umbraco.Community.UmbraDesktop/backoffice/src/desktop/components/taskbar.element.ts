@@ -1,5 +1,5 @@
 import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
-import { UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
+import { UMBRADESKTOP_CHROME_ICON_PX, UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
 import { taskActivation } from '../window-model';
 import { exitDialogContent } from '../exit-message.js';
 import { formatClock, msUntilNextMinute } from '../clock-format.js';
@@ -25,7 +25,20 @@ import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import { noticeIconName, windowNotices, worstSeverity } from '../notices/notices.js';
 import type { UmbraDesktopNoticeSeverity } from '../notices/types.js';
 import { progressCaption } from '../progress/progress.js';
-import { UMBRADESKTOP_PROGRESS_TRACK_DEFAULT, progressStyles, renderProgress } from '../progress/progress-view.js';
+import {
+  UMBRADESKTOP_PROGRESS_OFFSET_PX,
+  UMBRADESKTOP_PROGRESS_TRACK_DEFAULT,
+  progressStyles,
+  renderProgress,
+} from '../progress/progress-view.js';
+
+/**
+ * How far the base pulls a task button's icon left, in px, to balance the transparent padding inside
+ * Umbraco's glyphs. Named because the busy ring has to follow it: the pull leaves the icon hanging
+ * out of the wrapper the ring is drawn against, and a ring sized to the wrapper came out 2px small and
+ * off-centre, which `theme/progress.test.ts` measured.
+ */
+const TASK_ICON_PULL_PX = 2;
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import type { PropertyValues } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -750,6 +763,9 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         --_progress-fill: var(--umbradesktop-taskbar-progress-fill, var(--uui-color-current, #f5c1bc));
         --_progress-track: var(--umbradesktop-taskbar-progress-track, ${UMBRADESKTOP_PROGRESS_TRACK_DEFAULT});
         --_progress-failed: var(--umbradesktop-taskbar-progress-failed, #ff6b8b);
+        /* The ring reaches as far left as the pulled icon does. Same specificity as a theme's strip
+           rule and earlier in the cascade, so a theme drawing a strip positions it unaffected. */
+        left: calc(-1 * var(--umbradesktop-progress-offset, ${UMBRADESKTOP_PROGRESS_OFFSET_PX}px) - ${TASK_ICON_PULL_PX}px);
       }
       :host {
         position: relative;
@@ -963,10 +979,10 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
          four themes that restate this rule. Every theme's copy was renamed with this one. */
       .task .task-icon {
         flex-shrink: 0;
-        font-size: 18px;
+        font-size: ${UMBRADESKTOP_CHROME_ICON_PX}px;
         /* Umbraco icon glyphs carry transparent padding inside their box, making the space
            before the icon read wider than the space after the label; pull it back to balance. */
-        margin-left: -2px;
+        margin-left: -${TASK_ICON_PULL_PX}px;
       }
       .task-label {
         overflow: hidden;
