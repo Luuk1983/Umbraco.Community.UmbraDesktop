@@ -1,6 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { UMBRADESKTOP_SPLASH_ELEMENT_ID, lowerBootSplash, raiseBootSplash } from '../boot/splash';
 import { clearBootAttempt, hasBootAttempt, markBootAttempt } from '../boot/boot-storage';
+import { waitForWallpaper } from '../boot/wallpaper-ready';
 import './desktop.element';
 import type { UmbraDesktopDesktopElement } from './desktop.element';
 
@@ -113,6 +114,28 @@ it('observes the surface for clamping once it exists', async () => {
   desktop.reportSettingsLoaded(true);
   await desktop.updateComplete;
   expect(desktop.observedSurfaceForTest).to.equal(desktop.renderRoot.querySelector('.surface'));
+});
+
+it('leaves the splash and the boot marker alone once it has been removed mid hand-off', async () => {
+  // The hand-off is asynchronous, so a desktop taken out of the page while it waits for the wallpaper
+  // used to finish it anyway: it lowered whatever splash was up by then, which belonged to the next
+  // boot, and cleared the marker for a boot it never finished. In this file that was the next test's
+  // splash, and the test after the one that left a hand-off running failed one run in three.
+  const stale = await mountDesktop();
+  stale.reportSettingsLoaded(true);
+  await stale.updateComplete;
+  const style = stale.renderRoot.querySelector('.desktop')?.getAttribute('style') ?? '';
+  const url = /url\("([^"]+)"\)/.exec(style)?.[1] ?? null;
+  stale.remove();
+
+  raiseBootSplash(document, 60_000);
+  markBootAttempt();
+  // The same wait the stale hand-off is in, and then a turn more for what follows it.
+  await waitForWallpaper(url);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  expect(document.getElementById(UMBRADESKTOP_SPLASH_ELEMENT_ID), 'a removed desktop lowered a splash').to.not.equal(null);
+  expect(hasBootAttempt(), 'a removed desktop cleared the marker of a boot it never finished').to.equal(true);
 });
 
 /**

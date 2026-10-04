@@ -216,11 +216,23 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    * A restore can be reported while the wallpaper is still being waited for, since both start from
    * the settings report. So the hold is checked again at the end, and a hand-off that finds windows
    * still being reopened stands down for {@link reportWindowsRestoring} to start again.
+   *
+   * So does a hand-off whose desktop has left the page while it waited, for good: the splash and
+   * the marker are the page's, not this element's, so a removed desktop that carried on would lower
+   * the next boot's splash and mark as finished a boot that never painted. Nothing puts a removed
+   * desktop back, because the backoffice builds a new section element on every visit
+   * (`createExtensionElement` in its section routes), which is also what Exit then coming back
+   * does. A test is where it showed: the boot test after one that left a hand-off running failed
+   * one run in three, because the old desktop lowered the new test's splash.
    */
   async #handOverFromSplash(): Promise<void> {
     bootTrace('desktop mounted, settings resolved; waiting for the wallpaper');
     await this.updateComplete;
     await waitForWallpaper(this._wallpaper?.background.url ?? null);
+    if (!this.isConnected) {
+      bootTrace('desktop removed before the hand-off finished; the splash is not ours to lower');
+      return;
+    }
     if (this._windowsRestoring) {
       this.#handingOver = false;
       bootTrace('windows are still being reopened; the splash stays up');
