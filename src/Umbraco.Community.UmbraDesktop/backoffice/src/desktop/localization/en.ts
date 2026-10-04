@@ -207,6 +207,14 @@ export default {
     taskbarFullscreenBrowserMac: 'Your browser is in full screen. Press Control-Command-F to leave it.',
     taskbarFullscreenBrowserChromeOs: 'Your browser is in full screen. Press the full screen key to leave it.',
     settingsBack: 'Back to Desktop settings',
+    // Package settings (design 2026-10-03). The heading says whose these are before anything else does.
+    // "Add-ons", the word the docs use for packages that extend the desktop, rather than "packages",
+    // which on the desktop is also Umbraco's own Packages app.
+    settingsAddOns: 'Add-ons',
+    // Names the add-on and nothing else. "Not from UmbraDesktop" read oddly for the desktop's own
+    // add-ons (Accessories, Connections), and the "Add-ons" heading already says it.
+    settingsPackageAttribution: 'These settings come from the %0% add-on.',
+    settingsBoxLoadFailed: 'This part of the settings could not be loaded.',
     // desktop settings — startup
     bootIntoDesktop: 'Open the desktop when I sign in',
     bootDescription:

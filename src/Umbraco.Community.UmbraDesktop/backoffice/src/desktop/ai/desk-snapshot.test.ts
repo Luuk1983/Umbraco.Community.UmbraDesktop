@@ -213,3 +213,18 @@ it('says so plainly when the desk is empty but apps exist', () => {
   expect(text.toLowerCase()).to.contain('no windows');
   expect(text).to.contain('Content editor');
 });
+
+it('marks an app that opens Desktop settings, since it opens no window', () => {
+  const view: DeskView = {
+    getWindows: () => [],
+    subjectsOf: () => [],
+    getApps: () => [
+      { alias: 'log', name: 'Log Viewer' },
+      { alias: 'saver', name: 'Screen Saver', opensSettings: 'My Package' },
+    ] as UmbraDesktopApp[],
+  };
+  const text = snapshot(view)!;
+
+  expect(text).to.contain('Screen Saver (opens Desktop settings)');
+  expect(text).to.not.contain('Log Viewer (');
+});

@@ -11,15 +11,20 @@ import type { UmbraDesktopUserDataClient, UmbraDesktopUserDataRow } from './type
  * that hazard is handled:
  *
  * ```
- * 0 rows   -> create, with a key we chose
+ * 0 rows   -> look again if the view is older than this write, then create, with a key we chose
  * 1 row    -> update it
- * >1 rows  -> update the first, delete the rest
+ * >1 rows  -> update the lowest key, delete the rest
  * ```
  *
  * The whole group is fetched once and served from memory afterwards, because two consumers want
  * rows from it on every load — the migration runner wants the ledger, the settings context wants the
  * settings — and filtering by group alone returns both in one response. Only *successful* reads are
  * remembered, so a request that failed is retried rather than cached as an answer.
+ *
+ * That snapshot is the one hazard a second tab adds: the same person in another tab writes the same
+ * rows, and nothing tells this one. So a write never creates on an old "no row" without looking
+ * again, a refused update looks again before giving up, and among duplicates the lowest key wins
+ * rather than whichever the server lists first, so every tab reads and keeps the same row.
  */
 export class UmbraDesktopUserDataRepository {
   /** The group every row read or written here belongs to. */
@@ -84,7 +89,7 @@ export class UmbraDesktopUserDataRepository {
     const rows = await this.#load();
     if (!rows) return undefined;
 
-    return rows.find((row) => row.identifier === identifier)?.value ?? null;
+    return rowsFor(rows, identifier)[0]?.value ?? null;
   }
 
   /**
@@ -127,20 +132,40 @@ export class UmbraDesktopUserDataRepository {
     // that were already waiting their turn when the user changed.
     if (this.#abandoned) return false;
 
-    const rows = await this.#load();
+    // Whether the rows in hand were read before this write began. Another tab of the same person
+    // may have written since, and nothing tells this one: its view is a snapshot from its own load.
+    const stale = this.#rows !== undefined;
+    let rows = await this.#load();
     if (!rows) return false;
 
-    const matches = rows.filter((row) => row.identifier === identifier);
+    let matches = rowsFor(rows, identifier);
 
-    if (matches.length === 0) {
-      const created: UmbraDesktopUserDataRow = { key: newRowKey(), group: this.#group, identifier, value };
-      if (!(await this.#attempt(() => this.#client.create(created)))) return false;
-      rows.push(created);
-      return true;
+    // Look again before creating. "No row" from an old snapshot is the one answer another tab can
+    // have made false, and a create on it is how two tabs end up with a row each, each updating its
+    // own, and a reload showing whichever the server happens to list first. A view read during this
+    // write is as fresh as a second look would be, so that costs nothing on a first save.
+    if (matches.length === 0 && stale) {
+      rows = await this.#reload();
+      if (!rows) return false;
+      matches = rowsFor(rows, identifier);
     }
 
-    const [keep, ...duplicates] = matches;
-    if (!(await this.#attempt(() => this.#client.update({ ...keep, value })))) return false;
+    if (matches.length === 0) return this.#create(rows, identifier, value);
+
+    let [keep, ...duplicates] = matches;
+    if (!(await this.#attempt(() => this.#client.update({ ...keep, value })))) {
+      // The row may be gone: another tab's save removes every duplicate but the lowest key, and this
+      // tab's snapshot may predate the row that won. Look again rather than guess, and move to the
+      // survivor. If the row is still there the refusal was real, and making a new row would only
+      // turn a failed save into a duplicate.
+      rows = await this.#reload();
+      if (!rows) return false;
+      const fresh = rowsFor(rows, identifier);
+      if (fresh.some((row) => row.key === keep.key)) return false;
+      if (fresh.length === 0) return this.#create(rows, identifier, value);
+      [keep, ...duplicates] = fresh;
+      if (!(await this.#attempt(() => this.#client.update({ ...keep, value })))) return false;
+    }
     keep.value = value;
 
     // After the write, not before: losing the extras only matters once there is a surviving row
@@ -155,11 +180,36 @@ export class UmbraDesktopUserDataRepository {
   }
 
   /**
+   * Create the identifier's row, with a key we chose, and remember it.
+   * @param rows The remembered rows, which the new row joins on success.
+   * @param identifier The row to create.
+   * @param value The value to store.
+   * @returns Whether the row is now on the server.
+   */
+  async #create(rows: UmbraDesktopUserDataRow[], identifier: string, value: string): Promise<boolean> {
+    const created: UmbraDesktopUserDataRow = { key: newRowKey(), group: this.#group, identifier, value };
+    if (!(await this.#attempt(() => this.#client.create(created)))) return false;
+    rows.push(created);
+    return true;
+  }
+
+  /**
    * The group's rows, fetched at most once.
    * @returns The rows, or undefined when the request failed.
    */
   #load(): Promise<UmbraDesktopUserDataRow[] | undefined> {
     this.#rows ??= this.#read();
+
+    return this.#rows;
+  }
+
+  /**
+   * The group's rows read afresh, replacing the remembered ones. Only for a write about to act on
+   * an answer another tab may have changed; reads keep the snapshot, see the class remarks.
+   * @returns The rows, or undefined when the request failed.
+   */
+  #reload(): Promise<UmbraDesktopUserDataRow[] | undefined> {
+    this.#rows = this.#read();
 
     return this.#rows;
   }
@@ -201,6 +251,20 @@ export class UmbraDesktopUserDataRepository {
 }
 
 /**
+ * One identifier's rows, lowest key first.
+ *
+ * Ordered by key rather than left in the server's order, which nothing promises is stable: with
+ * duplicates, every tab and every page load must agree on which row is the real one, or each keeps
+ * its own and a reload shows whichever came first.
+ * @param rows The group's rows.
+ * @param identifier The identifier to pick.
+ * @returns Its rows, the one to read and keep first.
+ */
+function rowsFor(rows: UmbraDesktopUserDataRow[], identifier: string): UmbraDesktopUserDataRow[] {
+  return rows.filter((row) => row.identifier === identifier).sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+}
+
+/**
  * A fresh key for a row we are about to create.
  *
  * Chosen here rather than left to the server because a create returns `201` with no body: a row
@@ -210,9 +274,11 @@ export class UmbraDesktopUserDataRepository {
  * `crypto.randomUUID` needs a secure context, which a backoffice served over plain HTTP on a LAN is
  * not, so it falls back to building a version 4 UUID out of `crypto.getRandomValues` — available
  * everywhere, secure context or not.
+ *
+ * Exported for the package settings document, so every row the desktop creates gets its key one way.
  * @returns A version 4 UUID.
  */
-function newRowKey(): string {
+export function newRowKey(): string {
   if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
 
   const bytes = crypto.getRandomValues(new Uint8Array(16));

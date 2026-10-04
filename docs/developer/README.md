@@ -22,6 +22,9 @@ using the desktop, see the [user guide](../user/README.md).
 - [Package catalogues](package-catalogues.md): give your package's own backoffice screens proper
   tiles and launcher groups with a `umbraDesktopCatalogue` manifest, the desktop's published group
   weights, replacing one of its tiles, and what the console tells you.
+- [Package settings](package-settings.md): give your package a row in Desktop settings with a
+  `umbraDesktopPackageSettings` manifest, what your box must do, the per-user store, opening your
+  settings from your own screens or a launcher tile, and what the console tells you.
 - [Attached windows](attached-windows.md): show something beside a document window, the way the live
   preview does. When to use it and when not, how to open one, what your element must do, and what the
   desktop already handles.
@@ -43,6 +46,7 @@ are shaped the way they are. The ones the guides above rest on:
 | Themes | [2026-09-04-theming-system-design.md](../design/2026-09-04-theming-system-design.md) |
 | Desktop apps | [2026-09-06-desktop-apps-design.md](../design/2026-09-06-desktop-apps-design.md) |
 | Package catalogues | [2026-09-25-package-catalogues-design.md](../design/2026-09-25-package-catalogues-design.md) |
+| Package settings: why one row per package below ours, why boxes and not categories, and why the context is global | [2026-10-03-package-settings-design.md](../design/2026-10-03-package-settings-design.md) |
 | Attached windows | [2026-09-27-attached-windows-design.md](../design/2026-09-27-attached-windows-design.md) |
 | Notifications | [2026-09-27-desktop-notifications-design.md](../design/2026-09-27-desktop-notifications-design.md) |
 | Installing the backoffice as an app, the browser behaviour it depends on, and the fixture that proves it | [2026-09-13-web-app-manifest-design.md](../design/2026-09-13-web-app-manifest-design.md) |

@@ -79,6 +79,7 @@ export function deriveApps(
       minSize: app.minSize,
       allowMultiple: app.allowMultiple,
       resizable: app.resizable,
+      opensSettings: app.opensSettings,
       weight: app.weight,
       group: app.group,
       confidence: 'certified',

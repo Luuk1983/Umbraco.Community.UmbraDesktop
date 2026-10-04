@@ -14,6 +14,8 @@ import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
 import { UmbraDesktopServerEventController } from '../conflict/server-event.controller.js';
 import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
+import { UMBRADESKTOP_PACKAGE_SETTINGS_CONTEXT } from '../settings/package-settings.context-token.js';
+import type { UmbraDesktopPackageSettingsContext } from '../settings/package-settings.context.js';
 import { UmbraDesktopWindowLayoutController } from '../windows/layout.controller.js';
 import { UmbraDesktopHelpContext } from '../help/help.context.js';
 import { takeHelpDeepLink } from '../help/help-deep-link.js';
@@ -73,6 +75,20 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   /** Stops watching this desktop's own document and takes it off the centre's sources. */
   #stopOwnNotifications?: () => void;
+
+  /**
+   * The package settings context as last provided, kept so a desktop moved in the DOM can attach
+   * itself again. Umbraco's consumer only calls back with a context it did not already have, and a
+   * disconnect followed by a connect in the same task keeps the one it had, so a move re-requests
+   * without calling back (`UmbContextConsumer.hostConnected` / `_onResponse` in v17).
+   */
+  #packageSettings?: UmbraDesktopPackageSettingsContext;
+
+  /**
+   * Takes this desktop off the package settings context. Set while connected, so a package's
+   * `openSettings` opens on the desktop the person is looking at (design §5).
+   */
+  #detachFromPackageSettings?: () => void;
 
   @state()
   private _windows: UmbraDesktopWindow[] = [];
@@ -157,6 +173,13 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     this.observe(this.#settings.loaded, (loaded) => this.reportSettingsLoaded(loaded === true));
     this.observe(this.#label.label, (label) => (this._label = label));
     this.observe(this.#settings.migration, (migration) => (this._migration = migration ?? { phase: 'idle' }));
+    // Registers this desktop as the one packages open their settings on. The callback runs again
+    // with undefined when the element leaves for good, and with the context when it comes back.
+    this.consumeContext(UMBRADESKTOP_PACKAGE_SETTINGS_CONTEXT, (context) => {
+      this.#packageSettings = context;
+      this.#detachFromPackageSettings?.();
+      this.#detachFromPackageSettings = context?.attachDesktop(this);
+    });
   }
 
   /**
@@ -282,6 +305,11 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     // section (via the taskbar's Exit) unmounts this element and restores it.
     this.#setOuterChrome(true);
     this.#watchOwnNotifications();
+    // A move in the DOM disconnects and reconnects in one task, and the consumer does not call back
+    // for a context it still holds, so the attachment dropped on disconnect is restored here.
+    if (!this.#detachFromPackageSettings && this.#packageSettings) {
+      this.#detachFromPackageSettings = this.#packageSettings.attachDesktop(this);
+    }
   }
 
   /**
@@ -325,6 +353,8 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   }
 
   override disconnectedCallback() {
+    this.#detachFromPackageSettings?.();
+    this.#detachFromPackageSettings = undefined;
     super.disconnectedCallback();
     this.#surfaceObserver.disconnect();
     // Forgotten along with the observation, so a re-connected desktop observes its new surface

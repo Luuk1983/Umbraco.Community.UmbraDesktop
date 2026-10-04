@@ -1,9 +1,10 @@
-import { UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS, parseSettings, serializeSettings } from './settings.js';
+import { UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS, parseSettingsValue } from './settings.js';
 import type { AccessoriesSettings } from './settings.js';
-import { ACCESSORIES_USER_DATA_GROUP, UserDataDocument, createUserDataClient } from '../shared/user-data.js';
+import { ACCESSORIES_USER_DATA_GROUP } from '../shared/user-data.js';
+import { UMBRADESKTOP_PACKAGE_SETTINGS_CONTEXT } from '../shared/package-settings.js';
+import type { UmbraDesktopPackageSettingsStore } from '../shared/package-settings.js';
 import { UmbControllerBase } from '@umbraco-cms/backoffice/class-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
-import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 
 /**
  * Why the settings on show may not be the ones in the user's account.
@@ -16,7 +17,7 @@ export type AccessoriesSettingsStatus = 'unread' | 'unsaved';
 /**
  * Where an element reads the package's settings from and writes them to.
  *
- * An interface rather than the controller below, so that the Screen Saver window and the idle
+ * An interface rather than the controller below, so that the screensaver's settings box and the idle
  * watcher can each be handed a {@link fixedSettings} in a test: the real one needs a signed-in user,
  * which only a booted backoffice has.
  */
@@ -65,108 +66,62 @@ export function fixedSettings(initial: Partial<AccessoriesSettings> = {}): Acces
   };
 }
 
-/** The `umbracoUserData` identifier the settings document is stored under, within the package's group. Final, like the group. */
-const SETTINGS_IDENTIFIER = 'Settings';
-
 /**
- * The `BroadcastChannel` a saved change is announced on, so other tabs of the same browser follow
- * it at once, as they did through `storage` events when the settings lived in `localStorage`. Named
- * after the package and what it carries, so nothing else on the origin talks on it by accident.
- * Tabs in other browsers pick the change up the next time they load.
- */
-export const ACCESSORIES_SETTINGS_CHANNEL = `${ACCESSORIES_USER_DATA_GROUP}.Settings`;
-
-/** The part of {@link UserDataDocument} the store uses, so a test can hand it a stand-in. */
-export type AccessoriesSettingsDocument = Pick<UserDataDocument, 'read' | 'write'>;
-
-/**
- * The settings of the signed-in user, kept in their account and held in the page.
+ * Accessories' settings, kept in the desktop's per-user store under this package's own user-data
+ * group: the same row they were in before the store moved into the desktop, so nothing was migrated
+ * (design 2026-10-03 §8). Turns the store's untyped value into `AccessoriesSettings` on every read,
+ * so a malformed or older value can never reach the screensaver.
  *
- * One per page (see {@link sharedSettingsStore}), so every element in it reads one value and one
- * write reaches them all at once. The rules:
- * - the value is the default until the stored one has loaded, and the default has the screensaver
- *   off, so nothing starts on the strength of a setting nobody has read yet;
- * - a change applies in the page at once and is stored in the background, one write at a time,
- *   ending on the latest;
- * - a failed write keeps the change in the page and says so through {@link status}, rather than
- *   losing it quietly; the next change stores the whole value again;
- * - stored settings that arrive after a change was made are older than it, and are not applied;
- * - a stored change is announced to other tabs on {@link ACCESSORIES_SETTINGS_CHANNEL}.
+ * Plain, with the store handed to {@link use}, so it can be tested without a backoffice; the
+ * controller below finds the store.
  */
-export class AccessoriesSettingsStore implements AccessoriesSettingsSource {
-  /** The settings on show. */
-  #value: AccessoriesSettings = UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS;
+export class AccessoriesHostSettings implements AccessoriesSettingsSource {
+  /** The desktop's store, once found. */
+  #store?: UmbraDesktopPackageSettingsStore;
 
-  /** See {@link status}. */
-  #status?: AccessoriesSettingsStatus;
+  /** Stops listening to it. */
+  #unsubscribe?: () => void;
 
   /** Who is told about a change. */
   #listeners = new Set<(value: AccessoriesSettings) => void>();
 
-  /** Whether the stored settings have been read. Reading again after that would only undo changes. */
-  #loaded = false;
-
-  /** The read in progress, so a second {@link load} joins it rather than asking twice. */
-  #loading?: Promise<void>;
+  /**
+   * The last value read, and the raw value it was read from, so a read parses once per change. The
+   * store keeps its parsed value until the stored string changes, so identity is the right test.
+   */
+  #cache?: { raw: unknown; value: AccessoriesSettings };
 
   /**
-   * Bumped by every change made here or heard from another tab. A read compares it before and
-   * after, so a value that was stored before the change does not overwrite it.
+   * Start reading from a store, or stop with undefined. Tells the listeners either way, since the
+   * value on show may have changed with the store.
+   * @param store The desktop's store for this package.
    */
-  #changes = 0;
-
-  /** The newest change not yet written, if any. Only the newest is written: it is the whole value. */
-  #pending?: AccessoriesSettings;
-
-  /** The write loop in progress, if any. */
-  #writing?: Promise<void>;
-
-  /** The channel to other tabs, where the browser has one. */
-  #channel?: BroadcastChannel;
-
-  /**
-   * @param document Where the settings are stored.
-   * @param channelName The cross-tab channel's name. Omit for no channel; tests pass their own so
-   *   two cases never hear each other.
-   */
-  constructor(
-    private readonly document: AccessoriesSettingsDocument,
-    channelName?: string,
-  ) {
-    if (channelName && typeof BroadcastChannel !== 'undefined') {
-      this.#channel = new BroadcastChannel(channelName);
-      this.#channel.onmessage = (event: MessageEvent) => this.#onBroadcast(event.data);
-    }
+  use(store: UmbraDesktopPackageSettingsStore | undefined): void {
+    this.#unsubscribe?.();
+    this.#store = store;
+    this.#unsubscribe = store?.subscribe(() => this.#notify());
+    this.#notify();
   }
 
   /** @inheritdoc */
   get value(): AccessoriesSettings {
-    return this.#value;
+    const raw = this.#store?.value;
+    if (!this.#cache || this.#cache.raw !== raw) this.#cache = { raw, value: parseSettingsValue(raw) };
+    return this.#cache.value;
   }
 
   /** @inheritdoc */
   get status(): AccessoriesSettingsStatus | undefined {
-    return this.#status;
+    return this.#store?.status;
   }
 
   /**
-   * Read the stored settings, once. Safe to call from every element that needs them: a second call
-   * joins the read in progress, and one after a successful read does nothing. One after a failed
-   * read tries again, so opening the Screen Saver window is also a retry.
-   * @returns When the read has answered.
+   * Change the settings. Dropped while there is no store, which is only before the desktop's
+   * context has been found: nothing can have been shown to change by then.
+   * @param next The new settings.
    */
-  load(): Promise<void> {
-    if (this.#loaded) return Promise.resolve();
-    this.#loading ??= this.#read().finally(() => (this.#loading = undefined));
-    return this.#loading;
-  }
-
-  /** @inheritdoc */
   set(next: AccessoriesSettings): void {
-    this.#changes++;
-    this.#apply(next);
-    this.#pending = next;
-    this.#writing ??= this.#flush().finally(() => (this.#writing = undefined));
+    this.#store?.set(next);
   }
 
   /** @inheritdoc */
@@ -175,166 +130,66 @@ export class AccessoriesSettingsStore implements AccessoriesSettingsSource {
     return () => this.#listeners.delete(listener);
   }
 
-  /**
-   * When every change made so far has been written, or has failed to be.
-   * @returns A promise that settles then.
-   */
-  async saved(): Promise<void> {
-    while (this.#writing) await this.#writing;
-  }
-
-  /** Stop hearing other tabs. For tests and for the package unloading; the page's store is otherwise never closed. */
+  /** Stop listening to the store. It belongs to the desktop and lives as long as the page. */
   close(): void {
-    this.#channel?.close();
-    this.#channel = undefined;
-  }
-
-  /** Read the stored settings, and take them unless something newer arrived meanwhile. */
-  async #read(): Promise<void> {
-    const changesAtStart = this.#changes;
-    const raw = await this.document.read();
-    if (raw === undefined) {
-      this.#setStatus('unread');
-      return;
-    }
-    this.#loaded = true;
-    if (this.#status === 'unread') this.#setStatus(undefined);
-    if (this.#changes !== changesAtStart) return;
-    this.#apply(parseSettings(raw));
-  }
-
-  /** Write the newest change until none is left, then say how the last write went. */
-  async #flush(): Promise<void> {
-    while (this.#pending) {
-      const next = this.#pending;
-      this.#pending = undefined;
-      const serialized = serializeSettings(next);
-      const stored = await this.document.write(serialized);
-      // A newer change is already waiting; its write decides the status.
-      if (this.#pending) continue;
-      if (stored) this.#channel?.postMessage(serialized);
-      this.#setStatus(stored ? undefined : 'unsaved');
-    }
-  }
-
-  /**
-   * Another tab stored a change: follow it. It was stored, so a failure of this tab's own is
-   * superseded by it, and it is newer than any read still in progress.
-   * @param data The message, the stored string.
-   */
-  #onBroadcast(data: unknown): void {
-    if (typeof data !== 'string') return;
-    this.#changes++;
-    this.#pending = undefined;
-    if (this.#status === 'unsaved') this.#status = undefined;
-    this.#apply(parseSettings(data), true);
-  }
-
-  /**
-   * Change the status, and tell the listeners so a window can show it.
-   * @param status The new status.
-   */
-  #setStatus(status: AccessoriesSettingsStatus | undefined): void {
-    if (status === this.#status) return;
-    this.#status = status;
-    this.#notify();
-  }
-
-  /**
-   * Take new settings and tell the listeners, if anything changed.
-   * @param next The settings.
-   * @param always Tell the listeners even when the value is the same, because something else
-   *   about the store changed with it.
-   */
-  #apply(next: AccessoriesSettings, always = false): void {
-    if (!always && serializeSettings(next) === serializeSettings(this.#value)) return;
-    this.#value = next;
-    this.#notify();
+    this.use(undefined);
   }
 
   /** Tell every listener the settings as they stand. */
   #notify(): void {
-    for (const listener of this.#listeners) listener(this.#value);
+    const value = this.value;
+    for (const listener of this.#listeners) listener(value);
   }
 }
 
-/** The page's one store, made on first use. */
-let shared: AccessoriesSettingsStore | undefined;
-
 /**
- * The page's settings store, made the first time anything asks.
+ * The settings of the signed-in user, for an element or an entry point: finds the desktop's package
+ * settings context and reads through {@link AccessoriesHostSettings}. The context is global, so an
+ * entry point outside the desktop reaches it as well as a window or a settings box does.
  *
- * In the backoffice the first to ask is the screensaver's entry point, whose host is the
- * backoffice's root and lives as long as the page, which matters because the store makes its
- * requests on that host. The requests are quiet: a failure is shown in the Screen Saver window
- * through {@link AccessoriesSettingsStore.status}, where the person who made the change is looking.
- * @param host The element to make requests for, if the store does not exist yet.
- * @returns The store.
- */
-export function sharedSettingsStore(host: UmbControllerHost): AccessoriesSettingsStore {
-  shared ??= new AccessoriesSettingsStore(
-    new UserDataDocument(createUserDataClient(host), ACCESSORIES_USER_DATA_GROUP, SETTINGS_IDENTIFIER),
-    ACCESSORIES_SETTINGS_CHANNEL,
-  );
-  return shared;
-}
-
-/** Close and forget the page's store, when the package unloads, so a reload starts clean. */
-export function releaseSharedSettingsStore(): void {
-  shared?.close();
-  shared = undefined;
-}
-
-/**
- * The page's settings, for one element: the Screen Saver window, or the idle watcher.
- *
- * A controller so it can wait for a signed-in user before asking the account, which the
- * `user-data` endpoints read the user from, and so the store's first read is started by whichever
- * element needs it first. Everything else is the page's one {@link AccessoriesSettingsStore}, so
- * every element sees one value and a change reaches them all without an event of its own.
+ * Reading the account is the desktop's work: it reads a store once a user is signed in, and every
+ * element in the page shares that one store, so a change reaches them all without an event of its own.
  */
 export class UmbraDesktopAccessoriesSettingsController
   extends UmbControllerBase
   implements AccessoriesSettingsSource
 {
-  /** The page's store. */
-  #store: AccessoriesSettingsStore;
+  /** The adapter that does the work. */
+  #settings = new AccessoriesHostSettings();
 
   /**
-   * @param host The element whose lifetime this controller shares.
-   * @param store The store to use. The page's one unless a test says otherwise.
+   * @param host The element or entry point host whose lifetime this follows.
    */
-  constructor(host: UmbControllerHost, store: AccessoriesSettingsStore = sharedSettingsStore(host)) {
+  constructor(host: UmbControllerHost) {
     super(host);
-    this.#store = store;
-    this.consumeContext(UMB_CURRENT_USER_CONTEXT, (context) => {
-      this.observe(
-        context?.unique,
-        (unique) => {
-          if (unique) void this.#store.load();
-        },
-        'observeCurrentUserUnique',
-      );
+    this.consumeContext(UMBRADESKTOP_PACKAGE_SETTINGS_CONTEXT, (context) => {
+      this.#settings.use(context?.store(ACCESSORIES_USER_DATA_GROUP));
     });
   }
 
   /** @inheritdoc */
   get value(): AccessoriesSettings {
-    return this.#store.value;
+    return this.#settings.value;
   }
 
   /** @inheritdoc */
   get status(): AccessoriesSettingsStatus | undefined {
-    return this.#store.status;
+    return this.#settings.status;
   }
 
   /** @inheritdoc */
   set(next: AccessoriesSettings): void {
-    this.#store.set(next);
+    this.#settings.set(next);
   }
 
   /** @inheritdoc */
   subscribe(listener: (value: AccessoriesSettings) => void): () => void {
-    return this.#store.subscribe(listener);
+    return this.#settings.subscribe(listener);
+  }
+
+  /** Stop listening to the store with the host. */
+  override destroy(): void {
+    this.#settings.close();
+    super.destroy();
   }
 }

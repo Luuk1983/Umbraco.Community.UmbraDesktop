@@ -23,6 +23,10 @@ change shows as it is made.
 Everything except **Site** and **Connections** is your own preference, stored on your Umbraco
 account. See [Settings on your account](settings-on-your-account.md).
 
+Add-ons, packages that add to the desktop, can put their settings here too. They are listed below
+the desktop's own categories, under **Add-ons**, one row per add-on. An add-on's screen starts by
+saying which add-on its settings come from, and the add-on decides where they are stored.
+
 A setting that cannot be used on this site is shown disabled, with the reason, rather than hidden,
 so the panel always shows what the desktop can do.
 

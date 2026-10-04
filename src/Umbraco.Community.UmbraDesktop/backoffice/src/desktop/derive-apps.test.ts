@@ -232,3 +232,10 @@ it('lets only the first app for a section cover it', () => {
   expect(apps.find((a) => a.alias === 'ours')!.coversSection).to.equal('Umb.Section.Content');
   expect(apps.find((a) => a.alias === 'Pkg.Twin')!.coversSection).to.equal(undefined);
 });
+
+it('carries opensSettings through to the derived app', () => {
+  const apps = deriveApps([], [], [], [
+    { alias: 'Pkg.Shortcut', name: 'Shortcut', icon: 'icon-box', element: MINESWEEPER_LOADER, opensSettings: 'My Package' },
+  ]);
+  expect(apps.find((app) => app.alias === 'Pkg.Shortcut')?.opensSettings).to.equal('My Package');
+});

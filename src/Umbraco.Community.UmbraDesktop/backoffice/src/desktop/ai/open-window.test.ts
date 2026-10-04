@@ -45,7 +45,7 @@ function subject(entityType: string, unique: string): UmbraDesktopWorkspaceSubje
 function desk(
   windows: UmbraDesktopWindow[] = [],
   subjects: Record<string, UmbraDesktopWorkspaceSubject[]> = {},
-  apps: Array<{ alias: string; name: string }> = [],
+  apps: Array<{ alias: string; name: string; opensSettings?: string }> = [],
 ): DeskView {
   return {
     getWindows: () => windows,
@@ -220,6 +220,18 @@ it("opens one of the desktop's own apps by name", () => {
 
   expect(outcome.kind).to.equal('open');
   expect((outcome as { app: UmbraDesktopApp }).app.alias).to.equal('log-viewer');
+});
+
+/** No window is made for such an app, so the reply must not tell the agent one was. */
+it('says Desktop settings were opened for an app that opens settings, not a window', () => {
+  const outcome = plan(desk([], {}, [{ alias: 'saver', name: 'Screen Saver', opensSettings: 'My Package' }]), {
+    app: 'Screen Saver',
+  });
+
+  expect(outcome.kind).to.equal('open');
+  expect(outcome.message).to.contain('Desktop settings');
+  expect(outcome.message).to.contain('My Package');
+  expect(outcome.message).to.not.contain('in a window');
 });
 
 it('matches the name a person would say, not the token', () => {

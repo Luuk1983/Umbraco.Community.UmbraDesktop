@@ -179,8 +179,14 @@ export class UmbraDesktopWindowLayoutRestorer {
         for (const saved of [...waiting]) {
           const app = apps.find((candidate) => candidate.alias === saved.app);
           if (!app) continue;
-          this.#sources.manager.restoreWindow(saved, app);
           waiting.splice(waiting.indexOf(saved), 1);
+          // An update can turn an app into a shortcut to Desktop settings while a layout saved
+          // before it still names the app. There is no window to put back (restoring one would load
+          // an element that is never loaded), and nobody asked for settings on boot. Taken off the
+          // waiting list like a restored window, so the splash is not held for it, and absent from
+          // the layout saved when this finishes, so the next load has nothing to skip.
+          if (app.opensSettings) continue;
+          this.#sources.manager.restoreWindow(saved, app);
           const windows = this.#sources.manager.getWindows();
           if (saved === active) activeId = windows[windows.length - 1]?.id;
         }

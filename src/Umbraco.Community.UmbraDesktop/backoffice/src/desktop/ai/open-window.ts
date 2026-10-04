@@ -189,7 +189,11 @@ function planOpenApp(
   return {
     kind: 'open',
     app,
-    message: `Opened "${label}" in a window on the desktop, beside this chat.`,
+    // The window manager sends such an app to settings instead of making a window, so the reply
+    // must not claim one, or the agent would tell the user to look for a window that is not there.
+    message: app.opensSettings
+      ? `Opened Desktop settings at "${app.opensSettings}" ("${label}" is a shortcut there rather than a window).`
+      : `Opened "${label}" in a window on the desktop, beside this chat.`,
   };
 }
 

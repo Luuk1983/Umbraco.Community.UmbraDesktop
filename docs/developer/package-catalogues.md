@@ -21,6 +21,7 @@ sidebar_position: 5
 | A heading of your own in the launcher | A `umbraDesktopCatalogue` group |
 | An app that is its own element, with no backoffice route behind it | A `umbraDesktopApp`. See [desktop-apps.md](desktop-apps.md) |
 | Your section to appear at all | Nothing: any section a user can reach already shows up under More |
+| Settings for what your package adds to the desktop | A `umbraDesktopPackageSettings`. See [package-settings.md](package-settings.md) |
 
 A catalogue is data only. It loads no code, so a static `umbraco-package.json` can carry it as
 well as a bundle can.

@@ -258,3 +258,29 @@ it('never hands the launcher a name it cannot sort', () => {
   ]);
   expect(() => groupApps(deriveApps([], [], [], apps), [])).to.not.throw();
 });
+
+/** A tile for a tool whose settings moved into Desktop settings has no window, so it needs no element. */
+it('keeps an app that opens settings, with no element of its own', () => {
+  const { apps, dropped } = normaliseRegisteredApps([
+    manifest({ element: undefined, meta: { label: 'Screen Saver', opensSettings: 'My Package' } }),
+  ]);
+  expect(dropped).to.deep.equal([]);
+  expect(apps[0].opensSettings).to.equal('My Package');
+});
+
+/** Matches how the panel matches package names, which trims `meta.package`. */
+it('trims the package name an app opens settings at', () => {
+  const { apps } = normaliseRegisteredApps([
+    manifest({ element: undefined, meta: { label: 'Screen Saver', opensSettings: '  My Package ' } }),
+  ]);
+  expect(apps[0].opensSettings).to.equal('My Package');
+});
+
+it('reports an opensSettings that is not text, and still needs an element then', () => {
+  const { apps, ignored, dropped } = normaliseRegisteredApps([
+    manifest({ element: undefined, meta: { label: 'x', opensSettings: 7 as unknown as string } }),
+  ]);
+  expect(apps).to.deep.equal([]);
+  expect(ignored.map((i) => i.field)).to.deep.equal(['meta.opensSettings']);
+  expect(dropped.length).to.equal(1);
+});
