@@ -69,6 +69,18 @@ export class UmbraDesktopThemePreviewElement extends UmbLitElement {
   public variant: UmbraDesktopVariant = 'light';
 
   /**
+   * Whether the backoffice is in Umbraco's high contrast theme, which paints the window's content
+   * half white and half black.
+   *
+   * A symbol rather than a likeness, on purpose. Umbraco's high contrast is a light scheme, so a
+   * window painted from its tokens looked like Light under the four themes that read them and dark
+   * under macOS, which states its own: a row of previews that did not say "contrast" anywhere. The
+   * chrome around the window stays the theme's, since that is what the row is choosing between.
+   */
+  @property({ type: Boolean })
+  public highContrast = false;
+
+  /**
    * A wallpaper to paint behind the chrome, already resolved to a URL.
    *
    * Optional, and a preview given none paints the theme's own desktop ground — which is what the
@@ -208,7 +220,7 @@ export class UmbraDesktopThemePreviewElement extends UmbLitElement {
             <span class="title"></span>
             ${this.#renderControls('trailing', metrics.trailingControlsWidth)}
           </div>
-          <div class="body"></div>
+          <div class="body ${this.highContrast ? 'contrast' : ''}"></div>
         </div>
         <div class="taskbar">
           <span class="start"></span>
@@ -366,6 +378,11 @@ export class UmbraDesktopThemePreviewElement extends UmbLitElement {
       .body {
         flex: 1;
         background: var(--umbradesktop-window-body-background, var(--uui-color-background));
+      }
+      /* Literal colours, not tokens: this is the one thing in the preview that must look the same
+         under every theme, because it stands for a setting rather than for the theme. */
+      .body.contrast {
+        background: linear-gradient(90deg, #fff 50%, #000 50%);
       }
     `,
   ];

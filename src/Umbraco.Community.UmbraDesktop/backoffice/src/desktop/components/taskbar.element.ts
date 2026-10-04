@@ -722,8 +722,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         <div class="cluster">
           <button
             class="start ${this._panel === 'launcher' ? 'active' : ''}"
-            title="Open apps"
-            aria-label="Open apps"
+            title=${this.localize.term('umbraDesktop_openApps')}
+            aria-label=${this.localize.term('umbraDesktop_openApps')}
             @click=${this.#toggleLauncher}>
             <umb-icon name="icon-umbraco"></umb-icon>
           </button>

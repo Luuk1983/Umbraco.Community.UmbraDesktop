@@ -149,6 +149,16 @@ describe('the taskbar and the launcher it opens', () => {
     await settle();
   });
 
+  it('names the start button in the user\'s language', async () => {
+    // It used to be a hard-coded English "Open apps", which Windows 98 shows as the button's visible
+    // label, so a Dutch desktop had one English word on its taskbar.
+    const start = taskbar.renderRoot.querySelector<HTMLElement>('.start')!;
+    const term = taskbar.localize.term('umbraDesktop_openApps');
+
+    expect(start.getAttribute('aria-label')).to.equal(term);
+    expect(start.getAttribute('title')).to.equal(term);
+  });
+
   it('closes on a press outside it', async () => {
     pressOutside();
     await settle();

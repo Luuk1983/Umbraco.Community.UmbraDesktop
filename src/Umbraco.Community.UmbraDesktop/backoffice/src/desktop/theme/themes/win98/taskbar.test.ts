@@ -10,9 +10,8 @@ import type { UmbraDesktopThemedMount } from './mount-themed.js';
  * A theme cannot add DOM, so the word arrives as generated content. What it must *not* do is
  * invent the word: a string written into a stylesheet is invisible to the localization files and
  * would stay English in every language. The button already has a `title`, so the theme renders
- * that, which means the label is whatever the taskbar says the button does — today an untranslated
- * "Open apps", and automatically the translated term if that title is ever localized, with no
- * further change here.
+ * that, which means the label is whatever the taskbar says the button does, in the user's language,
+ * because the taskbar localizes the title.
  *
  * The first test below is what keeps that honest: it compares the rendered label against the
  * button's own title rather than against an expected string, so replacing `attr(title)` with a
@@ -66,6 +65,9 @@ it('caps the start button so a long translation cannot crowd out the task list',
   const start = startButton();
   const original = start.getAttribute('title') ?? '';
   try {
+    // A short label set here rather than whatever the title is: in this runner no dictionary is
+    // loaded, so the localized title is its own key, long enough to reach the cap already.
+    start.setAttribute('title', 'Start');
     const short = start.getBoundingClientRect().width;
 
     start.setAttribute('title', 'Anwendungen, Werkzeuge und Einstellungen oeffnen');

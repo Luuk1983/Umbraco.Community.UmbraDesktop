@@ -51,7 +51,7 @@ Windows 98 ship a single palette on purpose: their grey is the design rather tha
 choice, so they look the same under all three.
 
 To change between Light, Dark and High contrast, see
-[Backoffice colours](backoffice-colours.md).
+[Backoffice theme](backoffice-colours.md).
 
 ## Match the wallpaper to the theme
 

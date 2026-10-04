@@ -135,6 +135,7 @@ export class UmbraDesktopThemePickerModalElement extends UmbModalBaseElement<Umb
                 <umbradesktop-theme-preview
                   .theme=${theme}
                   .variant=${this._variant}
+                  .highContrast=${this._theme?.highContrast ?? false}
                   .wallpaper=${previewWallpaper(theme, this.#currentThumb(), this._followsTheme)}></umbradesktop-theme-preview>
                 <span class="text">
                   <span class="name">${theme.name}</span>

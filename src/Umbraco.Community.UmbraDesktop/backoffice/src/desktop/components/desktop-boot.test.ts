@@ -187,3 +187,38 @@ describe('while windows are being reopened', () => {
     );
   });
 });
+
+describe('the welcome wizard', () => {
+  /**
+   * Put the wizard up, as the settings context does for a new user. No current user exists in a
+   * test, so the context never decides it; this sets the state the desktop observes instead.
+   * @param desktop The painted desktop.
+   * @param showing Whether the wizard is up.
+   */
+  async function showWelcome(desktop: UmbraDesktopDesktopElement, showing: boolean): Promise<void> {
+    (desktop as unknown as { _welcome: boolean })._welcome = showing;
+    desktop.requestUpdate();
+    await desktop.updateComplete;
+  }
+
+  it('covers the desktop and makes everything behind it inert', async () => {
+    const desktop = await mountDesktop();
+    desktop.reportSettingsLoaded(true);
+    await showWelcome(desktop, true);
+
+    expect(desktop.renderRoot.querySelector('umbradesktop-welcome-screen')).to.not.equal(null);
+    for (const selector of ['.surface', 'umbradesktop-taskbar', 'umbradesktop-toasts']) {
+      expect(desktop.renderRoot.querySelector(selector)!.hasAttribute('inert'), selector).to.equal(true);
+    }
+  });
+
+  it('gives the desktop back when it is gone', async () => {
+    const desktop = await mountDesktop();
+    desktop.reportSettingsLoaded(true);
+    await showWelcome(desktop, true);
+    await showWelcome(desktop, false);
+
+    expect(desktop.renderRoot.querySelector('umbradesktop-welcome-screen')).to.equal(null);
+    expect(desktop.renderRoot.querySelector('.surface')!.hasAttribute('inert')).to.equal(false);
+  });
+});
