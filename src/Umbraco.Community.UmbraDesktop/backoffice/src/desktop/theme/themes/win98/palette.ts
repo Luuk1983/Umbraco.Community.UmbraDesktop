@@ -168,6 +168,12 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-titlebar-background': WIN98_ACTIVE_CAPTION,
   '--umbradesktop-titlebar-border-bottom': 'none',
   '--umbradesktop-titlebar-text': WIN98_CAPTION_TEXT,
+  '--umbradesktop-titlebar-progress-fill': WIN98_MENU_HILIGHT,
+  '--umbradesktop-titlebar-progress-track': WIN98_FACE,
+  '--umbradesktop-titlebar-progress-failed': '#800000',
+  '--umbradesktop-taskbar-progress-fill': WIN98_MENU_HILIGHT,
+  '--umbradesktop-taskbar-progress-track': 'transparent',
+  '--umbradesktop-taskbar-progress-failed': '#800000',
   // Win98 marks an inactive window by recolouring its caption, not by fading it: the buttons on an
   // inactive window are as crisp and as clickable as on an active one. Neutralising the base rule
   // here rather than in the sheet is what lets `window.css.ts` simply state the two colours.

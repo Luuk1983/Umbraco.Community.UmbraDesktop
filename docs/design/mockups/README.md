@@ -35,3 +35,7 @@ Later mockups, one set per feature, named after the design doc they belong to:
   for [`../2026-10-03-welcome-wizard-design.md`](../2026-10-03-welcome-wizard-design.md). The
   wallpaper thumbnails are embedded, so the file opens on its own. The theme cards are drawn by
   hand; the built page uses the theme picker's own miniatures.
+- **[2026-10-03-window-progress.html](./2026-10-03-window-progress.html)**: a busy window's progress in
+  every theme, in four states, for
+  [`../2026-10-03-window-progress-design.md`](../2026-10-03-window-progress-design.md). The Umbraco
+  theme is drawn both ways that were considered; the ring round the icon is the one built.

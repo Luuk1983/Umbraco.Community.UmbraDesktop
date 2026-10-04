@@ -153,3 +153,20 @@ it('closes every window when it cannot tell which one the chat is in', () => {
 
   expect(outcome.windowIds).to.deep.equal(['a']);
 });
+
+it('leaves a window with work in flight alone, and says why', () => {
+  // Closing it would stop the upload as surely as closing an unsaved window loses its edits.
+  const busy = { progress: { state: 'determinate' as const, fraction: 0.2, completed: 2, total: 10, failed: 0 } };
+  const outcome = plan(desk([win('a', 'Media library', busy), win('b', 'Log Viewer'), win(SELF, 'Copilot')]));
+
+  expect(outcome.windowIds).to.deep.equal(['b']);
+  expect(outcome.message).to.contain('Media library');
+  expect(outcome.message.toLowerCase()).to.contain('still working');
+});
+
+it('closes a window whose work has failed: nothing is left to stop', () => {
+  const failed = { progress: { state: 'failed' as const, fraction: 1, completed: 1, total: 1, failed: 1 } };
+  const outcome = plan(desk([win('a', 'Media library', failed), win(SELF, 'Copilot')]));
+
+  expect(outcome.windowIds).to.deep.equal(['a']);
+});

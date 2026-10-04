@@ -1,5 +1,5 @@
 import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
-import { UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
+import { UMBRADESKTOP_CHROME_ICON_PX, UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
 import { taskActivation } from '../window-model';
 import { exitDialogContent } from '../exit-message.js';
 import { formatClock, msUntilNextMinute } from '../clock-format.js';
@@ -24,6 +24,21 @@ import { attentionCount } from '../notifications/scrollback.js';
 import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import { noticeIconName, windowNotices, worstSeverity } from '../notices/notices.js';
 import type { UmbraDesktopNoticeSeverity } from '../notices/types.js';
+import { progressCaption } from '../progress/progress.js';
+import {
+  UMBRADESKTOP_PROGRESS_OFFSET_PX,
+  UMBRADESKTOP_PROGRESS_TRACK_DEFAULT,
+  progressStyles,
+  renderProgress,
+} from '../progress/progress-view.js';
+
+/**
+ * How far the base pulls a task button's icon left, in px, to balance the transparent padding inside
+ * Umbraco's glyphs. Named because the busy ring has to follow it: the pull leaves the icon hanging
+ * out of the wrapper the ring is drawn against, and a ring sized to the wrapper came out 2px small and
+ * off-centre, which `theme/progress.test.ts` measured.
+ */
+const TASK_ICON_PULL_PX = 2;
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import type { PropertyValues } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -309,14 +324,25 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     // The words, not just the shape: this is the accessible name and the tooltip, so the state is
     // readable to a screen reader and on a monochrome display. `notices[0]` is the worst notice,
     // which is the one the badge is drawing.
-    const label = worst ? `${name} — ${this.localize.term(notices[0].title)}` : name;
+    // Work in progress joins the same sentence, last, so "Media — Unsaved changes — Uploading 14 of
+    // 50" reads in order of what the editor can lose. The ring is decoration for that reason: these
+    // words are what a screen reader and a tooltip get. Issue #108.
+    const caption = progressCaption(
+      w.progress,
+      (key, ...args) => this.localize.term(key, ...args),
+      (value) => this.localize.string(value),
+    );
+    const label = [name, worst ? this.localize.term(notices[0].title) : '', caption].filter(Boolean).join(' — ');
     return html`
       <button
         class="task window ${w.active ? 'active' : ''}"
         title=${label}
         aria-label=${label}
         @click=${() => this.#onTaskClick(w)}>
-        <umb-icon class="task-icon" name=${w.app.icon}></umb-icon>
+        <span class="progress-anchor">
+          <umb-icon class="task-icon" name=${w.app.icon}></umb-icon>
+          ${renderProgress(w.progress, caption, true)}
+        </span>
         <span class="task-label">${name}</span>
         ${this.#renderBadge(worst)}
       </button>
@@ -501,6 +527,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           this.#manager?.unsavedWindows().length ?? 0,
           this.#manager?.conflictedWindows().length ?? 0,
           (key, ...args) => this.localize.term(key, ...args),
+          this.#manager?.busyWindows().length ?? 0,
         ),
         confirmLabel: this.localize.term('umbraDesktop_exitConfirm'),
         cancelLabel: this.localize.term('umbraDesktop_exitStay'),
@@ -726,7 +753,20 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   }
 
   static override styles = [
+    progressStyles,
     css`
+      /* The taskbar's colours for the progress ring, from its own tokens: the bar is a dark ground
+         where the caption is a light one, so the fill is the backoffice's current-item pink here
+         rather than the caption's blue, and the failure colour is a lighter red that still reads
+         on navy. Issue #108. */
+      .task .progress {
+        --_progress-fill: var(--umbradesktop-taskbar-progress-fill, var(--uui-color-current, #f5c1bc));
+        --_progress-track: var(--umbradesktop-taskbar-progress-track, ${UMBRADESKTOP_PROGRESS_TRACK_DEFAULT});
+        --_progress-failed: var(--umbradesktop-taskbar-progress-failed, #ff6b8b);
+        /* The ring reaches as far left as the pulled icon does. Same specificity as a theme's strip
+           rule and earlier in the cascade, so a theme drawing a strip positions it unaffected. */
+        left: calc(-1 * var(--umbradesktop-progress-offset, ${UMBRADESKTOP_PROGRESS_OFFSET_PX}px) - ${TASK_ICON_PULL_PX}px);
+      }
       :host {
         position: relative;
         display: block;
@@ -939,10 +979,10 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
          four themes that restate this rule. Every theme's copy was renamed with this one. */
       .task .task-icon {
         flex-shrink: 0;
-        font-size: 18px;
+        font-size: ${UMBRADESKTOP_CHROME_ICON_PX}px;
         /* Umbraco icon glyphs carry transparent padding inside their box, making the space
            before the icon read wider than the space after the label; pull it back to balance. */
-        margin-left: -2px;
+        margin-left: -${TASK_ICON_PULL_PX}px;
       }
       .task-label {
         overflow: hidden;

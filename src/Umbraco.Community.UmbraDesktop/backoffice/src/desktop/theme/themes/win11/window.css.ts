@@ -1,4 +1,5 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
+import { progressStrip } from '../../../progress/progress-view.js';
 import { W11_FONT } from './palette.js';
 import { W11_TITLEBAR_HEIGHT } from './metrics.js';
 
@@ -68,4 +69,7 @@ export default css`
   .notice .notice-actions uui-button {
     --uui-button-border-radius: 4px;
   }
+
+  /* Work in progress (#108): a 2px line along the title bar's foot, in the taskbar's green. */
+  ${progressStrip('.titlebar', { height: 2 })}
 `;

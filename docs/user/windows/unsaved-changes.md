@@ -19,7 +19,8 @@ everywhere else:
 - **Exit desktop** asks once for the whole desktop, and says how many windows hold unsaved changes.
 
 If someone else changes the same document while you hold unsaved changes, the window warns about that
-too. See [Overwrite protection](overwrite-protection.md).
+too. See [Overwrite protection](overwrite-protection.md). Work that is still running, such as an
+upload, is guarded the same way. See [Busy windows](busy-windows.md).
 
 Unsaved changes do not survive a reload of the page, even when the desktop
 [reopens your windows](../settings/reopening-windows.md). Plain Umbraco loses them on a reload too.

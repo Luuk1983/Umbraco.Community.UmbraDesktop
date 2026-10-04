@@ -1,4 +1,5 @@
 import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
+import { isBusy } from '../progress/progress.js';
 import type { UmbraDesktopWorkspaceSubject } from '../dirty-watcher';
 
 /**
@@ -60,6 +61,12 @@ function describeWindow(
   // cannot derive from "the page I have open".
   for (const subject of subjects) {
     parts.push(`showing ${subject.entityType} ${subject.unique}`);
+  }
+  // Work in flight, with its count when there is one: an agent asked to close or reload this window
+  // should know it would stop something. English and unlocalised, like the rest of this line.
+  if (isBusy(win.progress)) {
+    const { completed, total } = win.progress!;
+    parts.push(total === undefined ? 'still working' : `still working (${completed} of ${total})`);
   }
   // Last, so it is the note the line ends on.
   if (win.dirty) parts.push('has unsaved changes');
