@@ -101,6 +101,11 @@ async function mountDesktopWithSettings(): Promise<{
  * Assert that selecting `theme` adopts its own stylesheets into the chrome, and that returning to
  * the Umbraco identity theme takes them away again.
  *
+ * The Umbraco theme ships stylesheets of its own now, so "returning to it" means this theme's
+ * sheets are gone and the Umbraco ones are in their place, not that nothing is adopted. That is
+ * why every check below is by sheet identity: it never needed the identity theme to be bare, only
+ * to be a different theme.
+ *
  * Asserted by sheet *identity* rather than by watching `adoptedStyleSheets` grow, and that is the
  * load-bearing detail here. The theme a desktop mounts on is not knowable from inside a test:
  * settings persist to `localStorage`, the runner serves every test file from one origin, and it
@@ -141,7 +146,7 @@ async function expectAdoptsSheets(
     mounted.probe.settings!.setTheme('umbraco');
     await until(
       () => roots.every((entry) => !entry.adopted()),
-      'the Umbraco theme ships no sheets at all, so none of them should be adopted',
+      `choosing the Umbraco theme should leave none of ${theme.name}'s stylesheets adopted`,
     );
 
     mounted.probe.settings!.setTheme(theme.id);
@@ -149,8 +154,8 @@ async function expectAdoptsSheets(
       await until(entry.adopted, `choosing ${theme.name} should adopt its ${entry.surface} stylesheet — ${entry.ifMissing}`);
     }
 
-    // And back: the Umbraco theme ships no sheets, so its selection has to *remove* them again
-    // rather than leave the previous theme's rules standing.
+    // And back: selecting the Umbraco theme has to *replace* them, rather than leave the previous
+    // theme's rules standing on top of it.
     mounted.probe.settings!.setTheme('umbraco');
     await until(
       () => roots.every((entry) => !entry.adopted()),

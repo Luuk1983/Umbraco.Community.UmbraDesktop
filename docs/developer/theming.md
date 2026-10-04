@@ -31,12 +31,13 @@ theme/themes/<id>/
   preview.css.ts    rules adopted into the settings picker's miniature (§1.2)
 ```
 
-Every file except `index.ts` is optional. The **Umbraco** theme is one `index.ts` with an empty
-palette and no sheets at all — every chrome token carries today's value as its CSS fallback, and an
-app token's fallback is carried by the app itself (§3), so setting nothing renders exactly what
-shipped before theming existed. Read
+Every file except `index.ts` is optional. The **Umbraco** theme ships a palette, a `window` sheet and
+a `taskbar` sheet and nothing else, and it is the one to read first: every value in its palette is a
+`--uui-*` reference, so one palette follows the backoffice's Light, Dark and High contrast settings
+with no dark variant of its own, and it answers no app token (§3), so an app's own fallback stays the
+Umbraco look. Read
 [`themes/umbraco/index.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/umbraco/index.ts)
-first; it is the shortest complete theme there can be.
+and its `palette.ts`, which is the shortest theme that still has a point of view.
 
 Then register it, and that is the only file outside your folder you touch:
 
@@ -127,10 +128,11 @@ the active one.
 
 ### 1.3 The base is the Umbraco look, and yours probably is not
 
-Every chrome component's own CSS is the **Umbraco** design: its fallbacks are `--uui-*` values, and
-where it has an opinion of its own — how a group of things is labelled, say — that opinion is copied
-from the backoffice, because the identity theme is what it has to render as when a palette sets
-nothing.
+Every chrome component's own CSS is the **Umbraco** design as it was before the theme had a palette
+of its own: its fallbacks are `--uui-*` values, and where it has an opinion of its own — how a group
+of things is labelled, say — that opinion is copied from the backoffice. The Umbraco theme restyles
+that foundation now (a navy caption, round buttons, a tab-shaped taskbar group), but what a palette
+does not set still lands on it, so the foundation stays Umbraco's.
 
 So if your theme imitates an operating system, expect to override rather than inherit wherever the
 two disagree, and prefer looking the part over matching the base. A launcher group heading is the
@@ -319,13 +321,13 @@ chrome group is checked against the CSS that actually reads it, in `tokens.test.
 nothing reads cannot sit there as dead weight. The app group has no reader in this package at all;
 its consumers live in the other packages that ship apps, so it is a published contract instead,
 checked in `app-tokens.test.ts`. That test also holds the one asymmetry worth knowing before you
-touch a palette: every theme other than the Umbraco identity theme must set **all** of the app
+touch a palette: every theme other than the Umbraco theme must set **all** of the app
 tokens, never a subset, because a chrome token's fallback lives in the component that reads it,
 but an app token's fallback lives in the app itself (`UMBRADESKTOP_APP_TOKEN_FALLBACKS`, and those
-values *are* the Umbraco look). The identity theme leans on exactly that: it answers neither group,
-which is what makes "the Umbraco theme is unchanged" a structural guarantee. Any other theme that
+values *are* the Umbraco look). The Umbraco theme leans on exactly that: it answers the chrome group
+and never the app one, so an app under it is the Umbraco look by construction. Any other theme that
 answered the chrome group but not the app one would render a correct desktop around an app painted
-in the identity theme's colours.
+in the Umbraco theme's colours.
 
 Each token is named for the CSS property it feeds, so `titlebar-border-bottom` sets a
 `border-bottom` and `window-border` sets the `border` shorthand. You never have to guess which
@@ -769,7 +771,7 @@ geometry tokens are the right shape — and between them they cover most of what
 
 | Theme | Launcher | How |
 |---|---|---|
-| Umbraco | Corner panel above the bar | The defaults; sets nothing |
+| Umbraco | Corner panel above the bar | The defaults; the theme leaves the launcher alone |
 | Win98 | Start menu, flush to the corner | `launcher-left: 0`, and `launcher-bottom` left to default to the bar's reserve |
 | Umbraco 4 | Corner panel, same anchor | Also just `launcher-left: 0` — v4 kept its Sections panel exactly there |
 | macOS | Full-screen surface above the dock | A **sheet** rule in `taskbar.css.ts`, since `left`/`right`/`width`/`height` all have to move together |

@@ -17,8 +17,9 @@ import { UmbraDesktopWindowElement } from '../../components/window.element.js';
  * which is exactly the failure mode the themes' own geometry tests exist for.
  *
  * The last test here is the one that earns its keep. The preview restates the chrome's own token
- * fallbacks, because the Umbraco identity theme ships an empty palette and a preview painted from
- * palettes alone would render it as nothing at all. That restatement is a second copy of a number,
+ * fallbacks, because a palette is partial by design and a preview painted from palettes alone would
+ * render every token a theme leaves alone as nothing at all. That restatement is a second copy of
+ * a number,
  * so it is held against the first copy on every run.
  */
 

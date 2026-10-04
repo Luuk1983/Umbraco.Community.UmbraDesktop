@@ -125,7 +125,7 @@ export default {
     backofficeThemeAbout: 'Het lichte, donkere en hoog-contrastthema van Umbraco zelf. Geldt voor de hele backoffice, dus ook voor wat er in elk venster staat.',
     backofficeThemePickerTitle: 'Kies een backoffice-thema',
     // één zin per thema, naast de voorvertoning in de kiezer: wat het *is*, niet wat het doet
-    themeAboutUmbraco: 'Het bureaublad zoals het standaard is, opgebouwd uit de kleuren en maatvoering van Umbraco zelf.',
+    themeAboutUmbraco: 'De header van de backoffice op het voorste venster, ronde knoppen en een rustige taakbalk, opgebouwd uit de kleuren van Umbraco zelf.',
     themeAboutUmbraco4: 'De backoffice van 2009 als vensterrand: warmgrijze verlopen, haarfijne panelen en knoppen die indrukken.',
     themeAboutMacos: 'Stoplichten links in elke titelbalk, een zwevend dock en een schermvullende, vervaagde launcher.',
     themeAboutWin11: 'Een vlakke acryl-taakbalk met gecentreerde knoppen, afgeronde vensters en vierkante titelknoppen.',
