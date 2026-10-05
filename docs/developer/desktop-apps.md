@@ -459,6 +459,17 @@ shipped it. Do not reach for it.
 This is opt-in by construction. An app that never writes that selector never needs to know the
 attribute exists, and §4 alone is enough to be correct everywhere.
 
+### Not your app's own element?
+
+The desktop stamps the attribute on app elements only. An element that a package lets apps place
+inside their own windows, such as the Arcade's result card and leaderboard panel, is not an app, so
+nothing stamps it. It can read the active theme's id from the `theme` observable on the desktop's
+settings context (§7.2) and stamp itself, after which the same `:host([data-umbradesktop-theme=...])`
+rules work. The Arcade's
+[`theme.controller.ts`](../../src/Umbraco.Community.UmbraDesktop.Services.Arcade/backoffice/src/pieces/theme.controller.ts)
+is the worked example: a small controller that does exactly that, and stamps nothing outside the
+desktop, which leaves the unbranched rules.
+
 ### The theme ids are a published API
 
 ```
@@ -610,13 +621,14 @@ should follow the same two, or the user who asked for 24 hour sees "2:30 PM" in 
 "14:30" a few centimetres below it. `this.localize.date` does not know about either setting.
 
 The desktop publishes them through the context it provides to everything inside it, apps included.
-**This is public API**: the alias, the two members below and their behaviour are kept stable.
+**This is public API**: the alias, the members below and their behaviour are kept stable.
 
 | | |
 |---|---|
 | Context alias | `'UmbraDesktopSettingsContext'` |
 | `formatDateTime(date, options)` | Formats `date` with `Intl.DateTimeFormat` options, exactly as the taskbar clock does: the user's culture, their hour override when `options` asks for an hour, and the hour padded to suit the cycle. Returns a string |
 | `locale` | An observable that emits whenever either setting changes. Observe it and redraw; its value is the desktop's own and not something to read |
+| `theme` | An observable of the active theme's id, one of the ids in §5. Published API since the Arcade's pieces use it to stamp themselves (§5) |
 
 As with the manifest type (§2), nothing is imported from the host. Declare the shape you use and a
 token with the same alias, and consume it:

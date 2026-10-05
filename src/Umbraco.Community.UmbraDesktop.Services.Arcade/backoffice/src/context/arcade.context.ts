@@ -5,16 +5,27 @@ import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registr
 import { UmbLocalizationController } from '@umbraco-cms/backoffice/localization-api';
 import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
 import { UMB_NOTIFICATION_CONTEXT } from '@umbraco-cms/backoffice/notification';
-import { UmbArrayState, UmbObjectState } from '@umbraco-cms/backoffice/observable-api';
+import { UmbArrayState, UmbNumberState, UmbObjectState } from '@umbraco-cms/backoffice/observable-api';
 import { createArcadeApi } from '../api/arcade-api.js';
-import type { ArcadeApi, ArcadeBoard, ArcadeProfile, ArcadeSubmitResult } from '../api/arcade-api.js';
+import type { ArcadeApi, ArcadeBoard, ArcadeOverview, ArcadeProfile, ArcadeSubmitResult } from '../api/arcade-api.js';
 import { normaliseGames } from '../games/game-manifest.js';
 import type { ArcadeGame } from '../games/game-manifest.js';
+import { ARCADE_HUB_ALIAS } from '../hub/constants.js';
 import { AREA } from '../shared/area.js';
 import { formatScore } from '../shared/format.js';
+import { rankText, say } from '../shared/phrases.js';
+import { DESKTOP_WINDOWS } from '../shared/windows.js';
+import type { DesktopWindows } from '../shared/windows.js';
+import { clearActiveArcade, setActiveArcade, whileRaising } from './active-arcade.js';
 import { UMBRADESKTOP_ARCADE_CONTEXT } from './arcade.context-token.js';
+// Also defines the element, before any toast needs it.
+import { ARCADE_BEATEN_TOAST_ELEMENT } from './beaten-toast.element.js';
 import { UMBRADESKTOP_ARCADE_PRIVACY_MODAL } from './privacy-modal.token.js';
 import type { ArcadePrivacyModalValue } from './privacy-modal.token.js';
+// Defines the result card. Games place its tag and import nothing (design P2), so the Arcade defines
+// it as soon as it loads, which is before any game can finish a round; a tag rendered earlier upgrades.
+import '../pieces/result.element.js';
+import '../pieces/leaderboard.element.js';
 
 /** What the context needs from outside, injectable so tests need no server, modal or toast container. */
 export interface ArcadeContextDeps {
@@ -24,14 +35,61 @@ export interface ArcadeContextDeps {
   registry: typeof umbExtensionsRegistry;
   /** Ask the one-time question; undefined when closed without an answer. */
   askPrivacy(host: UmbControllerHost, displayName: string): Promise<ArcadePrivacyModalValue | undefined>;
-  /** Raise a toast on the desktop, where the notification centre picks it up. */
-  toast(host: UmbControllerHost, color: 'positive' | 'warning', message: string): void;
+  /** Raise a toast on the desktop, where the notification centre picks it up; `element` gives it its own element and data. */
+  toast(host: UmbControllerHost, color: 'positive' | 'warning', message: string, element?: { name: string; data: unknown }): void;
   /** How long the beaten check waits for game manifests, in milliseconds; tests shorten it. */
   gamesWaitMs: number;
+  /** Where the board last played per game is kept; a function so a locked-down browser's throwing storage is caught. */
+  storage: () => Storage;
 }
 
 /** How long the beaten check waits for game manifests to register before naming a game by its alias. */
 const GAMES_WAIT_MS = 3000;
+
+/** What a game may say when it submits. Published API for games, only ever gains optional fields. */
+export interface ArcadeSubmitOptions {
+  /**
+   * The game shows the Arcade's result card for this score, so the Arcade raises neither the
+   * privacy dialog nor the "New best" toast: the card asks and celebrates instead (design P3, P13).
+   */
+  showsResult?: boolean;
+}
+
+/** An accepted submit as the game gets it: the server's answer plus what the result card needs. */
+export type ArcadeGameResult = Extract<ArcadeSubmitResult, { status: 'accepted' }> & {
+  /** The game's `umbraDesktopGame` alias. */
+  game: string;
+  /** The board's alias. */
+  board: string;
+  /** The value submitted. */
+  value: number;
+  /** The rank in words, in the backoffice language: "3rd". A game cannot import the Arcade's ordinals. */
+  rankText: string;
+};
+
+/** What `submit` answers: an accepted result, or why not. */
+export type ArcadeSubmitAnswer = ArcadeGameResult | Exclude<ArcadeSubmitResult, { status: 'accepted' }>;
+
+/** A player's standing on one board, for a game's own display (Snake's Best chip, design P5). */
+export interface ArcadeStanding {
+  /** Their best. */
+  best: number;
+  /** Their rank, or would-be rank while hidden. */
+  rank: number;
+  /** The rank in words. */
+  rankText: string;
+}
+
+/** A board the hub should show when it opens, or now if it is open (design §4). */
+export interface ArcadeHubRequest {
+  /** The game's alias. */
+  game: string;
+  /** The board's alias; the game's page picks the mode last played without one. */
+  board?: string;
+}
+
+/** Where the board last played per game is kept, as one JSON object of game alias to board alias. */
+export const LAST_BOARD_KEY = 'umbradesktop-arcade-last-board';
 
 /**
  * The Arcade on the desktop: games submit through it, the hub reads through it, and it tells you,
@@ -81,6 +139,26 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
   /** Stops the games wait early (timer and subscription); undefined when nothing is waiting. */
   #cancelGamesWait: (() => void) | undefined;
 
+  /** The window manager, for opening the hub. Found on the desktop element, which hosts this context and provides it. */
+  #windows?: DesktopWindows;
+
+  /** The board the hub should show next, until the hub takes it. */
+  readonly #hubRequest = new UmbObjectState<ArcadeHubRequest | undefined>(undefined);
+
+  /** The board the hub should show next, as the hub observes it. */
+  readonly hubRequest = this.#hubRequest.asObservable();
+
+  /** Counts the writes this visit that changed a board; the value means nothing, only that it moved. */
+  readonly #scoresChanged = new UmbNumberState(0);
+
+  /**
+   * Moves after every write that changes what a board shows: an accepted score, showing or hiding the
+   * player's scores, a moderation, and the player deleting theirs. The hub stays open while the player
+   * plays, so without this its overview and game page would go on showing the boards as they were
+   * when it opened ("Not played yet" after a win). They observe it and read again quietly.
+   */
+  readonly scoresChanged = this.#scoresChanged.asObservable();
+
   /**
    * @param host The desktop element.
    * @param deps Collaborators; the real ones by default.
@@ -93,9 +171,12 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
       askPrivacy:
         deps.askPrivacy ??
         ((h, displayName) => umbOpenModal(h, UMBRADESKTOP_ARCADE_PRIVACY_MODAL, { data: { displayName } }).catch(() => undefined)),
-      toast: deps.toast ?? ((_host, color, message) => void this.#peek(color, message)),
+      toast: deps.toast ?? ((_host, color, message, element) => void this.#peek(color, message, element)),
       gamesWaitMs: deps.gamesWaitMs ?? GAMES_WAIT_MS,
+      storage: deps.storage ?? (() => window.localStorage),
     };
+    // So the beaten toast, which renders outside the desktop, can ask this context to show a board.
+    setActiveArcade(this);
     this.#localize = new UmbLocalizationController(this);
     // The initializer rather than `registry.byType`, which never evaluates a manifest's `conditions`.
     new UmbExtensionsManifestInitializer(this, this.#deps.registry as never, 'umbraDesktopGame', null, (permitted) => {
@@ -107,6 +188,7 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
       }
       this.#games.setValue(games);
     });
+    this.consumeContext(DESKTOP_WINDOWS, (windows) => (this.#windows = windows));
     void this.#announceBeaten();
   }
 
@@ -125,9 +207,10 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
    * @param game The game's `umbraDesktopGame` alias.
    * @param board The board's alias.
    * @param value Points, or milliseconds for a time.
-   * @returns How it went, or undefined when the game or board is unknown.
+   * @param options Whether the game shows the result card, in which case the Arcade neither asks nor toasts.
+   * @returns How it went, with what the card needs when accepted, or undefined when the game or board is unknown.
    */
-  async submit(game: string, board: string, value: number): Promise<ArcadeSubmitResult | undefined> {
+  async submit(game: string, board: string, value: number, options: ArcadeSubmitOptions = {}): Promise<ArcadeSubmitAnswer | undefined> {
     const found = this.getGames().find((g) => g.alias === game);
     const definition = found?.leaderboards.find((b) => b.alias === board);
     if (!found || !definition) {
@@ -136,6 +219,16 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
     }
     const result = await this.#deps.api.submit(game, definition, value);
     if (result.status !== 'accepted') return result;
+    this.#rememberBoard(game, board);
+    this.#changed();
+    const answer: ArcadeGameResult = { ...result, game, board, value, rankText: rankText(this.#localize, result.rank) };
+    // The card asks and celebrates, so the Arcade does neither (design P3, P13). Once answered this
+    // visit, a result read before the answer was saved is stale: hand the card the answer instead,
+    // or it would ask again.
+    if (options.showsResult) {
+      if (!this.#answered) return answer;
+      return { ...answer, askedAboutPublic: true, isPublic: this.#profile.getValue()?.isPublic ?? answer.isPublic };
+    }
 
     let isPublic = result.isPublic;
     if (!result.askedAboutPublic && !this.#destroyed) {
@@ -150,13 +243,99 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
 
     if (result.isPersonalBest) {
       const name = this.#gameName(found, definition.alias);
-      const score = formatScore(definition.format, value);
+      const score = formatScore(definition.format, value, this.#localize.lang());
       const message = isPublic
         ? this.#localize.termOrDefault(`${AREA}_newBestRanked`, `New best on ${name}: ${score}, number ${result.rank}`, name, score, result.rank)
         : this.#localize.termOrDefault(`${AREA}_newBest`, `New best on ${name}: ${score}`, name, score);
       this.#toast('positive', message);
     }
-    return { ...result, isPublic };
+    return { ...answer, isPublic };
+  }
+
+  /**
+   * The board the player last submitted to in a game, so a game page and a panel opened without one
+   * open on it (design P12). Kept in this browser only: it is a convenience, not data.
+   * @param game The game's alias.
+   * @returns The board's alias, or undefined when none is remembered.
+   */
+  lastBoard(game: string): string | undefined {
+    try {
+      const stored = JSON.parse(this.#deps.storage().getItem(LAST_BOARD_KEY) ?? '{}') as Record<string, unknown>;
+      const board = stored?.[game];
+      return typeof board === 'string' ? board : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Save the answer to "show your scores?" from a result card, or the quiet line's "Show them"
+   * (design P7). Marks the question answered for this visit, as the dialog's answer does.
+   * @param shown Whether to show the player's scores.
+   * @returns Whether it saved.
+   */
+  async setScoresShown(shown: boolean): Promise<boolean> {
+    const saved = await this.#deps.api.updateProfile({ isPublic: shown });
+    if (!saved) return false;
+    this.#profile.setValue(saved);
+    this.#answered = true;
+    this.#changed();
+    return true;
+  }
+
+  /**
+   * The player's standing on a board, for a game's own display.
+   * @param game The game's alias.
+   * @param board The board's alias.
+   * @returns The standing, null when they have not played it, undefined when the server is unreachable.
+   */
+  async getStanding(game: string, board: string): Promise<ArcadeStanding | null | undefined> {
+    const data = await this.#deps.api.getBoard(game, board);
+    if (!data) return undefined;
+    if (!data.viewer) return null;
+    return { best: data.viewer.value, rank: data.viewer.rank, rankText: rankText(this.#localize, data.viewer.rank) };
+  }
+
+  /** The hub's overview. @returns Every board as the player sees it, or undefined when unreachable. */
+  getOverview(): Promise<ArcadeOverview | undefined> {
+    return this.#deps.api.getOverview();
+  }
+
+  /**
+   * Show a board in the hub: remember it, then open the hub, which takes the request when it opens or
+   * at once if it is open already (design §4). Used by the panel's "Open in the Arcade" and the beaten
+   * toast. Nothing is kept when the hub cannot be opened, so a later visit does not jump to it.
+   * @param game The game's alias.
+   * @param board The board's alias, or none for the mode last played.
+   * @returns Whether the hub opened.
+   */
+  showBoard(game: string, board?: string): boolean {
+    if (this.#destroyed) return false;
+    this.#hubRequest.setValue({ game, board });
+    const opened = this.#windows?.openApp(ARCADE_HUB_ALIAS) ?? false;
+    if (!opened) this.#hubRequest.setValue(undefined);
+    return opened;
+  }
+
+  /** The hub has shown the requested board; forget it. */
+  clearHubRequest(): void {
+    this.#hubRequest.setValue(undefined);
+  }
+
+  /**
+   * Remember the board just played. Never throws: a browser that refuses storage just forgets.
+   * @param game The game's alias.
+   * @param board The board's alias.
+   */
+  #rememberBoard(game: string, board: string): void {
+    try {
+      const storage = this.#deps.storage();
+      const parsed: unknown = JSON.parse(storage.getItem(LAST_BOARD_KEY) ?? '{}');
+      const stored = typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {};
+      storage.setItem(LAST_BOARD_KEY, JSON.stringify({ ...stored, [game]: board }));
+    } catch {
+      // A convenience only.
+    }
   }
 
   /** The player's best on a board. @param game Game alias. @param board Board alias. @returns The best, null if unplayed, undefined if unreachable. */
@@ -185,23 +364,41 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
   /** Delete everything about the player. @returns Whether it worked. */
   async deleteMyScores(): Promise<boolean> {
     const done = await this.#deps.api.deleteProfile();
-    if (done) await this.refreshProfile();
+    if (done) {
+      this.#changed();
+      await this.refreshProfile();
+    }
     return done;
   }
 
   /** Remove a score (admin). @param game Game. @param board Board. @param userKey Player. @returns Whether it worked. */
-  removeScore(game: string, board: string, userKey: string): Promise<boolean> {
-    return this.#deps.api.removeScore(game, board, userKey);
+  async removeScore(game: string, board: string, userKey: string): Promise<boolean> {
+    return this.#changedIf(await this.#deps.api.removeScore(game, board, userKey));
   }
 
   /** Empty a board (admin). @param game Game. @param board Board. @returns Whether it worked. */
-  resetBoard(game: string, board: string): Promise<boolean> {
-    return this.#deps.api.resetBoard(game, board);
+  async resetBoard(game: string, board: string): Promise<boolean> {
+    return this.#changedIf(await this.#deps.api.resetBoard(game, board));
   }
 
-  /** Reset a display name (admin). @param userKey Player. @returns Whether it worked. */
-  resetName(userKey: string): Promise<boolean> {
-    return this.#deps.api.resetName(userKey);
+  /** Reset a display name (admin), which every board the player is on shows. @param userKey Player. @returns Whether it worked. */
+  async resetName(userKey: string): Promise<boolean> {
+    return this.#changedIf(await this.#deps.api.resetName(userKey));
+  }
+
+  /** Say a board changed, through {@link scoresChanged}. */
+  #changed(): void {
+    this.#scoresChanged.setValue(this.#scoresChanged.getValue() + 1);
+  }
+
+  /**
+   * Say a board changed when a write worked; a moderation's one line.
+   * @param done Whether the server accepted the write.
+   * @returns `done`, for the caller to pass on.
+   */
+  #changedIf(done: boolean): boolean {
+    if (done) this.#changed();
+    return done;
   }
 
   /**
@@ -213,6 +410,7 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
     if (this.#destroyed) return;
     this.#destroyed = true;
     this.#cancelGamesWait?.();
+    clearActiveArcade(this);
     super.destroy();
   }
 
@@ -232,6 +430,8 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
         if (saved) {
           this.#profile.setValue(saved);
           this.#answered = true;
+          // Shown or hidden, the boards now show the score differently.
+          this.#changed();
         }
         return saved;
       } finally {
@@ -244,26 +444,31 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
 
   /**
    * Tell the player who took first place from them since they last looked: once per visit, because
-   * this context exists once per visit (D10). A plain warning toast, so the notification centre
-   * shows and keeps it; its message says where to look, since a click on it does nothing.
+   * this context exists once per visit (D10). A warning toast naming both scores and where the player
+   * stands now (design P13), raised with the Arcade's own element: the desktop draws the toast itself
+   * from its headline and message, and selecting it raises that element again, which opens the board
+   * (settled point 11, `beaten-toast.element.ts`).
    */
   async #announceBeaten(): Promise<void> {
     const events = await this.#deps.api.takeBeaten();
     if (events.length > 0) await this.#gamesLoaded();
     for (const event of events) {
+      if (this.#destroyed) return;
       const game = this.getGames().find((g) => g.alias === event.game);
       const name = game ? this.#gameName(game, event.board) : event.game;
-      const score = formatScore(event.format, event.value);
-      this.#toast(
-        'warning',
-        this.#localize.termOrDefault(
-          `${AREA}_beaten`,
-          `${event.byDisplayName} took first place on ${name} from you (${score}). Open the Arcade to see the board.`,
-          event.byDisplayName,
-          name,
-          score,
-        ),
-      );
+      const theirs = formatScore(event.format, event.value, this.#localize.lang());
+      const headline = say(this.#localize, 'beatenHeadline', '{0} took first place from you on {1}', event.byDisplayName, name);
+      // The player's own row now, for "your 480" and "You are 2nd now". One read per event, and there
+      // is at most one event per board.
+      const viewer = (await this.#deps.api.getBoard(event.game, event.board))?.viewer;
+      const open = say(this.#localize, 'beatenOpen', 'Select to open the leaderboard.');
+      const message = viewer
+        ? `${say(this.#localize, 'beatenScore', '{0} beats your {1}.', theirs, formatScore(event.format, viewer.value, this.#localize.lang()))} ${say(this.#localize, 'beatenRank', 'You are {0} now.', rankText(this.#localize, viewer.rank))} ${open}`
+        : `${say(this.#localize, 'beatenWith', 'With {0}.', theirs)} ${open}`;
+      this.#toast('warning', message, {
+        name: ARCADE_BEATEN_TOAST_ELEMENT,
+        data: { headline, message, game: event.game, board: event.board },
+      });
     }
   }
 
@@ -299,11 +504,12 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
    * score submit or the beaten check: the score is saved either way.
    * @param color The toast's colour.
    * @param message The text.
+   * @param element The toast's own element and its data, for a toast that does something when selected.
    */
-  #toast(color: 'positive' | 'warning', message: string): void {
+  #toast(color: 'positive' | 'warning', message: string, element?: { name: string; data: unknown }): void {
     if (this.#destroyed) return;
     try {
-      this.#deps.toast(this._host, color, message);
+      this.#deps.toast(this._host, color, message, element);
     } catch (error) {
       console.warn('[UmbraDesktop Arcade] A notification could not be raised.', error);
     }
@@ -328,13 +534,20 @@ export class UmbraDesktopArcadeContext extends UmbContextBase {
    * moves it into the notification centre (`2026-09-27-desktop-notifications-design.md`).
    * `getContext` rejects rather than resolving undefined when no notification context answers, so a
    * missing one is caught here.
+   *
+   * Raised inside `whileRaising`: core builds the toast's element synchronously inside `peek`, so the
+   * beaten toast's element can tell this, the Arcade's own raise, from the desktop raising it again
+   * because the player selected it.
    * @param color The toast's colour.
    * @param message The text.
+   * @param element The toast's own element and its data, instead of core's default layout.
    */
-  async #peek(color: 'positive' | 'warning', message: string): Promise<void> {
+  async #peek(color: 'positive' | 'warning', message: string, element?: { name: string; data: unknown }): Promise<void> {
     try {
       const notifications = await this.getContext(UMB_NOTIFICATION_CONTEXT);
-      notifications?.peek(color, { data: { message } });
+      whileRaising(() =>
+        notifications?.peek(color, element ? ({ elementName: element.name, data: element.data } as never) : { data: { message } }),
+      );
     } catch {
       // No notification context (the desktop is gone, or not in a backoffice): the toast is a courtesy.
     }

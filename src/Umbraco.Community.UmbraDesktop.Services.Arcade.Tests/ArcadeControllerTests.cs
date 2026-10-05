@@ -44,6 +44,7 @@ public class ArcadeControllerTests : IAsyncLifetime
         Assert.IsType<ForbidResult>(await outsider.DeleteProfile());
         Assert.IsType<ForbidResult>(await outsider.SubmitScore(SnakeScore));
         Assert.IsType<ForbidResult>(await outsider.GetBoard("Pkg.Snake.Game", "default"));
+        Assert.IsType<ForbidResult>(await outsider.GetOverview());
         Assert.IsType<ForbidResult>(await outsider.GetBest("Pkg.Snake.Game", "default"));
         Assert.IsType<ForbidResult>(await outsider.TakeBeaten());
         Assert.IsType<ForbidResult>(await outsider.ResetBoard("Pkg.Snake.Game", "default"));
@@ -97,6 +98,42 @@ public class ArcadeControllerTests : IAsyncLifetime
 
         Assert.False(board.CanModerate);
         Assert.Equal(300, board.Viewer!.Value);
+    }
+
+    /// <summary>The overview reaches the browser with the viewer's standing per board.</summary>
+    [Fact]
+    public async Task Serves_the_overview()
+    {
+        var player = As(Guid.NewGuid(), "Ada", ArcadeController.DesktopSectionAlias);
+        await player.SubmitScore(SnakeScore);
+
+        var overview = Assert.IsType<OverviewResponseModel>(Assert.IsType<OkObjectResult>(await player.GetOverview()).Value);
+
+        var snake = Assert.Single(overview.Boards);
+        Assert.Equal("Pkg.Snake.Game", snake.Game);
+        Assert.Equal(1, snake.Viewer!.Rank);
+        Assert.Equal(1, snake.Players);
+        Assert.Equal(0, overview.Colleagues);
+    }
+
+    /// <summary>A board read carries the player count and the entry above; a submit carries who was passed.</summary>
+    [Fact]
+    public async Task Boards_and_submits_carry_the_new_fields()
+    {
+        var grace = As(Guid.NewGuid(), "Grace", ArcadeController.DesktopSectionAlias);
+        var ada = As(Guid.NewGuid(), "Ada", ArcadeController.DesktopSectionAlias);
+        await grace.UpdateProfile(new UpdateProfileRequestModel(null, true, null));
+        await grace.SubmitScore(SnakeScore with { Value = 500 });
+        await ada.UpdateProfile(new UpdateProfileRequestModel(null, true, null));
+
+        var below = Assert.IsType<SubmitScoreResponseModel>(Assert.IsType<OkObjectResult>(await ada.SubmitScore(SnakeScore with { Value = 300 })).Value);
+        var board = Assert.IsType<BoardResponseModel>(Assert.IsType<OkObjectResult>(await ada.GetBoard("Pkg.Snake.Game", "default")).Value);
+        var past = Assert.IsType<SubmitScoreResponseModel>(Assert.IsType<OkObjectResult>(await ada.SubmitScore(SnakeScore with { Value = 600 })).Value);
+
+        Assert.Null(below.Passed);
+        Assert.Equal(2, board.Players);
+        Assert.Equal("Grace", board.Above!.DisplayName);
+        Assert.Equal(new PassedPlayerModel("Grace", 500), past.Passed);
     }
 
     /// <summary>Resetting a name is moderation too.</summary>

@@ -29,6 +29,8 @@ export default {
     snakePaused: 'Gepauzeerd. Druk op spatie om verder te gaan',
     snakeOver: 'Game over. Druk op spatie om opnieuw te spelen',
     snakeWon: 'Je hebt het hele veld gevuld!',
+    snakeClassic: 'Klassiek',
+    snakeOpenLeaderboard: 'Ranglijst openen',
     solitaire: 'Solitaire',
     solitaireNewGame: 'Nieuw spel',
     solitaireSettings: 'Instellingen',
@@ -64,5 +66,9 @@ export default {
     solitaireSuitH: 'harten',
     solitaireSuitD: 'ruiten',
     solitaireSuitC: 'klaveren',
+    solitaireRule: 'Hoogste score wint, inclusief tijdbonus',
+    solitaireBonus: 'incl. {0} tijdbonus',
+    solitaireLeaderboard: 'Ranglijst',
+    solitaireShowLeaderboard: 'Ranglijst tonen',
   },
 };

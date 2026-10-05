@@ -6,11 +6,13 @@ import {
   FLIP_MS,
   MOVE_MS,
   SOLITAIRE_GAME_ALIAS,
+  SOLITAIRE_RESULT_WAIT_MS,
   solitaireBoard,
   STAGGER_MS,
   TOOLBAR_HEIGHT_PX,
 } from './constants.js';
 import { ArcadeScores } from '../shared/arcade.js';
+import type { ArcadeResult } from '../shared/arcade.js';
 import { WinCascade } from './cascade.js';
 import type { CascadeCard } from './cascade.js';
 import { CLASSIC_FACES_ALIAS, THEME_BACK_ALIAS, THEME_BACK_IMAGE } from './backs.js';
@@ -22,7 +24,7 @@ import { playFlip, snapshot } from './motion.js';
 import type { Snapshot } from './motion.js';
 import {
   applyTime, canAutoFinish, canDrop, deal, draw, foundationFor, move, movableRun, nextFinishingMove, pile,
-  randomShuffle, withTimeBonus,
+  randomShuffle, timeBonus, withTimeBonus,
 } from './rules.js';
 import type { Card, KlondikeGame, PileId, Shuffler } from './rules.js';
 import { savedGames } from './saved-games.js';
@@ -104,11 +106,16 @@ interface Drag {
  * Cards are all direct children of one `.table`, in id order, and stacked with `z-index`, rather
  * than nested inside pile elements. A card that moves from one pile to another would otherwise
  * change parent, which destroys the node and with it the animation and the 3D turn.
+ *
+ * With the Arcade there (design P6), the win screen after the cascade is the Arcade's result card,
+ * with the time bonus in its detail line, and the settings dialog gains Leaderboard, which opens the
+ * Arcade's panel over the table on the draw mode being played and stops the clock until the player
+ * closes it. Without the Arcade the win screen and the dialog are exactly as they always were.
  */
 @customElement('umbradesktop-solitaire')
 export class SolitaireElement extends UmbLitElement {
   /** The line to the Arcade; injectable for tests. Does nothing without the Arcade. */
-  scores: Pick<ArcadeScores, 'submit'> = new ArcadeScores(this, SOLITAIRE_GAME_ALIAS);
+  scores: Pick<ArcadeScores, 'submit' | 'reachable'> = new ArcadeScores(this, SOLITAIRE_GAME_ALIAS);
 
   /** How a new game is shuffled. A seam for tests, as Minesweeper's placer is. */
   @property({ attribute: false })
@@ -139,6 +146,13 @@ export class SolitaireElement extends UmbLitElement {
    */
   @property({ attribute: false })
   clockIntervalMs = 1000;
+
+  /**
+   * How long a win waits for the Arcade's answer before showing the game's own win screen, in ms.
+   * A seam for tests, as {@link clockIntervalMs} is; players always get {@link SOLITAIRE_RESULT_WAIT_MS}.
+   */
+  @property({ attribute: false })
+  resultWaitMs = SOLITAIRE_RESULT_WAIT_MS;
 
   /**
    * Asks for the next frame of the win cascade. Unset means `requestAnimationFrame`; a test
@@ -194,6 +208,56 @@ export class SolitaireElement extends UmbLitElement {
   /** Whether the game is won and the panel is showing. */
   @state()
   private _won = false;
+
+  /**
+   * What the Arcade handed back for the win; the result card replaces the win screen when it is set
+   * (design P6). Undefined before a win, after New game, and without the Arcade.
+   */
+  @state()
+  private _result?: ArcadeResult;
+
+  /**
+   * Whether the Arcade is there, which is when the settings dialog offers the leaderboard and the
+   * panel is placed at all. Asked when the window opens and again when the settings dialog opens, and
+   * set by an accepted win too: an Arcade that loaded after the window opened would otherwise give the
+   * card a Leaderboard button with no panel behind it.
+   */
+  @state()
+  private _arcadeHere = false;
+
+  /**
+   * Whether a win's score is still on its way to an Arcade that is there. The win screen waits for
+   * the answer meanwhile, so it does not show for a moment and then give way to the card, taking the
+   * keyboard with it. Never set without the Arcade, where the win screen shows at once as it always did.
+   * Cleared after {@link resultWaitMs} whatever the answer, so a stalled server still gets the player a
+   * win screen; a card that arrives later replaces it.
+   */
+  @state()
+  private _awaitingResult = false;
+
+  /**
+   * Whether the leaderboard panel is open. Mirrored back from the panel's `close` event, because the
+   * panel closes itself (Esc, its close button, the scrim) and a flag left saying `true` would make
+   * the next `?open=${true}` a no-op for Lit.
+   */
+  @state()
+  private _panelOpen = false;
+
+  /** The board the panel opens on: the draw mode being played, or the one the card names. */
+  @state()
+  private _panelBoard = '';
+
+  /** The win's time bonus, for the card's detail line ("incl. 1,520 time bonus", the mock's section 6). */
+  #bonus = 0;
+
+  /** Whether the clock was running when the panel opened, so closing it starts the clock again, and only then. */
+  #clockBeforePanel = false;
+
+  /**
+   * What opened the panel, so closing it gives the keyboard back there: the panel's close button
+   * held it and goes away with the panel, which would otherwise leave focus on the page behind.
+   */
+  #panelOpener: 'settings' | 'card' = 'settings';
 
   /** Whether the win cascade canvas is on screen. */
   @state()
@@ -267,6 +331,8 @@ export class SolitaireElement extends UmbLitElement {
       }
     }
     if (this._game.moves > 0) this.#startTimer();
+    // Whether the Arcade is there decides the win screen and the dialog's Leaderboard; nothing waits on it.
+    void this.scores.reachable().then((here) => (this._arcadeHere = here));
     this.observe(umbExtensionsRegistry.byType('umbraDesktopSolitaireBack'), (backs) => (this._backs = backs));
     this.observe(umbExtensionsRegistry.byType('umbraDesktopSolitaireFaces'), (faces) => {
       this._facesManifests = faces;
@@ -336,15 +402,19 @@ export class SolitaireElement extends UmbLitElement {
 
   /**
    * Put keyboard focus where the player needs it after the win appears: on the cascade, so a key
-   * ends it, and on Play again once the panel shows.
+   * ends it, and once the cascade is over on Play again, or on the Arcade's card when that is what
+   * shows. Watched on all three, because the win screen or the card can arrive after `_won` does,
+   * when the Arcade answers late or turns the score down.
    * @param changed The properties that changed in this update.
    */
   override updated(changed: Map<PropertyKey, unknown>): void {
     if (changed.has('_cascading') && this._cascading) {
       this.shadowRoot?.querySelector<HTMLElement>('canvas.cascade')?.focus({ preventScroll: true });
     }
-    if (changed.has('_won') && this._won) {
-      this.shadowRoot?.querySelector<HTMLElement>('.play-again')?.focus({ preventScroll: true });
+    if ((changed.has('_won') || changed.has('_result') || changed.has('_awaitingResult')) && this._won) {
+      this.shadowRoot
+        ?.querySelector<HTMLElement>('.play-again, umbradesktop-arcade-result')
+        ?.focus({ preventScroll: true });
     }
   }
 
@@ -426,6 +496,18 @@ export class SolitaireElement extends UmbLitElement {
    */
   #clock(): string {
     return `${Math.floor(this._elapsed / 60)}:${String(this._elapsed % 60).padStart(2, '0')}`;
+  }
+
+  /**
+   * The card's detail line: the time bonus the win earned, in the backoffice language's digits, as
+   * the card shows the score beside it ("incl. 1,520 time bonus", the mock's section 6). The English
+   * fallback is filled here, because `termOrDefault` hands a fallback back unprocessed when the key
+   * is missing.
+   * @returns The line.
+   */
+  #bonusLine(): string {
+    const bonus = this.localize.number(this.#bonus);
+    return this.localize.termOrDefault(`${AREA}_solitaireBonus`, `incl. ${bonus} time bonus`, bonus);
   }
 
   /**
@@ -656,11 +738,16 @@ export class SolitaireElement extends UmbLitElement {
   }
 
   /**
-   * Open the settings modal and start loading the face previews it shows.
+   * Open the settings modal and start loading the face previews it shows. Asks again whether the
+   * Arcade is there, so one that loaded after the window opened is offered as Leaderboard; only ever
+   * turned on here, since a panel already placed should not vanish from under the player.
    */
   #openSettings(): void {
     this._settingsOpen = true;
     void this.#loadPreviews();
+    void this.scores.reachable().then((here) => {
+      if (here) this._arcadeHere = true;
+    });
   }
 
   /**
@@ -670,6 +757,40 @@ export class SolitaireElement extends UmbLitElement {
   #closeSettings = (): void => {
     this._settingsOpen = false;
     this.shadowRoot?.querySelector<HTMLElement>('.settings')?.focus();
+  };
+
+  /**
+   * Open the Arcade's leaderboard panel over the table. The panel stops the clock itself, through
+   * its `open` event, so a panel that never draws (the Arcade gone since) stops nothing.
+   * @param board The board to open it on.
+   * @param opener What opened it, which gets the keyboard back when it closes.
+   */
+  #openPanel(board: string, opener: 'settings' | 'card'): void {
+    this._panelBoard = board;
+    this.#panelOpener = opener;
+    this._panelOpen = true;
+  }
+
+  /** The panel opened over the table: stop the clock, remembering whether it ran (settled point 13). */
+  #onPanelOpen = (): void => {
+    this.#clockBeforePanel = this.#timer !== undefined;
+    this.#stopTimer();
+  };
+
+  /**
+   * The panel closed. `close` always means the player is done with it (Esc, its close button, the
+   * scrim): "Open in the Arcade" leaves it open over the stopped game. So carry on timing if the clock
+   * was running before, and only a game still being played, and give the keyboard back to what opened
+   * it. A `close` that follows New game setting the panel shut finds it already closed and has
+   * nothing left to do.
+   */
+  #onPanelClose = (): void => {
+    if (!this._panelOpen) return;
+    this._panelOpen = false;
+    if (this.#clockBeforePanel && this._game?.status === 'playing') this.#startTimer();
+    this.#clockBeforePanel = false;
+    const back = this.#panelOpener === 'card' ? 'umbradesktop-arcade-result' : '.settings';
+    void this.updateComplete.then(() => this.shadowRoot?.querySelector<HTMLElement>(back)?.focus());
   };
 
   /**
@@ -725,7 +846,8 @@ export class SolitaireElement extends UmbLitElement {
    * Start a new game: forget the save, gather every card into the stock, then deal from it.
    *
    * Gathering first, without animation, is what makes the deal visibly come from the stock. The
-   * epoch bump cancels a win still in progress, and the clock restarts with the first move.
+   * epoch bump cancels a win still in progress, and the clock restarts with the first move. The last
+   * win's card goes, and the panel shuts without restarting the clock it stopped: that was the old game's.
    */
   async #newGame(): Promise<void> {
     this.#epoch++;
@@ -733,6 +855,10 @@ export class SolitaireElement extends UmbLitElement {
     this.#stopCascade();
     this.store.remove(this.#id);
     this._won = false;
+    this._result = undefined;
+    this._awaitingResult = false;
+    this._panelOpen = false;
+    this.#clockBeforePanel = false;
     this._cascading = false;
     this._finishing = false;
     this._elapsed = 0;
@@ -799,8 +925,26 @@ export class SolitaireElement extends UmbLitElement {
     this._game = withTimeBonus(this._game!, this._elapsed);
     // Before the cascade's awaits: a New game started mid-cascade bumps the epoch and returns early,
     // and must not cost the player the score they just won. The game's own draw mode, never the
-    // settings', which only apply to the next deal.
-    void this.scores.submit(solitaireBoard(this._game.drawCount), this._game.score);
+    // settings', which only apply to the next deal. It asks for the result card's data rather than the
+    // Arcade's dialog and toast (design P3, P6). `this._elapsed` is the one `withTimeBonus` just used,
+    // so the bonus the card shows is the bonus the score counted.
+    this.#bonus = timeBonus(this._elapsed);
+    this._awaitingResult = this._arcadeHere;
+    if (this._awaitingResult) {
+      // A stalled server must not leave the table without a win screen; the epoch keeps this from
+      // touching a game dealt since.
+      window.setTimeout(() => {
+        if (epoch === this.#epoch) this._awaitingResult = false;
+      }, this.resultWaitMs);
+    }
+    void this.scores.submit(solitaireBoard(this._game.drawCount), this._game.score, { showsResult: true }).then((result) => {
+      // A New game since has bumped the epoch: the answer belongs to a game no longer on the table.
+      if (epoch !== this.#epoch) return;
+      this._result = result;
+      this._awaitingResult = false;
+      // An accepted win proves the Arcade is there, even if it was not when the window opened.
+      if (result) this._arcadeHere = true;
+    });
     this.store.remove(this.#id);
     this.#cascadeStopped = false;
     if (!this.reducedMotion() && this._layout) {
@@ -874,6 +1018,11 @@ export class SolitaireElement extends UmbLitElement {
    * empty stock lands on. Cards are rendered in id order, stacked by `z-index` and keyed by id, so
    * a move never reorders the DOM. A face-down card's front is only rendered once it has been seen
    * (the cache check), which leaves the 3D turn a face to turn to without drawing 52 SVGs up front.
+   *
+   * A win shows the Arcade's card when the Arcade accepted the score, nothing while an Arcade that is
+   * there is still answering, and the game's own win screen otherwise. The Arcade's panel is placed
+   * only when the Arcade answered, and lies over everything on the felt, toolbar included, as the
+   * mock's section 7 shows.
    * @returns The toolbar and the table, or nothing before the first game.
    */
   override render() {
@@ -967,7 +1116,18 @@ export class SolitaireElement extends UmbLitElement {
         ${this._cascading
           ? html`<canvas class="cascade" tabindex="-1" @click=${() => this.#stopCascade()}></canvas>`
           : nothing}
-        ${this._won
+        ${this._won && this._result
+          ? html`<umbradesktop-arcade-result
+              tabindex="-1"
+              .result=${this._result}
+              @leaderboard=${(event: CustomEvent<{ board: string }>) => this.#openPanel(event.detail.board, 'card')}
+              @play-again=${() => void this.#newGame()}
+            >
+              ${this.#bonus > 0
+                ? html`<span slot="detail">${this.#bonusLine()}</span>`
+                : nothing}
+            </umbradesktop-arcade-result>`
+          : this._won && !this._awaitingResult
           ? html`<div class="win" role="status">
               <h2>${t('solitaireWon', 'You won')}</h2>
               <p>
@@ -995,9 +1155,24 @@ export class SolitaireElement extends UmbLitElement {
               }))}
               .selectedBack=${backAlias}
               .selectedFaces=${facesAlias}
+              .showLeaderboard=${this._arcadeHere}
               @solitaire-settings-change=${this.#onSettingsChange}
               @solitaire-settings-close=${this.#closeSettings}
+              @solitaire-settings-leaderboard=${() => {
+                this.#closeSettings();
+                // The game's own draw mode, never the dialog's, which is the next game's.
+                this.#openPanel(solitaireBoard(game.drawCount), 'settings');
+              }}
             ></umbradesktop-solitaire-settings>`
+          : nothing}
+        ${this._arcadeHere
+          ? html`<umbradesktop-arcade-leaderboard
+              game=${SOLITAIRE_GAME_ALIAS}
+              board=${this._panelBoard}
+              ?open=${this._panelOpen}
+              @open=${this.#onPanelOpen}
+              @close=${this.#onPanelClose}
+            ></umbradesktop-arcade-leaderboard>`
           : nothing}
       </div>
     `;
@@ -1015,6 +1190,8 @@ export class SolitaireElement extends UmbLitElement {
    * toolbar, does read the app tokens. `.table` is its own stacking context: the cards' z-indices
    * run to 52 and lifted cards far higher, and without the isolation they would paint over, and
    * take the clicks of, everything above them: the toolbar, the cascade, the win panel and the modal.
+   * The same isolation is what lets the Arcade's card and panel, which set their own z-index (5 and
+   * 6) and fill the felt, lie over the cards; they sit above the toolbar (2) too, so their scrim dims it.
    */
   static override styles = css`
     :host {

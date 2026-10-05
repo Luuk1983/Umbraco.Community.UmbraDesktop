@@ -21,7 +21,9 @@ export interface ArcadePrivacyModalValue {
 }
 
 /**
- * The one-time "show your scores?" question (design D7). A small dialog.
+ * The one-time "show your scores?" question (design D7), as a small dialog. It is the fallback for a
+ * game that shows no result card (design P3): a game that places the card asks everyone else there,
+ * so this dialog only opens when no card is on screen to ask.
  *
  * It renders in the backoffice's own modal container, outside the desktop, so its element cannot
  * consume desktop contexts: it takes the name as data and answers with the value, and the Arcade

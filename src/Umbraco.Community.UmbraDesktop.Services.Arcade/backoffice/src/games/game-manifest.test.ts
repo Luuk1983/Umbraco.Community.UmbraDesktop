@@ -14,6 +14,16 @@ const minesweeper = {
   },
 };
 
+it('reads a game\'s own rule, and ignores one that is not text', () => {
+  const base = { type: 'umbraDesktopGame', meta: { app: 'Pkg.App', label: 'Game', leaderboards: [{ alias: 'default', label: 'Game', better: 'higher', format: 'points' }] } };
+  const { games } = normaliseGames([
+    { ...base, alias: 'Pkg.Ruled', meta: { ...base.meta, rule: '#pkg_rule' } },
+    { ...base, alias: 'Pkg.Odd', meta: { ...base.meta, rule: 42 } },
+  ]);
+  expect(games.find((g) => g.alias === 'Pkg.Ruled')?.rule).to.equal('#pkg_rule');
+  expect(games.find((g) => g.alias === 'Pkg.Odd')?.rule).to.equal(undefined);
+});
+
 it('reads a valid game', () => {
   const { games, dropped } = normaliseGames([minesweeper]);
   expect(dropped).to.deep.equal([]);
@@ -23,6 +33,7 @@ it('reads a valid game', () => {
       app: 'Pkg.Minesweeper',
       label: 'Minesweeper',
       icon: 'icon-bomb',
+      rule: undefined,
       weight: 0,
       leaderboards: [{ alias: 'easy', label: 'Easy', better: 'lower', format: 'time', min: undefined, max: undefined }],
     },

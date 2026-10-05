@@ -5,7 +5,9 @@
 > packages depend on, so any add-on can put its game on the leaderboards, and a site without games
 > carries none of it.
 
-- **Status:** Designed 2026-10-01 with the owner. Built 2026-10-03; §10 has the notes from the build
+- **Status:** Designed 2026-10-01 with the owner. Built 2026-10-03; §10 has the notes from the build.
+  The player-facing parts (§7, where D7 asks, the click in D10) are superseded by
+  [`2026-10-03-arcade-player-experience-design.md`](./2026-10-03-arcade-player-experience-design.md)
 - **Plan:** [`2026-10-01-arcade-plan.md`](./2026-10-01-arcade-plan.md)
 - **Date:** 2026-10-01
 - **Branch:** `claude/gaming-service-scores-8ffbf2`

@@ -1,12 +1,16 @@
 import { css, customElement, html, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbModalBaseElement } from '@umbraco-cms/backoffice/modal';
 import type { ArcadePrivacyModalData, ArcadePrivacyModalValue } from './privacy-modal.token.js';
-import { AREA } from '../shared/area.js';
+import { ARCADE_NAME_MAX_LENGTH } from '../shared/display-name.js';
+import { say } from '../shared/phrases.js';
 
 /**
- * Asks once, at a player's first score, whether to show their scores on the leaderboards, with
- * their display name ready to change (D7). Either button is an answer; closing the dialog is not,
- * so the question comes back with the next score.
+ * The fallback question: asks once, at a player's first score, whether to show their scores on the
+ * leaderboards, with their display name ready to change (D7). It is only for a game that shows no
+ * result card (design P3); a game that places the card asks everyone else there, in the same words.
+ * It says in one sentence what the Arcade is, and its two answers are equal and neutral (P9), each
+ * saying its consequence. Either button is an answer; closing the dialog is not, so the question
+ * comes back with the next score.
  */
 @customElement('umbradesktop-arcade-privacy-modal')
 export class UmbraDesktopArcadePrivacyModalElement extends UmbModalBaseElement<
@@ -42,33 +46,35 @@ export class UmbraDesktopArcadePrivacyModalElement extends UmbModalBaseElement<
 
   /** @returns The dialog. */
   override render() {
-    const t = (key: string, fallback: string) => this.localize.termOrDefault(`${AREA}_${key}`, fallback);
-    return html`<uui-dialog-layout headline=${t('privacyHeadline', 'Show your scores on the Arcade?')}>
+    const l = this.localize;
+    const answerShow = say(l, 'answerShow', 'Yes, show my scores');
+    const answerHide = say(l, 'answerHide', 'No, only I see them');
+    return html`<uui-dialog-layout headline=${say(l, 'fallbackHeadline', 'Show your scores on the Arcade leaderboard?')}>
       <p>
-        ${t(
-          'privacyText',
-          'Your best scores can appear on the Arcade leaderboards for everyone who uses the desktop. You can change this later in the Arcade.',
+        ${say(
+          l,
+          'fallbackText',
+          "The Arcade keeps everyone's best scores in the desktop's games and ranks them on leaderboards. Show yours there, where colleagues can see them? You can change this in the Arcade at any time.",
         )}
       </p>
-      <uui-label for="name">${t('displayName', 'Display name')}</uui-label>
+      <uui-label for="name">${say(l, 'leaderboardName', 'Your name on the leaderboards')}</uui-label>
       <uui-input
         id="name"
-        label=${t('displayName', 'Display name')}
+        label=${say(l, 'leaderboardName', 'Your name on the leaderboards')}
         .value=${this._name ?? this.data?.displayName ?? ''}
-        maxlength="32"
+        maxlength=${ARCADE_NAME_MAX_LENGTH}
         @input=${(e: Event) => (this._name = (e.target as HTMLInputElement).value)}></uui-input>
       <uui-button
         slot="actions"
-        data-answer="private"
-        look="secondary"
-        label=${t('keepPrivate', 'Keep them private')}
+        data-answer="hide"
+        look="outline"
+        label=${answerHide}
         @click=${() => this.#answer(false)}></uui-button>
       <uui-button
         slot="actions"
-        data-answer="public"
-        look="primary"
-        color="positive"
-        label=${t('showThem', 'Show them')}
+        data-answer="show"
+        look="outline"
+        label=${answerShow}
         @click=${() => this.#answer(true)}></uui-button>
     </uui-dialog-layout>`;
   }

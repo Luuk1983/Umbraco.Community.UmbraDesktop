@@ -4,7 +4,7 @@
  * window. A native <dialog> is not used: `showModal()` puts it in the top layer over the whole page.
  * Changes are reported as they are made; the game applies and stores them.
  */
-import { css, customElement, html, property, unsafeSVG } from '@umbraco-cms/backoffice/external/lit';
+import { css, customElement, html, nothing, property, unsafeSVG } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import type { DrawCount } from './rules.js';
 
@@ -28,6 +28,11 @@ export class SolitaireSettingsModalElement extends UmbLitElement {
   @property({ attribute: false }) selectedBack = '';
   /** The chosen face set's alias. */
   @property({ attribute: false }) selectedFaces = '';
+  /**
+   * Whether to offer the Arcade's leaderboard: only when the Arcade is there (design P6). The game
+   * knows that and this dialog does not, so the game says; without it the dialog is as it always was.
+   */
+  @property({ attribute: false }) showLeaderboard = false;
   /**
    * The active theme id. The desktop stamps it on the game, not on this child, and a theme-specific
    * rule (Windows 98's group boxes) can only match a host attribute, so the game passes it on.
@@ -63,6 +68,14 @@ export class SolitaireSettingsModalElement extends UmbLitElement {
    */
   #close(): void {
     this.dispatchEvent(new CustomEvent('solitaire-settings-close', { bubbles: true, composed: true }));
+  }
+
+  /**
+   * Ask the game for the Arcade's leaderboard. The game closes this dialog and opens the panel on
+   * the draw mode being played, which only the game knows (the dialog's draw mode is the next game's).
+   */
+  #leaderboard(): void {
+    this.dispatchEvent(new CustomEvent('solitaire-settings-leaderboard', { bubbles: true, composed: true }));
   }
 
   /**
@@ -108,7 +121,8 @@ export class SolitaireSettingsModalElement extends UmbLitElement {
    * Render the settings modal.
    *
    * The render method creates the dialog UI, with three sections for game settings (draw mode),
-   * card back selection, and card face selection. Each option is an `aria-pressed` button. The
+   * card back selection, and card face selection, and with the Arcade a fourth, Leaderboard, whose
+   * one button is a plain action like Done rather than a toggle. Each option is an `aria-pressed` button. The
    * scrim background closes the modal on click. Buttons are laid out in a segmented group for
    * draw mode and a grid of choices for backs and faces.
    */
@@ -168,6 +182,14 @@ export class SolitaireSettingsModalElement extends UmbLitElement {
               )}
             </div>
           </section>
+          ${this.showLeaderboard
+            ? html`<section>
+                <h3>${t('solitaireLeaderboard', 'Leaderboard')}</h3>
+                <button class="leaderboard" data-action="leaderboard" @click=${() => this.#leaderboard()}>
+                  ${t('solitaireShowLeaderboard', 'Show the leaderboard')}
+                </button>
+              </section>`
+            : nothing}
           <footer><button class="done" @click=${() => this.#close()}>${t('solitaireDone', 'Done')}</button></footer>
         </div>
       </div>

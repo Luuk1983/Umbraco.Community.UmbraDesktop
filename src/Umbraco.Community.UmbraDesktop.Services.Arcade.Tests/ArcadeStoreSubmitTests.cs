@@ -153,4 +153,70 @@ public class ArcadeStoreSubmitTests : IAsyncLifetime
         Assert.Equal(SubmitStatus.Conflict, result.Status);
         Assert.Equal(1, await _database.ReadAsync(db => db.Scores.CountAsync()));
     }
+
+    /// <summary>Show a player's scores, so they rank for everyone.</summary>
+    /// <param name="user">The player.</param>
+    /// <param name="name">Their name.</param>
+    private Task Show(Guid user, string name) => _store.UpdateProfileAsync(user, name, null, isPublic: true, notifyWhenBeaten: null);
+
+    /// <summary>Taking first place names who was there and their score, for "past Grace's 500" (design §3).</summary>
+    [Fact]
+    public async Task Taking_first_place_names_who_was_passed()
+    {
+        await Show(Grace, "Grace");
+        await _store.SubmitAsync(Grace, "Grace", Snake, 500);
+        await Show(Ada, "Ada");
+
+        var result = await _store.SubmitAsync(Ada, "Ada", Snake, 600);
+
+        Assert.Equal(new PassedPlayer("Grace", 500), result.Passed);
+    }
+
+    /// <summary>A leader beating their own best passed nobody.</summary>
+    [Fact]
+    public async Task A_leader_improving_passes_nobody()
+    {
+        await Show(Grace, "Grace");
+        await _store.SubmitAsync(Grace, "Grace", Snake, 500);
+        await Show(Ada, "Ada");
+        await _store.SubmitAsync(Ada, "Ada", Snake, 600);
+
+        Assert.Null((await _store.SubmitAsync(Ada, "Ada", Snake, 700)).Passed);
+    }
+
+    /// <summary>A best that stays below first, and a score that is no best, pass nobody.</summary>
+    [Fact]
+    public async Task Below_first_or_not_a_best_passes_nobody()
+    {
+        await Show(Grace, "Grace");
+        await _store.SubmitAsync(Grace, "Grace", Snake, 500);
+        await Show(Ada, "Ada");
+
+        Assert.Null((await _store.SubmitAsync(Ada, "Ada", Snake, 300)).Passed);
+        Assert.Null((await _store.SubmitAsync(Ada, "Ada", Snake, 200)).Passed);
+    }
+
+    /// <summary>A player whose scores are hidden still sees the board with themselves on it, so their would-be first place names who they passed.</summary>
+    [Fact]
+    public async Task A_hidden_player_taking_would_be_first_names_who_they_passed()
+    {
+        await Show(Grace, "Grace");
+        await _store.SubmitAsync(Grace, "Grace", Snake, 500);
+
+        var result = await _store.SubmitAsync(Ada, "Ada", Snake, 600);
+
+        Assert.False(result.IsPublic);
+        Assert.Equal(new PassedPlayer("Grace", 500), result.Passed);
+    }
+
+    /// <summary>A hidden player already ahead of the shown leader passed nobody new by improving.</summary>
+    [Fact]
+    public async Task A_hidden_player_already_ahead_passes_nobody()
+    {
+        await Show(Grace, "Grace");
+        await _store.SubmitAsync(Grace, "Grace", Snake, 500);
+        await _store.SubmitAsync(Ada, "Ada", Snake, 600);
+
+        Assert.Null((await _store.SubmitAsync(Ada, "Ada", Snake, 700)).Passed);
+    }
 }

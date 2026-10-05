@@ -37,6 +37,9 @@ export default {
     snakePaused: 'Paused. Press space to carry on',
     snakeOver: 'Game over. Press space to play again',
     snakeWon: 'You filled the board!',
+    // Snake's one Arcade board, and the Best chip's tooltip once it opens the leaderboard.
+    snakeClassic: 'Classic',
+    snakeOpenLeaderboard: 'Open the leaderboard',
     // Solitaire: the window title, then everything the game says.
     solitaire: 'Solitaire',
     solitaireNewGame: 'New game',
@@ -74,5 +77,11 @@ export default {
     solitaireSuitH: 'hearts',
     solitaireSuitD: 'diamonds',
     solitaireSuitC: 'clubs',
+    // Solitaire on the Arcade: its rule line, the card's bonus line ({0} is the bonus), and the
+    // settings dialog's Leaderboard section.
+    solitaireRule: 'Highest score wins, time bonus included',
+    solitaireBonus: 'incl. {0} time bonus',
+    solitaireLeaderboard: 'Leaderboard',
+    solitaireShowLeaderboard: 'Show the leaderboard',
   },
 };

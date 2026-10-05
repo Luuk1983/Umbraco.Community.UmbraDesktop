@@ -1,9 +1,10 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './minesweeper.element.js';
 import {
   MINESWEEPER_BEGINNER,
   MINESWEEPER_CELL_SIZE_PX,
   MINESWEEPER_CONTENT_SIZE,
+  MINESWEEPER_GAME_ALIAS,
   MINESWEEPER_MIN_CONTENT_SIZE,
   MINESWEEPER_PADDING_PX,
 } from './constants.js';
@@ -622,9 +623,9 @@ describe('the Arcade', () => {
       .placer=${placeAt(WALL)}
       .now=${() => clock}
       .scores=${{
-        submit: async (board: string, value: number) => {
+        submit: async (board: string, value: number, _options?: unknown) => {
           submitted.push([board, value]);
-          return true;
+          return undefined;
         },
       }}
     ></umbradesktop-minesweeper>`);
@@ -646,7 +647,7 @@ describe('the Arcade', () => {
       .scores=${{
         submit: async (...a: unknown[]) => {
           submitted.push(a);
-          return true;
+          return undefined;
         },
       }}
     ></umbradesktop-minesweeper>`);
@@ -655,5 +656,166 @@ describe('the Arcade', () => {
     cells(element)[MINED_CELL].click();
     await settled(element);
     expect(submitted).to.deep.equal([]);
+  });
+
+  /** What the Arcade hands back for a win. */
+  const accepted = { status: 'accepted' as const, isPersonalBest: true, rank: 3, rankText: '3rd', value: 9_400 };
+
+  /**
+   * Win a game under WALL with the given scores line, in two clicks (see the first case here).
+   * @param scores The fake line to the Arcade.
+   * @returns The element after the win.
+   */
+  async function win(scores: unknown): Promise<MinesweeperElement> {
+    let clock = 1000;
+    const element = await fixture<MinesweeperElement>(html`<umbradesktop-minesweeper
+      .placer=${placeAt(WALL)} .now=${() => clock} .scores=${scores}></umbradesktop-minesweeper>`);
+    cells(element)[SAFE_CORNER].click();
+    await settled(element);
+    clock = 10_400;
+    cells(element)[80].click();
+    await settled(element);
+    return element;
+  }
+
+  /** The status row's parts, by class, which the Arcade must never change (P4). */
+  const header = (element: MinesweeperElement) =>
+    [...element.shadowRoot!.querySelector('.status')!.children].map((child) => child.className);
+
+  /**
+   * Wait for something the game renders after the Arcade has answered, then hand it back.
+   *
+   * `waitUntil` from `@open-wc/testing` resolves with nothing, so the query runs again afterwards.
+   * @param element The game.
+   * @param selector What to find in its shadow root.
+   * @param message What failed to appear, if it does not.
+   * @returns The element found.
+   */
+  async function found(element: MinesweeperElement, selector: string, message: string): Promise<HTMLElement> {
+    await waitUntil(() => element.shadowRoot!.querySelector(selector) !== null, message);
+    return element.shadowRoot!.querySelector<HTMLElement>(selector)!;
+  }
+
+  it('shows the Arcade\'s result card over the board on a win, having asked for it', async () => {
+    const options: unknown[] = [];
+    const element = await win({
+      submit: async (_board: string, _value: number, o: unknown) => {
+        options.push(o);
+        return accepted;
+      },
+    });
+    const card = await found(element, 'umbradesktop-arcade-result', 'card placed');
+    expect(card.parentElement!.classList.contains('board'), 'over the whole game, header included, not the well').to.equal(true);
+    expect((card as unknown as { result: unknown }).result === accepted, 'it was handed the result').to.equal(true);
+    expect(options).to.deep.equal([{ showsResult: true }]);
+    expect(element.shadowRoot!.textContent, 'the card says it, so the banner does not').not.to.contain('Cleared.');
+  });
+
+  it('shows nothing new on a loss', async () => {
+    const element = await fixture<MinesweeperElement>(html`<umbradesktop-minesweeper
+      .placer=${placeAt(WALL)} .scores=${{ submit: async () => accepted }}></umbradesktop-minesweeper>`);
+    cells(element)[SAFE_CORNER].click();
+    await settled(element);
+    cells(element)[MINED_CELL].click();
+    await settled(element);
+    expect(element.shadowRoot!.querySelector('umbradesktop-arcade-result') === null, 'no card').to.equal(true);
+    expect(element.shadowRoot!.querySelector('umbradesktop-arcade-leaderboard') === null, 'no panel').to.equal(true);
+    expect(element.shadowRoot!.textContent).to.contain('Boom.');
+  });
+
+  it('leaves its header exactly as it is, before and after a win', async () => {
+    const plain = await fixture<MinesweeperElement>(
+      html`<umbradesktop-minesweeper .placer=${placeAt(WALL)}></umbradesktop-minesweeper>`,
+    );
+    const before = header(plain);
+    const element = await win({ submit: async () => accepted });
+    await found(element, 'umbradesktop-arcade-result', 'card placed');
+    expect(before).to.deep.equal(['display mines', 'new-game', 'display clock']);
+    expect(header(element)).to.deep.equal(before);
+  });
+
+  it('opens the panel from the card on the easy board, and deals a new game from Play again', async () => {
+    const element = await win({ submit: async () => accepted });
+    const card = await found(element, 'umbradesktop-arcade-result', 'card');
+    expect(element.shadowRoot!.querySelector('umbradesktop-arcade-leaderboard')!.hasAttribute('open'), 'closed first').to.equal(false);
+    card.dispatchEvent(new CustomEvent('leaderboard', { bubbles: true }));
+    await element.updateComplete;
+    const panel = element.shadowRoot!.querySelector('umbradesktop-arcade-leaderboard')!;
+    expect(panel.hasAttribute('open')).to.equal(true);
+    expect(panel.getAttribute('board')).to.equal('easy');
+    expect(panel.getAttribute('game')).to.equal(MINESWEEPER_GAME_ALIAS);
+    panel.dispatchEvent(new CustomEvent('close'));
+    await element.updateComplete;
+    expect(panel.hasAttribute('open')).to.equal(false);
+    card.dispatchEvent(new CustomEvent('play-again', { bubbles: true }));
+    await settled(element);
+    expect(element.shadowRoot!.querySelector('umbradesktop-arcade-result') === null, 'the card is gone').to.equal(true);
+    expect(element.shadowRoot!.querySelector('umbradesktop-arcade-leaderboard') === null, 'and so is the panel').to.equal(true);
+    expect(cells(element).every((cell) => cell.dataset.state === 'closed'), 'on a fresh board').to.equal(true);
+  });
+
+  it('opens the panel again after the player dismissed it', async () => {
+    const element = await win({ submit: async () => accepted });
+    const card = await found(element, 'umbradesktop-arcade-result', 'card');
+    const panel = element.shadowRoot!.querySelector('umbradesktop-arcade-leaderboard')!;
+    card.dispatchEvent(new CustomEvent('leaderboard', { bubbles: true }));
+    await element.updateComplete;
+    expect(panel.hasAttribute('open'), 'opened').to.equal(true);
+    // The real panel closes itself on Esc and reports it; the game has to take that in, or its own
+    // flag still says open and Lit sees no change when the card asks again.
+    panel.removeAttribute('open');
+    panel.dispatchEvent(new CustomEvent('close'));
+    await element.updateComplete;
+    card.dispatchEvent(new CustomEvent('leaderboard', { bubbles: true }));
+    await element.updateComplete;
+    expect(panel.hasAttribute('open'), 'opened again').to.equal(true);
+  });
+
+  it('gives the card the keyboard when it appears, so Tab does not walk the hidden cells first', async () => {
+    const element = await win({ submit: async () => accepted });
+    const card = await found(element, 'umbradesktop-arcade-result', 'card');
+    await element.updateComplete;
+    expect(card.getAttribute('tabindex'), 'focusable by script, not a Tab stop of its own').to.equal('-1');
+    expect(element.shadowRoot!.activeElement === card, 'the card has focus').to.equal(true);
+  });
+
+  it('gives focus back to New game when the panel closes, since its own close button went with it', async () => {
+    const element = await win({ submit: async () => accepted });
+    const card = await found(element, 'umbradesktop-arcade-result', 'card');
+    card.dispatchEvent(new CustomEvent('leaderboard', { bubbles: true }));
+    await element.updateComplete;
+    element.shadowRoot!.querySelector('umbradesktop-arcade-leaderboard')!.dispatchEvent(new CustomEvent('close'));
+    await element.updateComplete;
+    expect(element.shadowRoot!.activeElement?.className, 'the focused control').to.equal('new-game');
+  });
+
+  it('keeps its own banner when the Arcade is absent', async () => {
+    const element = await win({ submit: async () => undefined });
+    await settled(element);
+    expect(element.shadowRoot!.querySelector('umbradesktop-arcade-result') === null, 'no card').to.equal(true);
+    expect(element.shadowRoot!.textContent).to.contain('Cleared.');
+  });
+
+  it('drops a slow answer for a game that has already been dealt over', async () => {
+    let answer: (value: typeof accepted) => void = () => undefined;
+    const element = await win({ submit: () => new Promise((resolve) => (answer = resolve)) });
+    element.shadowRoot!.querySelector<HTMLButtonElement>('.new-game')!.click();
+    await settled(element);
+    answer(accepted);
+    await settled(element);
+    expect(element.shadowRoot!.querySelector('umbradesktop-arcade-result') === null, 'no card on the new board').to.equal(true);
+  });
+
+  it('covers the whole game with the card, header included, without moving the board', async () => {
+    const element = await win({ submit: async () => accepted });
+    const board = element.shadowRoot!.querySelector<HTMLElement>('.board')!;
+    const before = board.getBoundingClientRect();
+    const card = await found(element, 'umbradesktop-arcade-result', 'card');
+    // The card fills its nearest positioned ancestor, so that is the box it covers: the whole game,
+    // with the header in it. The Arcade's element is not loaded here, so this asks the layout rather
+    // than measuring the card.
+    expect((card as HTMLElement).offsetParent === board, 'the card\'s box is the whole game, not the well').to.equal(true);
+    expect(board.contains(element.shadowRoot!.querySelector('.status')), 'the header is in that box').to.equal(true);
+    expect(board.getBoundingClientRect().height, 'the board does not move').to.equal(before.height);
   });
 });

@@ -9,8 +9,9 @@ import './solitaire.element.js';
 import type { SolitaireElement } from './solitaire.element.js';
 import { SavedGameStore } from './saved-games.js';
 import { MemoryStorage } from './memory-storage.test-helper.js';
-import { SOLITAIRE_CONTENT_SIZE } from './constants.js';
+import { SOLITAIRE_CONTENT_SIZE, SOLITAIRE_GAME_ALIAS, SOLITAIRE_RESULT_WAIT_MS } from './constants.js';
 import type { KlondikeGame, Shuffler } from './rules.js';
+import type { ArcadeResult } from '../shared/arcade.js';
 
 /** The unshuffled deck: t0 is the ace of spades, t1 ends on 3S, t4 ends on 2H (see rules tests). */
 export const identity: Shuffler = (cards) => [...cards];
@@ -29,18 +30,27 @@ export async function solitaire(
     store?: SavedGameStore;
     settings?: MemoryStorage;
     clockIntervalMs?: number;
+    /** How long a win waits for the Arcade's answer before showing its own win screen. */
+    resultWaitMs?: number;
     reducedMotion?: boolean;
+    /**
+     * The line to the Arcade. Set on the element before it connects, so `connectedCallback` asks
+     * this one whether the Arcade is there. No Arcade by default, as in every case but the Arcade's.
+     */
+    scores?: SolitaireElement['scores'];
   } = {},
 ): Promise<SolitaireElement> {
   const store = options.store ?? new SavedGameStore(() => new MemoryStorage());
   const settings = options.settings ?? new MemoryStorage();
   const el = await fixture<SolitaireElement>(html`<umbradesktop-solitaire
     style="display:block;width:${SOLITAIRE_CONTENT_SIZE.w}px;height:${SOLITAIRE_CONTENT_SIZE.h}px"
+    .scores=${options.scores ?? { submit: async () => undefined, reachable: async () => false }}
     .shuffle=${identity}
     .startingGame=${options.game}
     .store=${store}
     .settingsStorage=${() => settings}
     .clockIntervalMs=${options.clockIntervalMs ?? 1000}
+    .resultWaitMs=${options.resultWaitMs ?? SOLITAIRE_RESULT_WAIT_MS}
     .reducedMotion=${() => options.reducedMotion ?? true}
   ></umbradesktop-solitaire>`);
   await waitUntil(
@@ -337,10 +347,11 @@ describe('solitaire element: finishing', () => {
     const submitted: Array<[string, number]> = [];
     const el = await solitaire({ game: { ...nearlyWon(), drawCount: 3 } });
     el.scores = {
-      submit: async (b: string, v: number) => {
+      submit: async (b: string, v: number, _options?: { showsResult?: boolean }) => {
         submitted.push([b, v]);
-        return true;
+        return undefined;
       },
+      reachable: async () => false,
     };
     doubleClick(el, '13S');
     await waitUntil(() => el.shadowRoot!.querySelector('.win'), 'won');
@@ -399,6 +410,319 @@ describe('solitaire element: finishing', () => {
     el.shadowRoot!.querySelector<HTMLElement>('.play-again')!.click();
     await waitUntil(() => el.shadowRoot!.querySelector('.win') === null && cardEl(el, '1S').dataset.pile === 't0');
     expect(readout(el, 'score')).to.equal('0');
+  });
+});
+
+/**
+ * The Arcade's two pieces in Solitaire (design P6, the mock's sections 6 and 7): after the win the
+ * result card replaces the game's own win screen, and the settings dialog gains Leaderboard, which
+ * opens the panel over the table and stops the clock until the player closes it.
+ *
+ * In this package's tests the Arcade's tags are unknown elements, so these cases check that Solitaire
+ * placed them with the right property, attribute and listeners, and fire the panel's `open` and
+ * `close` themselves, as the real panel does. The pieces' own tests check what they draw.
+ */
+describe('solitaire element: the Arcade pieces', () => {
+  /** What the Arcade hands back for a win. */
+  const accepted: ArcadeResult = {
+    status: 'accepted', isPersonalBest: true, previousBest: null, rank: 2, isPublic: true, askedAboutPublic: true,
+    displayName: 'You', passed: null, game: SOLITAIRE_GAME_ALIAS, board: 'draw-1', value: 110, rankText: '2nd',
+  };
+
+  /** An Arcade that is there and answers a win with nothing. */
+  const here: SolitaireElement['scores'] = { submit: async () => undefined, reachable: async () => true };
+
+  /** An Arcade that is there and accepts every win. */
+  const accepting: SolitaireElement['scores'] = { submit: async () => accepted, reachable: async () => true };
+
+  /**
+   * Wait for something the game renders after the Arcade has answered, then hand it back.
+   *
+   * `waitUntil` from `@open-wc/testing` resolves with nothing, so the query runs again afterwards.
+   * @param el The game.
+   * @param selector What to find in its shadow root.
+   * @param message What failed to appear, if it does not.
+   * @returns The element found.
+   */
+  async function found(el: SolitaireElement, selector: string, message: string): Promise<HTMLElement> {
+    await waitUntil(() => el.shadowRoot!.querySelector(selector) !== null, message);
+    return el.shadowRoot!.querySelector<HTMLElement>(selector)!;
+  }
+
+  /** The panel, or null when the game has not placed one. */
+  const panelOf = (el: SolitaireElement) => el.shadowRoot!.querySelector<HTMLElement>('umbradesktop-arcade-leaderboard');
+
+  /**
+   * Open the panel the way a player does: the gear, then Leaderboard.
+   * @param el The game.
+   * @returns The panel.
+   */
+  async function openPanel(el: SolitaireElement): Promise<HTMLElement> {
+    el.shadowRoot!.querySelector<HTMLElement>('.settings')!.click();
+    const modal = (await found(el, 'umbradesktop-solitaire-settings', 'settings')) as HTMLElement & { showLeaderboard: boolean };
+    await waitUntil(() => modal.showLeaderboard === true, 'told the Arcade is there');
+    modal.dispatchEvent(new CustomEvent('solitaire-settings-leaderboard', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    return panelOf(el)!;
+  }
+
+  /**
+   * Count the intervals started while `action` runs, which is how a clock that starts on a won game
+   * shows itself: its ticks change nothing on screen, because a won game takes no time.
+   * @param action What to watch.
+   * @returns How many intervals were started.
+   */
+  async function intervalsStarted(action: () => Promise<void>): Promise<number> {
+    const original = window.setInterval;
+    let started = 0;
+    window.setInterval = ((handler: TimerHandler, timeout?: number, ...rest: unknown[]) => {
+      started++;
+      return original(handler, timeout, ...rest);
+    }) as typeof window.setInterval;
+    try {
+      await action();
+    } finally {
+      window.setInterval = original;
+    }
+    return started;
+  }
+
+  it('shows the Arcade card instead of its own win screen, asking for it', async () => {
+    const options: unknown[] = [];
+    const el = await solitaire({
+      game: nearlyWon(),
+      scores: {
+        submit: async (_b: string, _v: number, o?: { showsResult?: boolean }) => {
+          options.push(o);
+          return accepted;
+        },
+        reachable: async () => true,
+      },
+    });
+    doubleClick(el, '13S');
+    const card = await found(el, 'umbradesktop-arcade-result', 'card');
+    expect((card as unknown as { result: unknown }).result === accepted, 'it was handed the result').to.equal(true);
+    expect(el.shadowRoot!.querySelector('.win') === null, 'no win screen of its own').to.equal(true);
+    expect(options).to.deep.equal([{ showsResult: true }]);
+  });
+
+  it("puts the time bonus in the card's detail line, the bonus the score counted, in the backoffice's digits", async () => {
+    const storage = new MemoryStorage();
+    new SavedGameStore(() => storage).save('old', { game: nearlyWon(), elapsedSeconds: 400 });
+    const submitted: number[] = [];
+    // A clock too slow to tick during the case, so the bonus is the one 400 seconds earn.
+    const el = await solitaire({
+      store: new SavedGameStore(() => storage),
+      clockIntervalMs: 60_000,
+      scores: {
+        submit: async (_b: string, v: number) => {
+          submitted.push(v);
+          return accepted;
+        },
+        reachable: async () => true,
+      },
+    });
+    el.lang = 'en';
+    doubleClick(el, '13S');
+    const detail = await found(el, 'umbradesktop-arcade-result [slot="detail"]', 'the detail line');
+    // 700000 / 400 = 1750; 100 before, 10 for the last card.
+    expect(detail.textContent!.trim()).to.equal('incl. 1,750 time bonus');
+    expect(submitted).to.deep.equal([100 + 10 + 1750]);
+  });
+
+  it('leaves the detail line out when the win earned no time bonus', async () => {
+    const el = await solitaire({ game: nearlyWon(), scores: accepting });
+    doubleClick(el, '13S');
+    await found(el, 'umbradesktop-arcade-result', 'card');
+    expect(el.shadowRoot!.querySelector('[slot="detail"]') === null, 'no detail line').to.equal(true);
+  });
+
+  it('keeps its own win screen, and offers no leaderboard, without the Arcade', async () => {
+    const el = await solitaire({ game: nearlyWon() });
+    el.shadowRoot!.querySelector<HTMLElement>('.settings')!.click();
+    const modal = (await found(el, 'umbradesktop-solitaire-settings', 'settings')) as HTMLElement & { showLeaderboard: boolean };
+    expect(modal.showLeaderboard).to.equal(false);
+    modal.dispatchEvent(new CustomEvent('solitaire-settings-close', { bubbles: true, composed: true }));
+    doubleClick(el, '13S');
+    await found(el, '.win', 'win screen');
+    expect(el.shadowRoot!.querySelector('umbradesktop-arcade-result') === null, 'no card').to.equal(true);
+    expect(panelOf(el) === null, 'no panel').to.equal(true);
+  });
+
+  it('shows nothing while the Arcade answers, and its own win screen if the Arcade turns the score down', async () => {
+    let answer: (value: ArcadeResult | undefined) => void = () => undefined;
+    const el = await solitaire({
+      game: nearlyWon(),
+      scores: { submit: () => new Promise((resolve) => (answer = resolve)), reachable: async () => true },
+    });
+    doubleClick(el, '13S');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(el.shadowRoot!.querySelector('.win') === null, 'no win screen to be replaced a moment later').to.equal(true);
+    answer(undefined);
+    await found(el, '.win .play-again', 'its own win screen after all');
+    expect(el.shadowRoot!.activeElement?.classList.contains('play-again') === true, 'Play again has focus').to.equal(true);
+  });
+
+  it('shows its own win screen when the Arcade does not answer in time, and a late card still replaces it', async () => {
+    let answer: (value: ArcadeResult | undefined) => void = () => undefined;
+    const el = await solitaire({
+      game: nearlyWon(),
+      resultWaitMs: 20,
+      scores: { submit: () => new Promise((resolve) => (answer = resolve)), reachable: async () => true },
+    });
+    doubleClick(el, '13S');
+    // The submit has not answered, and here never would have without the line below.
+    await found(el, '.win .play-again', 'its own win screen, not a blank table');
+    expect(el.shadowRoot!.activeElement?.classList.contains('play-again') === true, 'Play again has focus').to.equal(true);
+    answer(accepted);
+    const card = await found(el, 'umbradesktop-arcade-result', 'the late card');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('.win') === null, 'the card replaced the win screen').to.equal(true);
+    expect(el.shadowRoot!.activeElement === card, 'the card has focus').to.equal(true);
+  });
+
+  it('places the panel when the Arcade answers a win after it was not there at the start', async () => {
+    const el = await solitaire({ game: nearlyWon(), scores: { submit: async () => accepted, reachable: async () => false } });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(panelOf(el) === null, 'no panel while the Arcade seemed absent').to.equal(true);
+    doubleClick(el, '13S');
+    const card = await found(el, 'umbradesktop-arcade-result', 'card');
+    card.dispatchEvent(new CustomEvent('leaderboard', { detail: { game: SOLITAIRE_GAME_ALIAS, board: 'draw-1' }, bubbles: true }));
+    await el.updateComplete;
+    expect(panelOf(el) !== null, "the card's Leaderboard has a panel to open").to.equal(true);
+    expect(panelOf(el)!.hasAttribute('open')).to.equal(true);
+  });
+
+  it('asks again whether the Arcade is there when the settings dialog opens', async () => {
+    let up = false;
+    const el = await solitaire({ scores: { submit: async () => undefined, reachable: async () => up } });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    up = true;
+    el.shadowRoot!.querySelector<HTMLElement>('.settings')!.click();
+    const modal = (await found(el, 'umbradesktop-solitaire-settings', 'settings')) as HTMLElement & { showLeaderboard: boolean };
+    await waitUntil(() => modal.showLeaderboard === true, 'Leaderboard offered once the Arcade is there');
+  });
+
+  it('gives the card the keyboard when it appears', async () => {
+    const el = await solitaire({ game: nearlyWon(), scores: accepting });
+    doubleClick(el, '13S');
+    const card = await found(el, 'umbradesktop-arcade-result', 'card');
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === card, 'the card has focus').to.equal(true);
+  });
+
+  it('opens the panel on the current draw mode from the settings dialog', async () => {
+    const el = await solitaire({ game: { ...nearlyWon(), drawCount: 3 }, scores: here });
+    const panel = await openPanel(el);
+    expect(panel.hasAttribute('open')).to.equal(true);
+    expect(panel.getAttribute('board')).to.equal('draw-3');
+    expect(panel.getAttribute('game')).to.equal(SOLITAIRE_GAME_ALIAS);
+    expect(el.shadowRoot!.querySelector('umbradesktop-solitaire-settings') === null, 'the dialog closed').to.equal(true);
+  });
+
+  it('opens the panel from the card on the board the card names, and gives the card focus back after', async () => {
+    const el = await solitaire({ game: nearlyWon(), scores: accepting });
+    doubleClick(el, '13S');
+    const card = await found(el, 'umbradesktop-arcade-result', 'card');
+    expect(panelOf(el)!.hasAttribute('open'), 'closed first').to.equal(false);
+    card.dispatchEvent(new CustomEvent('leaderboard', { detail: { game: SOLITAIRE_GAME_ALIAS, board: 'draw-1' }, bubbles: true }));
+    await el.updateComplete;
+    const panel = panelOf(el)!;
+    expect(panel.hasAttribute('open')).to.equal(true);
+    expect(panel.getAttribute('board')).to.equal('draw-1');
+    // The real panel takes focus to its close button when it opens; stand in for that, so the case
+    // proves the card gets the keyboard back rather than that it never lost it.
+    el.shadowRoot!.querySelector<HTMLElement>('.new-game')!.focus();
+    panel.dispatchEvent(new CustomEvent('close'));
+    await el.updateComplete;
+    expect(panel.hasAttribute('open'), 'closed').to.equal(false);
+    expect(el.shadowRoot!.activeElement === card, 'back on the card').to.equal(true);
+  });
+
+  it('stops the clock while the panel is open, and starts it again after', async () => {
+    const el = await solitaire({ game: nearlyWon(), clockIntervalMs: 5, scores: here });
+    await waitUntil(() => readout(el, 'time') !== '0:00', 'the clock runs');
+    const panel = await openPanel(el);
+    panel.dispatchEvent(new CustomEvent('open'));
+    const stopped = readout(el, 'time');
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(readout(el, 'time')).to.equal(stopped);
+    // Stand in for the real panel holding focus on its close button, as above.
+    el.shadowRoot!.querySelector<HTMLElement>('.new-game')!.focus();
+    panel.dispatchEvent(new CustomEvent('close'));
+    await waitUntil(() => readout(el, 'time') !== stopped, 'the clock runs again');
+    expect(el.shadowRoot!.activeElement?.classList.contains('settings') === true, 'back on the gear').to.equal(true);
+  });
+
+  it('does not start a clock that had not started when the panel opened', async () => {
+    const el = await solitaire({ clockIntervalMs: 5, scores: here });
+    const panel = await openPanel(el);
+    panel.dispatchEvent(new CustomEvent('open'));
+    panel.dispatchEvent(new CustomEvent('close'));
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(readout(el, 'time'), 'the clock still waits for the first move').to.equal('0:00');
+  });
+
+  it('does not start the clock of a won game when the panel closes', async () => {
+    const el = await solitaire({ game: nearlyWon(), clockIntervalMs: 5, scores: accepting });
+    doubleClick(el, '13S');
+    const card = await found(el, 'umbradesktop-arcade-result', 'card');
+    card.dispatchEvent(new CustomEvent('leaderboard', { detail: { game: SOLITAIRE_GAME_ALIAS, board: 'draw-1' }, bubbles: true }));
+    await el.updateComplete;
+    const panel = panelOf(el)!;
+    panel.dispatchEvent(new CustomEvent('open'));
+    const started = await intervalsStarted(async () => {
+      panel.dispatchEvent(new CustomEvent('close'));
+      await el.updateComplete;
+    });
+    expect(started, 'no clock started').to.equal(0);
+  });
+
+  it('opens the panel again after the player dismissed it', async () => {
+    const el = await solitaire({ scores: here });
+    const panel = await openPanel(el);
+    // The real panel closes itself on Esc and reports it; the game has to take that in, or its own
+    // flag still says open and Lit sees no change when the dialog asks again.
+    panel.removeAttribute('open');
+    panel.dispatchEvent(new CustomEvent('close'));
+    await el.updateComplete;
+    await openPanel(el);
+    expect(panel.hasAttribute('open'), 'opened again').to.equal(true);
+  });
+
+  it('drops the card and closes the panel with Play again', async () => {
+    const el = await solitaire({ game: nearlyWon(), scores: accepting });
+    doubleClick(el, '13S');
+    const card = await found(el, 'umbradesktop-arcade-result', 'card');
+    card.dispatchEvent(new CustomEvent('leaderboard', { detail: { game: SOLITAIRE_GAME_ALIAS, board: 'draw-1' }, bubbles: true }));
+    await el.updateComplete;
+    card.dispatchEvent(new CustomEvent('play-again', { detail: { game: SOLITAIRE_GAME_ALIAS, board: 'draw-1' }, bubbles: true }));
+    await waitUntil(() => cardEl(el, '1S').dataset.pile === 't0', 'fresh deal');
+    expect(el.shadowRoot!.querySelector('umbradesktop-arcade-result') === null, 'the card is gone').to.equal(true);
+    expect(panelOf(el)!.hasAttribute('open'), 'the panel is shut').to.equal(false);
+    expect(readout(el, 'score')).to.equal('0');
+  });
+
+  /**
+   * Both pieces fill the felt and set their own z-index (the result card 5, the panel 6, in their
+   * `:host` rules in the Arcade's `pieces/`). An unknown element has neither, so the case gives the
+   * panel those rules inline and checks what a click finds: the table is its own stacking context,
+   * so no card can rise through, and the toolbar sits under the scrim, which dims everything as the
+   * mock's section 7 shows.
+   */
+  it('lets the panel lie over the table and the toolbar, for painting and for clicks', async () => {
+    const el = await solitaire({ scores: here });
+    const panel = await openPanel(el);
+    panel.style.cssText = 'position:absolute;inset:0;z-index:6;display:block';
+    const hit = (target: Element) => {
+      const r = target.getBoundingClientRect();
+      return el.shadowRoot!.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    };
+    // New game rather than the gear for the toolbar: the gear lies past the test page's viewport, where
+    // `elementFromPoint` finds nothing at all.
+    for (const target of [cardEl(el, '1S'), cardEl(el, '13C'), el.shadowRoot!.querySelector('.new-game')!]) {
+      expect(hit(target) === panel, `${target.className} is under the panel`).to.equal(true);
+    }
   });
 });
 

@@ -10,6 +10,7 @@ import {
   MINESWEEPER_STATUS_HEIGHT_PX,
 } from './constants.js';
 import { ArcadeScores } from '../shared/arcade.js';
+import type { ArcadeResult } from '../shared/arcade.js';
 import { createBoard, remainingMines, reveal, toggleFlag } from './rules.js';
 import type { MinesweeperBoard, MinesweeperConfig, MinesweeperPlacer } from './rules.js';
 import { css, customElement, html, nothing, property, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
@@ -127,6 +128,13 @@ function formatDisplay(value: number): string {
  * the five themes is carried by `--umbradesktop-app-edge-width` and `--umbradesktop-app-radius`
  * doing their job: a theme with square bevelled controls and one with flat rounded ones are the
  * same stylesheet with different numbers in it.
+ *
+ * On a win it asks the Arcade for the result instead of its dialog and toast (design P3), and draws
+ * the Arcade's result card over the whole game, header included: the well alone is too short for the
+ * card's taller states, and the header (mine counter, New game, timer) sits dimmed under the card's
+ * scrim, untouched as markup, until the next game. The card's Leaderboard link opens the Arcade's
+ * panel over the whole board, the only way in (P4), and Play again deals a new game. A loss shows nothing new, and without the
+ * Arcade the game's own "Cleared." banner stands.
  */
 @customElement('umbradesktop-minesweeper')
 export class MinesweeperElement extends UmbLitElement {
@@ -158,6 +166,22 @@ export class MinesweeperElement extends UmbLitElement {
    * seconds and the easy board ties constantly on them, so the Arcade gets this exact span instead.
    */
   #startedAt?: number;
+
+  /**
+   * What the Arcade handed back for the last win, which the result card shows over the board
+   * (design P4). Undefined before a win, after New game, and without the Arcade, in which case the
+   * game's own "Cleared." banner shows as it always did.
+   */
+  @state()
+  private _result?: ArcadeResult;
+
+  /**
+   * Whether the leaderboard panel is open. Minesweeper opens it only from the card (P4). Mirrored
+   * back from the panel's `close` event, because the panel closes itself (Esc, its close button, the
+   * scrim) and a flag left saying `true` would make the next `?open=${true}` a no-op for Lit.
+   */
+  @state()
+  private _panelOpen = false;
 
   /** The game. Undefined only between construction and {@link connectedCallback}. */
   @state()
@@ -202,10 +226,18 @@ export class MinesweeperElement extends UmbLitElement {
     super.disconnectedCallback();
   }
 
-  /** Start or stop the clock to match the board, after every render. */
-  override updated(): void {
+  /**
+   * Start or stop the clock to match the board, after every render, and give the Arcade's card the
+   * keyboard when it appears, as Solitaire does: the card covers the board, and without this a
+   * keyboard player would Tab through eighty-one cells they cannot see before reaching it.
+   * @param changed The properties that changed in this update.
+   */
+  override updated(changed: Map<PropertyKey, unknown>): void {
     if (this._board?.status === 'playing') this.#startClock();
     else this.#stopClock();
+    if (changed.has('_result') && this._result) {
+      this.shadowRoot?.querySelector<HTMLElement>('umbradesktop-arcade-result')?.focus({ preventScroll: true });
+    }
   }
 
   /** Begin ticking, unless already ticking. */
@@ -228,7 +260,21 @@ export class MinesweeperElement extends UmbLitElement {
     this.#stopClock();
     this._elapsed = 0;
     this.#startedAt = undefined;
+    this._result = undefined;
+    this._panelOpen = false;
     this._board = createBoard(this.config, this.placer);
+  }
+
+  /**
+   * Take in the panel's own dismissal (Esc, its close button, the scrim), so the next request to open
+   * it is a change Lit sees, and give focus back to New game: the panel's close button held it and
+   * disappeared with the panel, which would otherwise leave focus on the page behind. Nothing is
+   * running here, so the one control that always exists is enough.
+   */
+  #onPanelClose(): void {
+    if (!this._panelOpen) return;
+    this._panelOpen = false;
+    void this.updateComplete.then(() => this.shadowRoot?.querySelector<HTMLElement>('.new-game')?.focus());
   }
 
   /**
@@ -243,7 +289,14 @@ export class MinesweeperElement extends UmbLitElement {
     // Only a click that actually started the game starts the timer: a first click on a flag does not.
     if (before === 'ready' && this._board.status !== 'ready') this.#startedAt = clickedAt;
     if (before !== 'won' && this._board.status === 'won' && this.#startedAt !== undefined) {
-      void this.scores.submit(MINESWEEPER_EASY_BOARD, Math.round(this.now() - this.#startedAt));
+      // Ask for the result card's data rather than the Arcade's dialog and toast (design P3, P13). A
+      // slow answer for a board already dealt over is dropped.
+      const won = this._board;
+      void this.scores
+        .submit(MINESWEEPER_EASY_BOARD, Math.round(this.now() - this.#startedAt), { showsResult: true })
+        .then((result) => {
+          if (this._board === won) this._result = result;
+        });
     }
   }
 
@@ -336,13 +389,16 @@ export class MinesweeperElement extends UmbLitElement {
   override render() {
     const board = this._board;
     if (!board) return nothing;
+    // A win with a card shows no banner: the card says it, and says more.
     const outcome =
-      board.status === 'won' || board.status === 'lost'
-        ? this.localize.termOrDefault(
-            `${AREA}_minesweeper${board.status === 'won' ? 'Won' : 'Lost'}`,
-            board.status === 'won' ? 'Cleared.' : 'Boom.',
-          )
-        : '';
+      board.status === 'won' && this._result
+        ? ''
+        : board.status === 'won' || board.status === 'lost'
+          ? this.localize.termOrDefault(
+              `${AREA}_minesweeper${board.status === 'won' ? 'Won' : 'Lost'}`,
+              board.status === 'won' ? 'Cleared.' : 'Boom.',
+            )
+          : '';
     return html`
       <div class="board">
         <div class="status">
@@ -371,6 +427,22 @@ export class MinesweeperElement extends UmbLitElement {
           </div>
         </div>
         <p class="outcome" role="status" data-result=${board.status}>${outcome}</p>
+        ${this._result
+          ? html`<umbradesktop-arcade-result
+              tabindex="-1"
+              .result=${this._result}
+              @leaderboard=${() => (this._panelOpen = true)}
+              @play-again=${() => this.#newGame()}
+            ></umbradesktop-arcade-result>`
+          : nothing}
+        ${this._result
+          ? html`<umbradesktop-arcade-leaderboard
+              game=${MINESWEEPER_GAME_ALIAS}
+              board=${MINESWEEPER_EASY_BOARD}
+              ?open=${this._panelOpen}
+              @close=${() => this.#onPanelClose()}
+            ></umbradesktop-arcade-leaderboard>`
+          : nothing}
       </div>
     `;
   }
@@ -422,9 +494,11 @@ export class MinesweeperElement extends UmbLitElement {
        braces. */
     .board {
       margin: auto;
-      /* The banner's containing block. The outcome line is taken out of flow so that a line shown for
-         the few seconds between a last click and a new game does not charge every window it is
-         ever opened in for the height of it. */
+      /* The containing block of the banner and of the Arcade's result card. The outcome line is taken
+         out of flow so that a line shown for the few seconds between a last click and a new game does
+         not charge every window it is ever opened in for the height of it. The card fills this box,
+         header included: Minesweeper's 258px well was too short for its taller states, the whole
+         game's 274x316 holds every one (result.layout.test.ts in the Arcade measures them). */
       position: relative;
     }
 

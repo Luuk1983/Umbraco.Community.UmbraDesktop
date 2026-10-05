@@ -24,6 +24,12 @@ export interface MetaUmbraDesktopGame {
   label: string;
   /** Umbraco icon alias. */
   icon?: string;
+  /**
+   * How to win, as the hub and the panel say it: a `#` key or a literal. Optional: without it the
+   * Arcade derives one per board ("Fastest time wins"). For a game whose number hides something,
+   * such as Solitaire's time bonus.
+   */
+  rule?: string;
   /** The boards, at least one. */
   leaderboards: UmbraDesktopGameLeaderboard[];
 }
@@ -58,6 +64,8 @@ export interface ArcadeGame {
   label: string;
   /** Its icon. */
   icon: string;
+  /** Its own rule, if the manifest has one. */
+  rule?: string;
   /** Umbraco's weight, higher first, for tab order. */
   weight: number;
   /** Its boards. */
@@ -131,6 +139,7 @@ export function normaliseGames(manifests: ReadonlyArray<unknown>): {
       app: meta.app,
       label: meta.label,
       icon: isText(meta.icon) ? meta.icon : 'icon-game',
+      rule: isText(meta.rule) ? meta.rule : undefined,
       weight: typeof manifest.weight === 'number' ? manifest.weight : 0,
       leaderboards: read,
     });

@@ -1,4 +1,10 @@
 /**
+ * A minute in milliseconds: a time below it is seconds to one decimal with a "sec" unit, from it m:ss
+ * with none. One constant, because `formatScore` and the unit in `phrases.ts` must switch together.
+ */
+export const MINUTE_MS = 60_000;
+
+/**
  * A score as the Arcade shows it (design D13, §7). Points are a whole number. A time under a minute
  * is seconds to one decimal, because Minesweeper's easy board ties constantly on whole seconds;
  * from a minute it is m:ss, where a tenth no longer matters to anyone reading it.
@@ -11,7 +17,7 @@
  */
 export function formatScore(format: 'points' | 'time', value: number, locale?: string): string {
   if (format === 'points') return Math.round(value).toLocaleString(locale);
-  if (value < 60_000) {
+  if (value < MINUTE_MS) {
     return (Math.floor(value / 100) / 10).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   }
   const seconds = Math.floor(value / 1000);

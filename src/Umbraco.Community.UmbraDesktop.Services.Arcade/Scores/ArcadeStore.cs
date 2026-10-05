@@ -52,6 +52,12 @@ public sealed class ArcadeStore(IArcadeDatabase database, IArcadeUserDirectory u
             }
 
             var leaderBefore = await LeaderAsync(db, definition);
+
+            // Who led as the player saw the board before this score, their own hidden score included.
+            // `leaderBefore` is the public leader, which is what the beaten notification needs; "passed"
+            // is about the player's own view, so a hidden player already ahead passes nobody new.
+            var leaderAsSeen = (await RankedAsync(db, definition, userKey)).FirstOrDefault()?.UserKey;
+
             var score = await db.Scores.SingleOrDefaultAsync(s => s.UserKey == userKey && s.Game == definition.Game && s.Board == definition.Board);
             var previous = score?.Value;
             var isBest = score is null || ScoreRules.IsBetter(definition.Better, value, score.Value);
@@ -76,7 +82,20 @@ public sealed class ArcadeStore(IArcadeDatabase database, IArcadeUserDirectory u
 
             var ranked = await RankedAsync(db, definition, userKey);
             var rank = ranked.FindIndex(s => s.UserKey == userKey) + 1;
-            return new SubmitResult(SubmitStatus.Accepted, isBest, previous, rank, profile.IsPublic, profile.AskedAboutPublic, profile.DisplayName);
+            PassedPlayer? passed = null;
+            if (isBest && rank == 1 && leaderAsSeen is { } passedKey && passedKey != userKey)
+            {
+                // The passed player was shown a moment ago; if a race removed them since, name nobody
+                // rather than throw.
+                var passedProfile = await db.Profiles.FindAsync(passedKey);
+                var passedScore = ranked.SingleOrDefault(s => s.UserKey == passedKey);
+                if (passedProfile is not null && passedScore is not null)
+                {
+                    passed = new PassedPlayer(passedProfile.DisplayName, passedScore.Value);
+                }
+            }
+
+            return new SubmitResult(SubmitStatus.Accepted, isBest, previous, rank, profile.IsPublic, profile.AskedAboutPublic, profile.DisplayName, passed);
         });
     }
 
@@ -127,15 +146,58 @@ public sealed class ArcadeStore(IArcadeDatabase database, IArcadeUserDirectory u
                 .ToList();
 
             BoardEntry? mine = null;
+            BoardEntry? above = null;
             var withViewer = await RankedAsync(db, definition, viewer);
             var index = withViewer.FindIndex(s => s.UserKey == viewer);
             if (index >= 0)
             {
                 var score = withViewer[index];
                 mine = new BoardEntry(index + 1, viewer, names[viewer], score.Value, score.AchievedAtUtc, true);
+                if (index > 0)
+                {
+                    var next = withViewer[index - 1];
+                    above = new BoardEntry(index, next.UserKey, names[next.UserKey], next.Value, next.AchievedAtUtc, false);
+                }
             }
 
-            return new BoardView(definition, top, mine, profile?.IsPublic ?? false);
+            return new BoardView(definition, top, mine, profile?.IsPublic ?? false, withViewer.Count, above);
+        });
+
+    /// <summary>
+    /// Every board as one viewer sees it, for the hub's overview: one read instead of one per board
+    /// (design §3). Shown players count, plus the viewer on their own boards whatever their settings,
+    /// by the same rule as <see cref="GetBoardAsync"/>.
+    /// </summary>
+    /// <param name="viewer">Who is looking.</param>
+    /// <returns>The overview.</returns>
+    public Task<ArcadeOverview> GetOverviewAsync(Guid viewer) =>
+        database.RunAsync(async db =>
+        {
+            var boards = await db.Leaderboards.OrderBy(l => l.Game).ThenBy(l => l.Board).ToListAsync();
+            var rows = await db.Scores
+                .Join(db.Profiles, s => s.UserKey, p => p.UserKey, (s, p) => new { Score = s, p.IsPublic, p.DisplayName })
+                .ToListAsync();
+            var hidden = await users.GetHiddenAsync(rows.Select(r => r.Score.UserKey).Distinct().ToArray());
+            var shown = rows.Where(r => r.Score.UserKey == viewer || (r.IsPublic && !hidden.Contains(r.Score.UserKey))).ToList();
+            var names = shown.DistinctBy(r => r.Score.UserKey).ToDictionary(r => r.Score.UserKey, r => r.DisplayName);
+
+            var summaries = boards.Select(board =>
+            {
+                var ranked = Order(shown.Where(r => r.Score.Game == board.Game && r.Score.Board == board.Board).Select(r => r.Score), board.Better);
+                BoardEntry Entry(int index) =>
+                    new(index + 1, ranked[index].UserKey, names[ranked[index].UserKey], ranked[index].Value, ranked[index].AchievedAtUtc, ranked[index].UserKey == viewer);
+                var mine = ranked.FindIndex(s => s.UserKey == viewer);
+                return new BoardSummary(
+                    board.Game,
+                    board.Board,
+                    ranked.Count,
+                    mine >= 0 ? Entry(mine) : null,
+                    ranked.Count > 0 ? Entry(0) : null,
+                    ranked.Count > 1 ? Entry(1) : null);
+            }).ToList();
+
+            var colleagues = shown.Select(r => r.Score.UserKey).Where(key => key != viewer).Distinct().Count();
+            return new ArcadeOverview(colleagues, summaries);
         });
 
     /// <summary>A player's best on a board, or null if they have not played it.</summary>
@@ -177,9 +239,20 @@ public sealed class ArcadeStore(IArcadeDatabase database, IArcadeUserDirectory u
         var visible = rows
             .Where(r => r.Score.UserKey == alwaysInclude || (r.IsPublic && !hidden.Contains(r.Score.UserKey)))
             .Select(r => r.Score);
-        var ordered = definition.Better == "lower" ? visible.OrderBy(s => s.Value) : visible.OrderByDescending(s => s.Value);
-        return ordered.ThenBy(s => s.AchievedAtUtc).ToList();
+        return Order(visible, definition.Better);
     }
+
+    /// <summary>
+    /// Scores in rank order: by value the board's way round, then earliest first (D8). One method so the
+    /// boards and the overview can never rank the same scores differently.
+    /// </summary>
+    /// <param name="scores">The scores to rank.</param>
+    /// <param name="better"><c>higher</c> or <c>lower</c>.</param>
+    /// <returns>The ranked scores.</returns>
+    private static List<ArcadeScoreEntity> Order(IEnumerable<ArcadeScoreEntity> scores, string better) =>
+        (better == "lower" ? scores.OrderBy(s => s.Value) : scores.OrderByDescending(s => s.Value))
+            .ThenBy(s => s.AchievedAtUtc)
+            .ToList();
 
     /// <summary>The public, visible player in first place, or null on an empty board.</summary>
     /// <param name="db">The context.</param>

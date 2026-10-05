@@ -31,11 +31,11 @@ class FakeArcade extends UmbControllerBase {
 
   /**
    * @param host The element that owns the stand-in.
-   * @param behaviour What `submit` and `getBest` do.
+   * @param behaviour What `submit`, `getBest` and, when a test needs one, `getStanding` do.
    */
   constructor(
     host: UmbControllerHost,
-    private readonly behaviour: { submit: (...args: unknown[]) => Promise<unknown>; getBest: () => Promise<unknown> },
+    private readonly behaviour: { submit: (...args: unknown[]) => Promise<unknown>; getBest: () => Promise<unknown>; getStanding?: () => Promise<unknown> },
   ) {
     super(host);
   }
@@ -50,13 +50,18 @@ class FakeArcade extends UmbControllerBase {
   getBest() {
     return this.behaviour.getBest();
   }
+
+  /** @returns Whatever the test set up, or undefined (no standing) when the test set up nothing. */
+  getStanding() {
+    return this.behaviour.getStanding?.() ?? Promise.resolve(undefined);
+  }
 }
 
 describe('ArcadeScores', () => {
   it('does nothing, and says so, without the Arcade', async () => {
     const game = await fixture<Game>(html`<umbradesktop-entertainment-arcade-test-game></umbradesktop-entertainment-arcade-test-game>`);
     const scores = new ArcadeScores(game, 'Pkg.Snake.Game');
-    expect(await scores.submit('default', 10)).to.equal(false);
+    expect(await scores.submit('default', 10)).to.equal(undefined);
     expect(await scores.best('default')).to.equal(undefined);
   });
 
@@ -68,7 +73,7 @@ describe('ArcadeScores', () => {
       const game = await fixture<Game>(html`<umbradesktop-entertainment-arcade-test-game></umbradesktop-entertainment-arcade-test-game>`);
       const scores = new ArcadeScores(game, 'Pkg.Snake.Game');
       const late = new Promise((resolve) => setTimeout(() => resolve('late'), 2000));
-      expect(await Promise.race([scores.submit('default', 10), late])).to.equal(false);
+      expect(await Promise.race([scores.submit('default', 10), late])).to.equal(undefined);
     } finally {
       window.requestAnimationFrame = raf;
     }
@@ -79,8 +84,9 @@ describe('ArcadeScores', () => {
     const arcade = new FakeArcade(host, { submit: async () => ({ status: 'accepted' }), getBest: async () => 300 });
     host.provideContext(ARCADE_CONTEXT, arcade as never);
     const scores = new ArcadeScores(game, 'Pkg.Snake.Game');
-    expect(await scores.submit('default', 10)).to.equal(true);
-    expect(arcade.calls).to.deep.equal([['Pkg.Snake.Game', 'default', 10]]);
+    const accepted = (await scores.submit('default', 10)) as { status: string } | undefined;
+    expect(accepted?.status).to.equal('accepted');
+    expect(arcade.calls).to.deep.equal([['Pkg.Snake.Game', 'default', 10, {}]]);
     expect(await scores.best('default')).to.equal(300);
   });
 
@@ -88,7 +94,7 @@ describe('ArcadeScores', () => {
     const { host, game } = await mount();
     host.provideContext(ARCADE_CONTEXT, new FakeArcade(host, { submit: async () => ({ status: 'rejected' }), getBest: async () => null }) as never);
     const scores = new ArcadeScores(game, 'Pkg.Snake.Game');
-    expect(await scores.submit('default', 10)).to.equal(false);
+    expect(await scores.submit('default', 10)).to.equal(undefined);
     expect(await scores.best('default')).to.equal(undefined);
   });
 
@@ -107,7 +113,40 @@ describe('ArcadeScores', () => {
     };
     host.provideContext(ARCADE_CONTEXT, new FakeArcade(host, { submit: boom, getBest: boom }) as never);
     const scores = new ArcadeScores(game, 'Pkg.Snake.Game');
-    expect(await scores.submit('default', 10)).to.equal(false);
+    expect(await scores.submit('default', 10)).to.equal(undefined);
     expect(await scores.best('default')).to.equal(undefined);
+    expect(await scores.standing('default')).to.equal(undefined);
+  });
+
+  it('hands back the accepted result and passes the options through', async () => {
+    const { host, game } = await mount();
+    const accepted = { status: 'accepted', isPersonalBest: true, rank: 2, rankText: '2nd', value: 310 };
+    const arcade = new FakeArcade(host, { submit: async () => accepted, getBest: async () => null });
+    host.provideContext(ARCADE_CONTEXT, arcade as never);
+    const scores = new ArcadeScores(game, 'Pkg.Snake.Game');
+    expect(await scores.submit('default', 310, { showsResult: true })).to.equal(accepted);
+    expect(arcade.calls).to.deep.equal([['Pkg.Snake.Game', 'default', 310, { showsResult: true }]]);
+  });
+
+  it('answers undefined for a refused score', async () => {
+    const { host, game } = await mount();
+    host.provideContext(ARCADE_CONTEXT, new FakeArcade(host, { submit: async () => ({ status: 'rejected' }), getBest: async () => null }) as never);
+    expect(await new ArcadeScores(game, 'Pkg.Snake.Game').submit('default', 0)).to.equal(undefined);
+  });
+
+  it('reads a standing, and says whether the Arcade is there', async () => {
+    const { host, game } = await mount();
+    const standing = { best: 480, rank: 1, rankText: '1st' };
+    host.provideContext(ARCADE_CONTEXT, new FakeArcade(host, { submit: async () => undefined, getBest: async () => 480, getStanding: async () => standing }) as never);
+    const scores = new ArcadeScores(game, 'Pkg.Snake.Game');
+    expect(await scores.standing('default')).to.equal(standing);
+    expect(await scores.reachable()).to.equal(true);
+  });
+
+  it('has no standing and is not reachable without the Arcade', async () => {
+    const lone = await fixture<Game>(html`<umbradesktop-entertainment-arcade-test-game></umbradesktop-entertainment-arcade-test-game>`);
+    const scores = new ArcadeScores(lone, 'Pkg.Snake.Game');
+    expect(await scores.standing('default')).to.equal(undefined);
+    expect(await scores.reachable()).to.equal(false);
   });
 });

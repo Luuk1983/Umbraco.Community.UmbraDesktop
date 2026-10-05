@@ -24,6 +24,26 @@ describe('solitaire settings modal', () => {
 
   const q = (el: Element, s: string) => el.shadowRoot!.querySelector<HTMLElement>(s)!;
 
+  /**
+   * The Leaderboard section is the Arcade's way in from Solitaire (design P6), so it is there only
+   * when the game says the Arcade answered, and pressing it asks the game rather than opening anything.
+   */
+  it('offers Leaderboard only when told the Arcade is there, and asks for it', async () => {
+    const without = await modal();
+    expect(without.shadowRoot!.querySelector('[data-action="leaderboard"]') === null, 'no Leaderboard without the Arcade').to.equal(true);
+    expect(without.shadowRoot!.querySelectorAll('section').length, 'the three sections it always had').to.equal(3);
+    const el = await modal();
+    el.showLeaderboard = true;
+    await el.updateComplete;
+    const sections = el.shadowRoot!.querySelectorAll('section');
+    expect(sections.length, 'a fourth section').to.equal(4);
+    expect(sections[3].querySelector('h3')!.textContent!.trim()).to.equal('Leaderboard');
+    const button = q(el, '[data-action="leaderboard"]');
+    expect(button.textContent!.trim()).to.equal('Show the leaderboard');
+    setTimeout(() => button.click());
+    await oneEvent(el, 'solitaire-settings-leaderboard');
+  });
+
   it('is a dialog that says what it is', async () => {
     const el = await modal();
     expect(q(el, '[role="dialog"]').getAttribute('aria-modal')).to.equal('true');

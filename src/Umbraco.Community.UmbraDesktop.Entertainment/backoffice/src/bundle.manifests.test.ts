@@ -3,6 +3,8 @@ import { manifests } from './bundle.manifests.js';
 import { MINESWEEPER_CONTENT_SIZE, MINESWEEPER_MIN_CONTENT_SIZE } from './minesweeper/constants.js';
 import { SNAKE_CONTENT_SIZE, SNAKE_MIN_CONTENT_SIZE } from './snake/constants.js';
 import { SOLITAIRE_CONTENT_SIZE, SOLITAIRE_MIN_CONTENT_SIZE } from './solitaire/constants.js';
+import en from './localization/en.js';
+import nl from './localization/nl.js';
 
 /**
  * What the manifest promises the desktop, asserted where it can be read without a desktop.
@@ -131,6 +133,18 @@ it('scores Minesweeper as a time, Snake and Solitaire as points', () => {
     ['default:higher:points'],
     ['draw-1:higher:points', 'draw-3:higher:points'],
   ]);
+});
+
+/**
+ * Solitaire says how it is won itself (settled point 8): the rule the Arcade would derive from its
+ * boards, "Highest score wins", leaves out the time bonus that decides most games.
+ */
+it("gives Solitaire's boards their own rule line, from a key both dictionaries have", () => {
+  const rules = games.map((g) => (g.meta as { rule?: string }).rule);
+  expect(rules).to.deep.equal([undefined, undefined, '#umbraDesktopEntertainment_solitaireRule']);
+  for (const dictionary of [en, nl]) {
+    expect(typeof (dictionary.umbraDesktopEntertainment as Record<string, unknown>).solitaireRule, 'the key is there').to.equal('string');
+  }
 });
 
 it('no longer defines the Games group, which the Arcade owns', () => {

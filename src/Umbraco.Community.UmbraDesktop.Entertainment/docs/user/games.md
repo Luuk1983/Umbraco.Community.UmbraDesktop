@@ -41,10 +41,18 @@ be moved and minimised, but not resized or maximised. Solitaire can be resized.
 
 ### High scores
 
-Each game keeps your best score on the Arcade: your fastest win in Minesweeper, your highest score
-in Snake, and your highest winning score in Solitaire for each draw mode. The first time you finish
-a game, you are asked whether your scores may appear on the leaderboards. To see them, open
-**Arcade** in the Games group. See [Arcade](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Services.Arcade/docs/user/arcade.md).
+The Arcade keeps your best score in each game: your fastest win in Minesweeper, your highest score
+in Snake, and your highest winning score in Solitaire for each draw mode. Each game shows how you
+did in its own window:
+
+- Minesweeper shows your result after every win.
+- Snake shows it at game over. Your best score at the top of the window, with its crown and your
+  rank, opens the leaderboard and pauses the game.
+- Solitaire shows it after a win. To see the leaderboard while you play, select the gear in the top
+  right corner, then **Show the leaderboard**.
+
+The first time you finish a game, you are asked whether your scores may appear on the leaderboards.
+To see every board, open **Arcade** in the Games group. See [Arcade](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Services.Arcade/docs/user/arcade.md).
 
 ### Minesweeper
 
@@ -66,8 +74,8 @@ Eat the food to grow longer, and do not hit the walls or your own tail.
 - To start again, select **New game**.
 
 Each piece of food is worth ten points, and the snake speeds up as it grows. The best score is
-kept on the Arcade, or in the browser without it. The game also pauses by itself when its window loses focus, so minimising
-it does not end the game.
+kept on the Arcade, or in the browser without it, where the top of the window shows it as **Best**.
+The game also pauses by itself when its window loses focus, so minimising it does not end the game.
 
 Minesweeper and Snake start fresh when the desktop [reopens its windows](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/user/settings/reopening-windows.md)
 after a reload.

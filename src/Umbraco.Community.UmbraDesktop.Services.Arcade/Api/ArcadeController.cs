@@ -107,7 +107,7 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
         var result = await store.SubmitAsync(user.Key, user.Name ?? string.Empty, model.ToDefinition(), model.Value);
         return result.Status switch
         {
-            SubmitStatus.Accepted => Ok(new SubmitScoreResponseModel(result.IsPersonalBest, result.PreviousBest, result.Rank, result.IsPublic, result.AskedAboutPublic, result.DisplayName)),
+            SubmitStatus.Accepted => Ok(new SubmitScoreResponseModel(result.IsPersonalBest, result.PreviousBest, result.Rank, result.IsPublic, result.AskedAboutPublic, result.DisplayName, PassedPlayerModel.From(result.Passed))),
             SubmitStatus.Conflict => Conflict(Problem("ArcadeBoardConflict", "This board is already recorded with different rules", StatusCodes.Status409Conflict)),
             _ => BadRequest(Problem("ArcadeScoreRejected", "The score or its board is not valid", StatusCodes.Status400BadRequest)),
         };
@@ -134,7 +134,26 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
             view.Top.Select(BoardEntryModel.From).ToArray(),
             view.Viewer is null ? null : BoardEntryModel.From(view.Viewer),
             view.ViewerIsPublic,
-            CanModerate(user)));
+            CanModerate(user),
+            view.Players,
+            view.Above is null ? null : BoardEntryModel.From(view.Above)));
+    }
+
+    /// <summary>Every board as the caller sees it, for the hub's overview.</summary>
+    /// <returns>The overview.</returns>
+    [HttpGet("overview")]
+    [MapToApiVersion("1.0")]
+    [ProducesResponseType(typeof(OverviewResponseModel), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetOverview()
+    {
+        if (Caller() is not { } user)
+        {
+            return Forbid();
+        }
+
+        var overview = await store.GetOverviewAsync(user.Key);
+        return Ok(new OverviewResponseModel(overview.Colleagues, overview.Boards.Select(BoardSummaryModel.From).ToArray()));
     }
 
     /// <summary>The caller's best on a board.</summary>

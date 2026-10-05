@@ -24,6 +24,27 @@ function copyDocs(): Plugin {
 	};
 }
 
+/** The display font's file in the fontsource package, and its licence. Kept in step with `src/pieces/font.ts`. */
+const FONT_SOURCE = "../node_modules/@fontsource-variable/fraunces";
+
+/**
+ * Copies the Arcade's display font (Fraunces, SIL Open Font License) and its licence into this
+ * package's App_Plugins folder, where `src/pieces/font.ts` points the browser. Copied rather than
+ * committed, so the repository holds no binary and the version is the lock file's.
+ * @returns The Vite plugin.
+ */
+function copyFont(): Plugin {
+	return {
+		name: "umbradesktop-copy-font",
+		closeBundle() {
+			const from = (file: string) => fileURLToPath(new URL(`${FONT_SOURCE}/${file}`, import.meta.url));
+			const to = (file: string) => fileURLToPath(new URL(`${outDir}/fonts/${file}`, import.meta.url));
+			cpSync(from("files/fraunces-latin-wght-normal.woff2"), to("fraunces-latin-wght-normal.woff2"));
+			cpSync(from("LICENSE"), to("OFL.txt"));
+		},
+	};
+}
+
 export default defineConfig({
 	build: {
 		lib: {
@@ -45,5 +66,5 @@ export default defineConfig({
 			external: [/^@umbraco/],
 		},
 	},
-	plugins: [copyDocs()],
+	plugins: [copyDocs(), copyFont()],
 });

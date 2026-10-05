@@ -1,101 +1,125 @@
-import { css, customElement, html, nothing, state } from '@umbraco-cms/backoffice/external/lit';
-import { UmbContextToken } from '@umbraco-cms/backoffice/context-api';
-import type { UmbContextMinimal } from '@umbraco-cms/backoffice/context-api';
+import { css, customElement, html, keyed, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+import type { ArcadeProfile } from '../api/arcade-api.js';
 import { UMBRADESKTOP_ARCADE_CONTEXT } from '../context/arcade.context-token.js';
 import type { ArcadeGame } from '../games/game-manifest.js';
-import { AREA } from '../shared/area.js';
-import './board.element.js';
+import { ensureArcadeFont } from '../pieces/font.js';
+import { arcadeLook, arcadeTheme } from '../pieces/look.js';
+import { TROPHY_PATH, avatar, icon } from '../pieces/parts.js';
+import { say } from '../shared/phrases.js';
+import './game-page.element.js';
+import './overview.element.js';
 import './profile.element.js';
 
-/** The one window-manager member the hub uses, published by the host (`docs/developer/desktop-contexts.md`). */
-interface DesktopWindows extends UmbContextMinimal {
-  /** Open an app by alias. @param alias The app. @returns Whether it opened. */
-  openApp(alias: string): boolean;
-}
-
-/** The host's window manager, by its published alias; nothing is imported from the host. */
-const DESKTOP_WINDOWS = new UmbContextToken<DesktopWindows>('UmbraDesktopWindowManagerContext');
-
-/** The tab id for the profile; cannot collide with a game alias, which never starts with `#`. */
-const PROFILE = '#profile';
+/** Where the hub is: its overview, one game's page, or the player's profile. */
+type HubView = { kind: 'overview' } | { kind: 'game'; game: string; board?: string } | { kind: 'profile' };
 
 /**
- * The Arcade: a tab per game with its boards side by side and a Play button, and a Profile tab
- * (design §7). Lives in the Games group and only appears once a game is registered.
+ * The Arcade (design P11): it opens on the overview, a tile opens a game's page, and the player's
+ * name opens their profile. The top bar navigates and nothing else. It also takes a request from the
+ * Arcade context to show a board, when it opens and while it is open, which is how the panel's
+ * "Open in the Arcade" and the beaten toast land on the right board (design §4).
  */
 @customElement('umbradesktop-arcade-hub')
 export class UmbraDesktopArcadeHubElement extends UmbLitElement {
-  /** The registered games. */
+  /** Where the hub is. */
   @state()
-  private _games: ArcadeGame[] = [];
-
-  /** The selected tab: a game alias or {@link PROFILE}. */
-  @state()
-  private _tab?: string;
+  private _view: HubView = { kind: 'overview' };
 
   /** Whether the Arcade context answered at all. */
   @state()
   private _connected = false;
 
-  /** The window manager, for Play. */
-  #windows?: DesktopWindows;
+  /** The registered games. */
+  @state()
+  private _games: ArcadeGame[] = [];
 
+  /** The player's settings, for their name in the top bar. */
+  @state()
+  private _profile?: ArcadeProfile;
+
+  /**
+   * Loads the display font, then follows the Arcade's games, the player's settings and the request
+   * to show a board. A request is taken as soon as it arrives and cleared, so the next one (or the
+   * same one, asked again) is heard; one for a game that is not installed leaves the hub on its
+   * overview, because the view only routes to a game it can find.
+   */
   constructor() {
     super();
+    ensureArcadeFont();
     this.consumeContext(UMBRADESKTOP_ARCADE_CONTEXT, (arcade) => {
       this._connected = arcade !== undefined;
-      if (arcade) this.observe(arcade.games, (games) => (this._games = games));
+      if (!arcade) return;
+      this.observe(arcade.games, (games) => (this._games = games), '_games');
+      this.observe(arcade.profile, (profile) => (this._profile = profile), '_profile');
+      this.observe(
+        arcade.hubRequest,
+        (request) => {
+          if (!request) return;
+          this._view = { kind: 'game', game: request.game, board: request.board };
+          arcade.clearHubRequest();
+        },
+        '_hubRequest',
+      );
+      void arcade.refreshProfile();
     });
-    this.consumeContext(DESKTOP_WINDOWS, (windows) => (this.#windows = windows));
   }
 
-  /** The selected game, defaulting to the first; undefined on the Profile tab. */
-  get #selected(): ArcadeGame | undefined {
-    return this._tab === PROFILE ? undefined : (this._games.find((g) => g.alias === this._tab) ?? this._games[0]);
+  /** The name opens the profile, and closes it again. */
+  #toggleProfile(): void {
+    this._view = this._view.kind === 'profile' ? { kind: 'overview' } : { kind: 'profile' };
   }
 
-  /** @returns The hub. */
+  /** @returns The hub: the top bar, and the overview, a game's page or the profile under it. */
   override render() {
-    const t = (key: string, fallback: string) => this.localize.termOrDefault(`${AREA}_${key}`, fallback);
-    if (!this._connected) return html`<p class="missing">${t('needsDesktop', 'The Arcade only works on the desktop.')}</p>`;
-    const game = this.#selected;
-    return html`
-      <uui-tab-group>
-        ${this._games.map(
-          (g) => html`<uui-tab label=${this.localize.string(g.label)} .active=${g === game} @click=${() => (this._tab = g.alias)}>
-            <uui-icon slot="icon" name=${g.icon}></uui-icon>${this.localize.string(g.label)}</uui-tab>`,
-        )}
-        <uui-tab label=${t('profile', 'Profile')} .active=${this._tab === PROFILE} @click=${() => (this._tab = PROFILE)}>
-          <uui-icon slot="icon" name="icon-user"></uui-icon>${t('profile', 'Profile')}</uui-tab>
-      </uui-tab-group>
+    const l = this.localize;
+    if (!this._connected) return html`<p class="missing">${say(l, 'needsDesktop', 'The Arcade only works on the desktop.')}</p>`;
+    const view = this._view;
+    const game = view.kind === 'game' ? this._games.find((g) => g.alias === view.game) : undefined;
+    const name = this._profile?.displayName ?? '';
+    const atHome = view.kind === 'overview' || (view.kind === 'game' && !game);
+    return html`<div class="room felt">
+      <header class="hhead">
+        ${atHome
+          ? html`${icon(TROPHY_PATH, 'trophy')}<h1 class="display">${say(l, 'hub', 'Arcade')}</h1>`
+          : html`<button class="back link" data-action="back" @click=${() => (this._view = { kind: 'overview' })}>‹ ${say(l, 'allGames', 'All games')}</button>`}
+        <button class="me ${view.kind === 'profile' ? 'open' : ''}" data-action="profile" title=${say(l, 'yourProfile', 'Your profile')}
+          aria-expanded=${String(view.kind === 'profile')} @click=${() => this.#toggleProfile()}>
+          ${avatar({ userKey: 'me', displayName: name || '?', isViewer: true })}<span>${name}</span><span class="chev" aria-hidden="true">${view.kind === 'profile' ? '▲' : '▼'}</span>
+        </button>
+      </header>
       <div class="body">
-        ${game
-          ? html`<header>
-                <h2>${this.localize.string(game.label)}</h2>
-                <uui-button look="primary" data-action="play" label=${t('play', 'Play')} @click=${() => this.#windows?.openApp(game.app)}></uui-button>
-              </header>
-              <div class="boards">
-                ${game.leaderboards.map((b) => html`<umbradesktop-arcade-board .game=${game} .board=${b} .showHeading=${game.leaderboards.length > 1}></umbradesktop-arcade-board>`)}
-              </div>`
-          : this._tab === PROFILE
-            ? html`<umbradesktop-arcade-profile></umbradesktop-arcade-profile>`
-            : nothing}
-      </div>`;
+        ${view.kind === 'profile'
+          ? html`<umbradesktop-arcade-profile></umbradesktop-arcade-profile>`
+          : game
+            ? // Keyed by the view, which is a new object per request and per tile: a request for the
+              // board already on show (the panel's "Open in the Arcade" again, after the player moved
+              // the pill) hands the page the same `board` string, which it would not see as a change.
+              // A fresh page reads the board again and selects the mode asked for.
+              keyed(view, html`<umbradesktop-arcade-game-page .game=${game} .board=${view.kind === 'game' ? (view.board ?? '') : ''}></umbradesktop-arcade-game-page>`)
+            : html`<umbradesktop-arcade-overview @open-game=${(event: CustomEvent<{ game: string }>) => (this._view = { kind: 'game', game: event.detail.game })}></umbradesktop-arcade-overview>`}
+      </div>
+    </div>`;
   }
 
-  /** Layout and the app surface (desktop-apps.md §4). */
-  static override styles = css`
-    :host { display: flex; flex-direction: column; height: 100%; background: var(--umbradesktop-app-surface, var(--uui-color-surface)); color: var(--umbradesktop-app-text, var(--uui-color-text)); font-family: var(--umbradesktop-app-font, inherit); }
-    /* uui-tab sets height:100%, which in this column flex stretched the strip over the body. */
-    uui-tab-group { flex: none; height: auto; }
-    uui-tab { height: auto; }
-    .body { flex: 1; overflow: auto; padding: var(--uui-size-space-5); }
-    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--uui-size-space-4); }
-    h2 { margin: 0; }
-    .boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--uui-size-space-5); }
-    .missing { padding: var(--uui-size-space-5); color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt)); }
-  `;
+  /** The room, the top bar and the scrolling body (mock §1 to §3). */
+  static override styles = [
+    arcadeTheme,
+    arcadeLook,
+    css`
+      :host { display: flex; flex-direction: column; height: 100%; }
+      .room { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 22px 24px 0; }
+      .hhead { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex: none; }
+      .hhead h1 { margin: 0; font-weight: 700; font-size: 28px; line-height: 1; }
+      .trophy { width: 34px; height: 34px; color: var(--arcade-gold); }
+      .back { font-size: 13px; }
+      .me { margin-inline-start: auto; display: flex; align-items: center; gap: 9px; padding: 4px 14px 4px 4px; border: 0; border-radius: var(--arcade-control-radius); background: var(--arcade-glass-strong); box-shadow: var(--arcade-edge); font-weight: 600; font-size: 13px; }
+      .me.open { background: color-mix(in srgb, var(--arcade-accent) 18%, transparent); }
+      .chev { color: var(--arcade-faint); font-size: 10px; }
+      .body { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 22px; }
+      .missing { padding: 20px; color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt)); }
+    `,
+  ];
 }
 
 export { UmbraDesktopArcadeHubElement as element };

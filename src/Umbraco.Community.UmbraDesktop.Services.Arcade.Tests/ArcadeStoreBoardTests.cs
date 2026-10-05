@@ -90,6 +90,61 @@ public class ArcadeStoreBoardTests : IAsyncLifetime
         Assert.Equal(13, board.Viewer!.Rank);
     }
 
+    /// <summary>"3rd of 12": the players shown, plus the viewer when their own scores are hidden (design §3).</summary>
+    [Fact]
+    public async Task Counts_the_players_shown_plus_a_hidden_viewer()
+    {
+        await PublicScore(Ada, "Ada", 300);
+        await PublicScore(Grace, "Grace", 500);
+        await _store.SubmitAsync(Linus, "Linus", Snake, 100);
+
+        Assert.Equal(2, (await _store.GetBoardAsync(Ada, Snake.Game, Snake.Board)).Players);
+        Assert.Equal(3, (await _store.GetBoardAsync(Linus, Snake.Game, Snake.Board)).Players);
+    }
+
+    /// <summary>The entry directly above the viewer, for "3.0 s behind Bram", also when the viewer is outside the top ten.</summary>
+    [Fact]
+    public async Task Returns_the_entry_directly_above_the_viewer()
+    {
+        for (var i = 0; i < 12; i++)
+        {
+            await PublicScore(Guid.NewGuid(), $"P{i}", 1_000 + i);
+        }
+        await PublicScore(Ada, "Ada", 5);
+
+        var board = await _store.GetBoardAsync(Ada, Snake.Game, Snake.Board);
+
+        Assert.NotNull(board.Above);
+        Assert.Equal(12, board.Above!.Rank);
+        Assert.Equal("P0", board.Above.DisplayName);
+        Assert.Equal(1_000, board.Above.Value);
+        Assert.False(board.Above.IsViewer);
+    }
+
+    /// <summary>Someone whose scores are hidden is never the one above: the viewer could not chase a row they cannot see.</summary>
+    [Fact]
+    public async Task A_hidden_player_is_never_the_entry_above()
+    {
+        await PublicScore(Grace, "Grace", 500);
+        await PublicScore(Ada, "Ada", 300);
+        await _store.SubmitAsync(Linus, "Linus", Snake, 400);
+
+        var board = await _store.GetBoardAsync(Ada, Snake.Game, Snake.Board);
+
+        Assert.Equal("Grace", board.Above!.DisplayName);
+        Assert.Equal(1, board.Above.Rank);
+    }
+
+    /// <summary>The leader has nobody above, and a viewer who has not played has no row to be above.</summary>
+    [Fact]
+    public async Task The_leader_and_a_viewer_who_has_not_played_have_nobody_above()
+    {
+        await PublicScore(Grace, "Grace", 500);
+
+        Assert.Null((await _store.GetBoardAsync(Grace, Snake.Game, Snake.Board)).Above);
+        Assert.Null((await _store.GetBoardAsync(Ada, Snake.Game, Snake.Board)).Above);
+    }
+
     /// <summary>Going private hides at once; going public again brings the scores back (D7).</summary>
     [Fact]
     public async Task Going_private_hides_and_going_public_restores()

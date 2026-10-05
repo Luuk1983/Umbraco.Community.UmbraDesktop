@@ -157,6 +157,8 @@ interface MetaUmbraDesktopGame {
   label: string;
   /** Native Umbraco icon alias. */
   icon?: string;
+  /** How to win, as the Arcade says it: a # key or a literal; derived per board when absent. */
+  rule?: string;
   /** The boards the game keeps scores on. */
   leaderboards: ArcadeLeaderboardDefinition[];
 }

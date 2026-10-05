@@ -24,7 +24,19 @@ public sealed record SubmitScoreRequestModel(string Game, string Board, string B
 /// <param name="IsPublic">Whether the player is shown.</param>
 /// <param name="AskedAboutPublic">Whether the one-time question has been answered.</param>
 /// <param name="DisplayName">The player's display name, to prefill that question.</param>
-public sealed record SubmitScoreResponseModel(bool IsPersonalBest, long? PreviousBest, int Rank, bool IsPublic, bool AskedAboutPublic, string DisplayName);
+/// <param name="Passed">Who the score took first place from, or null.</param>
+public sealed record SubmitScoreResponseModel(bool IsPersonalBest, long? PreviousBest, int Rank, bool IsPublic, bool AskedAboutPublic, string DisplayName, PassedPlayerModel? Passed);
+
+/// <summary>The player a score passed for first place.</summary>
+/// <param name="DisplayName">Their name.</param>
+/// <param name="Value">Their best.</param>
+public sealed record PassedPlayerModel(string DisplayName, long Value)
+{
+    /// <summary>From the store's record.</summary>
+    /// <param name="passed">The record, or null.</param>
+    /// <returns>The model, or null.</returns>
+    public static PassedPlayerModel? From(PassedPlayer? passed) => passed is null ? null : new(passed.DisplayName, passed.Value);
+}
 
 /// <summary>A change to the caller's settings; a null field is left alone.</summary>
 /// <param name="DisplayName">A new display name.</param>
@@ -54,8 +66,36 @@ public sealed record BoardEntryModel(int Rank, Guid UserKey, string DisplayName,
 /// <param name="Viewer">The caller's own row, if they have played.</param>
 /// <param name="ViewerIsPublic">Whether the caller is shown.</param>
 /// <param name="CanModerate">Whether the caller may remove rows and reset the board.</param>
-public sealed record BoardResponseModel(bool Played, IReadOnlyList<BoardEntryModel> Top, BoardEntryModel? Viewer, bool ViewerIsPublic, bool CanModerate);
+/// <param name="Players">How many rank on it for the caller.</param>
+/// <param name="Above">The shown player directly above the caller, or null.</param>
+public sealed record BoardResponseModel(bool Played, IReadOnlyList<BoardEntryModel> Top, BoardEntryModel? Viewer, bool ViewerIsPublic, bool CanModerate, int Players, BoardEntryModel? Above);
 
 /// <summary>A player's best.</summary>
 /// <param name="Value">The best, or null if they have not played.</param>
 public sealed record BestResponseModel(long? Value);
+
+/// <summary>One board on the overview.</summary>
+/// <param name="Game">The game's manifest alias.</param>
+/// <param name="Board">The board's alias.</param>
+/// <param name="Players">How many rank on it for the caller.</param>
+/// <param name="Viewer">The caller's row, or null.</param>
+/// <param name="Leader">First place, or null.</param>
+/// <param name="Next">Second place, or null.</param>
+public sealed record BoardSummaryModel(string Game, string Board, int Players, BoardEntryModel? Viewer, BoardEntryModel? Leader, BoardEntryModel? Next)
+{
+    /// <summary>From the store's record.</summary>
+    /// <param name="summary">The record.</param>
+    /// <returns>The model.</returns>
+    public static BoardSummaryModel From(BoardSummary summary) => new(
+        summary.Game,
+        summary.Board,
+        summary.Players,
+        summary.Viewer is null ? null : BoardEntryModel.From(summary.Viewer),
+        summary.Leader is null ? null : BoardEntryModel.From(summary.Leader),
+        summary.Next is null ? null : BoardEntryModel.From(summary.Next));
+}
+
+/// <summary>The hub's overview.</summary>
+/// <param name="Colleagues">Distinct players shown on any board, not counting the caller.</param>
+/// <param name="Boards">Every board the Arcade knows.</param>
+public sealed record OverviewResponseModel(int Colleagues, IReadOnlyList<BoardSummaryModel> Boards);

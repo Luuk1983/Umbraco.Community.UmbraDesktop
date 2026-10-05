@@ -1,5 +1,5 @@
 import { manifests as localizationManifests } from './localization/manifest.js';
-import { HUB_CONTENT_SIZE, HUB_MIN_CONTENT_SIZE } from './hub/constants.js';
+import { ARCADE_HUB_ALIAS, HUB_CONTENT_SIZE, HUB_MIN_CONTENT_SIZE } from './hub/constants.js';
 import { UMBRADESKTOP_ARCADE_HAS_GAMES_CONDITION } from './conditions/has-games.condition.alias.js';
 import { UMBRADESKTOP_ARCADE_PRIVACY_MODAL_ALIAS } from './context/privacy-modal.token.js';
 import { AREA } from './shared/area.js';
@@ -54,7 +54,7 @@ const privacyModal: UmbExtensionManifest = {
  */
 const hub: UmbExtensionManifest = {
   type: 'umbraDesktopApp',
-  alias: `${ALIAS}.Hub`,
+  alias: ARCADE_HUB_ALIAS,
   name: 'Arcade',
   element: () => import('./hub/hub.element.js'),
   weight: 100,

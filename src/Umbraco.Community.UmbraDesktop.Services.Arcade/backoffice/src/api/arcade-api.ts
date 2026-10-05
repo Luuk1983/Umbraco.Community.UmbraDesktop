@@ -21,9 +21,17 @@ export interface ArcadeProfile {
   askedAboutPublic: boolean;
 }
 
+/** Who a score took first place from (design §3): "First place, past Bram's 450". */
+export interface ArcadePassed {
+  /** Their board name. */
+  displayName: string;
+  /** Their best, which the score beat. */
+  value: number;
+}
+
 /** How a submit went. */
 export type ArcadeSubmitResult =
-  | { status: 'accepted'; isPersonalBest: boolean; previousBest: number | null; rank: number; isPublic: boolean; askedAboutPublic: boolean; displayName: string }
+  | { status: 'accepted'; isPersonalBest: boolean; previousBest: number | null; rank: number; isPublic: boolean; askedAboutPublic: boolean; displayName: string; passed: ArcadePassed | null }
   | { status: 'rejected' }
   | { status: 'conflict' }
   | { status: 'failed' };
@@ -56,6 +64,34 @@ export interface ArcadeBoard {
   viewerIsPublic: boolean;
   /** Whether the viewer may moderate. */
   canModerate: boolean;
+  /** How many rank on it for the viewer: everyone shown, plus the viewer when hidden. "3rd of 12". */
+  players: number;
+  /** The shown player directly above the viewer, or null when they lead or have not played. */
+  above: ArcadeBoardEntry | null;
+}
+
+/** One board on the hub's overview. */
+export interface ArcadeBoardSummary {
+  /** The game's manifest alias. */
+  game: string;
+  /** The board's alias. */
+  board: string;
+  /** How many rank on it for the viewer. */
+  players: number;
+  /** The viewer's row, or null if they have not played it. */
+  viewer: ArcadeBoardEntry | null;
+  /** First place, or null when nobody ranks. */
+  leader: ArcadeBoardEntry | null;
+  /** Second place, shown as "Next" when the viewer leads. */
+  next: ArcadeBoardEntry | null;
+}
+
+/** The hub's overview, in one read. */
+export interface ArcadeOverview {
+  /** Colleagues shown on any board, not counting the viewer. */
+  colleagues: number;
+  /** Every board the server knows; the hub keeps those of installed games. */
+  boards: ArcadeBoardSummary[];
 }
 
 /** "Somebody took first place from you." */
@@ -84,6 +120,8 @@ export interface ArcadeApi {
   submit(game: string, board: UmbraDesktopGameLeaderboard, value: number): Promise<ArcadeSubmitResult>;
   /** A board. @param game The game alias. @param board The board alias. */
   getBoard(game: string, board: string): Promise<ArcadeBoard | undefined>;
+  /** Every board as the caller sees it, for the hub's overview. */
+  getOverview(): Promise<ArcadeOverview | undefined>;
   /** The caller's best. @param game The game alias. @param board The board alias. */
   getBest(game: string, board: string): Promise<number | null | undefined>;
   /** The caller's unread beaten events, handed out once. */
@@ -132,6 +170,9 @@ export function createArcadeApi(): ArcadeApi {
     },
     async getBoard(game, board) {
       return (await attempt<ArcadeBoard>(() => umbHttpClient.get({ url: `${BASE}/boards/${enc(game)}/${enc(board)}`, security: [...SECURITY] }))).data;
+    },
+    async getOverview() {
+      return (await attempt<ArcadeOverview>(() => umbHttpClient.get({ url: `${BASE}/overview`, security: [...SECURITY] }))).data;
     },
     async getBest(game, board) {
       const { data } = await attempt<{ value: number | null }>(() => umbHttpClient.get({ url: `${BASE}/best/${enc(game)}/${enc(board)}`, security: [...SECURITY] }));

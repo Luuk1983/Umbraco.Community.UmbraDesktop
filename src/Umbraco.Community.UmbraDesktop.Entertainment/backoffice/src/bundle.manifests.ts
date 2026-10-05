@@ -155,7 +155,8 @@ const games: UmbExtensionManifest[] = [
       label: '#umbraDesktopEntertainment_snake',
       icon: 'icon-game',
       leaderboards: [
-        { alias: SNAKE_BOARD_ALIAS, label: '#umbraDesktopEntertainment_snake', better: 'higher', format: 'points' },
+        // "Classic" rather than repeating the game's name on its one board; the alias is unchanged, so nothing stored moves.
+        { alias: SNAKE_BOARD_ALIAS, label: '#umbraDesktopEntertainment_snakeClassic', better: 'higher', format: 'points' },
       ],
     },
   },
@@ -168,6 +169,8 @@ const games: UmbExtensionManifest[] = [
       app: 'Umbraco.Community.UmbraDesktop.Entertainment.Solitaire',
       label: '#umbraDesktopEntertainment_solitaire',
       icon: 'icon-playing-cards',
+      // Said by the game, not derived: "Highest score wins" would leave out the time bonus that decides most games.
+      rule: '#umbraDesktopEntertainment_solitaireRule',
       leaderboards: [
         { alias: 'draw-1', label: '#umbraDesktopEntertainment_solitaireDrawOne', better: 'higher', format: 'points' },
         { alias: 'draw-3', label: '#umbraDesktopEntertainment_solitaireDrawThree', better: 'higher', format: 'points' },

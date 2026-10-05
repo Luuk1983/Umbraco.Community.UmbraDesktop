@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arcade mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ---------- page ---------- */
+:root{
+  --page:#eceef3;--ink:#16204a;--muted:#5b6380;
+  --felt:radial-gradient(130% 90% at 50% -10%,#34489a 0%,#1d2a5c 45%,#111a40 80%,#0c1232 100%);
+  --text:#eef0ff;--soft:rgba(232,235,255,.62);--faint:rgba(232,235,255,.38);
+  --glass:rgba(255,255,255,.065);--glass2:rgba(255,255,255,.1);--ring:rgba(255,255,255,.11);
+  --pink:#f5c1bc;--pinkd:#e9958d;--gold1:#ffe08a;--gold2:#e0a91e;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.55 Inter,system-ui,sans-serif;padding:40px 24px 90px}
+main{max-width:1180px;margin:0 auto}
+h1{font:600 32px/1.2 Fraunces,Georgia,serif;margin:0 0 6px}
+h2{font:600 22px/1.3 Fraunces,Georgia,serif;margin:64px 0 6px}
+p.lead{color:var(--muted);margin:0 0 26px;max-width:780px}
+.row{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.notes{flex:1 1 240px;max-width:330px;font-size:14px;color:var(--muted)}
+.notes b{color:var(--ink);font-weight:600}
+.notes ul{padding-left:18px;margin:8px 0}.notes li{margin:5px 0}
+.cap{font-size:13px;color:var(--muted);margin:10px 0 0;text-align:center;max-width:330px}
+.desk{padding:30px;border-radius:18px;background:radial-gradient(120% 120% at 85% 5%,#ff8a7a 0%,#7b4ce0 30%,#2b2a9e 60%,#0e0f3d 100%)}
+
+/* ---------- shared game-room language ---------- */
+.felt{background:var(--felt);color:var(--text);position:relative;isolation:isolate}
+.felt::before{content:"";position:absolute;inset:0;z-index:-1;opacity:.28;mix-blend-mode:overlay;pointer-events:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.glass{background:var(--glass);box-shadow:inset 0 0 0 1px var(--ring);border-radius:14px;backdrop-filter:blur(10px)}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;background:var(--glass2);box-shadow:inset 0 0 0 1px var(--ring);font:500 13px Inter;color:var(--text)}
+.btn{font:600 13px Inter;border:0;border-radius:999px;padding:9px 18px;color:#1b264f;background:linear-gradient(180deg,#ffd9d4,var(--pink));box-shadow:0 6px 18px -6px rgba(245,193,188,.7),inset 0 1px 0 rgba(255,255,255,.6)}
+.btn.ghost{background:transparent;color:var(--text);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)}
+.btn.sm{padding:6px 14px;font-size:12px}
+.lbl{font:600 10px Inter;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 11px Inter;color:#fff;flex:none;background:linear-gradient(135deg,#6b7cff,#3544b1)}
+.av.a2{background:linear-gradient(135deg,#ff8fa6,#c0516b)}.av.a3{background:linear-gradient(135deg,#6fe0b8,#2e8a6e)}.av.a4{background:linear-gradient(135deg,#ffcf70,#b07a1c)}.av.a5{background:linear-gradient(135deg,#b49bff,#6a4bc4)}
+.av.self{box-shadow:0 0 0 2px #1b264f,0 0 0 4px var(--pink)}
+.medal{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:800 12px Inter;flex:none}
+.medal.g{background:radial-gradient(circle at 35% 30%,#fff6cf,var(--gold1) 35%,var(--gold2) 90%);color:#6b4700;box-shadow:0 0 0 2px rgba(255,224,138,.35),0 4px 12px -2px rgba(224,169,30,.6)}
+.medal.s{background:radial-gradient(circle at 35% 30%,#fff,#dfe3ee 40%,#98a1b9 95%);color:#3e465f;box-shadow:0 0 0 2px rgba(223,227,238,.25)}
+.medal.b{background:radial-gradient(circle at 35% 30%,#ffe4cc,#e7a774 40%,#a8612b 95%);color:#5b2c07;box-shadow:0 0 0 2px rgba(231,167,116,.25)}
+.medal.p{background:var(--glass2);color:var(--soft);box-shadow:inset 0 0 0 1px var(--ring)}
+.crown{width:16px;height:16px;color:var(--gold1);filter:drop-shadow(0 0 6px rgba(255,224,138,.6));flex:none}
+.ribbon{display:inline-flex;align-items:center;gap:6px;font:800 10px Inter;letter-spacing:.14em;text-transform:uppercase;color:#1b264f;background:linear-gradient(90deg,var(--gold1),#ffd36b,var(--gold1));padding:4px 10px;border-radius:999px;box-shadow:0 0 18px rgba(255,224,138,.45);white-space:nowrap}
+.lr{display:flex;align-items:center;gap:12px;padding:9px 14px;border-radius:12px;font-size:14px}
+.lr .name{flex:1;display:flex;align-items:center;gap:10px;min-width:0;white-space:nowrap}
+.lr .sc{font:700 15px Inter;font-variant-numeric:tabular-nums}
+.lr .dt{width:64px;text-align:right;color:var(--faint);font-size:12px}
+.lr.mine{background:linear-gradient(100deg,rgba(245,193,188,.22),rgba(245,193,188,.07) 45%,rgba(255,255,255,.16) 52%,rgba(245,193,188,.07) 60%,rgba(245,193,188,.12));box-shadow:inset 0 0 0 1px rgba(245,193,188,.4),0 0 24px -6px rgba(245,193,188,.45)}
+.you{font-size:11px;font-weight:700;color:var(--pink);margin-left:4px;letter-spacing:.08em}
+.gap{text-align:center;color:var(--faint);letter-spacing:.4em;font-size:12px;padding:2px 0}
+
+/* ---------- desktop window chrome (Umbraco theme) ---------- */
+.uw{border-radius:10px;overflow:hidden;box-shadow:0 34px 70px -20px rgba(5,6,30,.75),0 0 0 1px rgba(255,255,255,.08)}
+.uw .tb{height:40px;display:flex;align-items:center;gap:9px;padding:0 14px;background:#fff;color:#16204a;font:500 14px Inter}
+.uw .tb .ctl{margin-left:auto;display:flex;gap:18px;color:#3a405c;font-size:14px}
+.ico{width:18px;height:18px;flex:none}
+
+/* ---------- hub ---------- */
+.hub{width:820px;height:620px;display:flex;flex-direction:column;font-family:Inter,sans-serif}
+.hub > .felt{flex:1;overflow:hidden;padding:22px 24px}
+.hhead{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.hhead h3{margin:0;font:700 28px/1 Fraunces,serif;letter-spacing:.01em}
+.hhead .trophy{width:34px;height:34px;color:var(--gold1);filter:drop-shadow(0 0 10px rgba(255,224,138,.5))}
+.me{margin-left:auto;display:flex;align-items:center;gap:9px;padding:4px 14px 4px 4px;border-radius:999px;background:var(--glass2);box-shadow:inset 0 0 0 1px var(--ring);font:600 13px Inter}
+.me .chev{color:var(--faint);font-size:10px}
+.back{font:600 13px Inter;color:var(--pink)}
+.standing{display:flex;gap:10px;margin-bottom:16px}
+.standing .glass{flex:1;padding:12px 16px;display:flex;align-items:center;gap:12px}
+.standing b{font:700 26px/1 Inter;font-variant-numeric:tabular-nums}
+.standing span{font-size:12px;color:var(--soft);line-height:1.3}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tile{padding:16px 16px 8px;position:relative;overflow:hidden}
+.tile.wide{grid-column:span 2}
+.tile::after{content:"";position:absolute;right:-40px;top:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(120,140,255,.22),transparent 65%);pointer-events:none}
+.ttop{display:flex;align-items:center;gap:12px;margin-bottom:8px;position:relative;z-index:1}
+.art{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(255,255,255,.18),rgba(255,255,255,.04));box-shadow:inset 0 0 0 1px var(--ring),0 8px 20px -8px rgba(0,0,0,.6);flex:none}
+.art svg{width:26px;height:26px;color:#fff}
+.tname{font:600 18px Fraunces,serif}
+.tsub{font-size:12px;color:var(--faint)}
+.ttop .btn{margin-left:auto}
+.mrow{display:grid;grid-template-columns:76px 1fr 1fr;align-items:center;gap:10px;padding:9px 2px;border-top:1px solid rgba(255,255,255,.07);position:relative;z-index:1}
+.mrow .mode{font:600 13px Inter;color:var(--soft)}
+.mrow .mine{display:flex;align-items:center;gap:9px}
+.mrow .mine b{font:700 20px Inter;font-variant-numeric:tabular-nums}
+.mrow .lead{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--soft)}
+.mrow .lead b{color:var(--text);font-variant-numeric:tabular-nums}
+
+.ghero{display:flex;align-items:center;gap:16px;margin-bottom:8px}
+.ghero .art{width:72px;height:72px;border-radius:18px}.ghero .art svg{width:32px;height:32px}
+.ghero h4{margin:0;font:700 28px/1.1 Fraunces,serif}
+.stats{margin-left:auto;display:flex;gap:10px;align-items:center}
+.stat{padding:8px 16px;text-align:center}
+.stat b{display:block;font:700 22px/1.1 Inter;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;padding:4px;border-radius:999px;background:rgba(0,0,0,.25);box-shadow:inset 0 0 0 1px var(--ring);margin-bottom:6px}
+.seg span{font:600 13px Inter;padding:6px 18px;border-radius:999px;color:var(--soft)}
+.seg span.on{background:#fff;color:#1b264f;box-shadow:0 4px 12px -4px rgba(0,0,0,.5)}
+.podium{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:end;gap:12px;margin:0 60px 10px}
+.pod{display:flex;flex-direction:column;align-items:center;gap:5px}
+.pod .av{width:42px;height:42px;font-size:13px}
+.pod .pn{font:600 13px Inter}.pod .ps{font:700 17px Inter;font-variant-numeric:tabular-nums}
+.step{width:100%;border-radius:12px 12px 4px 4px;display:grid;place-items:start center;padding-top:8px;font:700 20px Fraunces,serif}
+.step.s1{height:54px;background:linear-gradient(180deg,rgba(255,224,138,.45),rgba(255,224,138,.08));box-shadow:inset 0 1px 0 rgba(255,240,190,.7),0 0 30px -8px rgba(255,224,138,.5);color:var(--gold1)}
+.step.s2{height:40px;background:linear-gradient(180deg,rgba(223,227,238,.32),rgba(223,227,238,.05));box-shadow:inset 0 1px 0 rgba(255,255,255,.5);color:#dfe3ee}
+.step.s3{height:30px;background:linear-gradient(180deg,rgba(231,167,116,.35),rgba(231,167,116,.05));box-shadow:inset 0 1px 0 rgba(255,220,190,.5);color:#e7a774}
+.list{padding:6px}
+
+.prof{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.box{padding:16px 18px}
+.box h5{margin:0 0 3px;font:600 17px Fraunces,serif}
+.box p{margin:0;font-size:13px;color:var(--soft)}
+.field{display:flex;gap:10px;margin-top:12px}
+.input{flex:1;border-radius:10px;padding:9px 12px;font-size:14px;background:rgba(0,0,0,.25);box-shadow:inset 0 0 0 1px var(--ring)}
+.tog{display:flex;align-items:center;gap:14px;padding:11px 0;border-top:1px solid rgba(255,255,255,.07)}
+.tog:first-child{border-top:0;padding-top:2px}
+.tog div{flex:1}.tog b{display:block;font-weight:600;font-size:14px}.tog span{font-size:12px;color:var(--soft)}
+.sw{width:42px;height:24px;border-radius:999px;background:rgba(255,255,255,.18);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.sw.on{background:linear-gradient(90deg,var(--pinkd),var(--pink))}.sw.on::after{left:21px}
+.btn.danger{background:transparent;color:#ff9aa5;box-shadow:inset 0 0 0 1.5px rgba(255,154,165,.5)}
+
+/* ---------- result card (the Arcade's piece) ---------- */
+.rcard{width:268px;border-radius:16px;padding:16px 16px 12px;overflow:hidden;box-shadow:0 24px 50px -12px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.12)}
+.rcard::after{content:"";position:absolute;left:50%;top:-80px;width:260px;height:180px;transform:translateX(-50%);background:radial-gradient(ellipse,rgba(255,224,138,.2),transparent 65%);pointer-events:none;z-index:-1}
+.rcard .k{font:600 11px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.rcard .bigs{display:flex;align-items:baseline;gap:6px;margin:4px 0 2px}
+.rcard .bigs b{font:800 46px/1 Inter;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.rcard .bigs span{font:600 16px Inter;color:var(--soft)}
+.rcard .meta{font-size:12px;color:var(--soft);margin:6px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rcard .meta b{color:var(--text)}
+.rcard .lr{padding:6px 8px;font-size:12.5px;border-radius:9px;gap:9px}
+.rcard .lr .av{width:22px;height:22px;font-size:9px}
+.rcard .lr .medal{width:22px;height:22px;font-size:10px}
+.rcard .lr .sc{font-size:13px}
+.rcard .acts{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.rcard .link{font:600 12px Inter;color:var(--pink)}
+.ask{margin:4px 0 10px;padding:10px 12px;border-radius:12px;background:rgba(245,193,188,.12);box-shadow:inset 0 0 0 1px rgba(245,193,188,.35);font-size:12.5px;line-height:1.45}
+.ask b{color:#fff}
+.lr.ghostrow{box-shadow:inset 0 0 0 1.5px rgba(245,193,188,.55);background:repeating-linear-gradient(135deg,rgba(245,193,188,.08) 0 6px,transparent 6px 12px)}
+.quiet{margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;font-size:11.5px;color:var(--faint)}
+.quiet a{color:var(--pink);font-weight:600}
+
+/* Minesweeper as it renders today under the Umbraco theme */
+.ms{width:300px;background:#fff}
+.ms .in{padding:8px}
+.ms .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.ms .disp{border:1.5px solid #1b2140;border-radius:4px;padding:3px 7px;font:700 14px Inter;letter-spacing:.08em;color:#1b2140}
+.ms .ng{border:1px solid #d7dae6;border-radius:4px;padding:5px 12px;font:13px Inter;color:#3a405c;background:#fafafa}
+.ms .well{border:1.5px solid #1b2140;border-radius:4px;padding:7px;position:relative;height:279px}
+/* leaderboard sheet over a game */
+.sheet{border-radius:16px 16px 0 0;box-shadow:0 -20px 50px -10px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.12);padding:12px 12px 10px}
+.compact-sheet{height:338px;border-radius:0;padding:10px 10px 8px}
+.full-sheet{width:470px;align-self:flex-end;margin-bottom:0;position:relative;z-index:3}
+.shead{display:flex;align-items:center;gap:10px;margin:0 2px 8px}
+.shead b{display:block;font:600 16px Fraunces,serif}
+.shead span{font-size:11.5px;color:var(--faint)}
+.shead .close{margin-left:auto;font-size:14px;color:var(--soft);width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--glass2)}
+.full-sheet .shead .close{margin-left:10px}
+.sheet .lr{padding:5px 8px;font-size:13px;gap:10px}
+.sheet .lr .av{width:24px;height:24px;font-size:9.5px}
+.sheet .lr .medal{width:24px;height:24px;font-size:11px}
+.sheet .lr .sc{font-size:14px}
+.sfoot{display:flex;justify-content:space-between;align-items:center;margin:8px 4px 0;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:var(--faint)}
+.sfoot .link{font:600 12px Inter;color:var(--pink)}
+.podium.mini{margin:2px 50px 8px}
+.podium.mini .av{width:32px;height:32px;font-size:11px}
+.podium.mini .pn{font-size:12px}.podium.mini .ps{font-size:14px}
+.podium.mini .step{font-size:15px;padding-top:4px}
+.podium.mini .step.s1{height:34px}.podium.mini .step.s2{height:24px}.podium.mini .step.s3{height:18px}
+/* compact result card: chosen by the card itself when its space is small */
+.rcard.compact{width:226px;padding:14px 16px 12px;text-align:center}
+.rcard.compact .bigs{justify-content:center;margin:6px 0 4px}
+.rcard.compact .bigs b{font-size:42px}
+.rcard.compact .standing1{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--soft)}
+.rcard.compact .standing1 b{color:var(--text)}
+.rcard.compact .standing1 .medal{width:24px;height:24px;font-size:11px}
+.rcard.compact .chase{font-size:12px;color:var(--faint);margin-top:3px}
+.rcard.compact .ribbon{margin:2px auto 0}
+.rcard.compact .acts{justify-content:center;gap:14px;margin-top:14px}
+.rcard.compact .q{font-size:13px;line-height:1.45;margin:4px 0 0}
+.rcard.compact .q b{color:#fff}
+.rcard.compact .quiet{justify-content:center;gap:8px}
+.ms .grid9{display:grid;grid-template-columns:repeat(9,29px)}
+.ms .c{width:29px;height:29px;background:#c6c6c6;border-right:1px solid #333;border-bottom:1px solid #333;display:grid;place-items:center;font:700 14px Inter}
+.ms .c.o{background:#ececec}.ms .c1{color:#1f3fff}.ms .c2{color:#138a35}
+.over{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,20,50,.38);backdrop-filter:blur(1.5px);border-radius:3px}
+
+/* Snake as it renders today */
+.sn{width:340px;background:#fff}
+.sn .in{padding:8px}
+.sn .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px}
+.sn .chip{border:1.5px solid #1b2140;border-radius:4px;padding:3px 8px;font:12px Inter;color:#3a405c;display:flex;gap:6px;align-items:center}
+.sn .chip b{font-size:14px;color:#1b2140}
+.sn .chip.plain{border-color:#d7dae6}
+.sn .chip.best{background:linear-gradient(90deg,#fff3c9,#fff);border-color:#d8a316;box-shadow:0 0 0 3px rgba(216,163,22,.15)}
+.sn .field{height:330px;border:1.5px solid #1b2140;border-radius:4px;position:relative}
+.sn .seg2{position:absolute;width:11px;height:11px;background:#1b264f}
+
+/* Solitaire */
+.sol{width:620px}
+.sol > .felt{height:400px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sol .hud{position:absolute;top:12px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center;font:500 13px Inter}
+.fc{position:absolute;width:48px;height:68px;border-radius:6px;background:#fbfaf6;box-shadow:0 4px 10px rgba(0,0,0,.45);font:700 13px Inter;padding:4px 6px;color:#1b2140}
+.fc.r{color:#c4303a}
+
+/* toast */
+.toast{width:430px;border-radius:14px;display:flex;gap:12px;padding:14px 16px;font-family:Inter;box-shadow:0 24px 50px -14px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.12)}
+.toast .ti{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;background:linear-gradient(145deg,rgba(255,224,138,.35),rgba(255,224,138,.06));box-shadow:inset 0 0 0 1px rgba(255,224,138,.4)}
+.toast b{font-size:14px;display:block}
+.toast p{margin:2px 0 8px;font-size:13px;color:var(--soft)}
+.toast a{font-size:13px;font-weight:600;color:var(--pink)}
+.toast .src{font-size:11px;color:var(--faint);margin-left:10px}
+.toast .x{margin-left:auto;color:var(--faint)}
+</style></head><body><main>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="crown" viewBox="0 0 24 24"><path fill="currentColor" d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8zm2.2 13h13.6v1.6H5.2z"/></symbol>
+    <symbol id="trophy" viewBox="0 0 24 24"><path fill="currentColor" d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V18h3v3H8v-3h3v-3.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3V3zm0 4H6v1a2 2 0 0 0 1 1.7V7zm10 0v2.7A2 2 0 0 0 18 8V7h-1z"/></symbol>
+    <symbol id="mine" viewBox="0 0 24 24"><circle cx="11" cy="13" r="6.5" fill="currentColor"/><path d="M15.5 7.5l2-2M18 9h2M17 4.5l.5-1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="snake" viewBox="0 0 24 24"><path d="M4 17c3 0 3-4 6-4s3 4 6 4 3-6 0-8-6 2-7-1 3-4 6-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="19" cy="4" r="1.4" fill="currentColor"/></symbol>
+    <symbol id="cards" viewBox="0 0 24 24"><rect x="8.5" y="3.5" width="11" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 6.5v12a2 2 0 0 0 2 2h8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M14 9.5l-2 3h4l-2 3" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<h1>The Arcade, with Solitaire's flair</h1>
+<p class="lead">The Arcade's own surfaces (the hub, the result cards, the leaderboard panel, the toast) share one look taken from Solitaire: the deep navy felt lit from above, frosted glass, Fraunces for names and headings, big numerals for scores, metal medals and a crown for first place, and a soft pink shine on your own row. Restrained: no confetti, no cartoons. The games themselves keep their own look. All data is made up and consistent across the views.</p>
+
+<!-- ============ 1. OVERVIEW ============ -->
+<h2>1. The hub opens on where you stand</h2>
+<p class="lead">A strip with your standing across everything, then a tile per game with one row per mode. Play starts the game, the tile opens its page, your name opens your profile.</p>
+<div class="row">
+<div class="desk"><div class="uw hub">
+  <div class="tb"><svg class="ico"><use href="#trophy"/></svg>Arcade<div class="ctl"><span>–</span><span>□</span><span>✕</span></div></div>
+  <div class="felt">
+    <div class="hhead"><svg class="trophy"><use href="#trophy"/></svg><h3>Arcade</h3><div class="me"><span class="av self">LP</span>Luuk Peters<span class="chev">▼</span></div></div>
+    <div class="standing">
+      <div class="glass"><svg class="crown" style="width:26px;height:26px"><use href="#crown"/></svg><b>1</b><span>board you lead<br>Snake</span></div>
+      <div class="glass"><span class="medal s">2</span><b>2</b><span>more in your top three<br>Minesweeper, Solitaire</span></div>
+      <div class="glass"><span class="medal p">#</span><b>12</b><span>colleagues on<br>the leaderboards</span></div>
+    </div>
+    <div class="tiles">
+      <div class="tile glass">
+        <div class="ttop"><div class="art"><svg><use href="#mine"/></svg></div><div><div class="tname">Minesweeper</div><div class="tsub">Fastest time wins</div></div><button class="btn sm">Play</button></div>
+        <div class="mrow"><span class="mode">Beginner</span><span class="mine"><span class="medal b">3</span><b>38.1</b></span><span class="lead"><svg class="crown"><use href="#crown"/></svg>Anna <b>31.8</b></span></div>
+      </div>
+      <div class="tile glass">
+        <div class="ttop"><div class="art"><svg><use href="#snake"/></svg></div><div><div class="tname">Snake</div><div class="tsub">Highest score wins</div></div><button class="btn sm">Play</button></div>
+        <div class="mrow"><span class="mode">Classic</span><span class="mine"><span class="medal g">1</span><b>480</b></span><span class="lead">Next: Bram <b>450</b></span></div>
+      </div>
+      <div class="tile glass wide">
+        <div class="ttop"><div class="art"><svg><use href="#cards"/></svg></div><div><div class="tname">Solitaire</div><div class="tsub">Highest score wins, time bonus included</div></div><button class="btn sm">Play</button></div>
+        <div class="mrow"><span class="mode">Draw 1</span><span class="mine"><span class="medal s">2</span><b>4,910</b></span><span class="lead"><svg class="crown"><use href="#crown"/></svg>Sophie <b>5,880</b></span></div>
+        <div class="mrow"><span class="mode">Draw 3</span><span class="mine"><span class="medal p">12</span><b>1,140</b></span><span class="lead"><svg class="crown"><use href="#crown"/></svg>Tom <b>3,960</b></span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<div class="notes">
+  <b>Where the excitement comes from:</b> your own numbers, big, next to the person you are chasing.
+  <ul>
+    <li>Your rank is a medal, gold, silver or bronze, so a glance says how you are doing.</li>
+    <li>The leader carries the crown. When you lead, the column shows who is next.</li>
+    <li>A mode you never played shows "Not played yet" in place of your medal, still with the leader: an invitation.</li>
+  </ul>
+</div>
+</div>
+
+<!-- ============ 2. GAME PAGE ============ -->
+<h2>2. A game's page: a podium, then the rest</h2>
+<p class="lead">The top three stand on a podium, everyone else is a list, and your row is pinned and shining when you are further down. One mode at a time, switched with the pill.</p>
+<div class="row">
+<div class="desk"><div class="uw hub">
+  <div class="tb"><svg class="ico"><use href="#trophy"/></svg>Arcade<div class="ctl"><span>–</span><span>□</span><span>✕</span></div></div>
+  <div class="felt">
+    <div class="hhead" style="margin-bottom:10px"><span class="back">‹ All games</span><div class="me"><span class="av self">LP</span>Luuk Peters<span class="chev">▼</span></div></div>
+    <div class="ghero"><div class="art"><svg><use href="#cards"/></svg></div><div><h4>Solitaire</h4><div class="tsub">Highest score wins, time bonus included</div></div>
+      <button class="btn" style="margin-left:auto;padding:11px 26px;font-size:14px">▶&nbsp; Play</button></div>
+    <div style="text-align:center;margin:10px 0 2px"><div class="seg"><span>Draw 1</span><span class="on">Draw 3</span></div></div>
+    <div class="podium">
+      <div class="pod"><span class="av a2">SB</span><span class="pn">Sophie Bakker</span><span class="ps">3,710</span><div class="step s2">2</div></div>
+      <div class="pod"><svg class="crown" style="width:22px;height:22px"><use href="#crown"/></svg><span class="av a4" style="width:50px;height:50px;box-shadow:0 0 0 3px rgba(255,224,138,.6),0 0 24px rgba(255,224,138,.4)">TV</span><span class="pn">Tom Visser</span><span class="ps">3,960</span><div class="step s1">1</div></div>
+      <div class="pod"><span class="av a3">AV</span><span class="pn">Anna de Vries</span><span class="ps">3,120</span><div class="step s3">3</div></div>
+    </div>
+    <div class="glass list">
+      <div class="lr"><span class="medal p">4</span><span class="name"><span class="av a5">BJ</span>Bram Jansen</span><span class="sc">2,870</span><span class="dt">30 Sep</span></div>
+      <div class="lr"><span class="medal p">5</span><span class="name"><span class="av">NH</span>Noor Hendriks</span><span class="sc">2,400</span><span class="dt">28 Sep</span></div>
+      <div class="gap">···</div>
+      <div class="lr mine"><span class="medal p">12</span><span class="name"><span class="av self">LP</span>Luuk Peters<span class="you">YOU</span></span><span class="sc">1,140</span><span class="dt">Today</span></div>
+    </div>
+  </div>
+</div></div>
+<div class="notes">
+  <b>The podium is the flair, the list is the information.</b>
+  <ul>
+    <li>One job per place: the bar navigates, the header names the game and holds its one action, the pill chooses the board it sits on.</li>
+    <li>No separate rank and best boxes: your row says both.</li>
+    <li>Ranks 4 to 10 scroll under the podium; your row stays pinned at the bottom until you are in the top ten.</li>
+    <li>Snake has one board, so no pill.</li>
+    <li>Scores hidden: your row still shows to you, marked "Only you see this"; nobody else sees it.</li>
+    <li>Admins get a ⋯ on hover per row (remove score, reset name) and "Reset this board" at the bottom. Hidden here to keep it clean.</li>
+  </ul>
+</div>
+</div>
+
+<!-- ============ 3. PROFILE ============ -->
+<h2>3. Your profile, behind your name</h2>
+<p class="lead">Same room, same back link. Every setting says what happens, not what it is called.</p>
+<div class="row">
+<div class="desk"><div class="uw hub" style="height:560px">
+  <div class="tb"><svg class="ico"><use href="#trophy"/></svg>Arcade<div class="ctl"><span>–</span><span>□</span><span>✕</span></div></div>
+  <div class="felt">
+    <div class="hhead"><span class="back">‹ All games</span><div class="me" style="background:rgba(245,193,188,.18)"><span class="av self">LP</span>Luuk Peters<span class="chev">▲</span></div></div>
+    <div class="prof">
+      <div class="box glass"><h5>Your name on the leaderboards</h5><p>What colleagues see next to your scores. It starts as your Umbraco name.</p>
+        <div class="field"><span class="input">Luuk Peters</span><button class="btn">Save</button></div></div>
+      <div class="box glass">
+        <div class="tog"><div><b>Show my scores on the leaderboards</b><span>Off: colleagues don't see them; you still see your own rank.</span></div><span class="sw on"></span></div>
+        <div class="tog"><div><b>Tell me when someone takes first place from me</b><span>Shown the next time you open the desktop.</span></div><span class="sw on"></span></div>
+      </div>
+      <div class="box glass"><h5>Delete my scores</h5><p>Removes every score and your name from the Arcade. This cannot be undone.</p><div class="field"><button class="btn danger">Delete my scores…</button></div></div>
+    </div>
+  </div>
+</div></div>
+<div class="notes"><b>Show my scores</b> is also in every game's result card, so nobody has to find this page to make that choice.</div>
+</div>
+
+<!-- ============ 4. MINESWEEPER ============ -->
+<h2>4. Minesweeper: a result card on every win</h2>
+<p class="lead">The game keeps its own look and its header stays exactly as it is. On a win, the Arcade's card rises over the board. Minesweeper's board is small, so the card shows its compact form: the time, how good it is, and Play again. The card picks compact by itself from the space it is given (Snake and Solitaire below have room for the full card); a game can also ask for it. A loss shows nothing new.</p>
+<div class="row">
+
+<div><div class="desk"><div class="uw ms">
+  <div class="tb"><svg class="ico"><use href="#mine"/></svg>Minesweeper<div class="ctl"><span>–</span><span>✕</span></div></div>
+  <div class="in">
+    <div class="bar"><span class="disp">000</span><span class="ng">New game</span><span class="disp">038</span></div>
+    <div class="well"><div class="grid9">
+      <span class="c o c1">1</span><span class="c o"></span><span class="c o"></span><span class="c o c1">1</span><span class="c"></span><span class="c o c1">1</span><span class="c o"></span><span class="c o"></span><span class="c o"></span>
+      <span class="c"></span><span class="c o c1">1</span><span class="c o"></span><span class="c o c1">1</span><span class="c o c1">1</span><span class="c o c1">1</span><span class="c o"></span><span class="c o c1">1</span><span class="c o c1">1</span>
+      <span class="c o c1">1</span><span class="c o c1">1</span><span class="c o"></span><span class="c o"></span><span class="c o"></span><span class="c o"></span><span class="c o"></span><span class="c o c1">1</span><span class="c"></span>
+      <span class="c o"></span><span class="c o"></span><span class="c o"></span><span class="c o c1">1</span><span class="c o c2">2</span><span class="c o c1">1</span><span class="c o"></span><span class="c o c1">1</span><span class="c o c1">1</span>
+      <span class="c o"></span><span class="c o"></span><span class="c o"></span><span class="c o c1">1</span><span class="c"></span><span class="c o c1">1</span><span class="c o"></span><span class="c o"></span><span class="c o"></span>
+      <span class="c o"></span><span class="c o"></span><span class="c o"></span><span class="c o c1">1</span><span class="c o c1">1</span><span class="c o c1">1</span><span class="c o"></span><span class="c o"></span><span class="c o"></span>
+      <span class="c o c1">1</span><span class="c o c1">1</span><span class="c o"></span><span class="c o"></span><span class="c o"></span><span class="c o"></span><span class="c o c1">1</span><span class="c o c1">1</span><span class="c o c1">1</span>
+      <span class="c"></span><span class="c o c2">2</span><span class="c o c1">1</span><span class="c o"></span><span class="c o"></span><span class="c o"></span><span class="c o c1">1</span><span class="c"></span><span class="c o c1">1</span>
+      <span class="c o c2">2</span><span class="c"></span><span class="c o c1">1</span><span class="c o"></span><span class="c o"></span><span class="c o"></span><span class="c o c1">1</span><span class="c o c1">1</span><span class="c o c1">1</span>
+    </div>
+    <div class="over"><div class="rcard felt compact">
+      <div class="k">You won · Beginner</div>
+      <div class="bigs"><b>38.1</b><span>sec</span></div>
+      <span class="ribbon">New best</span>
+      <div class="standing1" style="margin-top:10px"><span class="medal b">3</span><span><b>3rd</b> of 12</span></div>
+      <div class="chase">3.0 s behind Bram</div>
+      <div class="acts"><span class="link">Leaderboard ›</span><button class="btn sm">Play again</button></div>
+    </div></div></div>
+  </div>
+</div></div><p class="cap">A new best, compact: the time, your medal, and the one person to chase.</p></div>
+
+<div><div class="desk"><div class="uw ms">
+  <div class="tb"><svg class="ico"><use href="#mine"/></svg>Minesweeper<div class="ctl"><span>–</span><span>✕</span></div></div>
+  <div class="in">
+    <div class="bar"><span class="disp">000</span><span class="ng">New game</span><span class="disp">036</span></div>
+    <div class="well"><div class="over"><div class="rcard felt compact">
+      <div class="k">You won · Beginner</div>
+      <div class="bigs"><b>36.4</b><span>sec</span></div>
+      <div class="q">That's <b>3rd of 12</b>. Show your scores on the Arcade leaderboard, where colleagues can see them?</div>
+      <div class="acts" style="flex-direction:column;gap:7px;margin-top:12px"><button class="btn ghost sm" style="width:100%">Yes, show my scores</button><button class="btn ghost sm" style="width:100%">No, only I see them</button></div>
+    </div></div></div>
+  </div>
+</div></div><p class="cap">The first win: says what showing means and who sees it, worded around your rank.</p></div>
+
+<div><div class="desk"><div class="uw ms">
+  <div class="tb"><svg class="ico"><use href="#mine"/></svg>Minesweeper<div class="ctl"><span>–</span><span>✕</span></div></div>
+  <div class="in">
+    <div class="bar"><span class="disp">000</span><span class="ng">New game</span><span class="disp">040</span></div>
+    <div class="well"><div class="over"><div class="rcard felt compact">
+      <div class="k">You won · Beginner</div>
+      <div class="bigs"><b>40.2</b><span>sec</span></div>
+      <div class="standing1" style="margin-top:4px"><span>Your best <b>36.4</b> · would be <b>3rd</b></span></div>
+      <div class="acts"><span class="link">Leaderboard ›</span><button class="btn sm">Play again</button></div>
+      <div class="quiet" style="display:block;line-height:1.5">Your scores are hidden from the leaderboard. <a>Show them</a></div>
+    </div></div></div>
+  </div>
+</div></div><p class="cap">Later wins with scores hidden: the quiet line says so, one click to show them.</p></div>
+
+</div>
+
+<!-- ============ 5. SNAKE ============ -->
+<h2>5. Snake: Best becomes a trophy you can click</h2>
+<p class="lead">The Best chip in Snake's header turns gold and shows your rank; clicking it opens the leaderboard over the game. Game over brings the same card as Minesweeper's.</p>
+<div class="row">
+<div><div class="desk"><div class="uw sn">
+  <div class="tb"><svg class="ico"><use href="#snake"/></svg>Snake<div class="ctl"><span>–</span><span>✕</span></div></div>
+  <div class="in">
+    <div class="bar"><span class="chip">Score <b>310</b></span><span class="chip plain">New game</span><span class="chip best"><svg class="crown" style="color:#c99512;filter:none"><use href="#crown"/></svg>Best <b>480</b> · 1st</span></div>
+    <div class="field">
+      <div class="over"><div class="rcard felt">
+        <div class="k">Game over · Classic</div>
+        <div class="bigs"><b>310</b><span>points</span></div>
+        <div class="meta">Your best <b>480</b> still leads</div>
+        <div class="lr mine"><span class="medal g">1</span><span class="name"><span class="av self">LP</span>You</span><svg class="crown"><use href="#crown"/></svg><span class="sc">480</span></div>
+        <div class="lr"><span class="medal s">2</span><span class="name"><span class="av a5">BJ</span>Bram Jansen</span><span class="sc">450</span></div>
+        <div class="lr"><span class="medal b">3</span><span class="name"><span class="av">NH</span>Noor Hendriks</span><span class="sc">290</span></div>
+        <div class="acts"><span class="link">Leaderboard ›</span><button class="btn sm">Play again</button></div>
+      </div></div>
+    </div>
+  </div>
+</div></div><p class="cap">Game over, not a best: this run's score, and where your best stands.</p></div>
+
+<div><div class="desk"><div class="uw sn">
+  <div class="tb"><svg class="ico"><use href="#snake"/></svg>Snake<div class="ctl"><span>–</span><span>✕</span></div></div>
+  <div class="in">
+    <div class="bar"><span class="chip">Score <b>520</b></span><span class="chip plain">New game</span><span class="chip best"><svg class="crown" style="color:#c99512;filter:none"><use href="#crown"/></svg>Best <b>520</b> · 1st</span></div>
+    <div class="field">
+      <div class="over"><div class="rcard felt">
+        <div class="k">Game over · Classic</div>
+        <div class="bigs"><b>520</b><span>points</span></div>
+        <div class="meta"><span class="ribbon"><svg class="crown" style="width:12px;height:12px;color:#1b264f;filter:none"><use href="#crown"/></svg>First place</span><span>past Bram's <b>450</b></span></div>
+        <div class="lr mine"><span class="medal g">1</span><span class="name"><span class="av self">LP</span>You</span><span class="sc">520</span></div>
+        <div class="lr"><span class="medal s">2</span><span class="name"><span class="av a5">BJ</span>Bram Jansen</span><span class="sc">450</span></div>
+        <div class="lr"><span class="medal b">3</span><span class="name"><span class="av">NH</span>Noor Hendriks</span><span class="sc">290</span></div>
+        <div class="acts"><span class="link">Leaderboard ›</span><button class="btn sm">Play again</button></div>
+      </div></div>
+    </div>
+  </div>
+</div></div><p class="cap">Taking first place gets the gold ribbon and names who you passed.</p></div>
+<div class="notes"><b>One card, three moments.</b> A new best gets the gold "New best" ribbon, first place gets "First place" with the crown, and anything else just tells you where your best stands. Play again is always the main button: the card celebrates, it does not get in the way.</div>
+</div>
+
+<!-- ============ 6. SOLITAIRE ============ -->
+<h2>6. Solitaire: at home in its own room</h2>
+<p class="lead">Solitaire already lives on this felt, so after the cascade its win screen simply becomes the Arcade card. Leaderboard opens on the mode just played; the settings menu gets "Leaderboard" for any time.</p>
+<div class="row">
+<div class="uw sol">
+  <div class="tb"><svg class="ico"><use href="#cards"/></svg>Solitaire<div class="ctl"><span>–</span><span>□</span><span>✕</span></div></div>
+  <div class="felt">
+    <div class="hud"><span class="pill">New game</span><span style="color:var(--soft)">Score <b style="color:#fff">4,910</b> &nbsp; Time <b style="color:#fff">3:12</b> &nbsp; Moves <b style="color:#fff">118</b></span><span class="pill">⚙</span></div>
+    <div class="fc" style="left:40px;top:80px;transform:rotate(-14deg)">K♠</div>
+    <div class="fc r" style="left:84px;top:270px;transform:rotate(18deg)">Q♥</div>
+    <div class="fc r" style="left:520px;top:90px;transform:rotate(10deg)">A♦</div>
+    <div class="fc" style="left:490px;top:280px;transform:rotate(-22deg)">J♣</div>
+    <div class="fc r" style="left:140px;top:60px;transform:rotate(6deg)">7♦</div>
+    <div class="rcard felt" style="width:310px;box-shadow:0 30px 70px -10px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.16)">
+      <div class="k">You won · Draw 1</div>
+      <div class="bigs"><b>4,910</b><span>points</span></div>
+      <div class="meta"><span class="ribbon">New best</span><span><b>2nd</b> of 9 · incl. 1,520 time bonus</span></div>
+      <div class="lr"><span class="medal g">1</span><span class="name"><span class="av a2">SB</span>Sophie Bakker</span><svg class="crown"><use href="#crown"/></svg><span class="sc">5,880</span></div>
+      <div class="lr mine"><span class="medal s">2</span><span class="name"><span class="av self">LP</span>You</span><span class="sc">4,910</span></div>
+      <div class="lr"><span class="medal b">3</span><span class="name"><span class="av a4">TV</span>Tom Visser</span><span class="sc">4,870</span></div>
+      <div class="acts"><span class="link">Leaderboard ›</span><button class="btn sm">Play again</button></div>
+    </div>
+  </div>
+</div>
+<div class="notes"><b>No extra dialog.</b> Solitaire already stops for a win, so the Arcade card replaces that screen rather than adding one. A game abandoned before winning submits nothing, as now.</div>
+</div>
+
+<!-- ============ 7. PANEL ============ -->
+<h2>7. The leaderboard inside a game</h2>
+<p class="lead">"Leaderboard ›" on a card, Snake's gold Best chip, or Solitaire's settings menu opens this sheet over the game. It shows the board for the mode just played and never leaves the game: close it and you are back where you were. Like the card, it picks compact by itself when the window is small.</p>
+<div class="row">
+
+<div><div class="desk"><div class="uw ms">
+  <div class="tb"><svg class="ico"><use href="#mine"/></svg>Minesweeper<div class="ctl"><span>–</span><span>✕</span></div></div>
+  <div class="sheet felt compact-sheet">
+    <div class="shead"><svg class="crown" style="width:18px;height:18px"><use href="#trophy"/></svg><div><b>Leaderboard</b><span>Beginner · fastest time wins</span></div><span class="close">✕</span></div>
+    <div class="lr"><span class="medal g">1</span><span class="name"><span class="av a3">AV</span>Anna de Vries</span><svg class="crown"><use href="#crown"/></svg><span class="sc">31.8</span></div>
+    <div class="lr"><span class="medal s">2</span><span class="name"><span class="av a5">BJ</span>Bram Jansen</span><span class="sc">35.0</span></div>
+    <div class="lr mine"><span class="medal b">3</span><span class="name"><span class="av self">LP</span>You</span><span class="sc">38.1</span></div>
+    <div class="lr"><span class="medal p">4</span><span class="name"><span class="av a4">TV</span>Tom Visser</span><span class="sc">44.9</span></div>
+    <div class="lr"><span class="medal p">5</span><span class="name"><span class="av a3">EM</span>Eva Mulder</span><span class="sc">51.2</span></div>
+    <div class="lr"><span class="medal p">6</span><span class="name"><span class="av">NH</span>Noor Hendriks</span><span class="sc">55.7</span></div>
+    <div class="sfoot"><span>12 players</span><span class="link">Open in the Arcade ›</span></div>
+  </div>
+</div></div><p class="cap">Compact, over Minesweeper: no podium, just the medals, the list, and your row.</p></div>
+
+<div><div class="uw sol">
+  <div class="tb"><svg class="ico"><use href="#cards"/></svg>Solitaire<div class="ctl"><span>–</span><span>□</span><span>✕</span></div></div>
+  <div class="felt" style="align-items:flex-end">
+    <div class="hud"><span class="pill">New game</span><span style="color:var(--soft)">Score <b style="color:#fff">320</b> &nbsp; Time <b style="color:#fff">1:04</b> &nbsp; Moves <b style="color:#fff">31</b></span><span class="pill">⚙</span></div>
+    <div class="fc" style="left:40px;top:70px">K♠</div><div class="fc r" style="left:100px;top:70px">7♥</div><div class="fc" style="left:470px;top:70px">A♣</div><div class="fc r" style="left:530px;top:70px">2♦</div>
+    <div class="sheet felt full-sheet">
+      <div class="shead"><svg class="crown" style="width:18px;height:18px"><use href="#trophy"/></svg><div><b>Leaderboard</b><span>Highest score wins</span></div><div class="seg" style="margin:0 0 0 auto"><span class="on">Draw 1</span><span>Draw 3</span></div><span class="close">✕</span></div>
+      <div class="podium mini">
+        <div class="pod"><span class="av self">LP</span><span class="pn" style="color:var(--pink)">You</span><span class="ps">4,910</span><div class="step s2" style="box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 0 0 1px rgba(245,193,188,.5),0 0 20px -4px rgba(245,193,188,.5)">2</div></div>
+        <div class="pod"><svg class="crown" style="width:18px;height:18px"><use href="#crown"/></svg><span class="av a2" style="box-shadow:0 0 0 3px rgba(255,224,138,.6)">SB</span><span class="pn">Sophie Bakker</span><span class="ps">5,880</span><div class="step s1">1</div></div>
+        <div class="pod"><span class="av a4">TV</span><span class="pn">Tom Visser</span><span class="ps">4,870</span><div class="step s3">3</div></div>
+      </div>
+      <div class="lr"><span class="medal p">4</span><span class="name"><span class="av a3">AV</span>Anna de Vries</span><span class="sc">4,400</span><span class="dt">2 Oct</span></div>
+      <div class="lr"><span class="medal p">5</span><span class="name"><span class="av a5">BJ</span>Bram Jansen</span><span class="sc">3,950</span><span class="dt">30 Sep</span></div>
+      <div class="sfoot"><span>9 players</span><span class="link">Open in the Arcade ›</span></div>
+    </div>
+  </div>
+</div><p class="cap" style="max-width:none">Full, over Solitaire: a small podium (you on it, lit pink), the pill for the other mode, the game paused underneath.</p></div>
+
+</div>
+<div class="notes" style="max-width:none;margin-top:16px"><b>A sheet, not a window.</b> It belongs to the game, so it rises from the bottom of the game's own area and the title bar stays visible; Esc or ✕ closes it. "Open in the Arcade" is the way out to the hub, on this same board. Opened mid-game (Snake's chip, Solitaire's settings menu), the game pauses underneath until it closes. Minesweeper only opens it from the win card, so there is nothing to pause.</div>
+
+<!-- ============ 8. TOAST ============ -->
+<h2>8. When someone takes first place from you</h2>
+<p class="lead">The one toast that stays, because it happens while you are not playing. Same room, naming the game, both scores and what to do; clicking opens the hub on that board. The "New best" toast goes for games that show a card.</p>
+<div class="row">
+<div class="desk" style="padding:44px 30px"><div class="toast felt">
+  <div class="ti"><svg class="crown" style="width:22px;height:22px"><use href="#crown"/></svg></div>
+  <div><b>Bram took first place from you on Snake</b><p>510 beats your 480. You are 2nd now.</p><a>Open the leaderboard ›</a><span class="src">Arcade</span></div>
+  <span class="x">✕</span>
+</div></div>
+<div class="notes">Needs a custom toast element so the click can open a window; that is what makes this toast worth having.</div>
+</div>
+
+<h2>How it stays a theme citizen</h2>
+<div class="row"><div class="notes" style="max-width:820px">
+<ul>
+<li>The felt, glass, pink and gold become Arcade tokens, with these values as the Umbraco look, the same way Solitaire's felt is restyled per theme. Windows 98 gets a teal felt with bevelled panels and the classic gold, macOS a graphite felt. Nothing disappears under any theme.</li>
+<li>The result card and leaderboard panel are the Arcade's pieces; a game places them, and a game without them still gets the old dialog and toast.</li>
+<li>Motion, small and once: the card rises in, a new-best row gets one sweep of the shine, the crown settles. Nothing loops, and all of it respects reduced motion.</li>
+</ul></div></div>
+
+</main></body></html>

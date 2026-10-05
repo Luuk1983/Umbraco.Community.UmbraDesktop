@@ -12,7 +12,7 @@ It keeps each player's best score on every board a game declares, shows the boar
 
 ## For game authors
 
-- [Putting your game on the Arcade](docs/developer/putting-your-game-on-the-arcade.md): depend on this package, describe your boards, submit scores, and what the server accepts.
+- [Putting your game on the Arcade](docs/developer/putting-your-game-on-the-arcade.md): depend on this package, describe your boards, submit scores, show them inside your game with a result card and a leaderboard panel, and what the server accepts.
 - [Arcade](docs/user/arcade.md): what players see.
 
 The checks on a score are a sanity check, not security: the server accepts positive values inside a board's optional limits, and an administrator can remove the rest.

@@ -9,6 +9,7 @@ import {
   snakeTickInterval,
 } from './constants.js';
 import { ArcadeScores } from '../shared/arcade.js';
+import type { ArcadeResult, ArcadeStanding } from '../shared/arcade.js';
 import { createGame, moveFoodFrom, steer, step, togglePause } from './rules.js';
 import type { SnakeConfig, SnakeDirection, SnakeFoodPlacer, SnakeGame, SnakeStatus } from './rules.js';
 import { css, customElement, html, nothing, property, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
@@ -27,10 +28,20 @@ const AREA = 'umbraDesktopEntertainment';
 const FOOD_COLOUR = '#e0302a';
 
 /**
+ * The Arcade's crown, drawn on the Best chip once the chip shows the Arcade best (design P5).
+ *
+ * A copy of the path in the Arcade's `pieces/parts.ts` rather than an import, because nothing is
+ * imported from the Arcade (design D4): Snake has to load and play without it. If the Arcade's crown
+ * ever changes shape, this is the second place to change.
+ */
+const CROWN_PATH = 'M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8zm2.2 13h13.6v1.6H5.2z';
+
+/**
  * Where the best score is kept, in this browser.
  *
  * Now the fallback for when the Arcade is absent (outside the desktop, or not installed) rather than
- * the only record: with the Arcade present its best is shown when it is higher.
+ * the only record: once the Arcade has a standing for the player, the chip shows the Arcade best
+ * instead, since the rank beside it belongs to that best.
  *
  * `localStorage` rather than anything on the server, because a high score is a nicety and not data:
  * losing it to a cleared cache costs nothing, and storing it server-side would mean an API and a
@@ -92,6 +103,12 @@ function writeBestScore(score: number): void {
  * start with an arrow key straight away. When it loses focus the game pauses, which also covers
  * minimising: the desktop keeps a minimised app running (§7 of the guide), and a Snake that carried
  * on moving where nobody could see it would always be dead by the time it was restored.
+ *
+ * With the Arcade there (design P5), the Best chip shows the Arcade best with the player's rank, in
+ * gold, and opens the Arcade's leaderboard panel over the whole board, pausing a running game until
+ * the player closes it; game over shows the Arcade's result card instead of the banner, over the whole
+ * game with the header dimmed under its scrim, since the well alone is too short for the card's taller states.
+ * Without the Arcade the chip stays the browser's best and opens nothing, as it always did.
  */
 @customElement('umbradesktop-snake')
 export class SnakeElement extends UmbLitElement {
@@ -126,7 +143,44 @@ export class SnakeElement extends UmbLitElement {
   private _best = readBestScore();
 
   /** The line to the Arcade; injectable for tests. Does nothing without the Arcade. */
-  scores: Pick<ArcadeScores, 'submit' | 'best'> = new ArcadeScores(this, SNAKE_GAME_ALIAS);
+  scores: Pick<ArcadeScores, 'submit' | 'standing'> = new ArcadeScores(this, SNAKE_GAME_ALIAS);
+
+  /**
+   * The player's Arcade standing, for the Best chip (design P5): undefined without the Arcade, when
+   * the chip stays the browser's best; null with the Arcade but nothing played yet.
+   */
+  @state()
+  private _standing?: ArcadeStanding | null;
+
+  /**
+   * What the Arcade handed back at the last game over, which the result card shows over the whole game.
+   * Undefined before a game ends, after New game, and without the Arcade, when the game's own
+   * game-over banner shows as it always did.
+   */
+  @state()
+  private _result?: ArcadeResult;
+
+  /**
+   * Whether the leaderboard panel is open. Mirrored back from the panel's `close` event, because the
+   * panel closes itself (Esc, its close button, the scrim) and a flag left saying `true` would make the
+   * chip's next `?open=${true}` a no-op for Lit.
+   */
+  @state()
+  private _panelOpen = false;
+
+  /**
+   * Whether opening the panel paused a running game, so closing it carries on, and only then
+   * (settled point 13): a game the player had paused themselves stays paused.
+   */
+  #resumeOnClose = false;
+
+  /**
+   * Whether the running game was paused by focus moving from the playfield to the chip. That is the
+   * keyboard's way to the panel (Tab, then Enter), and the playfield's focusout pauses the game before
+   * the chip is pressed, so without this `#openPanel` would find it paused and never carry on. Cleared
+   * when focus leaves the chip, by which time a press has already opened the panel.
+   */
+  #pausedForChip = false;
 
   /** The status at the last update, to catch the one transition into a finished game. */
   #lastStatus?: SnakeStatus;
@@ -141,10 +195,8 @@ export class SnakeElement extends UmbLitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     if (!this._game) this._game = createGame(this.config, this.placer);
-    // Ask the Arcade for the best; the browser's stays as the fallback, and nothing waits on this.
-    void this.scores.best(SNAKE_BOARD_ALIAS).then((best) => {
-      if (best !== undefined && best > this._best) this._best = best;
-    });
+    // The Arcade's standing for the chip; the browser's best stays the fallback, and nothing waits on this.
+    void this.scores.standing(SNAKE_BOARD_ALIAS).then((standing) => (this._standing = standing));
   }
 
   /** Stop the clock. Closing the window unmounts the element, and a tick must not outlive it. */
@@ -193,7 +245,18 @@ export class SnakeElement extends UmbLitElement {
     // under the message, and the guard makes it a no-op if a key or New game got there first.
     const finished = game?.status === 'over' || game?.status === 'won';
     if (finished && this.#lastStatus !== game.status && game.score > 0) {
-      void this.scores.submit(SNAKE_BOARD_ALIAS, game.score * SNAKE_POINTS_PER_FOOD);
+      // Ask for the result card's data rather than the Arcade's dialog and toast (design P3), and
+      // move the chip to what the Arcade now says. A slow answer for a game already dealt over is dropped.
+      const ended = game;
+      void this.scores
+        .submit(SNAKE_BOARD_ALIAS, game.score * SNAKE_POINTS_PER_FOOD, { showsResult: true })
+        .then((result) => {
+          if (this._game !== ended || !result) return;
+          this._result = result;
+          // Not a best: the best stands as it was, which the result carries when the standing was never known.
+          const best = result.isPersonalBest ? result.value : (this._standing?.best ?? result.previousBest ?? result.value);
+          this._standing = { best, rank: result.rank, rankText: result.rankText };
+        });
     }
     this.#lastStatus = game?.status;
     if (game?.status === 'ready') {
@@ -252,10 +315,47 @@ export class SnakeElement extends UmbLitElement {
     this.shadowRoot?.querySelector<HTMLElement>('.field')?.focus();
   }
 
-  /** Deal a fresh game and hand the keyboard back to the playfield. */
+  /** Deal a fresh game, drop the last game's card and panel, and hand the keyboard back to the playfield. */
   #newGame(): void {
     this.#stopClock();
+    this._result = undefined;
+    this._panelOpen = false;
+    this.#resumeOnClose = false;
+    this.#pausedForChip = false;
     this._game = createGame(this.config, this.placer);
+    this.#focusField();
+  }
+
+  /**
+   * Open the leaderboard panel from the chip or the card, pausing a running game underneath (§4).
+   *
+   * The chip's mousedown keeps focus on the playfield, so a running game is still running here and
+   * this is what pauses it, which is how it knows to carry on when the panel closes. From the
+   * keyboard, Tab to the chip has already paused it, and that pause counts as the panel's too.
+   */
+  #openPanel(): void {
+    if (this._game?.status === 'playing') {
+      this._game = togglePause(this._game);
+      this.#resumeOnClose = true;
+    } else if (this.#pausedForChip && this._game?.status === 'paused') {
+      this.#resumeOnClose = true;
+    }
+    this.#pausedForChip = false;
+    this._panelOpen = true;
+  }
+
+  /**
+   * Take in the panel's `close`, which always means the player is done with it: they dismissed it
+   * (Esc, its close button, the scrim). "Open in the Arcade" leaves it open over the paused game.
+   * Carries on only if the panel was what paused the game, and gives the playfield the keyboard back,
+   * since the panel's close button held it and went with the panel. A `close` that follows New game
+   * setting the panel shut finds it already closed and has nothing left to do.
+   */
+  #closePanel(): void {
+    if (!this._panelOpen) return;
+    this._panelOpen = false;
+    if (this.#resumeOnClose && this._game?.status === 'paused') this._game = togglePause(this._game);
+    this.#resumeOnClose = false;
     this.#focusField();
   }
 
@@ -263,12 +363,14 @@ export class SnakeElement extends UmbLitElement {
    * Turn a key press into a move.
    *
    * Only the keys the game uses have their default prevented, so arrows do not scroll the window
-   * while everything else (Tab, most importantly) still does what it always does.
+   * while everything else (Tab, most importantly) still does what it always does. Nothing at all while
+   * the panel is open: the panel keeps Tab inside itself, but a click on the scrim's edge or a script
+   * can still put focus on the playfield, and a key there would play the game behind the scrim.
    * @param event The key press on the playfield.
    */
   #onKey(event: KeyboardEvent): void {
     const game = this._game;
-    if (!game) return;
+    if (!game || this._panelOpen) return;
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     const direction = KEY_DIRECTIONS[key];
     if (direction) {
@@ -282,17 +384,25 @@ export class SnakeElement extends UmbLitElement {
     }
   }
 
-  /** Pause when the playfield loses focus, for the reason given on the class. */
-  #onBlur(): void {
-    if (this._game?.status === 'playing') this._game = togglePause(this._game);
+  /**
+   * Pause when the playfield loses focus, for the reason given on the class, noting when the focus
+   * went to the chip (see `#pausedForChip`).
+   * @param event The focusout, whose `relatedTarget` is where focus went.
+   */
+  #onBlur(event: FocusEvent): void {
+    if (this._game?.status !== 'playing') return;
+    this._game = togglePause(this._game);
+    this.#pausedForChip = event.relatedTarget !== null && event.relatedTarget === this.shadowRoot?.querySelector('[data-action="leaderboard"]');
   }
 
   /**
    * What the banner over the board says, if anything.
    * @param game The game being rendered.
-   * @returns A localised line, or an empty string while the snake is moving.
+   * @returns A localised line, or an empty string while the snake is moving or the Arcade's card says it.
    */
   #message(game: SnakeGame): string {
+    // A finished game with a card shows no banner: the card says it, and says more.
+    if (this._result && (game.status === 'over' || game.status === 'won')) return '';
     switch (game.status) {
       case 'ready':
         return this.localize.termOrDefault(`${AREA}_snakeStart`, 'Press an arrow key to start');
@@ -305,6 +415,43 @@ export class SnakeElement extends UmbLitElement {
       default:
         return '';
     }
+  }
+
+  /**
+   * The gold Best chip, once the Arcade is there (design P5): "♛ 480 · 1st", opening the leaderboard.
+   *
+   * The word "Best" is not drawn: the crown and the gold say it, and Snake's header has no room for
+   * it under a wide theme font (Verdana, Umbraco 4's, ran the chip 56px past the board). The chip's
+   * accessible name keeps the word, from the same dictionary key the plain display draws, so a screen
+   * reader hears "Best 480, 1st" rather than a number. The title is a tooltip on top of that name.
+   *
+   * The number is the Arcade best alone once there is a standing, never a higher best from this
+   * browser: the rank beside it is the Arcade best's, and the two must agree. With the Arcade there but
+   * nothing played on it yet there is no rank, and the browser's best stands in.
+   *
+   * `@mousedown` keeps focus on the playfield, so the press does not first pause the game through the
+   * playfield's blur handler; `#openPanel` then pauses it itself and knows to resume. The keyboard's
+   * way, Tab then Enter, does pause it on the way, which `#pausedForChip` remembers.
+   * @param standing The Arcade's standing, or null when there is none yet.
+   * @returns The chip.
+   */
+  #renderArcadeBest(standing: ArcadeStanding | null) {
+    const best = standing ? standing.best : this._best;
+    const word = this.localize.termOrDefault(`${AREA}_snakeBest`, 'Best');
+    return html`<button
+      class="display arcade-best"
+      data-action="leaderboard"
+      aria-label=${standing ? `${word} ${best}, ${standing.rankText}` : `${word} ${best}`}
+      title=${this.localize.termOrDefault(`${AREA}_snakeOpenLeaderboard`, 'Open the leaderboard')}
+      @mousedown=${(event: Event) => event.preventDefault()}
+      @click=${() => this.#openPanel()}
+      @focusout=${() => (this.#pausedForChip = false)}
+    >
+      <svg class="crown" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d=${CROWN_PATH}></path></svg>
+      <span class="text"><span class="best">${best}</span>${standing
+          ? html`<span class="rank"> · ${standing.rankText}</span>`
+          : nothing}</span>
+    </button>`;
   }
 
   /**
@@ -333,10 +480,10 @@ export class SnakeElement extends UmbLitElement {
           <button class="new-game" @click=${() => this.#newGame()}>
             ${this.localize.termOrDefault(`${AREA}_snakeNewGame`, 'New game')}
           </button>
-          <span class="display">
-            <span class="label">${this.localize.termOrDefault(`${AREA}_snakeBest`, 'Best')}</span>
-            <span class="best">${this._best}</span>
-          </span>
+          ${this._standing !== undefined ? this.#renderArcadeBest(this._standing) : html`<span class="display">
+                <span class="label">${this.localize.termOrDefault(`${AREA}_snakeBest`, 'Best')}</span>
+                <span class="best">${this._best}</span>
+              </span>`}
         </div>
         <div class="well">
           <div
@@ -347,7 +494,7 @@ export class SnakeElement extends UmbLitElement {
             data-status=${game.status}
             style="grid-template-columns: repeat(${game.width}, ${SNAKE_CELL_SIZE_PX}px)"
             @keydown=${(event: KeyboardEvent) => this.#onKey(event)}
-            @focusout=${() => this.#onBlur()}
+            @focusout=${(event: FocusEvent) => this.#onBlur(event)}
           >
             ${Array.from(
               { length: game.width * game.height },
@@ -356,6 +503,22 @@ export class SnakeElement extends UmbLitElement {
           </div>
           <p class="message" role="status" ?hidden=${!message}>${message}</p>
         </div>
+        ${this._result
+          ? html`<umbradesktop-arcade-result
+              outcome="over"
+              .result=${this._result}
+              @leaderboard=${() => this.#openPanel()}
+              @play-again=${() => this.#newGame()}
+            ></umbradesktop-arcade-result>`
+          : nothing}
+        ${this._standing !== undefined
+          ? html`<umbradesktop-arcade-leaderboard
+              game=${SNAKE_GAME_ALIAS}
+              board=${SNAKE_BOARD_ALIAS}
+              ?open=${this._panelOpen}
+              @close=${() => this.#closePanel()}
+            ></umbradesktop-arcade-leaderboard>`
+          : nothing}
       </div>
     `;
   }
@@ -390,6 +553,9 @@ export class SnakeElement extends UmbLitElement {
        one end only. The same belt-and-braces Minesweeper wears. */
     .board {
       margin: auto;
+      /* The Arcade's result card fills this box, header included: Snake's 272px well was too short for
+         the card's taller states, the whole game's 312x354 holds every one (result.layout.test.ts in
+         the Arcade measures them). The panel is placed here too. */
       position: relative;
     }
 
@@ -399,6 +565,16 @@ export class SnakeElement extends UmbLitElement {
       justify-content: space-between;
       gap: ${SNAKE_PADDING_PX}px;
       height: ${SNAKE_STATUS_HEIGHT_PX}px;
+      /* The header never sets the board's width: the well does, and the manifest declares exactly
+         that, so a header wider than the well would have the window clip the board. With its own
+         content left out of its width, the row is as wide as the well and its parts fit inside it:
+         the gold chip gives way (below), and the score and New game, which have no shorter form,
+         keep theirs. Measured in Verdana 15px, the Arcade chip ran the header 88px past the well. */
+      contain: inline-size;
+    }
+
+    .status > * {
+      flex-shrink: 0;
     }
 
     /* The edge is a spread shadow rather than a border so it costs no layout, and the content size
@@ -440,6 +616,61 @@ export class SnakeElement extends UmbLitElement {
         var(--umbradesktop-app-edge-dark, var(--uui-color-border));
       border-radius: var(--umbradesktop-app-radius, 3px);
       cursor: pointer;
+    }
+
+    /* The Best chip once it shows the Arcade best (design P5): still a .display, so it sits in the
+       header like the other two under every theme, but gold and clickable. The gold is Snake's own,
+       like Minesweeper's glyph colours (desktop-apps.md §4: an app owns its domain's colours).
+       border: 0 and the gold edge as a spread shadow, for the reason .display gives: a button's
+       default border would cost layout the plain display does not, and the declared size would
+       stop being exact. Windows 98's bevel below still replaces the shadow, so the chip is bevelled
+       there like the score beside it. */
+    .arcade-best {
+      font: inherit;
+      margin: 0;
+      border: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      color: #3a2a00;
+      background: linear-gradient(90deg, #fff3c9, #fff);
+      box-shadow:
+        0 0 0 1px #d8a316,
+        0 0 0 4px rgb(216 163 22 / 15%);
+      /* The one part of the header that gives way when a wide font leaves it short of room: it may
+         shrink below its content, and its text ellipsizes while the crown stays whole. */
+      flex-shrink: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .arcade-best .crown {
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+      color: #c99512;
+    }
+
+    .arcade-best .text {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    /* Umbraco 4's Verdana is wide enough that an ordinary "480 · 1st" needed 66.5px and got 58.1 in a
+       real window, so the ellipsis above, meant for a five-digit best, ate the rank every day. A
+       slightly smaller face and tighter insides give it back without touching the chip's width,
+       which stays whatever the score and New game leave it; the ellipsis stays as the safety net. */
+    :host([data-umbradesktop-theme='umbraco4']) .arcade-best {
+      gap: 3px;
+      padding-inline: 5px;
+      font-size: 0.93em;
+    }
+
+    .arcade-best:focus-visible {
+      outline: 2px solid #c99512;
+      outline-offset: 2px;
     }
 
     /* Positioned so the start, pause and game-over message can be placed against the playing field

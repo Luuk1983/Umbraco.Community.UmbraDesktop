@@ -56,6 +56,13 @@ export const DEAL_STAGGER_MS = 28;
 export const FLIP_MS = 220;
 /** Pause between auto-finish moves, in ms. */
 export const AUTO_FINISH_STEP_MS = 110;
+/**
+ * How long a win waits for the Arcade's answer before showing Solitaire's own win screen, in ms.
+ * The win screen holds back while the score is on its way so it does not flash and give way to the
+ * card; a stalled server must not leave the player with no win screen at all. A card that arrives
+ * later still replaces it.
+ */
+export const SOLITAIRE_RESULT_WAIT_MS = 4000;
 /** Pointer travel in px before a press becomes a drag. */
 export const DRAG_THRESHOLD_PX = 4;
 
