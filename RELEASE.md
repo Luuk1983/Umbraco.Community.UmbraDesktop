@@ -68,13 +68,19 @@ A release supporting Umbraco 18 starts at `v18.0.0`.
 2. Branch `release/vX.Y.Z` from `origin/main`. From here `main` is free for the next release's
    work. Only this release's finishing touches go on the branch: fixes, and screenshots, which
    need a running backoffice and so usually come last.
-3. Create the release on GitHub, with a new tag (`vX.Y.Z`) on the release branch and the notes
-   written by hand. The owner does this step; nobody tags from the command line. Creating the tag
-   there is a tag push like any other, so it triggers `publish.yml`, and the workflow's release step
-   finds the release already there and only attaches the packages, leaving the notes alone
-   (observed on 17.2.0).
+3. Tag `vX.Y.Z` on the release branch. A tag push is what publishes, and there are two ways to make
+   one:
+   - **A version worth announcing:** the owner creates a release on GitHub, with a new tag on the
+     release branch and the notes written by hand. Creating the tag there is a tag push like any
+     other, so it triggers `publish.yml`. The owner does this step.
+   - **A version that is not:** push the tag on its own, with no GitHub release. It publishes to
+     NuGet and leaves the repository's Releases list alone. The GitHub UI cannot create a tag
+     without a release, so this is done from the command line or GitHub Desktop, and the owner
+     asks Claude to do it.
 4. `.github/workflows/publish.yml` does the rest: every frontend, every test suite, the C# tests,
-   every pack, a payload check, NuGet trusted publishing, and a GitHub release.
+   every pack, a payload check and NuGet trusted publishing. It never creates a GitHub release,
+   whichever way the tag was made, so a release exists only when someone made one in step 3. It
+   also does not attach the packages to that release; they are on nuget.org.
 5. Merge the release branch into `main` straight away, with a pull request. The Marketplace reads
    the listing files from `main`'s root and their screenshot URLs point at `main`, so until this
    merge the listing still shows the old screenshots. NuGet does not wait for it: the packed
@@ -91,9 +97,10 @@ A release supporting Umbraco 18 starts at `v18.0.0`.
 
 ### Release notes
 
-`generate_release_notes: true` diffs against the **previous tag**. If you cut a beta first, the
-stable release's notes cover only what happened after the beta and omit the entire feature line.
-Hand-curate the body of any stable release that had a prerelease before it.
+The notes are written in the GitHub release screen, and its **Generate release notes** button diffs
+against the **previous tag**. If you cut a beta first, the stable release's notes cover only what
+happened after the beta and omit the entire feature line. Hand-curate the body of any stable
+release that had a prerelease before it.
 
 ## Owner-only steps
 
