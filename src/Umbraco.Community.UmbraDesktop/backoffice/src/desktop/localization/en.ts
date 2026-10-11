@@ -225,6 +225,9 @@ export default {
     reopenWindowsPersistent: 'Always',
     reopenWindowsDescription:
       'This session keeps your windows when you reload the page or leave the desktop and come back, until you close the tab. Always also brings them back the next time you open the backoffice. Backoffice windows reopen at the page they were showing; unsaved changes are not kept.',
+    viewsBeside: 'Offer to open workspace views beside the editor',
+    viewsBesideDescription:
+      'Puts a side-panel button on the view a document window shows, such as Info, when that view works next to the editor. The view stays connected to the document, so it shows unsaved edits and its actions apply to the document. Turning this off closes any views open beside a window.',
     // desktop settings — language and region. The first row is the odd one out and its hint says so:
     // it changes the whole backoffice, and it is the only setting here that needs a reload.
     backofficeLanguage: 'Backoffice language',
@@ -313,6 +316,7 @@ export default {
       'Closing is the safe option here: your unsaved changes are discarded and the version someone else saved is kept.',
     // Preview, an attached window beside a document
     previewOpen: 'Preview',
+    previewOpenTitle: 'Preview beside the editor. Shift-click to open it as a window.',
     previewClose: 'Close the preview',
     dockHere: 'Dock here',
     dockRelease: 'Release to dock',
@@ -327,6 +331,12 @@ export default {
     previewDesktop: 'Desktop width',
     previewOption: 'Preview with',
     previewFailed: 'The preview could not be opened.',
+    // A document's workspace view kept beside its editor (issue #131)
+    besideOpenTitle: 'Keep %0% beside the editor. Shift-click to open it as a window.',
+    besideCloseTitle: 'Close %0% beside the editor',
+    besideTitle: '%0%: %1%',
+    besideWaiting: 'Waiting for the document to open in its window.',
+    besideMissing: 'This view is no longer available.',
     // Background Jobs app
     backgroundJobsIntro:
       'Every scheduled job Umbraco runs behind your site: publishing, webhooks, cleanups, and anything a package added. Nothing here can be started or stopped, it is a read-only view of what the CMS is doing on its own.',

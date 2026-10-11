@@ -43,8 +43,10 @@ Do not use it for:
 - **Something that outlives its owner.** Closing the owner closes it, and so does the owner moving
   to a different document. If your content should survive either, it is a window of its own.
 - **Editing.** Attached content should be read-only. The desktop does not guard unsaved work in a
-  pane, and a pane is where your content usually is. Every consumer so far (a preview, a diff, a
-  read-only copy from another environment) holds nothing to lose.
+  pane, and a pane is where your content usually is. The preview, a diff and a read-only copy from
+  another environment hold nothing to lose. The one exception is a view that edits its owner's own
+  work rather than holding any (§8): the work stays in the owner, so the pane still has nothing to
+  lose.
 - **A second level.** Attached content cannot own attached content. `openAttached` refuses a
   floating attached window as an owner.
 
@@ -83,8 +85,10 @@ What each part does:
   window. The id stays the same when the content moves between pane and floating window.
 - **The desktop picks the form.** It opens a pane when the owner can widen by the pane's width and
   still fit on the desktop, or, for a maximized or snapped owner, when the editor keeps its minimum
-  after giving the pane its width. Otherwise it opens floating. You do not get a say, and your
-  content must work in both.
+  after giving the pane its width. Otherwise it opens floating. Your content must work in both.
+- **Shift-click asks for a window.** Pass `{ floating: true }` as a fourth argument to open it
+  floating even where a pane would fit, and do that when your control is Shift-clicked, as Preview
+  and the views beside the editor do. Content already open is focused either way.
 
 To make your control a toggle, which is what people expect from a button that opens a panel, look
 up what is open with `attachedKind` from `window-group.ts` and close it with `closeAttached`:
@@ -97,7 +101,9 @@ if (open) manager.closeAttached(ownerId, open.kind === 'pane' ? open.pane.id : o
 else manager.openAttached(ownerId, app, 'right');
 ```
 
-Show the control as pressed while `attachedKind` finds something, and set `aria-pressed`.
+Show the control as pressed while `attachedKind` finds something, and set `aria-pressed`. Draw the
+side-panel glyph on it, the one Preview draws after its label: it means "opens beside this window"
+wherever it appears, and the icon or label beside it says what opens.
 
 **Where the control goes.** Not in the titlebar. Every theme sums its titlebar controls into its
 drag-clamp metrics and measures them in its `metrics.test.ts`, and a control that only some windows
@@ -172,7 +178,11 @@ Do not re-implement any of these. Each is tested, and a second copy would drift.
   browser tab".
 - **Two actions that look alike read as one.** Pop out is a picture-in-picture glyph, Dock is the
   same frame with a side panel filled, and leaving the desktop is spelled out with the external-link
-  arrow. If your toolbar adds actions, keep them distinguishable from these.
+  arrow. If your toolbar adds actions, keep them distinguishable from these. The side-panel glyph is
+  also what a control that opens attached content draws, so do not reuse it for anything else.
+- **A control that names nothing reads as nothing.** The first build of the views beside the editor
+  put a plain "Open beside" button next to Preview, and it was unclear what it would open. Put your
+  control where the thing it opens is named, and let it come and go with that name.
 - **Size for the content people will put in it.** Umbraco's own preview page lays out badly below
   about 920px, so the preview asks for 920. A pane narrower than its content wants is a pane people
   pop out straight away.
@@ -195,7 +205,55 @@ Each pure file has a `.test.ts` beside it, written first. Do the same: the rules
 (when to refetch, what to show while the owner is dirty) are pure functions, and they are where the
 bugs are.
 
-## 8. Checklist
+## 8. A consumer that edits: workspace views beside the editor
+
+A document's workspace views (Info, and views packages add) can open beside the editor. They are the
+second consumer, and the first that edits, so read this before building on it. User guide:
+[Views beside the editor](../user/windows/views-beside-the-editor.md). Reasoning:
+[the design](../design/2026-10-07-workspace-views-beside-design.md).
+
+**The view runs on its owner's workspace.** Nothing is copied. The pane's host builds the view's
+element from its manifest on the desktop page, and answers every context request it makes from the
+owner's frame, asked from the first split's `umb-workspace-editor`. So the view shows unsaved edits,
+its actions change the owner, and its dialogs open in the owner. That is why it may edit: the work
+sits in the owner, which guards it as it guards any other unsaved change, and closing, docking or
+reloading the pane loses nothing.
+
+**Two copies of the backoffice meet in it**, the desktop page's code and the frame's data. Two things
+do not cross that line, and `beside/bridge.ts` fixes both for each frame that hosts a view:
+
+- Core's modal context checks its token with `instanceof UmbModalToken`, and the view's token is the
+  desktop page's class. The frame's class is taught to accept it. The frame's class is reached
+  through a `backofficeEntryPoint` that publishes each page's own classes on its window
+  (`beside/realm.ts`), never by evaluating code in the frame.
+- Core's consumer waits for a re-provide on its own page's `window` once a context is withdrawn,
+  which a save does. The frame's provide events are relayed to the desktop page's `window` for the
+  aliases the view asked for.
+
+Both are applied again on every load of the owner's frame, and the view is rebuilt against the new
+page. `beside/owner-frames.ts` is where the host hears about those loads.
+
+**Views with a router of their own are not offered.** A router slot routes against its own page's
+address, which beside the editor is the desktop's. The window looks for one in the view as rendered,
+and again on click. Editor kinds are left out by kind, and packages can opt a view out in their
+catalogue ([Package catalogues](package-catalogues.md#11-keeping-a-workspace-view-from-opening-beside-the-editor)).
+
+**Links in the view navigate the owner.** The host stops every link click in the view, because the
+desktop page's router would otherwise take it, and repeats the backoffice ones in the owner's frame.
+A click left to the browser, such as one with a modifier or a `target`, still does what the browser
+does.
+
+| File | What it shows |
+| --- | --- |
+| `beside/beside-model.ts` | The app factory and the pure rules: which view is offered, the opt-out lists, which attached content is a view |
+| `beside/beside-offer.ts` | The offer and the named view, read from the owner's frame |
+| `beside/frame-views.ts` | Finding the anchor, the rendered view and a router inside it, across shadow roots |
+| `beside/bridge.ts` | Forwarding requests, the token fix and the provide relay |
+| `beside/link-rule.ts` | Which clicks go to the owner |
+| `beside/beside-host.element.ts` | The element in the pane: building, remounting and bridging the view |
+| `components/window.element.ts`, `#onBeside` | The toggle, and Shift-click for a window |
+
+## 9. Checklist
 
 - [ ] An element app with a per-feature `alias`, sensible `defaultSize` and `minSize`, and `props`
 - [ ] Opened by a feature, from a control outside the titlebar, which toggles and shows as pressed

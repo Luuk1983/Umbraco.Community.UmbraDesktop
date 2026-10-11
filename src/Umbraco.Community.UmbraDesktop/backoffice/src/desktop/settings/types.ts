@@ -154,6 +154,15 @@ export interface UmbraDesktopSettings {
    */
   reopenWindows: UmbraDesktopReopenWindows;
   /**
+   * Whether a document window offers to open the workspace view it shows (Info, and router-less
+   * package views) beside its editor, with the path strip's Open beside button (issue #131).
+   *
+   * On by default: the button only appears where the view works beside the editor, and this is the
+   * way out for someone who would rather not have it, or whose view misbehaves there. Turning it off
+   * also closes the views already open beside a window.
+   */
+  viewsBeside: boolean;
+  /**
    * Whether changing the theme should also change the wallpaper to the one that theme declares.
    *
    * Off by default. Switching it on is the user asking for their wallpaper to be managed, which is

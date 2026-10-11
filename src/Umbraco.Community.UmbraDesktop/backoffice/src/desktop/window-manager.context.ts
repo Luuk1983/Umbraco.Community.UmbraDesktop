@@ -320,9 +320,17 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * @param ownerId The window to attach it to. A floating attached window cannot be one.
    * @param app The content: an element app, never a launcher app.
    * @param side Which side of the owner's content it goes on.
+   * @param options `floating` opens it as a window even where a pane would fit, which is what a
+   * Shift-click on the control that opens it asks for. Content already open is focused either way.
+   * @param options.floating Whether to skip the pane.
    * @returns The attached content's id, or undefined when `ownerId` is not an open ordinary window.
    */
-  public openAttached(ownerId: string, app: UmbraDesktopApp, side: UmbraDesktopDockSide): string | undefined {
+  public openAttached(
+    ownerId: string,
+    app: UmbraDesktopApp,
+    side: UmbraDesktopDockSide,
+    options: { floating?: boolean } = {},
+  ): string | undefined {
     const current = this.#windows.getValue();
     const owner = current.find((w) => w.id === ownerId);
     if (!owner || owner.owner) return undefined;
@@ -336,7 +344,9 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
       return existing.window.id;
     }
     const id = crypto.randomUUID();
-    const docked = this.#withPane(current, ownerId, { id, app, side, width: this.#paneWidth(app) });
+    const docked = options.floating
+      ? undefined
+      : this.#withPane(current, ownerId, { id, app, side, width: this.#paneWidth(app) });
     if (docked) {
       this.#windows.setValue(focusGroup(docked, ownerId));
       return id;

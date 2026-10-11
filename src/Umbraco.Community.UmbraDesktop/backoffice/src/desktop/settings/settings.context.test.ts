@@ -207,6 +207,21 @@ it('changes when windows are reopened', async () => {
   subscription.unsubscribe();
 });
 
+it('switches workspace views beside the editor on and off', async () => {
+  const context = await contextOnHost();
+  let beside: boolean | undefined;
+  const subscription = context.viewsBeside.subscribe((value) => (beside = value));
+  expect(beside, 'on until the user says otherwise').to.equal(true);
+  context.setViewsBeside(false);
+  expect(beside).to.equal(false);
+  let stored: boolean | undefined;
+  context.settings.subscribe((settings) => (stored = settings.viewsBeside)).unsubscribe();
+  expect(stored, 'kept with the rest of the settings, which are what is persisted').to.equal(false);
+  context.setViewsBeside(true);
+  expect(beside).to.equal(true);
+  subscription.unsubscribe();
+});
+
 describe('the launcher arrangement', () => {
   const LAYOUT = { groups: [{ id: 'editing', label: null, apps: ['media'] }], removed: ['profiling'], deletedGroups: [] };
 

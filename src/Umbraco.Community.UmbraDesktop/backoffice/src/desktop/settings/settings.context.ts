@@ -91,6 +91,9 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   /** When the desktop reopens the windows this user had open: never, after a refresh, or also after the browser closes. */
   public readonly reopenWindows = this.#settings.asObservablePart((settings) => settings.reopenWindows);
 
+  /** Whether a document window offers to open the workspace view it shows beside its editor. */
+  public readonly viewsBeside = this.#settings.asObservablePart((settings) => settings.viewsBeside);
+
   /**
    * How this user wants dates and times formatted: which culture, and any clock override.
    *
@@ -390,6 +393,15 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    */
   public setReopenWindows(mode: UmbraDesktopReopenWindows): void {
     this.#update({ reopenWindows: mode });
+  }
+
+  /**
+   * Switch the Open beside button on or off. Persists, and applies at once: each document window
+   * follows this, and turning it off closes the views open beside it (design §7).
+   * @param enabled Whether the button is offered.
+   */
+  public setViewsBeside(enabled: boolean): void {
+    this.#update({ viewsBeside: enabled });
   }
 
   /**

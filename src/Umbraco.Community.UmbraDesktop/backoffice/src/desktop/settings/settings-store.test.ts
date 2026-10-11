@@ -28,6 +28,7 @@ it('round-trips settings through serialise and parse', () => {
     wallpaperFollowsTheme: true,
     locale: { source: 'browser', hourCycle: 'h23' },
     reopenWindows: 'off',
+    viewsBeside: false,
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -47,6 +48,7 @@ it('reads back each wallpaper kind unchanged', () => {
           pinned: [],
           bootIntoDesktop: false,
           reopenWindows: 'persistent',
+          viewsBeside: true,
           taskbarFeatures: {},
           wallpaperFollowsTheme: false,
           locale: { source: 'backoffice', hourCycle: 'auto' },
@@ -102,6 +104,7 @@ it('round-trips a pinned list', () => {
     wallpaperFollowsTheme: false,
     locale: { source: 'backoffice', hourCycle: 'auto' },
     reopenWindows: 'session',
+    viewsBeside: true,
   };
   expect(parseSettings(serialiseSettings(settings))).to.deep.equal(settings);
 });
@@ -268,6 +271,20 @@ it('never returns the shared default feature map, so a caller cannot mutate it',
 it('ignores a wallpaper-follows-theme preference that is not a boolean', () => {
   expect(parseSettings(JSON.stringify({ v: 1, wallpaperFollowsTheme: 'yes' })).wallpaperFollowsTheme).to.equal(false);
   expect(parseSettings(JSON.stringify({ v: 1, wallpaperFollowsTheme: 1 })).wallpaperFollowsTheme).to.equal(false);
+});
+
+it('opens workspace views beside the editor by default, including for a payload that predates the setting', () => {
+  // On by default (design D5): the button only shows where a view works beside the editor, and the
+  // setting is the way out for someone who would rather not have it.
+  expect(parseSettings(null).viewsBeside).to.equal(true);
+  expect(parseSettings(JSON.stringify({ v: 1, theme: 'win98' })).viewsBeside).to.equal(true);
+});
+
+it('keeps a stored choice about workspace views beside the editor, and ignores one that is not a boolean', () => {
+  expect(parseSettings(JSON.stringify({ v: 1, viewsBeside: false })).viewsBeside).to.equal(false);
+  expect(parseSettings(JSON.stringify({ v: 1, viewsBeside: true })).viewsBeside).to.equal(true);
+  expect(parseSettings(JSON.stringify({ v: 1, viewsBeside: 'no' })).viewsBeside).to.equal(true);
+  expect(parseSettings(JSON.stringify({ v: 1, viewsBeside: 0 })).viewsBeside).to.equal(true);
 });
 
 it('defaults locale to the backoffice culture on an automatic clock', () => {

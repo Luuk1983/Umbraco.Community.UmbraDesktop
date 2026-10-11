@@ -91,3 +91,18 @@ export interface UmbraDesktopPathCrumb {
    */
   home?: boolean;
 }
+
+/** The workspace view a document window shows, as the path strip names it (issue #131). */
+export interface UmbraDesktopPathView {
+  /** The view's tab label, a `#key` or a literal. */
+  label: string;
+  /** The view's tab icon. */
+  icon?: string;
+  /** Whether it can open beside the editor, which puts the side-panel button on it. */
+  beside: boolean;
+  /**
+   * Whether it is open beside the window already, which shows the button as pressed: pressing it
+   * then closes it, as Preview's does.
+   */
+  open?: boolean;
+}

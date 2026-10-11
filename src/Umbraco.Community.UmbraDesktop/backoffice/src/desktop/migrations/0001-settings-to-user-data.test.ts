@@ -31,6 +31,7 @@ const STORED = JSON.stringify({
   pinned: ['content'],
   bootIntoDesktop: true,
   reopenWindows: 'persistent',
+  viewsBeside: true,
   taskbarFeatures: { clock: false },
   wallpaperFollowsTheme: false,
   locale: { source: 'browser', hourCycle: 'h23' },

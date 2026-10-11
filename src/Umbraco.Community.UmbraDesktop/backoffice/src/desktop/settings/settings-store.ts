@@ -32,6 +32,7 @@ export const UMBRADESKTOP_DEFAULT_SETTINGS: UmbraDesktopSettings = {
   pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
   bootIntoDesktop: false,
   reopenWindows: 'session',
+  viewsBeside: true,
   taskbarFeatures: {},
   wallpaperFollowsTheme: false,
   locale: { source: 'backoffice', hourCycle: 'auto' },
@@ -234,6 +235,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     pinned: [...UMBRADESKTOP_DEFAULT_PINNED],
     bootIntoDesktop: UMBRADESKTOP_DEFAULT_SETTINGS.bootIntoDesktop,
     reopenWindows: UMBRADESKTOP_DEFAULT_SETTINGS.reopenWindows,
+    viewsBeside: UMBRADESKTOP_DEFAULT_SETTINGS.viewsBeside,
     taskbarFeatures: {},
     wallpaperFollowsTheme: UMBRADESKTOP_DEFAULT_SETTINGS.wallpaperFollowsTheme,
     locale: { ...UMBRADESKTOP_DEFAULT_SETTINGS.locale },
@@ -257,6 +259,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
     theme?: unknown;
     bootIntoDesktop?: unknown;
     reopenWindows?: unknown;
+    viewsBeside?: unknown;
     taskbarFeatures?: unknown;
     wallpaperFollowsTheme?: unknown;
     locale?: unknown;
@@ -270,6 +273,7 @@ export function parseSettings(raw: string | null): UmbraDesktopSettings {
   if (isPinnedList(payload.pinned)) settings.pinned = payload.pinned;
   if (isBootPreference(payload.bootIntoDesktop)) settings.bootIntoDesktop = payload.bootIntoDesktop;
   if (isReopenWindows(payload.reopenWindows)) settings.reopenWindows = payload.reopenWindows;
+  if (typeof payload.viewsBeside === 'boolean') settings.viewsBeside = payload.viewsBeside;
   if (isFeatureMap(payload.taskbarFeatures)) settings.taskbarFeatures = { ...payload.taskbarFeatures };
   if (isWallpaperFollowsTheme(payload.wallpaperFollowsTheme)) {
     settings.wallpaperFollowsTheme = payload.wallpaperFollowsTheme;

@@ -247,3 +247,29 @@ it('says so when an entry carries conditions, which a catalogue entry does not r
   expect(catalogue.entries).to.deep.equal([{ alias: 'Pkg.App', ref: 'Pkg.Section' }]);
   expect(messages.some((message) => message.includes('"conditions"') && message.includes('"evaluateConditions"'))).to.equal(true);
 });
+
+describe('the workspace views a package keeps out of the beside button', () => {
+  it('are read as a list of view aliases', () => {
+    const { catalogue, reports } = one({ workspaceViewsNotBeside: ['Pkg.WorkspaceView.Stats', 'Pkg.WorkspaceView.Tabs'] });
+    expect(catalogue.workspaceViewsNotBeside).to.deep.equal(['Pkg.WorkspaceView.Stats', 'Pkg.WorkspaceView.Tabs']);
+    expect(reports).to.deep.equal([]);
+  });
+
+  it('leave a catalogue that names none exactly as it was', () => {
+    expect(one({ entries: [] }).catalogue).to.not.have.property('workspaceViewsNotBeside');
+  });
+
+  it('are ignored, and said to be, when they are not a list of text', () => {
+    for (const junk of ['Pkg.View', [1, 2], { a: 1 }, ['ok', 3]]) {
+      const { catalogue, messages } = one({ workspaceViewsNotBeside: junk });
+      expect(catalogue.workspaceViewsNotBeside, JSON.stringify(junk)).to.equal(undefined);
+      expect(messages.some((m) => m.includes('workspaceViewsNotBeside')), JSON.stringify(junk)).to.equal(true);
+    }
+  });
+
+  it('can be the only thing a catalogue carries', () => {
+    // A package whose view breaks beside the editor says so without having any launcher entries.
+    const { reports } = one({ workspaceViewsNotBeside: ['Pkg.View'] });
+    expect(reports).to.deep.equal([]);
+  });
+});

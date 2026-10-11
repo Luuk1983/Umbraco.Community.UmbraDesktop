@@ -1379,3 +1379,21 @@ describe('the app snapshot', () => {
     }
   });
 });
+
+it('publishes the desktop’s and every package’s workspace views that do not open beside the editor', async () => {
+  const harness = await setup();
+  try {
+    let notBeside: ReadonlyArray<string> = [];
+    const subscription = harness.context.viewsNotBeside.subscribe((value) => (notBeside = value));
+    registerCatalogue(harness.registry, 'Pkg.One', { workspaceViewsNotBeside: ['Pkg.One.View'] });
+    registerCatalogue(harness.registry, 'Pkg.Two', { workspaceViewsNotBeside: ['Pkg.Two.View'] });
+    await settle();
+    expect([...notBeside].sort()).to.include.members(['Pkg.One.View', 'Pkg.Two.View']);
+    harness.registry.unregister('Pkg.One');
+    await settle();
+    expect(notBeside).to.not.include('Pkg.One.View');
+    subscription.unsubscribe();
+  } finally {
+    harness.teardown();
+  }
+});

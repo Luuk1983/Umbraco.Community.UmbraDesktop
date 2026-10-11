@@ -234,3 +234,114 @@ describe('the preview action while a preview is open', () => {
     dispose();
   });
 });
+
+describe('the view the window shows', () => {
+  const crumbs: UmbraDesktopPathCrumb[] = [
+    { label: 'Content', href: '/umbraco/section/content', current: false, home: true },
+    { label: 'Home', href: undefined, current: true },
+  ];
+
+  it('is named after the crumbs, with its own icon, when the window gives one', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.view = { label: 'Info', icon: 'icon-info', beside: false };
+    await element.updateComplete;
+    const view = root.querySelector('.path-view');
+    expect(view?.textContent?.trim()).to.equal('Info');
+    expect(view?.querySelector('umb-icon')?.getAttribute('name')).to.equal('icon-info');
+    const parts = [...root.querySelectorAll('.path-current, .path-view')];
+    expect(parts.map((p) => p.className.split(' ')[0])).to.deep.equal(['path-current', 'path-view']);
+    dispose();
+  });
+
+  it('is not named when the window gives none', async () => {
+    const { root, dispose } = await mountPath(crumbs);
+    expect(root.querySelector('.path-view')).to.equal(null);
+    dispose();
+  });
+
+  it('carries the open-beside button only while the view can open beside the editor', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.view = { label: 'Analytics', icon: 'icon-chart', beside: false };
+    await element.updateComplete;
+    expect(root.querySelector('button.path-beside'), 'a view that cannot').to.equal(null);
+    element.view = { label: 'Info', icon: 'icon-info', beside: true };
+    await element.updateComplete;
+    const button = root.querySelector('.path-view + button.path-beside');
+    expect(button, 'right after the view it moves').to.exist;
+    expect(button?.getAttribute('aria-label')).to.be.a('string').and.not.equal('');
+    dispose();
+  });
+
+  it('asks the window to open the view beside it, as a window on Shift-click', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.view = { label: 'Info', icon: 'icon-info', beside: true };
+    await element.updateComplete;
+    const asked: boolean[] = [];
+    element.addEventListener('umbradesktop-path-beside', (e) => asked.push((e as CustomEvent<{ floating: boolean }>).detail.floating));
+    const button = root.querySelector('button.path-beside') as HTMLButtonElement;
+    button.click();
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+    expect(asked).to.deep.equal([false, true]);
+    dispose();
+  });
+
+  it('shows as pressed while the view is open beside the window, as Preview does', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.style.setProperty('--umbradesktop-strip-button-on-background', 'rgb(1, 2, 3)');
+    element.view = { label: 'Info', icon: 'icon-info', beside: true };
+    await element.updateComplete;
+    const button = root.querySelector('button.path-beside')!;
+    expect(button.getAttribute('aria-pressed')).to.equal('false');
+    const closedTitle = button.getAttribute('title');
+    element.view = { label: 'Info', icon: 'icon-info', beside: true, open: true };
+    await element.updateComplete;
+    expect(button.getAttribute('aria-pressed')).to.equal('true');
+    expect(getComputedStyle(button).backgroundColor, 'the theme’s pressed fill').to.equal('rgb(1, 2, 3)');
+    expect(button.getAttribute('title'), 'the tooltip says pressing it closes it').to.not.equal(closedTitle);
+    dispose();
+  });
+
+  it('leaves Preview alone at the strip’s end', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.previewable = true;
+    element.view = { label: 'Info', icon: 'icon-info', beside: true };
+    await element.updateComplete;
+    const actions = root.querySelector('.path-actions');
+    expect(actions?.querySelectorAll('button').length).to.equal(1);
+    expect(actions?.querySelector('button.path-preview')).to.exist;
+    dispose();
+  });
+});
+
+describe('the glyph for opening beside the window', () => {
+  const crumbs: UmbraDesktopPathCrumb[] = [
+    { label: 'Content', href: '/umbraco/section/content', current: false, home: true },
+    { label: 'Home', href: undefined, current: true },
+  ];
+
+  it('is the same side-panel glyph on the view button and on Preview, never the pop-out one', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.previewable = true;
+    element.view = { label: 'Info', icon: 'icon-info', beside: true };
+    await element.updateComplete;
+    const beside = root.querySelector('button.path-beside svg.path-beside-glyph');
+    const preview = root.querySelector('button.path-preview svg.path-beside-glyph');
+    expect(beside).to.exist;
+    expect(preview, 'Preview says how it opens with the same glyph').to.exist;
+    expect(beside!.innerHTML).to.equal(preview!.innerHTML);
+    dispose();
+  });
+
+  it('opens Preview as a window on Shift-click too', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.previewable = true;
+    await element.updateComplete;
+    const asked: boolean[] = [];
+    element.addEventListener('umbradesktop-path-preview', (e) => asked.push((e as CustomEvent<{ floating: boolean }>).detail.floating));
+    const button = root.querySelector('button.path-preview') as HTMLButtonElement;
+    button.click();
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+    expect(asked).to.deep.equal([false, true]);
+    dispose();
+  });
+});

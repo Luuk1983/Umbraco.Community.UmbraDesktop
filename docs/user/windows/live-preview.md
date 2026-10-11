@@ -15,7 +15,10 @@ without leaving the desktop and without saving.
 ## Open and close the preview
 
 - To open the preview, select **Preview** at the right of a document window's path. The button
-  shows as pressed while the preview is open.
+  shows as pressed while the preview is open. The side-panel mark after its label means it opens
+  beside the window; the same mark opens a document's views beside it, see
+  [Views beside the editor](views-beside-the-editor.md).
+- To open the preview as a window of its own straight away, hold Shift while you select **Preview**.
 - To close the preview, select **Preview** again, or select close in the preview's header.
 
 ## What it shows
