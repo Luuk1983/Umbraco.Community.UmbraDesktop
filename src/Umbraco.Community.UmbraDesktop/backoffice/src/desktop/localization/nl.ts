@@ -212,6 +212,9 @@ export default {
     reopenWindowsPersistent: 'Altijd',
     reopenWindowsDescription:
       'Deze sessie bewaart je vensters als je de pagina herlaadt of het bureaublad verlaat en terugkomt, tot je het tabblad sluit. Altijd brengt ze ook terug de volgende keer dat je de backoffice opent. Backoffice-vensters openen op de pagina die ze lieten zien; niet-opgeslagen wijzigingen worden niet bewaard.',
+    viewsBeside: 'Aanbieden om werkruimteweergaven naast de editor te openen',
+    viewsBesideDescription:
+      'Zet een zijpaneelknop op de weergave die een documentvenster toont, zoals Info, als die weergave naast de editor werkt. De weergave blijft verbonden met het document, dus hij toont niet-opgeslagen wijzigingen en zijn acties gelden voor het document. Uitzetten sluit alle weergaven die naast een venster open zijn.',
     // bureaubladinstellingen — taal en regio. De eerste rij is de vreemde eend en de regel eronder
     // zegt dat ook: die verandert de hele backoffice en is de enige die opnieuw laden vraagt.
     backofficeLanguage: 'Taal van de backoffice',
@@ -297,6 +300,7 @@ export default {
       'Sluiten is hier de veilige keuze: je niet-opgeslagen wijzigingen gaan verloren en de versie die iemand anders heeft opgeslagen blijft staan.',
     // Voorbeeld, een gekoppeld venster naast een document
     previewOpen: 'Voorbeeld',
+    previewOpenTitle: 'Voorbeeld naast de editor. Shift-klik om het als venster te openen.',
     previewClose: 'Voorbeeld sluiten',
     dockHere: 'Hier vastzetten',
     dockRelease: 'Loslaten om vast te zetten',
@@ -311,6 +315,12 @@ export default {
     previewDesktop: 'Desktopbreedte',
     previewOption: 'Voorbeeld met',
     previewFailed: 'Het voorbeeld kon niet worden geopend.',
+    // Een werkruimteweergave van een document naast de editor (issue #131)
+    besideOpenTitle: '%0% naast de editor houden. Shift-klik om het als venster te openen.',
+    besideCloseTitle: '%0% naast de editor sluiten',
+    besideTitle: '%0%: %1%',
+    besideWaiting: 'Wachten tot het document in zijn venster geopend is.',
+    besideMissing: 'Deze weergave is niet meer beschikbaar.',
     // Background Jobs app
     backgroundJobsIntro:
       'Alle geplande taken die Umbraco achter je site uitvoert: publiceren, webhooks, opschoningen, en alles wat een pakket heeft toegevoegd. Je kunt hier niets starten of stoppen, dit is een alleen-lezen overzicht van wat het CMS uit zichzelf doet.',

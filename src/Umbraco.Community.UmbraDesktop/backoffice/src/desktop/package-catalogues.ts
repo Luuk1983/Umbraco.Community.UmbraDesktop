@@ -33,6 +33,11 @@ export interface UmbraDesktopPackageCatalogue {
   groups: UmbraDesktopPackageGroup[];
   /** The entries that survived validation, in the package's own order. */
   entries: UmbraDesktopPackageEntry[];
+  /**
+   * Workspace view aliases this package keeps out of the Open beside button (issue #131). Present
+   * only when the package sent a valid list, so a catalogue without one reads exactly as before.
+   */
+  workspaceViewsNotBeside?: string[];
 }
 
 /** What {@link normalisePackageCatalogues} produces. */
@@ -120,6 +125,11 @@ export function normalisePackageCatalogues(manifests: ReadonlyArray<unknown>, or
     }
     catalogue.groups = normaliseList(meta.groups, 'group', reporter, (raw) => normaliseGroup(raw, reporter));
     catalogue.entries = normaliseList(meta.entries, 'entry', reporter, (raw) => normaliseEntry(raw, reporter, origin));
+    const notBeside = meta.workspaceViewsNotBeside;
+    if (isStringArray(notBeside)) catalogue.workspaceViewsNotBeside = [...notBeside];
+    else if (notBeside !== undefined) {
+      reporter.catalogue('workspaceViewsNotBeside', 'has "workspaceViewsNotBeside" that is not a list of view aliases, so it was ignored');
+    }
   }
   return { catalogues, reports };
 }

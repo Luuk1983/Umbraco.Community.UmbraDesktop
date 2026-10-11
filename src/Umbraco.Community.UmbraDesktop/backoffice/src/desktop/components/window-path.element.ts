@@ -1,5 +1,5 @@
 import { UMBRADESKTOP_PATH_HEIGHT } from '../constants.js';
-import type { UmbraDesktopPathCrumb } from '../path/types.js';
+import type { UmbraDesktopPathCrumb, UmbraDesktopPathView } from '../path/types.js';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import { css, customElement, html, nothing, property } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -77,6 +77,19 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
   public previewActive = false;
 
   /**
+   * The workspace view the window shows, named after the crumbs with its own icon, and whether it can
+   * open beside the editor, which puts the side-panel button on it (issue #131). Undefined while the
+   * window shows its first view, the editor.
+   *
+   * On the view's own crumb rather than beside Preview, because it acts on the view and Preview acts
+   * on the document: a button that comes and goes with the view reads as part of it when it sits on
+   * its name, and as a glitch when it blinks at the strip's end next to one that never does. The
+   * window decides, as it does for Preview: it is the one that can see the view in its frame.
+   */
+  @property({ attribute: false })
+  public view?: UmbraDesktopPathView;
+
+  /**
    * Adopts the active theme's `window` stylesheet.
    *
    * Its own call rather than something inherited from `window.element`'s: custom properties cross a
@@ -151,28 +164,85 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
             : html`<span class="path-current" aria-current="page" title=${label}>${content}</span>`;
           return html`${body}${separator}`;
         })}
-        ${this.previewable
-          ? html`<button
-              class="path-preview ${this.previewActive ? 'path-preview-on' : ''}"
-              type="button"
-              aria-pressed=${this.previewActive ? 'true' : 'false'}
-              title=${this.localize.term(this.previewActive ? 'umbraDesktop_previewClose' : 'umbraDesktop_previewOpen')}
-              aria-label=${this.localize.term('umbraDesktop_previewOpen')}
-              @click=${this.#preview}>
-              <umb-icon class="path-preview-icon" name="icon-eye"></umb-icon>
-              <span class="path-preview-label">${this.localize.term('umbraDesktop_previewOpen')}</span>
-            </button>`
-          : nothing}
+        ${this.#renderView()}
+        ${this.#renderActions()}
       </nav>
     `;
   }
 
   /**
-   * Ask the window to open its preview. An event, for the same reason {@link #navigate} is one: the
-   * window owns the frame, the route and the manager, and this strip owns none of them.
+   * The view the window shows, as the last step of the path, and the button that keeps it beside the
+   * editor when it can be.
+   * @returns The view crumb, or nothing while the window shows its first view.
    */
-  #preview = () => {
-    this.dispatchEvent(new CustomEvent('umbradesktop-path-preview', { bubbles: true, composed: true }));
+  #renderView() {
+    const view = this.view;
+    if (!view) return nothing;
+    const label = this.localize.string(view.label);
+    const title = this.localize.term(view.open ? 'umbraDesktop_besideCloseTitle' : 'umbraDesktop_besideOpenTitle', label);
+    return html`<span class="path-separator" aria-hidden="true">/</span>
+      <span class="path-view" title=${label}>
+        ${view.icon ? html`<umb-icon class="path-view-icon" name=${view.icon}></umb-icon>` : nothing}${label}
+      </span>
+      ${view.beside
+        ? html`<button
+            class="path-action path-beside ${view.open ? 'path-action-on' : ''}"
+            type="button"
+            aria-pressed=${view.open ? 'true' : 'false'}
+            title=${title}
+            aria-label=${title}
+            @click=${this.#beside}>
+            ${besideGlyph}
+          </button>`
+        : nothing}`;
+  }
+
+  /**
+   * The action at the strip's right end: Preview, which acts on the document and so is there
+   * whenever a document is. In a group of its own, which is what stays pinned to the end while a deep
+   * path scrolls under it. Its icon says what opens and the side-panel glyph after its label says
+   * how, the same glyph the view crumb's button draws.
+   * @returns The group, or nothing when there is no document to preview.
+   */
+  #renderActions() {
+    if (!this.previewable) return nothing;
+    return html`<span class="path-actions">
+      <button
+        class="path-action path-preview ${this.previewActive ? 'path-preview-on' : ''}"
+        type="button"
+        aria-pressed=${this.previewActive ? 'true' : 'false'}
+        title=${this.localize.term(this.previewActive ? 'umbraDesktop_previewClose' : 'umbraDesktop_previewOpenTitle')}
+        aria-label=${this.localize.term('umbraDesktop_previewOpen')}
+        @click=${this.#preview}>
+        <umb-icon class="path-preview-icon" name="icon-eye"></umb-icon>
+        <span class="path-preview-label">${this.localize.term('umbraDesktop_previewOpen')}</span>
+        ${besideGlyph}
+      </button>
+    </span>`;
+  }
+
+  /**
+   * Ask the window to open the view it shows beside its editor, as a window of its own on
+   * Shift-click, which is what Shift-click on a link does in a browser. An event, for the reason
+   * {@link #navigate} is one, and because the window checks the view once more before it does.
+   * @param event The click.
+   */
+  #beside = (event: MouseEvent) => {
+    this.dispatchEvent(
+      new CustomEvent('umbradesktop-path-beside', { detail: { floating: event.shiftKey }, bubbles: true, composed: true }),
+    );
+  };
+
+  /**
+   * Ask the window to open its preview, as a window of its own on Shift-click. An event, for the
+   * same reason {@link #navigate} is one: the window owns the frame, the route and the manager, and
+   * this strip owns none of them.
+   * @param event The click.
+   */
+  #preview = (event: MouseEvent) => {
+    this.dispatchEvent(
+      new CustomEvent('umbradesktop-path-preview', { detail: { floating: event.shiftKey }, bubbles: true, composed: true }),
+    );
   };
 
   static override styles = [
@@ -257,13 +327,22 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
       }
       /* Pinned to the strip's right end, and kept there while a deep path scrolls sideways under it:
          sticky inside the strip's own horizontal scroller, with the strip's background behind it so
-         crumbs passing underneath do not show through. Styled as a crumb, from the crumb's tokens,
-         so every theme that restyles its crumbs restyles this with them. */
-      .path-preview {
+         crumbs passing underneath do not show through. One group for every action, since two
+         buttons each pinned to the same edge would sit on top of each other. */
+      .path-actions {
         flex: none;
         position: sticky;
         right: 0;
         margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        background: var(--umbradesktop-path-background, var(--uui-color-surface-alt));
+      }
+      /* Styled as a crumb, from the crumb's tokens, so every theme that restyles its crumbs restyles
+         these with them. */
+      .path-action {
+        flex: none;
         display: inline-flex;
         align-items: center;
         gap: 4px;
@@ -280,7 +359,7 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
       /* A toolbar button's hover, shared with the pane header's controls and the Dock button, and
          separate from a crumb's: Windows 98 hovers a crumb in its navy selection, as a link, and a
          toolbar button by raising it. */
-      .path-preview:hover {
+      .path-action:hover {
         background: var(
           --umbradesktop-strip-button-hover-background,
           var(--umbradesktop-path-link-hover-background, var(--uui-color-surface-emphasis))
@@ -295,7 +374,9 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
          which 'theme/attached-content.test.ts' holds it to. The first version drew an outline ring
          on the hover ground, which is what a focused form field looks like, not a toggle. */
       .path-preview-on,
-      .path-preview-on:hover {
+      .path-preview-on:hover,
+      .path-action-on,
+      .path-action-on:hover {
         background: var(--umbradesktop-strip-button-on-background, var(--uui-color-current));
         color: var(--umbradesktop-strip-button-on-text, var(--uui-color-current-contrast));
         box-shadow: var(--umbradesktop-strip-button-on-shadow, none);
@@ -304,9 +385,49 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
         font-size: 1.15em;
         line-height: 1;
       }
+      /* The view the window shows, the last step of the path: drawn as the current crumb is, with
+         the view's own icon so it reads as the tab it came from. */
+      .path-view {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 4px;
+        color: var(--umbradesktop-path-text, var(--uui-color-text));
+      }
+      .path-view-icon {
+        font-size: 1.15em;
+        line-height: 1;
+      }
+      /* Glyph only, right after the view's name, which is what labels it. */
+      .path-beside {
+        padding: 2px 4px;
+      }
+      /* Drawn in the strip's own type size, like the preview's icon, in the text colour it sits in. */
+      .path-beside-glyph {
+        width: 1.15em;
+        height: 1.15em;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1;
+      }
+      .path-beside-glyph-fill {
+        fill: currentColor;
+        stroke: none;
+      }
     `,
   ];
 }
+
+/**
+ * The side-panel glyph: a frame with its side panel filled, the one the Dock button draws. It means
+ * "opens beside this window" wherever it appears, on the view crumb's button and after Preview's
+ * label alike. Never the pop-out glyph, which the pane header uses for the opposite.
+ */
+const besideGlyph = html`<svg class="path-beside-glyph" viewBox="0 0 16 16" aria-hidden="true">
+  <rect x="1.5" y="2.5" width="13" height="11" rx="1"></rect>
+  <rect class="path-beside-glyph-fill" x="9" y="4" width="4" height="8"></rect>
+</svg>`;
 
 export default UmbraDesktopWindowPathElement;
 

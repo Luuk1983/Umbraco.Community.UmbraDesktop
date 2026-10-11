@@ -16,7 +16,7 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 
 - **Real windows, side by side.** Drag, resize, maximise, or snap two windows into halves. [Windows](docs/user/windows/README.md)
 - **A warning before you overwrite someone.** Plain Umbraco lets the second save win silently; the desktop tells you, and never throws away unsaved work without asking. [Overwrite protection](docs/user/windows/overwrite-protection.md)
-- **Your page beside its editor.** A live preview that reloads on every save, headless sites included. [Live preview](docs/user/windows/live-preview.md)
+- **Your page beside its editor.** A live preview that reloads on every save, headless sites included, and the document's Info kept open beside it too. [Live preview](docs/user/windows/live-preview.md), [Views beside the editor](docs/user/windows/views-beside-the-editor.md)
 - **A launcher that fits how you work.** Apps grouped by what they do, pinned to the taskbar, arranged the way you like. [Launcher](docs/user/launcher/README.md)
 - **Five themes.** Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98, each with a wallpaper to match. [Appearance](docs/user/appearance/README.md)
 - **It follows you.** Your settings live on your Umbraco account, and your windows come back after a reload. [Settings](docs/user/settings/README.md)

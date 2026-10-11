@@ -37,6 +37,13 @@ export interface MetaUmbraDesktopCatalogue {
   groups?: UmbraDesktopPackageGroup[];
   /** Deep links into this package's screens. An entry with one of our aliases replaces ours. */
   entries?: UmbraDesktopPackageEntry[];
+  /**
+   * Aliases of this package's workspace views that should not open beside the editor, for a view
+   * the desktop's own checks would offer but that does not work there. The desktop already leaves
+   * out editor kinds and views with a router of their own, so most packages need nothing here. Lists
+   * from every package add up. See `docs/developer/package-catalogues.md`.
+   */
+  workspaceViewsNotBeside?: string[];
 }
 
 /**

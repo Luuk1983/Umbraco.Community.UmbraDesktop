@@ -13,7 +13,7 @@ change shows as it is made.
 
 | Category | What it holds | See |
 | --- | --- | --- |
-| **General** | How the desktop starts, and which windows come back | [Starting in the desktop](starting-in-the-desktop.md), [Reopening windows](reopening-windows.md) |
+| **General** | How the desktop starts, which windows come back, and whether a document's views can open beside the editor | [Starting in the desktop](starting-in-the-desktop.md), [Reopening windows](reopening-windows.md), [Views beside the editor](../windows/views-beside-the-editor.md#turn-it-off) |
 | **Language and region** | The language the backoffice speaks, and how the desktop writes dates and times | [Language and region](language-and-region.md) |
 | **Appearance** | The theme, the wallpaper and the backoffice's own theme | [Appearance](../appearance/README.md) |
 | **Taskbar** | What the taskbar keeps beside the launcher button | [Using the taskbar](../taskbar/using-the-taskbar.md#the-fixed-row) |

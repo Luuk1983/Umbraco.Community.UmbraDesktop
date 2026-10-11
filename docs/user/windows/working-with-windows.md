@@ -37,7 +37,9 @@ section name in its header, and a window has no header, so this is where that go
 If the window has unsaved changes, it asks before leaving, the same way closing it does.
 
 A window that shows a document also has a **Preview** button at the right of its path. See
-[Live preview](live-preview.md).
+[Live preview](live-preview.md). When it shows one of the document's views other than Content, the
+path names that view, and a side-panel button next to the name keeps it open beside the editor. See
+[Views beside the editor](views-beside-the-editor.md).
 
 ## While a window loads
 

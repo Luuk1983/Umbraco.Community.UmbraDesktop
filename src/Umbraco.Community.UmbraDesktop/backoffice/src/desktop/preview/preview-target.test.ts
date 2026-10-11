@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { previewTargetFromPath } from './preview-target';
+import { previewTargetFromPath, withoutWorkspaceView, workspaceViewPathname } from './preview-target';
 
 /**
  * What the preview opens is read off the document window's route: the document's GUID and the
@@ -58,4 +58,46 @@ it('answers nothing for a document being created, which has nothing saved to pre
   expect(previewTargetFromPath(`/umbraco/section/content/workspace/document/create/parent/document/null/${GUID}`)).to.equal(
     undefined,
   );
+});
+
+describe('the workspace view a document route ends in', () => {
+  it('reads the view pathname after the variant segment', () => {
+    expect(workspaceViewPathname(`/umbraco/section/content/workspace/document/edit/${GUID}/en-US/view/info`)).to.equal('info');
+  });
+
+  it('reads it from a split view, whose routes all hang off the one variant segment', () => {
+    expect(workspaceViewPathname(`/umbraco/section/content/workspace/document/edit/${GUID}/en-US_&_da-DK/view/info`)).to.equal(
+      'info',
+    );
+  });
+
+  it('stops at the view, so a route the view adds below it does not change which view it is', () => {
+    expect(
+      workspaceViewPathname(`/umbraco/section/content/workspace/document/edit/${GUID}/invariant/view/engage-analytics/devices`),
+    ).to.equal('engage-analytics');
+  });
+
+  it('answers nothing for a document showing its first view, which has no view segment', () => {
+    expect(workspaceViewPathname(`/umbraco/section/content/workspace/document/edit/${GUID}/en-US`)).to.equal(undefined);
+  });
+
+  it('answers nothing for a view on anything but a document being edited', () => {
+    expect(workspaceViewPathname(`/umbraco/section/media/workspace/media/edit/${GUID}/view/info`)).to.equal(undefined);
+  });
+});
+
+describe('the route of a document’s first view', () => {
+  it('drops the view and everything below it, which is the route core shows the first view on', () => {
+    expect(withoutWorkspaceView(`/umbraco/section/content/workspace/document/edit/${GUID}/en-US/view/info`)).to.equal(
+      `/umbraco/section/content/workspace/document/edit/${GUID}/en-US`,
+    );
+    expect(
+      withoutWorkspaceView(`/umbraco/section/content/workspace/document/edit/${GUID}/en-US/view/engage-analytics/devices`),
+    ).to.equal(`/umbraco/section/content/workspace/document/edit/${GUID}/en-US`);
+  });
+
+  it('leaves a route with no view as it is', () => {
+    const path = `/umbraco/section/content/workspace/document/edit/${GUID}/en-US`;
+    expect(withoutWorkspaceView(path)).to.equal(path);
+  });
 });

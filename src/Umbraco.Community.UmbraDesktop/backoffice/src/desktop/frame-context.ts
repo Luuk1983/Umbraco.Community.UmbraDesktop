@@ -18,9 +18,14 @@
  * names and both have to be found when core renames one.
  */
 
-/** Umbraco's context-api event names. Not exported by the package, and stable across v14+. */
-const CONTEXT_REQUEST_EVENT = 'umb:context-request';
-const CONTEXT_PROVIDE_EVENT = 'umb:context-provide';
+/**
+ * Umbraco's context-api event names. Not exported by the package, and stable across v14+. Exported
+ * from here for `beside/bridge.ts`, so the names are still written down in one place.
+ */
+export const CONTEXT_REQUEST_EVENT = 'umb:context-request';
+/** Fired by every provider as it connects; see {@link CONTEXT_REQUEST_EVENT}. */
+export const CONTEXT_PROVIDE_EVENT = 'umb:context-provide';
+/** Fired by a provider as it disconnects; see {@link watchUnprovidedContext}. */
 const CONTEXT_UNPROVIDED_EVENT = 'umb:context-unprovided';
 
 /**

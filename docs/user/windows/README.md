@@ -17,3 +17,5 @@ description: Working with windows, and how the desktop protects your work in the
   document you have open. Plain Umbraco does not warn about this at all.
 - [Live preview](live-preview.md): see the rendered page beside the editor, docked inside the same
   window or in a window of its own.
+- [Views beside the editor](views-beside-the-editor.md): keep a document's Info, or another of its
+  views, open next to the editor while you edit.
