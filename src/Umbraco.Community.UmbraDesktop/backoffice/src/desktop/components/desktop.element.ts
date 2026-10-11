@@ -14,6 +14,8 @@ import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
 import { UmbraDesktopServerEventController } from '../conflict/server-event.controller.js';
 import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
+import { UMBRADESKTOP_PACKAGE_SETTINGS_CONTEXT } from '../settings/package-settings.context-token.js';
+import type { UmbraDesktopPackageSettingsContext } from '../settings/package-settings.context.js';
 import { UmbraDesktopWindowLayoutController } from '../windows/layout.controller.js';
 import { UmbraDesktopHelpContext } from '../help/help.context.js';
 import { takeHelpDeepLink } from '../help/help-deep-link.js';
@@ -30,6 +32,8 @@ import './taskbar.element.js';
 import './desktop-toasts.element.js';
 import '../desktop-label/desktop-label.element.js';
 import '../migrations/migration-screen.element.js';
+import '../welcome/welcome-screen.element.js';
+import type { UmbraDesktopWelcomeChoices } from '../welcome/choices';
 import type { UmbraDesktopMigrationScreenState } from '../migrations/types.js';
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -73,6 +77,20 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   /** Stops watching this desktop's own document and takes it off the centre's sources. */
   #stopOwnNotifications?: () => void;
+
+  /**
+   * The package settings context as last provided, kept so a desktop moved in the DOM can attach
+   * itself again. Umbraco's consumer only calls back with a context it did not already have, and a
+   * disconnect followed by a connect in the same task keeps the one it had, so a move re-requests
+   * without calling back (`UmbContextConsumer.hostConnected` / `_onResponse` in v17).
+   */
+  #packageSettings?: UmbraDesktopPackageSettingsContext;
+
+  /**
+   * Takes this desktop off the package settings context. Set while connected, so a package's
+   * `openSettings` opens on the desktop the person is looking at (design §5).
+   */
+  #detachFromPackageSettings?: () => void;
 
   @state()
   private _windows: UmbraDesktopWindow[] = [];
@@ -123,6 +141,13 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   private _migration: UmbraDesktopMigrationScreenState = { phase: 'idle' };
 
   /**
+   * Whether the welcome wizard is up, for somebody new to the desktop. Never at the same time as a
+   * migration: that needs settings in this browser, and a newcomer has none.
+   */
+  @state()
+  private _welcome = false;
+
+  /**
    * The surface currently under the resize observer, so it is attached exactly once per surface.
    *
    * Needed because the surface does not exist for the whole life of this element any more: it
@@ -157,6 +182,14 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     this.observe(this.#settings.loaded, (loaded) => this.reportSettingsLoaded(loaded === true));
     this.observe(this.#label.label, (label) => (this._label = label));
     this.observe(this.#settings.migration, (migration) => (this._migration = migration ?? { phase: 'idle' }));
+    // Registers this desktop as the one packages open their settings on. The callback runs again
+    // with undefined when the element leaves for good, and with the context when it comes back.
+    this.consumeContext(UMBRADESKTOP_PACKAGE_SETTINGS_CONTEXT, (context) => {
+      this.#packageSettings = context;
+      this.#detachFromPackageSettings?.();
+      this.#detachFromPackageSettings = context?.attachDesktop(this);
+    });
+    this.observe(this.#settings.welcome, (welcome) => (this._welcome = welcome === true));
   }
 
   /**
@@ -216,11 +249,23 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    * A restore can be reported while the wallpaper is still being waited for, since both start from
    * the settings report. So the hold is checked again at the end, and a hand-off that finds windows
    * still being reopened stands down for {@link reportWindowsRestoring} to start again.
+   *
+   * So does a hand-off whose desktop has left the page while it waited, for good: the splash and
+   * the marker are the page's, not this element's, so a removed desktop that carried on would lower
+   * the next boot's splash and mark as finished a boot that never painted. Nothing puts a removed
+   * desktop back, because the backoffice builds a new section element on every visit
+   * (`createExtensionElement` in its section routes), which is also what Exit then coming back
+   * does. A test is where it showed: the boot test after one that left a hand-off running failed
+   * one run in three, because the old desktop lowered the new test's splash.
    */
   async #handOverFromSplash(): Promise<void> {
     bootTrace('desktop mounted, settings resolved; waiting for the wallpaper');
     await this.updateComplete;
     await waitForWallpaper(this._wallpaper?.background.url ?? null);
+    if (!this.isConnected) {
+      bootTrace('desktop removed before the hand-off finished; the splash is not ours to lower');
+      return;
+    }
     if (this._windowsRestoring) {
       this.#handingOver = false;
       bootTrace('windows are still being reopened; the splash stays up');
@@ -282,6 +327,11 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     // section (via the taskbar's Exit) unmounts this element and restores it.
     this.#setOuterChrome(true);
     this.#watchOwnNotifications();
+    // A move in the DOM disconnects and reconnects in one task, and the consumer does not call back
+    // for a context it still holds, so the attachment dropped on disconnect is restored here.
+    if (!this.#detachFromPackageSettings && this.#packageSettings) {
+      this.#detachFromPackageSettings = this.#packageSettings.attachDesktop(this);
+    }
   }
 
   /**
@@ -325,6 +375,8 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
   }
 
   override disconnectedCallback() {
+    this.#detachFromPackageSettings?.();
+    this.#detachFromPackageSettings = undefined;
     super.disconnectedCallback();
     this.#surfaceObserver.disconnect();
     // Forgotten along with the observation, so a re-connected desktop observes its new surface
@@ -417,7 +469,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
         <!-- On the wallpaper, like the logo: after it, and before the surface so every window
              paints over it. It has no z-index, so this order is the whole of its stacking. -->
         <umbradesktop-desktop-label .label=${this._label}></umbradesktop-desktop-label>
-        <div class="surface" ?inert=${this.#migrationShowing}>
+        <div class="surface" ?inert=${this.#systemScreenShowing}>
           ${repeat(
             this._windows,
             (w) => w.id,
@@ -425,9 +477,9 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
           )}
           ${this.#renderSnapGhost()}
         </div>
-        <umbradesktop-toasts ?inert=${this.#migrationShowing}></umbradesktop-toasts>
-        <umbradesktop-taskbar ?inert=${this.#migrationShowing}></umbradesktop-taskbar>
-        ${this.#renderMigration()}
+        <umbradesktop-toasts ?inert=${this.#systemScreenShowing}></umbradesktop-toasts>
+        <umbradesktop-taskbar ?inert=${this.#systemScreenShowing}></umbradesktop-taskbar>
+        ${this.#renderMigration()} ${this.#renderWelcome()}
       </div>
     `;
   }
@@ -446,7 +498,8 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    * @returns The screen, or nothing when no migration is showing.
    */
   /**
-   * Whether the migration screen is up, and therefore whether the desktop behind it is inert.
+   * Whether the migration screen is up, one of the two screens that make the desktop behind them
+   * inert (see `#systemScreenShowing`).
    *
    * The screen covers the desktop visually via `UMBRADESKTOP_Z_SYSTEM_SCREEN`, but covering is not
    * blocking: without `inert` the windows and the taskbar stay in the tab order and reachable by
@@ -457,6 +510,33 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    */
   get #migrationShowing(): boolean {
     return this._migration.phase !== 'idle';
+  }
+
+  /**
+   * Whether a full-screen system screen is up, the migration screen or the welcome wizard, and
+   * therefore whether the desktop behind it is inert. The reasons are the migration screen's: covering
+   * is not blocking, and the taskbar's cog would open settings the wizard is about to write.
+   * @returns True while either screen is showing.
+   */
+  get #systemScreenShowing(): boolean {
+    return this.#migrationShowing || this._welcome;
+  }
+
+  /**
+   * The welcome wizard, when it is up.
+   *
+   * Here for the reasons the migration screen is: in the same pass as the desktop, because the
+   * settings context decides it before reporting the settings loaded, and inside the desktop, so it
+   * appears however somebody arrived, booted in under the splash or clicked in from the header.
+   * @returns The wizard, or nothing.
+   */
+  #renderWelcome() {
+    if (!this._welcome) return nothing;
+
+    return html`<umbradesktop-welcome-screen
+      @umbradesktop-welcome-finish=${(event: CustomEvent<UmbraDesktopWelcomeChoices>) =>
+        this.#settings.finishWelcome(event.detail)}
+      @umbradesktop-welcome-dismiss=${() => this.#settings.dismissWelcome()}></umbradesktop-welcome-screen>`;
   }
 
   #renderMigration() {

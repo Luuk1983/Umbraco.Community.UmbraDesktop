@@ -1,5 +1,6 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { W11_FONT } from './palette.js';
+import { progressStrip } from '../../../progress/progress-view.js';
 import {
   W11_TASK_MARKER_HEIGHT,
   W11_TASK_MARKER_WIDTH,
@@ -197,5 +198,26 @@ export default css`
   .notice-badge[data-severity='error'] {
     background: var(--umbradesktop-notice-error-color, var(--uui-color-danger));
     color: var(--umbradesktop-taskbar-background-opaque, #f3f3f3);
+  }
+
+  /* Work in progress (#108): Windows' own taskbar progress, where the running mark under the icon
+     grows into a green bar. Drawn over the mark at its height and its distance from the foot, half
+     the button wide; raised above the '::after' that draws the mark, which would otherwise paint
+     over it because it comes later. */
+  ${progressStrip('.task', {
+    height: W11_TASK_MARKER_HEIGHT,
+    radius: W11_TASK_MARKER_HEIGHT / 2,
+    inset: `auto 25% ${W11_TASK_MARKER_HEIGHT}px 25%`,
+  })}
+  .task .progress {
+    z-index: 1;
+  }
+  /* The bar is the mark while it is drawn, as on Windows, where the progress bar takes the running
+     indicator's place rather than sitting on top of it. Left showing, the focused window's blue mark
+     poked out either side of the green and read as one smeared two-tone bar, which a backoffice
+     screenshot showed and no test did. Focus is still on the button: the focused tile keeps its
+     lighter fill. */
+  .task.window:has(.progress)::after {
+    opacity: 0;
   }
 `;

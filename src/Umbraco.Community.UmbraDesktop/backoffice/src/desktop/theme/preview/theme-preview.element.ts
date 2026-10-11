@@ -48,10 +48,9 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
  * to say something about its launcher has the chrome itself to say it in.
  *
  * **The fallbacks are the chrome's own, restated.** Every `var(--umbradesktop-…, …)` below carries
- * the same fallback the component that owns the token carries, because the Umbraco identity theme
- * ships an **empty palette** on purpose — its look lives entirely in those fallbacks — and a
- * miniature painted from palettes alone would render it as nothing at all. That is a second copy of
- * a number, so `theme-preview.test.ts` holds every one of them against the chrome's own CSS on each
+ * the same fallback the component that owns the token carries, because a palette is partial by
+ * design — every theme leaves most tokens to those fallbacks — and a miniature painted from
+ * palettes alone would render the rest as nothing at all. That is a second copy of a number, so `theme-preview.test.ts` holds every one of them against the chrome's own CSS on each
  * run. Change a fallback in `window.element` or `taskbar.element` and that test tells you this file
  * needs the same edit.
  */
@@ -67,6 +66,18 @@ export class UmbraDesktopThemePreviewElement extends UmbLitElement {
    */
   @property({ type: String })
   public variant: UmbraDesktopVariant = 'light';
+
+  /**
+   * Whether the backoffice is in Umbraco's high contrast theme, which paints the window's content
+   * half white and half black.
+   *
+   * A symbol rather than a likeness, on purpose. Umbraco's high contrast is a light scheme, so a
+   * window painted from its tokens looked like Light under the four themes that read them and dark
+   * under macOS, which states its own: a row of previews that did not say "contrast" anywhere. The
+   * chrome around the window stays the theme's, since that is what the row is choosing between.
+   */
+  @property({ type: Boolean })
+  public highContrast = false;
 
   /**
    * A wallpaper to paint behind the chrome, already resolved to a URL.
@@ -208,7 +219,7 @@ export class UmbraDesktopThemePreviewElement extends UmbLitElement {
             <span class="title"></span>
             ${this.#renderControls('trailing', metrics.trailingControlsWidth)}
           </div>
-          <div class="body"></div>
+          <div class="body ${this.highContrast ? 'contrast' : ''}"></div>
         </div>
         <div class="taskbar">
           <span class="start"></span>
@@ -366,6 +377,11 @@ export class UmbraDesktopThemePreviewElement extends UmbLitElement {
       .body {
         flex: 1;
         background: var(--umbradesktop-window-body-background, var(--uui-color-background));
+      }
+      /* Literal colours, not tokens: this is the one thing in the preview that must look the same
+         under every theme, because it stands for a setting rather than for the theme. */
+      .body.contrast {
+        background: linear-gradient(90deg, #fff 50%, #000 50%);
       }
     `,
   ];

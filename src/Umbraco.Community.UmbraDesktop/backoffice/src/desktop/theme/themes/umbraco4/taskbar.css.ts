@@ -1,4 +1,5 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
+import { progressStrip } from '../../../progress/progress-view.js';
 import {
   U4_EDGE,
   U4_FONT,
@@ -142,4 +143,8 @@ export default css`
      rule's inline glyph after the name is exactly right here, and the 11px Verdana button hands it
      its own size through the base's '1em'. The corner-dot rule this replaced existed only because
      the badge used to be an overlay in every theme. */
+
+  /* Work in progress (#108): the caption's bar again, along the foot of the button, inside the
+     bevel so the base's clipping of the running list cannot cut it off. */
+  ${progressStrip('.task', { height: 3, inset: 'auto 2px 2px 2px' })}
 `;

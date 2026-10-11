@@ -29,7 +29,7 @@ const WAKE_EVENTS = ['keydown', 'pointerdown', 'wheel', 'touchstart'] as const;
  * Two uses, one element. **Full screen** (the default) it covers everything, hides the pointer, takes
  * focus, and removes itself at the first key, click, scroll or real mouse movement, announcing that
  * with a `dismiss` event. With **`preview`** it fills its parent instead and never dismisses itself,
- * which is the little monitor in the Screen Saver window.
+ * which is the little monitor in the Screen Saver settings.
  *
  * A plain custom element rather than a Lit one: it has no template to render, only a canvas to draw
  * on, and it is appended straight to `document.body`, outside every Umbraco context.

@@ -1,6 +1,19 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { MACOS_DOCK_SEPARATOR, MACOS_FONT } from './palette.js';
 import { MACOS_DOCK_ICON, MACOS_DOCK_TILE, MACOS_TASKBAR_RESERVE } from './metrics.js';
+import { progressStrip } from '../../../progress/progress-view.js';
+
+/**
+ * How far the dock icon is lifted inside its tile, in px, to open room for the running dot below
+ * it. Named because the progress capsule is laid over the icon's foot and has to know where that is.
+ */
+const MACOS_DOCK_ICON_LIFT = 4;
+
+/** The gap between the dock icon's box and the tile's edge, on each side. */
+const DOCK_ICON_MARGIN = (MACOS_DOCK_TILE - MACOS_DOCK_ICON) / 2;
+
+/** Height of Finder's copy capsule laid over a dock icon, in px. */
+const DOCK_CAPSULE_HEIGHT = 5;
 
 /**
  * A centred floating dock. The `.cluster` wrapper (start + running windows) is what makes centring
@@ -60,7 +73,7 @@ export default css`
      The tile growing to 42px keeps that: the icon is centred, so it moves down 2px with the box
      while the dot stays 3px off the bottom edge, leaving about 4px still. */
   .task .task-icon {
-    transform: translateY(-4px);
+    transform: translateY(-${MACOS_DOCK_ICON_LIFT}px);
   }
   /* Sanctioned exception: the dock shows icons only. The button keeps its title attribute, so
      the app name is still available as a tooltip and as the accessible name. */
@@ -186,4 +199,13 @@ export default css`
     background: var(--umbradesktop-notice-error-color, var(--uui-color-danger));
     color: var(--umbradesktop-taskbar-background-opaque, #e9e9ef);
   }
+
+  /* Work in progress (#108): Finder's copy capsule, laid across the foot of the dock icon, inset a
+     little from its sides, with the running dot still clear below. Derived from the tile and the
+     icon so it follows either if they change. */
+  ${progressStrip('.task', {
+    height: DOCK_CAPSULE_HEIGHT,
+    radius: DOCK_CAPSULE_HEIGHT / 2,
+    inset: `auto ${DOCK_ICON_MARGIN + 2}px ${DOCK_ICON_MARGIN + MACOS_DOCK_ICON_LIFT}px ${DOCK_ICON_MARGIN + 2}px`,
+  })}
 `;

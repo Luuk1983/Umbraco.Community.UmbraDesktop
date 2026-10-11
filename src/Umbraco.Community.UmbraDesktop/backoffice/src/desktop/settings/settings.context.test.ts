@@ -246,3 +246,42 @@ it('formats a time for apps the way the taskbar clock does, following the clock 
   context.setClockHourCycle('h12');
   expect(context.formatDateTime(afternoon, withSeconds)).to.match(/^2:30:05\s?\S+/);
 });
+
+describe('the welcome wizard', () => {
+  /**
+   * The wallpaper the desktop is painting, as opposed to the one stored.
+   * @param context The context to read.
+   * @returns The painted wallpaper's reference.
+   */
+  function paintedOf(context: UmbraDesktopSettingsContext): UmbraDesktopWallpaperRef {
+    let ref!: UmbraDesktopWallpaperRef;
+    context.wallpaper.subscribe((view) => (ref = view.ref)).unsubscribe();
+    return ref;
+  }
+
+  it('is not up for anybody until a load has decided it', async () => {
+    const context = await contextOnHost();
+    let up: boolean | undefined;
+    context.welcome.subscribe((value) => (up = value)).unsubscribe();
+
+    expect(up).to.equal(false);
+  });
+
+  it('applies the theme, its wallpaper and the sign-in switch on Done', async () => {
+    const context = await contextOnHost();
+
+    context.finishWelcome({ theme: 'macos', bootIntoDesktop: true });
+
+    let theme: string | undefined;
+    let boot: boolean | undefined;
+    context.settings.subscribe((settings) => ((theme = settings.theme), (boot = settings.bootIntoDesktop))).unsubscribe();
+    expect(theme).to.equal('macos');
+    expect(boot).to.equal(true);
+    expect(wallpaperOf(context)).to.deep.equal({ kind: 'builtin', id: 'first-light' });
+    expect(paintedOf(context), 'the desktop behind the fade must already wear it').to.deep.equal({
+      kind: 'builtin',
+      id: 'first-light',
+    });
+    expect(followsTheme(context)).to.equal(false);
+  });
+});

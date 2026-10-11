@@ -15,13 +15,17 @@ change shows as it is made.
 | --- | --- | --- |
 | **General** | How the desktop starts, and which windows come back | [Starting in the desktop](starting-in-the-desktop.md), [Reopening windows](reopening-windows.md) |
 | **Language and region** | The language the backoffice speaks, and how the desktop writes dates and times | [Language and region](language-and-region.md) |
-| **Appearance** | The theme, the wallpaper and the backoffice's own colours | [Appearance](../appearance/README.md) |
+| **Appearance** | The theme, the wallpaper and the backoffice's own theme | [Appearance](../appearance/README.md) |
 | **Taskbar** | What the taskbar keeps beside the launcher button | [Using the taskbar](../taskbar/using-the-taskbar.md#the-fixed-row) |
 | **Site** | Settings that apply to everyone on the site. Only for users with access to the Settings section | [Site](../site/README.md) |
 | **Connections (experimental)** | Other Umbraco instances this desktop can read from | [External connections](../external-connections/README.md) |
 
 Everything except **Site** and **Connections** is your own preference, stored on your Umbraco
 account. See [Settings on your account](settings-on-your-account.md).
+
+Add-ons, packages that add to the desktop, can put their settings here too. They are listed below
+the desktop's own categories, under **Add-ons**, one row per add-on. An add-on's screen starts by
+saying which add-on its settings come from, and the add-on decides where they are stored.
 
 A setting that cannot be used on this site is shown disabled, with the reason, rather than hidden,
 so the panel always shows what the desktop can do.

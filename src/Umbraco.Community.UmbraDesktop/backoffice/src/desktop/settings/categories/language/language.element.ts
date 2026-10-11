@@ -105,6 +105,7 @@ export class UmbraDesktopSettingsLanguageElement extends UmbLitElement {
           this.#manager?.unsavedWindows().length ?? 0,
           this.#manager?.conflictedWindows().length ?? 0,
           (key, ...args) => this.localize.term(key, ...args),
+          this.#manager?.busyWindows().length ?? 0,
         ),
         confirmLabel: this.localize.term('umbraDesktop_reloadConfirm'),
         cancelLabel: this.localize.term('umbraDesktop_reloadLater'),

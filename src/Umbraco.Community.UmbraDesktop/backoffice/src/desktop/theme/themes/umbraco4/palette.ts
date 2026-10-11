@@ -139,6 +139,12 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-titlebar-background': U4_RAISED,
   '--umbradesktop-titlebar-border-bottom': `1px solid ${U4_LINE}`,
   '--umbradesktop-titlebar-text': U4_TEXT,
+  '--umbradesktop-titlebar-progress-fill': '#3d6fa8',
+  '--umbradesktop-titlebar-progress-track': U4_FACE_DIM,
+  '--umbradesktop-titlebar-progress-failed': '#b23a2d',
+  '--umbradesktop-taskbar-progress-fill': '#3d6fa8',
+  '--umbradesktop-taskbar-progress-track': 'transparent',
+  '--umbradesktop-taskbar-progress-failed': '#b23a2d',
   // Like Win98, this theme marks an inactive window by recolouring its header rather than fading
   // it, so the buttons on an inactive window stay as crisp and as clickable as on an active one.
   // Neutralising the base rule here is what lets `window.css.ts` simply state the two treatments.

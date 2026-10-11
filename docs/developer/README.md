@@ -22,9 +22,15 @@ using the desktop, see the [user guide](../user/README.md).
 - [Package catalogues](package-catalogues.md): give your package's own backoffice screens proper
   tiles and launcher groups with a `umbraDesktopCatalogue` manifest, the desktop's published group
   weights, replacing one of its tiles, and what the console tells you.
+- [Package settings](package-settings.md): give your package a row in Desktop settings with a
+  `umbraDesktopPackageSettings` manifest, what your box must do, the per-user store, opening your
+  settings from your own screens or a launcher tile, and what the console tells you.
 - [Attached windows](attached-windows.md): show something beside a document window, the way the live
   preview does. When to use it and when not, how to open one, what your element must do, and what the
   desktop already handles.
+- [Showing work in progress](window-progress.md): report work your app is doing so its window shows
+  progress on its title bar and taskbar button, how the desktop reads Umbraco's own uploads, and how
+  a theme draws it.
 - [Writing documentation](writing-documentation.md): how these docs are structured, the front
   matter and Markdown every page uses, and the writing style.
 - [Help for your add-on](add-on-help.md): ship your package's documentation so it appears in the
@@ -43,9 +49,11 @@ are shaped the way they are. The ones the guides above rest on:
 | Themes | [2026-09-04-theming-system-design.md](../design/2026-09-04-theming-system-design.md) |
 | Desktop apps | [2026-09-06-desktop-apps-design.md](../design/2026-09-06-desktop-apps-design.md) |
 | Package catalogues | [2026-09-25-package-catalogues-design.md](../design/2026-09-25-package-catalogues-design.md) |
+| Package settings: why one row per package below ours, why boxes and not categories, and why the context is global | [2026-10-03-package-settings-design.md](../design/2026-10-03-package-settings-design.md) |
 | Attached windows | [2026-09-27-attached-windows-design.md](../design/2026-09-27-attached-windows-design.md) |
 | Notifications | [2026-09-27-desktop-notifications-design.md](../design/2026-09-27-desktop-notifications-design.md) |
 | Installing the backoffice as an app, the browser behaviour it depends on, and the fixture that proves it | [2026-09-13-web-app-manifest-design.md](../design/2026-09-13-web-app-manifest-design.md) |
 | The site name on the desktop: why a watermark in a corner, why the App name, why the domain comes from the browser | [2026-09-27-desktop-label-design.md](../design/2026-09-27-desktop-label-design.md) |
 | Remote content: how it redirects a backoffice, keeps it read-only, and what that cannot reach | [2026-09-29-remote-content-viewer-design.md](../design/2026-09-29-remote-content-viewer-design.md) |
 | The Help app: why the server lists the files, why several windows, and how a target resolves | [2026-09-30-help-app-design.md](../design/2026-09-30-help-app-design.md) |
+| Busy windows: why progress sits beside `dirty`, how tasks are summed, and why the media placeholders were abandoned | [2026-10-03-window-progress-design.md](../design/2026-10-03-window-progress-design.md) |

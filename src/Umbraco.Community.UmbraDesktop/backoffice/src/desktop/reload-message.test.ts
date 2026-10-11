@@ -49,3 +49,9 @@ it('always ends on the question', () => {
     expect(body.endsWith('umbraDesktop_reloadQuestion')).to.equal(true);
   }
 });
+
+it('says how many windows the reload would stop mid-work', () => {
+  expect(reloadDialogContent(2, 0, 0, term, 1)).to.equal(
+    'umbraDesktop_reloadSaved umbraDesktop_reloadCloses(2) umbraDesktop_exitBusyOne umbraDesktop_reloadQuestion',
+  );
+});

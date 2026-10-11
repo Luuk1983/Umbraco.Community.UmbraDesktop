@@ -28,7 +28,11 @@ is on.
 ![The same desktop in all five themes: Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98, each over the wallpaper it brings.](../../screenshots/theme-gallery.png)
 
 - **Umbraco**. The default, built from Umbraco's own design tokens, so the desktop reads as part of
-  the backoffice rather than bolted on.
+  the backoffice rather than bolted on. The window in front wears the backoffice header: a navy title
+  bar with a white title, and round window buttons. A window you are not
+  working in turns sand and quiet. On the taskbar, a button lights as a rounded tile under the
+  pointer, the window in front keeps its tile lit with a short coral line under it, and a window with
+  its attached windows sits in one tab-shaped box.
 - **Umbraco 4**. The 2009 backoffice as desktop chrome: warm grey gradients, hairline panels,
   buttons that press in, and the old Sections panel as the launcher, with glossy orbs for pinned
   apps.
@@ -51,7 +55,7 @@ Windows 98 ship a single palette on purpose: their grey is the design rather tha
 choice, so they look the same under all three.
 
 To change between Light, Dark and High contrast, see
-[Backoffice colours](backoffice-colours.md).
+[Backoffice theme](backoffice-colours.md).
 
 ## Match the wallpaper to the theme
 

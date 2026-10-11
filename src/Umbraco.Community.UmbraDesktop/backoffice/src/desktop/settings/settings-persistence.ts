@@ -14,6 +14,16 @@ import type {
 /** Where a loaded set of settings came from. */
 export type UmbraDesktopSettingsSource = 'server' | 'cache' | 'defaults';
 
+/**
+ * What the account said when it was asked, apart from where the settings ended up coming from.
+ *
+ * `source` cannot carry this, because it collapses two answers that mean opposite things: an
+ * account that answered with nothing is somebody who has never saved a setting, and an account that
+ * did not answer at all could be anybody. The welcome wizard is shown to the first and never to the
+ * second, since it could not record that the second had finished it (`welcome/detection.ts`).
+ */
+export type UmbraDesktopSettingsAccount = 'present' | 'empty' | 'unreachable';
+
 /** What one load produced. */
 export interface UmbraDesktopSettingsLoad {
   /** The settings to apply. */
@@ -26,6 +36,9 @@ export interface UmbraDesktopSettingsLoad {
    * did not answer, so this session will forget anything changed in it.
    */
   source: UmbraDesktopSettingsSource;
+
+  /** What the account said. See {@link UmbraDesktopSettingsAccount}. */
+  account: UmbraDesktopSettingsAccount;
 }
 
 /** What persistence needs in order to work. */
@@ -84,13 +97,17 @@ export class UmbraDesktopSettingsPersistence {
       // The only branch that writes the cache, because it is the only one holding a value the
       // account actually confirmed.
       this.#sources.cache.write(stored);
-      return { settings: parseSettings(stored), source: 'server' };
+      return { settings: parseSettings(stored), source: 'server', account: 'present' };
     }
 
     // Unreachable, or empty. Either way this browser's copy is the best answer available, and the
     // cache is left exactly as it was: there is nothing confirmed to mirror.
     const cached = this.#sources.cache.read();
-    return { settings: parseSettings(cached), source: cached ? 'cache' : 'defaults' };
+    return {
+      settings: parseSettings(cached),
+      source: cached ? 'cache' : 'defaults',
+      account: stored === null ? 'empty' : 'unreachable',
+    };
   }
 
   /**

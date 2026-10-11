@@ -1,14 +1,15 @@
 /**
  * The Accessories package's settings, and how they are written down. One today, the screensaver,
- * set in the Screen Saver window; the record is kept as a record so a later setting has somewhere
- * to go. They are stored in the signed-in user's account; `settings.source.ts` does the storing.
+ * set in its settings box in Desktop settings; the record is kept as a record so a later setting
+ * has somewhere to go. They are stored in the signed-in user's account by the desktop's package
+ * settings store; `settings.source.ts` reads them from it.
  *
- * Pure functions over strings, with no storage and no DOM, for the reason the host's own
+ * Pure functions over strings and decoded values, with no storage and no DOM, for the reason the host's own
  * `settings-store.ts` gives: the fallback for every kind of unreadable payload is then a table a test
  * can walk, rather than something only a broken browser profile would ever exercise.
  */
 
-/** The screensavers on offer, by id. The order is the order the Screen Saver window lists them in. */
+/** The screensavers on offer, by id. The order is the order the screensaver's settings list them in. */
 export const UMBRADESKTOP_SCREENSAVERS = ['starfield', 'mystify', 'flying'] as const;
 
 /** One screensaver's id. */
@@ -27,7 +28,10 @@ export interface AccessoriesScreensaverSettings {
   enabled: boolean;
   /** Which one. */
   saver: AccessoriesScreensaverId;
-  /** How long the desktop must be left alone first, in minutes: one of {@link UMBRADESKTOP_SCREENSAVER_WAIT_CHOICES}. */
+  /**
+   * How long the desktop must be left alone first, in minutes: one of
+   * {@link UMBRADESKTOP_SCREENSAVER_WAIT_CHOICES}.
+   */
   waitMinutes: number;
 }
 
@@ -65,11 +69,20 @@ export function parseSettings(raw: string | null): AccessoriesSettings {
   } catch {
     return UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS;
   }
+  return parseSettingsValue(decoded);
+}
+
+/**
+ * Read settings the desktop's store has already decoded from JSON. Field by field, so one bad value
+ * costs only itself, and anything that is not an object is the default. {@link parseSettings} ends
+ * here too, so a stored string and a decoded value cannot come to be read differently.
+ * @param decoded The decoded value, or undefined when nothing is stored.
+ * @returns Settings that are always usable.
+ */
+export function parseSettingsValue(decoded: unknown): AccessoriesSettings {
   if (typeof decoded !== 'object' || decoded === null) return UMBRADESKTOP_ACCESSORIES_DEFAULT_SETTINGS;
   const { screensaver } = decoded as { screensaver?: unknown };
-  return {
-    screensaver: parseScreensaver(screensaver),
-  };
+  return { screensaver: parseScreensaver(screensaver) };
 }
 
 /**
@@ -90,13 +103,4 @@ function parseScreensaver(value: unknown): AccessoriesScreensaverSettings {
       ? (waitMinutes as number)
       : fallback.waitMinutes,
   };
-}
-
-/**
- * Write settings for storage.
- * @param settings The settings.
- * @returns The string to store.
- */
-export function serializeSettings(settings: AccessoriesSettings): string {
-  return JSON.stringify(settings);
 }

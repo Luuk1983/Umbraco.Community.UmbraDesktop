@@ -72,6 +72,13 @@ export const UMBRADESKTOP_RING_STROKE_PX = 2;
  */
 export const UMBRADESKTOP_MARK_SIZE_AT_VIEWBOX = 72;
 
+/**
+ * How strongly the ring's track shows under its arc: the arc's own colour, faint. Named because the
+ * progress ring round a busy window's icon draws the same track, and a ring that is merely close to
+ * the loader's reads as a mistake rather than as the same thing.
+ */
+export const UMBRADESKTOP_RING_TRACK_OPACITY = 0.16;
+
 /** How long the arc takes to come round. Read by both callers' keyframes. */
 export const UMBRADESKTOP_RING_SPIN_MS = 1150;
 
@@ -88,6 +95,13 @@ export const UMBRADESKTOP_SPLASH_RING_SIZE = UMBRADESKTOP_RING_VIEWBOX;
  */
 export const UMBRADESKTOP_WINDOW_RING_SIZE = 64;
 
+/**
+ * How much of the ring the turning arc covers: a quarter. Named because a second drawing reads it,
+ * the indeterminate progress ring round a busy window's icon (`progress/progress-view.ts`), and that
+ * one has to turn with the same arc as this one or the two read as almost-the-same animations.
+ */
+export const UMBRADESKTOP_RING_ARC = 0.25;
+
 /** The ring's full circumference, in viewBox units. The number every arc length derives from. */
 const RING_CIRCUMFERENCE = 2 * Math.PI * UMBRADESKTOP_RING_RADIUS;
 
@@ -103,7 +117,7 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * UMBRADESKTOP_RING_RADIUS;
  * Needs no per-size compensation, unlike the stroke: a dash pattern is measured in user units, so
  * it scales with the circle it is drawn on and stays a quarter at any rendered size.
  */
-export const UMBRADESKTOP_RING_DASHARRAY = `${(RING_CIRCUMFERENCE / 4).toFixed(3)} ${RING_CIRCUMFERENCE.toFixed(3)}`;
+export const UMBRADESKTOP_RING_DASHARRAY = `${(RING_CIRCUMFERENCE * UMBRADESKTOP_RING_ARC).toFixed(3)} ${RING_CIRCUMFERENCE.toFixed(3)}`;
 
 /**
  * The `stroke-width`, in viewBox units, that paints {@link UMBRADESKTOP_RING_STROKE_PX} at a given

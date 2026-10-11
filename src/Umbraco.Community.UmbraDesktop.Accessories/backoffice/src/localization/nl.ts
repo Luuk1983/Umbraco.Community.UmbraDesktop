@@ -86,7 +86,7 @@ export default {
     screensaverMinutes: 'minuten',
     screensaverAbout: 'Start als het bureaublad zo lang niet is gebruikt. Een toets, een klik of een echte beweging van de muis brengt het terug.',
     screensaverUnsaved: 'Je keuze is nog niet in je account opgeslagen. Hij geldt hier wel, en wordt opgeslagen bij je volgende wijziging.',
-    screensaverUnread: 'Je opgeslagen keuze kon niet worden gelezen, dus dit is de standaard. Open dit venster opnieuw om het nog eens te proberen.',
+    screensaverUnread: 'Je opgeslagen keuze kon niet worden gelezen, dus dit is de standaard. Sluit de bureaubladinstellingen en open ze opnieuw om het nog eens te proberen.',
     calculatorAdd: 'Plus',
     calculatorSubtract: 'Min',
     calculatorMultiply: 'Vermenigvuldigen met',

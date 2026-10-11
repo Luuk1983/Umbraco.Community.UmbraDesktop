@@ -5,8 +5,8 @@ import type { UmbraDesktopPalette } from './types';
  *
  * Emitted as one string, and applied by replacing the whole attribute, so that switching to a
  * theme which does not set a token clears the previous theme's value instead of leaving it
- * stranded. An empty palette therefore renders an empty string, which is exactly what the Umbraco
- * identity theme needs.
+ * stranded. An empty palette therefore renders an empty string, which is what a theme that is only
+ * stylesheets needs (the Umbraco theme was one until it grew a palette of its own).
  * @param palette The palette to render.
  * @returns The declarations, or an empty string when the palette sets nothing.
  */

@@ -3,6 +3,14 @@ import type { UmbraDesktopRegisteredApp } from './types';
 import { UMBRADESKTOP_DEFAULT_ICON } from './constants';
 import { isBoolean, isFiniteNumber, isNonEmptyString, isRecord, isSize } from './manifest-values';
 
+/**
+ * The element an app that only opens settings is given, since the type wants one. Never loaded:
+ * the window manager's `open` opens settings before any window exists, and the layout restorer
+ * skips a saved window whose app opens settings, so nothing mounts an app host around it. One
+ * constant, so its identity is stable across recomputes, which the app host relies on.
+ */
+const SETTINGS_SHORTCUT_ELEMENT = () => Promise.reject(new Error('This app opens Desktop settings, never a window.'));
+
 /** One manifest this pass refused, and what was wrong with it. */
 export interface UmbraDesktopDroppedApp {
   /** The manifest alias, so the report can name the package's own app. */
@@ -52,15 +60,16 @@ export interface UmbraDesktopNormalisedApps {
  * identity, derivation re-runs on every registry emission, and a wrapper minted here would hand
  * the host a fresh function each time and restart every open game.
  *
- * A manifest with no `element` at all is dropped rather than passed on: it would reach the launcher
- * as a tile that opens a window with nothing in it, which is worse than not being there. That is a
- * package's bug, and it used to be dropped in silence on the grounds that it is not worth a user's
- * attention. True, and beside the point: the person it *is* worth something to is the author, whose
- * app simply never appears with nothing anywhere saying the desktop saw the manifest and refused
- * it. So the drop is now reported alongside the apps and the caller turns it into a dev-facing
- * diagnostic. Reported rather than logged, because this function is pure and worth keeping that
- * way: it is the piece that can be tested by calling it, and a `console` in here would make every
- * caller's test a test of the console too.
+ * A manifest with no `element` at all, and no `meta.opensSettings` to stand in for one (an app that
+ * only opens Desktop settings has no window to fill), is dropped rather than passed on: it would
+ * reach the launcher as a tile that opens a window with nothing in it, which is worse than not
+ * being there. That is a package's bug, and it used to be dropped in silence on the grounds that
+ * it is not worth a user's attention. True, and beside the point: the person it *is* worth
+ * something to is the author, whose app simply never appears with nothing anywhere saying the
+ * desktop saw the manifest and refused it. So the drop is now reported alongside the apps and the
+ * caller turns it into a dev-facing diagnostic. Reported rather than logged, because this function
+ * is pure and worth keeping that way: it is the piece that can be tested by calling it, and a
+ * `console` in here would make every caller's test a test of the console too.
  *
  * That reason is worded two ways, and the second one exists because of `js`. `ManifestElement`
  * declares `js?` next to `element?`, Umbraco's own `createExtensionElement` resolves
@@ -90,19 +99,6 @@ export function normaliseRegisteredApps(
   const dropped: UmbraDesktopDroppedApp[] = [];
   const ignored: UmbraDesktopIgnoredField[] = [];
   for (const manifest of manifests) {
-    // Falsiness is the whole test, and deliberately not a shape test: every arm of the union is
-    // legal, so the only thing that genuinely cannot yield an element is a nullish value or the
-    // empty string (a path to nothing). Anything truthy is somebody's intent, and getting it wrong
-    // is a failure the app host reports in the window rather than one to guess at here.
-    if (!manifest.element) {
-      dropped.push({
-        alias: manifest.alias,
-        reason: manifest.js
-          ? 'its manifest has no "element" to load: it points at a module through "js", which the desktop does not read. Rename that field to "element"'
-          : 'its manifest has no "element" to load, so its window would open empty',
-      });
-      continue;
-    }
     const meta: Record<string, unknown> = isRecord(manifest.meta) ? manifest.meta : {};
     /**
      * One optional field: its value when valid, otherwise `undefined`, reported when it was present.
@@ -117,6 +113,22 @@ export function normaliseRegisteredApps(
       ignored.push({ alias: manifest.alias, field });
       return undefined;
     };
+    // Trimmed, like the panel trims `meta.package` when it matches a package by name.
+    const opensSettings = read(meta.opensSettings, isNonEmptyString, 'meta.opensSettings')?.trim();
+    // Falsiness is the whole test, and deliberately not a shape test: every arm of the union is
+    // legal, so the only thing that genuinely cannot yield an element is a nullish value or the
+    // empty string (a path to nothing). Anything truthy is somebody's intent, and getting it wrong
+    // is a failure the app host reports in the window rather than one to guess at here.
+    // An app that only opens settings has no window, so it needs no element (design §6).
+    if (!manifest.element && !opensSettings) {
+      dropped.push({
+        alias: manifest.alias,
+        reason: manifest.js
+          ? 'its manifest has no "element" to load: it points at a module through "js", which the desktop does not read. Rename that field to "element"'
+          : 'its manifest has no "element" to load, so its window would open empty',
+      });
+      continue;
+    }
     const weight = read(manifest.weight, isFiniteNumber, 'weight');
     apps.push({
       alias: manifest.alias,
@@ -124,7 +136,7 @@ export function normaliseRegisteredApps(
         read(meta.label, isNonEmptyString, 'meta.label') ??
         (isNonEmptyString(manifest.name) ? manifest.name : String(manifest.alias)),
       icon: read(meta.icon, isNonEmptyString, 'meta.icon') ?? UMBRADESKTOP_DEFAULT_ICON,
-      element: manifest.element,
+      element: manifest.element || SETTINGS_SHORTCUT_ELEMENT,
       group: read(meta.group, isNonEmptyString, 'meta.group'),
       // Negated, because the two scales run opposite ways and an author only ever sees one of them.
       // A manifest's root `weight` is Umbraco's, and Umbraco sorts extensions descending
@@ -143,6 +155,7 @@ export function normaliseRegisteredApps(
       minSize: read(meta.minSize, isSize, 'meta.minSize'),
       allowMultiple: read(meta.allowMultiple, isBoolean, 'meta.allowMultiple'),
       resizable: read(meta.resizable, isBoolean, 'meta.resizable'),
+      opensSettings,
     });
   }
   return { apps, dropped, ignored };

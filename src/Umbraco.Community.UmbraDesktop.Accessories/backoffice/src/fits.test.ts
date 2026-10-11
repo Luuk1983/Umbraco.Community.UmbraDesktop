@@ -26,14 +26,13 @@ import './system-info/system-info.element.js';
  * layout.
  */
 
-/** Each app's tag, by its manifest `name`. */
+/** Each window app's tag, by its manifest `name`. The Screen Saver tile opens settings, not a window, so it has none. */
 const TAGS: Record<string, string> = {
   Notepad: 'umbradesktop-notepad',
   Paint: 'umbradesktop-paint',
   Calculator: 'umbradesktop-calculator',
   Clock: 'umbradesktop-clock',
   StickyNotes: 'umbradesktop-sticky-notes',
-  ScreenSaver: 'umbradesktop-screensaver-panel',
   CharacterMap: 'umbradesktop-character-map',
   DiskCleanup: 'umbradesktop-disk-cleanup',
   SystemInfo: 'umbradesktop-system-info',
@@ -48,7 +47,9 @@ interface App {
   meta: Record<'defaultSize' | 'minSize', { w: number; h: number }>;
 }
 
-const apps = manifests.filter((manifest) => manifest.type === 'umbraDesktopApp') as unknown as App[];
+const apps = (manifests.filter((manifest) => manifest.type === 'umbraDesktopApp') as unknown as App[]).filter(
+  (app) => app.name in TAGS,
+);
 
 /**
  * How long the page's first painted frame may take. Measured 2026-10-03: the first frame that has
@@ -94,4 +95,24 @@ for (const app of apps) {
       });
     }
   }
+}
+
+/**
+ * The Screen Saver's settings box is not a window, so it has no declared sizes to measure against.
+ * What it must do is fit a box in Desktop settings, which is about 360px wide at the narrowest and
+ * pads its content, so it is measured in 300px of inner width, under every theme and none: nothing
+ * may overflow sideways, and the host's box grows to the height.
+ */
+for (const theme of THEMES) {
+  it(`the Screen Saver settings fit a 300px column under ${theme ?? 'no theme'}`, async () => {
+    const body = await fixture<HTMLDivElement>(
+      html`<div style="display: flex; flex-direction: column; width: 300px"></div>`,
+    );
+    const element = document.createElement('umbradesktop-screensaver-panel') as HTMLElement & { updateComplete: Promise<unknown> };
+    if (theme) element.setAttribute('data-umbradesktop-theme', theme);
+    body.appendChild(element);
+    await element.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(element.scrollWidth, 'rendered width').to.be.at.most(300);
+  });
 }

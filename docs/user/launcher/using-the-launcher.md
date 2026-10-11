@@ -11,6 +11,7 @@ The launcher is where apps are opened.
 
 - To open the launcher, select the launcher button on the taskbar.
 - To open an app, select its tile. It opens in a window.
+- To see an app's full name, point at its tile. A name too long for the tile ends in an ellipsis.
 
 ![The launcher: a search box, a Pinned row at the top, and every other app grouped by what it does.](../../screenshots/launcher.png)
 

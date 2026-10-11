@@ -451,6 +451,7 @@ export class UmbraDesktopArrangeController {
         tabindex="0"
         role="group"
         aria-label=${name}
+        title=${name}
         data-drop="tile"
         data-group=${groupId}
         data-alias=${app.alias}

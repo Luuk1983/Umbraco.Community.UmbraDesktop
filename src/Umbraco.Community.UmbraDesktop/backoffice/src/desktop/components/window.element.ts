@@ -3,6 +3,10 @@ import type { UmbraDesktopResizeEdges } from '../window-model';
 import { clampResizeOrigin, clampWindowPosition, isResizable, resizeRect, restoreDragPosition } from '../window-model';
 import { injectChromeStyles } from '../chrome-injector';
 import { watchWorkspaceDirtyState } from '../dirty-watcher.js';
+import { watchFrameUploads } from '../progress/upload-watcher.js';
+import { progressCaption } from '../progress/progress.js';
+import type { UmbraDesktopTask } from '../progress/progress.js';
+import { UMBRADESKTOP_PROGRESS_TRACK_DEFAULT, progressStyles, renderProgress } from '../progress/progress-view.js';
 import { watchNotifications } from '../notifications/notification-watcher.js';
 import { UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT } from '../notifications/notification-centre.context-token.js';
 import type { UmbraDesktopNotificationCentreContext } from '../notifications/notification-centre.context.js';
@@ -20,6 +24,7 @@ import {
   UMBRADESKTOP_WINDOW_MIN_SIZE,
   UMBRADESKTOP_PATH_HEIGHT,
   UMBRADESKTOP_OPEN_HELP_EVENT,
+  UMBRADESKTOP_CHROME_ICON_PX,
 } from '../constants';
 import { minWindowSizeForContent } from '../window-chrome.js';
 import { buildCrumbs, windowShowsPath } from '../path/crumbs.js';
@@ -207,6 +212,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    */
   #stopPathWatch?: () => void;
 
+  /**
+   * Stops the current frame's media upload watcher. Replaced and released on the same occasions as
+   * {@link #stopDirtyWatch}, for the same reason. Issue #108.
+   */
+  #stopUploadWatch?: () => void;
+
   /** Stops following the frame's router for the window layout; see `#startLocationWatch`. */
   #stopLocationWatch?: () => void;
 
@@ -294,6 +305,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     super.disconnectedCallback();
     this.#stopDirtyWatch?.();
     this.#stopDirtyWatch = undefined;
+    this.#stopUploadWatch?.();
+    this.#stopUploadWatch = undefined;
     this.#stopPathWatch?.();
     this.#stopPathWatch = undefined;
     this.#stopLocationWatch?.();
@@ -567,12 +580,29 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (id) this.#manager?.setDirty(id, event.detail.dirty);
   };
 
+  /**
+   * A registered app's work, as its host collected it from the app's `umbradesktop-task` events.
+   * The app-window half of the frame's upload watch, landing on the same `setTasks` under its own
+   * source, so the manager sums the two rather than one overwriting the other. Issue #108 D5.
+   * @param event The host's report.
+   */
+  #onAppTasks = (event: CustomEvent<{ tasks: ReadonlyArray<UmbraDesktopTask> }>) => {
+    const id = this.window?.id;
+    if (id) this.#manager?.setTasks(id, 'app', event.detail.tasks);
+  };
+
   #startDirtyWatch(iframe: HTMLIFrameElement) {
     this.#stopDirtyWatch?.();
     this.#stopDirtyWatch = undefined;
+    this.#stopUploadWatch?.();
+    this.#stopUploadWatch = undefined;
     const id = this.window?.id;
     const doc = iframe.contentDocument;
     if (!id || !doc) return;
+    // A reload replaces the document and every upload in it, so whatever the old frame reported is
+    // over: cleared here rather than left for a watcher that will never hear from that frame again.
+    this.#manager?.setTasks(id, 'frame', []);
+    this.#stopUploadWatch = watchFrameUploads(doc, (tasks) => this.#manager?.setTasks(id, 'frame', tasks));
     this.#manager?.setDirty(id, false);
     // Subjects cleared too, not left standing. A reload replaces the frame's document, so the
     // previous subjects' getters close over a dead realm, and between the reload starting and the
@@ -1150,6 +1180,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         .props=${w.app.content.props}
         .load=${w.app.content.element}
         @umbradesktop-app-dirty=${this.#onAppDirty}
+        @umbradesktop-app-tasks=${this.#onAppTasks}
         @umbradesktop-app-location=${this.#onAppLocation}></umbradesktop-app-host>`;
       // Keyed only for attached content, whose reload is a remount: it fetches what it shows when it
       // connects. An ordinary element app keeps the plain commit this method's doc argues for, and a
@@ -1404,7 +1435,19 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
           @pointercancel=${this.#onTitlePointerCancel}
           @dblclick=${this.#onTitleDblClick}>
           <span class="title">
-            <umb-icon class="app-icon" name=${w.app.icon}></umb-icon>
+            <!-- The icon in an anchor, because the progress ring is drawn round it. A theme that
+                 draws progress elsewhere makes the anchor static. Issue #108 D6. -->
+            <span class="progress-anchor">
+              <umb-icon class="app-icon" name=${w.app.icon}></umb-icon>
+              ${renderProgress(
+                w.progress,
+                progressCaption(
+                  w.progress,
+                  (key, ...args) => this.localize.term(key, ...args),
+                  (value) => this.localize.string(value),
+                ),
+              )}
+            </span>
             <span class="title-text">${this.localize.string(w.app.name)}</span>
             ${(() => {
               const notices = windowNotices(w);
@@ -1548,7 +1591,15 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   }
 
   static override styles = [
+    progressStyles,
     css`
+      /* The title bar's colours for the progress ring, from its own tokens: the ring sits on the
+         caption, so it takes the caption's ground into account, as the taskbar's does the bar's. */
+      .titlebar .progress {
+        --_progress-fill: var(--umbradesktop-titlebar-progress-fill, var(--uui-color-interactive-emphasis, #3544b1));
+        --_progress-track: var(--umbradesktop-titlebar-progress-track, ${UMBRADESKTOP_PROGRESS_TRACK_DEFAULT});
+        --_progress-failed: var(--umbradesktop-titlebar-progress-failed, var(--uui-color-danger, #d42054));
+      }
       .frame {
         position: absolute;
         display: flex;
@@ -1633,7 +1684,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
          the app icon, because a macOS titlebar shows no icon at all, and a marker sharing that
          selector would be invisible in that theme. Every theme's rule was renamed with this one. */
       .title .app-icon {
-        font-size: 18px;
+        font-size: ${UMBRADESKTOP_CHROME_ICON_PX}px;
         /* The icon is the app's identity and is the same 18px at every width: the text beside it
            is what yields. */
         flex: 0 0 auto;

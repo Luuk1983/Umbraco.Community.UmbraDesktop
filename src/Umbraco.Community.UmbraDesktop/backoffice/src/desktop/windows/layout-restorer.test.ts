@@ -108,6 +108,31 @@ it('drops a window whose app never arrives, and still restores the rest', async 
 });
 
 /**
+ * An update can turn an app into a shortcut to Desktop settings (the Screen Saver did), and a layout
+ * saved before that still names it. Restoring it would open a window around an element that is never
+ * loaded, so it is skipped, and settings are not opened on boot either: nobody asked for them.
+ */
+it('skips a saved window whose app now opens settings, without waiting for it or opening a window', async () => {
+  const shortcut: UmbraDesktopApp = { ...app('saver'), opensSettings: 'My Package' };
+  const layout: UmbraDesktopWindowLayout = {
+    version: 1,
+    windows: [
+      ...LAYOUT.windows,
+      { app: 'saver', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 9, active: true },
+    ],
+  };
+  const { restorer, saves, windows } = setup({ layout, apps: [CONTENT, MEDIA, shortcut] });
+  const began = performance.now();
+  await restorer.start();
+  expect(performance.now() - began, 'settled at once, not at the 150ms deadline').to.be.lessThan(100);
+  expect(windows().map((w) => w.app.alias)).to.deep.equal(['content', 'media']);
+  expect(saves[0].windows.map((w) => w.app), 'forgotten, so the next load has nothing to skip').to.deep.equal([
+    'content',
+    'media',
+  ]);
+});
+
+/**
  * The restore is saved the moment it finishes, not at the next change. That is what forgets a
  * window whose app never came, so the next load does not wait for it all over again, and what gives
  * a tab seeded from the copy kept between visits a working copy of its own.

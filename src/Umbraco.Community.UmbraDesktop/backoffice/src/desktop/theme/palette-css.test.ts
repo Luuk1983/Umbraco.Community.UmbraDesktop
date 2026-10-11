@@ -10,7 +10,7 @@ it('renders each token as a declaration', () => {
   ).to.equal('--umbradesktop-window-radius:10px;--umbradesktop-taskbar-height:44px;');
 });
 
-it('renders an empty palette as an empty string, so the identity theme sets nothing', () => {
+it('renders an empty palette as an empty string, so a theme with no palette sets nothing', () => {
   expect(paletteCss({})).to.equal('');
 });
 
