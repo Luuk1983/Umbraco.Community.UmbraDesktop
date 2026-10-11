@@ -303,6 +303,7 @@ prefix is for:
 | `strip-button-*` | The toolbar buttons in those strips: the path strip's Preview, the pane header's controls and a floating attached window's Dock. Corner radius, the hover fill, text and shadow, and the pressed fill, text and shadow. Separate from a crumb's hover, because a crumb is a link and these are buttons: Windows 98 hovers a crumb in navy and raises a button. A theme that styles the path strip must set the pressed pair, or it gets Umbraco's own "you are here" pink |
 | `dock-zone-*` | The zones inside an owner window where a dragged attached window can dock: border, radius, fill and label colours, and an `active` border, fill and label for the zone under the pointer. Keep the active one strong: it is drawn over a window, often a white one |
 | `task-group-*` | The box on the taskbar around a window's button and its floating attached windows' buttons: gap, padding, border, radius and background |
+| `tray-*` | The system tray at the trailing end of the bar, which holds the tray items and then the clock: `tray-gap`, the space between them. Anything your theme draws around the tray, a well, a push to the edge or a separator, goes on a `.tray` rule in your sheet and never on `.clock`, or the items land outside it. With nothing in it but the clock, the tray has to be the box the clock alone would be. `components/taskbar-tray.test.ts` measures that for the Umbraco theme, and each other shipped theme's `taskbar.test.ts` for its own. Items are centred on the bar, and the clock stretches to the tray's full height. A tray item's flyout should open in the top layer (the popover API or a dialog), since a theme may make the tray a stacking context, as Windows 11 does |
 | `toasts-*`, `toast-*` | The desktop's notifications ([design](design/2026-09-27-desktop-notifications-design.md)). `toasts-*` places the stack: its `top`, `right`, `bottom` and `left` offsets and its flex `direction`. The default hangs it above the taskbar at the trailing edge and grows it upwards; macOS sets `top`, clears `bottom` to `auto` and turns the direction to `column`, which is all a theme with its bar or a menu bar at the top needs. `toast-*` is one toast's surface: width, background, backdrop, text, border, radius and shadow, each falling back to the matching `launcher-*` token, so a theme that styled its launcher has styled its toasts. `toast-positive-color` is the success edge; the other severities read the `notice-*` colours |
 | `scrollback-*` | The list behind the clock. It is drawn on the `launcher-*` surface outright, so it has only its gap above the bar (`scrollback-bottom`), its radius, and `scrollback-hover-text` for a theme whose launcher hover fill is a selection bar that needs its own text colour, as Windows 98's navy does. There is no horizontal token: the list hangs from wherever your theme puts the clock, measured, so a dock that carries its clock mid-screen needs nothing. The toasts stand aside while it is open |
 | `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent with the text that reads on it, and the UI font |
@@ -682,10 +683,10 @@ divider does the grouping.
 Two traps if you draw the divider, and the macOS dock walked into both.
 
 **Your theme probably already has a separator, and the two have to match.** The dock's rule before
-the clock is a `border-left`, and the base leaves the clock an inline item sized by its own text, so
-that border came out about 13px tall next to a 42px divider three buttons away. Two rules of
-different heights on one bar read as a rendering fault. Both now take their height from one
-constant, and `theme/themes/macos/taskbar.test.ts` measures the clock's.
+the tray is a `border-left`. It was the clock's, and the base leaves the clock an inline item sized
+by its own text, so that border came out about 13px tall next to a 42px divider three buttons away.
+Two rules of different heights on one bar read as a rendering fault. Both now take their height from
+one constant, and `theme/themes/macos/taskbar.test.ts` measures the tray's.
 
 **Size it to the icons, not to the buttons.** Matching them at the *tile's* height was the first fix
 and it made the dock a row of boxes: the tile is 42px and the glyph inside it is 24px, so a rule

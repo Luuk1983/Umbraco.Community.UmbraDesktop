@@ -16,10 +16,11 @@ It also does something the backoffice does not do at all. When two people have t
 
 ![The UmbraDesktop desktop: several backoffice sections open at once as separate, overlapping windows. The taskbar along the bottom carries a titled button for each of them, and beside the launcher button a row of icons for the pinned apps.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/desktop-windows.png)
 
-> **New: games on the desktop.** [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment)
-> is an optional add-on that puts Minesweeper and Snake in the launcher's Games group, each in a window of its own
-> and themed along with everything else. Install it if you want it; the desktop is unchanged
-> without it. See [Games](#games).
+> **New: games and umbraCoffee on the desktop.** [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment)
+> is an optional add-on that puts Minesweeper and Snake in the launcher's Games group, and umbraCoffee,
+> the community's monthly live show, in its Media group, each in a window of its own and themed along
+> with everything else. A coffee cup by the clock tells you when the next episode is about to start.
+> Install it if you want it; the desktop is unchanged without it. See [Games and media](#games-and-media).
 
 ## Features
 
@@ -30,7 +31,7 @@ It also does something the backoffice does not do at all. When two people have t
 - Never loses your work. A window holding unsaved changes shows a dot in its title bar and on its taskbar button, and closing it, reloading it or leaving the desktop asks first, in the same words the backoffice uses everywhere else. Leaving the desktop asks once and says how many windows are unsaved.
 - Warns before you overwrite someone. If somebody else saves or bins a document while you have it open with unsaved changes, the window says so, in its own chrome, on its taskbar button and in every dialog that could throw your work away. Deletion is warned about even when you have nothing unsaved, because there is no version left to refresh to. The plain backoffice does not warn about this at all.
 - See the page while you edit it. Press Preview in a document window's path and the rendered page opens beside the editor, inside the same window, and reloads every time you save. It works for headless sites too, using the same preview URL as Save and preview. Pop it out into a window of its own and it stays grouped with its document on the taskbar. See [Live preview](#live-preview).
-- A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus any heading a package brings along, such as the Entertainment add-on's Games. Empty groups never show.
+- A launcher that stays out of the way. Apps are grouped into Editing, Workflow, Marketing and sales, Development, Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System, so you find things by what they do, plus any heading a package brings along, such as the Entertainment add-on's Games and Media. Empty groups never show.
 - Knows the commercial packages. Forms, Deploy, Workflow, Commerce, Engage, UI Builder, Automate and Umbraco AI each get proper apps with the right name, icon, group and window chrome, instead of a generic tile in More. Nothing to configure: an app appears only if you have that package.
 - Umbraco AI, if you have it. The Copilot Workspace opens as a window, so the chat sits beside the pages it is about instead of replacing them. The agent can put a document, a media item or any of the desktop's apps on your desk in its own window, and it can read what you already have open, including which windows hold unsaved changes. Needs Umbraco AI 17.4 or later, and nothing appears without it. See [Umbraco AI](#umbraco-ai).
 - Pin what you use. Pin your regulars and they sit at the top of the launcher, under Pinned, and on the taskbar as icons. One pin, one gesture, shown in two places. Your pins are stored on your Umbraco account, so they follow you to any browser you sign in on.
@@ -47,7 +48,8 @@ It also does something the backoffice does not do at all. When two people have t
 - Your desk follows you. Wallpaper, theme, pins, taskbar switches and language are stored on your Umbraco account rather than in one browser, so signing in from another machine, another browser or a private window gives you the desktop you set up, and clearing site data does not lose it. Settings you already had are moved across once, the first time you open the desktop after updating, behind a screen that tells you it is happening rather than doing it behind your back. See [Your settings follow you](#your-settings-follow-you).
 - Room for apps that are not the backoffice. Any package can register a self-contained app: its own element in a window, with no section and no URL behind it, themed along with the rest of the desktop so it looks native under whichever theme you picked. That is how games and small tools reach the desktop, and it takes no change to this package. See [Custom and third-party apps](#custom-and-third-party-apps).
 - Tiles your packages bring themselves. A package with backoffice screens of its own can give them proper tiles, the right window and a heading of its own in the launcher, from its own release. A package that reuses the alias of the desktop's own tile for them replaces it, pins included, so the package that owns the screens decides how they open. See [Custom and third-party apps](#custom-and-third-party-apps).
-- Games, if you want them. The optional Entertainment add-on above is the first thing to use that app seam, and it uses no other route in, so its source is the worked example for putting an app of your own on the desktop. See [Games](#games).
+- An icon of your own beside the clock. A package can put an icon in the taskbar's system tray to report on something, such as the Entertainment add-on's umbraCoffee cup, and raise notifications with buttons on them. Each icon gets its own switch in Desktop settings, Taskbar, and none can push in nearer the clock than the ones already there. See [Custom and third-party apps](#custom-and-third-party-apps).
+- Games and umbraCoffee, if you want them. The optional Entertainment add-on above is the first thing to use the app and tray seams, and it uses no other route in, so its source is the worked example for putting an app or a tray icon of your own on the desktop. See [Games and media](#games-and-media).
 - See what Umbraco is doing when you aren't. Background Jobs lists every scheduled job the CMS runs behind your site: publishing, webhooks, cleanups, and any a package added, with how often each runs, when it last ran, how that went and when it is due next. Umbraco shows this nowhere else.
 - Install it as an app. The backoffice declares a web app manifest, so your browser can install or pin it. It opens straight on the desktop in its own window, with no address bar and no tabs, and carries your site's own name and icon rather than a generic browser tile. Both are settings, so an agency running ten sites gets ten distinguishable apps. See [Installing the backoffice as an app](#installing-the-backoffice-as-an-app).
 - Know which site you are on. Switch it on and the site's name is written large in a corner of the desktop, behind the windows, with the domain under it if you like. Local, staging and production otherwise look identical, and a full-screen desktop or an installed app shows no address bar at all. See [Showing the site's name on the desktop](#showing-the-sites-name-on-the-desktop).
@@ -78,7 +80,7 @@ That single grant does two things: it makes the desktop reachable, and it reveal
 
 UmbraDesktop grants no access of its own. Every app that opens a piece of the backoffice is gated on the section it comes from, so a user only ever sees apps for sections they could already reach. Give an editor access to Content and Media and those are the apps they get.
 
-The exception is a self-contained app registered by a package, which has no backing section to be permitted to and so is gated by nothing beyond its own manifest conditions and reaching the desktop at all. Minesweeper and Snake are two: everyone who can open the desktop can open them. An app of that kind holds no backoffice data, so there is nothing behind it to leak; if you need one restricted, the condition belongs on its own manifest.
+The exception is a self-contained app registered by a package, which has no backing section to be permitted to and so is gated by nothing beyond its own manifest conditions and reaching the desktop at all. Minesweeper, Snake and umbraCoffee are three: everyone who can open the desktop can open them. An app of that kind holds no backoffice data, so there is nothing behind it to leak; if you need one restricted, the condition belongs on its own manifest.
 
 ## How to use it
 
@@ -305,6 +307,13 @@ also marks each open window with a small bar under its icon, grey for open and i
 the one you are in. So on those themes a bare icon launches something and a marked one is already
 open.
 
+The other end of the bar is the system tray: the clock, and beside it any icons that packages put
+there, such as the Entertainment add-on's umbraCoffee cup. A tray icon reports on something rather
+than launching it, and it shows only while it has something to say. The newest sits furthest from
+the clock, so an icon you are used to does not move when another turns up. Each one gets its own
+switch in Desktop settings, Taskbar, under System tray icons, and that heading appears only once a
+package has put an icon there.
+
 ## Notifications
 
 Umbraco raises a notification in the backoffice it happened in, and every window on the desktop is a
@@ -318,7 +327,9 @@ window is shown once, on the desktop, and not inside the window.
   one the sender asked to keep stays until you close it. Point at it to hold it while you read.
 - **Click it to go there.** Clicking a notification brings forward the window that raised it, and
   restores it if it was minimised. An error that carries buttons of its own, such as Full Error
-  Message, is shown again inside its window, where those buttons work.
+  Message, is shown again inside its window, where those buttons work. A notification the desktop
+  raises itself, such as an umbraCoffee reminder, has its buttons right on the desktop's own
+  notification.
 - **The clock remembers.** Click the clock for the last twenty, newest first, each with the window
   that raised it, how many times and when it last did. A repeat updates its line rather than taking
   a new one, so one noisy message cannot push the others out.
@@ -564,9 +575,9 @@ It is white with a dark edge around the letters, so it reads on any wallpaper, d
 
 If you copy databases between environments, set the name in configuration. The switches, and a name set in the backoffice, live in the database, so a copy carries them along: copy staging to production and production says Staging. `AppName` in `appsettings.json` stays with each environment, as [Setting them from configuration instead](#setting-them-from-configuration-instead) describes. The domain line cannot be wrong, because it comes from the browser.
 
-## Games
+## Games and media
 
-Minesweeper and Snake, each in a window, under whichever theme you picked. They ship in their own package rather than this one, because a desktop and a minesweeper are not the same product and nobody should have to take the second to get the first:
+Minesweeper and Snake, each in a window, under whichever theme you picked, and umbraCoffee, the community's monthly live show. They ship in their own package rather than this one, because a desktop and a minesweeper are not the same product and nobody should have to take the second to get the first:
 
 ```bash
 dotnet add package Umbraco.Community.UmbraDesktop.Entertainment
@@ -576,11 +587,13 @@ dotnet add package Umbraco.Community.UmbraDesktop.Entertainment
 
 ![Snake open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with its score, New game button and best score above the board, and the launcher open down to its Games group, which lists Minesweeper and Snake.](https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-snake.png)
 
-That is the whole installation. There is no section to grant and no dashboard to enable: the games appear in a Games group in the launcher for anyone who can already reach the desktop, and the group is not there at all if the package is not installed.
+That is the whole installation. There is no section to grant and no dashboard to enable: the games appear in a Games group in the launcher for anyone who can already reach the desktop, umbraCoffee in a Media group, and neither group is there at all if the package is not installed.
 
-The add-on is released from the same tag as this package and always carries the same version number, so matching versions are the compatibility answer. Its dependency on the desktop is a version range rather than an exact pin, so upgrading the desktop on its own is fine.
+umbraCoffee plays the stream with its live chat when the show is live, counts down when an episode is coming up, and otherwise leads with the latest episode, under controls drawn in the style of your theme. While an episode is coming up or live, a coffee cup sits in the tray beside the clock, and the desktop reminds you ten minutes before it starts and again when it goes live. The cup and the reminders are one switch, in Desktop settings, Taskbar and as Remind me in the umbraCoffee window, on by default. Your server makes no outbound calls for it: a scheduled job in this repository keeps the schedule in two small files on GitHub, and the editor's browser reads them from there. Behind a proxy that blocks GitHub, umbraCoffee says so and shows the episodes it shipped with. A site with a Content Security Policy has a few hosts to allow. The [add-on's README](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Entertainment/README.md) has the details.
 
-Nothing in that package is privileged. It reaches the desktop through the same public manifests any package can register, a `umbraDesktopApp` for each game and a catalogue for the Games group, which makes its source the worked example for [Custom and third-party apps](#custom-and-third-party-apps).
+The add-on is released from the same tag as this package and always carries the same version number, so matching versions are the compatibility answer. It needs at least the desktop release it came with, so when you upgrade the add-on, upgrade the desktop with it. Any later 17.x desktop works too, so upgrading the desktop on its own is fine.
+
+Nothing in that package is privileged. It reaches the desktop through the same public manifests any package can register, a `umbraDesktopApp` for each app, a `umbraDesktopTrayItem` for the cup and a catalogue for the Games and Media groups, which makes its source the worked example for [Custom and third-party apps](#custom-and-third-party-apps).
 
 ## Connecting other Umbraco instances (experimental)
 
@@ -697,6 +710,8 @@ Beyond that there are two paths, and which one you take depends on what your app
 
 The desktop's own entry for a third-party package points at its extension by alias rather than by URL, so it resolves only where that package is registered and stays silently absent everywhere else. No flag is needed and none exists: any package can unregister any extension, so no entry is ever guaranteed to resolve. uSync ships this way: install it and a uSync app appears in the Synchronisation group, opening its whole workspace without the Settings tree beside it. Not unconditionally, though, and that is the point of the mechanism. An install that runs uSync in its own section instead gates that entry out, and uSync turns up as an ordinary uncertified app in More.
 
+**Alongside either, an icon in the system tray.** If your package has something to report, a status or something about to start, register a `umbraDesktopTrayItem` manifest and your element is drawn beside the clock while it has something to show. It gets a switch in Desktop settings with no work, a small context to open an app or switch itself off, and notifications raised from it can carry buttons of their own. [`docs/desktop-apps.md`](docs/desktop-apps.md) §9 is the guide.
+
 ## Documentation
 
 The full design, including the research behind the iframe approach, is in [`docs/design/umbradesktop-design.md`](docs/design/umbradesktop-design.md).
@@ -707,8 +722,10 @@ Building an app of your own, in your own package, is one extension manifest and 
 app paints itself with and the fallback each one needs, what a grid of controls tiled edge to edge
 needs that a single control does not, how to branch per theme and why the theme
 ids are a published API, what the desktop does to your element over its lifetime, and the traps that
-cost real time. The reasoning is in
-[`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md).
+cost real time. It also covers putting an icon in the system tray, the small context a package may
+call to open an app or switch its icon off, and raising a notification with buttons on it. The
+reasoning is in [`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md),
+and for the tray in [`docs/design/2026-09-27-umbracoffee-design.md`](docs/design/2026-09-27-umbracoffee-design.md) (the umbraCoffee data source and window are in [`2026-09-30-umbracoffee-v2-design.md`](docs/design/2026-09-30-umbracoffee-v2-design.md)).
 
 Putting your package's own backoffice screens on the desktop is one catalogue manifest.
 [`docs/package-catalogues.md`](docs/package-catalogues.md) is the guide: the entry and group fields,

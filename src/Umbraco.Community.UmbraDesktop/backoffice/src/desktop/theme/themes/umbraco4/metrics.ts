@@ -98,6 +98,35 @@ export const U4_TASKBAR_HEIGHT = 32;
 export const U4_TASKBAR_PADDING = 3;
 
 /**
+ * The edge around the tray's white well, in px. The only box the tray adds around the clock, so it
+ * is also what `taskbar.test.ts` allows between an empty tray and the clock inside it: a tray with
+ * nothing in it but the time has to be the box the clock alone used to be (design D16).
+ */
+export const U4_TRAY_BORDER = 1;
+
+/**
+ * The white-ish highlight inside the well's top and leading edges, in px, drawn as an inset shadow:
+ * the thing that makes the well read as sunken. An inset shadow is painted under the element's
+ * children, so the tray pads its top by this much to keep the clock's hover fill, and a tray item's,
+ * from covering it. The leading side is already clear, by {@link U4_TRAY_PADDING}.
+ */
+export const U4_TRAY_HIGHLIGHT = 1;
+
+/**
+ * The room either side of the time inside the tray's white well, in px, as the clock had it when
+ * the clock was the well. The total that `taskbar.test.ts` holds the empty tray to (design D16).
+ */
+export const U4_CLOCK_PADDING = 7;
+
+/**
+ * The room between the inside of the well's edge and the first thing in the tray, in px: the bar's
+ * own padding, so an icon sits as far inside the well's border as the buttons sit inside the bar.
+ * Taken out of {@link U4_CLOCK_PADDING} on the clock's leading side, so a tray holding only the
+ * clock is still exactly the old well.
+ */
+export const U4_TRAY_PADDING = U4_TASKBAR_PADDING;
+
+/**
  * Draggable titlebar that must stay on screen, in px. The Umbraco theme's value, unchanged: it is
  * a comfort budget rather than a consequence of this theme's geometry, and 80px of header is as
  * grabbable here as it is under Umbraco.

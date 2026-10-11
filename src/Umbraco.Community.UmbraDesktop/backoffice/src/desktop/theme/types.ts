@@ -115,6 +115,7 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-task-group-border',
   '--umbradesktop-task-group-radius',
   '--umbradesktop-task-group-background',
+  '--umbradesktop-tray-gap',
   '--umbradesktop-dock-zone-border',
   '--umbradesktop-dock-zone-radius',
   '--umbradesktop-dock-zone-background',

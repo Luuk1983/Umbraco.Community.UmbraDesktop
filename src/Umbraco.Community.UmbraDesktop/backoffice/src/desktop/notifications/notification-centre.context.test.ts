@@ -194,7 +194,30 @@ it('does nothing for an entry whose window has closed', () => {
   expect(raisedAgain).to.deep.equal([]);
 });
 
-it("raises the desktop's own notification again on the desktop, with no window to focus", () => {
+it("shows the desktop's own notification again as a plain desktop toast when its element is not defined", () => {
+  // Was a re-raise in the desktop's document. With the element undefined (its module never loaded,
+  // say after a reload with the package's tray item switched off), Umbraco's own toast draws an
+  // empty box, so the desktop shows the headline and message itself instead.
+  const c = centre();
+  const raisedAgain: string[] = [];
+  c.context.registerSource(UMBRADESKTOP_DESKTOP_SOURCE_ID, { reraise: (n) => raisedAgain.push(n.message) });
+  c.context.raise(note('Err', { headline: 'Reminder', element: { name: 'x-el', data: {} } }), {
+    sourceId: UMBRADESKTOP_DESKTOP_SOURCE_ID,
+    source: 'Desktop',
+  });
+  c.context.dismiss(c.toasts()[0].id);
+
+  c.context.activate(c.entries()[0]);
+
+  expect(c.windows.focused).to.deep.equal([]);
+  expect(raisedAgain, 'nothing raised in the document, where it would draw empty').to.deep.equal([]);
+  expect(c.toasts()).to.have.length(1);
+  expect(c.toasts()[0].notification.message).to.equal('Err');
+  expect(c.toasts()[0].notification.headline).to.equal('Reminder');
+  expect(c.entries()[0].count, 'showing it again is not another arrival').to.equal(1);
+});
+
+it("only takes a clicked plain desktop toast down, rather than bringing it straight back", () => {
   const c = centre();
   const raisedAgain: string[] = [];
   c.context.registerSource(UMBRADESKTOP_DESKTOP_SOURCE_ID, { reraise: (n) => raisedAgain.push(n.message) });
@@ -202,9 +225,121 @@ it("raises the desktop's own notification again on the desktop, with no window t
     sourceId: UMBRADESKTOP_DESKTOP_SOURCE_ID,
     source: 'Desktop',
   });
+
+  c.context.activate(c.toasts()[0]);
+
+  expect(c.toasts(), 'it was already showing everything it could').to.deep.equal([]);
+  expect(raisedAgain).to.deep.equal([]);
+});
+
+/**
+ * A layout the desktop can draw itself, defined so the centre knows a desktop toast would draw it.
+ * Design D15.
+ */
+customElements.define('test-centre-note', class extends HTMLElement {});
+
+const DESKTOP = { sourceId: UMBRADESKTOP_DESKTOP_SOURCE_ID, source: 'Desktop' };
+
+it("shows the desktop's own notification with a drawable element again as a desktop toast", () => {
+  const c = centre();
+  const raisedAgain: string[] = [];
+  c.context.registerSource(UMBRADESKTOP_DESKTOP_SOURCE_ID, { reraise: (n) => raisedAgain.push(n.message) });
+  const element = { name: 'test-centre-note', data: { episode: 1 } };
+  c.context.raise(note('Starting soon', { element }), DESKTOP);
+  const firstGeneration = c.toasts()[0].generation;
+  c.context.dismiss(c.toasts()[0].id);
+
   c.context.activate(c.entries()[0]);
+
+  expect(raisedAgain, 'the desktop draws it now, so nothing is raised in the document').to.deep.equal([]);
   expect(c.windows.focused).to.deep.equal([]);
-  expect(raisedAgain).to.deep.equal(['Err']);
+  expect(c.toasts()).to.have.length(1);
+  expect(c.toasts()[0].notification.element).to.deep.equal(element);
+  expect(c.toasts()[0].sourceId).to.equal(UMBRADESKTOP_DESKTOP_SOURCE_ID);
+  expect(c.toasts()[0].source).to.equal('Desktop');
+  expect(c.toasts()[0].notification.duration, 'shown again to be used, so it stays').to.equal(null);
+  expect(c.toasts()[0].generation, 'a new generation, so its timer starts fresh').to.not.equal(firstGeneration);
+  expect(c.entries(), 'showing it again is not another arrival').to.have.length(1);
+  expect(c.entries()[0].count).to.equal(1);
+});
+
+it('does not count showing a desktop toast again as a repeat when it is still up, nor swap what it carries', () => {
+  const c = centre();
+  const closedIn: string[] = [];
+  c.context.registerSource(UMBRADESKTOP_DESKTOP_SOURCE_ID, { reraise: () => {}, close: (key) => closedIn.push(key) });
+  const raised = note('Starting soon', { duration: 6000, element: { name: 'test-centre-note', data: {} } });
+  c.context.raise(raised, DESKTOP);
+  const before = c.toasts()[0];
+
+  c.context.activate(c.entries()[0]);
+
+  expect(c.toasts()).to.have.length(1);
+  expect(c.toasts()[0].count).to.equal(1);
+  expect(c.entries()[0].count).to.equal(1);
+  expect(c.toasts()[0].notification.key, 'still the original, so its dismissal can close it').to.equal(raised.key);
+  expect(c.toasts()[0].notification.duration).to.equal(6000);
+  expect(c.toasts()[0].generation, 'only its timer starts over').to.not.equal(before.generation);
+  c.context.dismiss(c.toasts()[0].id);
+  expect(closedIn).to.deep.equal([raised.key]);
+});
+
+it('closes every original a toast stands for, repeats included, in each source', () => {
+  const c = centre();
+  const closedIn: string[] = [];
+  c.context.registerSource('w-a', { reraise: () => {}, close: (key) => closedIn.push(`w-a:${key}`) });
+  c.context.registerSource('w-b', { reraise: () => {}, close: (key) => closedIn.push(`w-b:${key}`) });
+  const first = note('Again', { duration: null });
+  const second = note('Again', { duration: null });
+  const third = note('Again', { duration: null });
+  c.context.raise(first, A);
+  c.context.raise(second, A);
+  c.context.raise(third, B);
+
+  c.context.dismiss(c.toasts()[0].id);
+
+  expect(closedIn).to.deep.equal([`w-a:${first.key}`, `w-a:${second.key}`, `w-b:${third.key}`]);
+});
+
+it("closes a window toast's original before raising it again, and never the one raised again", () => {
+  const c = centre();
+  const calls: string[] = [];
+  c.context.registerSource('w-a', {
+    reraise: () => calls.push('reraise'),
+    close: (key) => calls.push(`close:${key}`),
+  });
+  const raised = note('Could not save', { element: { name: 'umb-peek-error-notification', data: {} } });
+  c.context.raise(raised, A);
+
+  c.context.activate(c.toasts()[0]);
+
+  expect(calls).to.deep.equal([`close:${raised.key}`, 'reraise']);
+});
+
+it("closes the original in its source when a toast is taken down, so it cannot turn up there later", () => {
+  const c = centre();
+  const closedIn: Array<[string, string]> = [];
+  c.context.registerSource('w-a', { reraise: () => {}, close: (key) => closedIn.push(['w-a', key]) });
+  c.context.registerSource(UMBRADESKTOP_DESKTOP_SOURCE_ID, {
+    reraise: () => {},
+    close: (key) => closedIn.push([UMBRADESKTOP_DESKTOP_SOURCE_ID, key]),
+  });
+  const fromWindow = note('From a window', { duration: null });
+  const fromDesktop = note('From the desktop', { duration: null });
+  const cleared = note('Cleared', { duration: null });
+  c.context.raise(fromWindow, A);
+  c.context.raise(fromDesktop, DESKTOP);
+
+  c.context.dismiss(c.toasts()[0].id);
+  c.context.dismiss(c.toasts()[0].id);
+  c.context.raise(cleared, DESKTOP);
+  c.context.clear();
+  c.context.dismiss('not-showing');
+
+  expect(closedIn).to.deep.equal([
+    ['w-a', fromWindow.key],
+    [UMBRADESKTOP_DESKTOP_SOURCE_ID, fromDesktop.key],
+    [UMBRADESKTOP_DESKTOP_SOURCE_ID, cleared.key],
+  ]);
 });
 
 it('clears the list and the toasts showing, and keeps the empty list', () => {

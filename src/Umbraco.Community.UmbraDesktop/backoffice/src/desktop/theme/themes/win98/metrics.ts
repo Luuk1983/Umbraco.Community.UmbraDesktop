@@ -119,6 +119,22 @@ export const WIN98_TASKBAR_HEIGHT = 30;
 export const WIN98_TASKBAR_PADDING = 2;
 
 /**
+ * The room either side of the time inside the tray's sunken well, in px, as the clock had it when
+ * the clock was the well. The total that `taskbar.test.ts` holds the empty tray to: with only the
+ * clock in it, the well has to be the box it was before the tray existed (design D16).
+ */
+export const WIN98_CLOCK_PADDING = 6;
+
+/**
+ * The room between the well's leading edge and the first thing in the tray, in px.
+ *
+ * Twice the bevel, so an item clears the bevel's two dark pixels by as much again, rather than
+ * sitting under them. Taken out of {@link WIN98_CLOCK_PADDING} on the clock's leading side, so a
+ * tray holding only the clock is still exactly the old well.
+ */
+export const WIN98_TRAY_PADDING = 2 * WIN98_BEVEL_DEPTH;
+
+/**
  * Draggable titlebar that must stay on screen, in px. The Umbraco theme's value, unchanged: it is
  * a comfort budget rather than a consequence of this theme's geometry, and 80px of caption is as
  * grabbable under Win98 as it is under Umbraco.

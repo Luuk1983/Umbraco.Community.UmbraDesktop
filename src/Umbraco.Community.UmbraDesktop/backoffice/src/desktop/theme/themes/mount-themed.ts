@@ -132,6 +132,66 @@ export async function mountThemedWith<T extends UmbraDesktopUpdatable>(
   return { element, root, dispose: () => host.remove() };
 }
 
+/** The tray and the clock inside it, as a themed taskbar lays them out. */
+export interface UmbraDesktopTrayMeasurement {
+  /** The tray's border box: the box a theme draws its well, push or separator on. */
+  tray: DOMRect;
+  /** The clock's border box, which is the last thing in the tray. */
+  clock: DOMRect;
+}
+
+/**
+ * Where a mounted taskbar puts its tray and its clock.
+ *
+ * Shared because every theme that styles the tray owes the same promise (design D16): a tray with
+ * nothing in it but the clock is the box the clock alone used to be. Each theme compares these two
+ * boxes against the cost its own tray rule adds, which is the only part that differs.
+ * @param root The mounted taskbar's shadow root.
+ * @returns Both boxes.
+ * @throws If the taskbar rendered no tray or no clock, which would otherwise measure nothing.
+ */
+export function measureTray(root: ShadowRoot): UmbraDesktopTrayMeasurement {
+  const tray = root.querySelector<HTMLElement>('.tray');
+  const clock = tray?.querySelector<HTMLElement>('.clock');
+  // Thrown rather than asserted with chai, for the reason `mountThemedWith` gives above.
+  if (!tray || !clock) throw new Error('The taskbar rendered no tray with a clock in it to measure.');
+  return { tray: tray.getBoundingClientRect(), clock: clock.getBoundingClientRect() };
+}
+
+/**
+ * The side of the stand-in tray item {@link withTrayItem} puts in the tray, in px: an icon's size,
+ * so it lays out as a real tray icon would without depending on a package being loaded.
+ */
+const TRAY_ITEM_SIZE = 16;
+
+/**
+ * Put a stand-in item at the head of a mounted taskbar's tray, measure, and take it out again.
+ *
+ * Nothing registers a real tray item in a test page, and the tray exists so that items sit inside
+ * whatever a theme draws around the time, so a theme test needs one to prove it. The item sets no
+ * alignment of its own, so it lands wherever the tray's own rules put a real item. Taken out in a
+ * `finally`, so the file's other cases, which measure the empty tray, are unaffected by the order
+ * they run in.
+ * @param root The mounted taskbar's shadow root.
+ * @param measure Reads what it needs while the item is in the tray.
+ * @returns Whatever `measure` returned.
+ * @throws If the taskbar rendered no tray.
+ */
+export function withTrayItem<T>(root: ShadowRoot, measure: (item: HTMLElement) => T): T {
+  const tray = root.querySelector<HTMLElement>('.tray');
+  if (!tray) throw new Error('The taskbar rendered no tray to put an item in.');
+  const item = document.createElement('span');
+  item.style.display = 'inline-block';
+  item.style.width = `${TRAY_ITEM_SIZE}px`;
+  item.style.height = `${TRAY_ITEM_SIZE}px`;
+  tray.prepend(item);
+  try {
+    return measure(item);
+  } finally {
+    item.remove();
+  }
+}
+
 /** What a themed window paints for the unsaved-changes marker, as measured in the browser. */
 export interface UmbraDesktopUnsavedMarkerMeasurement {
   /** Whether the marker is in the DOM at all. */

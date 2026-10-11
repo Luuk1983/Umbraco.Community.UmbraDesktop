@@ -567,6 +567,14 @@ bug.
   `ProjectReference` packs. This is the one place lockstep must not leak into the metadata: an exact
   pin would force an Entertainment publish for every host release and would break anyone who
   upgraded the host between add-on releases.
+
+  *Amended 2026-09-29, with umbraCoffee:* a `ProjectReference` packs a minimum (`>= version`), not
+  an exact pin, so the premise above was wrong. Entertainment now references the host project, and a
+  small pack target bounds that dependency to `[<this release>, 17.99999999]`. The floor is the
+  release itself because an add-on can need host features from the same release (umbraCoffee needs
+  the tray), and `[17.0.0,18.0.0)` let NuGet install 17.0.0, which lacks them. `17.99999999`, not
+  `18.0.0)`, because the latter admits 18 prereleases. A CI step checks the packed range, since the
+  target hooks a private NuGet target. `RELEASE.md` has the details.
 - **Its own Marketplace listing**, as `umbraco-marketplace-umbraco.community.umbradesktop.entertainment.json`
   beside the existing file. The Marketplace resolves multiple packages from one repository root by
   package-id suffix, and GitHub roots are explicitly supported

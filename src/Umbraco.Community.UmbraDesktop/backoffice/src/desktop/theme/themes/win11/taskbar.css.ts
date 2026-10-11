@@ -12,14 +12,14 @@ import {
 
 /**
  * The Windows 11 taskbar: flush, full width, acrylic, with Start and the running windows centred
- * on the screen and the clock pinned to the trailing end.
+ * on the screen and the tray, clock last, pinned to the trailing end.
  *
  * Centring is the one genuinely structural thing this theme does, and it is what the `.cluster`
  * wrapper was added to the chrome for (design §4) — this is its first user. The subtlety is that
- * Windows centres the cluster on the **bar**, not on the space the clock leaves over; those
- * differ by half the clock's width, which is the difference between a Windows 11 taskbar and a
+ * Windows centres the cluster on the **bar**, not on the space the tray leaves over; those
+ * differ by half the tray's width, which is the difference between a Windows 11 taskbar and a
  * nearly-centred one. So the cluster comes out of the flex flow and is positioned against the bar
- * instead, and the clock — now the only item left in that flow — is pushed right with an auto
+ * instead, and the tray — now the only item left in that flow — is pushed right with an auto
  * margin.
  *
  * Everything else is colour, and lives in the palette.
@@ -52,17 +52,25 @@ export default css`
     justify-content: center;
     gap: ${W11_TASKBAR_PADDING}px;
   }
-  /* The cluster no longer holds a place in the flow, so the clock has to claim the trailing end
-     for itself rather than being pushed there by its sibling. */
-  .clock {
+  /* The cluster no longer holds a place in the flow, so the tray has to claim the trailing end for
+     itself rather than being pushed there by its sibling. The tray and not the clock (design D16):
+     a push on the clock would leave the tray, and every item in it, at the leading end under the
+     cluster. */
+  .tray {
     margin-left: auto;
+    /* Above the centred cluster, so a very wide cluster slides under the tray rather than over
+       it. Neither should ever be that wide, but the stacking order should not be an accident.
+
+       These two make the tray a stacking context, with every package's tray item inside it. A
+       flyout a tray item opens is therefore capped at this z-index whatever its own says, so it
+       should open in the top layer (the popover API or a dialog) rather than rely on z-index. */
+    position: relative;
+    z-index: 1;
+  }
+  .clock {
     padding: 0 12px;
     font-size: 12px;
     opacity: 1;
-    /* Above the centred cluster, so a very wide cluster slides under the clock rather than over
-       it. Neither should ever be that wide, but the stacking order should not be an accident. */
-    position: relative;
-    z-index: 1;
   }
   /* A rule between the fixed buttons and the open windows, which Windows does not draw: there the
      two lists are one list, so there is nothing to separate. Here they are separate, and the marker

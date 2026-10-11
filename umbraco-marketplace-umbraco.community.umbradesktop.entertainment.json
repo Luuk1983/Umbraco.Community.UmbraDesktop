@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop Entertainment",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "Games for UmbraDesktop. An optional add-on that puts Minesweeper and Snake on the desktop, each in a window of its own and themed along with the rest of it.",
+  "Description": "Games and media for UmbraDesktop. An optional add-on that puts Minesweeper, Snake and umbraCoffee on the desktop, each in a window of its own and themed along with the rest of it.",
   "PackageType": "Package",
   "LicenseTypes": [
     "Free"
@@ -29,7 +29,17 @@
     "fun",
     "add-on",
     "themes",
-    "launcher"
+    "launcher",
+    "umbracoffee",
+    "youtube",
+    "community",
+    "media",
+    "live stream",
+    "live-stream",
+    "video-player",
+    "reminders",
+    "search",
+    "guests"
   ],
   "RelatedPackages": [
     {
@@ -46,6 +56,14 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/entertainment-games-snake.png",
       "Caption": "Snake, the second game, under the same theme. Arrow keys to steer, a score and a best score, and it pauses itself when its window loses focus."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/umbracoffee-live.png",
+      "Caption": "umbraCoffee while a show is live: the stream under player controls drawn in the style of the theme, with the live chat and the episode list in a side panel and a Remind me switch in the header."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/docs/screenshots/umbracoffee-upcoming.png",
+      "Caption": "umbraCoffee before the next show: a countdown with the start time written like the desktop's clock, a Remind me switch, and the episodes waiting in the side panel."
     }
   ]
 }

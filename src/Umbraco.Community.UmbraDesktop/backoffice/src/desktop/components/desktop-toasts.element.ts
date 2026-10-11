@@ -1,7 +1,8 @@
 import { UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT } from '../notifications/notification-centre.context-token.js';
 import type { UmbraDesktopNotificationCentreContext } from '../notifications/notification-centre.context.js';
+import { createNotificationLayoutHandler, drawsOwnElement } from '../notifications/own-element.js';
 import { notificationIconName } from '../notifications/severity.js';
-import type { UmbraDesktopToast } from '../notifications/types.js';
+import type { UmbraDesktopNotification, UmbraDesktopToast } from '../notifications/types.js';
 import { UMBRADESKTOP_Z_TOASTS } from '../constants.js';
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -18,6 +19,16 @@ interface ToastTimer {
   remaining: number;
 }
 
+/** The element a toast draws of its own, with what it needs to stay current and to be let go. */
+interface OwnElement {
+  /** The element, made once and kept. */
+  element: HTMLElement;
+  /** What the toast carries now, which the handler's read-only fields read. */
+  notification: UmbraDesktopNotification;
+  /** Settles the handler's 'onClose()'; called once the element is let go. */
+  settle: () => void;
+}
+
 /**
  * The desktop's toasts: every notification raised anywhere on the desktop, drawn once.
  *
@@ -25,6 +36,10 @@ interface ToastTimer {
  * the whole stack holds still while the pointer is over it, the way core's own container does, so a
  * message being read does not close under the reader. Clicking a toast takes you to the window that
  * raised it.
+ *
+ * A notification the desktop raised in its own document is the exception when it carries an element
+ * of its own: the toast draws that element in place of its text, buttons included, so they can be
+ * used where they are seen. umbraCoffee design D15, and {@link drawsOwnElement} for why only those.
  *
  * Placed by the theme: the stack's four offsets and its direction are tokens, so a theme can hang it
  * under a menu bar as easily as over a tray. Design §5.
@@ -43,6 +58,14 @@ export class UmbraDesktopToastsElement extends UmbLitElement {
 
   /** Whether the pointer is over the stack, which holds every timer. */
   #pointerOver = false;
+
+  /**
+   * The element each toast that draws its own is showing, by toast id. Kept, rather than created in
+   * every render, so a re-render or a repeat does not throw away whatever the element holds (its
+   * focus, its own state), and dropped once its toast goes, so a toast that comes back later starts
+   * fresh, as Umbraco's own container would give it a new one.
+   */
+  #ownElements = new Map<string, OwnElement>();
 
   /** Whether the list behind the clock is open, which hides the stack and holds every timer. */
   @state()
@@ -76,13 +99,16 @@ export class UmbraDesktopToastsElement extends UmbLitElement {
   }
 
   /**
-   * Start, restart or drop timers so they match the toasts now showing.
+   * Start, restart or drop timers so they match the toasts now showing, and let go of the elements
+   * of toasts that have gone. A toast that draws its own element times out exactly as any other,
+   * on the duration it was raised with.
    * @param changed The properties this update is for.
    */
   override updated(changed: Map<string, unknown>) {
     super.updated(changed);
     if (!changed.has('_toasts')) return;
     const showing = new Set(this._toasts.map((t) => t.id));
+    for (const id of [...this.#ownElements.keys()]) if (!showing.has(id)) this.#releaseOwnElement(id);
     for (const [id, timer] of this.#timers) {
       if (showing.has(id)) continue;
       window.clearTimeout(timer.handle);
@@ -101,10 +127,16 @@ export class UmbraDesktopToastsElement extends UmbLitElement {
     }
   }
 
+  /**
+   * Stop every timer, and let go of every element a toast was drawing, so a sender awaiting one's
+   * 'onClose()' is not left waiting on a stack that has gone. The stack only leaves with the
+   * desktop; if it ever came back, its next render would draw fresh ones.
+   */
   override disconnectedCallback() {
     super.disconnectedCallback();
     for (const timer of this.#timers.values()) window.clearTimeout(timer.handle);
     this.#timers.clear();
+    for (const id of [...this.#ownElements.keys()]) this.#releaseOwnElement(id);
   }
 
   /**
@@ -149,16 +181,81 @@ export class UmbraDesktopToastsElement extends UmbLitElement {
   }
 
   /**
+   * The element a toast draws in place of its text, when it gets one (umbraCoffee design D15).
+   *
+   * It is given what Umbraco's container gives a notification layout: 'data', and a handler whose
+   * 'close()' takes the toast down; 'own-element.ts' has the whole contract. The data is set again on
+   * every render, so a repeat that refreshes the toast in place hands the kept element what the
+   * repeat carried. The element is made again only if a repeat names a different one, since a repeat
+   * is matched on its text and not on its element. And it is let go when the toast stops drawing one,
+   * which happens when a repeat from a window takes the toast over.
+   * @param toast The toast.
+   * @returns The element, or undefined for a toast that draws headline and message.
+   */
+  #ownElementFor(toast: UmbraDesktopToast): HTMLElement | undefined {
+    const spec = toast.notification.element;
+    if (!spec || !drawsOwnElement(toast.sourceId, toast.notification)) {
+      this.#releaseOwnElement(toast.id);
+      return undefined;
+    }
+    let own = this.#ownElements.get(toast.id);
+    if (own && own.element.localName !== spec.name) {
+      this.#releaseOwnElement(toast.id);
+      own = undefined;
+    }
+    if (!own) {
+      const element = document.createElement(spec.name);
+      const id = toast.id;
+      const { handler, settle } = createNotificationLayoutHandler(
+        () => this.#ownElements.get(id)?.notification ?? toast.notification,
+        () => this.#centre?.dismiss(id),
+      );
+      // Handed over once, when the element is made: the toast it closes is fixed by the map's key.
+      Object.assign(element, { notificationHandler: handler });
+      own = { element, notification: toast.notification, settle };
+      this.#ownElements.set(id, own);
+    }
+    own.notification = toast.notification;
+    Object.assign(own.element, { data: spec.data });
+    return own.element;
+  }
+
+  /**
+   * Let go of the element a toast was drawing, and settle its handler's 'onClose()', since from the
+   * element's side its toast has gone. Does nothing for a toast that had none.
+   * @param id The toast.
+   */
+  #releaseOwnElement(id: string) {
+    const own = this.#ownElements.get(id);
+    if (!own) return;
+    this.#ownElements.delete(id);
+    own.settle();
+  }
+
+  /**
    * One toast.
    *
    * Two buttons rather than one clickable box with a close control inside it, because a button
    * inside a button is not a thing HTML allows, and because the two do different things: the body
    * takes you to the window, the cross only takes the toast away.
+   *
+   * A toast that draws its own element has no body button at all. The element brings its own
+   * controls, and wrapping them in a button would be the button inside a button again. It also
+   * shows no icon, source label or ×N count, deliberately: the element owns the whole body, as a
+   * layout does inside Umbraco's own toast. The cross stays: a theme may restyle the toast, never
+   * take away the way to close it.
    * @param toast The toast.
    * @returns Its template.
    */
   #renderToast(toast: UmbraDesktopToast) {
     const n = toast.notification;
+    const own = this.#ownElementFor(toast);
+    if (own) {
+      return html`<div class="toast" data-color=${n.color} role="status">
+        <div class="toast-own">${own}</div>
+        ${this.#renderClose(toast)}
+      </div>`;
+    }
     const source = this.localize.string(toast.source);
     return html`<div class="toast" data-color=${n.color} role="status">
       <button class="toast-body" @click=${() => this.#centre?.activate(toast)}>
@@ -176,20 +273,30 @@ export class UmbraDesktopToastsElement extends UmbLitElement {
           </span>
         </span>
       </button>
-      <button
-        class="toast-close"
-        title=${this.localize.term('umbraDesktop_notificationsClose')}
-        aria-label=${this.localize.term('umbraDesktop_notificationsClose')}
-        @click=${() => this.#centre?.dismiss(toast.id)}>
-        <!-- Drawn rather than taken from the icon set: Umbraco's 'icon-remove' is a bin, and this
-             button takes a toast off the screen, it deletes nothing. The same cross the window's own
-             close control draws. -->
-        <svg class="glyph" viewBox="0 0 12 12" aria-hidden="true">
-          <line x1="3" y1="3" x2="9" y2="9"></line>
-          <line x1="9" y1="3" x2="3" y2="9"></line>
-        </svg>
-      </button>
+      ${this.#renderClose(toast)}
     </div>`;
+  }
+
+  /**
+   * A toast's close button. Its own method because both kinds of toast draw it, and a second copy
+   * would be a second place for the cross to drift.
+   * @param toast The toast it closes.
+   * @returns Its template.
+   */
+  #renderClose(toast: UmbraDesktopToast) {
+    return html`<button
+      class="toast-close"
+      title=${this.localize.term('umbraDesktop_notificationsClose')}
+      aria-label=${this.localize.term('umbraDesktop_notificationsClose')}
+      @click=${() => this.#centre?.dismiss(toast.id)}>
+      <!-- Drawn rather than taken from the icon set: Umbraco's 'icon-remove' is a bin, and this
+           button takes a toast off the screen, it deletes nothing. The same cross the window's own
+           close control draws. -->
+      <svg class="glyph" viewBox="0 0 12 12" aria-hidden="true">
+        <line x1="3" y1="3" x2="9" y2="9"></line>
+        <line x1="9" y1="3" x2="3" y2="9"></line>
+      </svg>
+    </button>`;
   }
 
   override render() {
@@ -273,14 +380,31 @@ export class UmbraDesktopToastsElement extends UmbLitElement {
         border: 0;
         cursor: pointer;
       }
-      .toast-body {
+      /* The body's place in the toast, which a toast drawing its own element gives to that element
+         (see '.toast-own' below), so both line up with each other in the stack. */
+      .toast-body,
+      .toast-own {
         flex: 1;
         min-width: 0;
+        padding: var(--uui-size-space-3) var(--uui-size-space-2) var(--uui-size-space-3) var(--uui-size-space-4);
+      }
+      .toast-body {
         display: flex;
         align-items: flex-start;
         gap: var(--uui-size-space-3);
-        padding: var(--uui-size-space-3) var(--uui-size-space-2) var(--uui-size-space-3) var(--uui-size-space-4);
         text-align: start;
+      }
+      /* A toast that draws its own element gives it the body's place and padding (shared with
+         '.toast-body' above). It inherits the toast's colour and font, and '--toast-accent' is there
+         for it to read, which is how it stays themed by the toast tokens without knowing about any of
+         them. The padding does not stack with the layout's: in Umbraco the padding is on the
+         'uui-toast-notification' around a layout, which this toast takes the place of, and
+         'uui-toast-notification-layout' (what core's peek-error layout renders) has none of its own,
+         only small negative margins round its message and actions. Read from the source, not yet
+         measured: the browser pass should check that layout's h5 headline margin and floated actions
+         sit right in here. */
+      .toast-own {
+        overflow-wrap: anywhere;
       }
       .toast-icon {
         flex: none;

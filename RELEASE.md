@@ -10,15 +10,41 @@ Two packages, from **one tag**, always at the **same version**:
 | Package | What it is |
 |---|---|
 | `Umbraco.Community.UmbraDesktop` | The desktop. The product. |
-| `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games add-on. Minesweeper today. |
+| `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games and media add-on: Minesweeper, Snake and umbraCoffee. |
 
 Lockstep is a decision, not an accident: design D13 in
 [`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md)
 §8.3. Both publish on **every** release, changed or not — a gap in Entertainment's version history
-reads like a broken pipeline, where a version with no changes reads like Umbraco. The one place
-lockstep must not leak is the dependency: Entertainment depends on the host by **range**
-(`[17.0.0,18.0.0)` in `src/Directory.Packages.props`), never as a `ProjectReference`, or every host
-release forces an Entertainment release and breaks anyone who upgraded the host in between.
+reads like a broken pipeline, where a version with no changes reads like Umbraco.
+
+**Every add-on requires this release of the host, or any later 17.** Entertainment today, and any
+add-on after it, references the host as a `ProjectReference`, never a `PackageReference`: it is then
+compiled against the host from the same commit, and its packed dependency is
+`[<this release>, 17.99999999.0]`. The floor is the release itself because an add-on registers
+things only this release's host understands (tray items, package catalogues). Entertainment used to
+take the host by package range, floored at 17.0.0, which compiled against 17.0.0 and let consumers
+keep a host that silently lacked them. Upgrading the host on its own within 17 is still fine; the
+ceiling is why. There is deliberately no central `PackageVersion` for the host any more, so an
+add-on written with a `PackageReference` fails restore with NU1010 instead of shipping the old
+range. [#88](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/pull/88)'s Accessories
+add-on was written that way and needs its one line changed to
+`<ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />`
+when it is rebased.
+
+A `ProjectReference` does not give that range by itself. NuGet packs it as a bare minimum,
+`>= <version built beside it>`, with no ceiling at all, so an add-on would claim to support host 18
+and every major after it. The `BoundHostRange` target in `src/Directory.Build.targets` rewrites it
+after NuGet computes it, for every project that references the host, so a new add-on gets it
+without doing anything. The ceiling is one property, `UmbraDesktopUmbracoMajorCeiling` in
+`src/Directory.Build.props`, which the Umbraco ranges in `src/Directory.Packages.props` use too.
+The target hooks NuGet's private `_GetProjectReferenceVersions`, which an SDK update can change
+without a word, so `.github/actions/build-packages` reads the nuspec of every packed add-on (every
+`Umbraco.Community.UmbraDesktop.*` package other than the host) and fails the run unless its host
+dependency is exactly `[<host package version>, 17.99999999.0]`. The floor comes from the host
+project's own MinVer version, the same number as the add-on's because both are versioned off one
+tag. **Raise the ceiling with the major**: the release that moves to Umbraco 18 changes
+`UmbraDesktopUmbracoMajorCeiling` to `18.99999999`, which moves the Umbraco ranges' and the add-ons'
+ceilings together.
 
 `Umbraco.Community.UmbraDesktop.TestInstance` and `.Tests` are never published.
 
@@ -104,6 +130,130 @@ Nothing in CI can do these.
   | `entertainment-games-minesweeper.png` | The add-on's first shot, also used in both readmes. Retaken with Snake so the Games group lists both games; the alt text names them, so retake it again when a game is added. |
   | `entertainment-games-snake.png` | Snake's shot, framed to match Minesweeper's: Windows 98, the Games group open in the launcher. Also in both readmes. Take it **before** the first key press, so the start message is showing in the middle of the board and the snake is sitting a quarter of the way down above it, since that is the one moment the board says how to play. |
   | `header-entry-point.png` | Small and annotated on purpose. It answers one question, "where is the way in", and showing more screen would not answer it better. |
+  | `umbracoffee-live.png`, `umbracoffee-upcoming.png` | umbraCoffee live and before the next show, for the Entertainment listing and README. Live needs a real or faked live `next-episode.json` (DevTools "Override content" works). Not yet in `docs/screenshots/` when the v2 docs were written, and the marketplace entries were added ahead of the files, so **do not merge without them**. |
+
+## umbraCoffee's data (Entertainment)
+
+umbraCoffee does not call YouTube from customer sites. A scheduled workflow does, and the editor's
+browser reads the result from GitHub. Design:
+[`docs/design/2026-09-30-umbracoffee-v2-design.md`](docs/design/2026-09-30-umbracoffee-v2-design.md).
+Everything below is an owner step except where it says the workflow does it.
+
+**The workflow.** `.github/workflows/umbracoffee-feed.yml` runs every five minutes and by hand
+(Actions tab, "umbraCoffee feed", Run workflow). It runs `tools/umbracoffee-feed/src/run.mjs` on the
+branch `data/umbracoffee` and pushes only when a file changed. The client reads `episodes.json` and
+`next-episode.json` from `raw.githubusercontent.com/.../data/umbracoffee/umbracoffee/`; the address
+is the one constant `UMBRACOFFEE_DATA_BASE_URL`. Scheduled runs only ever use the workflow file on the
+default branch, so nothing happens until it is on `main`.
+
+**The files on the data branch**, all in `umbracoffee/`:
+
+| File | Written by | What it is |
+| --- | --- | --- |
+| `sources.json` | the workflow | Every episode with its title, date and YouTube description |
+| `details.json` | you, with `apply-details.mjs` | Summary and guests per episode, made from the description |
+| `overrides.json` | you, by hand | Your corrections. Always wins. No tool writes it |
+| `episodes.json` | the workflow and `apply-details.mjs` | What the app reads, rebuilt from the three above. No descriptions |
+| `next-episode.json` | the workflow | The upcoming or live episode, if any |
+
+The workflow only commits `sources.json`, `episodes.json` and `next-episode.json`. It reads
+`details.json` and `overrides.json` but never commits them, so your push is the only way they change.
+`tools/umbracoffee-feed/README.md` has every command and the file shapes.
+
+**Fill in new episodes, about once a month.** Summaries and guests are written locally, never by the
+workflow and never on a customer's site, so a new episode shows with no summary until you do this.
+Run from the repository root, with `<dir>` the `umbracoffee/` folder of a data branch checkout:
+
+1. To get the workflow's latest `sources.json`, pull the data branch.
+2. To see what needs doing, run `node tools/umbracoffee-feed/src/pending.mjs <dir> > pending.json`.
+   It lists new episodes and ones whose title or description changed. An empty array means nothing
+   to do.
+3. To write the answers, give a Claude Code session `tools/umbracoffee-feed/prompts/episode-details.md`
+   and `pending.json`, and ask it to run the prompt once per episode and write all answers, each with
+   its `videoId`, to `results.json`.
+4. To save them, run `node tools/umbracoffee-feed/src/apply-details.mjs <dir> results.json`. It
+   refuses the whole file if one answer is wrong and names each bad one; fix those and run it again.
+5. To check them, read the answers marked uncertain, and run
+   `node tools/umbracoffee-feed/src/guests.mjs <dir>` for new spellings of known guests. Put fixes in
+   `overrides.json`, then apply again (an empty `[]` results file is enough) or let the workflow
+   rebuild `episodes.json`.
+6. To publish, commit `details.json`, `episodes.json` and any `overrides.json` change, and push the
+   data branch.
+
+**One guest, one name.** The guest filter groups people by name, so "Jesper" and "Jesper
+Mayntzhusen" would be two guests. `guestNames` in `overrides.json` maps a spelling to the name it
+means, as an exact match, and a guest that becomes a duplicate within an episode is dropped. `guests.mjs`
+lists the pairs that look like one person spelled two ways.
+
+```json
+{
+  "version": 1,
+  "guestNames": { "Jesper": "Jesper Mayntzhusen" },
+  "episodes": { "<videoId>": { "summary": "...", "guests": [{ "name": "...", "affiliation": null }], "guestsUnnamed": false } }
+}
+```
+
+Both parts are optional. Under `episodes`, each field you give (`summary`, `guests`, `guestsUnnamed`)
+wins over `details.json` for that episode, and the fields you leave out still come from it.
+
+**The data branch.** Nothing to create by hand: if `data/umbracoffee` does not exist, the workflow
+creates it as an orphan branch on its first run (the "Check out the data branch" step) and pushes the
+first files to it. Protect nothing on it, or the push fails. Run the workflow once by hand after the
+merge and look at `raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/data/umbracoffee/umbracoffee/episodes.json`.
+
+**The YouTube key.** Without `YOUTUBE_API_KEY` the workflow still keeps the episode list current, but
+`next-episode.json` stays empty, so there is no countdown, cup or reminder. To create the free key:
+
+1. In the Google Cloud console create a project (any name). No billing account is needed.
+2. Under APIs and services, Library, enable **YouTube Data API v3** for that project.
+3. Under Credentials, create an **API key**. Under its restrictions choose "Restrict key", API
+   restrictions, and allow only YouTube Data API v3. Leave application restrictions off: the calls
+   come from GitHub's runners, whose addresses change.
+4. In the repository, Settings, Secrets and variables, Actions, add a repository secret named
+   `YOUTUBE_API_KEY` with the key.
+
+The default quota is 10,000 units a day and the workflow spends one unit per lookup, a few a day
+normally and one a run while an episode is coming up or live. The tool never prints the key, and its
+tests check that an error message does not contain it.
+
+**Scheduled workflows switch themselves off.** GitHub disables scheduled workflows in a public
+repository after 60 days without repository activity. What was
+checked: the design's assumption that development on `main` counts, which is the reason no keepalive
+was built. What was **not** checked: whether a push to `data/umbracoffee` alone counts, since the
+first 60 days have not passed. So do not rely on the data branch. The fallback if the workflow is
+found switched off is to enable it again in the Actions tab (a disabled scheduled workflow stays off
+until someone does) and run it by hand. A monthly no-op commit to `main` is the next step if that
+ever happens twice. The client already copes with a stopped workflow: a stale next-episode file is
+ignored and the app falls back to the episode list, which does not go stale in a harmful way.
+
+**Refresh the shipped snapshot before packing.** The package carries a copy of the episode list for
+when GitHub cannot be reached (`backoffice/src/umbracoffee/snapshot/episodes.snapshot.json` in the
+Entertainment project). Nothing does this in CI, so before tagging:
+
+```bash
+curl -L -o episodes.json https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/data/umbracoffee/umbracoffee/episodes.json
+node tools/umbracoffee-feed/src/snapshot.mjs episodes.json
+```
+
+The snapshot is the version 2 `episodes.json` whole, summaries and guests included; `snapshot.mjs`
+refuses an older version. It stamps `snapshotAt` with the file's own date, which is the "showing
+episodes up to" date users see when offline. Fill in new episodes first, so the snapshot has their
+summaries. Review the diff and commit it with the release. Delete `episodes.json` afterwards.
+
+**The one-off backfill.** The RSS feed stops at the 15 newest videos, so the older episodes are
+added once by hand with `backfill.mjs`. The workflow never does this. The order against the
+workflow's runs does not matter: for episodes still in the feed, the workflow brings the title and
+description up to date itself. Collect the ids with their upload dates as `id,published` lines (an
+ISO date, for example `aRkc0fRxQjw,2026-09-25T11:27:38Z`; bare ids are refused, since oEmbed has no
+dates) and run
+`node tools/umbracoffee-feed/src/backfill.mjs <dir> < ids.csv`. It asks oEmbed for each unknown id's
+title, skips ids it already has or oEmbed does not know, adds the rest to `sources.json` with an
+empty description and rebuilds `episodes.json`. Commit both and push the data branch. The scrape
+itself is not kept in the repository.
+
+The dry run of `run.mjs` against the real feed with no key, and the tool's tests (`node --test` in
+`tools/umbracoffee-feed`, also run by the build action), are the checks that exist. The workflow
+itself has not run on GitHub yet.
 
 ## Traps this repository has actually hit
 
@@ -119,6 +269,13 @@ Nothing in CI can do these.
   `src/Directory.Packages.props` is a bounded range for that reason. `Umbraco.JsonSchema.Extensions`
   sidesteps it differently: it is build-time only, so it carries `PrivateAssets="all"` and never
   reaches the dependency list at all.
+- **`[17.0.0,18.0.0)` admits Umbraco 18's prereleases.** NuGet orders `18.0.0-rc.1` before
+  `18.0.0`, so an exclusive `18.0.0` ceiling lets every 18 beta and RC in, which is exactly the
+  code a 17 package has never been tested against. Bound Umbraco references at `17.99999999`
+  instead (`[17.0.0,17.99999999]`), which stops below every 18 version, prerelease or not, and is
+  a plain stable number so it pushes cleanly (see `-0` below). The ceiling is one property,
+  `UmbraDesktopUmbracoMajorCeiling` in `src/Directory.Build.props`, shared with the add-ons' host
+  dependency.
 - **`-0` as an upper bound** (`[17.0.0,18.0.0-0)`) packs fine and then fails
   `dotnet nuget push` with `400 BadRequest: invalid Version`. Use plain stable bounds.
 - **`dotnet test` against a directory or a solution** silently matches nothing and reports green.

@@ -194,3 +194,19 @@ it('changes the format source and the clock override independently', async () =>
   context.setClockHourCycle('h23');
   expect(localeOf(context)).to.deep.equal({ source: 'browser', hourCycle: 'h23' });
 });
+
+/**
+ * Apps format times through the context, so they follow the same two settings the taskbar clock
+ * does and change when the user changes them. Public API: see `docs/desktop-apps.md`.
+ */
+it('formats a time for apps the way the taskbar clock does, following the clock setting', async () => {
+  const context = await contextOnHost();
+  const afternoon = new Date(2026, 0, 5, 14, 30, 5);
+  const withSeconds: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
+
+  context.setClockHourCycle('h23');
+  expect(context.formatDateTime(afternoon, withSeconds)).to.equal('14:30:05');
+
+  context.setClockHourCycle('h12');
+  expect(context.formatDateTime(afternoon, withSeconds)).to.match(/^2:30:05\s?\S+/);
+});

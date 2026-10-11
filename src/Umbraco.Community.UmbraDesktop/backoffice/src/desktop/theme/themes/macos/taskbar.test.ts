@@ -1,14 +1,20 @@
 import { expect } from '@open-wc/testing';
 import '../../../components/taskbar.element.js';
-import { UMBRADESKTOP_THEME_TEST_TIMEOUT_MS, mountThemedWith } from '../mount-themed.js';
+import { UMBRADESKTOP_THEME_TEST_TIMEOUT_MS, measureTray, mountThemedWith, withTrayItem } from '../mount-themed.js';
 import type { UmbraDesktopThemedMount, UmbraDesktopUpdatable } from '../mount-themed.js';
 import { UMBRADESKTOP_MACOS_THEME } from './index.js';
-import { MACOS_DOCK_ICON } from './metrics.js';
+import {
+  MACOS_CLOCK_LEADING,
+  MACOS_CLOCK_PADDING,
+  MACOS_DOCK_ICON,
+  MACOS_TRAY_PADDING,
+  MACOS_TRAY_SEPARATOR,
+} from './metrics.js';
 import { MACOS_LIGHT } from './palette.js';
 
 /**
  * The dock draws two separators: one between the fixed buttons and the open windows, one before the
- * clock. They have to be the same line.
+ * tray, which ends with the clock. They have to be the same line.
  *
  * They were not, and it was visible immediately. The divider was built to the tile's height and the
  * clock's was a `border-left` on a box the base leaves sized to its own text, so the dock showed a
@@ -21,7 +27,7 @@ import { MACOS_LIGHT } from './palette.js';
  *
  * The divider itself cannot be measured here. It is rendered only when there is something on both
  * sides of it, which needs a window manager, and that never resolves outside a desktop — so the
- * clock's rule is what gets measured, and the sheet is what says the two agree. That split follows
+ * tray's rule is what gets measured, and the sheet is what says the two agree. That split follows
  * the Windows 11 taskbar tests, which assert on rule text for exactly the same reason.
  */
 
@@ -43,25 +49,57 @@ function sheetText(): string {
   return [...sheets[sheets.length - 1].cssRules].map((rule) => rule.cssText).join('\n');
 }
 
-it('draws the clock separator at the icon height, not at the height of its own text', function () {
+it('draws the tray separator at the icon height, not at the height of its own text', function () {
   this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
-  const clock = bar.root.querySelector('.clock') as HTMLElement;
-  expect(clock, 'the taskbar should render a clock').to.not.equal(null);
+  const tray = bar.root.querySelector('.tray') as HTMLElement;
+  expect(tray, 'the taskbar should render a tray').to.not.equal(null);
 
-  // The rendered box, because that is the thing the separator is drawn down the side of: the base
-  // leaves the clock an inline flex item sized by its own text, which made its rule a coincidence
-  // of the font rather than a stated height.
+  // The rendered box, because that is the thing the separator is drawn down the side of. It hangs on
+  // the tray rather than the clock (design D16), so tray items sit after it, beside the time,
+  // rather than out on the far side of the line among the windows.
   expect(
-    clock.getBoundingClientRect().height,
-    'the clock is sized to the icon so its left rule matches the divider',
+    tray.getBoundingClientRect().height,
+    'the tray is sized to the icon so its left rule matches the divider',
   ).to.be.closeTo(MACOS_DOCK_ICON, 1);
 
-  const style = getComputedStyle(clock);
-  expect(style.borderLeftStyle, 'the separator before the clock is that border').to.equal('solid');
-  expect(style.borderLeftWidth).to.equal('1px');
+  const style = getComputedStyle(tray);
+  expect(style.borderLeftStyle, 'the separator before the tray is that border').to.equal('solid');
+  expect(style.borderLeftWidth).to.equal(`${MACOS_TRAY_SEPARATOR}px`);
 });
 
-it('gives the divider and the clock separator the same height and the same ink', function () {
+it('draws an empty tray as exactly the clock', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  expect(bar.root.querySelector('.tray')!.childElementCount, 'this test is about the empty tray').to.equal(1);
+  const { tray, clock } = measureTray(bar.root);
+  // The separator and the leading padding moved off the clock are all the tray adds, both on the
+  // leading side. The clock kept the rest of its old padding, so the two together are the old box.
+  expect(tray.width - clock.width, 'only the separator and the padding moved off the clock').to.be.closeTo(
+    MACOS_TRAY_SEPARATOR + MACOS_TRAY_PADDING,
+    0.5,
+  );
+  expect(tray.right, 'nothing on the trailing side').to.be.closeTo(clock.right, 0.5);
+  // The box as it was when the clock carried the separator: the time with the clock's old padding,
+  // its long leading side and its short trailing one, plus the line. The split has to add back up.
+  const time = (bar.root.querySelector('.clock-time') as HTMLElement).getBoundingClientRect();
+  expect(tray.width - time.width, 'the tray is as wide as the clock was before the tray existed').to.be.closeTo(
+    MACOS_TRAY_SEPARATOR + MACOS_CLOCK_LEADING + MACOS_CLOCK_PADDING,
+    0.5,
+  );
+});
+
+it('puts a tray item after the separator, before the time', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  withTrayItem(bar.root, (item) => {
+    const { tray, clock } = measureTray(bar.root);
+    const box = item.getBoundingClientRect();
+    expect(box.left, 'the item sits inside the separator, clear of it').to.be.at.least(
+      tray.left + MACOS_TRAY_SEPARATOR + MACOS_TRAY_PADDING - 0.5,
+    );
+    expect(box.right, 'and comes before the clock').to.be.at.most(clock.left + 0.5);
+  });
+});
+
+it('gives the divider and the tray separator the same height and the same ink', function () {
   this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
   const text = sheetText();
 

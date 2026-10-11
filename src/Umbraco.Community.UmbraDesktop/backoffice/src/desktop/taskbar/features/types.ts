@@ -9,9 +9,12 @@ import type { UmbraDesktopApp } from '../../types';
  * the health indicator (#22) and a hide-the-clock toggle belong. Windows keeps the same separation —
  * taskbar items against system tray icons — and the reason is that the two speak different
  * languages: a launcher-side element acts when clicked, which for everything but full screen means
- * calling `open()`, and a tray element reports state. Nothing fills `tray` yet, and this issue must not:
- * the region exists so that when it does arrive it arrives as an entry here rather than as a second
- * mechanism with its own settings shape.
+ * calling `open()`, and a tray element reports state. No host feature fills `tray` yet, but the
+ * region is no longer only the host's: it is the one part of the taskbar packages may add to, through
+ * a `umbraDesktopTrayItem` manifest (umbraCoffee design D9). A package item shares this region's
+ * settings heading and the same stored on/off map, so it is not a second mechanism with its own
+ * settings shape; the tray code under `taskbar/tray/` loads it and orders it by appearance (D14).
+ * The host's own tray features, when they come, still arrive as an entry here.
  *
  * A feature's {@link UmbraDesktopTaskbarFeature.weight} orders it *within* its region, never
  * globally, so the two orders stay independent.
@@ -122,10 +125,12 @@ export interface UmbraDesktopTaskbarFeatureContext {
  * a feature contributing several elements, or none, is the normal case rather than a special one.
  * An app alias is therefore never part of this contract; it is a detail inside one feature.
  *
- * **Curated, not an extension point**, the same way the themes, the settings categories and the app
- * catalogue are: a feature is a folder plus one entry in `index.ts`, and a package cannot add
- * itself. The order is the shell's and the user cannot change it, as on Windows, which is what
- * makes a position on the row worth building muscle memory for.
+ * **The host's own features are curated**, the same way the themes and the settings categories are:
+ * a feature is a folder plus one entry in `index.ts`, and a package cannot become one. The order is
+ * the shell's and the user cannot change it, as on Windows, which is what makes a position on the
+ * row worth building muscle memory for. Packages reach the taskbar only through the tray, with a
+ * `umbraDesktopTrayItem` manifest (design D9): such an item is not one of these, has no weight, and
+ * always sits further from the clock than every host tray feature.
  */
 export interface UmbraDesktopTaskbarFeature {
   /**

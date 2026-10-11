@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { clockLocale, formatClock, msUntilNextMinute } from './clock-format.js';
+import { clockLocale, formatClock, formatDateTime, msUntilNextMinute } from './clock-format.js';
 
 /**
  * The whole matrix, without a taskbar.
@@ -89,6 +89,27 @@ it('asks for the runtime default rather than a named locale for the browser', ()
   expect(clockLocale({ source: 'browser', hourCycle: 'auto' }, locales)).to.equal(undefined);
 });
 
+/**
+ * The Regional format setting reaches a date an app formats, not only the clock, and a date is the
+ * one output with no hour for the Clock setting to change, so the culture is all that decides it.
+ *
+ * Compared against `Intl` rather than against a literal, because the browser branch is whatever
+ * Chrome runs as, and a Dutch date pinned as a string would make a CLDR wording change look like a
+ * regression here. The last line is what makes the first two mean anything: were Dutch and English
+ * to format alike, both could pass with the culture ignored.
+ */
+it('formats a date in the culture the Regional format setting picks', () => {
+  const medium: Intl.DateTimeFormatOptions = { dateStyle: 'medium' };
+  const dutch = new Intl.DateTimeFormat('nl', medium).format(afternoon);
+  const runtime = new Intl.DateTimeFormat(undefined, medium).format(afternoon);
+
+  expect(formatDateTime(afternoon, { source: 'backoffice', hourCycle: 'auto' }, { backoffice: 'nl' }, medium)).to.equal(dutch);
+  expect(formatDateTime(afternoon, { source: 'browser', hourCycle: 'auto' }, { backoffice: 'nl' }, medium)).to.equal(runtime);
+  expect(dutch, 'a culture that actually differs from the default one').to.not.equal(
+    new Intl.DateTimeFormat('en-us', medium).format(afternoon),
+  );
+});
+
 it('waits until the next whole minute, never zero and never more than one', () => {
   // The taskbar sits beside the operating system's own clock, so the two have to turn over
   // together. A fixed interval cannot do that at any frequency: it turns the minute over wherever
@@ -114,4 +135,39 @@ it('measures from the moment it is given, so a late timer corrects itself', () =
   // fresh reading rather than from when it meant to fire, so the error does not accumulate.
   const late = new Date(2026, 0, 5, 14, 31, 7, 250);
   expect(msUntilNextMinute(late)).to.equal(52750);
+});
+
+/**
+ * The same rules for any time or date an app shows, not only the taskbar's hours and minutes: this
+ * is what the settings context publishes to apps (see `docs/desktop-apps.md`), so a clock app with
+ * seconds reads exactly as the taskbar does.
+ */
+describe('formatDateTime', () => {
+  const withSeconds: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
+
+  it('applies the hour override to a time with seconds', () => {
+    expect(formatDateTime(afternoon, { source: 'backoffice', hourCycle: 'h23' }, locales, withSeconds)).to.equal('14:30:00');
+    expect(formatDateTime(afternoon, { source: 'backoffice', hourCycle: 'h12' }, locales, withSeconds)).to.equal('2:30:00 PM');
+  });
+
+  it('pads a 24-hour hour and not a 12-hour one, as the taskbar does', () => {
+    const early = new Date(2026, 0, 5, 9, 5, 7);
+    expect(formatDateTime(early, { source: 'backoffice', hourCycle: 'h23' }, locales, withSeconds)).to.equal('09:05:07');
+    expect(formatDateTime(early, { source: 'backoffice', hourCycle: 'h12' }, locales, withSeconds)).to.equal('9:05:07 AM');
+  });
+
+  it('leaves a date with no time in it to the culture', () => {
+    const dateOnly: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+    expect(formatDateTime(afternoon, { source: 'backoffice', hourCycle: 'h23' }, locales, dateOnly)).to.equal(
+      'Monday, January 5, 2026',
+    );
+  });
+
+  it('is what formatClock is, for hours and minutes', () => {
+    for (const hourCycle of ['auto', 'h12', 'h23'] as const) {
+      expect(formatClock(midnight, { source: 'backoffice', hourCycle }, locales)).to.equal(
+        formatDateTime(midnight, { source: 'backoffice', hourCycle }, locales, { hour: 'numeric', minute: '2-digit' }),
+      );
+    }
+  });
 });

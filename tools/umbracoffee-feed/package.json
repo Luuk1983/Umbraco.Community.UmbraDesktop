@@ -1,0 +1,9 @@
+{
+  "name": "umbracoffee-feed",
+  "private": true,
+  "type": "module",
+  "description": "Keeps the umbraCoffee data branch up to date. Dependency-free on purpose: the workflow runs it from a bare checkout.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

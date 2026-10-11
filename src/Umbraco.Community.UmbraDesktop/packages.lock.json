@@ -21,7 +21,7 @@
       },
       "Umbraco.Cms.Api.Common": {
         "type": "Direct",
-        "requested": "[17.0.0, 18.0.0)",
+        "requested": "[17.0.0, 17.99999999.0]",
         "resolved": "17.0.0",
         "contentHash": "WM43vpWH6p75IdocPGvwesybdJl+rMPlSayKE4kU62jDUM6/jUNe3/bgJwNokHvh2EXgqgOB6GR7k+IqrXcaaA==",
         "dependencies": {
@@ -36,7 +36,7 @@
       },
       "Umbraco.Cms.Api.Management": {
         "type": "Direct",
-        "requested": "[17.0.0, 18.0.0)",
+        "requested": "[17.0.0, 17.99999999.0]",
         "resolved": "17.0.0",
         "contentHash": "G7xO9Oa77+qOzf6j9QU44Q1r0RwjevXMqZIgn3m+EP9u6sybdKaVxwv/lDK+FWHx1xrq7AhEYo+lfD7FlbanVw==",
         "dependencies": {
@@ -50,7 +50,7 @@
       },
       "Umbraco.Cms.Core": {
         "type": "Direct",
-        "requested": "[17.0.0, 18.0.0)",
+        "requested": "[17.0.0, 17.99999999.0]",
         "resolved": "17.0.0",
         "contentHash": "XmwzNfoXJkT/QkK48ePr73PPZGTaJF2Z2vljKVdZMbMMaZqY3SForO8Uy9LcmFYqX9+VaPiyFEqF+0l/D6J0rw==",
         "dependencies": {
@@ -69,7 +69,7 @@
       },
       "Umbraco.Cms.Infrastructure": {
         "type": "Direct",
-        "requested": "[17.0.0, 18.0.0)",
+        "requested": "[17.0.0, 17.99999999.0]",
         "resolved": "17.0.0",
         "contentHash": "35L5XwCAqu/xQIkupt4jspqY302FkGC/eKTJwAa67T+uH65bRdQ9DKC4LJN3wQOK93zaWYGglhbpqFYXKVtxcw==",
         "dependencies": {

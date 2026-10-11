@@ -1,16 +1,16 @@
 import type { ManifestElement, ManifestWithDynamicConditions } from '@umbraco-cms/backoffice/extension-api';
 
 /**
- * The desktop's manifest types, `umbraDesktopApp` and `umbraDesktopCatalogue`, declared here because
- * a consuming package cannot import them.
+ * The desktop's manifest types, `umbraDesktopApp`, `umbraDesktopCatalogue` and `umbraDesktopTrayItem`,
+ * declared here because a consuming package cannot import them.
  *
  * **This file is a hand-written copy of a contract that lives in another package, and it exists
- * because there is currently no other way.** UmbraDesktop's own `app.extension.ts` and
- * `catalogue.extension.ts` declare these types and register them in Umbraco's
- * `UmbExtensionManifestMap`, but those declarations reach nobody
- * outside its own project: the host's npm package is `private`, its NuGet package ships built
- * JavaScript rather than TypeScript, and `docs/desktop-apps.md` makes a virtue of the contract
- * being structural, so nothing is imported from the host at all.
+ * because there is currently no other way.** UmbraDesktop's own `app.extension.ts`,
+ * `catalogue.extension.ts` and `tray.extension.ts` declare these types and register them in
+ * Umbraco's `UmbExtensionManifestMap`, but those declarations reach nobody outside its own project:
+ * the host's npm package is `private`, its NuGet package ships built JavaScript rather than
+ * TypeScript, and `docs/desktop-apps.md` makes a virtue of the contract being structural, so nothing
+ * is imported from the host at all.
  *
  * The consequence is not a warning but a build failure, and one whose message points at the wrong
  * thing. Without this file, `type: 'umbraDesktopApp'` matches no arm of the `UmbExtensionManifest`
@@ -119,17 +119,46 @@ interface ManifestUmbraDesktopCatalogue extends ManifestWithDynamicConditions {
   meta: MetaUmbraDesktopCatalogue;
 }
 
+/**
+ * What a `umbraDesktopTrayItem` manifest carries. A copy of the host's `MetaUmbraDesktopTrayItem`.
+ *
+ * No weight, on the host's side and so on this one: package items sit in the tray in the order they
+ * appeared, so no package can claim a place nearer the clock than one that was there first.
+ */
+interface MetaUmbraDesktopTrayItem {
+  /** The switch's name in Desktop settings. A localisation token (`#area_key`) or a literal. */
+  label: string;
+  /** The line under that switch: what the item puts in the tray. A token or a literal. */
+  description: string;
+  /** Whether the item is on for a user who has never said otherwise. Default: on. */
+  defaultEnabled?: boolean;
+}
+
+/**
+ * An icon in the taskbar's system tray: one custom element, drawn while the user has it switched on,
+ * which sets `hidden` on itself while it has nothing to show. Its alias is the key the switch is
+ * stored under, so it is final once shipped. A copy of the host's `ManifestUmbraDesktopTrayItem`.
+ */
+interface ManifestUmbraDesktopTrayItem extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions {
+  /** Discriminates this manifest from every other extension type. */
+  type: 'umbraDesktopTrayItem';
+  /** The switch's name and description, and whether it starts on. */
+  meta: MetaUmbraDesktopTrayItem;
+}
+
 declare global {
   /**
-   * Adds `umbraDesktopApp` and `umbraDesktopCatalogue` to Umbraco's own extension type map, which is
-   * what makes the manifests assignable to `UmbExtensionManifest` and so accepted in this package's
-   * `manifests` array. Umbraco's own extension kinds declare themselves the same way, and so does
-   * the host.
+   * Adds `umbraDesktopApp`, `umbraDesktopCatalogue` and `umbraDesktopTrayItem` to Umbraco's own
+   * extension type map, which is what makes the manifests assignable to `UmbExtensionManifest` and
+   * so accepted in this package's `manifests` array. Umbraco's own extension kinds declare
+   * themselves the same way, and so does the host.
    */
   interface UmbExtensionManifestMap {
     /** This package's desktop apps. */
     umbraDesktopApp: ManifestUmbraDesktopApp;
     /** This package's launcher groups. */
     umbraDesktopCatalogue: ManifestUmbraDesktopCatalogue;
+    /** This package's system tray icons. */
+    umbraDesktopTrayItem: ManifestUmbraDesktopTrayItem;
   }
 }
