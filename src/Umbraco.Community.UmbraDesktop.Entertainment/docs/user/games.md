@@ -8,7 +8,7 @@ image: ../screenshots/entertainment-games-minesweeper.png
 
 # Games
 
-UmbraDesktop Entertainment puts Minesweeper, Snake and Solitaire on the desktop, each in a window of its own,
+The UmbraDesktop Entertainment Add-on puts Minesweeper, Snake and Solitaire on the desktop, each in a window of its own,
 under whichever theme is in use. So Minesweeper under the Windows 98 theme looks like Minesweeper, and
 under the macOS theme does not.
 

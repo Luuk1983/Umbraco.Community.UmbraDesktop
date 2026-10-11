@@ -2,7 +2,7 @@
 
 # UmbraDesktop Arcade service
 
-High scores and leaderboards for UmbraDesktop games. This is a service package: you get it with a game that uses it, such as UmbraDesktop Entertainment, and do not need to install it yourself. Its audience is game authors who want their game on the Arcade.
+High scores and leaderboards for UmbraDesktop games. This is a service package: you get it with a game that uses it, such as the UmbraDesktop Entertainment Add-on, and do not need to install it yourself. Its audience is game authors who want their game on the Arcade.
 
 [![NuGet](https://img.shields.io/nuget/v/Umbraco.Community.UmbraDesktop.Services.Arcade)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Services.Arcade) [![License](https://img.shields.io/github/license/Luuk1983/Umbraco.Community.UmbraDesktop)](../../LICENSE)
 

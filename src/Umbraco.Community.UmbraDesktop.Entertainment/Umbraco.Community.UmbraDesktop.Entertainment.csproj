@@ -9,7 +9,7 @@
 	  <ContentTargetFolders>.</ContentTargetFolders>
 	  <Product>Umbraco.Community.UmbraDesktop.Entertainment</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop.Entertainment</PackageId>
-	  <Title>UmbraDesktop Entertainment</Title>
+	  <Title>UmbraDesktop Entertainment Add-on</Title>
 	  <Description>Games for UmbraDesktop. An optional add-on that puts Minesweeper, Snake and Solitaire on the desktop, each in a window of its own and themed along with the rest of it.</Description>
 	  <PackageTags>umbraco;backoffice;desktop;games;minesweeper;snake;solitaire;card-game;klondike;entertainment;umbradesktop;apps;umbraco-marketplace</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop.Entertainment</RootNamespace>

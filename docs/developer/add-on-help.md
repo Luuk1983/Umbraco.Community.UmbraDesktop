@@ -15,7 +15,7 @@ desktop's and no change to the desktop. It takes three things:
 2. that folder served from your package's own `App_Plugins` folder
 3. one `umbraDesktopDocs` manifest entry saying where it is
 
-Everything you need is on this page. UmbraDesktop Entertainment, an add-on in the desktop's own
+Everything you need is on this page. The UmbraDesktop Entertainment Add-on, in the desktop's own
 repository, does exactly this, so its source is a worked example if you want one:
 `src/Umbraco.Community.UmbraDesktop.Entertainment/`.
 

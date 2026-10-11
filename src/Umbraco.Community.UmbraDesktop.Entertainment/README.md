@@ -1,6 +1,6 @@
 ![UmbraDesktop](../Umbraco.Community.UmbraDesktop/Package-image_128_128.png)
 
-# UmbraDesktop Entertainment
+# UmbraDesktop Entertainment Add-on
 
 Games for UmbraDesktop. Minesweeper, Snake and Solitaire, each in a window of its own on the desktop, themed along with everything else.
 

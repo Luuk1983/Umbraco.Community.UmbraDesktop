@@ -10,7 +10,7 @@
 	  <Product>Umbraco.Community.UmbraDesktop.Services.Arcade</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop.Services.Arcade</PackageId>
 	  <Title>UmbraDesktop Arcade service</Title>
-	  <Description>High scores and leaderboards for UmbraDesktop games. A service package: you get it with a game that uses it, such as UmbraDesktop Entertainment, and do not need to install it yourself.</Description>
+	  <Description>High scores and leaderboards for UmbraDesktop games. A service package: you get it with a game that uses it, such as the UmbraDesktop Entertainment Add-on, and do not need to install it yourself.</Description>
 	  <PackageTags>umbraco;backoffice;desktop;umbradesktop;games;leaderboard;high-scores</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop.Services.Arcade</RootNamespace>
 	  <Authors>Luuk Peters</Authors>

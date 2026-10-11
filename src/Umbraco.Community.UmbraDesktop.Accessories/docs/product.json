@@ -1,6 +1,6 @@
 {
   "id": "accessories",
-  "name": "UmbraDesktop Accessories",
+  "name": "UmbraDesktop Accessories Add-on",
   "packageId": "Umbraco.Community.UmbraDesktop.Accessories",
   "repository": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop",
   "docsRoot": "src/Umbraco.Community.UmbraDesktop.Accessories/docs"

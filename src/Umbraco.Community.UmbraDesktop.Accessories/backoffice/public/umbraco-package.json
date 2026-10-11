@@ -1,7 +1,7 @@
 {
 	"$schema": "../../umbraco-package-schema.json",
 	"id": "Umbraco.Community.UmbraDesktop.Accessories",
-	"name": "UmbraDesktop Accessories",
+	"name": "UmbraDesktop Accessories Add-on",
 	"version": "GetsGenerated",
 	"extensions": [
 		{

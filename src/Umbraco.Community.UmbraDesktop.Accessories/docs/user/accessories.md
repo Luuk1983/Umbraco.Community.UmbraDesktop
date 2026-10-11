@@ -8,7 +8,7 @@ image: ../screenshots/accessories-desktop.png
 
 # Accessories
 
-UmbraDesktop Accessories puts the small tools Windows kept under Start > Programs > Accessories and
+The UmbraDesktop Accessories Add-on puts the small tools Windows kept under Start > Programs > Accessories and
 System Tools on the desktop, each in a window of its own and themed along with the rest of it.
 
 ## Install

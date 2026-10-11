@@ -9,7 +9,7 @@
 	  <ContentTargetFolders>.</ContentTargetFolders>
 	  <Product>Umbraco.Community.UmbraDesktop.Accessories</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop.Accessories</PackageId>
-	  <Title>UmbraDesktop Accessories</Title>
+	  <Title>UmbraDesktop Accessories Add-on</Title>
 	  <Description>The small tools for UmbraDesktop. An optional add-on that puts Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information on the desktop, each in a window of its own and themed along with the rest of it.</Description>
 	  <PackageTags>umbraco;backoffice;desktop;accessories;notepad;paint;sticky-notes;calculator;clock;character-map;screensaver;disk-cleanup;system-information;umbradesktop;apps;umbraco-marketplace</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop.Accessories</RootNamespace>

@@ -8,7 +8,7 @@ sidebar_position: 1
 # Arcade
 
 The Arcade keeps your best score on every board of the desktop's games and ranks everyone's. It
-arrives with a game that uses it, such as UmbraDesktop Entertainment. You do not install it
+arrives with a game that uses it, such as the UmbraDesktop Entertainment Add-on. You do not install it
 yourself.
 
 ## After a game
