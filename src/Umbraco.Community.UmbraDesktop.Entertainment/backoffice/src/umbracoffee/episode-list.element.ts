@@ -528,7 +528,7 @@ export class UmbraCoffeeEpisodeListElement extends UmbLitElement {
       flex: none;
       margin: 0;
       padding: 0 15px;
-      overflow: hidden;
+      overflow: clip; /* not a scroll container: see .ep-d in episode-list */
       white-space: nowrap;
       text-overflow: ellipsis;
       font-size: 12px;
@@ -650,12 +650,16 @@ export class UmbraCoffeeEpisodeListElement extends UmbLitElement {
       overflow: hidden;
     }
 
+    /* clip, not hidden: a box with overflow hidden is still a scroll container, so on Linux CI,
+       whose fallback font is wider, the live row's tag and date overflowed by a few pixels and the
+       line became a second scroller (2026-10-11). clip cuts the same way and keeps the ellipsis,
+       and nothing, not even focus, can scroll it. */
     .ep-d,
     .ep-g {
       font-size: 12px;
       line-height: 16px;
       white-space: nowrap;
-      overflow: hidden;
+      overflow: clip;
       text-overflow: ellipsis;
       color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt));
     }

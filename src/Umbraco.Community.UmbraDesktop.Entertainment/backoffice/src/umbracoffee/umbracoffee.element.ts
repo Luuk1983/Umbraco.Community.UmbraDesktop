@@ -1259,12 +1259,12 @@ export class UmbraCoffeeAppElement extends UmbLitElement {
 
       .meta {
         flex-wrap: nowrap;
-        overflow: hidden;
+        overflow: clip; /* not a scroll container: see .ep-d in episode-list */
         white-space: nowrap;
       }
 
       .guests {
-        overflow: hidden;
+        overflow: clip; /* not a scroll container: see .ep-d in episode-list */
         text-overflow: ellipsis;
       }
 

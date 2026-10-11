@@ -767,7 +767,7 @@ export class ControlBarElement extends UmbLitElement {
       gap: 6px;
       min-width: 0;
       flex-shrink: 1;
-      overflow: hidden;
+      overflow: clip; /* not a scroll container: see .ep-d in episode-list */
       padding-left: 8px;
       color: var(--_dim);
     }
@@ -778,7 +778,7 @@ export class ControlBarElement extends UmbLitElement {
     }
 
     .status span {
-      overflow: hidden;
+      overflow: clip; /* not a scroll container: see .ep-d in episode-list */
       text-overflow: ellipsis;
     }
 

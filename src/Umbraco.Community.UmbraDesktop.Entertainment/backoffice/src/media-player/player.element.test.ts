@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, html, waitUntil } from '@open-wc/testing';
 import './player.element.js';
 import type { PlayerElement } from './player.element.js';
 import {
@@ -8,7 +8,7 @@ import {
   MEDIA_MIN_WIDTH_PX,
   PLAYER_ASPECT_RATIO,
 } from './constants.js';
-import { FakeEngine } from './test-support.js';
+import { FakeEngine, mount, unmountAll } from './test-support.js';
 
 /** A stand-in for `IntersectionObserver` that a case can fire by hand. */
 class StubObserver {
@@ -47,11 +47,13 @@ class StubObserver {
 /** Mount a player on a fake engine. */
 async function player(videoId = 'aRkc0fRxQjw', autoplay = false) {
   const engine = new FakeEngine();
-  const element = await fixture<PlayerElement>(
+  const element = await mount<PlayerElement>(
     html`<umbradesktop-media-player .engine=${engine} .videoId=${videoId} .autoplay=${autoplay}></umbradesktop-media-player>`,
   );
   return { element, engine };
 }
+
+afterEach(unmountAll);
 
 describe('media player', () => {
   const realObserver = window.IntersectionObserver;

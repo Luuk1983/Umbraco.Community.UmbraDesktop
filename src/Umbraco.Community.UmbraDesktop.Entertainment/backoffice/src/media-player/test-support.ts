@@ -1,6 +1,39 @@
 import { ENGINE_EVENTS } from './engine.js';
 import type { PlayerEngine, PlayerLoadOptions, PlayerState } from './engine.js';
 import type { YTNamespace, YTPlayer, YTPlayerOptions } from './youtube-engine.js';
+import { render, type TemplateResult } from '@umbraco-cms/backoffice/external/lit';
+
+/** Hosts {@link mount} appended, so {@link unmountAll} can take them away again. */
+const mounted: HTMLElement[] = [];
+
+/**
+ * Draw a template in a host appended to the page by hand, and wait for the element in it to render.
+ *
+ * In place of open-wc's `fixture`, which waits for an animation frame that a page in the background
+ * never gets: in the full suite, and always in CI, the test pages are background tabs, and the
+ * control bar's file hung there until the runner's two-minute limit (2026-10-11). Call
+ * {@link unmountAll} in an `afterEach`.
+ * @param template What to draw.
+ * @returns The first element the template drew.
+ */
+export async function mount<T extends Element>(template: TemplateResult): Promise<T> {
+  const host = document.createElement('div');
+  document.body.append(host);
+  mounted.push(host);
+  render(template, host);
+  const element = host.firstElementChild as T;
+  // The first custom element drawn, the template's own or one inside a wrapper, is the one to wait for.
+  const custom = [element, ...element.querySelectorAll('*')].find((node) => node.localName.includes('-')) as
+    | (Element & { updateComplete?: Promise<unknown> })
+    | undefined;
+  await custom?.updateComplete;
+  return element;
+}
+
+/** Remove every host {@link mount} appended. */
+export function unmountAll(): void {
+  for (const host of mounted.splice(0)) host.remove();
+}
 
 /**
  * Test doubles for the media player.

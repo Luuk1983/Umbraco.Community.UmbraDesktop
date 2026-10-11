@@ -1,4 +1,4 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, html } from '@open-wc/testing';
 import './control-bar.element.js';
 import type { ControlBarElement } from './control-bar.element.js';
 import {
@@ -16,7 +16,7 @@ import {
   VOLUME_STEP,
 } from './constants.js';
 import { ENGINE_EVENTS } from './engine.js';
-import { FakeEngine } from './test-support.js';
+import { FakeEngine, mount, unmountAll } from './test-support.js';
 
 /** The five theme ids the desktop stamps on an app element. */
 const THEMES = ['umbraco', 'umbraco4', 'macos', 'win11', 'win98'];
@@ -32,7 +32,7 @@ async function bar(configure?: (engine: FakeEngine) => void, container?: HTMLEle
   engine.duration = 3000;
   engine.time = 1000;
   configure?.(engine);
-  const wrapper = await fixture<HTMLDivElement>(
+  const wrapper = await mount<HTMLDivElement>(
     html`<div style="width:${width}px"><umbradesktop-control-bar .engine=${engine} .videoId=${'aRkc0fRxQjw'} .container=${container}></umbradesktop-control-bar></div>`,
   );
   const element = wrapper.querySelector<ControlBarElement>('umbradesktop-control-bar')!;
@@ -47,7 +47,7 @@ async function bar(configure?: (engine: FakeEngine) => void, container?: HTMLEle
  * @returns The bar.
  */
 async function disabledBar(status: string, videoId = 'next1') {
-  const wrapper = await fixture<HTMLDivElement>(
+  const wrapper = await mount<HTMLDivElement>(
     html`<div style="width:720px"><umbradesktop-control-bar disabled .status=${status} .videoId=${videoId}></umbradesktop-control-bar></div>`,
   );
   const element = wrapper.querySelector<ControlBarElement>('umbradesktop-control-bar')!;
@@ -81,6 +81,8 @@ async function press(element: ControlBarElement, target: HTMLElement, key: strin
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true }));
   await element.updateComplete;
 }
+
+afterEach(unmountAll);
 
 describe('media player control bar', () => {
   it('renders every control', async () => {
