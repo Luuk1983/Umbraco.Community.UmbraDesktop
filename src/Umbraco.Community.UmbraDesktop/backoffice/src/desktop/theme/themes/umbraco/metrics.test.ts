@@ -2,30 +2,29 @@ import { expect } from '@open-wc/testing';
 import '../../../components/window.element.js';
 import type { UmbraDesktopWindowElement } from '../../../components/window.element.js';
 import type { UmbraDesktopApp } from '../../../types.js';
-import { paletteCss } from '../../palette-css.js';
 import { UMBRADESKTOP_UMBRACO_THEME } from './index.js';
-// Two pieces of the shared themed-mount module, and only two: this theme mounts its own bare
-// chrome for the reason below, but the probe rectangle and the chrome-cost measurement have to be
-// the same ones the other four themes are held to, or the numbers are not comparable.
+// The probe rectangle and the chrome-cost measurement are the shared ones, so the numbers are
+// comparable with the other four themes'; the mount is this theme's own binding, which also puts
+// the backoffice's tokens on the page.
 import { measureChromeCost, UMBRADESKTOP_PROBE_WINDOW_RECT } from '../mount-themed.js';
+import { mountThemed } from './mount-themed.js';
+import type { UmbraDesktopThemedMount } from './mount-themed.js';
 
 /**
- * The Umbraco theme's `metrics` describe CSS that nothing in this theme writes: its palettes are
- * empty by design, so every number it publishes describes the *base* styles in
- * `components/window.element` and their CSS fallbacks. That makes it the one theme whose metrics
- * can drift without anybody touching the theme — and they did. `trailing` was written when the
- * titlebar carried three buttons; reload was added as a fourth and the constant stayed at 138,
- * under-reporting the dead band by a whole button. A window dragged hard against the right edge
- * therefore kept 46px less draggable caption than the 80px `grab` asks for — a bug in the theme
- * that renders for every user who has never opened the settings panel.
+ * The Umbraco theme's `metrics` are the base chrome's own, and the theme now restyles that chrome
+ * with a palette and two sheets. So this file holds the one promise that makes the restyle safe:
+ * **nothing the window manager clamps against moved.** The caption is still 40px, the buttons are
+ * still 46px wide, the frame ring is still 1px, and what the chrome costs an app is unchanged. A
+ * rounder corner, a navy bar and a circle painted behind a button are all paint.
  *
- * So this file does for the Umbraco theme what `themes/win98/metrics.test.ts` does for Win98:
- * mount the real window, measure the boxes the browser actually paints, and hold the published
- * metrics against them. Deriving the numbers from named constants (see `constants.ts`) keeps them
- * consistent with each other; only measuring keeps them consistent with the CSS.
+ * It matters more here than for the other themes, because this is the default: a metric that
+ * drifts is wrong for every user who has never opened the settings panel, which is exactly how the
+ * trailing strip came to describe three buttons for as long as there have been four.
  *
- * It needs no `mount-themed` helper of its own. That helper exists to apply a palette and adopt a
- * theme's stylesheets, and this theme has neither — mounting it *is* mounting the bare chrome.
+ * So this does for the Umbraco theme what `themes/win98/metrics.test.ts` does for Win98: mount the
+ * real window **with the theme's own palette and stylesheet in force**, measure the boxes the
+ * browser actually paints, and hold the published metrics against them. Measuring the bare base, as
+ * this file did while the theme had nothing of its own, would pass for a window nobody sees.
  */
 
 /** A throwaway app for a window that only has to render, never load anything. */
@@ -36,20 +35,6 @@ const PROBE_APP: UmbraDesktopApp = {
   content: { kind: 'iframe', url: 'about:blank' },
   chromeProfile: 'bare',
 };
-
-/**
- * The backoffice custom properties the base window styles fall back to, which a bare test page
- * does not load.
- *
- * Only this one is set, because it is the only fallback that changes the size of a box being
- * measured: `.frame`'s `border` and `.titlebar`'s `border-bottom` are both
- * `1px solid var(--uui-color-border)`, and a `var()` with no value makes the whole declaration
- * invalid at computed-value time — the border collapses to `none`, and both measurements come out
- * a pixel short of what the backoffice paints. Leaving it undefined would measure a window that
- * only exists in the test runner. (`--uui-size-space-3` and friends are left unset on purpose:
- * they move the title text, not any edge these metrics describe.)
- */
-const BACKOFFICE_TOKENS = '--uui-color-border:#d8d7d9;';
 
 /**
  * How long the shared mount may take, well above Mocha's 5s default: a full-suite run has two
@@ -64,27 +49,16 @@ const BACKOFFICE_TOKENS = '--uui-color-border:#d8d7d9;';
  */
 const MOUNT_TIMEOUT_MS = 20_000;
 
-/** The window under test, mounted once for the whole file. */
-let element: UmbraDesktopWindowElement;
-
-/** The wrapper carrying the palette, removed on teardown. */
-let host: HTMLElement;
+/** The themed window under test, mounted once for the whole file. */
+let mounted: UmbraDesktopThemedMount<UmbraDesktopWindowElement>;
 
 /** The window's shadow root, where the chrome's own DOM lives. */
 let root: ShadowRoot;
 
 before(async function () {
   this.timeout(MOUNT_TIMEOUT_MS);
-  host = document.createElement('div');
-  // The theme's own palette, empty as it is, applied the way `theme.context` applies it — so a
-  // token this theme ever starts setting is in force here too, rather than silently skipped.
-  host.setAttribute('style', BACKOFFICE_TOKENS + paletteCss(UMBRADESKTOP_UMBRACO_THEME.palettes.light));
-  document.body.appendChild(host);
-
-  element = document.createElement('umbradesktop-window') as UmbraDesktopWindowElement;
-  host.appendChild(element);
-  await element.updateComplete;
-  element.window = {
+  mounted = await mountThemed<UmbraDesktopWindowElement>('umbradesktop-window', 'window');
+  mounted.element.window = {
     id: 'w1',
     app: PROBE_APP,
     rect: UMBRADESKTOP_PROBE_WINDOW_RECT,
@@ -92,11 +66,11 @@ before(async function () {
     active: true,
     state: 'normal',
   };
-  await element.updateComplete;
-  root = element.shadowRoot!;
+  await mounted.element.updateComplete;
+  root = mounted.root;
 });
 
-after(() => host?.remove());
+after(() => mounted?.dispose());
 
 it('reserves exactly the trailing strip of titlebar its window controls actually occupy', () => {
   const frame = root.querySelector('.frame') as HTMLElement;

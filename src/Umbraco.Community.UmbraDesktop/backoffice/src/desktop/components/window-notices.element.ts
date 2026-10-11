@@ -180,7 +180,7 @@ export class UmbraDesktopWindowNoticesElement extends UmbLitElement {
            'window.element', a flex column sized by an inline style or a maximized window's 100% —
            is exactly that; '.notice-stack' itself has no such parent, only this shadow host, whose own
            height is otherwise nothing but its content. Measured in the browser rather than assumed
-           (docs/theming.md §4): putting the percentage on '.notice-stack' instead compiles and passes a
+           (docs/developer/theming.md §4): putting the percentage on '.notice-stack' instead compiles and passes a
            naive glance, but it resolves against '.notice-stack''s *own* unclamped content height — a
            number with nothing to do with the window — so it clips every stack to the same
            45%-of-itself regardless of whether the window is 300px or 3000px tall. Here, a flex

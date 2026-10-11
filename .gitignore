@@ -370,9 +370,17 @@ FodyWeavers.xsd
 # Committing them was ~180KB of binary churn per artwork change that nothing ever read from git.
 **/backoffice/public/wallpapers/
 
+# Solitaire card backs. Build output: backoffice/scripts/build-card-backs.mjs cuts them from the
+# host's committed wallpaper PNGs. win98.svg is drawn by hand and is committed.
+**/backoffice/public/solitaire/backs/*.avif
+
 # Rendered app icons. Build output like the wallpapers above: scripts/build-appicons.mjs regenerates
 # every PNG here from the committed SVGs in backoffice/appicons-src/.
 **/backoffice/public/appicons/
+
+# The docs the Help app reads. Build output like the wallpapers: scripts/docs/copy-docs.mjs copies the
+# published pages from docs/ and recompresses the images they use, on every build.
+**/backoffice/public/docs/
 
 # App icon contact sheets. A judging aid, not a source and not build output: scripts/appicon-sheet.mjs
 # regenerates them on demand so an icon can be looked at rather than assumed. They sit beside the

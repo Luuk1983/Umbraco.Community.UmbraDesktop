@@ -18,3 +18,24 @@ Presented in the order the design was explored:
 5. **[fullscreen-drawer.html](./fullscreen-drawer.html)** — the fullscreen launchpad,
    categorised per section with multilevel sub-groups. v1 scope: **auto + search**.
 6. **[blueprint.html](./blueprint.html)** — the end-to-end architecture on one screen.
+
+Later mockups, one set per feature, named after the design doc they belong to:
+
+- **[launcher-layout-model.html](./launcher-layout-model.html)**,
+  **[launcher-layout-drag.html](./launcher-layout-drag.html)** and
+  **[launcher-layout-arrange.html](./launcher-layout-arrange.html)**: the launcher you arrange
+  yourself, for [`../2026-09-27-launcher-layout-design.md`](../2026-09-27-launcher-layout-design.md).
+  The first one's normal-mode view predates Pinned being a place, which the second one shows.
+- **[2026-09-30-solitaire.html](./2026-09-30-solitaire.html)**: the Solitaire table, its settings
+  modal, the default deck and the card back per theme, for
+  [`../2026-09-30-solitaire-design.md`](../2026-09-30-solitaire-design.md). The wallpaper crops are
+  embedded, so the file opens on its own. Its court figures are placeholders.
+- **[2026-10-03-welcome-wizard.html](./2026-10-03-welcome-wizard.html)**: the welcome animation
+  as three stills, the language page in English and in Dutch, the theme page and the sign-in page,
+  for [`../2026-10-03-welcome-wizard-design.md`](../2026-10-03-welcome-wizard-design.md). The
+  wallpaper thumbnails are embedded, so the file opens on its own. The theme cards are drawn by
+  hand; the built page uses the theme picker's own miniatures.
+- **[2026-10-03-window-progress.html](./2026-10-03-window-progress.html)**: a busy window's progress in
+  every theme, in four states, for
+  [`../2026-10-03-window-progress-design.md`](../2026-10-03-window-progress-design.md). The Umbraco
+  theme is drawn both ways that were considered; the ring round the icon is the one built.

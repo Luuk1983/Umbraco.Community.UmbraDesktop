@@ -67,7 +67,7 @@ const TICK_MS = 30_000;
 /** One minute, in ms, for the bar's "Starts in 28 days". */
 const MINUTE_MS = 60_000;
 
-/** The attribute the desktop stamps on an app's element with the active theme's id (`docs/desktop-apps.md` §5). */
+/** The attribute the desktop stamps on an app's element with the active theme's id (`docs/developer/desktop-apps.md` §5). */
 const THEME_ATTRIBUTE = 'data-umbradesktop-theme';
 
 /** Which tab of the column is open while live. */

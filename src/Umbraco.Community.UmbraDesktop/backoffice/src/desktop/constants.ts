@@ -44,6 +44,60 @@ export const UMBRADESKTOP_FALLBACK_ALIAS_PREFIX = 'section:';
 export const UMBRADESKTOP_THEME_ATTRIBUTE = 'data-umbradesktop-theme';
 
 /**
+ * The attribute a registered app puts on its **own element** while it holds unsaved work, and
+ * removes once that work is saved or thrown away.
+ *
+ * The app-window counterpart of the dirty watch an iframe window runs on the workspace inside it.
+ * An app has no workspace for the desktop to watch, so it says so itself, and from there it is the
+ * same flag: the titlebar marker, the taskbar marker, the close guard and the leave-the-desktop
+ * prompt all read it, with no app-specific code in any of them.
+ *
+ * An attribute rather than an event or a context, because it is the one channel that needs nothing
+ * imported from this package, the same reason the theme id reaches an app as an attribute: a
+ * `toggleAttribute` is all an app writes, and the state is readable at any moment rather than only
+ * when a change happens to be heard. Presence is what counts; the value is ignored. Published in
+ * `docs/developer/desktop-apps.md` §7.
+ */
+export const UMBRADESKTOP_DIRTY_ATTRIBUTE = 'data-umbradesktop-dirty';
+
+/**
+ * The event `<umbradesktop-app-host>` fires when its app's {@link UMBRADESKTOP_DIRTY_ATTRIBUTE}
+ * changes, and once whenever an app is mounted. Internal: it is how the host tells the window that
+ * holds it, and no app listens for it.
+ */
+export const UMBRADESKTOP_APP_DIRTY_EVENT = 'umbradesktop-app-dirty';
+
+/**
+ * The event a registered app dispatches from its own element to report work it is doing: start a
+ * task, update it, and end it. Published in `docs/developer/window-progress.md`.
+ *
+ * An event rather than an attribute, unlike {@link UMBRADESKTOP_DIRTY_ATTRIBUTE}, because the
+ * desktop sums several tasks and an attribute holds one value per app. It keeps what made the
+ * attribute the right channel, though: the name is a string, so an app imports nothing from this
+ * package. Dispatched with `bubbles` and `composed`, and `detail` is
+ * `{ id, state: 'running' | 'done' | 'failed', completed?, total?, failed?, label? }`.
+ * `<umbradesktop-app-host>` stops it there, so it never escapes the window. Issue #108, design D5.
+ */
+export const UMBRADESKTOP_TASK_EVENT = 'umbradesktop-task';
+
+/**
+ * The event `<umbradesktop-app-host>` fires with its app's current task list whenever a
+ * {@link UMBRADESKTOP_TASK_EVENT} changes it, and with an empty one when the app goes. Internal, the
+ * counterpart of {@link UMBRADESKTOP_APP_DIRTY_EVENT}: it is how the host tells its window.
+ */
+export const UMBRADESKTOP_APP_TASKS_EVENT = 'umbradesktop-app-tasks';
+
+/**
+ * The font size, in px, of a window's app icon in its title bar and on its taskbar button.
+ *
+ * One number because two stylesheets set it and a third thing is derived from it: the busy ring is
+ * drawn round that icon, and how far the icon shrinks to fit inside the ring is worked out from its
+ * size (`progress/progress-view.ts`). A literal in each stylesheet would let the ring and the icon it
+ * surrounds disagree the first time one of them changed.
+ */
+export const UMBRADESKTOP_CHROME_ICON_PX = 18;
+
+/**
  * Height of the taskbar/panel in pixels.
  *
  * The chrome no longer reads this directly — it takes its height from
@@ -209,7 +263,7 @@ export const UMBRADESKTOP_DOCK_ZONE_WIDTH = 160;
  * its own bottom hairline, measured from the window's top, because that is where a `rect.y` puts
  * it.
  *
- * Both are **derived, never typed**, for the reason `docs/theming.md` §4 gives: these numbers feed
+ * Both are **derived, never typed**, for the reason `docs/developer/theming.md` §4 gives: these numbers feed
  * `clampWindowPosition`, and one that disagrees with the CSS strands windows at the screen edges.
  * `trailing` was a hand-written `138` — three buttons — for as long as the titlebar has rendered
  * four, so a window dragged hard right kept 46px less draggable caption than `grab` asks for,
@@ -336,3 +390,26 @@ export const UMBRADESKTOP_Z_SYSTEM_SCREEN = UMBRADESKTOP_Z_TASKBAR + 1;
  * — their settings are still in this browser either way — and the ledger makes repeating it safe.
  */
 export const UMBRADESKTOP_MIGRATION_TIMEOUT_MS = 30_000;
+
+/**
+ * The id the launcher uses for the Pinned place wherever it needs a group-shaped id: drop targets
+ * and Move to. Starts with `@` because a layout group id is a catalogue alias or `custom-…`, and a
+ * package could otherwise register a group called `pinned`.
+ */
+export const UMBRADESKTOP_PINNED_GROUP_ID = '@pinned';
+
+/**
+ * The event an app element dispatches to tell the desktop where it is, with `{ location: string }`
+ * in `detail`, bubbling and composed (Help design D7). The window records it on the manager, the
+ * layout saves it, and a reopened window hands it back as the app's `location` property. Public
+ * contract for any app, documented in `docs/developer/desktop-apps.md`.
+ */
+export const UMBRADESKTOP_APP_LOCATION_EVENT = 'umbradesktop-app-location';
+
+/**
+ * The event any package can dispatch to open Help at a page, with `{ target: string }` in `detail`,
+ * bubbling and composed (Help design D9). Target strings are `product/page/heading`. The desktop
+ * answers it in its own document and inside every backoffice window, which is what lets a package's
+ * own dashboard ask. Published API, documented in `docs/developer/add-on-help.md`.
+ */
+export const UMBRADESKTOP_OPEN_HELP_EVENT = 'umbradesktop-open-help';

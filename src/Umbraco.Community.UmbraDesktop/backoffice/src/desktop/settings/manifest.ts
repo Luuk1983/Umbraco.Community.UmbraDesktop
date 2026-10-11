@@ -6,7 +6,10 @@ import {
   UMBRADESKTOP_WALLPAPER_PICKER_MODAL_ALIAS,
 } from './modal-tokens';
 
-/** Modal registrations for the desktop settings feature. */
+/**
+ * Registrations for the desktop settings feature: its modals, and the global context packages reach
+ * their settings through.
+ */
 export const manifests: Array<UmbExtensionManifest> = [
   {
     type: 'modal',
@@ -37,5 +40,12 @@ export const manifests: Array<UmbExtensionManifest> = [
     alias: UMBRADESKTOP_CONNECTION_EDITOR_MODAL_ALIAS,
     name: 'UmbraDesktop Connection Editor Modal',
     element: () => import('./components/connection-editor-modal.element.js'),
+  },
+  {
+    // Global so a package's entry point reaches it too (design D6). Created at boot, idle until asked.
+    type: 'globalContext',
+    alias: 'Umbraco.Community.UmbraDesktop.GlobalContext.PackageSettings',
+    name: 'UmbraDesktop Package Settings Context',
+    api: () => import('./package-settings.context.js'),
   },
 ];

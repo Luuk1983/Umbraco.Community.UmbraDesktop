@@ -138,6 +138,16 @@ export class UmbraDesktopThemeContext extends UmbContextBase {
   #pending = 0;
 
   /**
+   * The id of the theme whose stylesheets have been asked for, or none yet.
+   *
+   * Tracked rather than inferred from the previous resolution, which is what this used to compare:
+   * a context starts already resolved on the default theme, so "the theme changed" is never true
+   * for a user who stays on it, and its stylesheets were never loaded. That cost nothing while the
+   * default theme had none to load.
+   */
+  #sheetsFor?: string;
+
+  /**
    * @param host The controller host providing this context, forwarded to {@link UmbContextBase}.
    */
   constructor(host: UmbControllerHost) {
@@ -166,6 +176,10 @@ export class UmbraDesktopThemeContext extends UmbContextBase {
     this.observe(umbExtensionsRegistry.byType('theme'), (manifests) => {
       this.#backofficeThemes.setValue(backofficeThemes(manifests));
     });
+
+    // The default theme's stylesheets, asked for now rather than when the first context resolves,
+    // so a user who never changes theme gets them as early as one who does.
+    this.#apply();
   }
 
   /**
@@ -186,24 +200,27 @@ export class UmbraDesktopThemeContext extends UmbContextBase {
 
   /**
    * Re-resolve the theme and load its stylesheets. Cheap when nothing changed: resolving is pure,
-   * and a theme's module is only imported when the theme in force actually differs.
+   * and a theme's module is only imported when its stylesheets have not been asked for yet.
    */
   #apply(): void {
-    const previous = this.#resolved.getValue();
     const next = resolveTheme({
       themeId: this.#chosenId,
       umbThemeAlias: this.#umbAlias,
       catalogue: UMBRADESKTOP_THEMES,
     });
     this.#resolved.setValue(next);
-    if (previous.theme.id !== next.theme.id) void this.#loadSheets(next);
+    if (this.#sheetsFor !== next.theme.id) {
+      this.#sheetsFor = next.theme.id;
+      void this.#loadSheets(next);
+    }
   }
 
   /**
    * Import the resolved theme's stylesheets and publish them.
    *
-   * A theme with no `sheets` — the Umbraco identity theme — publishes an empty set immediately,
-   * which is what un-adopts the previous theme's rules.
+   * A theme with no `sheets` publishes an empty set immediately, which is what un-adopts the
+   * previous theme's rules. No shipped theme is that bare any more, but a theme that is only a
+   * palette is still a valid one.
    * @param resolved The theme now in force.
    */
   async #loadSheets(resolved: UmbraDesktopResolvedTheme): Promise<void> {

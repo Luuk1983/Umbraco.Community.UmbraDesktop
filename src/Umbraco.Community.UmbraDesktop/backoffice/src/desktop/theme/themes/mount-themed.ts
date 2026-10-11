@@ -100,6 +100,11 @@ export type UmbraDesktopUpdatable = HTMLElement & { updateComplete: Promise<unkn
  * @param palette The variant to apply, normally the theme's light palette.
  * @param tag The chrome element to mount, e.g. `umbradesktop-window`.
  * @param surface Which of the theme's stylesheets belongs to it.
+ * @param backofficeStyle Declarations written *before* the palette on the wrapper, for the
+ * `--uui-*` values a bare test page does not load. A theme whose palette points at the backoffice's
+ * own tokens (the Umbraco theme's does, so that it follows light, dark and a site's own colours)
+ * measures nothing without them: a `var()` with no value makes the declaration invalid at
+ * computed-value time and the property falls back to its initial value.
  * @returns The mounted element, its shadow root, and a teardown.
  * @throws If the theme ships no stylesheet for that surface, which would leave the test measuring
  * the untouched base chrome and passing or failing for reasons that have nothing to do with it.
@@ -109,9 +114,10 @@ export async function mountThemedWith<T extends UmbraDesktopUpdatable>(
   palette: UmbraDesktopPalette,
   tag: string,
   surface: UmbraDesktopSurface,
+  backofficeStyle = '',
 ): Promise<UmbraDesktopThemedMount<T>> {
   const host = document.createElement('div');
-  host.setAttribute('style', paletteCss(palette));
+  host.setAttribute('style', backofficeStyle + paletteCss(palette));
   document.body.appendChild(host);
 
   const element = document.createElement(tag) as T;

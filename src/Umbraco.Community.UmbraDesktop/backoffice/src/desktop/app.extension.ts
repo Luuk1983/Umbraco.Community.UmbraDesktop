@@ -50,6 +50,12 @@ export interface MetaUmbraDesktopApp {
    * app whose content does not reflow, where a bigger window is only a bigger empty margin.
    */
   resizable?: boolean;
+  /**
+   * A package name: choosing this tile opens Desktop settings at that package's row instead of a
+   * window, and `element` is then not needed (design §6). For a tool whose settings moved into
+   * Desktop settings, such as the Accessories Screen Saver, so the tile people know still leads there.
+   */
+  opensSettings?: string;
 }
 
 /**
@@ -61,7 +67,10 @@ export interface MetaUmbraDesktopApp {
  * available, which for a game is right: reaching the desktop at all is already gated by the
  * desktop section's permission.
  */
-export interface ManifestUmbraDesktopApp extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions {
+export interface ManifestUmbraDesktopApp
+  // Typed with Umbraco's full condition union, as its own header apps are, so a condition's own
+  // config (a section condition's `match`, say) is accepted. The bare default only knows `alias`.
+  extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions<UmbExtensionConditionConfig> {
   type: 'umbraDesktopApp';
   meta: MetaUmbraDesktopApp;
   /**

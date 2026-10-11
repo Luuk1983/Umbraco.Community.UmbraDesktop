@@ -15,7 +15,7 @@ import type { Observable } from '@umbraco-cms/backoffice/external/rxjs';
 /**
  * The part of the desktop's settings context umbraCoffee uses. A local copy, for the reason
  * `tray-context.ts` gives: this package may not import the host's source. The alias and both members
- * are the desktop settings context's public API, documented in `docs/desktop-apps.md`.
+ * are the desktop settings context's public API, documented in `docs/developer/desktop-apps.md`.
  *
  * `locale` has been on the desktop's settings context since the Regional format and Clock settings
  * came; `formatDateTime` is newer. So an older desktop provides a context under this

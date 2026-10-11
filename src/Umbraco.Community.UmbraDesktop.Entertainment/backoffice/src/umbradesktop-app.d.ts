@@ -1,16 +1,16 @@
 import type { ManifestElement, ManifestWithDynamicConditions } from '@umbraco-cms/backoffice/extension-api';
 
 /**
- * The desktop's manifest types, `umbraDesktopApp`, `umbraDesktopCatalogue` and `umbraDesktopTrayItem`,
- * declared here because a consuming package cannot import them.
+ * The desktop's manifest types, `umbraDesktopApp`, `umbraDesktopCatalogue`, `umbraDesktopTrayItem`
+ * and `umbraDesktopDocs`, declared here because a consuming package cannot import them.
  *
  * **This file is a hand-written copy of a contract that lives in another package, and it exists
  * because there is currently no other way.** UmbraDesktop's own `app.extension.ts`,
- * `catalogue.extension.ts` and `tray.extension.ts` declare these types and register them in
- * Umbraco's `UmbExtensionManifestMap`, but those declarations reach nobody outside its own project:
- * the host's npm package is `private`, its NuGet package ships built JavaScript rather than
- * TypeScript, and `docs/desktop-apps.md` makes a virtue of the contract being structural, so nothing
- * is imported from the host at all.
+ * `catalogue.extension.ts`, `tray.extension.ts` and `docs.extension.ts` declare these types and
+ * register them in Umbraco's `UmbExtensionManifestMap`, but those declarations reach nobody outside
+ * its own project: the host's npm package is `private`, its NuGet package ships built JavaScript
+ * rather than TypeScript, and `docs/developer/desktop-apps.md` makes a virtue of the contract being
+ * structural, so nothing is imported from the host at all.
  *
  * The consequence is not a warning but a build failure, and one whose message points at the wrong
  * thing. Without this file, `type: 'umbraDesktopApp'` matches no arm of the `UmbExtensionManifest`
@@ -146,12 +146,26 @@ interface ManifestUmbraDesktopTrayItem extends ManifestElement<HTMLElement>, Man
   meta: MetaUmbraDesktopTrayItem;
 }
 
+/** What a `umbraDesktopDocs` manifest carries. A copy of the host's `MetaUmbraDesktopDocs`. */
+interface MetaUmbraDesktopDocs {
+  /** The docs folder's URL path on the site, under `/App_Plugins/`. */
+  path: string;
+}
+
+/** A package's docs for the Help app, as data. Only ever gains optional fields, like the others. */
+interface ManifestUmbraDesktopDocs extends ManifestWithDynamicConditions {
+  /** Discriminates this manifest from every other extension type. */
+  type: 'umbraDesktopDocs';
+  /** Where the docs are. */
+  meta: MetaUmbraDesktopDocs;
+}
+
 declare global {
   /**
-   * Adds `umbraDesktopApp`, `umbraDesktopCatalogue` and `umbraDesktopTrayItem` to Umbraco's own
-   * extension type map, which is what makes the manifests assignable to `UmbExtensionManifest` and
-   * so accepted in this package's `manifests` array. Umbraco's own extension kinds declare
-   * themselves the same way, and so does the host.
+   * Adds `umbraDesktopApp`, `umbraDesktopCatalogue`, `umbraDesktopTrayItem` and `umbraDesktopDocs` to
+   * Umbraco's own extension type map, which is what makes the manifests assignable to
+   * `UmbExtensionManifest` and so accepted in this package's `manifests` array. Umbraco's own
+   * extension kinds declare themselves the same way, and so does the host.
    */
   interface UmbExtensionManifestMap {
     /** This package's desktop apps. */
@@ -160,5 +174,7 @@ declare global {
     umbraDesktopCatalogue: ManifestUmbraDesktopCatalogue;
     /** This package's system tray icons. */
     umbraDesktopTrayItem: ManifestUmbraDesktopTrayItem;
+    /** This package's docs, for the Help app. */
+    umbraDesktopDocs: ManifestUmbraDesktopDocs;
   }
 }

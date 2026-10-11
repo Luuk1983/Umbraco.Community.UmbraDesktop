@@ -6,6 +6,9 @@ import {
   UMBRACOFFEE_MIN_CONTENT_SIZE,
   UMBRACOFFEE_TRAY_ALIAS,
 } from './umbracoffee/constants.js';
+import { SOLITAIRE_CONTENT_SIZE, SOLITAIRE_MIN_CONTENT_SIZE } from './solitaire/constants.js';
+import { backManifests, facesManifests } from './solitaire/backs.js';
+import type {} from './solitaire/extensions.js';
 import { manifests as localizationManifests } from './localization/manifest.js';
 
 /**
@@ -46,7 +49,7 @@ const catalogue: UmbExtensionManifest = {
  * package exists: the seam it uses is verified inside the host by tests, but "a *second* package
  * can put an app on the desktop" is a claim only a second package can make.
  *
- * Written against `docs/desktop-apps.md` §2 field by field. Four of them are worth a sentence
+ * Written against `docs/developer/desktop-apps.md` §2 field by field. Four of them are worth a sentence
  * because each was a defect at some point in the seam's own build:
  *
  * - **`element`, never `js`.** `js` is the field every other Umbraco extension type uses for this,
@@ -130,6 +133,28 @@ const snake: UmbExtensionManifest = {
 };
 
 /**
+ * Solitaire, registered as the other two games are. Resizable, unlike them: a card table has no
+ * fixed pixel size and the cards scale with the window (design D5). Weight 800 keeps it after
+ * Snake (900), the slot Snake's comment left for a later game.
+ */
+const solitaire: UmbExtensionManifest = {
+  type: 'umbraDesktopApp',
+  alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Solitaire',
+  name: 'Solitaire',
+  element: () => import('./solitaire/solitaire.element.js'),
+  weight: 800,
+  meta: {
+    label: '#umbraDesktopEntertainment_solitaire',
+    icon: 'icon-playing-cards',
+    group: 'games',
+    defaultSize: SOLITAIRE_CONTENT_SIZE,
+    minSize: SOLITAIRE_MIN_CONTENT_SIZE,
+    allowMultiple: true,
+    resizable: true,
+  },
+};
+
+/**
  * umbraCoffee: the community's monthly live show, watched in a window (umbraCoffee design §6.1).
  *
  * Registered the way the games are, for the reasons Minesweeper's comment gives, with two
@@ -160,6 +185,21 @@ const umbraCoffee: UmbExtensionManifest = {
 };
 
 /**
+ * This package's docs, for the desktop's Help app.
+ *
+ * The build copies `docs/` into this package's own App_Plugins folder (see `vite.config.ts`), and
+ * this tells the Help app where to find it. Nothing more: the route is the public one any add-on
+ * uses, written the way `docs/developer/add-on-help.md` in the host describes it, so this package
+ * stays the proof that the route works from outside.
+ */
+const docs: UmbExtensionManifest = {
+  type: 'umbraDesktopDocs',
+  alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Docs',
+  name: 'UmbraDesktop Entertainment docs',
+  meta: { path: '/App_Plugins/Umbraco.Community.UmbraDesktop.Entertainment/docs' },
+};
+
+/**
  * The coffee cup in the tray, and the reminders it raises (umbraCoffee design §6.2, §6.3).
  *
  * One switch for both, under the tray heading in Desktop settings (design D1, D8), which is why the
@@ -183,14 +223,18 @@ const umbraCoffeeTray: UmbExtensionManifest = {
  *
  * `UmbExtensionManifest` is a global type from `@umbraco-cms/backoffice/extension-types`, wired up
  * in tsconfig's `types`, so there is nothing to import for it. The `umbraDesktopApp`,
- * `umbraDesktopCatalogue` and `umbraDesktopTrayItem` arms of that union are contributed by
+ * `umbraDesktopCatalogue`, `umbraDesktopTrayItem` and `umbraDesktopDocs` arms of that union are contributed by
  * `umbradesktop-app.d.ts` in this folder, for the reason given there.
  */
 export const manifests: Array<UmbExtensionManifest> = [
   catalogue,
   minesweeper,
   snake,
+  solitaire,
   umbraCoffee,
   umbraCoffeeTray,
+  docs,
+  ...backManifests,
+  ...facesManifests,
   ...localizationManifests,
 ];

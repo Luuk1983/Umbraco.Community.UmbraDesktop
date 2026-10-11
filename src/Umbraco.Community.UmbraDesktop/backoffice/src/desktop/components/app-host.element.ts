@@ -4,10 +4,19 @@ import { UMBRADESKTOP_APP_TOKEN_FALLBACKS } from '../theme/types.js';
 // mounted directly by its own test and by anything that reaches for an app host without a window
 // around it, so it carries its own.
 import './loader.element.js';
-import { UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS, UMBRADESKTOP_THEME_ATTRIBUTE } from '../constants.js';
+import {
+  UMBRADESKTOP_APP_DIRTY_EVENT,
+  UMBRADESKTOP_APP_TASKS_EVENT,
+  UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS,
+  UMBRADESKTOP_DIRTY_ATTRIBUTE,
+  UMBRADESKTOP_TASK_EVENT,
+  UMBRADESKTOP_THEME_ATTRIBUTE,
+} from '../constants.js';
 import { customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { loadManifestElement } from '@umbraco-cms/backoffice/extension-api';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+import { applyTaskReport } from '../progress/progress.js';
+import type { UmbraDesktopTask } from '../progress/progress.js';
 import type {
   ClassConstructor,
   ElementLoaderExports,
@@ -251,6 +260,87 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
    */
   #mounting: Promise<void> = Promise.resolve();
 
+  /** The work the mounted app has reported and not yet ended. Emptied with each app. */
+  #tasks: ReadonlyArray<UmbraDesktopTask> = [];
+
+  constructor() {
+    super();
+    this.addEventListener(UMBRADESKTOP_TASK_EVENT, this.#onTask);
+  }
+
+  /**
+   * Take a task report from the mounted app and pass the app's whole task list to the window.
+   *
+   * Stopped here whatever it says, so the event never leaves the window: past this host it would be
+   * heard by the desktop and by whatever else listens there, as a report about nothing in
+   * particular. A report from anything but the current app is ignored, which is what keeps a
+   * replaced app that still has a timer running from reporting into its successor's window.
+   * @param event The app's report.
+   */
+  #onTask = (event: Event) => {
+    event.stopPropagation();
+    if (!this._app || !event.composedPath().includes(this._app)) return;
+    const next = applyTaskReport(this.#tasks, (event as CustomEvent).detail);
+    if (next === this.#tasks) return;
+    this.#tasks = next;
+    this.#reportTasks();
+  };
+
+  /** Drop the app's tasks, for an app that has gone: its work went with it. */
+  #clearTasks(): void {
+    if (this.#tasks.length === 0) return;
+    this.#tasks = [];
+    this.#reportTasks();
+  }
+
+  /** Tell whoever holds this host what the app is doing now. */
+  #reportTasks(): void {
+    this.dispatchEvent(new CustomEvent(UMBRADESKTOP_APP_TASKS_EVENT, { detail: { tasks: this.#tasks } }));
+  }
+
+  /** Watches the mounted app's unsaved-work attribute. Replaced with each app, dropped with the host. */
+  #dirtyWatch?: MutationObserver;
+
+  /**
+   * Report the app's unsaved-work attribute to whoever holds this host, now and whenever it changes.
+   *
+   * A `MutationObserver` on the one attribute, rather than an event the app fires, because the
+   * attribute is the contract (see {@link UMBRADESKTOP_DIRTY_ATTRIBUTE}): an app writes a
+   * `toggleAttribute` and imports nothing. Reported once straight away, so an app that is already
+   * unsaved when it mounts is counted, and so a swap from an unsaved app to a clean one clears the
+   * flag rather than leaving the old app's answer standing.
+   * @param app The app element to watch, or undefined to stop watching.
+   */
+  #watchDirty(app?: HTMLElement): void {
+    this.#dirtyWatch?.disconnect();
+    this.#dirtyWatch = undefined;
+    if (!app) return;
+    const report = () =>
+      this.dispatchEvent(
+        new CustomEvent(UMBRADESKTOP_APP_DIRTY_EVENT, {
+          detail: { dirty: app.hasAttribute(UMBRADESKTOP_DIRTY_ATTRIBUTE) },
+        }),
+      );
+    this.#dirtyWatch = new MutationObserver(report);
+    this.#dirtyWatch.observe(app, { attributes: true, attributeFilter: [UMBRADESKTOP_DIRTY_ATTRIBUTE] });
+    report();
+  }
+
+  /**
+   * Resume watching an app that is still mounted, for a host that was detached and put back. A
+   * window is not normally moved, but a watch that stayed off after one would under-report silently.
+   */
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this._app && !this.#dirtyWatch) this.#watchDirty(this._app);
+  }
+
+  /** Stop watching the app. The window is closing, and a closed window has nothing to report. */
+  override disconnectedCallback(): void {
+    this.#watchDirty(undefined);
+    super.disconnectedCallback();
+  }
+
   /**
    * Settles once the current load has been attempted *and* its outcome is in the DOM: the app
    * mounted, or the failure message rendered. Both outcomes resolve, since a rendered message is
@@ -340,6 +430,8 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
     const load = this.load;
     // Synchronous, so a swap clears the old app in the update this is called from.
     this._app = undefined;
+    this.#watchDirty(undefined);
+    this.#clearTasks();
     this._failed = false;
     this._pending = !!load;
     if (load) {
@@ -376,6 +468,7 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
         if (this.props) Object.assign(app, this.props);
         this._pending = false;
         this._app = app;
+        this.#watchDirty(app);
       } catch (error) {
         // Same guard on this path: a superseded attempt must not paint a failure over the app that
         // replaced it, and a timeout arriving after a swap is exactly that case.

@@ -272,7 +272,7 @@ extra. Other users see a change on their next load. There is no push, and a labe
   is switched on and a name exists; never the domain twice.
 - The element: nothing when off; each corner where it should be; bottom corners measured above the
   taskbar reserve under every theme, because deriving a number only makes it consistent with itself
-  (`docs/theming.md` §4); a long name cut off rather than wrapped; under every theme and variant, an
+  (`docs/developer/theming.md` §4); a long name cut off rather than wrapped; under every theme and variant, an
   ink at least half strength, the label as a whole never faded, and at least 28px.
 - In a real desktop: the label placed after the logo and before the window surface, with no z-index
   of its own; and under every theme the same white ink with a halo at least 70% strong that
@@ -365,7 +365,7 @@ where they came from first.
       desktop looks like. Left for a person to take, as the installed app's was: it wants a desktop
       somebody likes the look of, captured at the size the README should show it, since Markdown
       cannot resize an image
-- [x] **`docs/theming.md`**: the label in the palette table in §3, saying a theme sets its lettering
+- [x] **`docs/developer/theming.md`**: the label in the palette table in §3, saying a theme sets its lettering
       only, and a line in the §7 checklist to look at the label over the theme's own wallpaper and a
       photo
 - [x] **`docs/design/`**: this file

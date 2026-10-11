@@ -4,7 +4,7 @@ import type { Observable } from '@umbraco-cms/backoffice/external/rxjs';
 /**
  * The part of the host's tray context this package uses. A local copy, as `umbradesktop-app.d.ts`
  * copies the manifest types: this package may not import the host's source, since that would pull
- * the desktop's bundle into this one. The alias is the host's public contract (`docs/desktop-apps.md`
+ * the desktop's bundle into this one. The alias is the host's public contract (`docs/developer/desktop-apps.md`
  * §9.8), and these three calls are the whole of it. It extends `UmbContextMinimal` only because a
  * context token requires that of whatever it carries; `getHostElement` is Umbraco's plumbing, which
  * the host's context inherits from its base class, and nothing here calls it.

@@ -3,6 +3,8 @@ import '../../../components/launcher.element.js';
 import type { UmbraDesktopLauncherElement } from '../../../components/launcher.element.js';
 import { mountThemed, UMBRADESKTOP_THEME_TEST_TIMEOUT_MS } from './mount-themed.js';
 import type { UmbraDesktopThemedMount } from './mount-themed.js';
+import { mountLauncher, stubApp } from '../../../components/launcher.test-helper.js';
+import { UMBRADESKTOP_UMBRACO4_THEME } from './index.js';
 
 /**
  * The launcher carries this theme's one genuinely structural idea, so it is the surface most
@@ -25,8 +27,8 @@ import type { UmbraDesktopThemedMount } from './mount-themed.js';
  * a way that is indistinguishable from a theme that was never adopted.
  *
  * What a browser can check here is the panel, the search row and the footer, all of which render
- * without any of the launcher's contexts. The app tiles and their pin toggles need the app
- * catalogue, so whether those still work is a question for a real backoffice.
+ * without any of the launcher's contexts. The app tiles need the app catalogue, so whether those
+ * still work is a question for a real backoffice.
  */
 
 /** The themed launcher under test, mounted once for the whole file. */
@@ -41,8 +43,13 @@ after(() => panel?.dispose());
 
 it('styles the grouped catalogue as a scrolling well, distinctly from the Favourites grid', function () {
   this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
-  const cards = panel.root.querySelector('.cards') as HTMLElement;
-  expect(cards, 'the launcher should render a cards container').to.not.equal(null);
+  // With no catalogue in context the launcher draws its empty state rather than the groups, so the
+  // container is built inside the body exactly as #renderGroups emits it, like favCard does below.
+  const body = panel.root.querySelector('.body') as HTMLElement;
+  expect(body, 'the launcher should render a body').to.not.equal(null);
+  const cards = document.createElement('div');
+  cards.className = 'cards';
+  body.appendChild(cards);
 
   const style = getComputedStyle(cards);
   // The tree well: white, sunken, and the only thing in the panel that scrolls. The base draws
@@ -58,6 +65,8 @@ it('styles the grouped catalogue as a scrolling well, distinctly from the Favour
     'the tree stacks its groups; the base auto-fill grid would put them side by side',
   ).to.equal('flex');
   expect(style.flexDirection).to.equal('column');
+
+  cards.remove();
 });
 
 it('keeps Favourites out of the tree, so the orb grid survives', function () {
@@ -82,6 +91,18 @@ it('draws the search row as a v4 sunken field, not a rounded chip', function () 
   expect(style.backgroundColor, 'a v4 text field is white').to.equal('rgb(255, 255, 255)');
   expect(style.borderTopLeftRadius, 'v4 fields are square').to.equal('0px');
   expect(style.boxShadow, 'a v4 field is sunken, with its shadow drawn inside it').to.contain('inset');
+});
+
+it('moves its outer margin to the header row, not the search field inside it', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // Theme sheets are appended after the base styles, so a .search rule that kept its own margin
+  // here would beat the base's `.search { margin: 0 }` and reintroduce it inside .hdr, doubling
+  // with .hdr's own margin and pushing the row right and down from where the sheet puts it.
+  const search = panel.root.querySelector('.search') as HTMLElement;
+  expect(search, 'the launcher should render a search row').to.not.equal(null);
+  const style = getComputedStyle(search);
+  expect(style.marginLeft, 'the header row owns the left margin now, not the field').to.equal('0px');
+  expect(style.marginTop, 'the header row owns the top margin now, not the field').to.equal('0px');
 });
 
 /**
@@ -191,5 +212,31 @@ it('keeps every footer action rendered and sized to be clicked', function () {
       getComputedStyle(action).visibility,
       'a restyled action button still has to be visible',
     ).to.equal('visible');
+  }
+});
+
+it('starts an arrange row icon where the tree row icon starts', async function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // Arrange mode draws each tile as a tree row inside a dashed edge and an inset, and its leading
+  // padding is derived from the tree's indent less those two. This measures that the derivation
+  // lands: the same app's icon, in the same group, starts at the same distance from the well's edge
+  // in both modes, so switching into arrange mode does not shift the list sideways.
+  const mount = await mountLauncher({
+    apps: [stubApp('content', 'editing', 10)],
+    groups: [{ alias: 'editing', label: 'Editing', weight: 10 }],
+    theme: UMBRADESKTOP_UMBRACO4_THEME,
+  });
+  try {
+    const iconOffset = () => {
+      const well = mount.root.querySelector('.cards')!.getBoundingClientRect();
+      const icon = mount.root.querySelector('.cards .tile[data-alias="content"] umb-icon')!.getBoundingClientRect();
+      return icon.left - well.left;
+    };
+    const tree = iconOffset();
+    (mount.root.querySelector('.ctl.arrange') as HTMLElement).click();
+    await mount.settle();
+    expect(iconOffset()).to.be.closeTo(tree, 0.5);
+  } finally {
+    mount.remove();
   }
 });

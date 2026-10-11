@@ -10,8 +10,8 @@
 	  <Product>Umbraco.Community.UmbraDesktop.Entertainment</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop.Entertainment</PackageId>
 	  <Title>UmbraDesktop Entertainment</Title>
-	  <Description>Games and media for UmbraDesktop. An optional add-on that puts Minesweeper, Snake and umbraCoffee on the desktop, each in a window of its own and themed along with the rest of it.</Description>
-	  <PackageTags>umbraco;backoffice;desktop;games;minesweeper;snake;entertainment;umbradesktop;apps;umbracoffee;youtube;community;media;live-stream;umbraco-marketplace</PackageTags>
+	  <Description>Games and media for UmbraDesktop. An optional add-on that puts Minesweeper, Snake, Solitaire and umbraCoffee on the desktop, each in a window of its own and themed along with the rest of it.</Description>
+	  <PackageTags>umbraco;backoffice;desktop;games;minesweeper;snake;solitaire;card-game;klondike;entertainment;umbradesktop;apps;umbracoffee;youtube;community;media;live-stream;umbraco-marketplace</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop.Entertainment</RootNamespace>
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>
@@ -93,6 +93,10 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
     <Content Remove="backoffice\**" />
     <Content Remove="package.json" />
     <Content Remove="package-lock.json" />
+    <!-- The add-on's docs reach the package through the Vite build, which copies them into
+         wwwroot for the desktop's Help app: without this, docs/product.json would also pack as
+         content at the package root. -->
+    <Content Remove="docs\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -101,6 +105,9 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
     <!-- Update, not Include: the SDK's default None glob already matches this file, and including
          it a second time fails the pack with a duplicate-item error. -->
     <None Update="README.md" Pack="true" PackagePath="\" />
+    <!-- The Apache 2.0 licence text for the card rank outlines (Roboto Slab), which Apache 2.0 says
+         must reach everyone who receives the package. Update for the same reason as README.md. -->
+    <None Update="THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 	<ItemGroup>
@@ -111,8 +118,9 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	<ItemGroup>
 	  <!-- The host, as the project built beside this one rather than a package from nuget.org. A
 	       package range compiles against the lowest host in range, so this add-on was built against
-	       17.0.0 and shipped claiming to work with a host that lacks the tray items and package
-	       catalogues it registers. Built from the same commit, the two cannot disagree.
+	       17.0.0 and shipped claiming to work with a host that lacks the package catalogue it
+	       registers its Games group through, and the tray items umbraCoffee registers. Built from
+	       the same commit, the two cannot disagree.
 	       This package has no C# of its own since umbraCoffee v2 (its data comes from a file on
 	       GitHub, read by the browser), so the reference is what makes it a NuGet package that needs
 	       the host at all. It also brings Umbraco.Cms.Core transitively, which is how the

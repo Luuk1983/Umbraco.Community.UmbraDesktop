@@ -595,5 +595,5 @@ around by description has neither property yet.
 - [ ] `README.md` names the feature everywhere it could be named
 - [ ] `umbraco-marketplace.json` mentions it in `Description` and `Tags`, with a screenshot in
       `docs/screenshots/` if the desktop looks different because of it
-- [ ] `docs/theming.md` gains the alarm tokens in its table
+- [ ] `docs/developer/theming.md` gains the alarm tokens in its table
 - [ ] This document records anything the build taught us that the code does not say

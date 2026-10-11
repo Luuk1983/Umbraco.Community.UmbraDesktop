@@ -103,7 +103,7 @@ subagent-sized. Tasks 3, 4, 6, 7 and 8 are inline. Task 9 is inline. Task 11 is 
 **Modified, Entertainment** (`src/Umbraco.Community.UmbraDesktop.Entertainment/backoffice/src/`):
 `bundle.manifests.ts` (+ test), `umbradesktop-app.d.ts`, `localization/en.ts`, `localization/nl.ts`.
 
-**Docs:** new `docs/package-catalogues.md`; `docs/desktop-apps.md`; `README.md`;
+**Docs:** new `docs/developer/package-catalogues.md`; `docs/developer/desktop-apps.md`; `README.md`;
 `docs/design/2026-09-06-desktop-apps-design.md`; `umbraco-marketplace-umbraco.community.umbradesktop.json`.
 
 ---
@@ -2696,12 +2696,12 @@ Inline. Design §7 and the repo's definition of done. Markdown only in `README.m
 readme). No em-dashes in anything written here.
 
 **Files:**
-- Create: `docs/package-catalogues.md`
-- Modify: `docs/desktop-apps.md`, `README.md`, `docs/design/2026-09-06-desktop-apps-design.md`,
+- Create: `docs/developer/package-catalogues.md`
+- Modify: `docs/developer/desktop-apps.md`, `README.md`, `docs/design/2026-09-06-desktop-apps-design.md`,
   `umbraco-marketplace-umbraco.community.umbradesktop.json`,
   `src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/app.extension.ts`
 
-- [ ] **Step 1: Write `docs/package-catalogues.md`**
+- [ ] **Step 1: Write `docs/developer/package-catalogues.md`**
 
 ```markdown
 # Putting your package's screens on the desktop
@@ -2858,7 +2858,7 @@ ever gain optional fields, so a copy that falls behind still describes a valid m
 - [ ] The console has no `[UmbraDesktop]` lines about your manifest.
 ```
 
-- [ ] **Step 2: Update `docs/desktop-apps.md`**
+- [ ] **Step 2: Update `docs/developer/desktop-apps.md`**
 
 Section 1: replace the table's second row with
 
@@ -2927,17 +2927,17 @@ register, a `umbraDesktopApp` for each game and a catalogue for the Games group,
 surface.**" with
 
 ```markdown
-**Tiles for your own backoffice screens.** If your app *is* a backoffice page, a section, dashboard or workspace your package registers, register a `umbraDesktopCatalogue` manifest with an entry for it: a name, an icon, a group, a chrome profile and window sizing, resolved exactly like the desktop's own entries. The same manifest can define launcher groups of your own. It ships with your package, so nothing waits on a release of this one. If the desktop already has an entry for your screens, reuse its alias and yours is used instead, pins included. [`docs/package-catalogues.md`](docs/package-catalogues.md) is the guide.
+**Tiles for your own backoffice screens.** If your app *is* a backoffice page, a section, dashboard or workspace your package registers, register a `umbraDesktopCatalogue` manifest with an entry for it: a name, an icon, a group, a chrome profile and window sizing, resolved exactly like the desktop's own entries. The same manifest can define launcher groups of your own. It ships with your package, so nothing waits on a release of this one. If the desktop already has an entry for your screens, reuse its alias and yours is used instead, pins included. [`docs/developer/package-catalogues.md`](docs/developer/package-catalogues.md) is the guide.
 ```
 
 and in the next paragraph change "A curated entry for a third-party package points at" to "The
 desktop's own entry for a third-party package points at".
 
-Documentation: after the `docs/desktop-apps.md` paragraph add
+Documentation: after the `docs/developer/desktop-apps.md` paragraph add
 
 ```markdown
 Putting your package's own backoffice screens on the desktop is one catalogue manifest.
-[`docs/package-catalogues.md`](docs/package-catalogues.md) is the guide: the entry and group fields,
+[`docs/developer/package-catalogues.md`](docs/developer/package-catalogues.md) is the guide: the entry and group fields,
 the desktop's published group weights, how replacing one of its tiles works, and what the console
 tells you. The reasoning is in
 [`docs/design/2026-09-25-package-catalogues-design.md`](docs/design/2026-09-25-package-catalogues-design.md).
@@ -2967,7 +2967,7 @@ is where deep links live."
 Run from the repository root:
 
 ```bash
-grep -n "—" docs/package-catalogues.md README.md
+grep -n "—" docs/developer/package-catalogues.md README.md
 ```
 
 Expected: nothing new in the lines this task wrote.
@@ -3057,7 +3057,7 @@ From `CLAUDE.md`, and say explicitly which items did not apply:
 - [ ] `README.md` covers it in every place Task 9 lists, Markdown only.
 - [ ] The host's Marketplace listing has the new tag; its `Description` is unchanged; the
       Entertainment listing needs nothing.
-- [ ] `docs/package-catalogues.md` exists and both `docs/desktop-apps.md` and the old design point at it.
+- [ ] `docs/developer/package-catalogues.md` exists and both `docs/developer/desktop-apps.md` and the old design point at it.
 - [ ] Anything the build taught that the code does not show is written where the next person meets it.
 
 - [ ] **Step 4: Report, and ask about a commit**

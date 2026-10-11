@@ -16,7 +16,7 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
  * Minesweeper's own glyphs.
  *
  * Hardcoded **deliberately**, and the same goes for {@link DIGIT_COLOURS} below. The app-token
- * contract stops at the surface an app sits on: `docs/desktop-apps.md` §4 says in as many words
+ * contract stops at the surface an app sits on: `docs/developer/desktop-apps.md` §4 says in as many words
  * that there is no mine colour and no flag red, because a theme has no opinion about what a mine
  * looks like and an app that waited for one would have nothing to draw. A mine is this app's
  * domain, so this app owns it.
@@ -63,7 +63,7 @@ const DIGIT_COLOURS = [
  * the same thing, inverted on a dark one, or the board means nothing.
  *
  * No pair of tokens can say it. `surface-raised` against `surface-sunken` is the obvious reading
- * and it is what shipped, and it was reported unplayable: `docs/desktop-apps.md` §4 promises text
+ * and it is what shipped, and it was reported unplayable: `docs/developer/desktop-apps.md` §4 promises text
  * on the three surfaces and `border` against all three at 3:1, and says nothing whatever about the
  * gap *between* two surfaces, because there is nothing to say — Umbraco's own surface family spans
  * 1.07:1 at its widest. Both Umbraco themes accordingly drew the two states 1.03:1 apart, which is
@@ -119,7 +119,7 @@ function formatDisplay(value: number): string {
  * the game's logic is therefore testable without a DOM, and everything here is testable through
  * one.
  *
- * Its styling reads the thirteen app tokens with the fallbacks `docs/desktop-apps.md` §4 publishes,
+ * Its styling reads the thirteen app tokens with the fallbacks `docs/developer/desktop-apps.md` §4 publishes,
  * and it has exactly one per-theme branch, for Windows 98's bevels. Every other difference between
  * the five themes is carried by `--umbradesktop-app-edge-width` and `--umbradesktop-app-radius`
  * doing their job: a theme with square bevelled controls and one with flat rounded ones are the
@@ -159,7 +159,7 @@ export class MinesweeperElement extends UmbLitElement {
    * Deal the first board.
    *
    * Here rather than in the constructor for two independent reasons, and both are traps
-   * `docs/desktop-apps.md` §8 names. The desktop stamps `data-umbradesktop-theme` on the element
+   * `docs/developer/desktop-apps.md` §8 names. The desktop stamps `data-umbradesktop-theme` on the element
    * *after* constructing it, so a constructor is too early to read anything about the theme (this
    * element reads the theme only in CSS, which is safe at any time, but the same ordering applies
    * to the property bindings below). And `config` and `placer` are set by whoever mounted the

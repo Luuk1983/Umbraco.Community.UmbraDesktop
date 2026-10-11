@@ -493,7 +493,7 @@ Both `npm run build` and `npm test` must pass; per CLAUDE.md neither subsumes th
   Its README alt text was corrected in passing: it had described groups the image does not contain
   ("Users & Members", renamed to Security and Advanced security a release earlier), which had been
   wrong since that rename.
-- **`docs/theming.md`** — untouched; no theme surface changes.
+- **`docs/developer/theming.md`** — untouched; no theme surface changes.
 - **Localisation** — `en.ts` and `nl.ts` gain `groupMarketingSales` and the nine app names we author
   (§6.3): three Workflow, five Deploy, one Engage. The other seven entries inherit a label the
   package translates itself, and need no entry.

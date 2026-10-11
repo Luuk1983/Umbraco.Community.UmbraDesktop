@@ -4,8 +4,11 @@
 	"version": "17.0.0",
 	"type": "module",
 	"scripts": {
-		"watch": "cd backoffice && tsc && vite build --watch",
-		"build": "cd backoffice && tsc && vite build",
+		"watch": "cd backoffice && node scripts/build-card-backs.mjs && tsc && vite build --watch",
+		"build": "cd backoffice && node scripts/build-card-backs.mjs && tsc && vite build",
+		"backs": "cd backoffice && node scripts/draw-static-backs.mjs",
+		"courts": "cd backoffice && node scripts/build-courts.mjs",
+		"ranks": "cd backoffice && node scripts/build-ranks.mjs",
 		"test": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve",
 		"test:watch": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve --watch"
 	},
@@ -13,11 +16,15 @@
 		"lit": "^3.2.1"
 	},
 	"devDependencies": {
+		"@fontsource/roboto-slab": "^5.3.0",
 		"@open-wc/testing": "^4.0.0",
 		"@types/mocha": "^10.0.9",
 		"@umbraco-cms/backoffice": "^17",
 		"@web/dev-server-esbuild": "^1.0.4",
 		"@web/test-runner": "^0.20.0",
+		"opentype.js": "^2.0.0",
+		"sharp": "^0.35.5",
+		"svgo": "^4.1.0",
 		"typescript": "^5.9.3",
 		"vite": "^7.1.9"
 	},

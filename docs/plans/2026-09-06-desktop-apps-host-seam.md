@@ -45,7 +45,7 @@ Therefore each app reads `var(--umbradesktop-app-surface, var(--uui-color-surfac
 | `backoffice/src/desktop/registered-apps.ts` | Pure: normalise `umbraDesktopApp` manifests into `UmbraDesktopRegisteredApp` |
 | `backoffice/src/desktop/registered-apps.test.ts` | Tests for the above |
 | `backoffice/src/desktop/catalogue/groups.test.ts` | The `games` group exists, sorts last, and every group has a token label |
-| `docs/desktop-apps.md` | Contributor guide for building a desktop app, written for outside this repo |
+| `docs/developer/desktop-apps.md` | Contributor guide for building a desktop app, written for outside this repo |
 
 **Modified**
 
@@ -402,7 +402,7 @@ These values are the starting set. The spec's §9 browser checkpoint, run agains
 
 - [ ] **Step 8: Update the theming guide, which is now wrong**
 
-`docs/theming.md` is the guide for theme authors, written deliberately for someone outside this repository, and this task is the one that asks them to set app tokens. Three places in it are false as of Task 1:
+`docs/developer/theming.md` is the guide for theme authors, written deliberately for someone outside this repository, and this task is the one that asks them to set app tokens. Three places in it are false as of Task 1:
 
 - **Line ~130:** "you can only set tokens the chrome actually reads. The normative list is `UMBRADESKTOP_TOKENS`". A palette may now also set app tokens, which no component in this package reads.
 - **Line ~132:** "53 tokens in these groups", followed by a group table with no app row. Add the app group to the table and correct the count, or better, stop stating a count that has now gone stale twice and name the two lists instead.
@@ -413,7 +413,7 @@ Explain the two-list split in the author's terms: the chrome group is checked ag
 - [ ] **Step 9: Commit**
 
 ```bash
-git add backoffice/src/desktop/theme docs/theming.md
+git add backoffice/src/desktop/theme docs/developer/theming.md
 git commit -m "feat: app token values for every theme that paints its own palette"
 ```
 
@@ -1555,7 +1555,7 @@ The repo's checklist (CLAUDE.md) is part of the feature, not paperwork after it.
 - Modify: `README.md`
 - Modify: `umbraco-marketplace.json`
 - Modify: `docs/design/2026-09-06-desktop-apps-design.md`
-- Create: `docs/desktop-apps.md`
+- Create: `docs/developer/desktop-apps.md`
 
 - [ ] **Step 1: Amend the design doc with the two findings**
 
@@ -1563,11 +1563,11 @@ In §3, replace the "Verify before building" block with the answer: `byType` doe
 
 In §6.1, two edits. Add that app tokens have no host-side fallbacks and cannot, that the documented fallback chain is the Umbraco look, that it lives in `UMBRADESKTOP_APP_TOKEN_FALLBACKS` as type-checked data rather than prose, and that each app carries those values itself. Then correct its **last paragraph**, which currently reads "Every theme answers all of them, per the existing contract" — that is now false and is the sentence a later reader will trust over an executed and archived plan. The identity theme answers none, on purpose.
 
-Also cite `docs/theming.md` (updated in Task 2) and `docs/desktop-apps.md` from §6.1, so a theme author and an app author each have somewhere to go from the spec.
+Also cite `docs/developer/theming.md` (updated in Task 2) and `docs/developer/desktop-apps.md` from §6.1, so a theme author and an app author each have somewhere to go from the spec.
 
 - [ ] **Step 2: Write the contributor guide**
 
-Create `docs/desktop-apps.md`, written for someone outside this repository, the way `docs/theming.md` is: the manifest shape (§4 of the design), the app token table with the fallback each app should write, how to branch per theme, and the boundary, which is that a self-contained app is registerable while a backoffice deep link is a pull request against `catalogue/`.
+Create `docs/developer/desktop-apps.md`, written for someone outside this repository, the way `docs/developer/theming.md` is: the manifest shape (§4 of the design), the app token table with the fallback each app should write, how to branch per theme, and the boundary, which is that a self-contained app is registerable while a backoffice deep link is a pull request against `catalogue/`.
 
 **Four things an author can only get wrong if nobody writes them down**, all found while building the seam:
 
@@ -1582,7 +1582,7 @@ CLAUDE.md's rule is to check every place a feature could be named rather than th
 
 **`### Windows are iframes` is false as a heading and as a first sentence.** It reads "Each window hosts an `<iframe>` deep-linked into the backoffice on the same origin." A window body is now either that or a self-contained element. Everything the section goes on to say about the iframe kind remains true and worth keeping, including the reason it exists: Umbraco's router reads one global `window.location`, so only one route tree can own the URL, and an iframe has its own. Reframe the section around the two body kinds with that explanation intact underneath, rather than bolting a paragraph onto the end.
 
-**`### Custom and third-party apps` says the opposite of what now ships.** Its closing line is "there is no runtime registration point." There is one, and this plan built it. That paragraph becomes the two paths: a self-contained app registers a `umbraDesktopApp` manifest and never talks to this repository, while anything pointing at a backoffice surface is still a pull request against `catalogue/`, because that is where a URL and a chrome profile get verified. Point at `docs/desktop-apps.md` for the first.
+**`### Custom and third-party apps` says the opposite of what now ships.** Its closing line is "there is no runtime registration point." There is one, and this plan built it. That paragraph becomes the two paths: a self-contained app registers a `umbraDesktopApp` manifest and never talks to this repository, while anything pointing at a backoffice surface is still a pull request against `catalogue/`, because that is where a URL and a chrome profile get verified. Point at `docs/developer/desktop-apps.md` for the first.
 
 Also check against the diff: `### How much chrome a window keeps` presents three profiles as the whole story, and an element body has no chrome to keep; `### The app catalogue` describes the catalogue as deciding "which apps appear", now one of two sources; `## Features` needs the capability; and `## Documentation` needs the new guide listed.
 

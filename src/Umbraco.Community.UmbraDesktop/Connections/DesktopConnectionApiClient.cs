@@ -22,6 +22,9 @@ public sealed record DesktopConnectionResponse(DesktopConnectionStatus Status, s
 /// <para>
 /// This is not a pass-through proxy and must not become one. It exists so that each typed endpoint
 /// the desktop exposes can share one authenticated GET, with the token handling in a single place.
+/// The remote content viewer does need a pass-through, and has its own in
+/// <see cref="DesktopConnectionProxy"/>, whose path guard is the whole of its safety. Keeping the two
+/// apart means widening one never quietly widens the other.
 /// </para>
 /// </remarks>
 /// <param name="tokenProvider">Supplies and invalidates access tokens for a connection.</param>

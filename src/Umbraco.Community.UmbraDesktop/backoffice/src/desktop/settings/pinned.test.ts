@@ -1,9 +1,9 @@
 import { expect } from '@open-wc/testing';
 import type { UmbraDesktopApp } from '../types';
-import { pinKeysFor, resolvePinned, togglePinnedApp } from './pinned';
+import { pinAppBefore, pinKeysFor, resolveAppAlias, resolvePinned, withoutApp } from './pinned';
 
 /**
- * A stand-in app for the toggle cases, which read nothing but its alias.
+ * A stand-in app for the cases that read nothing but its alias.
  * @param alias The app alias.
  * @returns The app.
  */
@@ -13,32 +13,6 @@ const plain = (alias: string): UmbraDesktopApp => ({
   icon: 'icon-document',
   content: { kind: 'iframe', url: '' },
   chromeProfile: 'full-section',
-});
-
-it('appends an app that is not pinned, so new pins land at the end of the list', () => {
-  expect(togglePinnedApp(['content', 'media'], plain('log-viewer'))).to.deep.equal(['content', 'media', 'log-viewer']);
-});
-
-it('removes an app that is already pinned', () => {
-  expect(togglePinnedApp(['content', 'media'], plain('content'))).to.deep.equal(['media']);
-});
-
-it('pins into an empty list', () => {
-  expect(togglePinnedApp([], plain('content'))).to.deep.equal(['content']);
-});
-
-it('unpins the last remaining app', () => {
-  expect(togglePinnedApp(['content'], plain('content'))).to.deep.equal([]);
-});
-
-it('does not mutate the list it is given', () => {
-  const before = ['content'];
-  togglePinnedApp(before, plain('media'));
-  expect(before).to.deep.equal(['content']);
-});
-
-it('preserves pin order when unpinning from the middle', () => {
-  expect(togglePinnedApp(['a', 'b', 'c'], plain('b'))).to.deep.equal(['a', 'c']);
 });
 
 describe('resolving pins against the apps a user may launch', () => {
@@ -112,12 +86,61 @@ describe('a pin that follows its section', () => {
   });
 
   it('unpins every key for the app, so it does not come straight back', () => {
-    expect(togglePinnedApp(['content', 'section:Pkg.Section', 'Pkg.App'], app('Pkg.App', 'Pkg.Section'))).to.deep.equal([
+    expect(withoutApp(['content', 'section:Pkg.Section', 'Pkg.App'], app('Pkg.App', 'Pkg.Section'))).to.deep.equal([
       'content',
     ]);
   });
 
   it('pins an app under its own alias', () => {
-    expect(togglePinnedApp(['content'], app('Pkg.App', 'Pkg.Section'))).to.deep.equal(['content', 'Pkg.App']);
+    expect(pinAppBefore(['content'], app('Pkg.App', 'Pkg.Section'))).to.deep.equal(['content', 'Pkg.App']);
+  });
+});
+
+describe('resolving one stored alias', () => {
+  const content = plain('content');
+  const pkg = { ...plain('pkg-app'), coversSection: 'Pkg.Section' };
+
+  it('finds an app by its own alias', () => {
+    expect(resolveAppAlias([content, pkg], 'content')).to.equal(content);
+  });
+
+  it("follows a section's fallback alias to the app that now covers the section", () => {
+    expect(resolveAppAlias([content, pkg], 'section:Pkg.Section')).to.equal(pkg);
+  });
+
+  it('finds nothing for an alias no app answers to', () => {
+    expect(resolveAppAlias([content], 'gone')).to.equal(undefined);
+  });
+});
+
+describe('placing a pin', () => {
+  const a = plain('a');
+  const b = plain('b');
+  const c = plain('c');
+
+  it('appends when no position is given', () => {
+    expect(pinAppBefore(['a', 'b'], c)).to.deep.equal(['a', 'b', 'c']);
+  });
+
+  it('inserts before the app it is dropped on', () => {
+    expect(pinAppBefore(['a', 'b'], c, b)).to.deep.equal(['a', 'c', 'b']);
+  });
+
+  it('moves an app that is already pinned rather than pinning it twice', () => {
+    expect(pinAppBefore(['a', 'b', 'c'], c, a)).to.deep.equal(['c', 'a', 'b']);
+  });
+
+  it('appends when the app it is dropped before is itself', () => {
+    expect(pinAppBefore(['a', 'b'], a, a)).to.deep.equal(['b', 'a']);
+  });
+
+  it('finds the position through a fallback alias', () => {
+    const pkg = { ...plain('pkg-app'), coversSection: 'Pkg.Section' };
+    expect(pinAppBefore(['section:Pkg.Section'], a, pkg)).to.deep.equal(['a', 'section:Pkg.Section']);
+  });
+
+  it('removes every key that stands for an app', () => {
+    const pkg = { ...plain('pkg-app'), coversSection: 'Pkg.Section' };
+    expect(withoutApp(['section:Pkg.Section', 'a', 'pkg-app'], pkg)).to.deep.equal(['a']);
   });
 });

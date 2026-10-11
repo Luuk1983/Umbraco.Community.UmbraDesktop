@@ -11,7 +11,7 @@ import { W11_LAUNCHER_WIDTH } from './metrics.js';
  * Four themes, four different answers to where the launcher lives, which is a decent sign the
  * contract's geometry tokens were the right shape.
  *
- * The centring is worth understanding before changing it. `docs/theming.md` §5 warns that an
+ * The centring is worth understanding before changing it. `docs/developer/theming.md` §5 warns that an
  * absolutely positioned box given `left`, `right` and an inherited `width` silently drops
  * `right` — so rather than a sheet fighting the base rule over all three, the offset is computed
  * in the palette from the width the palette itself declares:
@@ -43,7 +43,7 @@ it('centres the panel on the viewport from the width it declares', function () {
     left,
     'the centring offset must be derived from the declared width, so the two cannot drift — and ' +
       'must stay in the palette rather than becoming a sheet rule that over-constrains left/' +
-      'right/width (docs/theming.md section 5)',
+      'right/width (docs/developer/theming.md section 5)',
   ).to.equal(`calc(50vw - ${W11_LAUNCHER_WIDTH / 2}px)`);
 });
 
@@ -76,6 +76,18 @@ it('renders the panel as one acrylic surface with no visible cards', function ()
     );
     expect(style.borderTopWidth, 'and no card borders either').to.equal('0px');
   }
+});
+
+it('moves its outer margin to the header row, not the search field inside it', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // Theme sheets are appended after the base styles, so a .search rule that kept its own margin
+  // here would beat the base's `.search { margin: 0 }` and reintroduce it inside .hdr, doubling
+  // with .hdr's own margin and pushing the row right and down from where the sheet puts it.
+  const search = panel.root.querySelector('.search') as HTMLElement;
+  expect(search, 'the launcher should render a search row').to.not.equal(null);
+  const style = getComputedStyle(search);
+  expect(style.marginLeft, 'the header row owns the left margin now, not the field').to.equal('0px');
+  expect(style.marginTop, 'the header row owns the top margin now, not the field').to.equal('0px');
 });
 
 it('keeps every footer action rendered and sized to be clicked', function () {

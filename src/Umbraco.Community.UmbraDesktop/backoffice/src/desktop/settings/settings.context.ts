@@ -1,13 +1,13 @@
 import type {
   UmbraDesktopClockCycle,
+  UmbraDesktopLauncherLayout,
   UmbraDesktopLocaleSource,
+  UmbraDesktopReopenWindows,
   UmbraDesktopSettings,
   UmbraDesktopWallpaperRef,
 } from './types';
 import type { UmbraDesktopWallpaperView } from './wallpaper-view';
 import { resolveWallpaper, wallpaperThumbUrl } from './wallpaper';
-import { togglePinnedApp } from './pinned';
-import type { UmbraDesktopApp } from '../types';
 import { withFeatureEnabled } from '../taskbar/features/enabled';
 import { UMBRADESKTOP_DEFAULT_SETTINGS } from './settings-store';
 import { browserSettingsCache } from './settings-cache';
@@ -38,6 +38,9 @@ import { UmbImagingRepository } from '@umbraco-cms/backoffice/imaging';
 import { UmbLocalizationController } from '@umbraco-cms/backoffice/localization-api';
 import { UMB_NOTIFICATION_CONTEXT } from '@umbraco-cms/backoffice/notification';
 import { formatDateTime } from '../clock-format';
+import { isNewcomer } from '../welcome/detection';
+import { welcomeSettings } from '../welcome/choices';
+import type { UmbraDesktopWelcomeChoices } from '../welcome/choices';
 
 /**
  * Owns the current user's desktop settings: the persisted preference, and the resolved view the
@@ -68,6 +71,9 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   /** Aliases of the apps pinned to Favourites, in pin order. */
   public readonly pinned = this.#settings.asObservablePart((settings) => settings.pinned);
 
+  /** The user's changes to the launcher; `undefined` when they have never arranged it. */
+  public readonly layout = this.#settings.asObservablePart((settings) => settings.layout);
+
   /** Id of the user's chosen chrome theme. */
   public readonly theme = this.#settings.asObservablePart((settings) => settings.theme);
 
@@ -82,6 +88,12 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   /** Whether landing on the backoffice root should open the desktop. */
   public readonly bootIntoDesktop = this.#settings.asObservablePart((settings) => settings.bootIntoDesktop);
 
+  /** When the desktop reopens the windows this user had open: never, after a refresh, or also after the browser closes. */
+  public readonly reopenWindows = this.#settings.asObservablePart((settings) => settings.reopenWindows);
+
+  /** Whether a document window offers to open the workspace view it shows beside its editor. */
+  public readonly viewsBeside = this.#settings.asObservablePart((settings) => settings.viewsBeside);
+
   /**
    * How this user wants dates and times formatted: which culture, and any clock override.
    *
@@ -94,7 +106,7 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    * Format a date or time the way this user has asked for it, exactly as the taskbar clock does:
    * their choice of culture, backoffice or browser, and their 12 or 24 hour override.
    *
-   * **Public API for apps**, documented in `docs/desktop-apps.md` §7.1, which is why it is a method
+   * **Public API for apps**, documented in `docs/developer/desktop-apps.md` §7.2, which is why it is a method
    * here rather than something an app reimplements: an app in another package cannot import
    * `clock-format.ts`, and a copy of its rules would drift. Pair it with {@link locale}, which emits
    * when either setting changes, so an app can redraw.
@@ -139,6 +151,22 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
 
   /** The migration screen's state, for the desktop to render. */
   public readonly migration = this.#migration.asObservable();
+
+  /**
+   * Whether the welcome wizard is up, for somebody new to the desktop.
+   *
+   * Decided by `welcome/detection.ts` from what the load found, and decided before `loaded` flips,
+   * for the reason the migration screen is: the wizard is then part of the first painted frame, and
+   * the boot splash lifts onto it rather than onto a desktop about to be covered.
+   *
+   * There is no "finished" flag behind it. The settings record that Done writes is the mark, and
+   * nothing else writes that record while the wizard is up: the desktop behind it is inert, and the
+   * migration that could has nothing to move for somebody with no browser cache.
+   */
+  #welcome = new UmbBooleanState(false);
+
+  /** Whether the welcome wizard is up, for the desktop to render. */
+  public readonly welcome = this.#welcome.asObservable();
 
   #imaging: UmbImagingRepository;
 
@@ -268,11 +296,17 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   }
 
   /**
-   * Pin an app to Favourites, or unpin it if any stored pin stands for it (see `togglePinnedApp`).
-   * @param app The app whose pin was clicked.
+   * Store the result of one launcher action: the pins and the layout, in one write.
+   *
+   * One method for both because a single drag can change both (pinning an app takes it out of its
+   * group), and two writes would put two round trips on the account for one gesture. The launcher
+   * computes the result with `launcher/layout-edits.ts`, since it has the catalogue and this context
+   * deliberately does not. Passing `undefined` as the layout is Reset.
+   * @param pinned The new pinned aliases.
+   * @param layout The new layout, or `undefined` for the catalogue's grouping.
    */
-  public togglePin(app: UmbraDesktopApp): void {
-    this.#update({ pinned: togglePinnedApp(this.#settings.getValue().pinned, app) });
+  public setLauncherArrangement(pinned: ReadonlyArray<string>, layout: UmbraDesktopLauncherLayout | undefined): void {
+    this.#update({ pinned: [...pinned], layout });
   }
 
   /**
@@ -352,6 +386,25 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
   }
 
   /**
+   * Choose when the desktop reopens this user's windows. Persists, and the windows open now stay
+   * open either way: what changes at once is where their layout is kept (see
+   * `windows/layout.controller.ts`), and what changes next time is whether they come back.
+   * @param mode Never, after a refresh, or also after the browser closes.
+   */
+  public setReopenWindows(mode: UmbraDesktopReopenWindows): void {
+    this.#update({ reopenWindows: mode });
+  }
+
+  /**
+   * Switch the Open beside button on or off. Persists, and applies at once: each document window
+   * follows this, and turning it off closes the views open beside it (design §7).
+   * @param enabled Whether the button is offered.
+   */
+  public setViewsBeside(enabled: boolean): void {
+    this.#update({ viewsBeside: enabled });
+  }
+
+  /**
    * Choose which culture the desktop formats dates and times with. Applies immediately and persists.
    *
    * Takes effect on screen at once, unlike {@link setBootIntoDesktop}: the taskbar observes this and
@@ -424,6 +477,7 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
     // whose run was cut short by the `#stale` guards below — would be inherited by this one, who
     // would arrive behind a screen belonging to somebody else's migration, with no button on it.
     this.#migration.setValue({ phase: 'idle' });
+    this.#welcome.setValue(false);
 
     // Quiet unless the boot runs long — see `boot/splash-status.ts`. Armed before the first request
     // rather than after it, so a slow *first* request is covered too.
@@ -446,6 +500,8 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
       if (pending.length > 0) {
         this.#migration.setValue({ phase: 'running', descriptionKey: pending[0].descriptionKey });
       }
+      // Never both: the migration needs a browser cache, and a newcomer has none.
+      this.#welcome.setValue(isNewcomer(load));
 
       await this.#refreshView(load.settings.wallpaper);
     } catch (error) {
@@ -589,6 +645,31 @@ export class UmbraDesktopSettingsContext extends UmbContextBase {
    */
   public dismissMigration(): void {
     this.#migration.setValue({ phase: 'idle' });
+  }
+
+  /**
+   * Apply and save what the welcome wizard ended on: the theme, that theme's wallpaper, and the
+   * sign-in switch, in one write.
+   *
+   * Leaves the wizard up. It is fading out over the desktop at this point, and the theme applied
+   * here is what that fade reveals; {@link dismissWelcome} takes it away once the fade is done.
+   *
+   * A failed save is reported like any other, and leaves the choices applied for the session and no
+   * record on the account, so the wizard comes back next time. Correct: it never got to say it was
+   * finished.
+   * @param choices What the wizard ended on.
+   */
+  public finishWelcome(choices: UmbraDesktopWelcomeChoices): void {
+    const settings = welcomeSettings(this.#settings.getValue(), choices, UMBRADESKTOP_THEMES);
+    this.#paintWallpaper(settings.wallpaper, {
+      theme: settings.theme,
+      bootIntoDesktop: settings.bootIntoDesktop,
+    });
+  }
+
+  /** Take the welcome wizard away, once it has faded. */
+  public dismissWelcome(): void {
+    this.#welcome.setValue(false);
   }
 
   /**

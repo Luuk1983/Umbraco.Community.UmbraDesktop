@@ -1,0 +1,14 @@
+{
+	"$schema": "../../umbraco-package-schema.json",
+	"id": "Umbraco.Community.UmbraDesktop.Accessories",
+	"name": "UmbraDesktop Accessories",
+	"version": "GetsGenerated",
+	"extensions": [
+		{
+			"type": "bundle",
+			"alias": "Umbraco.Community.UmbraDesktop.Accessories.Bundle",
+			"name": "UmbraDesktop Accessories Bundle",
+			"js": "/App_Plugins/Umbraco.Community.UmbraDesktop.Accessories/umbradesktop-accessories.js"
+		}
+	]
+}

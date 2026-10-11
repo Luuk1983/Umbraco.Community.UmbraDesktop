@@ -81,7 +81,7 @@ the available events cannot support.
 - **D8 — Trashed is a third state and it does not alarm a clean window.** Only permanent deletion
   does, because it is the one state with nothing to refresh to. See §4.
 - **D9 — `info` keeps the `.dirty` selector.** All five themes style it, `unsaved-marker.test.ts`
-  keys off it, and `docs/theming.md` documents it for readers outside this repository, so the one
+  keys off it, and `docs/developer/theming.md` documents it for readers outside this repository, so the one
   state whose appearance must not change keeps the class it has and the `info` tokens chain to the
   existing ones. `warning` and `error` are a *different element* in the same slot, `.notice-marker`,
   because they are no longer a dot: see §8.1. Amended after the feature was seen running — the first
@@ -615,6 +615,6 @@ cannot render reporting "changed" with a count.
 - [ ] `umbraco-marketplace.json` names it in `Description`, since being the only surface in Umbraco
       that warns an editor before they overwrite somebody is exactly what a person would choose this
       package for, plus `Tags` and a `Screenshots` entry
-- [ ] `docs/theming.md` gains the notice tokens, the three severities and the taskbar badge slot
+- [ ] `docs/developer/theming.md` gains the notice tokens, the three severities and the taskbar badge slot
 - [ ] Anything a build taught that is not obvious from the code is written down where the next person
       will hit it

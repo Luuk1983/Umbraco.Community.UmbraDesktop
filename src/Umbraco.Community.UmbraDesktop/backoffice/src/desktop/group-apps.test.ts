@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { groupApps } from './group-apps';
+import { catalogueGroupOf, groupApps, launcherGroupOrder } from './group-apps';
 import { UMBRADESKTOP_MORE_GROUP_ALIAS } from './constants';
 import type { UmbraDesktopApp, UmbraDesktopGroup } from './types';
 
@@ -60,4 +60,18 @@ it('sorts apps and groups whose names are not text without throwing', () => {
       [...groups, { alias: 'x', label: odd(7), weight: 10 }, { alias: 'y', label: odd(8), weight: 10 }],
     ),
   ).to.not.throw();
+});
+
+it('orders the catalogue groups by weight with the reserved More group last', () => {
+  const order = launcherGroupOrder([
+    { alias: 'late', label: 'Late', weight: 50 },
+    { alias: 'early', label: 'Early', weight: 5 },
+  ]);
+  expect(order.map((g) => g.alias)).to.deep.equal(['early', 'late', UMBRADESKTOP_MORE_GROUP_ALIAS]);
+});
+
+it("names an app's catalogue group, and More when its group is unset or unknown", () => {
+  expect(catalogueGroupOf(app('logs', { group: 'diagnostics' }), groups)).to.equal('diagnostics');
+  expect(catalogueGroupOf(app('stray', { group: 'nowhere' }), groups)).to.equal(UMBRADESKTOP_MORE_GROUP_ALIAS);
+  expect(catalogueGroupOf(app('bare'), groups)).to.equal(UMBRADESKTOP_MORE_GROUP_ALIAS);
 });

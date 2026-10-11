@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import './launcher.element.js';
 import type { UmbraDesktopLauncherElement } from './launcher.element.js';
-import type { UmbraDesktopApp, UmbraDesktopLauncherGroup } from '../types.js';
+import type { UmbraDesktopApp, UmbraDesktopGroup } from '../types.js';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
 import { UmbContextProvider } from '@umbraco-cms/backoffice/context-api';
 import { UmbArrayState } from '@umbraco-cms/backoffice/observable-api';
@@ -69,18 +69,12 @@ async function launcherWithLongName(): Promise<UmbraDesktopLauncherElement> {
   const wrapper = document.createElement('div');
   wrapper.style.width = '1180px';
   document.body.appendChild(wrapper);
-  const groups = new UmbArrayState<UmbraDesktopLauncherGroup>([], (g) => g.group.alias);
-  groups.setValue([
-    {
-      group: { alias: 'diagnostics', label: 'Diagnostics' },
-      apps: [appNamed('short', 'Logs'), appNamed('long', LONG_NAME), appNamed('other', 'Profiling')],
-    },
-  ]);
+  const catalogueGroups = new UmbArrayState<UmbraDesktopGroup>([], (g) => g.alias);
   const apps = new UmbArrayState<UmbraDesktopApp>([], (a) => a.alias);
   apps.setValue([appNamed('short', 'Logs'), appNamed('long', LONG_NAME), appNamed('other', 'Profiling')]);
   new UmbContextProvider(wrapper, UMBRADESKTOP_APP_CATALOGUE_CONTEXT, {
     apps: apps.asObservable(),
-    groups: groups.asObservable(),
+    catalogueGroups: catalogueGroups.asObservable(),
     isRefRegistered: () => true,
     getEntryRef: () => undefined,
     getHostElement: () => wrapper,

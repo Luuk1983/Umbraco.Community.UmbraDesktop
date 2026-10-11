@@ -17,18 +17,53 @@ export function pinKeysFor(app: UmbraDesktopApp, pinned: ReadonlyArray<string>):
 }
 
 /**
- * Pin an app, or unpin it: removing **every** key that stands for it, not only its own alias, or an
- * app pinned through its section's fallback would stay pinned after the user unpinned it.
+ * The app a stored alias stands for: the app with that alias, or, for a section's fallback alias
+ * (`section:<alias>`), the app that covers that section now (design D15 of the package catalogues
+ * design).
  *
- * New pins are appended so the list stays in pin order — the order the Favourites hero renders
- * them in — rather than jumping to the front.
+ * Shared by pins and by the launcher layout, which store aliases the same way and have to resolve
+ * them the same way. Two copies of this rule would disagree the first time a package replaced a
+ * fallback tile.
+ * @param apps The apps this user may launch.
+ * @param alias A stored alias.
+ * @returns The app, or `undefined` when nothing answers to it.
+ */
+export function resolveAppAlias(apps: ReadonlyArray<UmbraDesktopApp>, alias: string): UmbraDesktopApp | undefined {
+  return apps.find((candidate) => candidate.alias === alias) ?? coveringApp(apps, alias);
+}
+
+/**
+ * The pinned list without an app: every key that stands for it, fallback alias included.
  * @param pinned The pinned aliases.
- * @param app The app whose pin was clicked.
+ * @param app The app to take out.
  * @returns A new list; the input is left untouched.
  */
-export function togglePinnedApp(pinned: ReadonlyArray<string>, app: UmbraDesktopApp): string[] {
+export function withoutApp(pinned: ReadonlyArray<string>, app: UmbraDesktopApp): string[] {
   const keys = pinKeysFor(app, pinned);
-  return keys.length > 0 ? pinned.filter((alias) => !keys.includes(alias)) : [...pinned, app.alias];
+  return pinned.filter((alias) => !keys.includes(alias));
+}
+
+/**
+ * Pin an app at a position: before another pinned app, or at the end.
+ *
+ * Used by the launcher's drag and Move to, which say where a pin lands. An app that is already
+ * pinned moves rather than appearing twice. `before` is matched through `pinKeysFor`, so a pin held
+ * under a section's fallback alias is still a valid position.
+ * @param pinned The pinned aliases.
+ * @param app The app to pin.
+ * @param before The pinned app it lands in front of; omitted, or the app itself, means the end.
+ * @returns A new list; the input is left untouched.
+ */
+export function pinAppBefore(
+  pinned: ReadonlyArray<string>,
+  app: UmbraDesktopApp,
+  before?: UmbraDesktopApp,
+): string[] {
+  const list = withoutApp(pinned, app);
+  const at = before && before !== app ? list.findIndex((alias) => pinKeysFor(before, [alias]).length > 0) : -1;
+  if (at === -1) list.push(app.alias);
+  else list.splice(at, 0, app.alias);
+  return list;
 }
 
 /**
@@ -57,7 +92,7 @@ export function resolvePinned(
 ): UmbraDesktopApp[] {
   const resolved: UmbraDesktopApp[] = [];
   for (const alias of pinned) {
-    const app = apps.find((candidate) => candidate.alias === alias) ?? coveringApp(apps, alias);
+    const app = resolveAppAlias(apps, alias);
     if (app && !resolved.includes(app)) resolved.push(app);
   }
   return resolved;

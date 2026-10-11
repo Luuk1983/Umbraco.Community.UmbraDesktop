@@ -15,7 +15,7 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 /**
  * What the cup raises a reminder with, and so what the desktop toast hands back as `data`.
  *
- * Plain JSON on purpose: the toast copies it through JSON (`docs/desktop-apps.md` §9.9), so it holds
+ * Plain JSON on purpose: the toast copies it through JSON (`docs/developer/desktop-apps.md` §9.9), so it holds
  * values, never functions. `headline` and `message` carry the whole reminder in words, because they
  * are what the notification history lists and what a repeat is folded on. The toast draws its own
  * words from `kind`, `title` and `startsAt` instead (owner, 2026-10-11), so those two are optional:

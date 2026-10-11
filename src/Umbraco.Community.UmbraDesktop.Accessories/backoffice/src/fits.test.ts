@@ -1,0 +1,118 @@
+import { expect, fixture, html } from '@open-wc/testing';
+import { manifests } from './bundle.manifests.js';
+import './calculator/calculator.element.js';
+import './character-map/character-map.element.js';
+import './clock/clock.element.js';
+import './disk-cleanup/disk-cleanup.element.js';
+import './notepad/notepad.element.js';
+import './paint/paint.element.js';
+import './screensaver/screensaver-panel.element.js';
+import './sticky-notes/sticky-notes.element.js';
+import './system-info/system-info.element.js';
+
+/**
+ * Every app, measured in a real browser at both sizes its manifest declares, under every theme id
+ * and under none: its content must fit the box the host will give it.
+ *
+ * This is the repository's "derive numbers, then measure them" rule as a test. Each `constants.ts`
+ * derives its sizes, which only proves the sum agrees with itself; this is the check against the
+ * rendered page. It earned its place on the first run: Clock's SVG face sized itself from its width
+ * and overflowed its minimum box by 40px, under every theme, with every other test green.
+ *
+ * The theme ids are stamped as attributes only, with no palette behind them, so what this measures
+ * is each app's own per-theme branches. That is exactly the part `docs/developer/desktop-apps.md` §8 warns can
+ * change an app's size under one theme alone. The palettes themselves are the host's, and every
+ * accessory reads them only for colours, radii and bevels drawn as shadows, none of which take
+ * layout.
+ */
+
+/** Each window app's tag, by its manifest `name`. The Screen Saver tile opens settings, not a window, so it has none. */
+const TAGS: Record<string, string> = {
+  Notepad: 'umbradesktop-notepad',
+  Paint: 'umbradesktop-paint',
+  Calculator: 'umbradesktop-calculator',
+  Clock: 'umbradesktop-clock',
+  StickyNotes: 'umbradesktop-sticky-notes',
+  CharacterMap: 'umbradesktop-character-map',
+  DiskCleanup: 'umbradesktop-disk-cleanup',
+  SystemInfo: 'umbradesktop-system-info',
+};
+
+/** The published theme ids (`docs/developer/desktop-apps.md` §5), plus no theme at all. */
+const THEMES = [undefined, 'umbraco', 'umbraco4', 'macos', 'win11', 'win98'];
+
+/** A registered app, as far as this test reads it. */
+interface App {
+  name: string;
+  meta: Record<'defaultSize' | 'minSize', { w: number; h: number }>;
+}
+
+const apps = (manifests.filter((manifest) => manifest.type === 'umbraDesktopApp') as unknown as App[]).filter(
+  (app) => app.name in TAGS,
+);
+
+/**
+ * How long the page's first painted frame may take. Measured 2026-10-03: the first frame that has
+ * anything to paint took 400 to 2,300ms, against 16ms for every frame after it, and on a loaded
+ * machine it went past the 5-second test timeout. The case that waited on it was always Notepad's,
+ * because Notepad is first in the list, so a cost of the page looked like a fault of one app. A
+ * bare frame does not take it: with nothing on the page yet, that frame comes back in 0ms.
+ */
+const FIRST_PAINT_TIMEOUT_MS = 30_000;
+
+/**
+ * Paints some plain text once before any case runs, so the page's first paint is paid here under
+ * its own limit and every case measures only its app under the usual 5 seconds. Measured with it:
+ * Notepad's first frame went from 367-438ms to 76-114ms, which is its own textarea, and every other
+ * app's stayed at a frame. The frame wait inside each case stays: that frame is where resize
+ * observers run, which is how Clock's overflow was found.
+ */
+before(async function () {
+  this.timeout(FIRST_PAINT_TIMEOUT_MS);
+  const warmUp = await fixture<HTMLDivElement>(html`<div style="width: 400px; height: 300px">Warming up</div>`);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  warmUp.remove();
+});
+
+for (const app of apps) {
+  for (const which of ['defaultSize', 'minSize'] as const) {
+    for (const theme of THEMES) {
+      it(`${app.name} fits its ${which} under ${theme ?? 'no theme'}`, async () => {
+        const { w, h } = app.meta[which];
+        // The window body the host would give it: exactly the content box, laid out as a column the
+        // app's own :host fills.
+        const body = await fixture<HTMLDivElement>(
+          html`<div style="display: flex; flex-direction: column; width: ${w}px; height: ${h}px; overflow: hidden"></div>`,
+        );
+        const element = document.createElement(TAGS[app.name]) as HTMLElement & { updateComplete: Promise<unknown> };
+        if (theme) element.setAttribute('data-umbradesktop-theme', theme);
+        element.style.flex = '1';
+        body.appendChild(element);
+        await element.updateComplete;
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        expect(element.scrollWidth, 'rendered width').to.be.at.most(w);
+        expect(element.scrollHeight, 'rendered height').to.be.at.most(h);
+      });
+    }
+  }
+}
+
+/**
+ * The Screen Saver's settings box is not a window, so it has no declared sizes to measure against.
+ * What it must do is fit a box in Desktop settings, which is about 360px wide at the narrowest and
+ * pads its content, so it is measured in 300px of inner width, under every theme and none: nothing
+ * may overflow sideways, and the host's box grows to the height.
+ */
+for (const theme of THEMES) {
+  it(`the Screen Saver settings fit a 300px column under ${theme ?? 'no theme'}`, async () => {
+    const body = await fixture<HTMLDivElement>(
+      html`<div style="display: flex; flex-direction: column; width: 300px"></div>`,
+    );
+    const element = document.createElement('umbradesktop-screensaver-panel') as HTMLElement & { updateComplete: Promise<unknown> };
+    if (theme) element.setAttribute('data-umbradesktop-theme', theme);
+    body.appendChild(element);
+    await element.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(element.scrollWidth, 'rendered width').to.be.at.most(300);
+  });
+}

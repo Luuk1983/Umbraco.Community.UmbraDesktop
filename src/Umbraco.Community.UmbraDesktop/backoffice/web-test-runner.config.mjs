@@ -56,4 +56,14 @@ export default {
   // with "Unsupported decorator location: field".
   plugins: [esbuildPlugin({ ts: true, target: 'es2020', tsconfig: 'tsconfig.json' }), touchPlugin()],
   testFramework: { config: { timeout: '5000' } },
+  // One test file at a time, so every file is the foreground tab. Run concurrently, the runner puts
+  // files in background tabs, where Chrome gives no animation frames, throttles timers and does not
+  // let a page take keyboard focus, and the keyboard-focus tests (window-app-focus.test.ts), which
+  // click and type for real, failed there while passing alone. The touch commands above bring their
+  // page to the front instead, which holds for one command; a focus test clicks, waits and types
+  // across several, and only one file at a time keeps its page in front for all of them. A
+  // --concurrency flag on the command line overrides this. The suite did pass at --concurrency 2 on
+  // 2026-09-30, 107s against 134s here, but nothing then keeps a focus test's page in front, so a
+  // focus test failing only in a concurrent run is that page having been in the back.
+  concurrency: 1,
 };

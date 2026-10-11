@@ -50,7 +50,7 @@ export class PlayerElement extends UmbLitElement {
   engine?: PlayerEngine;
 
   /**
-   * The theme id the desktop stamps on an app's element (`docs/desktop-apps.md`), or whoever hosts the
+   * The theme id the desktop stamps on an app's element (`docs/developer/desktop-apps.md`), or whoever hosts the
    * player copies onto it. Declared so Lit observes the attribute, and passed on to the bar in
    * {@link render}: the bar styles its five themes with `:host([data-umbradesktop-theme=…])`, and an
    * attribute on this element does not reach into the shadow root that holds the bar.

@@ -34,6 +34,18 @@ class ProbeManager extends UmbraDesktopWindowManagerContext {
     this.asked += 1;
     return this.answer;
   }
+
+  /** Package names settings were opened at, instead of a modal. */
+  public settingsOpened: string[] = [];
+
+  /**
+   * Record the request instead of opening the settings modal, which needs a booted backoffice's
+   * modal manager.
+   * @param packageName The package settings would have opened at.
+   */
+  protected override _openSettings(packageName: string): void {
+    this.settingsOpened.push(packageName);
+  }
 }
 
 /** Every host to tear down after a test. */
@@ -412,6 +424,34 @@ describe('server state and its guards', () => {
  * as losing their chat: stacking a duplicate, replacing the window and taking its state with it,
  * leaving it buried behind whatever covered it, and leaving it minimized.
  */
+describe('opening an app window at a location', () => {
+  const HELP: UmbraDesktopApp = { ...APP, alias: 'help', content: { kind: 'element', element: HTMLElement } };
+
+  it('hands the location to the app as a property and records it on the window', () => {
+    const ctx = manager();
+    ctx.open(HELP, { location: 'umbradesktop/snapping' });
+    const [opened] = windowsOf(ctx);
+    expect(opened.app.content).to.eql({ kind: 'element', element: HTMLElement, props: { location: 'umbradesktop/snapping' } });
+    expect(opened.location).to.equal('umbradesktop/snapping');
+    expect(HELP.content, 'the catalogue’s own app is not touched').to.eql({ kind: 'element', element: HTMLElement });
+  });
+
+  it('opens a second window at another location rather than moving the first', () => {
+    const ctx = manager();
+    ctx.open(HELP, { location: 'a' });
+    ctx.open(HELP, { location: 'b' });
+    expect(windowsOf(ctx).map((w) => w.location)).to.eql(['a', 'b']);
+  });
+
+  it('opens as before without one', () => {
+    const ctx = manager();
+    ctx.open(HELP);
+    const [opened] = windowsOf(ctx);
+    expect(opened.app).to.equal(HELP);
+    expect(opened.location).to.equal(undefined);
+  });
+});
+
 describe('single-window apps', () => {
   /** A single-window app: the shape the chat catalogue entry uses. */
   const SOLO: UmbraDesktopApp = { ...APP, alias: 'solo', name: 'Solo', allowMultiple: false };
@@ -715,5 +755,189 @@ describe('fixed-size apps', () => {
     const id = windowsOf(ctx)[0].id;
     ctx.setState(id, 'maximized');
     expect(windowsOf(ctx)[0].state).to.equal('maximized');
+  });
+});
+
+/**
+ * Reopening a saved window, for the window layout (`windows/layout.ts`), and recording where a
+ * backoffice window's frame is, which is what lets it reopen at that page.
+ */
+describe('restoring saved windows', () => {
+  const SECTION: UmbraDesktopApp = { ...APP, alias: 'section', content: { kind: 'iframe', url: '/umbraco/section/content' } };
+
+  it('reopens a window at its saved rectangle, state and snap, without taking focus', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    ctx.restoreWindow(
+      {
+        app: 'section',
+        rect: { x: 40, y: 50, w: 600, h: 400 },
+        state: 'maximized',
+        z: 7,
+        active: true,
+        snapped: 'left',
+        restoreRect: { x: 1, y: 2, w: 300, h: 200 },
+      },
+      SECTION,
+    );
+    const restored = windowsOf(ctx).find((w) => w.app.alias === 'section')!;
+    expect(restored.rect).to.eql({ x: 40, y: 50, w: 600, h: 400 });
+    expect(restored.state).to.equal('maximized');
+    expect(restored.snapped).to.equal('left');
+    expect(restored.restoreRect).to.eql({ x: 1, y: 2, w: 300, h: 200 });
+    expect(restored.active, 'focus is the restorer’s to give, once every window is back').to.equal(false);
+  });
+
+  it('stacks restored windows above what is open, in the order they are restored', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    ctx.restoreWindow({ app: 'section', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 1, active: false }, SECTION);
+    ctx.restoreWindow({ app: 'section', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 2, active: false }, SECTION);
+    const [first, second, third] = windowsOf(ctx);
+    expect(second.z).to.be.greaterThan(first.z);
+    expect(third.z).to.be.greaterThan(second.z);
+  });
+
+  it('opens a restored backoffice window at the page it was showing', () => {
+    const ctx = manager();
+    ctx.restoreWindow(
+      { app: 'section', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 1, active: false, location: '/umbraco/section/content/workspace/document/edit/abc' },
+      SECTION,
+    );
+    const [restored] = windowsOf(ctx);
+    expect(restored.app.content).to.eql({ kind: 'iframe', url: '/umbraco/section/content/workspace/document/edit/abc' });
+    expect(restored.location).to.equal('/umbraco/section/content/workspace/document/edit/abc');
+  });
+
+  it('hands a restored app window its saved location, as a property and as its location', () => {
+    const ctx = manager();
+    const HELP: UmbraDesktopApp = { ...APP, alias: 'help', content: { kind: 'element', element: HTMLElement, props: { keep: 1 } } };
+    ctx.restoreWindow(
+      { app: 'help', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 1, active: false, appLocation: 'umbradesktop/snapping' },
+      HELP,
+    );
+    const [restored] = windowsOf(ctx);
+    expect(restored.app.content).to.eql({ kind: 'element', element: HTMLElement, props: { keep: 1, location: 'umbradesktop/snapping' } });
+    expect(restored.location).to.equal('umbradesktop/snapping');
+    expect(HELP.content, 'the catalogue’s own app is not touched').to.eql({ kind: 'element', element: HTMLElement, props: { keep: 1 } });
+  });
+
+  it('records where a window’s frame is', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    const id = windowsOf(ctx)[0].id;
+    ctx.setLocation(id, '/umbraco/section/media');
+    expect(windowsOf(ctx)[0].location).to.equal('/umbraco/section/media');
+  });
+});
+
+it('opens settings instead of a window for an app that opens settings', () => {
+  const ctx = manager();
+  ctx.open({ ...APP, alias: 'shortcut', opensSettings: 'My Package' });
+  expect(windowsOf(ctx)).to.have.lengthOf(0);
+  expect(ctx.settingsOpened).to.deep.equal(['My Package']);
+});
+
+describe('work in progress', () => {
+  /** A manager whose dialogs are recorded answers, with the stop-work question told apart. */
+  class WorkProbe extends UmbraDesktopWindowManagerContext {
+    /** What any dialog answers. */
+    public answer = true;
+    /** Which dialogs were opened, in order, and for which window. */
+    public opened: string[] = [];
+
+    protected override async _askToDiscard(): Promise<boolean> {
+      this.opened.push('discard');
+      return this.answer;
+    }
+
+    protected override async _askToStopWork(w: UmbraDesktopWindow): Promise<boolean> {
+      this.opened.push(`stop:${w.dirty ? 'dirty' : 'clean'}`);
+      return this.answer;
+    }
+  }
+
+  let workHost: UmbElementControllerHost;
+  let work: WorkProbe;
+
+  beforeEach(() => {
+    workHost = new UmbElementControllerHost(document.createElement('div'));
+    work = new WorkProbe(workHost);
+    work.open(APP);
+  });
+
+  afterEach(() => {
+    workHost.destroy();
+  });
+
+  /** The one open window. */
+  const only = () => windowsOf(work)[0];
+
+  it('puts a summary of the reported tasks on the window', () => {
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running', completed: 14, total: 50 }]);
+    expect(only().progress?.state).to.equal('determinate');
+    expect(only().progress?.total).to.equal(50);
+  });
+
+  it('sums what two sources report into one state', () => {
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running', completed: 4, total: 10 }]);
+    work.setTasks(only().id, 'app', [{ id: 'a', state: 'running', completed: 10, total: 40 }]);
+    expect(only().progress?.completed).to.equal(14);
+    expect(only().progress?.total).to.equal(50);
+  });
+
+  it('clears the summary when the last source stops reporting, minimized or not', () => {
+    work.setState(only().id, 'minimized');
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running' }]);
+    work.setTasks(only().id, 'frame', []);
+    expect(only().progress).to.equal(undefined);
+  });
+
+  it('hands back the same list when a report changes nothing, so a repeat costs no render', () => {
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running', completed: 1, total: 2 }]);
+    const before = windowsOf(work);
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running', completed: 1, total: 2 }]);
+    expect(windowsOf(work)).to.equal(before);
+  });
+
+  it('asks before closing a window with work in flight', async () => {
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running' }]);
+    work.answer = false;
+    await work.requestClose(only().id);
+    expect(work.opened).to.deep.equal(['stop:clean']);
+    expect(windowsOf(work)).to.have.lengthOf(1);
+  });
+
+  it('asks once, not twice, for a window that is both busy and unsaved', async () => {
+    work.setDirty(only().id, true);
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'running' }]);
+    await work.requestClose(only().id);
+    expect(work.opened).to.deep.equal(['stop:dirty']);
+    expect(windowsOf(work)).to.have.lengthOf(0);
+  });
+
+  it('closes a failed window without asking: nothing is left to stop', async () => {
+    work.setTasks(only().id, 'frame', [{ id: 'a', state: 'failed', failed: 1 }]);
+    await work.requestClose(only().id);
+    expect(work.opened).to.deep.equal([]);
+    expect(windowsOf(work)).to.have.lengthOf(0);
+  });
+
+  it('counts busy windows for Exit, leaving failed and idle ones out', () => {
+    work.open({ ...APP, alias: 'b' });
+    work.open({ ...APP, alias: 'c' });
+    const [a, b] = windowsOf(work);
+    work.setTasks(a.id, 'frame', [{ id: 'x', state: 'running' }]);
+    work.setTasks(b.id, 'frame', [{ id: 'x', state: 'failed' }]);
+    expect(work.busyWindows().map((w) => w.id)).to.deep.equal([a.id]);
+  });
+
+  it('forgets a closed window tasks, so a window reopened later starts idle', () => {
+    const id = only().id;
+    work.setTasks(id, 'frame', [{ id: 'a', state: 'running' }]);
+    work.close(id);
+    work.setTasks(id, 'app', []);
+    expect(windowsOf(work)).to.have.lengthOf(0);
+    expect(work.busyWindows()).to.have.lengthOf(0);
   });
 });

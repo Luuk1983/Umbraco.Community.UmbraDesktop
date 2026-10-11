@@ -6,7 +6,7 @@ on:
 
 permissions:
   id-token: write # Required for NuGet trusted publishing
-  contents: write # Required for creating GitHub releases
+  contents: read # Required to check out the repository; nothing here writes to it
 
 jobs:
   publish:
@@ -37,12 +37,6 @@ jobs:
       - name: Push to NuGet
         run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
-      # generate_release_notes diffs against the previous tag, so a stable release that had a
-      # prerelease before it gets notes covering only what happened after that prerelease. Curate
-      # the body by hand in that case; see RELEASE.md.
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ./artifacts/*.nupkg
-          generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+      # There is deliberately no GitHub release step. A tag push publishes to NuGet and nothing
+      # else, so a version that is not worth announcing stays out of the repository's Releases
+      # list. A release there is the owner's choice, made in the GitHub UI; see RELEASE.md.

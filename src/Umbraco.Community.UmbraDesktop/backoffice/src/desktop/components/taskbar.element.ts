@@ -1,5 +1,5 @@
 import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
-import { UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
+import { UMBRADESKTOP_CHROME_ICON_PX, UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
 import { taskActivation } from '../window-model';
 import { exitDialogContent } from '../exit-message.js';
 import { formatClock, msUntilNextMinute } from '../clock-format.js';
@@ -19,6 +19,7 @@ import { UMBRADESKTOP_TRAY_CONTEXT } from '../taskbar/tray/tray.context-token.js
 import { UmbraDesktopTrayItemsController } from '../taskbar/tray/tray-items.controller.js';
 import type { UmbraDesktopTrayItem } from '../taskbar/tray/tray-items.js';
 import './launcher.element.js';
+import type { UmbraDesktopLauncherConfirm, UmbraDesktopLauncherElement } from './launcher.element.js';
 import './scrollback.element.js';
 import { UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT } from '../notifications/notification-centre.context-token.js';
 import type { UmbraDesktopNotificationCentreContext } from '../notifications/notification-centre.context.js';
@@ -26,12 +27,40 @@ import { attentionCount } from '../notifications/scrollback.js';
 import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import { noticeIconName, windowNotices, worstSeverity } from '../notices/notices.js';
 import type { UmbraDesktopNoticeSeverity } from '../notices/types.js';
+import { progressCaption } from '../progress/progress.js';
+import {
+  UMBRADESKTOP_PROGRESS_OFFSET_PX,
+  UMBRADESKTOP_PROGRESS_TRACK_DEFAULT,
+  progressStyles,
+  renderProgress,
+} from '../progress/progress-view.js';
+
+/**
+ * How far the base pulls a task button's icon left, in px, to balance the transparent padding inside
+ * Umbraco's glyphs. Named because the busy ring has to follow it: the pull leaves the icon hanging
+ * out of the wrapper the ring is drawn against, and a ring sized to the wrapper came out 2px small and
+ * off-centre, which `theme/progress.test.ts` measured.
+ */
+const TASK_ICON_PULL_PX = 2;
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import type { PropertyValues } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbConfirmModal, umbOpenModal } from '@umbraco-cms/backoffice/modal';
 import { UMB_SEARCH_MODAL } from '@umbraco-cms/backoffice/search';
 import { UMB_CURRENT_USER_MODAL } from '@umbraco-cms/backoffice/current-user';
+
+/**
+ * Whether keyboard focus is inside an iframe on this page, which is where it goes when the user
+ * clicks into one of the desktop's windows. Walked down through shadow roots, because the document
+ * only reports the outermost host of whatever has focus, and a window's iframe sits several shadow
+ * roots deep.
+ * @returns True when the focused element is an iframe.
+ */
+function focusIsInFrame(): boolean {
+  let active: Element | null = document.activeElement;
+  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+  return active instanceof HTMLIFrameElement;
+}
 
 /**
  * The bottom panel: Umbraco-logo start button (opens the app launcher), running-window
@@ -341,14 +370,25 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     // The words, not just the shape: this is the accessible name and the tooltip, so the state is
     // readable to a screen reader and on a monochrome display. `notices[0]` is the worst notice,
     // which is the one the badge is drawing.
-    const label = worst ? `${name} — ${this.localize.term(notices[0].title)}` : name;
+    // Work in progress joins the same sentence, last, so "Media — Unsaved changes — Uploading 14 of
+    // 50" reads in order of what the editor can lose. The ring is decoration for that reason: these
+    // words are what a screen reader and a tooltip get. Issue #108.
+    const caption = progressCaption(
+      w.progress,
+      (key, ...args) => this.localize.term(key, ...args),
+      (value) => this.localize.string(value),
+    );
+    const label = [name, worst ? this.localize.term(notices[0].title) : '', caption].filter(Boolean).join(' — ');
     return html`
       <button
         class="task window ${w.active ? 'active' : ''}"
         title=${label}
         aria-label=${label}
         @click=${() => this.#onTaskClick(w)}>
-        <umb-icon class="task-icon" name=${w.app.icon}></umb-icon>
+        <span class="progress-anchor">
+          <umb-icon class="task-icon" name=${w.app.icon}></umb-icon>
+          ${renderProgress(w.progress, caption, true)}
+        </span>
         <span class="task-label">${name}</span>
         ${this.#renderBadge(worst)}
       </button>
@@ -365,14 +405,16 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
    * Open one of the two panels, or close whichever is open, wiring up the dismiss listeners to
    * match. While a panel is open we listen for a pointer down outside it and its own button, a window
    * blur (a click landing inside an iframe window steals focus without bubbling a pointer event to
-   * us), and the Escape key, any of which closes it. Listeners are removed as soon as it closes, and
-   * switching straight from one panel to the other keeps them.
+   * us), and the Escape key. What each of them does is in its handler: the launcher can hold itself
+   * open, and Escape steps back inside it before it closes. Listeners are removed as soon as the
+   * panel closes, and switching straight from one panel to the other keeps them.
    * @param panel The panel to open, or undefined to close.
    */
   #setPanel(panel: 'launcher' | 'scrollback' | undefined) {
     if (panel === this._panel) return;
     const wasOpen = this._panel !== undefined;
     this._panel = panel;
+    if (panel !== 'launcher') this.#launcherAsking = false;
     this.#notifications?.setListOpen(panel === 'scrollback');
     if (wasOpen === (panel !== undefined)) return;
     if (panel) {
@@ -387,6 +429,28 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       window.removeEventListener('blur', this.#onWindowBlur);
       window.removeEventListener('resize', this.#placeScrollback);
     }
+  }
+
+  /**
+   * Whether a question the launcher asked is on screen, in a modal this element opened for it. The
+   * launcher is held open until it is answered: a press inside the modal is outside the launcher,
+   * and so is the Escape that closes the modal, and closing the launcher under its own question
+   * would leave the answer nowhere to go.
+   */
+  #launcherAsking = false;
+
+  /** The launcher, while it is open. */
+  get #launcher(): UmbraDesktopLauncherElement | null {
+    return this.shadowRoot?.querySelector<UmbraDesktopLauncherElement>('umbradesktop-launcher') ?? null;
+  }
+
+  /**
+   * Whether the open panel stays open whatever the user does outside it: the launcher while it is
+   * asking a question, and while it says it holds itself open, as arrange mode does.
+   * @returns True to leave it open.
+   */
+  #panelHeld(): boolean {
+    return this._panel === 'launcher' && (this.#launcherAsking || !!this.#launcher?.holdsOpen);
   }
 
   /**
@@ -418,17 +482,51 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     const panel = this.shadowRoot?.querySelector(panelSelector);
     const button = this.shadowRoot?.querySelector(buttonSelector);
     if ((panel && path.includes(panel)) || (button && path.includes(button))) return;
+    if (this.#panelHeld()) return;
     this.#setPanel(undefined);
   };
 
-  /** Close the open panel on Escape. */
+  /**
+   * Escape closes the open panel, except in the launcher, where it first steps back a level, from
+   * All apps or arrange mode to the launcher itself. While the launcher's own question is open the
+   * Escape is the modal's.
+   */
   #onLauncherKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') this.#setPanel(undefined);
+    if (e.key !== 'Escape' || this.#launcherAsking) return;
+    if (this._panel === 'launcher' && this.#launcher?.back()) return;
+    this.#setPanel(undefined);
   };
 
-  /** Close the open panel when focus leaves the window (e.g. a click landing inside an iframe). */
+  /**
+   * Close the open panel when focus has gone into one of the desktop's windows: a click inside a
+   * window's iframe takes focus without a pointer event ever reaching this document, and a window
+   * blur is the only sign of it. Not when the browser as a whole lost focus to another program,
+   * which blurs the window just the same: switching away and back closed the launcher every time.
+   * Focus is still on the page then, so the iframe is what tells the two apart.
+   */
   #onWindowBlur = () => {
+    if (this.#panelHeld() || !focusIsInFrame()) return;
     this.#setPanel(undefined);
+  };
+
+  /**
+   * Put the launcher's question to the user in a confirm modal owned here, where a click inside it
+   * cannot unmount the element that opened it, and hold the launcher open until it is answered.
+   * @param e The launcher's `confirm` event.
+   */
+  #onLauncherConfirm = async (e: CustomEvent<UmbraDesktopLauncherConfirm>) => {
+    e.preventDefault();
+    const { headline, content, confirmLabel, answer } = e.detail;
+    this.#launcherAsking = true;
+    let confirmed = true;
+    try {
+      await umbConfirmModal(this, { headline, content, confirmLabel, color: 'danger' });
+    } catch {
+      confirmed = false;
+    } finally {
+      this.#launcherAsking = false;
+    }
+    answer(confirmed);
   };
 
   /**
@@ -475,6 +573,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           this.#manager?.unsavedWindows().length ?? 0,
           this.#manager?.conflictedWindows().length ?? 0,
           (key, ...args) => this.localize.term(key, ...args),
+          this.#manager?.busyWindows().length ?? 0,
         ),
         confirmLabel: this.localize.term('umbraDesktop_exitConfirm'),
         cancelLabel: this.localize.term('umbraDesktop_exitStay'),
@@ -496,7 +595,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         @search=${this.#onSearch}
         @profile=${this.#onProfile}
         @settings=${this.#onSettings}
-        @exit=${this.#onExit}></umbradesktop-launcher>
+        @exit=${this.#onExit}
+        @confirm=${this.#onLauncherConfirm}></umbradesktop-launcher>
     `;
   }
 
@@ -699,8 +799,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         <div class="cluster">
           <button
             class="start ${this._panel === 'launcher' ? 'active' : ''}"
-            title="Open apps"
-            aria-label="Open apps"
+            title=${this.localize.term('umbraDesktop_openApps')}
+            aria-label=${this.localize.term('umbraDesktop_openApps')}
             @click=${this.#toggleLauncher}>
             <umb-icon name="icon-umbraco"></umb-icon>
           </button>
@@ -730,7 +830,20 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   }
 
   static override styles = [
+    progressStyles,
     css`
+      /* The taskbar's colours for the progress ring, from its own tokens: the bar is a dark ground
+         where the caption is a light one, so the fill is the backoffice's current-item pink here
+         rather than the caption's blue, and the failure colour is a lighter red that still reads
+         on navy. Issue #108. */
+      .task .progress {
+        --_progress-fill: var(--umbradesktop-taskbar-progress-fill, var(--uui-color-current, #f5c1bc));
+        --_progress-track: var(--umbradesktop-taskbar-progress-track, ${UMBRADESKTOP_PROGRESS_TRACK_DEFAULT});
+        --_progress-failed: var(--umbradesktop-taskbar-progress-failed, #ff6b8b);
+        /* The ring reaches as far left as the pulled icon does. Same specificity as a theme's strip
+           rule and earlier in the cascade, so a theme drawing a strip positions it unaffected. */
+        left: calc(-1 * var(--umbradesktop-progress-offset, ${UMBRADESKTOP_PROGRESS_OFFSET_PX}px) - ${TASK_ICON_PULL_PX}px);
+      }
       :host {
         position: relative;
         display: block;
@@ -943,10 +1056,10 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
          four themes that restate this rule. Every theme's copy was renamed with this one. */
       .task .task-icon {
         flex-shrink: 0;
-        font-size: 18px;
+        font-size: ${UMBRADESKTOP_CHROME_ICON_PX}px;
         /* Umbraco icon glyphs carry transparent padding inside their box, making the space
            before the icon read wider than the space after the label; pull it back to balance. */
-        margin-left: -2px;
+        margin-left: -${TASK_ICON_PULL_PX}px;
       }
       .task-label {
         overflow: hidden;

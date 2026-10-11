@@ -105,6 +105,13 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-titlebar-background': 'linear-gradient(#f8f8f8, #e8e8e8)',
   '--umbradesktop-titlebar-border-bottom': `${MACOS_TITLEBAR_BORDER}px solid #cfcfcf`,
   '--umbradesktop-titlebar-text': '#4d4d4d',
+  '--umbradesktop-titlebar-progress-fill': MACOS_ACCENT,
+  '--umbradesktop-titlebar-progress-track': 'transparent',
+  '--umbradesktop-titlebar-progress-failed': '#d70015',
+  // Finder's capsule: a white track with the accent filling it, over the icon.
+  '--umbradesktop-taskbar-progress-fill': MACOS_ACCENT,
+  '--umbradesktop-taskbar-progress-track': 'rgba(255, 255, 255, 0.92)',
+  '--umbradesktop-taskbar-progress-failed': '#d70015',
   '--umbradesktop-titlebar-inactive-opacity': '0.55',
   '--umbradesktop-control-color': '#4d4d4d',
   // The base window sheet's '.ctrl.close:hover' falls back to Umbraco's danger pink, which would
@@ -157,6 +164,28 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-launcher-card-background': 'rgba(255, 255, 255, 0.1)',
   '--umbradesktop-launcher-card-border': '1px solid rgba(255, 255, 255, 0.16)',
   '--umbradesktop-launcher-card-radius': '12px',
+  // The launcher's own controls and arrange mode, as frosted pills on the dimmed surface like the
+  // cards. A pressed or default control is filled with the accent that carries white text, not the
+  // brighter one, because the base writes white on it; see {@link MACOS_ACCENT}.
+  '--umbradesktop-launcher-control-background': 'rgba(255, 255, 255, 0.12)',
+  '--umbradesktop-launcher-control-border': '1px solid rgba(255, 255, 255, 0.18)',
+  '--umbradesktop-launcher-control-text': '#ffffff',
+  '--umbradesktop-launcher-control-active-background': MACOS_ACCENT,
+  '--umbradesktop-launcher-letter-text': '#ffffff',
+  '--umbradesktop-launcher-letter-border': '1px solid rgba(255, 255, 255, 0.16)',
+  '--umbradesktop-launcher-text-muted': 'rgba(255, 255, 255, 0.6)',
+  '--umbradesktop-launcher-banner-background': 'rgba(255, 255, 255, 0.14)',
+  '--umbradesktop-launcher-banner-border': '1px solid rgba(255, 255, 255, 0.22)',
+  '--umbradesktop-launcher-banner-text': '#ffffff',
+  '--umbradesktop-launcher-divider': '1px solid rgba(255, 255, 255, 0.16)',
+  // Where a drop lands carries no text, so it takes the bright accent, which is the one that reads
+  // on this dark surface; the wash is the same blue at low alpha.
+  '--umbradesktop-launcher-drop-background': 'rgba(10, 132, 255, 0.18)',
+  '--umbradesktop-launcher-drop-outline': `2px solid ${MACOS_ACCENT_DARK}`,
+  '--umbradesktop-launcher-ghost-shadow': '0 12px 32px rgba(0, 0, 0, 0.45)',
+  '--umbradesktop-launcher-remove-background': 'rgba(255, 69, 58, 0.22)',
+  '--umbradesktop-launcher-remove-border': '2px dashed #ff453a',
+  '--umbradesktop-launcher-remove-text': '#ffffff',
   // Notifications arrive at the top right on a Mac, under the menu bar, and stack downwards. There
   // is no menu bar here, so the stack hangs from the top of the desktop instead. The surface is
   // Launchpad's, rounded the way macOS rounds a notification, which the square full-screen
@@ -242,6 +271,12 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   '--umbradesktop-strip-button-on-text': '#ffffff',
   '--umbradesktop-titlebar-border-bottom': `${MACOS_TITLEBAR_BORDER}px solid rgba(0, 0, 0, 0.5)`,
   '--umbradesktop-titlebar-text': '#d0d0d2',
+  '--umbradesktop-titlebar-progress-fill': MACOS_ACCENT_DARK,
+  '--umbradesktop-titlebar-progress-track': 'transparent',
+  '--umbradesktop-titlebar-progress-failed': '#ff453a',
+  '--umbradesktop-taskbar-progress-fill': MACOS_ACCENT_DARK,
+  '--umbradesktop-taskbar-progress-track': 'rgba(40, 40, 40, 0.92)',
+  '--umbradesktop-taskbar-progress-failed': '#ff453a',
   '--umbradesktop-control-color': '#d0d0d2',
   '--umbradesktop-taskbar-background': 'rgba(28, 28, 32, 0.7)',
   '--umbradesktop-taskbar-background-opaque': '#1c1c20',

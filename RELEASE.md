@@ -5,31 +5,32 @@ Repo-specific facts a generic checklist cannot know. Read this first, then work 
 
 ## What ships
 
-Two packages, from **one tag**, always at the **same version**:
+Three packages, from **one tag**, always at the **same version**:
 
 | Package | What it is |
 |---|---|
 | `Umbraco.Community.UmbraDesktop` | The desktop. The product. |
-| `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games and media add-on: Minesweeper, Snake and umbraCoffee. |
+| `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games and media add-on: Minesweeper, Snake, Solitaire and umbraCoffee. |
+| `Umbraco.Community.UmbraDesktop.Accessories` | Optional tools add-on. Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information. It has server-side code of its own (the Sticky Notes API) and a C# test project beside it. |
 
 Lockstep is a decision, not an accident: design D13 in
 [`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md)
-§8.3. Both publish on **every** release, changed or not — a gap in Entertainment's version history
+§8.3, and Accessories follows it unchanged
+([`docs/design/2026-09-24-accessories-design.md`](docs/design/2026-09-24-accessories-design.md)).
+All three publish on **every** release, changed or not — a gap in an add-on's version history
 reads like a broken pipeline, where a version with no changes reads like Umbraco.
 
-**Every add-on requires this release of the host, or any later 17.** Entertainment today, and any
-add-on after it, references the host as a `ProjectReference`, never a `PackageReference`: it is then
-compiled against the host from the same commit, and its packed dependency is
-`[<this release>, 17.99999999.0]`. The floor is the release itself because an add-on registers
-things only this release's host understands (tray items, package catalogues). Entertainment used to
-take the host by package range, floored at 17.0.0, which compiled against 17.0.0 and let consumers
-keep a host that silently lacked them. Upgrading the host on its own within 17 is still fine; the
-ceiling is why. There is deliberately no central `PackageVersion` for the host any more, so an
-add-on written with a `PackageReference` fails restore with NU1010 instead of shipping the old
-range. [#88](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/pull/88)'s Accessories
-add-on was written that way and needs its one line changed to
-`<ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />`
-when it is rebased.
+**Every add-on requires this release of the host, or any later 17.** Each add-on references the
+host as a `ProjectReference`, never a `PackageReference`: it is then compiled against the host from
+the same commit, and its packed dependency is `[<this release>, 17.99999999.0]`. The floor is the
+release itself because an add-on registers things only this release's host understands (package
+catalogues; for Entertainment also tray items; for Accessories also the unsaved-work attribute and the settings context's
+`formatDateTime`). The add-ons used to take the host by package range, floored at 17.0.0, which
+compiled against 17.0.0 and let consumers keep a host that silently lacked them: on such a host the
+Accessories Clock threw on every render and Notepad closed over unsaved work without asking.
+Upgrading the host on its own within 17 is still fine; the ceiling is why. There is deliberately no
+central `PackageVersion` for the host any more, so an add-on written with a `PackageReference` fails
+restore with NU1010 instead of shipping the old range.
 
 A `ProjectReference` does not give that range by itself. NuGet packs it as a bare minimum,
 `>= <version built beside it>`, with no ceiling at all, so an add-on would claim to support host 18
@@ -51,9 +52,9 @@ ceilings together.
 ## Versioning
 
 MinVer, from `v*` tags on this repository. `MinVerAutoIncrement=minor`,
-`MinVerMinimumMajorMinor=17.0`, and all three settings are **repeated verbatim in both csproj
-files** — there is no shared props file to inherit them from, and dropping `MinVerTagPrefix` from
-the add-on makes MinVer ignore every `v`-prefixed tag and version it `17.0.0-alpha.0` while the host
+`MinVerMinimumMajorMinor=17.0`, and all three settings are **repeated verbatim in every csproj
+file** — there is no shared props file to inherit them from, and dropping `MinVerTagPrefix` from
+an add-on makes MinVer ignore every `v`-prefixed tag and version it `17.0.0-alpha.0` while the host
 says `17.0.0`.
 
 **The package major tracks the Umbraco major**, so the first release was `v17.0.0`, not `v1.0.0`.
@@ -61,18 +62,45 @@ A release supporting Umbraco 18 starts at `v18.0.0`.
 
 ## Cutting a release
 
-1. Everything merged to `main`. `main` is the trunk; check `origin/main`, not your local copy.
-2. Update the README, `umbraco-marketplace*.json` and `docs/` first — see the Definition of done in
-   [`CLAUDE.md`](CLAUDE.md). The Marketplace description is the only thing most people read.
-3. Tag `main`: `git tag v17.1.0 && git push origin v17.1.0`.
-4. `.github/workflows/publish.yml` does the rest: both frontends, both test suites, the C# tests,
-   both packs, a payload check, NuGet trusted publishing, and a GitHub release.
+1. Everything for the release merged to `main`, including the README, `umbraco-marketplace*.json`
+   and `docs/` (see the Definition of done in [`CLAUDE.md`](CLAUDE.md)). `main` is the trunk;
+   check `origin/main`, not your local copy.
+2. Branch `release/vX.Y.Z` from `origin/main`. From here `main` is free for the next release's
+   work. Only this release's finishing touches go on the branch: fixes, and screenshots, which
+   need a running backoffice and so usually come last.
+3. Tag `vX.Y.Z` on the release branch. A tag push is what publishes, and there are two ways to make
+   one:
+   - **A version worth announcing:** the owner creates a release on GitHub, with a new tag on the
+     release branch and the notes written by hand. Creating the tag there is a tag push like any
+     other, so it triggers `publish.yml`. The owner does this step.
+   - **A version that is not:** push the tag on its own, with no GitHub release. It publishes to
+     NuGet and leaves the repository's Releases list alone. The GitHub UI cannot create a tag
+     without a release, so this is done from the command line or GitHub Desktop, and the owner
+     asks Claude to do it.
+4. `.github/workflows/publish.yml` does the rest: every frontend, every test suite, the C# tests,
+   every pack, a payload check and NuGet trusted publishing. It never creates a GitHub release,
+   whichever way the tag was made, so a release exists only when someone made one in step 3. It
+   also does not attach the packages to that release; they are on nuget.org.
+5. Merge the release branch into `main` straight away, with a pull request. The Marketplace reads
+   the listing files from `main`'s root and their screenshot URLs point at `main`, so until this
+   merge the listing still shows the old screenshots. NuGet does not wait for it: the packed
+   README's images are pinned to the tagged commit, which has them.
+
+   This repository allows squash merges only, so the merge brings the changes back but never the
+   tagged commit, and `main` never has the release tag in its history. MinVer versions a commit
+   from the newest tag among its ancestors, so `main`'s CI packages keep numbering themselves as
+   prereleases of the version just shipped (17.3.0-beta.1.N after 17.3.0) until the next release
+   is tagged. Nothing ships from those packages, so this is cosmetic. Do not "fix" it by tagging
+   `main`: a tag push is a publish. 17.2.0 and earlier were tagged on `main` itself, after
+   squash-merging a `release/` branch, which is why their tags are in `main`'s history and later
+   ones are not.
 
 ### Release notes
 
-`generate_release_notes: true` diffs against the **previous tag**. If you cut a beta first, the
-stable release's notes cover only what happened after the beta and omit the entire feature line.
-Hand-curate the body of any stable release that had a prerelease before it.
+The notes are written in the GitHub release screen, and its **Generate release notes** button diffs
+against the **previous tag**. If you cut a beta first, the stable release's notes cover only what
+happened after the beta and omit the entire feature line. Hand-curate the body of any stable
+release that had a prerelease before it.
 
 ## Owner-only steps
 
@@ -95,15 +123,21 @@ Nothing in CI can do these.
   environment claim, not as an approval gate. The `v*.*.*` tag pattern is the only guard, which is
   specific enough that publishing by accident means pushing a genuinely release-shaped tag.
 - **Screenshots.** Need a running backoffice and a login, which is why they are always the last
-  thing. They live in `docs/screenshots/`, and both the README and the marketplace files reference
-  them by `raw.githubusercontent.com/.../main/...` URL, so they resolve only once the commit is on
-  `main`. Nothing validates those URLs: a filename typo silently 404s on the live Marketplace, and
-  a broken image is worse than a missing one, so an entry is added only after the file exists.
+  thing. The host's live in `docs/screenshots/`, and each add-on's in its own
+  `docs/screenshots/` since #78 split the docs, the way an external add-on's would. The READMEs and docs reference them by relative path,
+  which the docs check validates, and packing pins the README's copies to the release commit
+  (`PinPackedReadme` in `src/Directory.Build.targets`), so they resolve once that commit is pushed.
+  The marketplace files reference them by `raw.githubusercontent.com/.../main/...` URL, so those
+  resolve only once the commit is on `main`, and nothing validates them: a filename typo silently
+  404s on the live Marketplace, and a broken image is worse than a missing one, so an entry is
+  added only after the file exists. Never move or delete a screenshot that has shipped: the NuGet
+  pages of versions packed before the pinning point at it on `main`.
 
-  Settled 2026-09-09. Nine entries below, ten files — `theme-wallpaper-match.png` was added
-  2026-09-13 with the theme-matched wallpapers, and is the only shot added since the set was called
-  complete. A feature earns a shot when a still frame explains it faster than the README sentence
-  does; most do not.
+  Reviewed for 17.3.0 on 2026-10-03. A feature earns a shot when a still frame explains it faster
+  than the README sentence does; most do not. A shot is retaken when its subject changes, not when
+  the chrome around it does: the full screen button and the arranged launcher appear on every frame
+  with a taskbar or launcher in it, and reshooting the theme and guard shots for that would not
+  make any of them explain its subject better.
 
   Note the ordering rule above cuts both ways. An entry must not reach `main` before its file, but
   preparing the entry on the same branch as the feature is how the two arrive together — what must
@@ -120,17 +154,29 @@ Nothing in CI can do these.
 
   | Shot | Notes |
   |---|---|
-  | `desktop-windows.png` | Three overlapping windows, and the opening image. Retaken 2026-09-13 for the taskbar feature row, which appears on every shot with a taskbar in it; the rest of the set was left alone, since three small icons beside the launcher button is not worth reshooting eight frames for. The caption named two windows and had to be rewritten with the shot — check the alt text, this table and the marketplace `Caption` together, because all three describe the same frame. |
+  | `hero.png` | The opening image of the README and the listing since #78: two windows side by side with the site's name on the wallpaper. Check the alt text, this table and the marketplace `Caption` together, because all three describe the same frame. |
+  | `desktop-windows.png` | The opening image until #78, now used only by the Windows page of the user guide and no longer in the listing. Kept, because shipped NuGet pages point at it. |
+  | `live-preview.png` | An editor with its page docked beside it, the first attached window. |
+  | `notifications.png` | The notification history under the clock. |
+  | `theme-gallery.png` | All five themes in one frame, in the README's "Make it yours". The listing keeps the macOS and Windows 98 shots beside it for a closer look at two of them. |
+  | `ai-copilot-chat.png` | Umbraco AI's Copilot chat in a window. Needs the TestInstance's Umbraco.AI packages and an API key to retake. |
+  | `help.png` | The Help app. Retake when the add-ons' docs change what its contents list shows. |
   | `unsaved-changes-guard.png` | Carries the whole guard story in one frame: the unsaved dot, the "someone else changed this" warning with both buttons, and the recycle-bin error, in three stacked windows with all three markers repeated on the taskbar. A separate overwrite-guard shot was planned and is not needed because this one covers it. Note the file arrived named `unsved-`, which would have 404ed silently on the Marketplace; check new filenames against the `ImageUrl` by eye, since nothing else will. |
-  | `launcher.png` | All twelve groups, Background Jobs under Diagnostics, the commercial packages and the Games group. |
+  | `launcher.png` | The whole launcher: the Pinned row, every group, the commercial packages, and the add-ons' Games and Accessories groups. Retake when a group is added or the launcher's layout changes; the caption names the Games group, so it must be in the frame. Since 17.3.0 the launcher no longer fits 1920×1080, so it was taken in a 2400×1351 window at normal scale and shrunk to 1920×1081; a fractional device pixel ratio instead changes how labels wrap. The "Minesweepe/r" break in the Games tile is the product's own, not the capture's. |
   | `theme-macos.png`, `theme-win98.png` | Two of the five themes, deliberately not all five. A theme shot sells the idea that the chrome restyles; the Description naming all five does the rest, and five near-identical launchers would pad the listing without adding to it. `theme-win98.png` shows an older launcher and is kept as it is: it is there to show the theme, and the content behind it is not the subject. |
   | `choose-background.png` | Desktop settings with the wallpaper tray open. The one shot that proves any of this is *yours to change*: without it a reader can take the two theme shots for two screenshots of a product rather than a switch they flip, and the Media library button is the only place that capability appears in the gallery at all. Also the only shot that evidences the README's count of shipped backgrounds, since the tray names them all plus None. The theme row is clipped by the tray, so neither the caption nor the alt text claims all five are visible. **Retake when the tile count changes** — it was shot at eight and the package ships ten since Cobalt Beacon and First Light. The README's alt text deliberately names no number, so a stale shot never contradicts the prose, but it is still the shot that has to show them all. |
   | `theme-wallpaper-match.png` | The theme picker with **Match the wallpaper to the theme** on, every preview carrying its own background. The one frame that explains the feature without a caption: Windows 98's bare teal sitting beside macOS's sunrise says what "each theme brings its own wallpaper" means faster than the sentence does. Take it with the toggle **on** — off, the five previews are identical backgrounds and the shot shows nothing. |
   | `background-jobs-viewer.png` | The Distributed table only. The Recurring one is below the fold and the view does not fit a screen at any framing worth having, so the caption does not claim the split and the explanation at the top of the shot carries the point. |
-  | `entertainment-games-minesweeper.png` | The add-on's first shot, also used in both readmes. Retaken with Snake so the Games group lists both games; the alt text names them, so retake it again when a game is added. |
-  | `entertainment-games-snake.png` | Snake's shot, framed to match Minesweeper's: Windows 98, the Games group open in the launcher. Also in both readmes. Take it **before** the first key press, so the start message is showing in the middle of the board and the snake is sitting a quarter of the way down above it, since that is the one moment the board says how to play. |
+  | `entertainment-games.png` | In the add-on's `docs/screenshots/`. Every game open at once under the Umbraco theme, and since 17.3.0 the add-on's opening image, so its NuGet page too, and first in its listing. It replaced the Minesweeper shot there because that one's alt text had to name every game in a menu and went stale when Solitaire arrived. Retake it when a game is added; the alt text names the games, so check it with the shot. Solitaire freshly dealt, Snake before the first key press, Minesweeper mid-game. |
+  | `entertainment-games-minesweeper.png` | In the add-on's `docs/screenshots/`. Windows 98 with the Start menu open to Games. Now the Minesweeper section of the games page and the second listing entry; its alt text names no games, so a new one does not falsify it. The copy left in the host's `docs/screenshots/` is the shipped one and stays. |
+  | `entertainment-games-solitaire.png` | In the add-on's `docs/screenshots/`. A game in progress with the settings button visible, in the add-on README and listing. |
+  | `entertainment-games-snake.png` | In the add-on's `docs/screenshots/`, listing only. Framed to match Minesweeper's: Windows 98, the Games group open in the launcher. Take it **before** the first key press, so the start message is showing in the middle of the board and the snake is sitting a quarter of the way down above it, since that is the one moment the board says how to play. |
   | `header-entry-point.png` | Small and annotated on purpose. It answers one question, "where is the way in", and showing more screen would not answer it better. |
-  | `umbracoffee-live.png`, `umbracoffee-upcoming.png` | umbraCoffee live and before the next show, for the Entertainment listing and README. Live needs a real or faked live `next-episode.json` (DevTools "Override content" works). Not yet in `docs/screenshots/` when the v2 docs were written, and the marketplace entries were added ahead of the files, so **do not merge without them**. |
+  | `umbracoffee-live.png`, `umbracoffee-upcoming.png`, `umbracoffee-search.png`, `umbracoffee-themes.png` | In the add-on's `docs/screenshots/`. umbraCoffee live, before the next show, searching by guest, and under every theme, for the Entertainment listing (live and upcoming) and its umbraCoffee page (all four). Live needs a real or faked live `next-episode.json` (DevTools "Override content" works). |
+
+  **Accessories has one shot**, `accessories-desktop.png` in its own `docs/screenshots/`: a few of
+  its tools open side by side under Windows 98. It is the add-on's opening image and its only
+  listing entry.
 
 ## umbraCoffee's data (Entertainment)
 
@@ -301,7 +347,8 @@ at the **project URL** — for a GitHub project URL, the root of the default bra
 serving several packages suffixes the file with the **lowercased package ID**:
 
 - `umbraco-marketplace-umbraco.community.umbradesktop.json` — the host.
-- `umbraco-marketplace-umbraco.community.umbradesktop.entertainment.json` — the add-on.
+- `umbraco-marketplace-umbraco.community.umbradesktop.entertainment.json` — the games add-on.
+- `umbraco-marketplace-umbraco.community.umbradesktop.accessories.json` — the tools add-on.
 
 **Both are suffixed, deliberately.** An unsuffixed `umbraco-marketplace.json` is observed to keep
 serving the package that has no suffixed file of its own, and the host shipped that way for
@@ -326,9 +373,10 @@ is a separate thing you choose, not a variant of the desktop.
 **Listing requires a dependency on an Umbraco package**, and version detection requires one on
 `Umbraco.Cms.*` — direct or **transitive**. Entertainment has no direct Umbraco dependency at all;
 it reaches `Umbraco.Cms.Core` transitively through the host. That is documented as sufficient but
-has not been observed for this package yet, so **check the Entertainment listing appears and shows
-v17 after its first stable release**. If it does not, a direct `Umbraco.Cms.Core` reference is the
-fix.
+has not been observed for that package yet, so **check its listing appears and shows v17 after its
+first stable release**. If it does not, a direct `Umbraco.Cms.Core` reference is the fix.
+Accessories references `Umbraco.Cms.Api.Management` and `Umbraco.Cms.Api.Common` directly, for its
+Sticky Notes API, so it meets the rule either way.
 
 Note *stable*, not *first publish*: the Marketplace appears to track only stable versions, so a
 package whose only published version is a prerelease has nothing for it to list. `17.1.0-rc.1`
@@ -343,8 +391,6 @@ request a minute per package ID.
 
 ## Scope notes
 
-- The Entertainment design (§8.2) plans **Minesweeper and Solitaire** for its first release.
-  Solitaire was descoped — issue #8 was closed with Minesweeper only. Its first decision, before
-  any code, is how card faces are rendered (inline SVG, sprite sheet, or Unicode), because that
-  settles the whole rendering approach and whether cards participate in theming at all.
+- The Entertainment design (§8.2) planned **Minesweeper and Solitaire** for its first release.
+  Solitaire was descoped then and shipped in 17.3.0 (#116), with Snake added in between.
 - A Linux theme is deliberately not built. See `CLAUDE.md`.

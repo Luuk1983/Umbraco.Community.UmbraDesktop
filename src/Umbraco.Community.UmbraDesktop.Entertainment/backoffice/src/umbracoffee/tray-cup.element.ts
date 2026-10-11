@@ -56,7 +56,7 @@ const MIN_SOON_REMINDER_MS = 60_000;
  *
  * The cup shows only while an episode is coming up or live (D6), and hides itself with `hidden`
  * otherwise, including before the first data and while offline, which is how a tray item leaves the tray
- * (`docs/desktop-apps.md` §9.2). Clicking it opens the umbraCoffee app by alias.
+ * (`docs/developer/desktop-apps.md` §9.2). Clicking it opens the umbraCoffee app by alias.
  *
  * Reminders live here rather than in a service of their own because the switch that turns the cup
  * off must turn the reminders off too (D1, D8): switched off, this element is not in the tray at all,

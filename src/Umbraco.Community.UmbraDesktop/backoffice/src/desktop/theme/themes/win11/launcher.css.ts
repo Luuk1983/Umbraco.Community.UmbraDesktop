@@ -7,7 +7,7 @@ import { W11_FONT } from './palette.js';
  *
  * Nothing here positions or sizes the panel. Its width, its centring offset and its clearance
  * above the bar are all palette tokens read by the base rules — see `palette.ts`, where the
- * centring is computed from the declared width so the two cannot drift, and `docs/theming.md` §5
+ * centring is computed from the declared width so the two cannot drift, and `docs/developer/theming.md` §5
  * for why a sheet setting `left`/`right`/`width` together would half-work instead.
  *
  * The group cards lose their fill and border through the palette rather than here, because
@@ -19,10 +19,17 @@ export default css`
     font-family: ${unsafeCSS(W11_FONT)};
     font-size: 12px;
   }
+  /* The base's .hdr row now carries the panel's own outer margin: the search field shares that
+     row with the All apps button, and the base already gives .hdr a margin of its own, so leaving
+     one here too would double it instead of moving it. The arrange banner takes that row's place,
+     so it shares the margin: with the base's own, the top row moved as arrange mode opened. */
+  .hdr,
+  .banner {
+    margin: 16px 20px 4px;
+  }
   /* A filled field with a border and a soft focus ring, which is how every Windows 11 text input
      is drawn — and unlike the base's card-coloured chip, it has to read as enterable. */
   .search {
-    margin: 16px 20px 4px;
     padding: 7px 12px;
     gap: 8px;
     background: var(--umbradesktop-launcher-card-background, rgba(255, 255, 255, 0.6));
@@ -68,6 +75,14 @@ export default css`
     grid-template-columns: repeat(6, 1fr);
     gap: 2px;
   }
+  /* Half as many across in arrange mode, because the layout there has half the width: the palette
+     takes the other half of the panel. That keeps a tile the width it has in Start, which is what
+     leaves room for its two edit buttons side by side; at six across in half the width they
+     covered each other. The Favourites selector is restated so it outranks the rule above. */
+  .card.agroup .grid,
+  .card.fav.agroup .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
   .launch {
     gap: 6px;
     padding: 10px 4px 8px;
@@ -81,20 +96,6 @@ export default css`
     font-size: 11px;
     line-height: 1.3;
     transform: none;
-  }
-  /* Windows 11 rounds its small toggles at 4px and gives them a real edge rather than the base's
-     circular badge hanging off the tile's corner. */
-  .pin {
-    top: -8px;
-    right: -8px;
-    width: 22px;
-    height: 22px;
-    border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.24);
-  }
-  .pin .pin-ico {
-    width: 13px;
-    height: 13px;
   }
   /* Start's footer is a distinct strip: a slightly deeper plane than the panel, with the user at
      the leading end and the actions at the trailing one, which is exactly what the base renders. */

@@ -8,7 +8,7 @@
 
 **Tech Stack:** .NET 10, Umbraco CMS 17 (compiled against 17.0.0), xUnit + NSubstitute, Lit + TypeScript, `@hey-api/openapi-ts`.
 
-**Design:** [`docs/design/2026-09-06-background-jobs-app-design.md`](2026-09-06-background-jobs-app-design.md)
+**Design:** [`docs/design/2026-09-06-background-jobs-app-design.md`](../design/2026-09-06-background-jobs-app-design.md)
 
 ---
 

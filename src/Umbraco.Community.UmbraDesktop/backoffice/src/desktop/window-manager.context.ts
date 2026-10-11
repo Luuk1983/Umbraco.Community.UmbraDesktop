@@ -22,6 +22,8 @@ import {
   setWindowRect,
   setWindowDirty,
   unsavedWindows,
+  busyWindows,
+  setWindowProgress,
   clampWindowsToBounds,
   setWindowServerState,
   setWindowAcknowledged,
@@ -34,6 +36,8 @@ import {
   isResizable,
 } from './window-model';
 import { snapRect, snapTargetAt } from './snap';
+import { isBusy, progressCaption, summariseTasks } from './progress/progress';
+import type { UmbraDesktopTask } from './progress/progress';
 import type { UmbraDesktopSnapTarget } from './snap';
 import {
   UMBRADESKTOP_DEFAULT_METRICS,
@@ -45,6 +49,9 @@ import {
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-token';
 import { minWindowSizeForContent, windowSizeForContent } from './window-chrome';
 import { windowShowsPath } from './path/crumbs.js';
+import { openDesktopSettings } from './settings/open-settings.js';
+import { appAtLocation, restoredUrl } from './windows/layout';
+import type { UmbraDesktopSavedWindow } from './windows/layout';
 import type { UmbraDesktopThemeMetrics } from './theme/types';
 import type { UmbraDesktopKeepVisible } from './window-model';
 import type { UmbraDesktopServerStatePatch } from './window-model';
@@ -85,6 +92,16 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * plain data. The router reads this on demand instead, which is the only access pattern it needs.
    */
   #subjects = new Map<string, ReadonlyArray<UmbraDesktopWorkspaceSubject>>();
+
+  /**
+   * The tasks each window's sources report, by window id and then by source.
+   *
+   * Off the model for the reason {@link #subjects} is: the model carries only the summary every
+   * surface reads, and keeping the raw reports here is what lets two sources — the frame watcher and
+   * an element app — each replace their own list without knowing the other exists. See
+   * {@link setTasks}.
+   */
+  #tasks = new Map<string, Map<string, ReadonlyArray<UmbraDesktopTask>>>();
 
   /**
    * The identity of the last **non-empty** subject set each window reported, so {@link setSubjects}
@@ -193,9 +210,22 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * `defaultSize` is the app's **content** box, so the active theme's chrome is added here rather
    * than being the app's problem: the app cannot read a titlebar height from another package, and
    * the one that tried guessed a single allowance for five different titlebars.
+   *
+   * An app window can be opened at a location (Help design D7): the app gets it as its `location`
+   * property before it connects, and the window records it, so the layout saves it and a feature can
+   * find the window showing it. The app's catalogue entry is not touched; the window gets a copy.
    * @param app The app to open.
+   * @param options Where an app window should open. Ignored for a backoffice window, which opens at
+   *   its own address.
+   * @param options.location The app's own location string.
    */
-  public open(app: UmbraDesktopApp): void {
+  public open(app: UmbraDesktopApp, options: { location?: string } = {}): void {
+    // Every route to an app comes through here, so this is the one place a tile that opens settings
+    // has to be caught: no window is made, so the taskbar, reopen-windows and allowMultiple never see it.
+    if (app.opensSettings) {
+      this._openSettings(app.opensSettings);
+      return;
+    }
     const current = this.#windows.getValue();
     if (app.allowMultiple === false) {
       const existing = findAppWindow(current, app.alias);
@@ -214,15 +244,70 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
         windowShowsPath(app) ? this.#metrics.pathbarHeight : 0,
       ),
     );
+    const located = options.location !== undefined && app.content.kind === 'element';
     const win: UmbraDesktopWindow = {
       id: crypto.randomUUID(),
-      app,
+      app: located ? appAtLocation(app, options.location!) : app,
       rect,
       z: nextZIndex(current),
       active: true,
       state: 'normal',
     };
+    if (located) win.location = options.location;
     this.#windows.setValue(focusWindow([...current, win], win.id));
+  }
+
+  /**
+   * Reopen a window from a saved layout, as it was: its rectangle, state and snap, and for a
+   * backoffice window the page it was showing. Called once per saved window when the desktop starts
+   * (see `windows/layout-restorer.ts`), in stacking order, so each lands above the last.
+   *
+   * It never takes focus. The saved layout says which window was active, and the restorer gives it
+   * focus once every window is back; a window activating itself here would move focus once per
+   * window restored. Its rectangle is taken as stored and pulled into reach by the same clamp that
+   * runs on every desktop resize, so a layout saved on a larger screen still lands usable.
+   * @param saved The saved window.
+   * @param app The app it belongs to, resolved by alias against the apps this user may open.
+   */
+  public restoreWindow(saved: UmbraDesktopSavedWindow, app: UmbraDesktopApp): void {
+    const current = this.#windows.getValue();
+    const url = restoredUrl(app, saved.location);
+    const appLocation = app.content.kind === 'element' ? saved.appLocation : undefined;
+    const win: UmbraDesktopWindow = {
+      id: crypto.randomUUID(),
+      // A copy with the stored page as its address, so the frame loads where the editor was, or
+      // with an app's own stored location as its property. The app's own entry is left untouched:
+      // the launcher still opens it at its start.
+      app: appLocation
+        ? appAtLocation(app, appLocation)
+        : url && app.content.kind === 'iframe' && url !== app.content.url
+          ? { ...app, content: { kind: 'iframe', url } }
+          : app,
+      rect: { ...saved.rect },
+      z: nextZIndex(current),
+      active: false,
+      state: saved.state,
+    };
+    if (url && app.content.kind === 'iframe') win.location = url;
+    if (appLocation) win.location = appLocation;
+    if (saved.snapped) win.snapped = saved.snapped;
+    if (saved.restoreRect) win.restoreRect = { ...saved.restoreRect };
+    const next = [...current, win];
+    this.#windows.setValue(this.#bounds ? clampWindowsToBounds(next, this.#bounds, this.#keep) : next);
+  }
+
+  /**
+   * Record the page a backoffice window's frame is showing, for the window layout to reopen it at.
+   * Written without a re-render when nothing changed, because the frame reports on every route
+   * change and most of those are to the page it is already on.
+   * @param id The window.
+   * @param location The frame's page, as a path on this site.
+   */
+  public setLocation(id: string, location: string): void {
+    const current = this.#windows.getValue();
+    const target = current.find((w) => w.id === id);
+    if (!target || target.location === location) return;
+    this.#windows.setValue(current.map((w) => (w.id === id ? { ...w, location } : w)));
   }
 
   /**
@@ -235,9 +320,17 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * @param ownerId The window to attach it to. A floating attached window cannot be one.
    * @param app The content: an element app, never a launcher app.
    * @param side Which side of the owner's content it goes on.
+   * @param options `floating` opens it as a window even where a pane would fit, which is what a
+   * Shift-click on the control that opens it asks for. Content already open is focused either way.
+   * @param options.floating Whether to skip the pane.
    * @returns The attached content's id, or undefined when `ownerId` is not an open ordinary window.
    */
-  public openAttached(ownerId: string, app: UmbraDesktopApp, side: UmbraDesktopDockSide): string | undefined {
+  public openAttached(
+    ownerId: string,
+    app: UmbraDesktopApp,
+    side: UmbraDesktopDockSide,
+    options: { floating?: boolean } = {},
+  ): string | undefined {
     const current = this.#windows.getValue();
     const owner = current.find((w) => w.id === ownerId);
     if (!owner || owner.owner) return undefined;
@@ -251,7 +344,9 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
       return existing.window.id;
     }
     const id = crypto.randomUUID();
-    const docked = this.#withPane(current, ownerId, { id, app, side, width: this.#paneWidth(app) });
+    const docked = options.floating
+      ? undefined
+      : this.#withPane(current, ownerId, { id, app, side, width: this.#paneWidth(app) });
     if (docked) {
       this.#windows.setValue(focusGroup(docked, ownerId));
       return id;
@@ -490,6 +585,7 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
       if (remaining.includes(gone)) continue;
       this.#subjects.delete(gone.id);
       this.#lastSubjectIdentity.delete(gone.id);
+      this.#tasks.delete(gone.id);
     }
     this.#windows.setValue(remaining);
   }
@@ -533,6 +629,42 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     const target = current.find((w) => w.id === id);
     if (!target || (target.saves ?? 0) === saves) return;
     this.#windows.setValue(current.map((w) => (w.id === id ? { ...w, saves } : w)));
+  }
+
+  /**
+   * Record the tasks one source reports for a window, replacing whatever that source said before,
+   * and put the summary of every source's tasks on the window.
+   *
+   * Per source, because a window has two and neither knows about the other: the frame watcher reads
+   * core's media uploads, and an element app reports its own work through the host. Each replaces
+   * only its own list, and the desktop sums them, so an app never has to average its work with work
+   * it cannot see. An empty list is how a source says it is done, which is what clears the marker —
+   * the same in a minimized window as in any other, since nothing here asks how the window looks.
+   *
+   * A window that is not open is ignored rather than resurrected: a frame can report once more while
+   * its window is closing.
+   * @param id The window.
+   * @param source Which source is reporting, e.g. `frame` or `app`.
+   * @param tasks Everything that source is doing now.
+   */
+  public setTasks(id: string, source: string, tasks: ReadonlyArray<UmbraDesktopTask>): void {
+    const current = this.#windows.getValue();
+    if (!current.some((w) => w.id === id)) return;
+    const sources = this.#tasks.get(id) ?? new Map<string, ReadonlyArray<UmbraDesktopTask>>();
+    if (tasks.length) sources.set(source, tasks);
+    else sources.delete(source);
+    if (sources.size) this.#tasks.set(id, sources);
+    else this.#tasks.delete(id);
+    const next = setWindowProgress(current, id, summariseTasks([...sources.values()].flat()));
+    if (next !== current) this.#windows.setValue(next);
+  }
+
+  /**
+   * Every open window with work in flight. Exit and the language reload count from this.
+   * @returns The busy windows, in list order.
+   */
+  public busyWindows(): ReadonlyArray<UmbraDesktopWindow> {
+    return busyWindows(this.#windows.getValue());
   }
 
   /**
@@ -718,6 +850,14 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   }
 
   /**
+   * Open Desktop settings at a package. A seam, like `_askToDiscard`, so tests need no modal manager.
+   * @param packageName The package's name.
+   */
+  protected _openSettings(packageName: string): void {
+    void openDesktopSettings(this, packageName);
+  }
+
+  /**
    * Open the backoffice's own discard-changes dialog.
    *
    * Split out as its own method purely so it can be substituted in tests — a modal manager context
@@ -735,9 +875,41 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   }
 
   /**
+   * Ask whether a window's work in flight may be stopped, saying what it is and, when the window is
+   * also holding unsaved changes, that those go too.
+   *
+   * One question for both, not the stop question followed by core's discard dialog: an editor asked
+   * twice about one click learns to click through dialogs. Our own wording rather than core's discard
+   * modal, whose sentence is about unsaved changes and would be untrue of an upload. It keeps that
+   * dialog's shape, though — say what is at stake, then ask — so it reads as the same guard. Split
+   * out, like {@link _askToDiscard}, so the decision is testable without a booted backoffice.
+   * @param w The window whose work is at stake.
+   * @returns True when the editor chose to stop it.
+   */
+  protected async _askToStopWork(w: UmbraDesktopWindow): Promise<boolean> {
+    const caption = progressCaption(
+      w.progress,
+      (key, ...args) => this.#localize.term(key, ...args),
+      (value) => this.#localize.string(value),
+    );
+    const body = this.#localize.term('umbraDesktop_stopWorkQuestion', caption);
+    try {
+      await umbConfirmModal(this, {
+        headline: this.#localize.term('umbraDesktop_stopWorkHeadline'),
+        content: w.dirty ? `${body} ${this.#localize.term('umbraDesktop_stopWorkUnsaved')}` : body,
+        confirmLabel: this.#localize.term('umbraDesktop_stopWorkConfirm'),
+        color: 'danger',
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Ask, if there is anything to lose, whether a window's unsaved changes may be discarded.
    *
-   * Answers without a dialog for a window that is clean — or one that is no longer open, so a
+   * Answers without a dialog for a window that is clean and idle — or one that is no longer open, so a
    * caller racing a close is not stranded. Reused rather than inlined into {@link requestClose}
    * because the titlebar's reload button needs the same question and then does something else
    * entirely with the answer: it reloads the frame in place rather than closing the window.
@@ -750,6 +922,9 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    */
   public async confirmDiscard(id: string): Promise<boolean> {
     const target = this.#windows.getValue().find((w) => w.id === id);
+    // Work in flight first, and in one question that also covers any unsaved changes: whatever the
+    // document's state, the act this guards stops the work, and that is the news. Issue #108 D8.
+    if (target && isBusy(target.progress)) return this._askToStopWork(target);
     if (!target?.dirty) return true;
     // A document that no longer exists cannot be saved to, so "discard your changes?" offers a
     // choice that does not exist. Closing is the only thing left and it asks nothing.

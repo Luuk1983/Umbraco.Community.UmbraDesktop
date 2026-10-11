@@ -131,3 +131,31 @@ it('paints every miniature in the variant the backoffice is in, not the one the 
   );
   expect(painted).to.deep.equal(UMBRADESKTOP_THEMES.map(() => 'dark'));
 });
+
+it('marks every miniature as high contrast under that backoffice theme', async () => {
+  // Umbraco's high contrast is a light scheme, so without the mark the row read as Light under four
+  // themes and dark under macOS. The preview draws the mark; the row only has to pass it on.
+  const wrapper = document.createElement('div');
+  document.body.append(wrapper);
+  after(() => wrapper.remove());
+  new UmbContextProvider(wrapper, UMBRADESKTOP_THEME_CONTEXT, {
+    resolved: new UmbObjectState({
+      theme: UMBRADESKTOP_THEMES[0],
+      variant: 'dark',
+      palette: UMBRADESKTOP_THEMES[0].palettes.light,
+      highContrast: true,
+    }).asObservable(),
+    backofficeVariant: new UmbStringState('dark').asObservable(),
+    getHostElement: () => wrapper,
+  } as never).hostConnected();
+
+  const element = document.createElement('umbradesktop-theme-picker-modal');
+  element.data = { current: 'umbraco' };
+  wrapper.append(element);
+  await element.updateComplete;
+
+  const marked = [...element.shadowRoot!.querySelectorAll('umbradesktop-theme-preview')].map(
+    (preview) => (preview as HTMLElement & { highContrast?: boolean }).highContrast,
+  );
+  expect(marked).to.deep.equal(UMBRADESKTOP_THEMES.map(() => true));
+});
