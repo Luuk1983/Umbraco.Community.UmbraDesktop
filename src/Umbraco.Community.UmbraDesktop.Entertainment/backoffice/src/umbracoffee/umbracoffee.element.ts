@@ -70,6 +70,32 @@ const MINUTE_MS = 60_000;
 /** The attribute the desktop stamps on an app's element with the active theme's id (`docs/developer/desktop-apps.md` §5). */
 const THEME_ATTRIBUTE = 'data-umbradesktop-theme';
 
+/** How many rounds {@link settledWithin} waits at most, so a part that keeps re-rendering cannot hold it forever. */
+const SETTLE_ROUNDS = 5;
+
+/**
+ * Resolves once every Lit element under a root, through nested shadow roots, has finished its
+ * pending update: the player, and the control bar inside the player's own shadow root. Waits in
+ * rounds, since one part's render can start another's, up to {@link SETTLE_ROUNDS}.
+ * @param root Where to look; nothing to wait for when absent.
+ * @returns A promise that never rejects.
+ */
+async function settledWithin(root: ShadowRoot | null): Promise<void> {
+  for (let round = 0; round < SETTLE_ROUNDS && root; round++) {
+    const pending: Array<Promise<unknown>> = [];
+    const visit = (node: ParentNode) => {
+      for (const element of node.querySelectorAll('*')) {
+        const lit = element as Element & { isUpdatePending?: boolean; updateComplete?: Promise<unknown> };
+        if (lit.isUpdatePending && lit.updateComplete) pending.push(lit.updateComplete.catch(() => undefined));
+        if (element.shadowRoot) visit(element.shadowRoot);
+      }
+    };
+    visit(root);
+    if (pending.length === 0) return;
+    await Promise.all(pending);
+  }
+}
+
 /** Which tab of the column is open while live. */
 type PanelTab = 'chat' | 'episodes';
 
@@ -337,6 +363,11 @@ export class UmbraCoffeeAppElement extends UmbLitElement {
       this.#infoObserver.observe(info);
     }
     this.fitSummary();
+    // Fit again once everything inside has rendered too. The fit above runs before the player and
+    // its control bar have drawn, when the details are still taller than they will be. The observer
+    // corrects that, but it only fires as a frame is drawn, which a page in a background tab never
+    // does: CI's test pages showed the summary running 200px past the details (2026-10-11).
+    void settledWithin(this.shadowRoot).then(() => this.fitSummary());
   }
 
   /**
