@@ -6,7 +6,7 @@ Games for UmbraDesktop. Minesweeper, Snake and Solitaire, each in a window of it
 
 [![NuGet](https://img.shields.io/nuget/v/Umbraco.Community.UmbraDesktop.Entertainment)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment) [![NuGet Downloads](https://img.shields.io/nuget/dt/Umbraco.Community.UmbraDesktop.Entertainment)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment) [![License](https://img.shields.io/github/license/Luuk1983/Umbraco.Community.UmbraDesktop)](../../LICENSE)
 
-![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher open down to its Games group, which lists Minesweeper, Snake and Solitaire, and the game's own taskbar button below.](docs/screenshots/entertainment-games-minesweeper.png)
+![Solitaire, Snake and Minesweeper open side by side as three windows on the UmbraDesktop desktop under the Umbraco theme, each with its own button on the taskbar.](docs/screenshots/entertainment-games.png)
 
 Install it and the launcher grows a Games group. Open a game and it gets a window like everything else, in whichever theme you picked, so Minesweeper under the Windows 98 theme looks like Minesweeper, and under macOS it does not.
 

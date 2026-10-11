@@ -3,7 +3,7 @@ id: games
 title: Games
 description: Install the Entertainment add-on and play Minesweeper, Snake and Solitaire on the desktop.
 sidebar_position: 1
-image: ../screenshots/entertainment-games-minesweeper.png
+image: ../screenshots/entertainment-games.png
 ---
 
 # Games
@@ -11,6 +11,8 @@ image: ../screenshots/entertainment-games-minesweeper.png
 UmbraDesktop Entertainment puts Minesweeper, Snake and Solitaire on the desktop, each in a window of its own,
 under whichever theme is in use. So Minesweeper under the Windows 98 theme looks like Minesweeper, and
 under the macOS theme does not.
+
+![Solitaire, Snake and Minesweeper open side by side as three windows on the UmbraDesktop desktop under the Umbraco theme, each with its own button on the taskbar.](../screenshots/entertainment-games.png)
 
 The games ship in their own package rather than in UmbraDesktop, because a desktop and a minesweeper
 are not the same product, and nobody should have to take the second to get the first.
@@ -41,7 +43,7 @@ be moved and minimised, but not resized or maximised. Solitaire can be resized.
 
 ### Minesweeper
 
-![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher open down to its Games group, which lists Minesweeper, Snake and Solitaire, and the game's own taskbar button below.](../screenshots/entertainment-games-minesweeper.png)
+![Minesweeper open in its own window on the UmbraDesktop desktop under the Windows 98 theme, with the launcher open down to its Games group and the game's own taskbar button below.](../screenshots/entertainment-games-minesweeper.png)
 
 The real one, with three difficulties, a mine counter and a timer.
 
