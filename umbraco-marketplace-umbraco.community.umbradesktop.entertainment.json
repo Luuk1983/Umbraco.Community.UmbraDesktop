@@ -75,11 +75,11 @@
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/umbracoffee-live.png",
-      "Caption": "umbraCoffee while a show is live: the stream under player controls drawn in the style of the theme, with the live chat and the episode list in a side panel and a Remind me switch in the header."
+      "Caption": "umbraCoffee while a show is live: the stream with its own control bar, the episode's title, guest and summary under it, and the Chat and Episodes tabs beside it."
     },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/umbracoffee-upcoming.png",
-      "Caption": "umbraCoffee before the next show: a countdown with the start time written like the desktop's clock, a Remind me switch, and the episodes waiting in the side panel."
+      "Caption": "umbraCoffee before the next show: a countdown where the picture will be, the start time written like the desktop's clock, and the coming episode at the top of the list."
     }
   ]
 }

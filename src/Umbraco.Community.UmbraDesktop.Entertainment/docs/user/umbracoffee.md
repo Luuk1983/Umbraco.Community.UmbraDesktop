@@ -12,66 +12,78 @@ umbraCoffee is the Umbraco community's monthly live show. UmbraDesktop Entertain
 desktop in a window of its own, in the launcher's **Media** group. It comes with the same package as
 the [games](games.md), so installing it is the same one command.
 
-![The umbraCoffee window while a show is live: the stream under player controls, the episode's title, date, summary and guests below it, and the Episodes tab in the side panel with a search field and a guest filter.](../screenshots/umbracoffee-live.png)
+![The umbraCoffee window while a show is live: the stream with its control bar under it, then the episode's title, a Live tag with the start time and the guest, and a summary. Beside it are the Chat and Episodes tabs, with the episode list open and the live episode at the top.](../screenshots/umbracoffee-live.png)
 
 ## Watch
 
 To open it, open the launcher and select **umbraCoffee** in the Media group. The window opens on
 whatever matters now:
 
-- **Live:** the stream, with the live chat beside it. Reading the chat needs nothing; posting in it
-  needs you signed in to YouTube in that browser, with third-party cookies allowed.
-- **Coming up:** a countdown in days, hours and minutes, with the start time written like the
-  desktop's clock, following your Regional format and Clock settings.
+- **Live:** the stream, with **Chat** and **Episodes** tabs beside it, open on **Chat**. Reading the
+  chat needs nothing. Posting in it needs you signed in to YouTube in that browser, with third-party
+  cookies allowed.
+- **Upcoming:** a countdown in days, hours and minutes where the picture will be, with a
+  **Watch the last episode** button under it.
 - **Otherwise:** the latest episode, ready to play.
 
-![The umbraCoffee window before the next show: a countdown in days, hours and minutes with the start time, a Remind me switch and a Watch the last episode button, and the episode list in the side panel.](../screenshots/umbracoffee-upcoming.png)
+![The umbraCoffee window before the next show: a countdown in days, hours and minutes with a Watch the last episode button, the episode's title with an Upcoming tag and its start time under it, and the episode list beside it with the coming episode at the top.](../screenshots/umbracoffee-upcoming.png)
 
-The video is YouTube's own player, but the controls under it are umbraCoffee's: play and pause, a
-seek bar, volume, captions, full screen and a link to watch on YouTube. They are drawn in the style of
-the theme you picked, so the window looks native under each of the five and follows the light or dark
-palette of the desktop.
+Under the picture is the episode: its title, then a line with a tag saying **Live**, **Upcoming** or
+**Latest episode**, its date, and its guests after **With**, then a short summary of what it covers.
+Times are written like the desktop's clock, following your Regional format and Clock settings. An
+episode with no summary or no guests leaves that part out.
 
-![The umbraCoffee window under each of the desktop's themes, its player controls, tabs and switches drawn in each theme's own style.](../screenshots/umbracoffee-themes.png)
+![The umbraCoffee window playing the latest episode: the video with its control bar, the title with a Latest episode tag, the date and the guest, a short summary, and the episode list beside it with the playing episode marked Paused.](../screenshots/umbracoffee-on-demand.png)
 
-The side panel beside the player has two tabs, **Chat** (live only) and **Episodes**, newest first,
-thirty at a time, each playable in place. A button in the header hides the panel, and a window too
-narrow for both moves it under the player. The window can be resized and maximised. umbraCoffee
-opens one window at a time, so opening it again brings the one you have to the front.
+The video is YouTube's own player, with umbraCoffee's controls in a bar under it: a seek line, then
+play, back and forward 10 seconds, volume and the time, and at the right captions, speed, full screen
+and **Watch on YouTube**. Speed steps through 1, 1.25, 1.5 and 2 times. Where the bar is less than
+720 pixels wide, it leaves out the volume slider, keeping the mute button, and shows **Watch on
+YouTube** as an icon only.
 
-Under the player is the episode playing: its title, its date, a short summary of what it covers, and
-its guests on a line starting **With**. An episode with nothing to say there leaves that part out.
+The list beside the player shows the episodes newest first, thirty at a time, with **Show more**
+under them. Select one to play it in place. In a narrow window the list moves under the player. The
+window can be resized down to 520 pixels wide, and maximised. umbraCoffee opens one window at a time,
+so opening it again brings the one you have to the front.
+
+The window looks native under each of the desktop's themes.
+
+![The umbraCoffee window under each of the desktop's five themes, and before a show under Windows 98.](../screenshots/umbracoffee-themes.png)
 
 ## Find an old episode
 
-To find an old episode, use the search field at the top of **Episodes**, **Title, topic or guest**.
-It looks in every episode's title, summary and guest names, ignores case and accents, and every word
-you type has to match. Under it, **All guests** lists everyone who has been on the show with how many
-episodes they were in, so you can pick one person and see only their episodes. Both work on the
-whole archive, not just the rows already shown, and the panel says how many episodes match. When
-nothing does, **Show all episodes** clears both.
+To find an old episode, type in the search field above the list, **Title, topic or guest**. It looks
+in every episode's title, summary and guest names, ignores case and accents, and every word you type
+has to match. It searches the whole archive, not just the rows already shown. While you search, the
+number of matching episodes shows under the field, and the matches are highlighted. When nothing
+matches, **Show all episodes** clears the search.
 
-![The Episodes tab filtered to one guest, showing how many of all the episodes match, with the matching episodes listed below.](../screenshots/umbracoffee-search.png)
+![The episode list searched for Matt, saying 16 episodes match, with Matt highlighted in each guest line.](../screenshots/umbracoffee-search.png)
 
 ## The tray cup and the reminders
 
-You do not have to remember to open it. While an episode is coming up or live, a coffee cup sits in
-the taskbar beside the clock: steaming while it is coming up, with a red dot once it is live. Point
-at it for the title and how long until it starts, and select it to open umbraCoffee. The rest of the
-month the cup is not there at all.
+You do not have to remember to open it. While an episode is coming up or live, umbraCoffee's coffee
+cup sits in the taskbar beside the clock: plain while the episode is coming up, steaming once it is
+live. Point at it for the title and how long until it starts, and select it to open umbraCoffee. The
+rest of the month the cup is not there at all.
 
 The desktop also reminds you twice per episode: ten minutes before it starts, and again when it goes
-live. Each reminder has two buttons. **Watch** opens umbraCoffee, and **Stop reminding me** turns the
-cup and the reminders off. Each reminder is shown once per episode in each browser, so a second tab
-or a reload does not repeat it.
+live. The first says **Put the kettle on** with a countdown to the start, then **Starting now**. The
+second says **Grab a cuppa!** and **On air**, and replaces the first. Each has two buttons:
+**Watch** (**Watch now** once it is live) opens umbraCoffee, and **Stop reminding me** turns the cup
+and the reminders off. Each reminder is shown once per episode in each browser, so a second tab or a
+reload does not repeat it. The notification list behind the clock keeps a one-line copy of each.
+
+![The reminder ten minutes before a show: a coffee cup badge, umbraCoffee, Put the kettle on, the episode's title and a countdown in minutes and seconds, with Watch and Stop reminding me buttons, above the cup in the taskbar beside the clock.](../screenshots/umbracoffee-reminder.png)
 
 The cup and the reminders are one switch, on by default. To switch them off, do either of these:
 
 - In Desktop settings, select **Taskbar** and switch **umbraCoffee** off under **System tray icons**.
-- In the umbraCoffee window, switch **Remind me** off.
+- In the umbraCoffee window, select **Settings**, the gear at the top right, and switch **Remind me**
+  off under **Reminders**.
 
-The two stay in step, even with both open. The umbraCoffee app itself stays in the launcher either
-way.
+The two are the same switch, so they stay in step. The umbraCoffee app itself stays in the launcher
+either way.
 
 ## Where umbraCoffee gets its data
 
@@ -89,10 +101,11 @@ job that writes the files runs about every five minutes, though GitHub sometimes
 good time, and a next-episode file that has not been refreshed for half an hour is ignored rather
 than trusted.
 
-If the browser cannot reach GitHub, for example behind a proxy that blocks it, umbraCoffee says so at
-the top of the window and shows the episodes that came with the package, with the date they are up
-to. There is no countdown, no cup and no reminders until it is back, and the **Remind me** switch
-shows as unavailable with the reason. It checks again on its next look.
+If the browser cannot reach GitHub, for example behind a proxy that blocks it, a warning sign shows
+beside the gear. Point at it, or move to it with the keyboard, to read why, and the date the episodes
+it shows are up to: the ones that came with the package. There is no countdown, no cup and no
+reminders until it is back, and the **Remind me** switch in the settings is unavailable, with the
+reason under it. It checks again on its next look.
 
 The package ships a snapshot of the episode list for exactly that case, summaries and guests
 included. It is refreshed before each release, so it can be some weeks behind. The browser only loads
@@ -139,3 +152,5 @@ manifest that puts each app in a window. See
 [Building a desktop app](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/docs/developer/desktop-apps.md)
 in the UmbraDesktop developer guide, whose tray section covers the tray item, the tray context and
 notifications with buttons.
+To try the cup and the reminders without waiting for a show, see
+[Testing umbraCoffee](../developer/umbracoffee-testing.md).
