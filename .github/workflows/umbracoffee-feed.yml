@@ -1,0 +1,69 @@
+name: umbraCoffee feed
+
+# Keeps the files umbraCoffee reads (docs/design/2026-09-30-umbracoffee-v2-design.md, section 4, and
+# the 2026-10-01 addendum in the v2 plan) on the `data/umbracoffee` branch, so a customer's browser reads GitHub and a customer's server
+# never calls YouTube. Every five minutes is GitHub's shortest schedule; runs often start 10 to 15
+# minutes late, which the client's freshness window already allows for.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# A run that overlaps the previous one would race it for the push. Queue rather than cancel:
+# cancelling could kill a run between writing the files and pushing them.
+concurrency:
+  group: umbracoffee-feed
+  cancel-in-progress: false
+
+jobs:
+  feed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # The data branch lives in its own worktree so its history stays out of main. On the very
+      # first run it does not exist yet, so it is created as an orphan with no shared history.
+      - name: Check out the data branch
+        run: |
+          if git ls-remote --exit-code --heads origin data/umbracoffee > /dev/null; then
+            git fetch origin data/umbracoffee
+            git worktree add -B data/umbracoffee data origin/data/umbracoffee
+          else
+            git worktree add --orphan -b data/umbracoffee data
+          fi
+
+      # Writes sources.json, episodes.json and next-episode.json. details.json and overrides.json are
+      # made locally (tools/umbracoffee-feed/README.md) and only read here.
+      # YOUTUBE_API_KEY is optional: without it the episode list is still kept current and
+      # next-episode.json stays empty. The tool never prints the key.
+      - name: Update the data files
+        id: feed
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: node tools/umbracoffee-feed/src/run.mjs data/umbracoffee
+
+      # Only when something changed, so an idle channel makes no commits. The data branch is
+      # pushed by hand instead of through an action because the push is the whole job. Only the three
+      # files the run writes are added, never details.json or overrides.json, so a stray local edit
+      # to those can never ride along. A file is skipped when it does not exist yet: next-episode.json
+      # is not written when the very first run cannot reach the API.
+      - name: Commit and push
+        if: steps.feed.outputs.changed == 'true'
+        working-directory: data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for file in sources.json episodes.json next-episode.json; do
+            if [ -f "umbracoffee/$file" ]; then git add "umbracoffee/$file"; fi
+          done
+          git commit -m "Update umbraCoffee data"
+          git push origin HEAD:data/umbracoffee

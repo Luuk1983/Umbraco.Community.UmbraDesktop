@@ -68,6 +68,14 @@ function isNotificationContext(instance: unknown): instance is NotificationConte
   return typeof c?.notifications?.subscribe === 'function' && typeof c?.peek === 'function';
 }
 
+/** What this module needs of one of core's handlers to close it: its own 'close()' and its toast. */
+interface ReportedHandler {
+  /** Core's close: settles the sender's 'onClose()' and starts the toast's close sequence. */
+  close?: () => void;
+  /** The toast element core built for it. */
+  element?: HTMLElement;
+}
+
 /** What a watcher tells its owner. */
 export interface UmbraDesktopNotificationCallbacks {
   /** A notification was raised, or was already on screen when watching began. */
@@ -76,9 +84,31 @@ export interface UmbraDesktopNotificationCallbacks {
   onClosed?(key: string): void;
 }
 
+/** How a watcher treats the document it watches, beyond hiding and reporting. */
+export interface UmbraDesktopNotificationWatchOptions {
+  /**
+   * Which of the handlers it reported, still in the list when it stops, to close before the hiding
+   * rule is lifted. Asked of each one's notification as it was reported. Added 2026-09-28.
+   *
+   * For the desktop's own document only, which outlives the desktop, and there only for what the
+   * desktop drew with its own element: leaving the desktop lifts the rule, and such a notification
+   * would then turn up again in the classic backoffice with buttons that reach for a desktop that has
+   * gone. A plain one is left to carry over, because it still means what it says there: core's
+   * offline notice while still offline, or an error that asked to stay.
+   *
+   * Not for a window's frame. A frame's watcher stops when its frame loads a new document or leaves
+   * the page with its window, and either way the document it watched goes with it: there is nothing
+   * left to turn up.
+   */
+  closeOnStop?: (notification: UmbraDesktopNotification) => boolean;
+}
+
 /** A running watcher. */
 export interface UmbraDesktopNotificationWatch extends UmbraDesktopNotificationSource {
-  /** Stop listening and lift the hiding rule. */
+  /**
+   * Stop listening and lift the hiding rule, first closing those it reported that it was asked to
+   * ({@link UmbraDesktopNotificationWatchOptions.closeOnStop}).
+   */
   stop(): void;
 }
 
@@ -98,11 +128,13 @@ export interface UmbraDesktopNotificationWatch extends UmbraDesktopNotificationS
  * provided during boot, before any `load` handler of ours has attached.
  * @param doc The document to watch: a frame's, or the desktop's own.
  * @param callbacks What to tell the owner.
+ * @param options How to treat the document when it stops.
  * @returns The running watcher.
  */
 export function watchNotifications(
   doc: Document,
   callbacks: UmbraDesktopNotificationCallbacks,
+  options: UmbraDesktopNotificationWatchOptions = {},
 ): UmbraDesktopNotificationWatch {
   const win = doc.defaultView;
   let context: NotificationContextLike | undefined;
@@ -112,6 +144,15 @@ export function watchNotifications(
   let stopped = false;
   /** Keys of the handlers in the list, as of its last emission. */
   let present = new Set<string>();
+  /**
+   * The handlers this watcher reported that are still in the list, by key: the originals of what
+   * the desktop is showing, and so the ones it may close ({@link UmbraDesktopNotificationSource.close},
+   * and on stop when asked). Never a replayed one, which is shown on purpose, nor one the reader
+   * could not read and so never reported. Held only while they are in the list, and only by this
+   * watcher, which goes when its document does. Each with the notification it was reported as, which
+   * is what {@link UmbraDesktopNotificationWatchOptions.closeOnStop} is asked about.
+   */
+  const reported = new Map<string, { handler: ReportedHandler; notification: UmbraDesktopNotification }>();
   /**
    * Set while this watcher is raising something again itself, so the handler that produces is not
    * reported as new. Core's state emits synchronously inside `peek`, which is what makes a flag
@@ -137,11 +178,14 @@ export function watchNotifications(
       }
       if (replayed.has(key)) continue;
       const notification = readNotificationHandler(handler);
-      if (notification) callbacks.onRaised(notification);
+      if (!notification) continue;
+      reported.set(key, { handler: handler as ReportedHandler, notification });
+      callbacks.onRaised(notification);
     }
     for (const key of present) {
       if (next.has(key)) continue;
       replayed.delete(key);
+      reported.delete(key);
       callbacks.onClosed?.(key);
     }
     present = next;
@@ -168,6 +212,34 @@ export function watchNotifications(
     injectStyle(containerRoot, doc, HIDE_STYLE_ID, buildHiddenToastsCss());
     hiddenIn = containerRoot;
     return true;
+  };
+
+  /**
+   * Close one reported handler in the document, the way its sender would. Its toast is hidden where
+   * it stands first: core's close runs an animation before the toast leaves the list, and on stop
+   * the hiding rule is lifted straight after, so without this it would flash up while it went. The
+   * close sequence is timers, not transitions, so a hidden toast still finishes it (design §3.2).
+   * Guarded, because it is someone else's object and a throw here would stop the rest.
+   *
+   * One edge UUI leaves: a toast closed before its opening animation frame has run (raised and
+   * closed within the same frame) never fires 'closed', because 'uui-toast-notification' only
+   * dispatches it at the end of a close that follows an open. Core's container removes a handler
+   * from the list on that event, so this one stays in the list. The sender's 'onClose()' has still
+   * settled, and the inline hide below keeps it invisible even with the rule lifted. The cost is a
+   * handler left in the list, which a watcher started later (the desktop entered again) reports as
+   * already on screen.
+   * @param key The handler's key.
+   */
+  const closeReported = (key: string) => {
+    const handler = reported.get(key)?.handler;
+    if (!handler) return;
+    reported.delete(key);
+    try {
+      handler.element?.style.setProperty('display', 'none', 'important');
+      handler.close?.();
+    } catch {
+      // A handler that cannot be closed is left to its own timer, as it was before this existed.
+    }
   };
 
   if (win && !tick()) {
@@ -199,10 +271,20 @@ export function watchNotifications(
       present.add(handler.key);
       handler.element?.setAttribute(UMBRADESKTOP_REPLAYED_ATTRIBUTE, '');
     },
+    close(key) {
+      if (stopped) return;
+      closeReported(key);
+    },
     stop() {
       stopped = true;
       if (timer !== undefined) win?.clearInterval(timer);
+      // Unsubscribed first, so the closes below are not reported back to a desktop that is leaving.
       subscription?.unsubscribe();
+      // Before the rule is lifted, or they would show for a moment in the document. See the option.
+      if (options.closeOnStop) {
+        for (const [key, { notification }] of [...reported]) if (options.closeOnStop(notification)) closeReported(key);
+      }
+      reported.clear();
       hiddenIn?.getElementById(HIDE_STYLE_ID)?.remove();
       hiddenIn = undefined;
       context = undefined;

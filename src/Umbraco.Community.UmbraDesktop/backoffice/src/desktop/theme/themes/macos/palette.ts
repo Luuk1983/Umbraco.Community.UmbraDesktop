@@ -60,7 +60,7 @@ export const MACOS_ACCENT = '#0067cc';
 export const MACOS_ACCENT_DARK = '#0a84ff';
 
 /**
- * The hairline the dock separates things with: the rule before the clock, and the rule between the
+ * The hairline the dock separates things with: the rule before the tray, and the rule between the
  * fixed buttons and the open windows.
  *
  * One constant rather than the same literal twice, because the two are the same line and a dock

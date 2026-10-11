@@ -89,6 +89,27 @@ it('asks for the runtime default rather than a named locale for the browser', ()
   expect(clockLocale({ source: 'browser', hourCycle: 'auto' }, locales)).to.equal(undefined);
 });
 
+/**
+ * The Regional format setting reaches a date an app formats, not only the clock, and a date is the
+ * one output with no hour for the Clock setting to change, so the culture is all that decides it.
+ *
+ * Compared against `Intl` rather than against a literal, because the browser branch is whatever
+ * Chrome runs as, and a Dutch date pinned as a string would make a CLDR wording change look like a
+ * regression here. The last line is what makes the first two mean anything: were Dutch and English
+ * to format alike, both could pass with the culture ignored.
+ */
+it('formats a date in the culture the Regional format setting picks', () => {
+  const medium: Intl.DateTimeFormatOptions = { dateStyle: 'medium' };
+  const dutch = new Intl.DateTimeFormat('nl', medium).format(afternoon);
+  const runtime = new Intl.DateTimeFormat(undefined, medium).format(afternoon);
+
+  expect(formatDateTime(afternoon, { source: 'backoffice', hourCycle: 'auto' }, { backoffice: 'nl' }, medium)).to.equal(dutch);
+  expect(formatDateTime(afternoon, { source: 'browser', hourCycle: 'auto' }, { backoffice: 'nl' }, medium)).to.equal(runtime);
+  expect(dutch, 'a culture that actually differs from the default one').to.not.equal(
+    new Intl.DateTimeFormat('en-us', medium).format(afternoon),
+  );
+});
+
 it('waits until the next whole minute, never zero and never more than one', () => {
   // The taskbar sits beside the operating system's own clock, so the two have to turn over
   // together. A fixed interval cannot do that at any frequency: it turns the minute over wherever

@@ -201,3 +201,116 @@ it('does nothing when asked to raise again before it has a context', () => {
   stops.push(watch.stop);
   expect(() => watch.reraise({ key: 'k', color: 'default', duration: 10, message: 'x' })).to.not.throw();
 });
+
+/**
+ * Whether core has been told to close a handler: its 'onClose()' promise settles synchronously
+ * inside 'close()', so a microtask later is enough to see it.
+ * @param handler One of core's handlers.
+ * @returns A function that says whether it has closed yet.
+ */
+function closeTracker(handler: { onClose(): Promise<unknown> }): () => boolean {
+  let closed = false;
+  void handler.onClose().then(() => (closed = true));
+  return () => closed;
+}
+
+it('closes what it reported and was asked to close when it stops, and leaves the rest', async () => {
+  const s = shell();
+  s.mountContainer();
+  // Staying with its own element: the kind the desktop draws itself, and closes on the way out.
+  const early = s.context.stay('default', { elementName: 'umbradesktop-test-layout', data: { message: 'Before' } });
+  s.render(early.element);
+  const raised: UmbraDesktopNotification[] = [];
+  const watch = watchNotifications(
+    document,
+    { onRaised: (n) => raised.push(n) },
+    { closeOnStop: (n) => n.element?.name === 'umbradesktop-test-layout' },
+  );
+  await waitUntil(() => s.container!.shadowRoot!.querySelector('style'), undefined, POLL_WAIT);
+  const own = s.context.stay('default', { elementName: 'umbradesktop-test-layout', data: { message: 'Own' } });
+  s.render(own.element);
+  const plain = s.context.stay('danger', { data: { message: 'Still offline' } });
+  s.render(plain.element);
+  s.context.peek('danger', { elementName: 'umbradesktop-test-layout', data: { message: 'Err' } });
+  watch.reraise(raised[raised.length - 1]);
+  const handlers = await new Promise<unknown[]>((resolve) =>
+    s.context.notifications.subscribe((list) => resolve(list)).unsubscribe(),
+  );
+  const replayed = handlers[handlers.length - 1] as { onClose(): Promise<unknown> };
+  const earlyClosed = closeTracker(early);
+  const ownClosed = closeTracker(own);
+  const plainClosed = closeTracker(plain);
+  const replayedClosed = closeTracker(replayed);
+
+  watch.stop();
+  const after = s.context.stay('default', { elementName: 'umbradesktop-test-layout', data: { message: 'After' } });
+  const afterClosed = closeTracker(after);
+  await Promise.resolve();
+
+  expect(earlyClosed(), 'reported when watching began, so the desktop showed it').to.equal(true);
+  expect(ownClosed()).to.equal(true);
+  expect(plainClosed(), 'a plain notification carries over, it still means what it says').to.equal(false);
+  expect(drawn(plain.element), 'and is drawn again once the rule is lifted').to.equal(true);
+  expect(replayedClosed(), 'raised again on purpose, visibly, so it is left to its reader').to.equal(false);
+  expect(afterClosed(), "never reported, so never the desktop's to close").to.equal(false);
+  expect(drawn(own.element), 'a closed one does not flash up while it closes, with the rule lifted').to.equal(false);
+});
+
+it('leaves what it reported alone when a watcher that was not asked to stops', async () => {
+  const s = shell();
+  s.mountContainer();
+  const watch = watchNotifications(document, { onRaised: () => {} });
+  await waitUntil(() => s.container!.shadowRoot!.querySelector('style'), undefined, POLL_WAIT);
+  const staying = s.context.stay('default', { data: { message: 'In a frame' } });
+  const closed = closeTracker(staying);
+
+  watch.stop();
+  await Promise.resolve();
+
+  expect(closed(), "a window's frame takes its document with it, so there is nothing to tidy").to.equal(false);
+});
+
+it('closes the original of a reported notification when asked, and nothing else', async () => {
+  const s = shell();
+  s.mountContainer();
+  const raised: UmbraDesktopNotification[] = [];
+  const watch = watchNotifications(document, { onRaised: (n) => raised.push(n) });
+  stops.push(watch.stop);
+  await waitUntil(() => s.container!.shadowRoot!.querySelector('style'), undefined, POLL_WAIT);
+  const one = s.context.stay('default', { data: { message: 'One' } });
+  const two = s.context.stay('default', { data: { message: 'Two' } });
+  const oneClosed = closeTracker(one);
+  const twoClosed = closeTracker(two);
+
+  s.context.peek('danger', { elementName: 'umbradesktop-test-layout', data: { message: 'Err' } });
+  watch.reraise(raised[raised.length - 1]);
+  const handlers = await new Promise<Array<{ key: string; onClose(): Promise<unknown> }>>((resolve) =>
+    s.context.notifications.subscribe((list) => resolve(list as never)).unsubscribe(),
+  );
+  const replayed = handlers[handlers.length - 1];
+  const replayedClosed = closeTracker(replayed);
+
+  watch.close?.(one.key);
+  watch.close?.('not-a-key');
+  watch.close?.(replayed.key);
+  await Promise.resolve();
+
+  expect(oneClosed()).to.equal(true);
+  expect(twoClosed()).to.equal(false);
+  expect(replayedClosed(), 'the one raised again is visible on purpose, never an original').to.equal(false);
+});
+
+it('closes nothing once it has stopped', async () => {
+  const s = shell();
+  s.mountContainer();
+  const watch = watchNotifications(document, { onRaised: () => {} });
+  await waitUntil(() => s.container!.shadowRoot!.querySelector('style'), undefined, POLL_WAIT);
+  const staying = s.context.stay('default', { data: { message: 'Carried over' } });
+  const closed = closeTracker(staying);
+
+  watch.stop();
+  watch.close?.(staying.key);
+  await Promise.resolve();
+
+  expect(closed(), 'the document is its own again').to.equal(false);
+});

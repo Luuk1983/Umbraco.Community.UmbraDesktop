@@ -1,0 +1,10 @@
+{
+  "kind": "youtube#videoListResponse",
+  "items": [
+    {
+      "id": "LIVE0000001",
+      "snippet": { "title": "umbraCoffee - Live Now", "liveBroadcastContent": "live" },
+      "liveStreamingDetails": { "scheduledStartTime": "2026-10-30T11:30:00Z", "actualStartTime": "2026-10-30T11:34:10Z" }
+    }
+  ]
+}

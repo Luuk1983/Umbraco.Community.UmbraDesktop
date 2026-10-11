@@ -1,0 +1,4381 @@
+{
+  "version": 2,
+  "snapshotAt": "2026-10-11T10:19:45Z",
+  "episodes": [
+    {
+      "videoId": "aRkc0fRxQjw",
+      "title": "The September Shift",
+      "published": "2026-09-25T11:27:38Z",
+      "summary": "Luuk Peters joins to talk about UmbraDesktop, his OS-style desktop for the Umbraco backoffice.",
+      "guests": [
+        {
+          "name": "Luuk Peters",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "Mp-5Uy7pZ9E",
+      "title": "Back To School",
+      "published": "2026-08-28T23:27:49Z",
+      "summary": "",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "RaFus8cVC24",
+      "title": "Summer Vibes Only",
+      "published": "2026-07-31T23:27:41Z",
+      "summary": "Covers the launch of Umbraco Automate and how to extend it, new security advisories, and the idea of an agent-ready CMS. Also discusses AEO and GEO tooling for Umbraco, migration write-ups, Umbraco Search replacing the existing search in v19, and upcoming events in the US and UK.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "mEa90pJb0Bw",
+      "title": "Codegarden 2026 Wrapped 🌯",
+      "published": "2026-06-26T23:06:54Z",
+      "summary": "A look back at Codegarden 2026.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "bmfrLgNfQ_g",
+      "title": "LIVE at #Codegarden 2026!",
+      "published": "2026-06-12T02:29:10Z",
+      "summary": "Recorded live at Codegarden 2026.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "cCqq76ItuB4",
+      "title": "Agents, Codegarden, Tees",
+      "published": "2026-05-30T00:06:57Z",
+      "summary": "Covers AI agents in Umbraco, the end of Bootstrap 3 in Forms, AI search, personalisation and the future of search, plus Codegarden and events. Adam Shallcross joins as a guest and also shows a demo.",
+      "guests": [
+        {
+          "name": "Adam Shallcross",
+          "affiliation": "Cogworks"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "uY9pZz5NHaQ",
+      "title": "AI in Umbraco",
+      "published": "2026-04-24T23:21:58Z",
+      "summary": "Focuses on AI in Umbraco, including the AI Community Team and Advisory Board, the AI documentation, AI Search and file uploads in Umbraco.AI. Also covers the Umbraco Awards nominees, a new Skrift issue and the reimagined UK Conference. Matt Brailsford joins as guest.",
+      "guests": [
+        {
+          "name": "Matt Brailsford",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "-b3HkTedXcA",
+      "title": "Spring Sips",
+      "published": "2026-03-28T00:25:23Z",
+      "summary": "Reviews the past month in Umbraco: the product update, the AI Community Team and Advisory Board, agent skills and a security advisory. Warren Buckley joins to talk about package development with the new Umbraco, and introducing Umbraco to students is discussed.",
+      "guests": [
+        {
+          "name": "Warren Buckley",
+          "affiliation": "Umbraco Hacker"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "wX5uvDOfLUc",
+      "title": "Compose Yourself",
+      "published": "2026-02-28T00:56:13Z",
+      "summary": "Centres on Umbraco Compose, with an unboxing, a promo, an example project and a demo. Also covers AI and the future of Umbraco, Umbraco AI, skills for agents, Umbraco highlights of 2025 and the Winter Keynote. Filip Bech-Larsen and Jordan McFarlane join to talk about Compose.",
+      "guests": [
+        {
+          "name": "Filip Bech-Larsen",
+          "affiliation": "Umbraco CTO"
+        },
+        {
+          "name": "Jordan McFarlane",
+          "affiliation": "Head of Orchestration"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Z8N-dXWdq04",
+      "title": "New Year, new U?!",
+      "published": "2026-01-31T00:27:52Z",
+      "summary": "A new-year episode recapping 24 Days in Umbraco and discussing the impact of AI on Tailwind CSS. Also covers predictions for 2026 (Umbraco Compose and more AI), the Winter Keynote, the Codegarden call for papers, Umbraco Spark, and a package script writer CLI.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "9O2g1t5H6HQ",
+      "title": "Ho Ho Ho!",
+      "published": "2025-12-20T00:50:24Z",
+      "summary": "The Christmas episode, with highlights from 24 Days in Umbraco 2025 on wellbeing, backoffice communication, DDoS defence, sustainability and Umbraco Search. Also covers an Umbraco 13 security advisory, the Developer MCP beta, Umbraco Commerce performance, and Codegarden and Spark announcements.",
+      "guests": [
+        {
+          "name": "Rune Strand",
+          "affiliation": "Umbraco Cloud"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "ipHGphfh0DU",
+      "title": "OP DELIVERED",
+      "published": "2025-11-29T00:13:00Z",
+      "summary": "Talks about the latest LTS v17 release of Umbraco and more, together with two guests from Umbraco HQ.",
+      "guests": [
+        {
+          "name": "Filip Bech-Larsen",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Niels Lyngsø",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "P3-3mxtv7RE",
+      "title": "Spooky Season",
+      "published": "2025-11-01T00:16:37Z",
+      "summary": "",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "iqLruz86yd0",
+      "title": "Vibes",
+      "published": "2025-08-29T23:31:43Z",
+      "summary": "",
+      "guests": [
+        {
+          "name": "Luuk Peters",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "H-Om8QGWMkw",
+      "title": "Summer Shenanigans",
+      "published": "2025-07-25T23:44:16Z",
+      "summary": "",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "rrnSxcSxvi8",
+      "title": "post-Codegarden Blues, Neurodiversity and more...",
+      "published": "2025-06-27T23:32:27Z",
+      "summary": "Looks back at Codegarden 2025 with highlights, blogs and pictures, plus neurodiversity and a proposed community support group. Also covers the June security advisories, Umbraco 14 end of life, the Umbraco 16 release, new MVPs and awards, and new packages.",
+      "guests": [
+        {
+          "name": "Georgina Bidder",
+          "affiliation": "Umbraco MVP"
+        },
+        {
+          "name": "Matt Brailsford",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Ronald Barendse",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "jqH0d8WPn1U",
+      "title": "LIVE at #CodeGarden2025",
+      "published": "2025-06-20T02:39:13Z",
+      "summary": "Recorded live at Codegarden 2025.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "je3VvP6Y98A",
+      "title": "May Security Advisory, Umbraco 16 RCs, Events and more!",
+      "published": "2025-05-30T23:18:44Z",
+      "summary": "Covers the May security advisory, Umbraco 16 release candidates, Skrift issue 116 and community team updates. Also discusses events (Umbraad, DDD South West, Codegarden), the Umbraco Awards nominees, new MVPs, community tees and new packages such as ContentAudit.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "6yoJhghIcP0",
+      "title": "UDUF, Sustainability and Codegarden countdown!",
+      "published": "2025-04-25T23:38:53Z",
+      "summary": "Discusses events at Umbraco HQ, including a summary of UDUF 2025, DDD South West and the approach to Codegarden. Also covers a security advisory, the Impact Report 2024, joining the Docs team, the Rollback Previewer and uTours packages, and the April uProfile.",
+      "guests": [
+        {
+          "name": "Steffie Limère",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Qr61mcuuWh8",
+      "title": "IsItCodegardenYet??? MVPs, releases and more!",
+      "published": "2025-03-29T00:50:23Z",
+      "summary": "Covers a summary of Umbraco Spark, the Codegarden schedule, the MVP programme and a security advisory. Also discusses Umbraco 15.3.0, the Sustainability Team, new packages, a v8 to v13 migration story and vibe coding. Three Umbraco MVPs join as guests.",
+      "guests": [
+        {
+          "name": "Carl Sergunar",
+          "affiliation": "Umbraco MVP"
+        },
+        {
+          "name": "Dean Leigh",
+          "affiliation": "Umbraco MVP"
+        },
+        {
+          "name": "Mike Masey",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "cbBYWeW_o_8",
+      "title": "Our.Replace(new Forum()) + Community Updates",
+      "published": "2025-03-01T00:42:27Z",
+      "summary": "Covers the new Umbraco forum, the Product Update for Q1 2025, MVP nomination deadlines and the release of 13.7.0. Also discusses Umbraco turning 20, leaving .NET Framework behind, new packages, and upcoming events such as Spark and UDUF. Sebastian Janssen joins as guest.",
+      "guests": [
+        {
+          "name": "Sebastian Janssen",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "YgaWTMsOhE4",
+      "title": "New Year Sparks Joy!",
+      "published": "2025-02-01T00:27:30Z",
+      "summary": "",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "6bXQYlreMlI",
+      "title": "Umbraco v15, Festivals Summary, EOTY...?",
+      "published": "2024-11-30T00:36:28Z",
+      "summary": "Covers Umbraco acquiring uMarketingSuite and renaming it Umbraco Engage, the 2025 price changes, the release of Umbraco v15 and a summary of the festival season. Also covers calls for speakers for 2025 events and Bluesky as a community home. Rick Butterfield joins as guest.",
+      "guests": [
+        {
+          "name": "Rick Butterfield",
+          "affiliation": "Wattle"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "mkoitfwtS0Y",
+      "title": "Hacktoberfest 2024",
+      "published": "2024-10-25T22:55:40Z",
+      "summary": "Covers the middle of festival season with updates from Swedish Umbraco Kalaset, the US festival and meetups. Also discusses Hacktoberfest, the Umbraco 15 release candidate, polls on adopting v14, Management API demos, repos being merged and a breaking change coming in v16.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "66lXWrvVr_4",
+      "title": "Festival Season",
+      "published": "2024-09-27T23:40:59Z",
+      "summary": "Covers a visit from the community teams, the v14.3 release candidate and 13.5, new packages and the UI Builder v14 alpha. Also covers the festival season (Umbraco Denmark Festival, Codecabin, US Festival), Hacktoberfest, an upcoming breaking change in v16 and the September uProfile.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Ucn980CU2QU",
+      "title": "Back To School",
+      "published": "2024-08-30T23:34:47Z",
+      "summary": "A conversation with Adam Werner, newly awarded Umbraco MVP and Umbraco US Foundation board member.",
+      "guests": [
+        {
+          "name": "Adam Werner",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "ApAdVfU53i8",
+      "title": "Summer Chillout Edition",
+      "published": "2024-07-26T23:42:52Z",
+      "summary": "",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "st7hegnAHao",
+      "title": "umbraCoffee LIVE @ Codegarden 2024 - Day 2",
+      "published": "2024-06-14T03:02:04Z",
+      "summary": "Recorded live from Codegarden 2024, day 2.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "yAzzWARH96Q",
+      "title": "umbraCoffee LIVE @ Codegarden 2024 - Day 1",
+      "published": "2024-06-13T04:40:39Z",
+      "summary": "Recorded live from Codegarden 2024, day 1.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "PJmZePxEbNU",
+      "title": "MAY the force be with you v14!",
+      "published": "2024-05-31T23:36:27Z",
+      "summary": "Monthly community news with Umbraco CTO Filip Bech-Larsen, with Umbraco 14 as a likely topic.",
+      "guests": [
+        {
+          "name": "Filip Bech-Larsen",
+          "affiliation": "Umbraco CTO"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "UlupUvJs_zA",
+      "title": "The (v14) Journey Continues",
+      "published": "2024-04-26T23:48:00Z",
+      "summary": "Covers the Umbraco 14 release candidate and Umbraco v13.3, plus blog posts on building for v14: reusing properties, TypeScript path aliases, testing Lit components, custom conditions and an early adopter's guide. Also covers a vulnerability in Plumber and Umbraco Workflow, and the April uProfile.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "COaq5oLRTvE",
+      "title": "Bellissima!",
+      "published": "2024-03-30T00:49:57Z",
+      "summary": "Covers Umbraco Bellissima (v14) Beta Preview 2, with docs, lessons learned and Warren building his first Bellissima package. Also covers new packages, MVP nominations, the Umbraco Spark and UMBRAAD events, a new Umbraco Cloud community team and the March uProfile.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "pnlEeu5-Mj0",
+      "title": "Happy birthday Umbraco, Commerce team, Community and other things...",
+      "published": "2024-02-24T00:50:55Z",
+      "summary": "Celebrates Umbraco's 19th birthday and the newly formed Umbraco Commerce Community Team, with the community store, MVP nominations and Codecabin applications. Also covers Umbraco 13.2 RC, new packages, and events such as Spark, Codegarden and UMBRAAD. Owain Williams joins as guest.",
+      "guests": [
+        {
+          "name": "Owain Williams",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": true,
+      "uncertain": true
+    },
+    {
+      "videoId": "1dP2ZQAuHik",
+      "title": "Speaking at events!",
+      "published": "2024-01-27T00:38:25Z",
+      "summary": "Speaking at events, with two of the people behind Codegarden as guests.",
+      "guests": [
+        {
+          "name": "Emma Burstow",
+          "affiliation": "Codegarden"
+        },
+        {
+          "name": "Steffie Limère Fugl",
+          "affiliation": "Codegarden"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "w28tjmqiMe0",
+      "title": "HO^3, Umbraco (13) is coming to town!",
+      "published": "2023-12-23T01:24:24Z",
+      "summary": "The December episode, with the release of Umbraco 13 LTS and a month-by-month recap of the Umbraco community in 2023, including umbraCoffee moving from weekly to monthly. Also looks ahead with predictions and resolutions for 2024 and the Winter Keynote.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "car3xWAz7hQ",
+      "title": "Umbraco 13, .NET 8, OpenAI",
+      "published": "2023-11-25T00:33:27Z",
+      "summary": "Covers the Umbraco 13 release candidate with webhooks, Dynamic Root and Blocks in the RTE, the Forms v12.2 release candidate, and the .NET 8 release. Also discusses the OpenAI drama and governance lessons, resources for Umbraco 14, and the call for Umbraco Community Day speakers.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "efggKgo26Jw",
+      "title": "umbraCoffee #300 - 🎂🎂🎂",
+      "published": "2023-11-04T00:12:38Z",
+      "summary": "Episode 300, the final episode of the weekly umbraCoffee series.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "V6DagoslyhI",
+      "title": "umbraCoffee #299 - UI Builder",
+      "published": "2023-10-27T23:13:30Z",
+      "summary": "Matt Brailsford joins to show what is new in Umbraco UI Builder. The news covers the Umbraco v12.3 release candidate with Delivery API previews and member auth, new packages such as CSP Manager and Mail Settings, upcoming meetups and the UK Festival, and the 24 Days In Umbraco deadline.",
+      "guests": [
+        {
+          "name": "Matt Brailsford",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "ETIoHiH0qIQ",
+      "title": "umbraCoffee #298 - Climate Action",
+      "published": "2023-10-24T23:16:02Z",
+      "summary": "On International Day of Climate Action, members of the Umbraco Sustainability Team discuss their work and the new Umbraco Sustainability Challenge. Topics include the team's introduction, the first Umbraco Impact Report and the sustainability best practices documentation.",
+      "guests": [],
+      "guestsUnnamed": true,
+      "uncertain": false
+    },
+    {
+      "videoId": "8vxrhBVsjS8",
+      "title": "umbraCoffee #297 - Heartcore, Hacktoberfest, and HoneyPots",
+      "published": "2023-10-20T23:17:57Z",
+      "summary": "Covers what is coming to Umbraco Heartcore and a round of new package releases, including HoneyPot v1.2 and Invisible Nodes. Also looks at Hacktoberfest meetups, other upcoming events, the US Summit aftermovie, and the UK Festival.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "elOHOtEk-zk",
+      "title": "umbraCoffee #296 - Umbraco Secrets, Hacks, Hints & Tips?",
+      "published": "2023-10-13T23:26:46Z",
+      "summary": "Andy Boot joins to share Umbraco secrets, hacks, hints and tips. The news covers the CI/CD flow for Umbraco Cloud projects, Hacktoberfest status, releases such as Contentment 4.5.0 and SeoToolkit, upcoming events, and blogs on Umbraco upgrades.",
+      "guests": [
+        {
+          "name": "Andy Boot",
+          "affiliation": "pixelbuilders"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "0JLsRKvJbaY",
+      "title": "umbraCoffee #295 - Sustainability Challenge, Community packages, Hacktoberfest update",
+      "published": "2023-10-06T23:14:14Z",
+      "summary": "Looks back on an event-heavy week of US Fest, meetups and Hacktoberfest hackathons. Covers the Umbraco Sustainability Challenge, the first UMB.FYI newsletter, and new and updated community packages such as Our Community Polls, Packages Script Writer and a Google Analytics package.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "2-eTo57p_-M",
+      "title": "umbraCoffee #294 - Festival season begins, Dev.rel(\"UK\") and more!",
+      "published": "2023-09-29T23:18:31Z",
+      "summary": "Laura Neto and Micheal Latouche join to talk about Dutch Umbraco Festival 2023 and recent community team hacking. Also covers the start of festival season, Hacktoberfest, the new UK community cultivator Lottie, Contentment updates, and the Umbraco MVP program.",
+      "guests": [
+        {
+          "name": "Laura Neto",
+          "affiliation": null
+        },
+        {
+          "name": "Micheal Latouche",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "oWHWXIJFV14",
+      "title": "umbraCoffee #293 - Community Teams in Odense",
+      "published": "2023-09-22T23:14:45Z",
+      "summary": "Callum and Umbraco Community Team members gathered at Umbraco HQ in Odense talk about what they are hacking on and discussing. Also covers the UMB.FYI newsletter, Umbraco 12.2 with the Media Delivery API, roadmap changes, and new packages and events.",
+      "guests": [],
+      "guestsUnnamed": true,
+      "uncertain": true
+    },
+    {
+      "videoId": "uIxj2gzMqSQ",
+      "title": "umbraCoffee #292 - umbracoTees day, community activities, other?!",
+      "published": "2023-09-15T23:58:47Z",
+      "summary": "Owain Williams and CodeCabin 2023 attendees join to recap CodeCabin highlights. Also covers umbracoTees day, community meetups, the roadmap shared by HQ, the early bird deadline for US Summit, UK Festival tickets, and the news that Contentment will not come to v14.",
+      "guests": [
+        {
+          "name": "Owain Williams",
+          "affiliation": "Gibe Digital"
+        },
+        {
+          "name": "Joe Glombek",
+          "affiliation": null
+        },
+        {
+          "name": "John Seto",
+          "affiliation": null
+        },
+        {
+          "name": "Delia Burnei",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "NvoeuxiUam4",
+      "title": "umbraCoffee #291 - Hello September",
+      "published": "2023-09-08T23:16:34Z",
+      "summary": "Corné Hoskam joins as the Umbraco v7 end of life countdown starts and CodeCabin begins. Covers Workflow 12.1, UmbCheckout, NestingContently v12, the UK Festival line-up and ticket sale, and a round of meetups.",
+      "guests": [
+        {
+          "name": "Corné Hoskam",
+          "affiliation": "uMarketingSuite"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "m_aPT_Xfg2A",
+      "title": "umbraCoffee #290 - Cloudy Down-Under",
+      "published": "2023-09-01T23:14:33Z",
+      "summary": "Covers the new Umbraco Cloud region in Australia, an RFC to replace macros with blocks in the RTE, and Umbraco Commerce v12.1 with the headless Storefront API. Also looks at upcoming meetups, UK Festival and DUUG Fest tickets, and community blogs.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "zrssy6iBjeg",
+      "title": "umbraCoffee #289 - UmbNews, Release Candidates, and Coffee",
+      "published": "2023-08-25T23:20:00Z",
+      "summary": "Covers a run of CMS releases, Workflow release candidates, and new packages such as UmBootstrap, SEO Toolkit v3.3, Cultiv Hangfire v3 and Simple Content Apps. Also mentions Australian meetups, UK Festival tickets, the accepted RFC for reusable global blocks, and a breaking change in member auth.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "NUlpfSC3DzM",
+      "title": "umbraCoffee #288 - Storefront API",
+      "published": "2023-08-18T23:19:32Z",
+      "summary": "Matt Brailsford joins to talk about the new Umbraco Commerce Storefront (headless) API. Also covers the Bellissima preview 2 update, Umbraco Forms v12.1, package releases such as Contentment and Block List Preview, and upcoming meetups.",
+      "guests": [
+        {
+          "name": "Matt Brailsford",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "f27JfgGtnQU",
+      "title": "umbraCoffee #287 - A Moq-ery of sustainable open source?",
+      "published": "2023-08-11T23:24:10Z",
+      "summary": "Covers the Umbraco v12.1 release and a possible v12.1.1, plus new packages such as UmBlazor and Skybrud Redirects Importer. Discusses the Moq SponsorLink controversy and sustainable open source, along with meetups, the UK Festival, and community blogs.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "JBTx5hNXA5k",
+      "title": "umbraCoffee #286 - Testing In Production",
+      "published": "2023-08-04T23:31:18Z",
+      "summary": "Covers the Umbraco HQ product update, Forms v12.1 and v10.5 release candidates, and package releases such as Accessibility Reporter, Atomic SEO and Newsletter Studio for v12. Also discusses the new Umbraco.com launch, upcoming meetups and festivals, and community blogs.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "8X_Hzm29tV8",
+      "title": "umbraCoffee #285 - X",
+      "published": "2023-07-28T23:17:36Z",
+      "summary": "Covers the Umbraco v12.1 release candidate with compositions on members and releases such as uSkinned v5 and packages by Dyfort. Also announces the return of the Umbraco UK Festival, lists upcoming meetups, and shares new video tutorials and community news.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "U8IDEC6QtYM",
+      "title": "umbraCoffee #284 - The band is back together!",
+      "published": "2023-07-21T23:14:36Z",
+      "summary": "Covers a blog on aligning package behaviour with the Content Delivery API, and new or updated packages such as Sidekick, uSync Forms and Access Restrictions for v12. Also lists upcoming meetups, Codecabin 2023 news, calls for speakers, and a PR about view components for blocks.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "XQy-tI2NnLQ",
+      "title": "umbraCoffee #283 - Patch Time!",
+      "published": "2023-07-14T23:17:39Z",
+      "summary": "Umbraco MVP Steve Temple joins as a high severity security patch lands for Umbraco v9+. Covers new Atomic packages, the redesigned Umbraco Marketplace, Steve's Image Resizer Azure Function, and upcoming meetups and calls for speakers.",
+      "guests": [
+        {
+          "name": "Steve Temple",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "xrTgfsBbKq4",
+      "title": "umbraCoffee #282 - Deadline-Driven Applications?",
+      "published": "2023-07-07T23:20:09Z",
+      "summary": "Lotte Pitcher and Karl Tynan join from Codecabin on the day of its applications deadline. Covers the Umbraco product update, Umbraco Commerce's official release, v12 and 10.6, roadmap changes, new package releases, post-Codegarden meetups, and Umbraco hosting.",
+      "guests": [
+        {
+          "name": "Lotte Pitcher",
+          "affiliation": "Codecabin"
+        },
+        {
+          "name": "Karl Tynan",
+          "affiliation": "Codecabin"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "CK3l3x2-teY",
+      "title": "umbraCoffee #281 - News FastTrack",
+      "published": "2023-06-30T10:50:02Z",
+      "summary": "Blake Watt and Aaron Sadler join as Umbraco v12 arrives with the Content Delivery API and Entity Framework. Covers Codegarden aftermath and blogs, umbCheckout updates, new packages such as punk Optimize and Page Guard, and meetups.",
+      "guests": [
+        {
+          "name": "Blake Watt",
+          "affiliation": null
+        },
+        {
+          "name": "Aaron Sadler",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Ccjzu38CEo8",
+      "title": "umbraCoffee #280 - Post-Codegarden Blues (again!)",
+      "published": "2023-06-23T23:28:03Z",
+      "summary": "Blake Watt and Aaron Sadler share their Codegarden highlights. Covers award winners, MVPs, keynote highlights, post-Codegarden blogs, new packages such as Limbo Recycle Bin and Variant Copy, an umbCheckout demo, and meetups.",
+      "guests": [
+        {
+          "name": "Blake Watt",
+          "affiliation": null
+        },
+        {
+          "name": "Aaron Sadler",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "PYmhJd0jOo8",
+      "title": "umbraCoffee #279 LIVE @ Codegarden 2023 - Day 3",
+      "published": "2023-06-17T00:04:05Z",
+      "summary": "Recorded live at Codegarden 2023, day 3.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "cYyItaUTdKg",
+      "title": "umbraCoffee LIVE @ Codegarden 2023 - Day 2",
+      "published": "2023-06-16T03:30:51Z",
+      "summary": "Recorded live at Codegarden 2023, day 2.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "2ZEcpIzqadE",
+      "title": "umbraCoffee LIVE @ Codegarden 2023 - Day 1",
+      "published": "2023-06-15T07:54:26Z",
+      "summary": "Recorded live at Codegarden 2023, day 1.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "2kaJiHTh7VE",
+      "title": "umbraCoffee #278 - Let's get ready for Codegarden!",
+      "published": "2023-06-09T23:15:54Z",
+      "summary": "Emma Garland and Owain Williams join to get ready for Codegarden, covering social activities, the bugfix bingo hackathon and Owain's secret stage. Also covers Umbraco v12 RC3, new packages, Skrift issue 95, post-Codegarden meetups, and the reusable blocks RFC.",
+      "guests": [
+        {
+          "name": "Emma Garland",
+          "affiliation": null
+        },
+        {
+          "name": "Owain Williams",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Ul-JZs0svsM",
+      "title": "umbraCoffee #277",
+      "published": "2023-06-02T23:08:56Z",
+      "summary": "Covers Umbraco's first Impact Report, a new RFC for reusable blocks, and a Forms v11.2 release candidate. Also covers package releases such as SEO Manager and IISExpress builder, Codegarden tips, the uBuddy sign-up, and the return of the Package Manifest podcast.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "7oA1q5h0Jys",
+      "title": "umbraCoffee #276 - \"Make digital sustainability a reality\"",
+      "published": "2023-05-26T23:14:35Z",
+      "summary": "Meets the new community Sustainability Team, covering its purpose, structure and plans. Also covers Umbraco 11.4, package releases such as Image Resizer and Newsletter Studio for v12, Codegarden preparations, and a Content Delivery API demo.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "e7nh_lTYYts",
+      "title": "umbraCoffee #275 - Content Delivery",
+      "published": "2023-05-19T23:33:54Z",
+      "summary": "Kenn Jacobsen from Umbraco HQ joins as Umbraco v12 is released with the new Content Delivery API and EF Core support. Covers overviews of the API, releases such as Contentment 4.4.4 and QuickBlocks, many events, and Codegarden and Codecabin news.",
+      "guests": [
+        {
+          "name": "Kenn Jacobsen",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "ClXk7s4POUI",
+      "title": "umbraCoffee #274 - QuickBlocks",
+      "published": "2023-05-12T23:16:18Z",
+      "summary": "Paul Seal joins to talk about his upcoming QuickBlocks package. Covers releases such as Workflow v10.2/v11.2, Accessibility Reporter and Community Tag Helpers, plus a long list of meetups, Codegarden and Umbraad news, and block list thumbnails.",
+      "guests": [
+        {
+          "name": "Paul Seal",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "4PJS97-JpK8",
+      "title": "umbraCoffee #273 - Releases, v11.4, delayed backoffice, & more!",
+      "published": "2023-05-05T23:22:12Z",
+      "summary": "Covers the Umbraco product update and the new backoffice being delayed to v14 in June 2024. Also covers Skrift issue 94, the Umbraco v11.4 release candidate, new packages such as Media Colour Finder, and Codegarden and Umbraad news.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "mkAr5VtYgIY",
+      "title": "umbraCoffee #272 - uSkinned latest demos, certifications, releases and more!",
+      "published": "2023-04-28T23:44:50Z",
+      "summary": "Members of the uSkinned team demo recent updates to uSkinned, themed Umbraco solutions and e-commerce. Also covers the new community Package Team, Workflow 11.2 and 10.2 release candidates, new packages, meetups, Umbraad, and MVP submissions.",
+      "guests": [
+        {
+          "name": "Paul",
+          "affiliation": "uSkinned"
+        },
+        {
+          "name": "Marc",
+          "affiliation": "uSkinned"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "KJB3jRXBCiM",
+      "title": "umbraCoffee #271 - Prompt (ChatGPT) Umbraco Engineers?!",
+      "published": "2023-04-21T23:13:42Z",
+      "summary": "Daniël Knippers and Guus Noij from Perplex talk about AI, ChatGPT and prompt engineering, with a demo of the Perplex AI Assistant package. Also covers Umbraco 11 ChatGPT integration, the uSkinned Snipcart integration, Codegarden tickets, Umbraad, and meetups.",
+      "guests": [
+        {
+          "name": "Daniël Knippers",
+          "affiliation": "Perplex"
+        },
+        {
+          "name": "Guus Noij",
+          "affiliation": "Perplex"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "lm8fokichyo",
+      "title": "umbraCoffee #270 - Vendr Joins Umbraco HQ",
+      "published": "2023-04-14T23:50:10Z",
+      "summary": "Matt Brailsford, Lucy Brailsford, Filip Bech-Larsen and Kim Sneum-Madsen discuss Umbraco's acquisition of Vendr and Konstrukt. Also covers Umbraco v11.3 and v10.5, Deploy releases, the Perplex AI assistant, Codegarden early bird tickets, and meetups.",
+      "guests": [
+        {
+          "name": "Matt Brailsford",
+          "affiliation": null
+        },
+        {
+          "name": "Lucy Brailsford",
+          "affiliation": null
+        },
+        {
+          "name": "Filip Bech-Larsen",
+          "affiliation": null
+        },
+        {
+          "name": "Kim Sneum-Madsen",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "U-XYll2Ape4",
+      "title": "umbraCoffee #269 - Not Stopping For Anyone!",
+      "published": "2023-04-07T11:36:01Z",
+      "summary": "Covers Umbraco's acquisition of Outfield Digital, Vendr and Konstrukt, Skrift issue 93, and releases such as uSkinned v4.1, umContentCreator and Azure AD SSO. Also covers Codegarden tickets, Umbraco Awards nominations, meetups, and community demos and blogs.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "X3eGFr-3O8U",
+      "title": "umbraCoffee #268 - Running late...",
+      "published": "2023-03-31T11:13:39Z",
+      "summary": "Covers a product update from Rune and the new Umbraco sustainability team, plus the Articulate 5 beta, a God Mode update and Dragonfly Site Tester. Also rounds up upcoming meetups, the Umbraco package team applications and Vendr's third birthday.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "RC6lKEIqVnQ",
+      "title": "umbraCoffee #267 - A11y Awareness",
+      "published": "2023-03-24T12:16:29Z",
+      "summary": "Danny Lancaster and Mike Masey, organisers of UMBRAAD, join to talk accessibility, including the open call for speakers and the Umbraco accessibility team. Also covers a medium-severity security advisory, Umbraco 11.3 and Forms releases, and Codegarden deadlines and meetups.",
+      "guests": [
+        {
+          "name": "Danny Lancaster",
+          "affiliation": "UMBRAAD"
+        },
+        {
+          "name": "Mike Masey",
+          "affiliation": "UMBRAAD"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "ibcMX7rujcI",
+      "title": "umbraCoffee #266 - The Teams They Are a-Changin'",
+      "published": "2023-03-17T12:36:42Z",
+      "summary": "Umbraco Package Team stewards Ronald Barendse and Bolette Kern join to discuss the package team update. Also covers Umbraco Spark, Skrift issue 92, Forms and Workflow releases, new docs sections, the Codegarden programme and Morten Christensen leaving Umbraco HQ.",
+      "guests": [
+        {
+          "name": "Ronald Barendse",
+          "affiliation": "Umbraco Package Team"
+        },
+        {
+          "name": "Bolette Kern",
+          "affiliation": "Umbraco Package Team"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "OVOBsXpomMw",
+      "title": "umbraCoffee #265 - LIVE from Umbraco Spark!",
+      "published": "2023-03-10T13:03:00Z",
+      "summary": "Recorded live from Umbraco Spark in Bristol.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "0A8igQ1zCY0",
+      "title": "umbraCoffee #264 - Saying Goodbye To A Friend",
+      "published": "2023-03-03T12:14:53Z",
+      "summary": "Matt Begent joins to talk about his Accessibility Reporter package. Also covers the end of the Umbraco Slack channel, a product update from Rune, new packages, and upcoming events including Umbraco Spark and Codegarden.",
+      "guests": [
+        {
+          "name": "Matt Begent",
+          "affiliation": "Gibe Digital"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "5fROC63Ct_M",
+      "title": "umbraCoffee #263 - Umbraco 11.2, lots of packages patches, events ahead and more!",
+      "published": "2023-02-24T12:15:06Z",
+      "summary": "Covers the Umbraco 11.2 release and a run of package patches, including Sift, Smidge, Vendr and Konstrukt. Also lists upcoming events such as Umbraco Spark and Codegarden, .NET 8 preview 1, and the PR of the week on inline macros.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "bnDJS9xHoNU",
+      "title": "umbraCoffee #262 - Umbraco's 18th Birthday!",
+      "published": "2023-02-17T11:54:13Z",
+      "summary": "Celebrates Umbraco turning 18, with memories and UmbracoTees day. Covers package releases such as Headless Preview, Skybrud Grid Data and Umbraco Search Extensions, plus events including the sold-out Umbraco Spark and Umbraco at Developer Week in San Francisco.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "WcNBbnKnb8w",
+      "title": "umbraCoffee #261 - Weekly Insights",
+      "published": "2023-02-10T12:18:53Z",
+      "summary": "Covers Skrift issue 91 and Umbraco's core telemetry insights, including Linux and Block List Editor usage. Also covers the Umbraco 11.2 release candidate, package releases from Mario Lopez and Anders Bjerner, the Codegarden call for papers and upcoming meetups.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "vrpHASHHJxw",
+      "title": "umbraCoffee #260 - So you want to speak at Codegarden...",
+      "published": "2023-02-03T12:38:33Z",
+      "summary": "Busra Sengul, Owain Williams and Rick Butterfield explain how to submit a talk to Codegarden. Also covers Rune's first product update of 2023, package releases, the Twitter API shutdown, Umbraco Community Day recordings and the Umbraco Awards.",
+      "guests": [
+        {
+          "name": "Busra Sengul",
+          "affiliation": null
+        },
+        {
+          "name": "Owain Williams",
+          "affiliation": null
+        },
+        {
+          "name": "Rick Butterfield",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "vbhCoCQEpt8",
+      "title": "umbraCoffee #259 - MVPs, conferences, chat apps and news...",
+      "published": "2023-01-27T12:18:01Z",
+      "summary": "Sebastiaan Janssen and Steve Temple join to talk about the MVP programme changes, Slack giving way to Discord, the Core Collaborators team and the public new backoffice repo. Also covers the Marketplace update, Umbraco Community Day, and calls for papers for Spark and Codegarden.",
+      "guests": [
+        {
+          "name": "Sebastiaan Janssen",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Steve Temple",
+          "affiliation": "Gibe"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "VhmuetVGOdk",
+      "title": "umbraCoffee #258 - WE'RE BACK!",
+      "published": "2023-01-13T12:34:24Z",
+      "summary": "The first episode of the new year, with Matt Wise joining. Covers Umbraco's New Year reception and 2023 focus, Umbraco 11.1 and 10.4, packages such as Block Preview and Content Security Policy Manager, Skrift issue 90 and upcoming events.",
+      "guests": [
+        {
+          "name": "Matt Wise",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "MZDUES1HaNY",
+      "title": "umbraCoffee #257 - await 2023() while driving 127.0.0.1 for Xmas;",
+      "published": "2022-12-23T12:27:55Z",
+      "summary": "Christmas episode with Rune Strand of Umbraco HQ as guest.",
+      "guests": [
+        {
+          "name": "Rune Strand",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "4Uc-seGzzAU",
+      "title": "umbraCoffee #256 - 16 Days in December ;)",
+      "published": "2022-12-16T11:58:58Z",
+      "summary": "Members of the 24 Days in Umbraco team join to discuss this year's edition, its new theme, highlights and challenges. Also covers the updated Razor cheat sheet, uSkinned and uSync Forms releases, several new packages and the Umbraco New Year reception.",
+      "guests": [
+        {
+          "name": "Jan Skovgaard",
+          "affiliation": "24 Days in Umbraco"
+        },
+        {
+          "name": "Chriztian Steinmeier",
+          "affiliation": "24 Days in Umbraco"
+        },
+        {
+          "name": "Paul Seal",
+          "affiliation": "24 Days in Umbraco"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "mh7q4dK3AjY",
+      "title": "umbraCoffee #255 - Community Health, Releases, Christmas countdown...",
+      "published": "2022-12-09T12:20:00Z",
+      "summary": "Covers the 24 Days in Umbraco recap, the Umbraco community health survey results and the release of Umbraco Workflow. Also covers package releases including Contentment 4.4.0 and CMS Import for v11, Umbraco Spark returning, and pull requests of the week.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "zAJHanYboV0",
+      "title": "umbraCoffee #254 - Grid All The Things!",
+      "published": "2022-12-02T12:32:20Z",
+      "summary": "Niels Lyngsø of Umbraco joins to explore the new Block Grid features and Umbraco UI/UX. Also covers the return of 24 Days in Umbraco, the Umbraco 11 release, the new docs site and Marketplace, package releases and upcoming events.",
+      "guests": [
+        {
+          "name": "Niels Lyngsø",
+          "affiliation": "Umbraco"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "b9XhX4bNCF8",
+      "title": "umbraCoffee #253 - Product(s) Update, Conferences, Releases, Life!",
+      "published": "2022-11-25T12:25:34Z",
+      "summary": "Rune Hem Strand joins to cover the Umbraco product updates. Also covers the UK and Danish festivals, Umbraco Secret Santa, the new Marketplace, package releases such as Skybrud Redirects and Limbo Tables, and upcoming meetups.",
+      "guests": [
+        {
+          "name": "Rune Hem Strand",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "-qlXIImNrFs",
+      "title": "#5thbday LIVE @ Umbraco Together",
+      "published": "2022-11-18T12:48:41Z",
+      "summary": "Recorded live at Umbraco Together for the show's fifth birthday.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "8ZnJt075VLs",
+      "title": "umbraCoffee #251 - Docs Away!",
+      "published": "2022-11-11T12:08:43Z",
+      "summary": "Sofie Toft joins to talk about Umbraco documentation and the new docs platform. Also covers Umbraco Forms 10.2, Umbraco Workflow, packages such as Limbo Tables and TFE Access Restriction, upcoming events, .NET 7 and GitHub Codespaces.",
+      "guests": [
+        {
+          "name": "Sofie Toft",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Kv9fTaKVQOI",
+      "title": "umbraCoffee #250 - Don't know what we're doing",
+      "published": "2022-11-04T12:24:54Z",
+      "summary": "Marks the 250th episode and looks at the coming Umbraco Marketplace. Covers Limbo Block List, Skrift issue 89, and upcoming events including Umbraco Together, Umbraco DK Festival and Codegarden 2023, plus podcasts and blog posts from the community.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "q-81aq_OShU",
+      "title": "umbraCoffee #249 - TRICK or TREAT",
+      "published": "2022-10-28T11:19:31Z",
+      "summary": "Covers the end of Hacktoberfest, the Umbraco product update and Umbraco Forms 10.2 RC. Also covers package releases such as Indexy, Upwest.Bundle and SeoToolkit 2.2.0, calls for authors at 24 Days and Skrift, and events including Umbraco Together and DK Fest.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "0o57PCiHOqQ",
+      "title": "umbraCoffee #248 - Back to the front-end!",
+      "published": "2022-10-21T11:15:00Z",
+      "summary": "Matt Brailsford joins to discuss his series on the future of the Umbraco UI. Covers the Umbraco 11 release candidate with .NET 7 and the Block Grid Editor, Umbraco 10.3.1, uSync and uCaptcha releases, and upcoming events.",
+      "guests": [
+        {
+          "name": "Matt Brailsford",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "wR10SO2SmAU",
+      "title": "umbraCoffee #247 - Hack The Planet!",
+      "published": "2022-10-14T11:14:33Z",
+      "summary": "Covers Hacktoberfest and the Candid Contributions Hackathon, the Umbraco 10.3 release candidate and Paul Seal's Community Quiz. Also covers package releases including Newsletter Studio and Skybrud Redirects, meetups, DUUG Fest highlights and the retirement of the Documentation Curators team.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "8PCMi1eoQgY",
+      "title": "umbraCoffee #246 - LIVE @ DUUG Fest 2022",
+      "published": "2022-10-07T11:12:08Z",
+      "summary": "Recorded live at DUUG Fest 2022.",
+      "guests": [],
+      "guestsUnnamed": true,
+      "uncertain": true
+    },
+    {
+      "videoId": "9vKiTD1M4JY",
+      "title": "umbraCoffee #245 - Let's SUMMIT!",
+      "published": "2022-09-30T11:10:04Z",
+      "summary": "Arnold Visser joins after the first Umbraco US Summit. Covers the summit and its hackathon, the longer-term roadmap, dedicated resources for Umbraco Cloud, 2023 price changes, package releases, DUUG Fest and other upcoming events.",
+      "guests": [
+        {
+          "name": "Arnold Visser",
+          "affiliation": "Umbraco Advocate"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "2HrSXiorjN4",
+      "title": "umbraCoffee #243 - Ahoy!",
+      "published": "2022-09-16T11:16:26Z",
+      "summary": "Jason Elkin joins for the episode. Covers the Umbraco product updates, the new Headless Community Team, Dynamics 365 for Umbraco Forms, package releases, the Arrr Umbraco Talk Like a Pirate Day project, and meetups including the Minneapolis, Charlotte and New York visits.",
+      "guests": [
+        {
+          "name": "Jason Elkin",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "el3512h4B_4",
+      "title": "umbraCoffee #242",
+      "published": "2022-09-09T11:12:27Z",
+      "summary": "Covers Skrift issue 87, a medium severity security patch and the Umbraco 10.2 release. Also covers Umbraco Deploy and Vendr release candidates, package releases such as uSync, Skybrud Redirects and Examine, new Umbraco hires and upcoming meetups.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "a6D-K-XP0so",
+      "title": "umbraCoughy #241 - Cloud regions, Festival season, & packages",
+      "published": "2022-09-02T11:07:30Z",
+      "summary": "Covers the new Umbraco Cloud East US region, package releases such as Skybrud Redirects Importer, Limbo Media Picker and OpenID Connect, and a medium severity security issue. Also covers meetups and the autumn festival season, including the US Summit, DUUG Fest and DK Festival.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "UOx3QvYX36Q",
+      "title": "umbraCoffee #240 - Ten Point Two",
+      "published": "2022-08-26T11:08:36Z",
+      "summary": "Sebastiaan Janssen and Bjarke Berg join to discuss the Umbraco 10.2 release candidate, including language variant permissions, read-only properties and bug fixes. Also covers package releases, UK and Danish meetups, the DF22 speaker line-up and the developer community survey.",
+      "guests": [
+        {
+          "name": "Sebastiaan Janssen",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Bjarke Berg",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "gmBKa_DVJsg",
+      "title": "umbraCoffee #239 - Let's ASSERT some FACTS",
+      "published": "2022-08-19T11:02:23Z",
+      "summary": "Lars-Erik Aabech joins to talk testing. Covers the Oslo meetup recap, the Umbraco product update with dedicated resources and Forms 10.1, package releases such as Skybrud Redirects and Newsletter Studio, the Umbraco Discord bot and upcoming meetups.",
+      "guests": [
+        {
+          "name": "Lars-Erik Aabech",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "5YVgNmQ5LTs",
+      "title": "umbraCoffee #238 - Melting",
+      "published": "2022-08-12T11:16:26Z",
+      "summary": "Covers Kenn Jacobsen joining the Umbraco HQ core team and the Umbraco Forms 10.1 release. Also covers package releases such as GodMode and SeoToolkit 2.1, upcoming meetups, the Headless community team applications and the DUUG Fest call for papers.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "kVkiK2Fv80w",
+      "title": "umbraCoffee #237 - So many leaks, we need a plumber!",
+      "published": "2022-08-05T11:11:08Z",
+      "summary": "Nathan Woulfe joins to discuss Umbraco acquiring Plumber and him joining the HQ team. Covers Rune's product update, the Umbraco 10.1 release, package releases from Kevin Jump and others, Skrift issue 86, Umbraco BBQ events and the new Headless community team.",
+      "guests": [
+        {
+          "name": "Nathan Woulfe",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "jUZ4S4witwI",
+      "title": "umbraCoffee #236 - Nothing to talk about",
+      "published": "2022-07-29T11:06:38Z",
+      "summary": "Covers developer setups and tools, and the RFC for implementing the new backoffice. Also covers the Cultiv Hangfire release, Umbraco BBQ events, upcoming meetups, the UmbraCollab Razor Class Library session and the Microsoft Ignite dates.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "UQDPc_zxcBA",
+      "title": "umbraCoffee #235 - Everyone is on holiday",
+      "published": "2022-07-22T11:03:29Z",
+      "summary": "Covers Rune's product update, the Umbraco 10.1 RC 2 and releases such as Contentment 4.1, Clip and uHeadless v3. Also covers Umbraco BBQ events, Umbraco US Summit registration, the UmbraCollab session on fixing CMS bugs and a DevOps webinar.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "n3sv_fLhBd8",
+      "title": "umbraCoffee #234 - Sizzling hot news!",
+      "published": "2022-07-15T11:03:42Z",
+      "summary": "Johannes Lantz joins for the episode. Covers the Umbraco 10.1 and Forms release candidates, package releases such as SEO Toolkit and Zapier integrations, Umbraco BBQ events, the Codegarden 2022 after movie and webinars from Poornima Nayar and Paul Seal.",
+      "guests": [
+        {
+          "name": "Johannes Lantz",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "1IXJ_mSvItA",
+      "title": "umbraCoffee #233 - CodeCabin Deadline Day!",
+      "published": "2022-07-08T11:25:37Z",
+      "summary": "Lotte Pitcher, Lucy Brailsford and Matt Brailsford join to talk about CODECABIN on its application deadline day. Also covers Skrift issue 85, package releases such as uSkinned for v10 and Godmode, the Umbraco US Summit and renewed Microsoft MVPs.",
+      "guests": [
+        {
+          "name": "Lotte Pitcher",
+          "affiliation": "CODECABIN"
+        },
+        {
+          "name": "Lucy Brailsford",
+          "affiliation": "CODECABIN"
+        },
+        {
+          "name": "Matt Brailsford",
+          "affiliation": "CODECABIN"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "rvrMUgvVy7g",
+      "title": "umbraCoffee #232 - Umbraco Summer Vibes",
+      "published": "2022-07-01T11:15:52Z",
+      "summary": "Post-Codegarden catch-up with Umbraco MVPs Jason Elkin and Owain Jones. Covers Codegarden aftermath, an Umbraco Cloud update, v10 package releases, upcoming events such as Umbracalong and Codecabin applications, and Owain's #umbrickoHQ project.",
+      "guests": [
+        {
+          "name": "Jason Elkin",
+          "affiliation": "Umbraco MVP"
+        },
+        {
+          "name": "Owain Jones",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "VmcAH0eVR3A",
+      "title": "umbraCoffee #231 - Post-Codegarden Blues",
+      "published": "2022-06-24T11:10:40Z",
+      "summary": "Shares Codegarden 2022 experiences and blog posts, plus the latest Umbraco product news. Covers v10 releases of Jumoo, Diplo GodMode and other packages, Paul Seal's Package Script Writer, Razor Class Libraries in packages, and a new hire at Umbraco HQ.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Na4lvCcFzJU",
+      "title": "umbraCoffee #230 - LIVE @ Codegarden 2022 - Day 3",
+      "published": "2022-06-17T11:00:01Z",
+      "summary": "Recorded live at Codegarden 2022, day 3.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "J0C0_GMamcI",
+      "title": "umbraCoffee LIVE @ Codegarden 2022 - Day 2",
+      "published": "2022-06-16T22:13:09Z",
+      "summary": "Recorded live at Codegarden 2022, day 2.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "zU8ML08oKZw",
+      "title": "umbraCoffee LIVE @ Codegarden 2022 - Day 1",
+      "published": "2022-06-15T22:15:00Z",
+      "summary": "Recorded live at Codegarden 2022, day 1.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "mWLwbpCLmUc",
+      "title": "umbraCoffee #229 - 116 hours to go...",
+      "published": "2022-06-10T11:10:28Z",
+      "summary": "Looks ahead to Codegarden the following week. Covers Umbraco v10 RC 5, a 2FA package, Skrift articles on Core Web Vitals and SVG backgrounds, package version targeting, Umbraco 10 on a Steam Deck, and a new hire at Umbraco HQ.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "6ypY5VtRPMc",
+      "title": "umbraCoffee #228 - Is anyone there...?",
+      "published": "2022-06-03T11:13:19Z",
+      "summary": "Codegarden preparations, including the logo challenge and Owain's secret stage. Covers package releases such as SEO Toolkit, NodeDefender and Search Extensions v2, a discussion on how packages should target Umbraco versions, the Umbraco Awards nominees, and new Umbraco HQ team members.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "qzbFssmEo-A",
+      "title": "umbraCoffee #227",
+      "published": "2022-05-27T11:22:20Z",
+      "summary": "Product update and Codegarden countdown, including the challenge and the new swag store. Covers Umbraco v10 RC4, Vendr, Konstrukt and Skybrud Redirects updates for v10, Hangfire Dashboard, and developer opinions on Umbraco 10.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "usl-Lryl7G4",
+      "title": "umbraCoffee #226",
+      "published": "2022-05-20T11:11:27Z",
+      "summary": "Umbraco Tees day and the Codegarden countdown. Covers Umbraco v10 RC 2 and v8.18.4, uSync betas for v10, Paul Seal open-sourcing Package Script Writer, Vendr v3, upcoming meetups, and roadmap changes for Dedicated Tiers, 2FA and Block Grid.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "nQnmknOa2go",
+      "title": "umbraCoffee #225 - Friday the 13th",
+      "published": "2022-05-13T11:15:56Z",
+      "summary": "Product update with Umbraco v9.5 and the v10 release candidate, Cloud and Forms roadmap items, and the full Codegarden schedule. Covers Paul Seal's Package Script Writer, the new backoffice team, a Starting from Scratch UmbraCollab session, and this month's uProfile.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "CpLuLLbi8h0",
+      "title": "umbraCoffee #224 - At-TEN-tion Umbracians!",
+      "published": "2022-05-06T11:19:13Z",
+      "summary": "Umbraco 10 release candidate, which targets .NET 6 and replaces SQL CE with SQLite. Covers Umbraco 9.5, package releases, Skrift articles, upcoming meetups, community blog posts, and Emma Burstow's new role as Director of Developer Relations at Umbraco.",
+      "guests": [
+        {
+          "name": "Warren Buckley",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "UeyC5dS5ECI",
+      "title": "umbraCoffee #223 - 7...8...9...10!",
+      "published": "2022-04-29T10:59:02Z",
+      "summary": "Umbraco ranked first among open source CMS in the Emerce100, plus a product update and the coming Umbraco 10. Covers Forms and Deploy releases, the new CMS community team, uSync 9.4, package releases, Umbracalong, and the Umbraco Awards deadline.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "a8mZ3fPhT5E",
+      "title": "umbraCoffee #222 - Bang-Bang-Gone!",
+      "published": "2022-04-22T11:06:08Z",
+      "summary": "Codegarden speaker list and ticket deadline. Covers Umbraco v9.5.0 RC with improved 2FA, the telemetry consent dashboard, Contentment v3, Examine v2.1, Skybrud Redirects, Skrift's seventh birthday, and C# dropping the !! operator.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "BqNgckPRG-c",
+      "title": "umbraCoffee #221 - We've been axed!",
+      "published": "2022-04-15T11:38:20Z",
+      "summary": "Patrick De Mooij demos his SEO Toolkit for Umbraco 9. Also covers the latest product update, Forms and Deploy release candidates, Konstrukt field views, the Umbraco Package Awards, Umbraco training discounts, and new GitHub features.",
+      "guests": [
+        {
+          "name": "Patrick De Mooij",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "gT7ghyY-4Bo",
+      "title": "umbraCoffee #220 - We're sorry! We're joining Sitecore!",
+      "published": "2022-04-08T11:06:51Z",
+      "summary": "Codegarden early bird tickets and announced speakers. Covers Umbraco v8.18.3 and v9.4.3 fixing duplicate content in NuCache, new packages such as Secret Store, Emptiness and Environment Inspect, Skrift issue 82, Heartcore roadmap updates, and a new headless community team.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "yI3vCMcv6rs",
+      "title": "siteCoffee #219 - ¯\\_(ツ)_/¯",
+      "published": "2022-04-01T11:07:28Z",
+      "summary": "An April Fools episode branded siteCoffee and focused on Sitecore. Jeroen Breuer summarises his highlights from SUGCON, where XM Cloud and Composable DXP were the big topics, and the show covers Sitecore headless rendering and LayoutService releases.",
+      "guests": [
+        {
+          "name": "Jeroen Breuer",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "AhAstB0uOTI",
+      "title": "umbraCoffee #218 - 9.4(.1), Umbracolong, new uSkinned and more!",
+      "published": "2022-03-25T12:18:55Z",
+      "summary": "Umbraco v9.4 release with item tracking and backoffice improvements, and bridging courses from Umbraco 8 to 9. Covers uSkinned for Umbraco 9, Skybrud Redirects v3, other V9 package migrations, meetups including the first Umbracalong, and Codegarden and MVP award deadlines.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "-mPwVdGiA9g",
+      "title": "umbraCoffee #217 - SQLite at the end of the tunnel",
+      "published": "2022-03-18T12:24:49Z",
+      "summary": "Codegarden tickets and the first announced speakers. Covers Umbraco v10 dropping SQL CE for SQLite, new picker packages for Umbraco 8 and 9, the backoffice community team 2.0, Warren's UUI experiments, upcoming meetups, 24 Days in Umbraco videos, and Vendr's 100 licenses sold.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "RMNXb0gjns8",
+      "title": "umbraCoffee #216 - Redirect me to the weekend",
+      "published": "2022-03-11T12:43:44Z",
+      "summary": "International Women's Day in the Umbraco community and the Umbraco 9.4 release candidate. Covers Forms v8.11/v9.3 and Deploy updates, Contentment v3.2.0, Simple Redirects, Meganav, Skybrud Redirects v3 beta, new DXP packages, MVP award nominations, and Corné Hoskam's blog on IIS redirects.",
+      "guests": [
+        {
+          "name": "Corné Hoskam",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "lu_SW2Nu1eM",
+      "title": "umbraCoffee #215",
+      "published": "2022-03-04T12:06:55Z",
+      "summary": "Kenn Jacobsen joins the show. Covers the Codegarden submission deadline, phase 3 of the future of the backoffice, Skrift issue 81, Callum Whyte's Meganav for V8 and V9, other package releases such as Tweet This and Vendr Checkout, and a Poornima Nayar podcast appearance.",
+      "guests": [
+        {
+          "name": "Kenn Jacobsen",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "OTF9f6tWhFM",
+      "title": "umbraCoffee #214",
+      "published": "2022-02-25T12:13:11Z",
+      "summary": "The final Umbraco 8 minor release and the latest Cloud updates. Covers Umbraco v9.3.1, Patrick de Mooij's SEO Toolkit, Kenn Jacobsen's headless project release, Skybrud Redirects v3 alpha, and upcoming meetups, Codegarden talk submissions and the Umbraco Awards.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "ReIrxmsUkPo",
+      "title": "umbraCoffee #213 - Happy 17th Birthday, Umbraco!",
+      "published": "2022-02-18T12:32:56Z",
+      "summary": "Umbraco celebrates its 17th birthday. Michael Latouche joins the show. Covers Umbraco v8.18 RC2, Vendr v2.1.0, Contentment v3.1.0, Mask Backoffice for V9, other package releases, Codegarden talk submissions, CodeCabin applications, and .NET turning 20.",
+      "guests": [
+        {
+          "name": "Micheal Latouche",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "ta2RZDl_Tig",
+      "title": "umbraCoffee #212 - We are not a coffee shop",
+      "published": "2022-02-11T12:21:54Z",
+      "summary": "Codegarden 2022 announced as a hybrid event with the call for speakers open, and Codecabin returning. Covers Umbraco v9.3, ImageSharp V2 and Slimsy V4, Composition Relations, Vendr updates, upcoming meetups, IndexNow for Umbraco, and videos from DF21.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "eFr8Anri1Cc",
+      "title": "umbraCoffee #211 - Friday Again",
+      "published": "2022-02-04T12:15:24Z",
+      "summary": "Product updates including the Umbraco v9.3 and v8.18 release candidates, Cloud features and roadmap items. Covers Skrift issue 80, IndexNow for Bing and Yandex, Warren's custom SVG icons video, community blog posts, and new hires at Umbraco HQ.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Jac6S8mB8Yw",
+      "title": "umbraCoffee #210 - 9.3 RC, new releases and community events + more",
+      "published": "2022-01-28T12:07:56Z",
+      "summary": "Umbraco 9.3 RC with 2FA for members, improved external providers and custom media folders. Covers new packages such as Compact Log Format Viewer and InlineSvgPicker for v9, a Konstrukt demo, UmbraCollab, a new UmbHost plan, and a Perplex and Frontis partnership.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "cmmdhpUXN2c",
+      "title": "umbraCoffee #209 - Konstrukt Anything You Can Imagine",
+      "published": "2022-01-21T12:28:13Z",
+      "summary": "Matt Brailsford joins to talk about Konstrukt, the fluent API for building backoffice interfaces in Umbraco 9. Also covers Umbraco 9.2, a medium-severity security advisory, the final Umbraco 8 release plan, uSkinned, Articulate for V9, meetups, and Umbraco Together recordings.",
+      "guests": [
+        {
+          "name": "Matt Brailsford",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "eIwHUXwvquc",
+      "title": "umbraCoffee #208 - New Year's Reception, Umbraco 9.2, Konstruct and community contribs!",
+      "published": "2022-01-14T12:15:08Z",
+      "summary": "Umbraco's New Year reception, with its 2022 goals and five-year plan. Covers the Umbraco 9.2 unboxing, Konstrukt being teased as the new name for Fluidity, upcoming meetups, community blog posts on Umbraco 9, and the 24 Days team's ten years.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "7-jX2nESNQY",
+      "title": "umbraCoffee #207 - Break Recap, 9.2, 2022 dreams and wishes",
+      "published": "2022-01-07T12:28:47Z",
+      "summary": "New Year recap and wishes for Umbraco in 2022. Covers Umbraco v9.2, Umbraco's strong showing in .NET open-source contributions, V9 releases of Feature Management Dashboard, Limbo SEO, Skybrud packages and Iconic, Skrift issue 79, and upcoming meetups.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Jx7pVg3t7EA",
+      "title": "umbraCoffee #206 - HO^3, Xmas { break; }!",
+      "published": "2021-12-17T12:37:10Z",
+      "summary": "Rune Strand from Umbraco HQ joins for the Christmas break episode. Covers the 24 Days in Umbraco articles, Umbraco 9.2 RC, the Cloud summary of the year, the Log4j vulnerability not affecting Umbraco, DF21, and package releases like Feature Flagged and Igloo 4.0.",
+      "guests": [
+        {
+          "name": "Rune Strand",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "a2L6sxb92ao",
+      "title": "umbraCoffee #205 - 10/24, Hacktoberfest recap, Secret Santa and more!",
+      "published": "2021-12-10T12:34:33Z",
+      "summary": "Paul Seal joins the show. Covers the Umbraco product update with v9.1.2, v9.2 and Deploy 9.2, Hacktoberfest 2021 recap, Umbraco Secret Santa, new Redirects alphas for v9, Perplex's v9 hackathon, the Candid Contributions podcast, and Paul and Matt's Umbraco Together talk.",
+      "guests": [
+        {
+          "name": "Paul Seal",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Zi4HCvmAiQo",
+      "title": "umbraCoffee #204 - recap, 24days.in, OSS sponsoring and more!",
+      "published": "2021-12-03T12:15:06Z",
+      "summary": "Recap of Umbraco Together and the latest product update. Covers the 24 Days in Umbraco articles, Umbraco Secret Santa, HQ sponsoring open source projects, package releases for v9 such as Newsletter Studio and ExamineX, DF21, and migrating from v8 to v9 on Cloud.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "VHKJZPx0c8c",
+      "title": "umbraCoffee #203 - LIVE @ Umbraco Together",
+      "published": "2021-11-26T12:54:44Z",
+      "summary": "Recorded live at Umbraco Together.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "Ey0oLUVjbhI",
+      "title": "umbraCoffee #202",
+      "published": "2021-11-19T12:27:06Z",
+      "summary": "Umbraco V9.1 release with history cleanup and a friendly 404 page, plus price rises for Cloud, Forms and Deploy. Covers Forms and Deploy updates, Skybrud Redirects, Tag Helpers contributions, Umbraco Together, upcoming meetups, Umbraco Secret Santa, and new Cloud product owner.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Fees9Z0fF1Q",
+      "title": "umbraCoffee #201 - Back in the Game! DK Fest, HQ visit, UI Library and more...",
+      "published": "2021-11-12T12:39:09Z",
+      "summary": "Two Umbraco HQ front-end team members join to talk about the Umbraco UI Library. Also covers takeaways from the Danish festival, the product update, Member List View 2.2.0, Protect Used Media, upcoming meetups, Umbraco Together, and the .NET 6 release.",
+      "guests": [
+        {
+          "name": "Mads N. Rasmussen",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Julia Gruszczyńska",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "nbirxPgQZnk",
+      "title": "umbraCoffee #200 - TWO HUNDRED",
+      "published": "2021-11-05T12:50:25Z",
+      "summary": "Episode 200 highlights, including subscriber numbers and thanks to supporters. Covers Umbraco 9.1 RC, the Umbraco UI Library release, Forms and Deploy RCs, Skrift issue 78, Newsletter Studio's move to v9, DF21 speakers, Umbraco Together, and community blog posts.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "C6nbhSV4hKA",
+      "title": "umbraCoffee #199 - umbracoTees Day, product update and 8.18 release, hacktoberfest final call!",
+      "published": "2021-10-29T11:13:37Z",
+      "summary": "Covers umbracoTees day, the 24-hour Hacktoberthon and the Umbraco product update of October 28th. Also looks at the shaping of the 8.18 release, new package releases such as Skybrud.LinkPicker and Newsletter Studio, and tips on moving from Umbraco 8 to 9.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "LoAJw1bEtZU",
+      "title": "umbraCoffee #198",
+      "published": "2021-10-22T11:22:50Z",
+      "summary": "Covers a new backoffice team RFC on the extension API and the community race to install Umbraco 9 as fast as possible. Also goes through package releases for Umbraco 9, upcoming events such as the Umbraco Together call for papers, and Filip Bech-Larsen becoming Umbraco's CTO.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "IY7XbsU0WOI",
+      "title": "umbraCoffee #197 - v9.0.1, Hacktoberfest progress, in-person events!",
+      "published": "2021-10-15T11:25:01Z",
+      "summary": "Covers Hacktoberfest highlights, Umbraco 9 becoming the default for new Cloud projects, and patches for Umbraco 9, Forms and Deploy. Also goes through Umbraco 9 package releases, roadmap changes, the backoffice extension API RFC and upcoming in-person events.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "mVwwIFMVOeQ",
+      "title": "umbraCoffee #196 - Let's get hacking!",
+      "published": "2021-10-08T11:28:41Z",
+      "summary": "Covers Hacktoberfest, including how to contribute to the Umbraco 9 source, and the Umbraco 8.17 release that brings tabs back. Also goes through package releases like Vendr 2 and Contentment 3, big events later in the year and departures from Umbraco HQ.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "_TW7G6pXQ8Y",
+      "title": "umbraCoffee #195 - It all starts now!",
+      "published": "2021-10-01T11:38:52Z",
+      "summary": "Looks back at the official Umbraco 9 launch and the community celebration. Also covers how Umbraco Cloud works with V9, the start of Hacktoberfest, Codegarden 2022 preparations and the many packages released for Umbraco 9.",
+      "guests": [
+        {
+          "name": "Emma Burstow",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Sebastiaan Janssen",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Ic3jmIOKpNI",
+      "title": "umbraCoffee #194",
+      "published": "2021-09-24T11:17:49Z",
+      "summary": "Covers the final days before the Umbraco 9 launch, including release candidate 4 and the V8 to V9 differences. Also goes through a new Umbraco 8.17 release candidate, Examine v2, package releases for V9, Umbraco's first integrations packages and new meetups.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "F4yWqFphdqE",
+      "title": "umbraCoffee #193 - 100 Days Of Umbraco?",
+      "published": "2021-09-17T11:36:40Z",
+      "summary": "Covers the Umbraco product update, the upcoming 8.17 release with tabs and the confirmed Umbraco 9 launch date of September 28th. Also touches on 100 Days of Umbraco, the new community Discord server and the Umbraco Marketplace announcement.",
+      "guests": [
+        {
+          "name": "Nurhak Kaya",
+          "affiliation": "Felinesoft"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "cLk-4qbXGsY",
+      "title": "umbraCoffee #192",
+      "published": "2021-09-10T11:23:25Z",
+      "summary": "Covers the Umbraco 8.17 and Umbraco 9 RC3 releases, with tabs returning and configurable overlays. Also goes through Umbraco 9 package releases, the 24days.in series, 100DaysOfCode, DF21 and a long list of upcoming meetups.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "e-mGfb1FURc",
+      "title": "umbraCoffee #191 - A September to Remember?",
+      "published": "2021-09-03T11:08:44Z",
+      "summary": "Covers the Umbraco product update, the upcoming 8.17 tabs release, Forms 8.8 and Deploy 4.2, and the release of Umbraco 8.16. Also discusses uSync 8.10 and 8.11, Monterro becoming majority stakeholder and 100DaysOfCode in the community.",
+      "guests": [
+        {
+          "name": "Kevin Jump",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "uZG7iRkSums",
+      "title": "umbraCoffee #190",
+      "published": "2021-08-27T11:19:30Z",
+      "summary": "Covers the details of the Umbraco Forms vulnerability released by AppCheck, which the guests discuss. Also goes through the Umbraco 8.16 release, Umbraco 9 versions of several Skybrud packages, upcoming meetups and new hires at Umbraco HQ.",
+      "guests": [
+        {
+          "name": "Gary O'leary-Steele",
+          "affiliation": "Security researcher"
+        },
+        {
+          "name": "Sebastiaan Janssen",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "MjpHrW-sQEU",
+      "title": "umbraCoffee #189",
+      "published": "2021-08-20T11:40:00Z",
+      "summary": "Covers Umbraco 9 RC 2 and the September 28th target date, plus Umbraco Forms 8.8 and Deploy 4.2. Also discusses Monterro acquiring a majority stake in Umbraco, Niels Hartvig stepping down and a round of package releases.",
+      "guests": [
+        {
+          "name": "Kim Sneum Madsen",
+          "affiliation": "Umbraco CEO"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "atznmc6nftw",
+      "title": "umbraCoffee #188 - Blazor, Umbraco 9, Docker, 8.16 RC, Packages and mooooore!",
+      "published": "2021-08-13T11:27:12Z",
+      "summary": "Covers server-side Blazor with Umbraco 9, the guest's walkthrough of the topic. Also goes through the Umbraco 8.16 release candidate, package releases such as Translation Manager and ExamineX, GitHub Codespaces and running Umbraco 9 on a Raspberry Pi.",
+      "guests": [
+        {
+          "name": "Corné Hoskam",
+          "affiliation": "Software Engineer"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "QpiSDydzmMM",
+      "title": "umbraCoffee #187 - Skrift, Package Team updates, upcoming stuff and more!",
+      "published": "2021-08-06T11:22:43Z",
+      "summary": "Covers Skrift issue 75 and the latest Umbraco product news, including patches for Forms and Deploy. Also goes through Umbraco 9 package releases, the first in-person Umbraco Leeds meetup in 18 months, upcoming meetups and multi-targeting tips for package developers.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "ivx60WrFmbE",
+      "title": "umbraCoffee #186 - Lite on news",
+      "published": "2021-07-30T11:07:14Z",
+      "summary": "A lighter news week covering uSync Triggers, Page Not Found Manager for V9 and the launch of Vendr Lite. Also discusses the move from agency to product company at Outfield Digital, Models Builder with V9 and the new interns at Umbraco HQ.",
+      "guests": [
+        {
+          "name": "Lucy Brailsford",
+          "affiliation": null
+        },
+        {
+          "name": "Paul Seal",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "w7RXjCfaoH8",
+      "title": "umbraCoffee #185",
+      "published": "2021-07-23T11:20:20Z",
+      "summary": "Covers the security patch for Umbraco Forms and the July product update. Also goes through packages ported to Umbraco 9 such as Full Text Search and Plumber, and the guest's work on Newsletter Studio and package migrations.",
+      "guests": [
+        {
+          "name": "Markus Johansson",
+          "affiliation": "Newsletter Studio"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "bU75Rie05Po",
+      "title": "umbraCoffee #184",
+      "published": "2021-07-16T11:08:27Z",
+      "summary": "Covers the release of Umbraco 8.15, with performance improvements, and the security advisory for Umbraco Forms. Also goes through V9 package releases such as Anaxi and Plumber, ExamineX plans, new Codegarden talks on YouTube and lessons from the V9 learnathons.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "CKhutfRakYw",
+      "title": "umbraCoffee #183 - Umbraco V9 is coming home",
+      "published": "2021-07-09T11:35:34Z",
+      "summary": "Covers the Umbraco 9 release candidate, with the guests involved in the V9 release, and the coming 8.15 performance release. Also discusses V7 entering security-patch-only support, many V9 package updates, Codegarden talks on YouTube and Skrift issue 74.",
+      "guests": [
+        {
+          "name": "Bjarke Berg",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Filip Bech",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Rune Strand",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "KKYyQJ-KOyI",
+      "title": "umbraCoffee #182",
+      "published": "2021-07-02T11:28:07Z",
+      "summary": "Covers the Umbraco 8.15 release candidate with big performance gains and the coming Umbraco 9 release candidate. Also goes through package releases and teasers for V9, upcoming meetups, upgrade stories, a new Umbraco DK Festival call for speakers and more Codegarden talks.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "jkvDKpTLvqQ",
+      "title": "umbraCoffee #181",
+      "published": "2021-06-25T11:16:18Z",
+      "summary": "Covers the latest Umbraco product update, the upcoming 8.15 release and Codegarden aftermath with new videos. Also goes through package releases like Contentment v2, upcoming meetups, Windows 11 news and the Vendr partner program.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "9VNRTB0xztE",
+      "title": "umbraCoffee #180",
+      "published": "2021-06-18T11:14:31Z",
+      "summary": "Covers Codegarden recap blog posts, the first Codegarden videos going online and a Package Manifest episode about the event. Also goes through package releases, Visual Studio 2022 preview, Strawberry Shake with Heartcore and new hires at Umbraco HQ.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "EJff38RV_so",
+      "title": "umbraCoffee #179 - \"LIVE\" @ Codegarden 2021",
+      "published": "2021-06-11T11:48:25Z",
+      "summary": "Recorded live at Codegarden 2021.",
+      "guests": [
+        {
+          "name": "Bjarke Berg",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Elitsa Marinovska",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "FoBrOYUzm7I",
+      "title": "umbraCoffee #178",
+      "published": "2021-06-04T11:20:07Z",
+      "summary": "Covers the final week before Codegarden, the Umbraco 8.14 release and Skrift issue 73. Also goes through patches for the CMS and Forms, the coming Umbraco Shop, the future of Umbraco certifications and package releases.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "sS8zSJnWvMg",
+      "title": "umbraCoffee #177 - #SeeYouAtCodegarden",
+      "published": "2021-05-28T11:16:09Z",
+      "summary": "A Codegarden countdown covering the packed programme and the teaser video. Also goes through the product updates, with Umbraco 9 beta 3 and the coming 8.14 release, plus package releases and GodMode running on Umbraco 9.",
+      "guests": [
+        {
+          "name": "Trine Nissen",
+          "affiliation": "Codegarden Planning Queen"
+        },
+        {
+          "name": "Arnold Visser",
+          "affiliation": "Umbraco Advocate"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "0eCSSmwO8UI",
+      "title": "umbraCoffee #176 - I spy with my UI",
+      "published": "2021-05-21T11:11:07Z",
+      "summary": "Covers the new Umbraco Backoffice Community Team and the 8.14 release candidate with the new Media Picker. Also goes through package releases, podcasts, accessibility efforts, changes to the GitHub contribution flow and Hangfire with Umbraco 9.",
+      "guests": [
+        {
+          "name": "Poornima Nayar",
+          "affiliation": "Microsoft MVP"
+        },
+        {
+          "name": "Ryan Helmn",
+          "affiliation": "Umbraco Backoffice team"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "g7zEGHXRdVs",
+      "title": "umbraCoffee #175 - Product Update, Codegarden countdown, blogs",
+      "published": "2021-05-14T11:12:32Z",
+      "summary": "Covers the product update with V9 beta 2 and the 8.14 release candidate plan, plus the Codegarden programme announcement. Also goes through Newsletter Studio v3, Umbraad, V9 learn-a-thons and several community blog posts.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "WOutzUczHX0",
+      "title": "umbraCoffee #174 - UMBRAAD!",
+      "published": "2021-05-07T11:20:54Z",
+      "summary": "Covers UMBRAAD and Global Accessibility Awareness Day, with the guest, an organiser of the event. Also goes through Skrift issue 72, package releases like Vendr 1.8 and Skybrud MNTP, the launch of Package Manifest and the Umbraco Awards.",
+      "guests": [
+        {
+          "name": "Mike Masey",
+          "affiliation": "Umbraco Accessibility Team"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "ULp3sYkCvmA",
+      "title": "umbraCoffee #173 - What do uSync about Umbraco V9?",
+      "published": "2021-04-30T11:28:40Z",
+      "summary": "Covers the Umbraco 9 beta release and what it means for packages, with the guests discussing uSync and uMarketingSuite on V9. Also goes through the end of V8 features, the product update, the Codegarden speakers and MVP nominations.",
+      "guests": [
+        {
+          "name": "Jeffrey Schoemaker",
+          "affiliation": "uMarketingSuite"
+        },
+        {
+          "name": "Kevin Jump",
+          "affiliation": "uSync"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "okJmof3gRZ0",
+      "title": "umbraCoffee #172 - uSkinned me right round baby...",
+      "published": "2021-04-23T11:52:51Z",
+      "summary": "Covers the Umbraco 8.13 release and the coming Umbraco 9 beta. The guests talk about the uSkinned Site Builder. Also goes through package updates, porting packages to .NET Core, MVP award nominations and Vendr's first Prestige Partner.",
+      "guests": [
+        {
+          "name": "Marc Love",
+          "affiliation": "uSkinned"
+        },
+        {
+          "name": "Paul Daly",
+          "affiliation": "uSkinned"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "uwJhQXu5MFU",
+      "title": "umbraCoffee #171 - ThisIsCodegarden, Umbraco US Fest and other news!",
+      "published": "2021-04-16T11:09:27Z",
+      "summary": "Covers getting ready for Codegarden and Umbraco US Fest. Also goes through upcoming events, the first signups for the Community Backoffice Team, package releases like Umbraco Forms 8.7.1, Forms and DTGE progress on Umbraco 9 and the Vendr partner programme.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "T0Ok5L2aDBM",
+      "title": "umbraCoffee #170 - I didn't mean it, I just want the backoffice to be good...",
+      "published": "2021-04-09T11:27:42Z",
+      "summary": "The guests discuss the latest Umbraco Backoffice RFC on future-proofing the backoffice API for package developers. Also covers the 8.13 release candidate, Umbraco Forms 8.7, Contentment 1.3 and other package releases, plus meetups.",
+      "guests": [
+        {
+          "name": "Mads Rasmussen",
+          "affiliation": null
+        },
+        {
+          "name": "Filip Bech",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "gTNMlizZ3B8",
+      "title": "umbraCoffee #169 - Question Everything",
+      "published": "2021-04-02T11:20:40Z",
+      "summary": "Covers April Fools highlights, Vendr's subscription pricing and the package awards at Codegarden. Also goes through package releases such as Block List MVC, upcoming events, the Unicore community office hours and Andy Butland's package migration blog series.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "RY9YR9LqVUw",
+      "title": "LUNGO #000 - Top Trends in 2021",
+      "published": "2021-04-01T13:10:52Z",
+      "summary": "A monthly discussion between the hosts on top trends in 2021.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "To8v3iJhdRo",
+      "title": "umbraCoffee #168 - Alpha 4 Enterprise",
+      "published": "2021-03-26T12:34:39Z",
+      "summary": "Covers Unicore alpha 4, Andy Butland's 8-part series on migrating packages and the guest joining the Umbraco HQ team. Also discusses the Umbraco Forms 8.7 release candidate, Deploy on Premises, Cloud infrastructure migration and package releases.",
+      "guests": [
+        {
+          "name": "Andy Butland",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "jOaVroBEuGs",
+      "title": "umbraCoffee #167 - Umbraco History",
+      "published": "2021-03-19T12:24:49Z",
+      "summary": "Covers Umbraco history nostalgia in the community and a round of patches for Umbraco, Forms and Deploy. Also goes through package releases, the Proworks headless series, Blazor WASM with Umbraco on .NET Core and Azure news.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "EGfyNAgZB54",
+      "title": "umbraCoffee #166",
+      "published": "2021-03-12T12:46:02Z",
+      "summary": "Covers the UI Component Library proof of concept and RFC, with the guests working on it. Also goes through International Women's Day stories, the product update, the Umbraco 8.12 release, package releases and the Codegarden call for speakers.",
+      "guests": [
+        {
+          "name": "Niels Lyngsø",
+          "affiliation": "Umbraco"
+        },
+        {
+          "name": "Julia Gruszczyńska",
+          "affiliation": "Umbraco"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "bnLZDBhSmSY",
+      "title": "umbraCoffee #165 - Speakers Academy, UI Component Lib RFC, Packages and more!",
+      "published": "2021-03-05T12:20:11Z",
+      "summary": "Emma Burstow talks about her new Developer Advocate role at Umbraco HQ and the Speakers Academy. Also covered: the RFC for a UI component library, new support and end-of-life announcements, package releases, meetups and community blog posts.",
+      "guests": [
+        {
+          "name": "Emma Burstow",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "dPsAvNvj734",
+      "title": "umbraCoffee #164 - Community Office Hours, new RC, Speakers' Academy and more!",
+      "published": "2021-02-26T12:26:16Z",
+      "summary": "Covers the launch of Community Office Hours, the Umbraco 8.12 release candidate and the status of the new Cloud infrastructure. Also package releases, the Speakers' Academy sessions, new hires at Umbraco HQ and community blog posts.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "KRSSCGSwBIw",
+      "title": "umbraCoffee #163 - Sweet 16",
+      "published": "2021-02-19T12:16:41Z",
+      "summary": "Celebrates Umbraco turning 16 and covers package releases such as Examine 1.1.0 and XStatic 1.0.0. Also the .NET 6 preview, the new accessibility course, the Codegarden call for speakers, meetups and community blog posts.",
+      "guests": [
+        {
+          "name": "Poornima Nayar",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "9bEaMKZ_9js",
+      "title": "umbraCoffee #162 - Umbraco really runs on .NET 5?! 🤯",
+      "published": "2021-02-12T12:20:54Z",
+      "summary": "Covers Unicore alpha 3 running on .NET 5 and its planned timeline. Also the announcement of Community Office Hours, the new accessibility training course, package releases, meetups and community blog posts.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "lDU5ugIptpI",
+      "title": "umbraCoffee #161 - First UniCore website, Skrift 69, packages, meetups",
+      "published": "2021-02-05T12:11:49Z",
+      "summary": "Shows the first website built on Unicore and looks at umbraCoffee's 2020 in numbers. Also Skrift issue 69, package releases such as uSync Complete 8.9 and XStatic updates, meetups and new hires at Umbraco HQ.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "aqz-u8PL6tg",
+      "title": "umbraCoffee #160 - XStatic for Umbraco",
+      "published": "2021-01-29T12:32:57Z",
+      "summary": "Sam Mullins joins to talk about XStatic, his static site generator package for Umbraco. Also Umbraco 8.11 and patch releases, other package releases, upcoming meetups, community blog posts and new hires at Umbraco HQ.",
+      "guests": [
+        {
+          "name": "Sam Mullins",
+          "affiliation": "XStatic"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Z-X4s_6T1SY",
+      "title": "umbraCoffee #159 - A whole new world",
+      "published": "2021-01-22T12:32:55Z",
+      "summary": "Goes through the news from the Umbraco New Year Reception, including the Unicore timeline, Cloud plans and the virtual Codegarden. Also upcoming events, Umbraco 8.11 and patches, package news and Skrift behind the scenes.",
+      "guests": [
+        {
+          "name": "Rune Strand",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "0R92b-arPqM",
+      "title": "umbraCoffee #158 - Unattended",
+      "published": "2021-01-15T12:13:04Z",
+      "summary": "Covers the Umbraco 8.11 release candidate with unattended installs, upcoming patches and the .NET Core alpha 3 plans. Also the backoffice RFC, package releases such as Vendr 1.5.0 RC, meetups and community blog posts.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "2tOeolRPBOU",
+      "title": "umbraCoffee #157 - 2021, finally... Happy New Year!",
+      "published": "2021-01-08T12:25:54Z",
+      "summary": "Starts 2021 with the Umbraco 8.10 release and the channel reaching 600 subscribers. Carl Sargunar and Owain Jones join for Skrift issue 68, package releases, meetups, the UmbrCoach mentoring initiative and community blog posts.",
+      "guests": [
+        {
+          "name": "Carl Sargunar",
+          "affiliation": null
+        },
+        {
+          "name": "Owain Jones",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "i0QfgRYj0zQ",
+      "title": "umbraCoffee #156 - UmbraChristmas",
+      "published": "2020-12-18T12:43:13Z",
+      "summary": "Filip Bech-Larsen joins for a festive episode. Topics include 24 Days in Umbraco, Secret Santa, the product update, .NET Core nightlies, the Umbraco 8.10 delay, package releases and what is coming to Umbraco in 2021.",
+      "guests": [
+        {
+          "name": "Filip Bech-Larsen",
+          "affiliation": "Umbraco CMS Programme Manager"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "t9g3Lig_-DY",
+      "title": "umbraCoffee #155 - #umbracoJumpers, Github Universe, Meetups series",
+      "published": "2020-12-11T12:23:56Z",
+      "summary": "Covers 24 Days in Umbraco articles, a .NET Core status update and the Community Teams day. Also package releases, new hires at Umbraco HQ, the uProfile, news from GitHub Universe and a push for 600 subscribers.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "ZmOM8MNhS5s",
+      "title": "umbraCoffee #154 - 24days.in, Secret Santa and more!",
+      "published": "2020-12-04T12:23:29Z",
+      "summary": "Dennis Adolfi joins to talk about 24 Days in Umbraco, Secret Santa sign-ups and the Umbraco 8.10 release candidate. Also Umbraco's move to semantic versioning, product update news, package releases and a round of December events.",
+      "guests": [
+        {
+          "name": "Dennis Adolfi",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "LUnefLJDyOo",
+      "title": "umbraCoffee #153 - Santa Is Coming (back) to Town!",
+      "published": "2020-11-27T12:14:44Z",
+      "summary": "Covers the return of Umbraco Secret Santa and Umbraco's move to semantic versioning. Also upcoming events, voting for DDD sessions, package releases such as Umbraco Forms 8.6, and community blog posts.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "83EtFlDiAI8",
+      "title": "umbraCoffee #152 - 🎂",
+      "published": "2020-11-20T12:32:02Z",
+      "summary": "umbraCoffee turns three, with a look back at its numbers. Also the new community site, the Community Teams retreat, Hacktoberfest results, package releases such as UmbPack 1.0.0, recent meetups and community blog posts.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "c0_iX9C8BO8",
+      "title": "umbraCoffee #151 - Cadence, Community, and Coffee",
+      "published": "2020-11-13T12:18:57Z",
+      "summary": "Ingrid van Beek joins as the November uProfile. Topics include the product update, Umbraco 8.10 coming in December, the new release cadence and versioning, the new community site, package releases, a virtual Codegarden in 2021 and .NET 5.",
+      "guests": [
+        {
+          "name": "Ingrid van Beek",
+          "affiliation": "uPersonal"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "1891g-QDNnQ",
+      "title": "umbraCoffee #150 - MAGA (Make A11y Great Always!)",
+      "published": "2020-11-06T12:18:37Z",
+      "summary": "Rachel Breeze and Mike Masey join to talk about accessibility in Umbraco. Also Hacktoberfest stats, Skrift issue 67, a package release, upcoming meetups and a round-up of the DF20 virtual festival.",
+      "guests": [
+        {
+          "name": "Rachel Breeze",
+          "affiliation": null
+        },
+        {
+          "name": "Mike Masey",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Vf5E-J9IJzA",
+      "title": "umbraCoffee #149 - TRICK or TREAT",
+      "published": "2020-10-30T12:19:26Z",
+      "summary": "Poornima Nayar and Joe Glombek join as new Umbraco Community Teams members. Topics include the Umbraco 8.9 release, the new community teams, Hacktoberfest contributions, patch releases, upcoming events and pull requests of the week.",
+      "guests": [
+        {
+          "name": "Poornima Nayar",
+          "affiliation": "Umbraco Community Teams"
+        },
+        {
+          "name": "Joe Glombek",
+          "affiliation": "Umbraco Community Teams"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "0Mt20kbd_2w",
+      "title": "umbraCoffee #148 - 🎄🎶 Do They Know It's... 24 Days in Umbraco",
+      "published": "2020-10-23T11:32:23Z",
+      "summary": "Jan Skovgaard and Chriztian Steinmeier from the 24 Days in Umbraco team talk about the return of the series and favourite articles. Also Umbracathon results, Hacktoberfest, the product update, Umbraco 8.9 timing, package releases and events.",
+      "guests": [
+        {
+          "name": "Jan Skovgaard",
+          "affiliation": "24 Days in Umbraco"
+        },
+        {
+          "name": "Chriztian Steinmeier",
+          "affiliation": "24 Days in Umbraco"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "uX5WUC6rmcY",
+      "title": "umbraCoffee #147 - Umbracathon time!",
+      "published": "2020-10-16T11:18:31Z",
+      "summary": "Covers the Candid Contributions Umbracathon, Hacktoberfest at the halfway point and accessibility issues to work on. Also package releases such as Vendr Reviews and ExamineX, meetups, .NET 5 RC 2 and community news.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Pw9DazLqpiU",
+      "title": "umbraCoffee #146 - Good Morning Umbraco!",
+      "published": "2020-10-09T11:12:10Z",
+      "summary": "Covers the Umbraco 8.9 release candidate, the product update and sessions from DF20. Also upcoming events, Skrift issue 66, packages such as SharePreview and uSync Complete 8.8, and Hacktoberfest updates.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "DNic6NthEPI",
+      "title": "umbraCoffee #145 - DUUG Fest, Hacktoberfest, Spamtoberfest",
+      "published": "2020-10-02T11:05:24Z",
+      "summary": "Covers DUUG Fest, the Umbraco 8.8 release and the start of Hacktoberfest, including the spam problem and Umbraco's rules. Also package news, tips for new developers, a Heartcore preview API and a block list deep dive.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "j_AEUglRg5s",
+      "title": "umbraCoffee #144 - The clock is TikTok-ing",
+      "published": "2020-09-25T11:16:46Z",
+      "summary": "Covers the product update, Umbraco 8.8 coming on October 1 and Unicore alpha 2. Also Hacktoberfest preparation, package releases such as Vendr 1.3, DUUG Fest, upcoming meetups and a new Heartcore hire.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "GccVr5tJ0eo",
+      "title": "umbraCoffee #143 - What's stopping you code like this?!",
+      "published": "2020-09-18T11:35:09Z",
+      "summary": "Martin Woodward from GitHub joins for a wider look at open source. They discuss the history of GitHub and Microsoft, the public roadmap, Discussions, Codespaces and new default branches, plus Umbraco 8.7 and 8.8 RC news and package releases.",
+      "guests": [
+        {
+          "name": "Martin Woodward",
+          "affiliation": "GitHub"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "0coR7UKJWss",
+      "title": "umbraCoffee #142 - So, what did I miss?",
+      "published": "2020-09-11T11:17:28Z",
+      "summary": "Covers the Umbraco 8.7 release with Block List, segments and 210 fixes, plus a block editor based grid demo. Also package releases, a call for volunteers, Hacktoberfest and packages, an RFC for storing elements in the database and DUUG Fest news.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "-ceCJZ9Tus0",
+      "title": "umbraCoffee #141 - Unicore Alpha",
+      "published": "2020-09-04T11:22:53Z",
+      "summary": "Bjarke Berg and Andy Butland from the .NET Core team discuss the Umbraco .NET Core alpha release. Also package releases, upcoming virtual meetups, the DF20 call for papers, community blog posts and new interns at Umbraco HQ.",
+      "guests": [
+        {
+          "name": "Bjarke Berg",
+          "affiliation": "Umbraco .NET Core team"
+        },
+        {
+          "name": "Andy Butland",
+          "affiliation": "Umbraco .NET Core team"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "-kjmI-O3tZw",
+      "title": "umbraCoffee #140 - Block to the Future",
+      "published": "2020-08-28T11:57:58Z",
+      "summary": "Niels Lyngsø joins to talk about the Block List editor. Also the product update, the imminent .NET Core alpha, roadmap updates, an Umbraco 8.7 Block List demo, many package releases and new interns at Umbraco HQ.",
+      "guests": [
+        {
+          "name": "Niels Lyngsø",
+          "affiliation": "Umbraco UX engineer"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "DN4ztVC9UW0",
+      "title": "umbraCoffee #139 - The Elephant In The Room, 8.7 Blocks and more!",
+      "published": "2020-08-21T11:15:12Z",
+      "summary": "Discusses keeping Umbraco the CMS of choice, based on several community blog posts, and the Umbazing Moments initiative. Also the Umbraco 8.7 release candidate with Block List and segments, package releases and new hires at Umbraco HQ.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "eP9BvZxjsx4",
+      "title": "umbraCoffee #138 - Heartcore GraphQL!",
+      "published": "2020-08-14T11:29:49Z",
+      "summary": "Morten Christensen and Rasmus John Pedersen join to introduce GraphQL for Umbraco Heartcore. Also the product update, Umbraco 8.7 preview, custom code for Umbraco Uno, package releases and a new Programme Manager for Umbraco CMS.",
+      "guests": [
+        {
+          "name": "Morten Christensen",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Rasmus John Pedersen",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "VSiQvNsYoHQ",
+      "title": "umbraCoffee #137 - Common Practice",
+      "published": "2020-08-07T11:26:32Z",
+      "summary": "Paul Marden joins to talk about a series of articles exploring different approaches to challenges. Also Skrift issue 64, ImageSharp 1.0.0, package releases, upcoming virtual meetups, Heartcore GraphQL and news from the .NET Foundation.",
+      "guests": [
+        {
+          "name": "Paul Marden",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "YOF_hxwPBfk",
+      "title": "umbraIcedCoffee #136 - Umbraco Tees (and Socks) day",
+      "published": "2020-07-31T11:10:27Z",
+      "summary": "Carole Rennie Logan joins for Umbraco Tees and Socks day. Also package releases such as Vendr 1.2.7, a round of virtual meetups, the Candid Contributions podcast, Umbraco's SEO blog series and an introduction to the Amplify starter kit.",
+      "guests": [
+        {
+          "name": "Carole Rennie Logan",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "agNAfB4HvBg",
+      "title": "umbraCoffee #135 - Umbraco Socks Day",
+      "published": "2020-07-24T11:03:25Z",
+      "summary": "Celebrates Umbraco Tees and Socks day. Also package releases such as Vendr 1.2.7, a round of virtual meetups, the Candid Contributions podcast, Umbraco's SEO blog series and an introduction to the Amplify starter kit.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "ZJQFu-5lAps",
+      "title": "umbraCoffee #134 - Summer Time, 8.7 countdown, community work!",
+      "published": "2020-07-17T11:11:21Z",
+      "summary": "Covers the Umbraco 8.7 countdown, Examine stability patches and package releases such as Plumber and Virtual Nodes. Also changes coming to uMarketingSuite, virtual meetups, LGPD and Umbraco, and a new DevOps team lead at Umbraco HQ.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "QkOIVURm8_g",
+      "title": "umbraCoffee #133 - We promise to keep this short(er)...!",
+      "published": "2020-07-10T11:10:00Z",
+      "summary": "Covers the product update, Umbraco 8.7 expected in August with Block List, and Heartcore GraphQL. Also .NET Core progress, automated testing, the backoffice running on Linux, Skrift issue 63, package releases, meetups and GitHub news.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "cTXT46IJ4sw",
+      "title": "umbraCoffee #132 - UmbPacking the week",
+      "published": "2020-07-03T11:25:56Z",
+      "summary": "Lotte Pitcher and Paul Seal join to talk about package tooling improvements with UmbPack. Also the product update, package releases, upcoming meetups, Paul's YouTube milestone, Skrift needing authors and community blog posts.",
+      "guests": [
+        {
+          "name": "Lotte Pitcher",
+          "affiliation": "Umbraco Packages Team"
+        },
+        {
+          "name": "Paul Seal",
+          "affiliation": "codeshare.co.uk"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "U6usugN8raM",
+      "title": "umbraCoffee #131 - Tres, Dos... Uno!",
+      "published": "2020-06-26T11:42:28Z",
+      "summary": "Niels Hartvig, Sofie Toft Kristensen and Kristian Egebæk-Carlsen from Umbraco HQ join to talk about Umbraco Uno and the new Contribution Stories section. Also Umbraco 8.6.3, package releases, meetups and a sneak peek at GraphQL on Heartcore.",
+      "guests": [
+        {
+          "name": "Niels Hartvig",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Sofie Toft Kristensen",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Kristian Egebæk-Carlsen",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Rz7O_VwNAQc",
+      "title": "umbraCoffee #130 - Working in Balance (with Umbraco)",
+      "published": "2020-06-19T11:32:13Z",
+      "summary": "Covers the June Umbraco product update, the Yuzu framework demo, the new Skrift website and several package releases including Vendr 1.2.5 and uMarketingSuite 1.1. Phil Whittaker joined to talk about Yuzu and working in balance.",
+      "guests": [
+        {
+          "name": "Phil Whittaker",
+          "affiliation": "HiFi"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "H5OXCXoJsxo",
+      "title": "umbraCoffee #129 - Bento Memento",
+      "published": "2020-06-12T11:51:08Z",
+      "summary": "Covers the announcement of Umbraco Uno, the no-code website builder, plus a Bento demo and releases such as Yuzu, Contentment and ExamineX. Also touches on meetups, accessibility talks and new hires at Umbraco HQ. Peter Gregory joined to show Bento.",
+      "guests": [
+        {
+          "name": "Peter Gregory",
+          "affiliation": "KØBEN Digital"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "RE4riO8dtYA",
+      "title": "umbraCoffee #128 - Simple is Perfect, SpeedWagon, 8.6.2 and more!",
+      "published": "2020-06-05T11:30:03Z",
+      "summary": "Looks back at the CodePatch event and BetaPatch, then covers SpeedWagon, Skrift issue 62, Umbraco 8.6.2 and a round of package releases. Darren Ferguson joined as guest.",
+      "guests": [
+        {
+          "name": "Darren Ferguson",
+          "affiliation": "Moriyama"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "KEpapOByXgg",
+      "title": "umbraCoffee #127 - Pretend Codegarden 2020",
+      "published": "2020-05-29T11:18:27Z",
+      "summary": "A pretend Codegarden 2020 week: photos and advice for virtual conferences, the new Umbraco MVPs and the Umbraco Awards winners. Also covers Vendr 1.2.0 and other releases. Lars-Erik Aabech joined and showed his virtual Codegarden.",
+      "guests": [
+        {
+          "name": "Lars-Erik Aabech",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "hIU8B2N4Lp0",
+      "title": "umbraCoffee #126 - Happy Birthday Skrift, Umbraco Awards, and more!",
+      "published": "2020-05-22T11:10:58Z",
+      "summary": "Covers UmbracoTees day, the Umbraco MVP and Umbraco Awards shows, CodePatch, Skrift's fifth birthday and Microsoft Build. Releases include UmbPack CLI, Silent Upgrade and several new property editors.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "TOn9YHAlW7E",
+      "title": "umbraCoffee #125 - v7.15.5, DTGE + Matryosha updates, CG Vibe",
+      "published": "2020-05-15T11:07:04Z",
+      "summary": "Covers Umbraco 7.15.5 with its memory leak fix, releases of DTGE, Matryoshka, Slimsy and SimpleRedirects, and the CodePatch announcement. Søren Kottal joined as guest.",
+      "guests": [
+        {
+          "name": "Søren Kottal",
+          "affiliation": "Ecreo"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "pYjnF3EOvas",
+      "title": "umbraCoffee #124 - Open Source, Open Mind",
+      "published": "2020-05-08T11:20:12Z",
+      "summary": "Discusses GitHub Satellite announcements, choosing packages, and respect for open source maintainers. Covers new packages including Perplex ContentBlocks and Mimic, Skrift issue 61 and upcoming virtual meetups.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "NapuZl8DOhk",
+      "title": "umbraCoffee #123 - uMarketingSuite, DTGE & Matryosha updates, Virtual events and more!",
+      "published": "2020-05-01T11:28:27Z",
+      "summary": "Celebrates the release of uMarketingSuite, with a release party and demo. Also covers Vendr 1.1.0, Matryoshka and DTGE updates, virtual meetups and Umbraco 8.6.1. Jeffrey Schoemaker joined together with the uMarketingSuite team.",
+      "guests": [
+        {
+          "name": "Jeffrey Schoemaker",
+          "affiliation": "uMarketingSuite"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "NhBTjjvGOjo",
+      "title": "umbraCoffee #122 - Quarantine Work != Remote Work",
+      "published": "2020-04-24T23:03:02Z",
+      "summary": "Covers Umbraco 8.6.1 with a memory leak fix, uSync Complete 8.6.0 and Maintenance Manager 2.0 for V8. Also covers virtual meetups, and working from home during quarantine.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "_pIpeTWGH6s",
+      "title": "umbracoCoffee #121 - CanConHackathon round-up, Future of Models Builder, and Round Table notes",
+      "published": "2020-04-17T23:11:43Z",
+      "summary": "Rounds up the Candid Contributions hackathon, with 42 pull requests. Covers the future of Models Builder, a question on namespaces for community packages, DTGE 1.2.0 and the notes from the second Umbraco Round Table.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Ss8GegAHobw",
+      "title": "umbraCoffee #120 - Virtual Hackathon, Skrift, Contributing Partners and more!",
+      "published": "2020-04-10T23:13:08Z",
+      "summary": "Covers the Candid Contributions virtual hackathon and their latest podcast episode on perfectionism. Releases include uSync 8.6, Igloo Theme 2.2 and Articulate 4.1.2, plus 26 new Contributing Gold Partners. Three members of the Candid Contributions team joined.",
+      "guests": [
+        {
+          "name": "Carole Rennie Logan",
+          "affiliation": "Candid Contributions"
+        },
+        {
+          "name": "Laura Weatherhead",
+          "affiliation": "Candid Contributions"
+        },
+        {
+          "name": "Lotte Pitcher",
+          "affiliation": "Candid Contributions"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "AmpXZfDn0HA",
+      "title": "umbraCoffee #119 - Vendr",
+      "published": "2020-04-03T11:08:52Z",
+      "summary": "Focuses on the launch of Vendr, covering what it took to get there, a demo and the new Vendr Checkout. Also covers the Umbraco 8.6 release, Documentation Appreciation Day and several community initiatives. Matt Brailsford joined as guest.",
+      "guests": [
+        {
+          "name": "Matt Brailsford",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "f9mYwdhMuZs",
+      "title": "umbraCoffee #118.5 - UmbracoTease Day",
+      "published": "2020-04-01T11:05:57Z",
+      "summary": "An April Fools special in which the hosts tell listeners to ignore everything said in the episode.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "voss9mRUGqA",
+      "title": "umbraCoffee #118 - Remote work, Open Source contributions, Virtual meetups and more!",
+      "published": "2020-03-27T12:12:11Z",
+      "summary": "Covers remote working, virtual meetups and upcoming releases including Umbraco 8.6, Vendr and Ucommerce 9. Also covers a security advisory for Umbraco Forms and CMS Import for Umbraco 8. Anthony Dang joined as guest.",
+      "guests": [
+        {
+          "name": "Anthony Dang",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "XdY4deFpKV0",
+      "title": "umbraCoffee #117 - Umbraco From Home",
+      "published": "2020-03-20T12:08:55Z",
+      "summary": "Looks at working on Umbraco from home, with community activities and remote working tips. Covers a security patch, Umbraco 8.6 plans, uSync 8.5.1, and an update on moving Umbraco to .NET Core.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "83pmxGaV3uA",
+      "title": "umbraCoffee #116 - Packaging up all of this weeks news... From home",
+      "published": "2020-03-13T12:11:10Z",
+      "summary": "Covers the many event cancellations caused by Coronavirus, including Codegarden 2020, and the move to remote-only community events. Also covers the packages team's RFC, roadmap and new CLI tool, and a security advisory. Jesper Mayntzhusen joined as guest.",
+      "guests": [
+        {
+          "name": "Jesper Mayntzhusen",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Vhd9JBJm610",
+      "title": "umbraCoffee #115 - LIVE @ Umbraco Spark 2020",
+      "published": "2020-03-06T11:59:13Z",
+      "summary": "Recorded live at Umbraco Spark 2020.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "3gnDK1G0dh8",
+      "title": "umbraCoffee #114 - Umbraco 8: 1 year on",
+      "published": "2020-02-28T11:28:47Z",
+      "summary": "Marks one year of Umbraco 8 and looks ahead at the future of the backoffice, including moving away from AngularJS. Covers the MVP nomination process, package releases and a long list of upcoming meetups before Umbraco Spark.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "2-xCIYmZbKo",
+      "title": "umbraCoffee #113 - Happy Birthday Umbraco, 8.6-rc, Devs workspaces and more!",
+      "published": "2020-02-21T12:16:54Z",
+      "summary": "Celebrates Umbraco's birthday and covers the product update with 8.6 RC, Forms vNext and Cloud news. Also covers Codegarden speakers, upcoming meetups and package releases such as uSync.Complete Agency License. Nathan Woulfe joined as guest.",
+      "guests": [
+        {
+          "name": "Nathan Woulfe",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "MkcuOATsDaI",
+      "title": "umbraCoffee #112 - Love is in the air ♥️",
+      "published": "2020-02-14T12:11:02Z",
+      "summary": "Covers the announced Codegarden speakers, Spark and other events, and the Docs team recruiting. Arnold Visser and Sofie Toft joined to talk about Arnold joining HQ. Releases include Examine Azure Directory, Preserver and Preflight 1.3.1.",
+      "guests": [
+        {
+          "name": "Arnold Visser",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Sofie Toft",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "5q22ViDpEdY",
+      "title": "umbraCoffee #111 - 1 month to Spark, uMarketingSuite, Vendr and more!",
+      "published": "2020-02-07T11:57:18Z",
+      "summary": "Looks ahead to the Umbraco Spark conference and covers uMarketingSuite with Vendr and Umbraco Cloud. Also covers meetups, NuGet download counts on Our Umbraco, and the Documentation Curators recruiting. Catherine Todd joined as guest.",
+      "guests": [
+        {
+          "name": "Catherine Todd",
+          "affiliation": "Gibe Digital"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "55xAuUxkpUo",
+      "title": "umbraCoffee #110 - Meet the Unicore team",
+      "published": "2020-01-31T12:38:44Z",
+      "summary": "Introduces the Umbraco Unicore team: who they are, their goal and what they have worked on. Also covers the Umbraco Roadshow in the USA, Umbraco 8.5.3, Forms releases and the new Block Editor progress.",
+      "guests": [
+        {
+          "name": "Andy Butland",
+          "affiliation": "Umbraco Unicore team"
+        },
+        {
+          "name": "Benjamin Carleski",
+          "affiliation": "Umbraco Unicore team"
+        },
+        {
+          "name": "Bjarke Berg",
+          "affiliation": "Umbraco Unicore team"
+        },
+        {
+          "name": "Emma Garland",
+          "affiliation": "Umbraco Unicore team"
+        },
+        {
+          "name": "Steve Temple",
+          "affiliation": "Umbraco Unicore team"
+        },
+        {
+          "name": "Yvo Linssen",
+          "affiliation": "Umbraco Unicore team"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "17-HGK7jjQ4",
+      "title": "umbraCoffee #109 - 8.5.2, CG20 first speakers, UniCore & Packages!",
+      "published": "2020-01-24T12:05:26Z",
+      "summary": "Covers Umbraco 8.5.2, the announced Unicore team and first Codegarden 2020 speakers, including Scott Hanselman. Looks back at the Umbraco Virtual meetup and covers releases such as Matryoshka, Content Protector and Super Doctype Create Menu.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "4hkLYR2K2ms",
+      "title": "umbraCoffee #108 - Umbraco's 2020 Vision",
+      "published": "2020-01-17T12:34:31Z",
+      "summary": "Goes through the Umbraco New Years Reception: community growth in 2019, increased focus on community teams, and the roadmap including Deploy on-premise and .NET Core. Also covers Umbraco 8.5 and a range of package releases. Anders Trans Sørensen joined as guest.",
+      "guests": [
+        {
+          "name": "Anders Trans Sørensen",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "tb2sBMDNwAI",
+      "title": "umbraCoffee #107 - Happy New Year!",
+      "published": "2020-01-10T12:11:14Z",
+      "summary": "Starts the year by asking what to change about Umbraco CMS in 2020. Covers the Round Table follow-up, Arnold Visser joining HQ, uSync reaching 500,000 downloads and many package releases. Also covers the Spark lineup and CodeCabin registration.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "pF0vQnrFJ1o",
+      "title": "umbraCoffee #106 - It's beggining to look a lot like...",
+      "published": "2019-12-20T12:03:42Z",
+      "summary": "Catches up on 24 Days in Umbraco and the year's uProfiles. Covers Secret Santa gifts, issue tracker discussions on doctype icons and macro parameters, Umbraco Spark early bird tickets and a packaging tool for MSBuild.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "hU4w3k6I1_Q",
+      "title": "umbraCoffee #105 - Umbraco 8.4, Security Advisory, Secret Santa",
+      "published": "2019-12-13T12:11:42Z",
+      "summary": "Covers the release of Umbraco 8.4, a security advisory for v7.0 to v7.14 and the Secret Santa gifts. Also covers Hacktoberfest results, package releases and speaker call deadlines. Laura Weatherhead joined as guest, with her Ladies of Code comic featured.",
+      "guests": [
+        {
+          "name": "Laura Weatherhead",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "7leXp4sESxI",
+      "title": "umbraCoffee #104 - 24days, Skrift, Secret Santa and more!",
+      "published": "2019-12-06T12:08:35Z",
+      "summary": "Covers the reaction to Umbraco Heartcore, 24 Days in Umbraco articles, Skrift issue 56 and the Secret Santa pairing. Also mentions the Codegarden CFP-athon, the V7 Editors manual and an upcoming Umbraco Virtual meetup.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "31d78z3BxTs",
+      "title": "umbraCoffee SPECIAL - Umbraco Heartcore LAUNCH",
+      "published": "2019-12-02T12:11:22Z",
+      "summary": "A special episode celebrating the launch of Umbraco Heartcore, with the guests from Umbraco HQ.",
+      "guests": [
+        {
+          "name": "Morten Christensen",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Rasmus John Pedersen",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Niels Hartvig",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "lAp1mQS6LO4",
+      "title": "umbraCoffee #103 - Super promo: FREE episode (only for Black Friday!)",
+      "published": "2019-11-29T12:07:59Z",
+      "summary": "Previews a week of 24 Days in Umbraco, the Heartcore launch and Secret Santa. Covers Umbraco 8.4 RC, the first package team update, Vendr's first working store and many end-of-year meetups. Jan Skovgaard joined as guest.",
+      "guests": [
+        {
+          "name": "Jan Skovgaard",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "vlK1qBY91kk",
+      "title": "umbraCoffee #102 - Santa is coming to Town ;)",
+      "published": "2019-11-22T11:58:34Z",
+      "summary": "Covers community team meetings at HQ, the product update with Heartcore beta access, Skrift 55 and Umbraco Secret Santa. Also covers upcoming meetups, Spark speakers and TechWoman100 award nominations for two community members.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "dRU1eb_e9UE",
+      "title": "umbraCoffee #101 - 1.3 million Scoville is REALLY Heartcore!",
+      "published": "2019-11-15T12:07:00Z",
+      "summary": "Looks back at the Umbraco UK Festival and covers Codegarden 2020 news, including the call for speakers and free tickets. Discusses the launch details of Umbraco Heartcore, Umbraco 8.3 and other releases. Busra Parnell joined as guest.",
+      "guests": [
+        {
+          "name": "Busra Parnell",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "xe0hWtnRknw",
+      "title": "umbraCoffee #100 - LIVE @ Umbraco UK Festival 2019",
+      "published": "2019-11-08T11:58:15Z",
+      "summary": "Recorded live at Umbraco UK Festival 2019.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "pEMIjPzx_LE",
+      "title": "umbraCoffee #099 - Who contributes to Open Source, New releases, Events",
+      "published": "2019-10-25T11:02:25Z",
+      "summary": "Covers Hacktoberfest ending, Codecabin starting, and the new e-commerce package Vendr for v8. Also covers Preflight and Bulma Starter Kit updates, UK Fest and other events, and the return of Umbraco Spark in 2020.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "9GNWrbp8dXQ",
+      "title": "umbraCoffee #098 - Elastic All The Things!",
+      "published": "2019-10-18T10:54:51Z",
+      "summary": "Arkadiusz Biel presents Elastic All The Things, based on his talk at PL Fest. Also covers Hacktoberfest contributions, Umbraco 8.2, community Squaretable notes and upcoming events such as the UK Fest.",
+      "guests": [
+        {
+          "name": "Arkadiusz Biel",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "QeX-En8zLhQ",
+      "title": "umbraCoffee #097 - LIVE @ DUUG Fest 2019",
+      "published": "2019-10-11T10:49:22Z",
+      "summary": "Recorded live at DUUG Fest 2019. Covers the Umbraco Package Program and product update, new packages and releases, data type usage reporting, Hacktoberfest progress and Owain's community corner MVP series.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "MFrl3aHSAbo",
+      "title": "umbraCoffee #096 - Umbraco PL Festival 2019",
+      "published": "2019-10-04T11:15:21Z",
+      "summary": "Recorded live at Umbraco PL Festival 2019. Covers Skrift issue 54, Hacktoberfest pull requests, Rasmus John Pedersen joining Umbraco HQ and a summary of the 2019 Umbraco Awards winners.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "AHKt3-nK8mc",
+      "title": "umbraCoffee #095 - Hacktoberfest is coming",
+      "published": "2019-09-27T11:27:26Z",
+      "summary": "Covers the Umbraco product update, Umbraco on .NET Core 3.0 and upcoming festivals and meetups. Also new package releases such as Redirects and PageNotFoundManager, an Umbraco PowerShell host and the Hacktoberfest kick-off.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "dPTgXE3m3QY",
+      "title": "umbraCoffee #094 - uSync? Completed it, mate",
+      "published": "2019-09-20T11:33:14Z",
+      "summary": "Kevin Jump joins to talk about the uSync.Complete announcement and the uSync 8.2 release. Also covers Stephan Gay's licence for his Umbraco contributions, the HQ community Round Table and festival news.",
+      "guests": [
+        {
+          "name": "Kevin Jump",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "o8rnnWzQ3rg",
+      "title": "umbraCoffee #093",
+      "published": "2019-09-13T11:30:13Z",
+      "summary": "Lotte Pitcher joins the show. Topics include the change of CEO at Umbraco HQ, the start of festival season, uSync Complete and other package releases, and a new documentation style guide powered by Vale.",
+      "guests": [
+        {
+          "name": "Lotte Pitcher",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "RgSK0EohnbU",
+      "title": "umbraCoffee #092 - Time For School",
+      "published": "2019-09-06T11:33:23Z",
+      "summary": "Rasmus Söderström joins the show. Topics include an unintended breaking change in the latest Umbraco release, Skrift, the upcoming festivals, a new video series by Paul Seal, package releases and new HQ hires.",
+      "guests": [
+        {
+          "name": "Rasmus Söderström",
+          "affiliation": "Impera"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "FpLMI_UIURg",
+      "title": "umbraCoffee #091 - Backstreet's Back, Product Update, Festivals!",
+      "published": "2019-08-30T11:34:48Z",
+      "summary": "Rune Hem Strand, a new Umbraco HQ hire, joins the show. Covers the Umbraco product update, accessibility in v8, the Sweden, Denmark and Poland festivals, uSync.Complete beta 2 and other package updates.",
+      "guests": [
+        {
+          "name": "Rune Hem Strand",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "7Ne7ThS9ArY",
+      "title": "umbraCoffee #090 - Teamwork Makes the Dream Work",
+      "published": "2019-08-23T11:38:29Z",
+      "summary": "Søren Kottal joins the show. Topics include the Umbraco 8.1.3 and 7.15.2 releases, migrating from v7 to v8, meetups, package releases, how to become an MVP and the Umbraco Forms discussion.",
+      "guests": [
+        {
+          "name": "Søren Kottal",
+          "affiliation": "Ecreo"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "9R7O-TYO0rk",
+      "title": "umbraCoffee #089 - What's the \"scoop\"?",
+      "published": "2019-08-16T11:42:08Z",
+      "summary": "Covers the Umbraco product update on security and the rich text editor, a poll on what Umbraco could do better, an RFC for media tracking and a look at Umbraco Scoop. Also lists many v8 package releases.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "RaoeUEwcaLA",
+      "title": "umbraCoffee #088 - Security, Skrift, \"Scoop\" and more!",
+      "published": "2019-08-09T11:41:21Z",
+      "summary": "Ronald Barendse joins the show. Topics include Skrift issue 52, Poornima Nayar's Alexa skill Scoop, recent security issues and how they were handled, Umbraco BBQs and v8 package releases.",
+      "guests": [
+        {
+          "name": "Ronald Barendse",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "gkXYSHY48Wo",
+      "title": "umbraCoffee #087 - Community Beyond Code",
+      "published": "2019-08-02T11:31:32Z",
+      "summary": "Anna Chu joins to talk about the Microsoft Ignite call for content, tips for conference submissions and how Microsoft approaches diverse events. Also covers the Umbraco HQ product announcements and roadmap and a security advisory.",
+      "guests": [
+        {
+          "name": "Anna Chu",
+          "affiliation": "Microsoft"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "wZ3G3JzrZgw",
+      "title": "umbraCoffee #086 - BBQs, policies, 30.000 commits!",
+      "published": "2019-07-26T11:04:24Z",
+      "summary": "Paul Seal joins the show. Covers the UK and Poland festival calls for papers, the Umbraco BBQs, the uSync roadmap, v8 package releases and Umbraco passing 30,000 commits on GitHub.",
+      "guests": [
+        {
+          "name": "Paul Seal",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "xOCuGZ2QZsU",
+      "title": "umbraCoffee #085 - New Umbraco benchmarks, uPractitioners, Package migrations",
+      "published": "2019-07-19T11:06:28Z",
+      "summary": "Covers the Umbraco 7.15 and 8.1 benchmarks, the Skrift digest on Umbraco Practitioners, internal agency tools and releases for v8.1. Also a security patch bundled by Perplex, the future of DTGE and meetup news.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "mHQHfPuqIgI",
+      "title": "umbraCoffee #084 - 7.15.0 and 8.1.0, Security Advisory, Package updates",
+      "published": "2019-07-12T11:04:13Z",
+      "summary": "Covers the release of Umbraco 7.15.0 and 8.1.0, the security advisory of July 9th and its workaround, and the London meetup. Also lists package releases and updates for v8.1.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "YD9-ETyb-WE",
+      "title": "umbraCoffee #083 - Umbraco 8.1, BBQs and events, uProfile",
+      "published": "2019-07-05T10:56:18Z",
+      "summary": "Covers the coming Umbraco 8.1 release, Skrift issue 51, the return of the Umbraco BBQs and other events and meetups. Also package releases for v8 and the July uProfile.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "3cKnedn9fmQ",
+      "title": "umbraCoffee #082 - Umbraco UK Festival, Resources to learn Umbraco and more",
+      "published": "2019-06-28T11:02:03Z",
+      "summary": "Katie Archibald joins the show. Topics include the expected Umbraco 8.1 release date, the UK and Sweden festivals, package releases, a Giphy pull request for the rich text editor and resources for learning Umbraco.",
+      "guests": [
+        {
+          "name": "Katie Archibald",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "h8fEZzjcgSs",
+      "title": "umbraCoffee #081 - Models Builder API, Training and Forms workflows changes, Summer!",
+      "published": "2019-06-21T11:11:37Z",
+      "summary": "Frans de Jong and Dan Booth join the show. Topics include Codegarden stories, pull requests inspired by Codegarden, changes to Umbraco Forms workflows, Umbraco 8 bridging courses, accessibility and v8 package releases.",
+      "guests": [
+        {
+          "name": "Frans de Jong",
+          "affiliation": null
+        },
+        {
+          "name": "Dan Booth",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "0k5ArE_FGnc",
+      "title": "umbraCoffee #080 - Sounds of Silence",
+      "published": "2019-06-14T10:53:57Z",
+      "summary": "Covers Examine Inspector for v8, the Codegarden aftermovie, contributing to the Umbraco documentation and a discussion about code partners. Also a prototype of an improved data type creation process.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "XDGUr9ZmoD4",
+      "title": "umbraCoffee #079 - Editor.js, tide flows, and Codegarden blues",
+      "published": "2019-06-07T11:07:02Z",
+      "summary": "Marc Stöcker joins to talk about Editor.js for Umbraco. Also covers Stephan Gay leaving Umbraco HQ, the Codegarden 2019 aftermath, Skrift reaching 50 issues and upcoming meetups.",
+      "guests": [
+        {
+          "name": "Marc Stöcker",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "CK1BlHREkzI",
+      "title": "umbraCoffee #078 - Let's make an ARIA to talk about Web Accessibility!",
+      "published": "2019-05-31T11:10:50Z",
+      "summary": "The Umbraco Accessibility Team joins to talk about web accessibility in Umbraco. Also covers post-Codegarden updates, the Umbraco RFCs and new releases.",
+      "guests": [
+        {
+          "name": "Rachel Breeze",
+          "affiliation": "Umbraco Accessibility Team"
+        },
+        {
+          "name": "Danny Lancaster",
+          "affiliation": "Umbraco Accessibility Team"
+        },
+        {
+          "name": "Mike Masey",
+          "affiliation": "Umbraco Accessibility Team"
+        },
+        {
+          "name": "Tiffany Prosser",
+          "affiliation": "Umbraco Accessibility Team"
+        },
+        {
+          "name": "Jan Skovgaard",
+          "affiliation": "Umbraco Accessibility Team"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "WTUAJ0MeW1o",
+      "title": "umbraCoffee LIVE @ Codegarden 2019 - Day 2",
+      "published": "2019-05-30T14:19:35Z",
+      "summary": "Streamed live from Codegarden 2019, day 2.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "PoaJmDSl1y4",
+      "title": "umbraCoffee #077 - LIVE @ Codegarden 2019 - Day 3",
+      "published": "2019-05-24T11:01:01Z",
+      "summary": "Streamed live from Codegarden 2019, day 3.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "pnbvohc66sI",
+      "title": "umbraCoffee LIVE @ Codegarden 2019 - Day 1",
+      "published": "2019-05-22T17:07:17Z",
+      "summary": "Streamed live from Codegarden 2019, day 1.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "JghTiY6KqEc",
+      "title": "umbraCoffee #076 - It's the FINAL COUNTDOWN!",
+      "published": "2019-05-17T11:11:35Z",
+      "summary": "Tiffany Prosser and Arnold Visser join the show. Topics include the final countdown to Codegarden, the uBuddies, new benchmarks, v8 package releases and Marc Goodson's article on v8.",
+      "guests": [
+        {
+          "name": "Tiffany Prosser",
+          "affiliation": null
+        },
+        {
+          "name": "Arnold Visser",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Y8SMXpb4c2E",
+      "title": "umbraCoffee #075 - Commercial Packages, Networking, v8ing stuff",
+      "published": "2019-05-10T11:02:21Z",
+      "summary": "Richard Soeteman joins to talk about commercial Umbraco packages and building them for v8. Also covers post-meetup news, Codegarden preparations, Skrift issue 49 and package releases such as uSync for v8.",
+      "guests": [
+        {
+          "name": "Richard Soeteman",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "v-ABP6kKcH4",
+      "title": "umbraCoffee #074 - It’s a MARATHON, not a sprint",
+      "published": "2019-05-03T10:56:57Z",
+      "summary": "Covers two Umbracians running marathons, the Codegarden countdown and rumours, the drinks pull requests and the retreat topics. Also the Umbraco 8.0.2 release, Articulate v4 for v8 and a uProfile.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "6wIrvyRpuDY",
+      "title": "umbraCoffee #073 - IsItCodegardenYet?",
+      "published": "2019-04-26T11:09:16Z",
+      "summary": "Covers Codegarden preparations, Translation Manager and other package releases for v8, a discussion about tabs and Umbraco 8 bridging courses. Also back-office accessibility activity and Mailgun templates in Umbraco Forms.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Jgwrtfy1vNc",
+      "title": "umbraCoffee #072 - H5YR!",
+      "published": "2019-04-19T10:58:32Z",
+      "summary": "Covers Skrift's fourth birthday, the Codegarden drinks pull requests and the end of the Umbraco Roadshow series. Also meetups, v8 package releases and Mike Masey's to-do list for Umbraco accessibility.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "ADhDTW7IY-w",
+      "title": "umbraCoffee #071 - Hit The Road(show) Jack!",
+      "published": "2019-04-12T10:57:31Z",
+      "summary": "Covers the Umbraco Roadshow stops in Serbia and Barcelona, Codegarden day 1 and the uBuddy profiles. Also Paul Seal's Giphy picker for v8, package releases and a new SWAT hire at HQ.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "QYzjUkv5Z8I",
+      "title": "umbraCoffee #070 - LIVE @ UFD19",
+      "published": "2019-04-05T10:52:14Z",
+      "summary": "Streamed live from Umbraco Festival Deutschland 2019.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "vKtA-9a5tMg",
+      "title": "umbraCoffee #069 - A shower of RELEASES and EVENTS!",
+      "published": "2019-03-29T12:00:34Z",
+      "summary": "Laura Vogt joins to talk about Umbraco Festival Deutschland. Also covers an Umbraco Spark summary, Codegarden updates, the Umbraco Roadshow, v8 adoption and many new package releases.",
+      "guests": [
+        {
+          "name": "Laura Vogt",
+          "affiliation": "Byte5"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "rl-0f1VGl4g",
+      "title": "umbraCoffee #068 - LIVE @ Umbraco Spark 2019",
+      "published": "2019-03-22T11:56:48Z",
+      "summary": "Streamed live from the Umbraco Spark conference in Bristol, UK.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "Fca5244gQ_g",
+      "title": "umbraCoffee #067 - Hey! uBuddy!",
+      "published": "2019-03-15T12:00:05Z",
+      "summary": "Owain Williams joins the show. Topics include the Umbraco 7.14.0 release, the uBuddies and the Community Corner, Codegarden speakers and awards, new training courses, Umbraco Spark and v8 package releases.",
+      "guests": [
+        {
+          "name": "Owain Williams",
+          "affiliation": "Community Corner"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "-aNYUUkVYgI",
+      "title": "umbraCoffee #066 - Womens Day, Spark, and Training",
+      "published": "2019-03-08T11:56:39Z",
+      "summary": "Catherine Todd joins to talk about the upcoming Umbraco Spark conference. Also covers International Women's Day, a closed Umbraco Cloud incident, the new Load Balancing training and v8 package releases.",
+      "guests": [
+        {
+          "name": "Catherine Todd",
+          "affiliation": "Umbraco Spark"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "RFDzV8hy6xo",
+      "title": "umbraCoffee #065 - Pretty gr8 week, UDUF and Virtual High 5!",
+      "published": "2019-03-01T12:04:06Z",
+      "summary": "Matthew Wise joins the show. Topics include the Umbraco v8.0.0 release and its reception, Umbraco Cloud issues, a recap of UDUF 2019, first v8 package releases and upcoming virtual and local meetups.",
+      "guests": [
+        {
+          "name": "Matthew Wise",
+          "affiliation": "Enjoy Digital"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "KG2u0IQUMW4",
+      "title": "umbraCoffee #064 - Award Winning Umbraco!",
+      "published": "2019-02-22T12:05:58Z",
+      "summary": "Covers Umbraco winning the Future Unicorn Award, the upcoming v8 release and its performance gains, and a round of meetups and Codegarden news. Guest Emma Burstow joins for the weekly news, including Umbraco Spark and package mentoring.",
+      "guests": [
+        {
+          "name": "Emma Burstow",
+          "affiliation": "Umbraco PR Team"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "U091UWyS51E",
+      "title": "umbraCoffee #063 - Sharing some Umbraco LOVE ❤️",
+      "published": "2019-02-15T12:07:38Z",
+      "summary": "Looks at Nathan Woulfe's Preflight content app, which won the v8 content app contest, plus Umbraco training for v8, Codegarden first-timer initiatives and event updates. Also covers package releases and package installer ideas.",
+      "guests": [
+        {
+          "name": "Nathan Woulfe",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "lad-Jl7Qrjs",
+      "title": "umbraCoffee #062 - The Road to PERFECTION, PRODUCTIVITY and a cup of TEA!",
+      "published": "2019-02-08T12:12:57Z",
+      "summary": "Covers Umbraco's Future Unicorn Award nomination, community preparation for v8, Umbraco 7.13.2 and a batch of package releases. Also touches on Codegarden speaker announcements and the v8 content app entries.",
+      "guests": [
+        {
+          "name": "Matt Brailsford",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "rbCxFVcJzQc",
+      "title": "umbraCoffee #061 - Conference organizers CHALLANGES",
+      "published": "2019-02-01T12:16:01Z",
+      "summary": "Covers the latest v8 changes, including new UI colours, language variants and removal of legacy code. Also discusses upcoming events such as UDUF and Umbraco Spark, the Codegarden call for papers, open source licensing and package releases.",
+      "guests": [
+        {
+          "name": "Peter Gregory",
+          "affiliation": null
+        },
+        {
+          "name": "Steve Temple",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Gh2wu8Y_WHk",
+      "title": "umbraCoffee #060 - Sparkling PRs, Fascinating Events and Blue Monday!",
+      "published": "2019-01-25T12:20:32Z",
+      "summary": "Covers the closing of the v8 content apps challenge, the announcement of the Umbraco Spark conference, and upcoming meetups and festivals. Also discusses new package releases and big v8 core pull requests, including the multi URL picker and dropped MySQL support.",
+      "guests": [
+        {
+          "name": "Paul Seal",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "mN9Jqb1tdNM",
+      "title": "umbraCoffee #059 - Awesome Umbraco",
+      "published": "2019-01-18T12:07:32Z",
+      "summary": "Covers Umbraco 7.13.1, the v8 content app competition, the Awesome Umbraco package list and a new community projects team. Also introduces Umbraco Spark, lists a run of package releases and previews the week's meetups.",
+      "guests": [
+        {
+          "name": "Lee Kelleher",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "2K3AT0-HVfQ",
+      "title": "umbraCoffee #058 - Contributing is KING!",
+      "published": "2019-01-11T12:03:19Z",
+      "summary": "Covers the Umbraco 7.13 release, in which most pull requests came from the community, and what v8 will mean for existing sites. Also mentions the Pre-flight v8 content app, the latest Skrift issue and the UK Fest recordings.",
+      "guests": [
+        {
+          "name": "Kenn Jacobsen",
+          "affiliation": "Umbraco Core contributor"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "JDCStbJsb08",
+      "title": "umbraCoffee #057 - UmbraGO / UmbraNO",
+      "published": "2019-01-04T12:06:48Z",
+      "summary": "A New Year episode built around a game of UmbraGO / UmbraNO, covering macros in the RTE, composition versus inheritance, Grid versus Nested Content and strongly typed models. Also covers v8 package migration, releases and new hires at HQ.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "xMShDYqRlSM",
+      "title": "umbraCoffee #056 - Driving 127.0.0.1 for Christmas...",
+      "published": "2018-12-21T12:20:41Z",
+      "summary": "A special pre-Christmas episode covering UmbracoTee day, Hacktoberfest swag, the v8 content app competition and the 24days.in series. Also covers new releases, UProfiles, TeaCommerce UI plans and end-to-end testing of the backoffice.",
+      "guests": [
+        {
+          "name": "Vera Green",
+          "affiliation": "Umbraco HQ"
+        },
+        {
+          "name": "Morten Hartvig Larsen",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "TYyFUH8N_2E",
+      "title": "umbraCoffee #055 - #umBrismas & v8 Hackathon",
+      "published": "2018-12-14T12:01:27Z",
+      "summary": "Covers the UmBrisMas meetup and v8 hackathon, a new Umbraco Practitioners meetup and the 24days.in articles. Also lists package releases, meetups and the community corner.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "S6cL-ZTiJ2c",
+      "title": "umbraCoffee #054 - 24 Days In UmbracoMan",
+      "published": "2018-12-07T12:06:26Z",
+      "summary": "Covers the 24 Days In Umbraco initiative, the retirement of UmbracoMan, Skrift issue 44 and TeaCommerce's new home. Also touches on an Umbraco Cloud incident, final meetups of the year and v8 plans. Guests are the people behind 24days.in.",
+      "guests": [
+        {
+          "name": "Jan Skovgaard",
+          "affiliation": "24days.in"
+        },
+        {
+          "name": "Chriztian Steinmeier",
+          "affiliation": "24days.in"
+        },
+        {
+          "name": "Dave Woestenborghs",
+          "affiliation": "24days.in"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "zJ_unPymTZc",
+      "title": "umbraCoffee #053 - HO HO HO, is it December already!?",
+      "published": "2018-11-30T12:06:35Z",
+      "summary": "Covers Umbraco 7.13 reaching full completion, the PR teams at HQ and the origins of the Our.Umbraco namespace. Also discusses funding package development, a long list of meetups worldwide and the UmBrisMas v8 hackathon.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "7oXO08TBtEg",
+      "title": "umbraCoffee #052 - CELEBRATE good times, come on!",
+      "published": "2018-11-23T11:58:33Z",
+      "summary": "The show's first birthday episode. Covers the v8 introduction and release plans, Umbraco's new identity and a CMS Critics Award, plus meetups, GDPR six months on, list view changes and package releases.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "Y0BRyNV3OTs",
+      "title": "umbraCoffee #051 - LIVE @ Umbraco Sweden Festival 2018",
+      "published": "2018-11-16T12:05:07Z",
+      "summary": "Recorded live at Umbraco Sweden Festival 2018 in Gothenburg. Covers UK Fest photos and blogs, a donut caching tutorial, meetups around the world, new package releases and docs and PR team updates.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "bDzTi8T_GsY",
+      "title": "umbraCoffee #050 - LIVE @ Umbraco UK Festival 2018",
+      "published": "2018-11-09T11:57:21Z",
+      "summary": "Recorded live at Umbraco UK Festival 2018 in London.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "824UHIpHuPA",
+      "title": "umbraCoffee #049 - NOVEMBER... just do your thing!",
+      "published": "2018-11-02T11:57:31Z",
+      "summary": "Covers the UK Festival countdown, the uDuf 2019 website, meetups in Belgium, Ireland and Barcelona, and the November uProfile. Also covers package releases, the new UmbraJobs portal, a new hire at HQ and v8 content app documentation.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "0D-Az8Jre1o",
+      "title": "umbraCoffee #048 - OK Google, tell me the news this week...",
+      "published": "2018-10-26T11:06:51Z",
+      "summary": "Covers the Umbraco DK Festival, Hacktoberfest and Perplex's Google Home integration package. Also covers new package releases, a new HQ hire, new meetup groups and Paul Seal's v8 live chat content app.",
+      "guests": [
+        {
+          "name": "Jeffrey Schoemaker",
+          "affiliation": "Perplex"
+        },
+        {
+          "name": "Niek Berenschot",
+          "affiliation": "Perplex"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "VT__WGGtHAg",
+      "title": "umbraCoffee #047 - CODECABIN re-cap, OCTOVERSE and more!",
+      "published": "2018-10-19T11:10:41Z",
+      "summary": "Recaps CodeCabin and covers content apps documentation, Umbraco RTL support, the US Fest and upcoming festivals, and GitHub Octoverse. Also lists new releases, community blogs and the PL Fest videos.",
+      "guests": [
+        {
+          "name": "Karl Tynan",
+          "affiliation": null
+        },
+        {
+          "name": "Frederik Raabye",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "A8296nJQAP8",
+      "title": "umbraCoffee #046 - LIVE @ Umbraco US Fest 2018",
+      "published": "2018-10-12T14:01:07Z",
+      "summary": "Recorded live at Umbraco US Festival in Chicago. Covers festival updates, CodeCabin starting, new releases such as Look and Formulate 2.0, v8 and Models Builder tutorials, 1000 contributions to the docs and the history of the support team.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "TmNKlXURQ3Y",
+      "title": "umbraCoffee #045 - LIVE @ DUUG Fest 2018",
+      "published": "2018-10-05T10:56:39Z",
+      "summary": "Recorded live at DUUG Fest in the Netherlands. Includes a v8 preview from a surprise guest covering variants, side-by-side editing and infinite editing, plus the v8 release plan, Hacktoberfest, Skrift 42 and upcoming festivals.",
+      "guests": [
+        {
+          "name": "Niels",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "sHjTMe1QUfM",
+      "title": "umbraCoffee #044 - HACKTOBERFEST is coming!",
+      "published": "2018-09-28T11:08:13Z",
+      "summary": "Covers Hacktoberfest, the naming of Umbraco festivals and the upcoming Sweden, DUUG, US and UK events. Also covers meetups, the v8 hackathon and content apps, the frontend build process in core, and Paul Seal's posts. Guests are a Sweden Festival organiser and Andrew Barta.",
+      "guests": [
+        {
+          "name": "Jens Josefsson",
+          "affiliation": "Umbraco Sweden Festival"
+        },
+        {
+          "name": "Andrew Barta",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "5Q0zYkzjrYU",
+      "title": "umbraCoffee #042 - FESTIVALS Season Begins!!!",
+      "published": "2018-09-14T11:05:06Z",
+      "summary": "Covers the start of festival season, a security patch release on September 20, DI abstraction work and version-specific docs. Also covers a Serilog demo in the backoffice, meetups, new releases and HQ news.",
+      "guests": [
+        {
+          "name": "Arnold Visser",
+          "affiliation": "Dutch Umbraco User Group"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "_zl4ELmBKv8",
+      "title": "umbraCoffee #041 - Umbraco BBQ in Manchester",
+      "published": "2018-09-07T10:59:27Z",
+      "summary": "Umbraco BBQ in Manchester.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "YjD1JfoJtNw",
+      "title": "umbraCoffee #040 - The Gates Are Closed (same as Issue Tracker soon...)",
+      "published": "2018-08-31T10:59:07Z",
+      "summary": "Covers the v8 hackathon, Umbraco's move to GitHub Issues, a code of conduct idea for the Slack channel and the Umbraco Virtual meetup recording. Also covers new releases, the Unicorner, US Fest speakers and a media picker focal point request.",
+      "guests": [
+        {
+          "name": "Nathan Woulfe",
+          "affiliation": "Umbraco MVP"
+        },
+        {
+          "name": "Poornima Nayar",
+          "affiliation": "Certified Umbraco Master"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "pvvUGJW8X3k",
+      "title": "#spilledUmbraCoffee #039 - It's all about PEOPLE, not TECHNOLOGY",
+      "published": "2018-08-24T11:04:16Z",
+      "summary": "Covers the Umbraco 7.12.1 patch release, a nested content toggle discussion and new releases such as UmbMapper and Plumber. Also covers Umbraco BBQ in London, DUUG Fest and Sweden Festival news, a new HQ hire and the Gutenberg discussion.",
+      "guests": [
+        {
+          "name": "Ravi Motha",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "WTItBaq0TJM",
+      "title": "umbraCoffee #038 - LIVE from Umbraco HQ @ Odense - Is It Codegarden Yet?!",
+      "published": "2018-08-17T10:55:28Z",
+      "summary": "Recorded live from Umbraco HQ in Odense. Covers the 200 subscriber milestone, the Unicorner, Owain Williams' Community Corner and Umbraco 7.12.0 with its benchmarks. Also covers a Serilog discussion, package releases, a new HQ hire and DUUGFest speakers.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "mh1XQi_kBhY",
+      "title": "umbraCoffee #037 - Shhh... Unicorner is around the corner!",
+      "published": "2018-08-10T11:04:52Z",
+      "summary": "Covers the return of the Unicorner, 86 PRs merged in July, the August uProfile and Skrift issue 40. Also covers the PL Festival schedule, DE Fest call for papers, a code block property editor and the Umbraco Cloud agency story from The Cogworks.",
+      "guests": [
+        {
+          "name": "Matthew Wise",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "-I3S82sLzBg",
+      "title": "uHangoutCoffee #036 - The end of the BLOGGY week",
+      "published": "2018-08-03T11:08:04Z",
+      "summary": "Covers umbracoTee day, the second v8 hackathon and CMS Critic Awards nominations, and several blogs on v8 NuCache and Serilog. Also covers new releases, festival speakers, the Umbraco BBQ schedule, a second virtual meetup and new HQ hires.",
+      "guests": [
+        {
+          "name": "Warren Buckley",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "CkdBvnMlLgo",
+      "title": "umbraCoffee #035",
+      "published": "2018-07-27T11:03:02Z",
+      "summary": "",
+      "guests": [
+        {
+          "name": "Stephan Gay",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "iI05234OZjc",
+      "title": "umbraCoffee #034",
+      "published": "2018-07-20T10:53:55Z",
+      "summary": "",
+      "guests": [
+        {
+          "name": "Henk Boelman",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "cuJXs06Vda0",
+      "title": "umbraCoffee #033",
+      "published": "2018-07-13T10:56:31Z",
+      "summary": "",
+      "guests": [
+        {
+          "name": "Simone Chiaretta",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "3jll6CIAkIQ",
+      "title": "umbraCoffee #032 - Ways to get INSPIRED",
+      "published": "2018-07-06T10:59:23Z",
+      "summary": "Covers ways to get inspired, including Skrift issue 39 posts and community blogs, along with the start of festival season. Also covers the v8 hackathon, meetups, CodeCabin sign-ups, Latch sponsoring Let's Encrypt and Warren's v8 blogs.",
+      "guests": [
+        {
+          "name": "Nik Rimington",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "JpAeMFy82pQ",
+      "title": "umbraCoffee #031 - Eat, sleep, code, repeat!",
+      "published": "2018-06-29T10:59:50Z",
+      "summary": "Covers Umbraco 7.11.1 and the coming 7.12, the first Cogworks v8 hackathon and a day of 17 merged pull requests. Also covers CodeCab.in sign-ups, new releases, the new Umbraco.TV crew and Umbraco Elements by Kevin Jump.",
+      "guests": [
+        {
+          "name": "Lucy Brailsford",
+          "affiliation": "Outfield Digital"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "XwjcHq4BlNs",
+      "title": "umbraCoffee #030 - Always MEASURE!",
+      "published": "2018-06-22T11:01:14Z",
+      "summary": "Covers the Umbraco 7.11.0 release, uBenchmark results from Offroad Code and more love for the docs. Also covers meetups, the virtual meetup summary, new package releases such as Fluidity, a Lego Mindstorms headless idea and Formulate passing 500 commits.",
+      "guests": [
+        {
+          "name": "Stephen Roberts",
+          "affiliation": "Offroad Code"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "O90LN7YTuUE",
+      "title": "umbraCoffee #029 - Meetups and the V8 event horizon",
+      "published": "2018-06-15T10:55:12Z",
+      "summary": "Covers meetups, v8 hackathons, Umbraco training news and the Anders Bjerner uProfile. Also covers super-early bird Codegarden tickets, Warren's lightning talk on Examine, tips for Latch, the Umbraco hall of fame and a blog on the v8 event horizon.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "rtYq81BaACk",
+      "title": "umbraCoffee #028 - Not About Github/Jithub ;)",
+      "published": "2018-06-08T10:55:51Z",
+      "summary": "Post-Codegarden 2018 roundup, with summaries from Umbraco HQ and the videos being published. Also covers community meetups, the Umbraco v8 discussions, the Cogworks v8 hackathon, the CPR team introduction and new package releases.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "fV1spKxGQDM",
+      "title": "umbraCoffee #027 - Why (and how!) you should SHARE KNOWLEDGE in the Umbraco community",
+      "published": "2018-06-01T10:54:40Z",
+      "summary": "Post-Codegarden 2018 buzz, including people trying the Headless beta and v8 and sending documentation pull requests. Also covers the first CODECABIN guests, backoffice theming, the CPR team's first meeting, new releases and a poll on naming the Settings section.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "FXGf-cX0VUY",
+      "title": "umbraCoffee #026 - LIVE @ Codegarden 2018 - Day 3",
+      "published": "2018-05-25T10:49:34Z",
+      "summary": "Recorded live at Codegarden 2018, day 3.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "zSkNcvGefvI",
+      "title": "umbraCoffee LIVE @ Codegarden 2018 - Day 2",
+      "published": "2018-05-24T15:29:51Z",
+      "summary": "Recorded live at Codegarden 2018, sharing the highlights of day 2.",
+      "guests": [],
+      "guestsUnnamed": true,
+      "uncertain": true
+    },
+    {
+      "videoId": "q85ra3HoZyU",
+      "title": "umbraCoffee LIVE @ Codegarden 2018 - Day 1",
+      "published": "2018-05-23T16:43:40Z",
+      "summary": "Recorded live at Codegarden 2018, sharing the highlights of day 1.",
+      "guests": [],
+      "guestsUnnamed": true,
+      "uncertain": true
+    },
+    {
+      "videoId": "D-5aEncPgSo",
+      "title": "umbraCoffee SPECIAL - Demystifying the Umbraco Retreat",
+      "published": "2018-05-21T14:41:01Z",
+      "summary": "Recorded live at the Umbraco Retreat 2018, explaining what the retreat is and what happened there over the past few days.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "CTEkA4divOg",
+      "title": "umbraCoffee #025 - Clear your MIND for #cg18",
+      "published": "2018-05-18T11:03:04Z",
+      "summary": "Run-up to Codegarden 2018 and a critical security update for Umbraco Forms. Also covers new hires at Umbraco HQ, the UFD18 videos, new Skrift issue, package releases, the documentation diary and backoffice tours.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "9I_resXJnas",
+      "title": "umbraCoffee #024 - LIGHTNING never strikes twice... but 14 times at #cg18!",
+      "published": "2018-05-11T10:58:13Z",
+      "summary": "Codegarden 2018 preparations: lightning talks, the final day format, the Beer PR contributors and rumours. Also covers the Umbraco US Festival identity, the Umbraco Deploy NuGet package, the latest uProfile and the future of C# from Build 2018.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "OdmAduwCsFI",
+      "title": "umbraCoffee #023 - May The Fourth Be With You",
+      "published": "2018-05-04T10:58:05Z",
+      "summary": "Umbraco community news with Christian Wandler: Skrift issue 37, growth at Umbraco HQ and the Umbraco Festival Germany recap. Also covers the umbraCoffee talk at Codegarden, the Beer PR t-shirt list, new releases and Perplex reaching 10,000 package downloads.",
+      "guests": [
+        {
+          "name": "Christian Wandler",
+          "affiliation": "Byte5"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "8igDqEXkxnM",
+      "title": "umbraCoffee #022 - Codegarden updates + Wir lieben Deutschland (Festival) - PART 2",
+      "published": "2018-04-27T10:59:15Z",
+      "summary": "Codegarden updates and the Umbraco Festival in Germany. Part 2 of a stream that was restarted after technical issues.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "DeDbT8u6Rlk",
+      "title": "umbraCoffee #022 - Codegarden updates + Wir lieben Deutschland (Festival) - PART 1",
+      "published": "2018-04-27T10:45:58Z",
+      "summary": "Codegarden updates and the Umbraco Festival in Germany. Part 1 of a stream that was restarted after technical issues.",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "II6ceooAwS0",
+      "title": "umbraCoffee #021 - Why Should You Attend Community Events?",
+      "published": "2018-04-20T10:54:20Z",
+      "summary": "Why attending community events is worth it, with Owain Williams. Also covers the Umbraco 7.10.3 memory leak fix, the Chrome 66 package issue, Beer PRs, more Codegarden talks, the first-timer's manual and new documentation.",
+      "guests": [
+        {
+          "name": "Owain Williams",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "94ADBYeadTM",
+      "title": "umbraCoffee #020 - Take A Note Of This",
+      "published": "2018-04-13T10:56:39Z",
+      "summary": "Notely 2.0 sneak peek with Michaël Vanbrabandt. Also covers Umbraco 7.10.2 and 7.9.4, the Codegarden schedule and first Beer PRs, Skybrud.Umbraco.Redirects and Translation Manager releases, Umbraco on AWS and Umbraco and GDPR.",
+      "guests": [
+        {
+          "name": "Michaël Vanbrabandt",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "rPABusHJ3Zs",
+      "title": "umbraCoffee #019 - Umbracoins, Skrift, (Beer)PRs and Codegarden hints",
+      "published": "2018-04-06T11:40:40Z",
+      "summary": "April Fools' Umbracoins, Umbraco HQ's doubled growth and the #up-for-grabs contribution invitation, with Maggy Burns and Cristhian Amaya. Also covers Codegarden updates, Umbraco 7.10.1, the latest Skrift issue and the Headless meetup in Denmark.",
+      "guests": [
+        {
+          "name": "Maggy Burns",
+          "affiliation": null
+        },
+        {
+          "name": "Cristhian Amaya",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Ktwte98bT6E",
+      "title": "umbraCoffee #018 - People, Not Technology",
+      "published": "2018-03-30T10:53:05Z",
+      "summary": "The umbraCoffee YouTube milestone and Umbraco 7.9.3 and 7.10.0, with Sebastiaan Janssen and Anders Bjerner. Also covers a feature request about overwriting other editors' work, the Our Umbraco upgrades, the PL Festival call for speakers and Codegarden day 2.",
+      "guests": [
+        {
+          "name": "Sebastiaan Janssen",
+          "affiliation": null
+        },
+        {
+          "name": "Anders Bjerner",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "oTBRfDnmv-4",
+      "title": "umbraCoffee #017 - Just Fork IT!",
+      "published": "2018-03-23T11:54:39Z",
+      "summary": "Making a first pull request, with Emma Burstow. Also covers Umbraco's market share compared with Drupal, a new Skrift issue, Codegarden speaker announcements, package releases, empathy in tech and the Umbraco training discount.",
+      "guests": [
+        {
+          "name": "Emma Burstow",
+          "affiliation": "Crumpled Dog"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "MJ7BkLf6Kfk",
+      "title": "umbraCoffee  #016 - PRs... PRs everywhere!",
+      "published": "2018-03-16T11:49:47Z",
+      "summary": "Documentation and pull requests, with Sofie Toft. Covers 67 merged documentation PRs, the UrlTracker discussion, Codegarden and Umbraco US Festival updates, Fluidity and MemberUnlock releases, the Cloud API and performance pull requests.",
+      "guests": [
+        {
+          "name": "Sofie Toft",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "eqe79Qod6yY",
+      "title": "umbraCoffee #015 - A pretty SOLID week...",
+      "published": "2018-03-09T12:00:02Z",
+      "summary": "Unit testing Umbraco and SOLID principles, with Emma Garland and Lars-Erik Aabech. Also covers new Codegarden speakers, the March uProfile, Skrift's third birthday, many package releases, International Women's Day stories and backoffice optimisation.",
+      "guests": [
+        {
+          "name": "Emma Garland",
+          "affiliation": null
+        },
+        {
+          "name": "Lars-Erik Aabech",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "KGls0DpamXY",
+      "title": "umbraCoffee #014 - Winter Has Come ;)",
+      "published": "2018-03-02T11:53:29Z",
+      "summary": "Umbraco 7.9 and GDPR, with Lee Kelleher talking about UMCO, CODECABIN and the Bristol user group. Also covers Codegarden's first speakers, the HQ hackathon and new CONTRIBUTING.md, the new download page and uSync and Translation Manager releases.",
+      "guests": [
+        {
+          "name": "Lee Kelleher",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "j4SaK1QCBxA",
+      "title": "umbraCoffee #013 - A little bit of magic... from uDuf 2018!",
+      "published": "2018-02-23T11:59:33Z",
+      "summary": "A wrap-up of uDuf 2018, with Damiaan Peeters. Covers the hackathon results, uSync's fifth birthday, the PL Festival call for speakers, package releases, Codegarden 2018 expectations, contributing to the Umbraco docs and React in the backoffice.",
+      "guests": [
+        {
+          "name": "Damiaan Peeters",
+          "affiliation": "Umbraco docs curator"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "UXlO_k32QPY",
+      "title": "umbraCoffee #012 - Spiders, kangaroos... what's Nexu?! (👈 not a typo!)",
+      "published": "2018-02-16T11:58:12Z",
+      "summary": "Umbraco's 13th open-source birthday and Nexu, with Dave Woestenborghs. Also covers the uDuf countdown, the Umbraco US Festival date, package releases including uCronos and Forms workflows, and a call for community blogs.",
+      "guests": [
+        {
+          "name": "Dave Woestenborghs",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "wyDTAP6RdH0",
+      "title": "umbraCoffee #011 - four, five, six... 7.8!",
+      "published": "2018-02-09T11:58:44Z",
+      "summary": "Umbraco 7.8 and 7.7.10, with Jeavon Leopold. Also covers the Umbraco Documentation Curators, Skrift issue 34, package releases, the Codegarden call for speakers, a feature request for content type change events and a Cloud CMS conference in Warsaw.",
+      "guests": [
+        {
+          "name": "Jeavon Leopold",
+          "affiliation": "Crumpled Dog"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "Kppv0PCmd74",
+      "title": "umbraCoffee #010 - INSERT INTO Umbraco.D-team",
+      "published": "2018-02-02T11:58:40Z",
+      "summary": "Welcoming new members of the Umbraco D-team. Covers the chosen installer screen, Umbraco meetups in Edinburgh, Denmark and Belgium, the Council of the European Union case study, package releases, feature requests and CODECABIN registration.",
+      "guests": [
+        {
+          "name": "Jacob",
+          "affiliation": "Umbraco D-team"
+        },
+        {
+          "name": "Nicolai",
+          "affiliation": "Umbraco D-team"
+        },
+        {
+          "name": "Kenneth",
+          "affiliation": "Umbraco D-team"
+        },
+        {
+          "name": "Kristian",
+          "affiliation": "Umbraco D-team"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "GzYuvYRH0so",
+      "title": "umbraCoffee #009 - ThisWeek.Dispose();",
+      "published": "2018-01-26T11:58:36Z",
+      "summary": "Sotiris Filippidis from DotSee on his AutoNode package and choosing the right CMS. Also covers HQ's New Year webinar, a leaked v8 screenshot, Umbraco 7.7.9, package releases, TryConvertTo performance improvements and the 7.8 installer background survey.",
+      "guests": [
+        {
+          "name": "Sotiris Filippidis",
+          "affiliation": "DotSee"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "b5hRjI7ErW4",
+      "title": "umbraCoffee #008 - We speak umbraco API fluently ;)",
+      "published": "2018-01-19T12:02:01Z",
+      "summary": "Matt Brailsford demos Fluidity and explains UMCO and its Patreon. Also covers Umbraco and GDPR, Translation Manager and UmbMapper releases, ModelsBuilder benchmarks, an Archetype to Nested Content migration tool and PL Festival tickets.",
+      "guests": [
+        {
+          "name": "Matt Brailsford",
+          "affiliation": "Umbraco MVP"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "NqK3AKB4QCs",
+      "title": "umbraCoffee #007 - Bugs Are (Not) Forever",
+      "published": "2018-01-12T12:03:51Z",
+      "summary": "Mike Masey on his pull requests to Umbraco Core. Also covers the return of uProfile, nominations for the 2018 Umbraco Awards, WebVR with Umbraco, Umbraco 7.7.8, package releases and a new online certification course.",
+      "guests": [
+        {
+          "name": "Mike Masey",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "OSVZh07Zd1w",
+      "title": "umbraCoffee #006 - Wind of Change",
+      "published": "2018-01-05T12:22:49Z",
+      "summary": "New Umbraco D-team employees and Niels' New Year memo about Headless and v8 in 2018, with Pete Duncanson. Also covers Spectre and Meltdown on Umbraco Cloud, Skrift issue 33, the Fluidity release and early bird uDuf tickets.",
+      "guests": [
+        {
+          "name": "Pete Duncanson",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "F_lPZbLkf2U",
+      "title": "umbraCoffee #005 - DROP TABLE [umbraco].[2017];",
+      "published": "2017-12-22T12:23:52Z",
+      "summary": "A look back at 2017 and forward to 2018 with Rune Strand. Covers the year's Umbraco releases and features, v8 appearing on the tracker and the Umbraco festivals held across the world.",
+      "guests": [
+        {
+          "name": "Rune Strand",
+          "affiliation": "Umbraco HQ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "KhvkStjVkHI",
+      "title": "umbraCoffee #004 - BREAKING NEWS, package 'Mass Production' and Open Source spirit",
+      "published": "2017-12-15T11:58:36Z",
+      "summary": "Kevin Jump joins to talk about Umbraco. Covers the new Community Engagement Officer, Umbraco 7.7.7, package releases including Translation Manager and uSync Health Checker, the return of the Umbraco DK meetups, keeping docs up to date, Nested Content requests and uDuf.",
+      "guests": [
+        {
+          "name": "Kevin Jump",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
+    {
+      "videoId": "fyIPN9Qje9Y",
+      "title": "umbraCoffee #003 - Umbraco Trainings, Worldwide Festivals and other community news!",
+      "published": "2017-12-08T12:06:10Z",
+      "summary": "Umbraco training discounts, worldwide festivals and community news. Covers Skrift posts, 24 Days articles, a new starter kit from Paul Seal, a v8 sneak peek, umbMapper and the launch of umbracofestival.com.",
+      "guests": [
+        {
+          "name": "Ismail Mayat",
+          "affiliation": null
+        }
+      ],
+      "guestsUnnamed": true,
+      "uncertain": true
+    },
+    {
+      "videoId": "ndNCKAtx5PI",
+      "title": "umbraCoffee #002 - Brace Yourselves, KNOWLEDGE is coming!",
+      "published": "2017-12-06T22:42:11Z",
+      "summary": "Paul Seal joins to talk about codeshare.co.uk, the 24 Days in Umbraco series and his SmallerImages project, plus the uDuf and German Umbraco festivals.",
+      "guests": [
+        {
+          "name": "Paul Seal",
+          "affiliation": "Codeshare"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    },
+    {
+      "videoId": "OY3_KErMlPg",
+      "title": "umbraCoffee #001 - #umbUKFest Hackathon and Umbraco 7.7.5(6) Community Edition",
+      "published": "2017-12-06T22:30:47Z",
+      "summary": "The umbUKFest hackathon and Umbraco 7.7.5 and 7.7.6 Community Edition, with Jack Malinowski. Also covers a departure from Umbraco HQ, the new certified partner program, the Umbraco 7.8 beta and contributing to the Core.",
+      "guests": [
+        {
+          "name": "Jack Malinowski",
+          "affiliation": "JMMJ"
+        }
+      ],
+      "guestsUnnamed": false,
+      "uncertain": true
+    }
+  ]
+}

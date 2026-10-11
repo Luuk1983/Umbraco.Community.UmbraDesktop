@@ -68,8 +68,9 @@ This also settles the issue's open question about the top layer. The container's
 hidden, only its children, so there is no question of a top-layer element surviving `display: none`.
 A hidden toast still runs its own lifecycle: its open and close sequence is `setTimeout` and
 `requestAnimationFrame`, neither of which cares about `display`, so it closes on schedule, fires
-`closed`, and leaves its context's list exactly as it would have. A sender awaiting `onClose()` sees
-the same timing as before.
+`closed`, and leaves its context's list exactly as it would have. A sender awaiting `onClose()` saw
+the same timing as before; since 2026-09-28 it also hears when the desktop's copy is taken down,
+see §10.
 
 ### 3.3 Clicking after a reload (D3)
 
@@ -196,3 +197,38 @@ Clear button in the list's header empties it, and takes any toast still showing 
 toast is the same notification as its line. There is still no per-entry dismiss, no read state and no
 muting; this is one reset, not a triage tool. The button is drawn disabled on an empty list rather
 than hidden.
+
+## 10. Closing the originals (2026-09-28)
+
+A notification the desktop draws still has its original in the document that raised it, hidden,
+until its own timer runs out. For a staying one that is never. That was harmless while the hiding
+rule stood, but leaving the desktop lifts the rule, and the classic backoffice then showed
+everything the desktop had already shown, a package's own element among them (umbraCoffee's
+reminder) with buttons that reached for a desktop that was gone.
+
+- **Leaving the desktop closes what it drew with its own element.** The desktop's own watcher is
+  started with a `closeOnStop` test, `drawsOwnElement` for the desktop, and on stop it closes the
+  handlers it reported that pass it and are still in the list, before it lifts the rule. Plain
+  notifications carry over to the classic backoffice, because they still mean what they say there:
+  core's offline notice while still offline, or an error that asked to stay. Only handlers it
+  reported: one raised again on purpose is visible already and left to its reader, and one raised
+  after the desktop has gone was never the desktop's. Each is hidden inline as it closes, because
+  core's close animates before the handler leaves the list and the rule is lifted straight after.
+  One UUI edge: a toast closed within the frame it opened in never fires `closed`, so its handler
+  stays in the list, hidden inline, and a later watcher reports it as already on screen.
+- **Windows are left alone.** A frame's watcher stops only when the frame loads a new document or
+  leaves the page with its window, and either way the document goes with it.
+- **Taking a toast down closes its original.** Sources gained an optional `close(key)` beside
+  `reraise`, and `dismiss` (the cross, an element's own close, the timer, a click, Clear) calls it
+  for every original the toast stands for: each toast keeps one source and key per arrival, so the
+  repeats from other windows are closed too. This is what stops a staying original from sitting in a
+  window's list for the life of the frame, and it means a sender awaiting `onClose()` hears about it
+  when the user closes the desktop's copy.
+- **The desktop's own notifications are never raised again in its document.** Clicking the entry
+  of one whose element is drawn shows it again as a desktop toast (umbraCoffee design D15). One whose
+  element is not defined, because its module never loaded, would draw an empty Umbraco toast, so its
+  entry shows it again as a plain desktop toast, headline and message, and its toast, already
+  showing that, only goes. Windows are unchanged.
+- **Showing a desktop notification again while its toast is up changes nothing it carries.** The
+  scrollback entry's rebuilt notification has the entry's key and no duration, so it only refreshes
+  the toast's timer, and the toast keeps the original's key to close it by.

@@ -1,0 +1,14 @@
+{
+  "kind": "youtube#videoListResponse",
+  "items": [
+    {
+      "id": "ENDED000001",
+      "snippet": { "title": "umbraCoffee - Done", "liveBroadcastContent": "none" },
+      "liveStreamingDetails": {
+        "scheduledStartTime": "2026-09-25T11:30:00Z",
+        "actualStartTime": "2026-09-25T11:31:00Z",
+        "actualEndTime": "2026-09-25T12:40:00Z"
+      }
+    }
+  ]
+}

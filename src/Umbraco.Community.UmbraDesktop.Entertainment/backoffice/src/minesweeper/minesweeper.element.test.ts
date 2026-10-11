@@ -424,7 +424,7 @@ function expectFullyVisible(host: HTMLElement, element: MinesweeperElement, why:
  * Every theme id the desktop can stamp on this element, plus the moment before it has stamped one.
  *
  * Hardcoded, because there is nothing to import: the host's npm package is private and its NuGet
- * package ships JavaScript, so the five ids are published as prose in `docs/developer/desktop-apps.md` §7 and
+ * package ships JavaScript, so the five ids are published as prose in `docs/developer/desktop-apps.md` §5 and
  * an app reads them from there. A sixth theme would not appear here, which is the honest limit of
  * this list — but it also could not break the assertion below, since the one rule that keys off an
  * id is a refinement on top of rules that hold for every theme.

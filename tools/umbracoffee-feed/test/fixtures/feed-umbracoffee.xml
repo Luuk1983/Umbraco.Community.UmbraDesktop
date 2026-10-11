@@ -1,0 +1,603 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+ <link rel="self" href="http://www.youtube.com/feeds/videos.xml?channel_id=UCF_Ene5-58a3Z55aw8O6Djg"/>
+ <id>yt:channel:F_Ene5-58a3Z55aw8O6Djg</id>
+ <yt:channelId>F_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+ <title>umbraCoffee</title>
+ <link rel="alternate" href="https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg"/>
+ <author>
+  <name>umbraCoffee</name>
+  <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+ </author>
+ <published>2017-12-05T09:46:59+00:00</published>
+ <entry>
+  <id>yt:video:aRkc0fRxQjw</id>
+  <yt:videoId>aRkc0fRxQjw</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - The September Shift</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=aRkc0fRxQjw"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2026-09-25T11:27:38+00:00</published>
+  <updated>2026-09-27T02:20:53+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - The September Shift</media:title>
+   <media:content url="https://www.youtube.com/v/aRkc0fRxQjw?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i2.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+
+// TODO</media:description>
+   <media:community>
+    <media:starRating count="4" average="5.00" min="1" max="5"/>
+    <media:statistics views="81"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:Mp-5Uy7pZ9E</id>
+  <yt:videoId>Mp-5Uy7pZ9E</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - Back To School</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=Mp-5Uy7pZ9E"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2026-08-28T23:27:49+00:00</published>
+  <updated>2026-09-07T05:41:25+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - Back To School</media:title>
+   <media:content url="https://www.youtube.com/v/Mp-5Uy7pZ9E?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i2.ytimg.com/vi/Mp-5Uy7pZ9E/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+
+// TODO</media:description>
+   <media:community>
+    <media:starRating count="2" average="5.00" min="1" max="5"/>
+    <media:statistics views="121"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:RaFus8cVC24</id>
+  <yt:videoId>RaFus8cVC24</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - Summer Vibes Only</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=RaFus8cVC24"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2026-07-31T23:27:41+00:00</published>
+  <updated>2026-09-08T16:36:43+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - Summer Vibes Only</media:title>
+   <media:content url="https://www.youtube.com/v/RaFus8cVC24?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i3.ytimg.com/vi/RaFus8cVC24/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+
+- Umbraco Automate launched: https://umbraco.com/blog/launching-umbraco-automate/
+  - Extending it: https://owain.codes/blog/2026/july/build-a-custom-umbraco-automate-action
+- Security advisories: https://umbraco.com/blog/security-advisory-july-7-2026-security-patches-are-now-available/
+- Agent-ready CMS (I like this term): https://umbraco.com/blog/the-agent-ready-cms-enable-the-ecosystem-umbraco-s-mcp-as-a-platform-and-software-factory/
+  - AEO for Umbraco: https://flowcourier.com/blog/aeo-for-umbraco/
+  - GEO Checker for Umbraco - https://marketplace.umbraco.com/package/geochecker.umbraco
+- Migrations, migrations everywhere!
+  - https://cornehoskam.com/posts/how-i-upgraded-umbraco-13-to-17-in-less-than-two-hours?utm_source=umbfyi&amp;utm_medium=web
+  - https://www.zpqrtbnk.net/posts/umbraco-13-to-17/
+  - https://www.linkedin.com/feed/update/urn:li:activity:7483152226157445121/
+- Umbraco Search replacing existing search in v19: https://github.com/umbraco/Announcements/issues/36
+- Events:
+  - Speakers announced for the US festival: https://umbracofestival.us/speakers/
+  - UK Conference as well! https://2026.umbracofoundation.co.uk/
+  - Dutch festival started announcing on Instagram, others are still looking for speakers?
+  - https://umbraco.com/events/
+
+## Other stuff
+
+- https://www.linkedin.com/posts/marcinzajkowski_as-a-long-term-umbraco-user-contributor-activity-7488222028013993984-lmWX</media:description>
+   <media:community>
+    <media:starRating count="3" average="5.00" min="1" max="5"/>
+    <media:statistics views="94"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:mEa90pJb0Bw</id>
+  <yt:videoId>mEa90pJb0Bw</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - Codegarden 2026 Wrapped 🌯</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=mEa90pJb0Bw"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2026-06-26T23:06:54+00:00</published>
+  <updated>2026-09-24T12:09:59+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - Codegarden 2026 Wrapped 🌯</media:title>
+   <media:content url="https://www.youtube.com/v/mEa90pJb0Bw?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i2.ytimg.com/vi/mEa90pJb0Bw/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Topics:
+//ToDo:</media:description>
+   <media:community>
+    <media:starRating count="2" average="5.00" min="1" max="5"/>
+    <media:statistics views="67"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:bmfrLgNfQ_g</id>
+  <yt:videoId>bmfrLgNfQ_g</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - LIVE at #Codegarden 2026!</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=bmfrLgNfQ_g"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2026-06-12T02:29:10+00:00</published>
+  <updated>2026-09-07T22:04:23+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - LIVE at #Codegarden 2026!</media:title>
+   <media:content url="https://www.youtube.com/v/bmfrLgNfQ_g?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i3.ytimg.com/vi/bmfrLgNfQ_g/hqdefault.jpg" width="480" height="360"/>
+   <media:description></media:description>
+   <media:community>
+    <media:starRating count="4" average="5.00" min="1" max="5"/>
+    <media:statistics views="105"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:cCqq76ItuB4</id>
+  <yt:videoId>cCqq76ItuB4</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - Agents, Codegarden, Tees</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=cCqq76ItuB4"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2026-05-30T00:06:57+00:00</published>
+  <updated>2026-09-26T15:51:13+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - Agents, Codegarden, Tees</media:title>
+   <media:content url="https://www.youtube.com/v/cCqq76ItuB4?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i4.ytimg.com/vi/cCqq76ItuB4/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+Today we're joined by Adam Shallcross, CEO &amp; Founder of Cogworks – and curator oft the Human Vibe Loop newsletter.
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+
+- Skrift: https://skrift.io/issues/?utm_source=umbfyi&amp;utm_medium=web#127
+- https://umbraad.com/
+- Bootstrap 3 bye bye from Forms: https://github.com/umbraco/Announcements/issues/35
+- AI Agents everywhere…
+- https://codeshare.co.uk/blog/designing-an-ai-agent-skill-for-adding-a-page-type-to-umbraco/
+- Adam’s demo? https://marketplace.umbraco.com/package/agentrun.umbraco
+- AI search: https://examinex.online/2026/04/16/ai-semantic-ranking-for-azure-search
+- Logs in Kudu: https://skttl.dev/blog/browsing-umbraco-logs-in-kudu/
+- Personalisation: https://kjac.dev/posts/personalisation-groups-as-segments/
+- Search future: https://www.youtube.com/watch?v=wwQBvBDGhPE
+- Events: https://umbraco.com/events/</media:description>
+   <media:community>
+    <media:starRating count="4" average="5.00" min="1" max="5"/>
+    <media:statistics views="132"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:uY9pZz5NHaQ</id>
+  <yt:videoId>uY9pZz5NHaQ</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - AI in Umbraco</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=uY9pZz5NHaQ"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2026-04-24T23:21:58+00:00</published>
+  <updated>2026-09-07T08:37:29+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - AI in Umbraco</media:title>
+   <media:content url="https://www.youtube.com/v/uY9pZz5NHaQ?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i2.ytimg.com/vi/uY9pZz5NHaQ/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+Today we're joined by Matt Brailsford - AI Staff Engineer @ Umbraco HQ, Co-founder of CODECABIN and Creator of UMB.FYI.
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+- AI Community Team &amp; Advisory Board: https://umbraco.com/blog/announcing-the-umbraco-in-ai-community-team-the-ai-in-umbraco-advisory-board/
+- AI in Umbraco
+  - Docs: https://docs.umbraco.com/ai-in-umbraco
+  - AI Search
+  - File Uploads Umbraco.AI
+  - Other?
+  - https://mattbrailsford.dev/
+- Umbraco Awards nominees announced: https://umbraco.com/blog/announcing-the-2026-umbraco-awards-nominees/
+- New Skrift issue: https://skrift.io/issues/
+- uProfile April: https://umbraco.com/blog/uprofile-april-2026-will-steed
+- Events and new, reimagined UK Conference: https://www.linkedin.com/posts/umbukfdn_umbraco-uk-conference-teaser-activity-7447919930936590336-UgQs/</media:description>
+   <media:community>
+    <media:starRating count="6" average="5.00" min="1" max="5"/>
+    <media:statistics views="123"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:-b3HkTedXcA</id>
+  <yt:videoId>-b3HkTedXcA</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - Spring Sips</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=-b3HkTedXcA"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2026-03-28T00:25:23+00:00</published>
+  <updated>2026-09-06T23:02:57+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - Spring Sips</media:title>
+   <media:content url="https://www.youtube.com/v/-b3HkTedXcA?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i2.ytimg.com/vi/-b3HkTedXcA/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+This time we're joined by Umbraco Hacker, Maker and Do'er - Warren Buckley - to talk about everything Umbraco from the past moth.
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+- Product Update: https://umbraco.com/blog/umbraco-product-update-q1-2026/
+- Umbraco in AI Community Team and Advisory Board: https://umbraco.com/blog/announcing-the-umbraco-in-ai-community-team-the-ai-in-umbraco-advisory-board/
+  - Agent Skills: https://umbraco.com/blog/the-agent-ready-cms-introducing-agent-skills-umbraco-backoffice-extension/
+- Package development with new Umbraco - Warren
+  - https://blog.hackmakedo.com/
+- Introducing Umbraco to students: https://www.nathanielnunes.com/blog/umbraco-in-action-introduction-to-cms-for-students
+- Security Advisory: https://umbraco.com/blog/umbraco-cms-security-advisory-march-10-2026-security-patches-are-now-available/
+- uProfile: https://umbraco.com/blog/uprofile-march-2026-debasish-gracias/</media:description>
+   <media:community>
+    <media:starRating count="2" average="5.00" min="1" max="5"/>
+    <media:statistics views="64"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:wX5uvDOfLUc</id>
+  <yt:videoId>wX5uvDOfLUc</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - Compose Yourself</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=wX5uvDOfLUc"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2026-02-28T00:56:13+00:00</published>
+  <updated>2026-09-07T02:04:57+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - Compose Yourself</media:title>
+   <media:content url="https://www.youtube.com/v/wX5uvDOfLUc?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i4.ytimg.com/vi/wX5uvDOfLUc/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+This time we're joined by Umbraco CTO Filip Bech-Larsen, and Head of Orchestration Jordan McFarlane, to talk all things Umbraco Compose...
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+
+- Introducing Umbraco Compose: https://umbraco.com/blog/introducing-umbraco-compose/
+  - Unboxing Video: https://www.youtube.com/watch?v=KpwlMLOf14o
+  - Promo: https://www.youtube.com/watch?v=fgc8w85hbP0
+  - Example project from Jeroen: https://www.youtube.com/watch?v=tXdbHn14Gn8
+  - Demo from Filip: https://www.youtube.com/watch?v=VnxqTnMjSYE
+- AI and future (of Umbraco too): https://umbraco.com/blog/ai-intentionally/
+  - Umbraco AI: https://mattbrailsford.dev/introducing-umbraco-ai
+  - Skills for Agents: https://skttl.dev/blog/umbraco-skills-ai-agents/
+  - 2026: https://www.phases.io/insights/ai-in-umbraco-in-2026-choices-governance-and-day-to-day-use/
+- New Skrift release: https://skrift.io/issues/?utm_source=umbfyi&amp;utm_medium=web#124
+- 2025 highlights: https://www.youtube.com/watch?v=OY5YtA3mP5U + Winter Keynote recording: https://www.youtube.com/watch?v=GK-eGhzZYpw
+- uProfile: https://umbraco.com/blog/uprofile-february-2026-jenny-bradshaw/
+- Contributing partners announcement: https://umbraco.com/blog/announcing-umbraco-contributing-partners-2025/
+- Ravi’s journey to MVP: https://www.wearecogworks.com/innerworks/articles/umbraco-mvp-story</media:description>
+   <media:community>
+    <media:starRating count="2" average="5.00" min="1" max="5"/>
+    <media:statistics views="115"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:Z8N-dXWdq04</id>
+  <yt:videoId>Z8N-dXWdq04</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - New Year, new U?!</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=Z8N-dXWdq04"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2026-01-31T00:27:52+00:00</published>
+  <updated>2026-09-08T19:51:10+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - New Year, new U?!</media:title>
+   <media:content url="https://www.youtube.com/v/Z8N-dXWdq04?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i3.ytimg.com/vi/Z8N-dXWdq04/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+
+- Happy New Year!
+- 24 Days in Umbraco recap: https://24days.in/umbraco-cms/2025/
+- Impacts of AI on Tailwind CSS: https://github.com/tailwindlabs/tailwindcss.com/pull/2388#issuecomment-3717222957, https://adams-morning-walk.transistor.fm/episodes/we-had-six-months-left
+- Astro has joined Cloudflare: https://blog.cloudflare.com/astro-joins-cloudflare/
+- Winter Keynote is on February 3rd: https://umbra.co/4oCIbGf
+- 2026 predictions: Umbraco Compose, and more AI
+- New Umbraco events calendar: https://umbraco.com/events/
+- Codegarden CFP closes February 4th: https://sessionize.com/codegarden-2026/
+- Umbraco Spark lineup + tickets: https://umbracospark.com/
+- Skrift issue 123: https://mailchi.mp/12361fb9e0d5/issue-13881856
+- Jeroen on Umbraco Engage: https://www.linkedin.com/posts/jeroen-breuer-3b135031_released-umbraco-compose-example-project-activity-7422545989015707648-IjWt/
+- Package script writer CLI: https://codeshare.co.uk/blog/introducing-package-script-writer-cli-tool/</media:description>
+   <media:community>
+    <media:starRating count="6" average="5.00" min="1" max="5"/>
+    <media:statistics views="88"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:9O2g1t5H6HQ</id>
+  <yt:videoId>9O2g1t5H6HQ</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - Ho Ho Ho!</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=9O2g1t5H6HQ"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2025-12-20T00:50:24+00:00</published>
+  <updated>2026-09-07T20:55:08+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - Ho Ho Ho!</media:title>
+   <media:content url="https://www.youtube.com/v/9O2g1t5H6HQ?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i2.ytimg.com/vi/9O2g1t5H6HQ/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+As is Christmas tradition, we are joined today by Umbraco Cloud product owner and all round wonderful human Rune Strand!
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+
+- 24 Days in Umbraco highlights:
+ - &quot;Choosing Wellbeing Over the Perfect Job&quot;, by Owain Williams: https://24days.in/umbraco-cms/2025/passion-isnt-enough/
+ - &quot;Communication in the Backoffice&quot;, by Niels Lyngsø: https://24days.in/umbraco-cms/2025/backoffice-communication/
+ - &quot;A Practical Guide to DDoS Defense for Umbraco&quot;, by Jesper Hauge: https://24days.in/umbraco-cms/2025/ddos-defence-guide/
+ - &quot;10 tips to make your Umbraco site more sustainable&quot;, by &quot;Lyle Lanley&quot;: https://24days.in/umbraco-cms/2025/sustainability-tips/
+ - &quot;Umbraco Search is coming to town&quot;, by Kenn Jacobsen: https://24days.in/umbraco-cms/2025/umbraco-search/
+ - Umbraco cryptic crossword, by Lotte Pitcher: https://24days.in/umbraco-cms/2025/christmas-crossword/
+- Umbraco 13 security advisory: https://umbraco.com/blog/security-advisory-december-9-2025-security-patch-is-now-available/
+- Umbraco Developer MCP beta 2: https://www.linkedin.com/feed/update/urn:li:activity:7407446308342349824/
+- &quot;Umbraco Commerce Performance on Umbraco 17&quot;, by Bump Digital: https://www.linkedin.com/pulse/umbraco-commerce-performance-17-we-tested-results-huge-bump-digital-x5cve/
+- Codegarden dates, tickets, and CFP have been announced: https://codegarden.umbraco.com/
+- Umbraco Spark early-bird tickets and CFP end soon: https://umbracospark.com/
+- Umbraco Winter Keynote on February 3rd: https://webapp.spotme.com/login/umbraco/winter-keynote-2026</media:description>
+   <media:community>
+    <media:starRating count="4" average="5.00" min="1" max="5"/>
+    <media:statistics views="84"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:ipHGphfh0DU</id>
+  <yt:videoId>ipHGphfh0DU</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - OP DELIVERED</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=ipHGphfh0DU"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2025-11-29T00:13:00+00:00</published>
+  <updated>2026-09-08T18:38:14+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - OP DELIVERED</media:title>
+   <media:content url="https://www.youtube.com/v/ipHGphfh0DU?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i2.ytimg.com/vi/ipHGphfh0DU/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+We're joint by two amazing gents from Umbraco HQ - Filip Bech-Larsen &amp; Niels Lyngsø to talk about the latest LTS v17 release and more.
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+
+// TODO</media:description>
+   <media:community>
+    <media:starRating count="9" average="5.00" min="1" max="5"/>
+    <media:statistics views="138"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:P3-3mxtv7RE</id>
+  <yt:videoId>P3-3mxtv7RE</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - Spooky Season</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=P3-3mxtv7RE"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2025-11-01T00:16:37+00:00</published>
+  <updated>2026-09-08T04:40:02+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - Spooky Season</media:title>
+   <media:content url="https://www.youtube.com/v/P3-3mxtv7RE?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i1.ytimg.com/vi/P3-3mxtv7RE/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+
+// TODO</media:description>
+   <media:community>
+    <media:starRating count="6" average="5.00" min="1" max="5"/>
+    <media:statistics views="103"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:iqLruz86yd0</id>
+  <yt:videoId>iqLruz86yd0</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - Vibes</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=iqLruz86yd0"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2025-08-29T23:31:43+00:00</published>
+  <updated>2026-09-07T05:10:35+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - Vibes</media:title>
+   <media:content url="https://www.youtube.com/v/iqLruz86yd0?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i2.ytimg.com/vi/iqLruz86yd0/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+
+// TODO</media:description>
+   <media:community>
+    <media:starRating count="7" average="5.00" min="1" max="5"/>
+    <media:statistics views="131"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:H-Om8QGWMkw</id>
+  <yt:videoId>H-Om8QGWMkw</yt:videoId>
+  <yt:channelId>UCF_Ene5-58a3Z55aw8O6Djg</yt:channelId>
+  <title>umbraCoffee - Summer Shenanigans</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=H-Om8QGWMkw"/>
+  <author>
+   <name>umbraCoffee</name>
+   <uri>https://www.youtube.com/channel/UCF_Ene5-58a3Z55aw8O6Djg</uri>
+  </author>
+  <published>2025-07-25T23:44:16+00:00</published>
+  <updated>2026-09-08T05:24:16+00:00</updated>
+  <media:group>
+   <media:title>umbraCoffee - Summer Shenanigans</media:title>
+   <media:content url="https://www.youtube.com/v/H-Om8QGWMkw?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i1.ytimg.com/vi/H-Om8QGWMkw/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Welcome to your monthly dose of #umbraCoffee​​​​​​​​​​​​! Your hosts - Marcin and Callum - together with their guest(s) will drive through all of the community news and happenings in the Umbraco world. So... grab a cuppa, join us LIVE and enjoy!
+
+See ya?!
+
+---
+☕ Wanna buy us a coffee/pizza/donuts?
+https://www.buymeacoffee.com/umbracoffee
+---
+
+Notes:
+
+// TODO</media:description>
+   <media:community>
+    <media:starRating count="6" average="5.00" min="1" max="5"/>
+    <media:statistics views="112"/>
+   </media:community>
+  </media:group>
+ </entry>
+</feed>

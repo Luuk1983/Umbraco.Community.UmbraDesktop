@@ -24,7 +24,9 @@ import { UmbraDesktopThemeContext } from '../theme/theme.context.js';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import { UmbraDesktopLabelContext } from '../desktop-label/desktop-label.context.js';
 import { UmbraDesktopNotificationCentreContext } from '../notifications/notification-centre.context.js';
+import { UmbraDesktopTrayContext } from '../taskbar/tray/tray.context.js';
 import { watchNotifications } from '../notifications/notification-watcher.js';
+import { drawsOwnElement } from '../notifications/own-element.js';
 import { UMBRADESKTOP_DESKTOP_SOURCE_ID } from '../notifications/types.js';
 import type { DesktopLabelResponseModel } from '../../api/types.gen';
 import './window.element.js';
@@ -74,6 +76,17 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    * clock. Windows feed it from their frames; this element feeds it from its own document.
    */
   #notifications = new UmbraDesktopNotificationCentreContext(this, this.#manager);
+
+  /**
+   * Resolves the curated catalogue and the packages' apps into the launcher's list, for the whole
+   * desktop subtree.
+   *
+   * A field rather than a bare `new` in the constructor since the tray context needs its `getApps`,
+   * and the window layout and Help its `apps`.
+   * Declared after the other contexts, which is where the constructor used to create it, so the
+   * order they start in is unchanged.
+   */
+  #catalogue = new UmbraDesktopAppCatalogueContext(this);
 
   /** Stops watching this desktop's own document and takes it off the centre's sources. */
   #stopOwnNotifications?: () => void;
@@ -157,19 +170,27 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   constructor() {
     super();
-    // Instantiating is enough to provide the catalogue context to the desktop subtree. The one
-    // reference kept is for the window layout below, which reopens windows by their apps.
-    const catalogue = new UmbraDesktopAppCatalogueContext(this);
     // Reopens this user's windows once their settings have loaded, and keeps the layout saved. The
     // desktop holds its first paint while it does; see `reportWindowsRestoring`.
     const layout = new UmbraDesktopWindowLayoutController(this, {
       manager: this.#manager,
       settings: this.#settings,
-      apps: catalogue.apps,
+      apps: this.#catalogue.apps,
     });
     this.observe(layout.restoring, (restoring) => this.reportWindowsRestoring(restoring === true));
     // Opens Help at a page, for the desktop's own code and for the event and deep link below.
-    this.#help = new UmbraDesktopHelpContext(this, { manager: this.#manager, apps: catalogue.apps });
+    this.#help = new UmbraDesktopHelpContext(this, { manager: this.#manager, apps: this.#catalogue.apps });
+    // The system tray's public face: package tray items and the two calls packages get (umbraCoffee
+    // design §7). Created here without keeping a reference, since providing it is its whole job on
+    // this element and nothing here calls it; a field nobody reads fails `noUnusedLocals`. Here
+    // rather than among the fields because it is handed the manager, settings and catalogue, so it
+    // has to come after all three.
+    new UmbraDesktopTrayContext(this, {
+      open: (app) => this.#manager.open(app),
+      getApps: () => this.#catalogue.getApps(),
+      setFeature: (id, enabled) => this.#settings.setTaskbarFeature(id, enabled),
+      observeFeatures: () => this.#settings.taskbarFeatures,
+    });
     // Adopts the active theme's desktop-surface stylesheet into this element's shadow root.
     new UmbraDesktopThemeStyles(this, 'desktop');
     // Consumed once here, not per window: see the class doc on why.
@@ -339,16 +360,23 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    * desktop raises itself is drawn once, as the desktop's, like one raised in any window.
    *
    * From connect to disconnect only. Leaving the desktop lifts the hiding rule with the watcher, so
-   * the classic backoffice draws its own toasts again the moment it is back.
+   * the classic backoffice draws its own toasts again the moment it is back. Just before it does, the
+   * watcher closes what the desktop drew with its own element, which would otherwise turn up there a
+   * second time with its buttons reaching for a desktop that has gone. Plain ones carry over: they
+   * still mean what they say there.
    */
   #watchOwnNotifications() {
     this.#stopOwnNotifications?.();
     const centre = this.#notifications;
     const origin = { sourceId: UMBRADESKTOP_DESKTOP_SOURCE_ID, source: '#umbraDesktop_notificationsSourceDesktop' };
-    const watch = watchNotifications(this.ownerDocument, {
-      onRaised: (notification) => centre.raise(notification, origin),
-      onClosed: (key) => centre.closed(UMBRADESKTOP_DESKTOP_SOURCE_ID, key),
-    });
+    const watch = watchNotifications(
+      this.ownerDocument,
+      {
+        onRaised: (notification) => centre.raise(notification, origin),
+        onClosed: (key) => centre.closed(UMBRADESKTOP_DESKTOP_SOURCE_ID, key),
+      },
+      { closeOnStop: (notification) => drawsOwnElement(UMBRADESKTOP_DESKTOP_SOURCE_ID, notification) },
+    );
     const unregister = centre.registerSource(UMBRADESKTOP_DESKTOP_SOURCE_ID, watch);
     this.#stopOwnNotifications = () => {
       unregister();

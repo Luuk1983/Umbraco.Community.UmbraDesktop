@@ -15,7 +15,9 @@ under the macOS theme does not.
 ![Solitaire, Snake and Minesweeper open side by side as three windows on the UmbraDesktop desktop under the Umbraco theme, each with its own button on the taskbar.](../screenshots/entertainment-games.png)
 
 The games ship in their own package rather than in UmbraDesktop, because a desktop and a minesweeper
-are not the same product, and nobody should have to take the second to get the first.
+are not the same product, and nobody should have to take the second to get the first. The same
+package also brings [umbraCoffee](umbracoffee.md), the community's monthly live show, in a **Media**
+group of its own.
 
 ## Install
 
@@ -32,7 +34,7 @@ Prerequisites:
 
 - Umbraco 17
 - .NET 10
-- UmbraDesktop 17.x, installed automatically
+- UmbraDesktop, the same version as this package or any later 17.x, installed automatically
 
 ## Play
 
@@ -105,8 +107,11 @@ Other packages can add card backs and card face sets. See
 ## Versions
 
 This package and UmbraDesktop are released together from the same tag and always share a version
-number, so matching versions are the compatibility answer. The dependency on UmbraDesktop is a range
-rather than an exact version, so upgrading the desktop on its own is fine.
+number, so matching versions are the compatibility answer. It needs at least the UmbraDesktop release
+it came with, because it uses desktop features that earlier releases lack. If your site references
+an older UmbraDesktop directly, upgrade that reference along with this one, or NuGet stops with a
+package downgrade error. Any later 17.x desktop works too, so upgrading the desktop on its own is
+fine.
 
 ## Writing your own
 

@@ -4,6 +4,8 @@ import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../../../app-catalogue.conte
 import type { UmbraDesktopAppCatalogueContext } from '../../../app-catalogue.context';
 import { UMBRADESKTOP_TASKBAR_REGIONS, taskbarFeaturesIn } from '../../../taskbar/features/index';
 import { isFeatureEnabled } from '../../../taskbar/features/enabled';
+import { UMBRADESKTOP_TRAY_CONTEXT } from '../../../taskbar/tray/tray.context-token';
+import type { UmbraDesktopTrayItem } from '../../../taskbar/tray/tray-items';
 import type {
   UmbraDesktopTaskbarFeature,
   UmbraDesktopTaskbarFeatureContext,
@@ -14,7 +16,8 @@ import { css, customElement, html, nothing, state } from '@umbraco-cms/backoffic
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
 /**
- * What the taskbar carries beside the launcher button: one switch per fixed feature.
+ * What the taskbar carries beside the launcher button: one switch per fixed feature, and one per
+ * package tray item under the system tray's heading.
  *
  * **Every feature is listed, always**, including ones this install cannot use. That is the half of
  * the rule the taskbar itself does not follow — the row shows only what the user can actually use,
@@ -36,8 +39,18 @@ export class UmbraDesktopSettingsTaskbarElement extends UmbLitElement {
   @state()
   private _apps: ReadonlyArray<UmbraDesktopApp> = [];
 
+  /**
+   * The packages' tray items, validated by the tray context, each drawn as a switch under the tray's
+   * heading. Read from the context rather than the registry so this screen and the taskbar list the
+   * same items and a bad manifest is reported once.
+   */
+  @state()
+  private _trayItems: ReadonlyArray<UmbraDesktopTrayItem> = [];
+
+  /** Where a switch's new state is stored; absent until the settings context resolves. */
   #settings?: UmbraDesktopSettingsContext;
 
+  /** Asked whether a feature's app is registered, which is how a feature decides it is usable. */
   #catalogue?: UmbraDesktopAppCatalogueContext;
 
   constructor() {
@@ -54,6 +67,15 @@ export class UmbraDesktopSettingsTaskbarElement extends UmbLitElement {
       // bundle can register after this panel is open, and a row that said "not installed" on the
       // way in should stop saying it the moment that stops being true.
       this.observe(context.apps, (apps) => (this._apps = apps));
+    });
+    this.consumeContext(UMBRADESKTOP_TRAY_CONTEXT, (context) => {
+      // Observed for the reason the catalogue is: a package can register its item, or have its
+      // conditions flip, while this panel is open. Passed `context?.items` rather than returning
+      // early, because observing undefined under the same alias is what removes the old observer
+      // when the context goes, instead of leaving it attached to a context nobody provides.
+      this.observe(context?.items, (items) => (this._trayItems = items ?? []), 'trayItems');
+      // Cleared when the context goes, so switches for items nobody can see any more do not linger.
+      if (!context) this._trayItems = [];
     });
   }
 
@@ -114,23 +136,52 @@ export class UmbraDesktopSettingsTaskbarElement extends UmbLitElement {
   }
 
   /**
+   * One package tray item's switch, the same row a host feature gets.
+   *
+   * Two differences, both from where the item comes from. Its label and description go through
+   * `localize.string`, because a package writes a `#token` or plain text where the host writes a bare
+   * key. And the switch is never disabled, because a tray item has no availability to fail: one this
+   * user may not have is filtered out by its conditions before it reaches this list.
+   * @param item The tray item to draw.
+   * @returns The row's template.
+   */
+  #renderTrayItem(item: UmbraDesktopTrayItem) {
+    return html`
+      <div class="feature">
+        <uui-toggle
+          label=${this.localize.string(item.label)}
+          ?checked=${isFeatureEnabled(this._features, { id: item.alias, defaultEnabled: item.defaultEnabled })}
+          @change=${(event: Event) =>
+            this.#settings?.setTaskbarFeature(
+              item.alias,
+              !!(event.target as HTMLInputElement | null)?.checked,
+            )}></uui-toggle>
+        <p class="hint">${this.localize.string(item.description)}</p>
+      </div>
+    `;
+  }
+
+  /**
    * One region: a heading, what that end of the taskbar is, and its switches.
    *
-   * A region with nothing in it draws nothing at all. The system tray is declared but empty, and a
-   * heading with no switches under it reads worse than no heading — while leaving it declared is
-   * what lets the first tray feature appear here without a change to this file.
+   * A region with nothing in it draws nothing at all. The system tray has no host features, so its
+   * heading appears only once a package registers a tray item, and a heading with no switches under
+   * it reads worse than no heading. Package items follow the host's own, because the host's are the
+   * ones every install has.
    * @param region The region to draw.
    * @param context The shared feature context, built once per render.
    * @returns The section's template, or nothing.
    */
   #renderRegion(region: UmbraDesktopTaskbarRegionInfo, context: UmbraDesktopTaskbarFeatureContext) {
     const features = taskbarFeaturesIn(region.id);
-    if (features.length === 0) return nothing;
+    const trayItems = region.id === 'tray' ? this._trayItems : [];
+    if (features.length === 0 && trayItems.length === 0) return nothing;
     return html`
       <section>
         <h4>${this.localize.term(region.labelKey)}</h4>
         <p class="about">${this.localize.term(region.descriptionKey)}</p>
         ${features.map((feature) => this.#renderFeature(feature, context))}
+        ${trayItems.map((item) => this.#renderTrayItem(item))}
       </section>
     `;
   }

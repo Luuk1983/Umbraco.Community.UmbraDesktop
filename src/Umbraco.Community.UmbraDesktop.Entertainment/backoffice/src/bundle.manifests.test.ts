@@ -2,6 +2,12 @@ import { expect } from '@open-wc/testing';
 import { manifests } from './bundle.manifests.js';
 import { MINESWEEPER_CONTENT_SIZE, MINESWEEPER_MIN_CONTENT_SIZE } from './minesweeper/constants.js';
 import { SNAKE_CONTENT_SIZE, SNAKE_MIN_CONTENT_SIZE } from './snake/constants.js';
+import {
+  UMBRACOFFEE_APP_ALIAS,
+  UMBRACOFFEE_CONTENT_SIZE,
+  UMBRACOFFEE_MIN_CONTENT_SIZE,
+  UMBRACOFFEE_TRAY_ALIAS,
+} from './umbracoffee/constants.js';
 import { SOLITAIRE_CONTENT_SIZE, SOLITAIRE_MIN_CONTENT_SIZE } from './solitaire/constants.js';
 
 /**
@@ -11,8 +17,23 @@ import { SOLITAIRE_CONTENT_SIZE, SOLITAIRE_MIN_CONTENT_SIZE } from './solitaire/
  * derivation tests, and restating it here would be a second copy of the contract to keep in step.
  */
 
-/** Every `umbraDesktopApp` this package registers. */
-const apps = manifests.filter((manifest) => manifest.type === 'umbraDesktopApp');
+/** The games' aliases. Named rather than taken to be every app, now that umbraCoffee is one too. */
+const GAME_ALIASES = [
+  'Umbraco.Community.UmbraDesktop.Entertainment.Minesweeper',
+  'Umbraco.Community.UmbraDesktop.Entertainment.Snake',
+  'Umbraco.Community.UmbraDesktop.Entertainment.Solitaire',
+];
+
+/**
+ * Every game this package registers as a `umbraDesktopApp`.
+ *
+ * The tests below were written when every app here was a game, and they assert game things: the
+ * games group, a fixed window. umbraCoffee is neither, so the filter names the games instead of
+ * taking the type to mean them.
+ */
+const apps = manifests.filter(
+  (manifest) => manifest.type === 'umbraDesktopApp' && GAME_ALIASES.includes(manifest.alias),
+);
 
 /** Minesweeper's manifest. */
 const minesweeper = apps.find((manifest) => manifest.alias === 'Umbraco.Community.UmbraDesktop.Entertainment.Minesweeper');
@@ -129,4 +150,69 @@ it('defines the games group itself, between System and Experimental', () => {
   expect(games!.label, "a token from this package's own dictionary").to.equal('#umbraDesktopEntertainment_groupGames');
   expect(games!.weight).to.be.greaterThan(50);
   expect(games!.weight).to.be.lessThan(70);
+});
+
+/**
+ * Media is this package's second group, for umbraCoffee now and Winamp and the video player later
+ * (umbraCoffee design D13). 65 puts it after Games (60) and before the host's Experimental (70).
+ */
+it('defines a media group after Games and before Experimental', () => {
+  const groups =
+    (catalogue as { meta?: { groups?: Array<{ alias: string; label: string; weight?: number }> } } | undefined)?.meta
+      ?.groups ?? [];
+  const media = groups.find((group) => group.alias === 'media');
+  expect(media, 'the package must define the group umbraCoffee names').to.not.equal(undefined);
+  expect(media!.label, "a token from this package's own dictionary").to.equal('#umbraDesktopEntertainment_groupMedia');
+  expect(media!.weight).to.equal(65);
+});
+
+/** umbraCoffee is an app like the games, but in Media, and resizable because a player can grow. */
+it('registers umbraCoffee in the media group, resizable', () => {
+  const app = manifests.find((manifest) => manifest.alias === UMBRACOFFEE_APP_ALIAS) as
+    | { type: string; element?: unknown; meta: { group: string; resizable?: boolean } }
+    | undefined;
+  expect(app, 'the package should register umbraCoffee').to.not.equal(undefined);
+  expect(app!.type).to.equal('umbraDesktopApp');
+  expect(typeof app!.element, 'declared through `element`, as a loader').to.equal('function');
+  expect(app!.meta.group).to.equal('media');
+  expect(app!.meta.resizable).to.not.equal(false);
+});
+
+/**
+ * The window's sizes are the constants the window's own CSS is derived from, so the manifest cannot
+ * open it at a size its layout was not measured at.
+ */
+it('opens umbraCoffee at the content size and floor the window is built for', () => {
+  const app = manifests.find((manifest) => manifest.alias === UMBRACOFFEE_APP_ALIAS) as
+    | { meta: { defaultSize?: { w: number; h: number }; minSize?: { w: number; h: number } } }
+    | undefined;
+  expect(app!.meta.defaultSize).to.deep.equal(UMBRACOFFEE_CONTENT_SIZE);
+  expect(app!.meta.minSize).to.deep.equal(UMBRACOFFEE_MIN_CONTENT_SIZE);
+});
+
+/**
+ * One umbraCoffee window at a time: a second would play the same stream twice, and with one the
+ * cup and the reminder's Watch bring the open window to the front instead of stacking new ones.
+ */
+it('opens umbraCoffee in one window at a time', () => {
+  const app = manifests.find((manifest) => manifest.alias === UMBRACOFFEE_APP_ALIAS) as
+    | { meta: { allowMultiple?: boolean } }
+    | undefined;
+  expect(app!.meta.allowMultiple).to.equal(false);
+});
+
+/**
+ * The cup is a tray item, on unless the user says otherwise (umbraCoffee design D1): an item that
+ * arrives switched off is mostly never found.
+ */
+it('registers the umbraCoffee tray item, on by default', () => {
+  const tray = manifests.find((manifest) => manifest.alias === UMBRACOFFEE_TRAY_ALIAS) as
+    | { type: string; element: unknown; meta: { label: string; description: string; defaultEnabled?: boolean } }
+    | undefined;
+  expect(tray, 'the package should register the umbraCoffee tray item').to.not.equal(undefined);
+  expect(tray!.type).to.equal('umbraDesktopTrayItem');
+  expect(typeof tray!.element).to.equal('function');
+  expect(tray!.meta.label, 'the switch in Desktop settings needs a name').to.be.a('string').and.not.equal('');
+  expect(tray!.meta.description, 'and a line on what it puts in the tray').to.be.a('string').and.not.equal('');
+  expect(tray!.meta.defaultEnabled).to.not.equal(false);
 });

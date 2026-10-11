@@ -71,6 +71,13 @@ runs:
         (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm test)
         (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm test)
 
+    # The umbraCoffee data tool (tools/umbracoffee-feed) is not shipped, but the scheduled workflow
+    # that keeps the data branch runs it unattended, so a broken change is only found there, in the
+    # middle of the night, unless CI runs its tests here. Dependency-free, so there is nothing to install.
+    - name: Test feed tool
+      shell: bash
+      run: (cd tools/umbracoffee-feed && node --test)
+
     # Must run before dotnet build/pack: wwwroot/App_Plugins is gitignored, so a clean checkout
     # would otherwise pack a package with no frontend in it at all.
     - name: Build frontend

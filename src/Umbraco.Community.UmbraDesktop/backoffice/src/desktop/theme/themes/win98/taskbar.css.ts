@@ -15,13 +15,18 @@ import {
   WIN98_FONT,
   WIN98_HILIGHT,
 } from './palette.js';
-import { WIN98_TASKBAR_PADDING } from './metrics.js';
+import {
+  WIN98_BEVEL_DEPTH,
+  WIN98_CLOCK_PADDING,
+  WIN98_TASKBAR_PADDING,
+  WIN98_TRAY_PADDING,
+} from './metrics.js';
 
 /**
  * The Win98 taskbar: a flush grey bar with a raised Start button, raised task buttons, and the
- * clock in a sunken tray at the trailing end. Everything about its colour, height and opacity is
- * in the palette; what is left here is the bevel work, which has no tokens, and the tightening
- * that a 30px bar needs after a 50px one.
+ * tray, with the clock at its end, sunken at the trailing end. Everything about its colour, height
+ * and opacity is in the palette; what is left here is the bevel work, which has no tokens, and the
+ * tightening that a 30px bar needs after a 50px one.
  *
  * Nothing here positions the launcher. The panel is mounted inside this component's shadow root,
  * so the base `.launcher` rule owns its geometry — and for this theme that rule needs nothing but
@@ -135,17 +140,28 @@ export default css`
   .task.active .task-label {
     transform: translate(1px, 1px);
   }
-  /* The clock sits in a sunken tray, which needs the box to be a box: the base rule leaves it an
-     inline flex item sized by its own text, so it has to be stretched and re-padded before a
-     bevel around it means anything. */
-  .clock {
-    align-self: stretch;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
+  /* The sunken well is the tray, not the clock (design D16). In Windows 98 the notification icons
+     sat in that well beside the time, so a well drawn round the clock alone would leave every tray
+     item outside it.
+
+     The bevel is an inset shadow, painted inside the tray's own edge and under its children. So
+     nothing a child paints may reach that edge: the clock's hover and pressed fill, or a tray
+     item's hover, would cover the bevel. The tray is padded by the bevel's depth on the top, the
+     bottom and the trailing side, and by more on the leading side so an icon clears the bevel by as
+     much again. The clock gives up exactly the horizontal part of that from its old padding, so a
+     tray holding only the clock is the box the clock was when it carried the bevel itself; the
+     tray is stretched to the bar, so the vertical part comes out of the clock's height, not the
+     well's. */
+  .tray {
     margin-left: ${WIN98_TASKBAR_PADDING}px;
-    padding: 0 6px;
+    padding: ${WIN98_BEVEL_DEPTH}px ${WIN98_BEVEL_DEPTH}px ${WIN98_BEVEL_DEPTH}px ${WIN98_TRAY_PADDING}px;
     box-shadow: ${unsafeCSS(WIN98_BEVEL_SUNKEN)};
+  }
+  /* The base already stretches the clock to fill the well, inside the bevel. Its padding is what is
+     left of its old padding once the tray has taken its share on each side, so the two still add
+     up to the old well. */
+  .clock {
+    padding: 0 ${WIN98_CLOCK_PADDING - WIN98_BEVEL_DEPTH}px 0 ${WIN98_CLOCK_PADDING - WIN98_TRAY_PADDING}px;
     font-size: 11px;
     /* The base dims the clock to 0.85 against a dark bar. Black on grey needs no dimming, and
        dimmed black on grey just reads as a rendering artefact. */

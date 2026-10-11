@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop Entertainment",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "Games for UmbraDesktop. An optional add-on that puts Minesweeper, Snake and Solitaire on the desktop, each in a window of its own and themed along with the rest of it.",
+  "Description": "Games and media for UmbraDesktop. An optional add-on that puts Minesweeper, Snake, Solitaire and umbraCoffee on the desktop, each in a window of its own and themed along with the rest of it.",
   "PackageType": "Package",
   "LicenseTypes": [
     "Free"
@@ -32,7 +32,17 @@
     "fun",
     "add-on",
     "themes",
-    "launcher"
+    "launcher",
+    "umbracoffee",
+    "youtube",
+    "community",
+    "media",
+    "live stream",
+    "live-stream",
+    "video-player",
+    "reminders",
+    "search",
+    "guests"
   ],
   "RelatedPackages": [
     {
@@ -62,6 +72,14 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/entertainment-games-solitaire.png",
       "Caption": "Solitaire, the third game: Klondike with draw one or draw three, on a table and with card backs that follow the theme. The settings button in the top right corner sets the draw mode, card back and card faces."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/umbracoffee-live.png",
+      "Caption": "umbraCoffee while a show is live: the stream with its own control bar, the episode's title, guest and summary under it, and the Chat and Episodes tabs beside it."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/umbracoffee-upcoming.png",
+      "Caption": "umbraCoffee before the next show: a countdown where the picture will be, the start time written like the desktop's clock, and the coming episode at the top of the list."
     }
   ]
 }

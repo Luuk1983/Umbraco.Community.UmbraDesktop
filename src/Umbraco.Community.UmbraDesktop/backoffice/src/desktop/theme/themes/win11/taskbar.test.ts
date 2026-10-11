@@ -6,6 +6,7 @@ import {
   UMBRADESKTOP_THEME_TEST_TIMEOUT_MS,
 } from './mount-themed.js';
 import type { UmbraDesktopThemedMount } from './mount-themed.js';
+import { measureTray, withTrayItem } from '../mount-themed.js';
 import { W11_ACCENT_DARK } from './palette.js';
 import { W11_TASK_MARKER_WIDTH } from './metrics.js';
 
@@ -17,11 +18,11 @@ type Bar = UmbraDesktopThemedMount<HTMLElement & { updateComplete: Promise<unkno
  * bar — and both halves of that are what keep it from reading as the macOS dock, which is
  * centred too but floats as a rounded pill above the bottom edge.
  *
- * Centring is the interesting part mechanically. The clock is pinned right while Start and the
- * running windows sit in the middle of the *screen*, not in the middle of the space the clock
- * leaves over — so the cluster comes out of the bar's flex flow and is positioned against the
- * bar instead. That is exactly what the `.cluster` wrapper was added to the chrome for (design
- * §4), and this is the first theme to use it.
+ * Centring is the interesting part mechanically. The tray, with the clock at its end, is pinned
+ * right while Start and the running windows sit in the middle of the *screen*, not in the middle of
+ * the space the tray leaves over — so the cluster comes out of the bar's flex flow and is
+ * positioned against the bar instead. That is exactly what the `.cluster` wrapper was added to the
+ * chrome for (design §4), and this is the first theme to use it.
  *
  * The buttons are icon-only, following Windows 11's default. That is a sanctioned exception the
  * macOS theme already established: the button keeps its `title`, so the app name is still both
@@ -46,29 +47,54 @@ after(() => {
   dark?.dispose();
 });
 
-it('centres the Start cluster on the bar while the clock stays pinned to the trailing end', function () {
+it('centres the Start cluster on the bar while the tray stays pinned to the trailing end', function () {
   this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
   const rendered = bar.root.querySelector('.bar') as HTMLElement;
   const cluster = bar.root.querySelector('.cluster') as HTMLElement;
-  const clock = bar.root.querySelector('.clock') as HTMLElement;
+  const tray = bar.root.querySelector('.tray') as HTMLElement;
   expect(cluster, 'the taskbar should render a cluster').to.not.equal(null);
-  expect(clock, 'the taskbar should render a clock').to.not.equal(null);
+  expect(tray, 'the taskbar should render a tray').to.not.equal(null);
 
   const barBox = rendered.getBoundingClientRect();
   const clusterBox = cluster.getBoundingClientRect();
-  const clockBox = clock.getBoundingClientRect();
+  const trayBox = tray.getBoundingClientRect();
 
-  // Centred on the bar itself, not on the space the clock leaves over: those differ by half the
-  // clock's width, which is the difference between a Windows 11 bar and a nearly-centred one.
+  // Centred on the bar itself, not on the space the tray leaves over: those differ by half the
+  // tray's width, which is the difference between a Windows 11 bar and a nearly-centred one.
   expect(
     (clusterBox.left + clusterBox.right) / 2,
-    'the cluster should be centred on the bar, not on the space beside the clock',
+    'the cluster should be centred on the bar, not on the space beside the tray',
   ).to.be.closeTo((barBox.left + barBox.right) / 2, 1.5);
 
+  // The tray, not the clock, is what is pushed right (design D16). A push left on the clock would
+  // leave the tray, and every item in it, sitting at the leading end with the cluster over it.
   expect(
-    barBox.right - clockBox.right,
-    'the clock stays pinned to the trailing end while the cluster is centred',
+    barBox.right - trayBox.right,
+    'the tray stays pinned to the trailing end while the cluster is centred',
   ).to.be.lessThan(24);
+});
+
+it('draws an empty tray as exactly the clock', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  expect(bar.root.querySelector('.tray')!.childElementCount, 'this test is about the empty tray').to.equal(1);
+  const { tray, clock } = measureTray(bar.root);
+  // Zero on every side: the push is a margin, outside the box, and the tray draws nothing itself.
+  expect(tray.width - clock.width, 'no padding of its own around the clock').to.be.closeTo(0, 0.5);
+  expect(tray.right, 'the clock ends where the tray ends').to.be.closeTo(clock.right, 0.5);
+});
+
+it('keeps the clock at the corner and puts a tray item beside it', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  const before = measureTray(bar.root).clock.right;
+  withTrayItem(bar.root, (item) => {
+    const { clock } = measureTray(bar.root);
+    const box = item.getBoundingClientRect();
+    expect(clock.right, 'an item grows the tray towards the cluster, never the clock off its corner').to.be.closeTo(
+      before,
+      0.5,
+    );
+    expect(box.right, 'the item comes before the clock').to.be.at.most(clock.left + 0.5);
+  });
 });
 
 it('keeps the bar flush and full width, unlike the floating macOS dock', function () {

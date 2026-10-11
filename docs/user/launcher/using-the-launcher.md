@@ -19,7 +19,7 @@ The launcher is where apps are opened.
 
 Apps are grouped by what they do: Editing, Workflow, Marketing and sales, Development,
 Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System. A package can
-bring a heading of its own, such as the Entertainment add-on's Games. Empty groups never show.
+bring a heading of its own, such as the Entertainment add-on's Games and Media. Empty groups never show.
 
 Any section that no catalogue entry covers still shows up, under **More**, with a generic icon.
 Nothing is hidden just because it has not been curated. See

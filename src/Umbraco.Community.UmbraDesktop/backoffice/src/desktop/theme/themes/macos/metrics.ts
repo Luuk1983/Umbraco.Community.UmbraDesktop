@@ -124,10 +124,42 @@ export const MACOS_DOCK_TILE = 42;
  * inside the icons, so the icon is the thing to match, not the slot it sits in.
  *
  * Both dock separators take it — the divider between the fixed buttons and the open windows, and
- * the rule before the clock — so the dock cannot end up with two rules of different heights, which
+ * the rule before the tray — so the dock cannot end up with two rules of different heights, which
  * is a thing that reads as a rendering fault rather than as a choice.
  */
 export const MACOS_DOCK_ICON = 24;
+
+/**
+ * The width of the separator the tray hangs before itself, in px: the dock's second rule, drawn as
+ * the tray's `border-left`. One pixel, as the divider it has to match is.
+ *
+ * Named because `taskbar.test.ts` needs it as well as the sheet: a tray holding only the clock may
+ * be wider than the clock by exactly this and {@link MACOS_TRAY_PADDING}, and nothing else.
+ */
+export const MACOS_TRAY_SEPARATOR = 1;
+
+/**
+ * The clock's padding on both sides inside the tray, in px, and its trailing padding before the
+ * tray existed.
+ */
+export const MACOS_CLOCK_PADDING = 4;
+
+/**
+ * The clock's leading padding before the tray existed, in px: the room between the separator and
+ * the time, when the separator was the clock's own border. Kept as the total that
+ * {@link MACOS_TRAY_PADDING} and {@link MACOS_CLOCK_PADDING} split between them, and that
+ * `taskbar.test.ts` holds the empty tray to.
+ */
+export const MACOS_CLOCK_LEADING = 10;
+
+/**
+ * The room between the tray's separator and the first thing in it, in px.
+ *
+ * Moved off the clock when the separator moved to the tray (design D16): the part of the clock's
+ * old leading padding that it no longer carries. So a tray with only the clock in it is the same
+ * box the clock was, and an item in the tray sits clear of the line the way the time always did.
+ */
+export const MACOS_TRAY_PADDING = MACOS_CLOCK_LEADING - MACOS_CLOCK_PADDING;
 
 /**
  * The dock's top hairline, in px. Feeds the palette's `--umbradesktop-taskbar-border-top`, in both

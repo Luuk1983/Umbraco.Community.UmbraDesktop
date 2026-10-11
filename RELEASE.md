@@ -10,7 +10,7 @@ Three packages, from **one tag**, always at the **same version**:
 | Package | What it is |
 |---|---|
 | `Umbraco.Community.UmbraDesktop` | The desktop. The product. |
-| `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games add-on. |
+| `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games and media add-on: Minesweeper, Snake, Solitaire and umbraCoffee. |
 | `Umbraco.Community.UmbraDesktop.Accessories` | Optional tools add-on. Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information. It has server-side code of its own (the Sticky Notes API) and a C# test project beside it. |
 
 Lockstep is a decision, not an accident: design D13 in
@@ -24,7 +24,7 @@ reads like a broken pipeline, where a version with no changes reads like Umbraco
 host as a `ProjectReference`, never a `PackageReference`: it is then compiled against the host from
 the same commit, and its packed dependency is `[<this release>, 17.99999999.0]`. The floor is the
 release itself because an add-on registers things only this release's host understands (package
-catalogues; for Accessories also the unsaved-work attribute and the settings context's
+catalogues; for Entertainment also tray items; for Accessories also the unsaved-work attribute and the settings context's
 `formatDateTime`). The add-ons used to take the host by package range, floored at 17.0.0, which
 compiled against 17.0.0 and let consumers keep a host that silently lacked them: on such a host the
 Accessories Clock threw on every render and Notepad closed over unsaved work without asking.
@@ -172,10 +172,134 @@ Nothing in CI can do these.
   | `entertainment-games-solitaire.png` | In the add-on's `docs/screenshots/`. A game in progress with the settings button visible, in the add-on README and listing. |
   | `entertainment-games-snake.png` | In the add-on's `docs/screenshots/`, listing only. Framed to match Minesweeper's: Windows 98, the Games group open in the launcher. Take it **before** the first key press, so the start message is showing in the middle of the board and the snake is sitting a quarter of the way down above it, since that is the one moment the board says how to play. |
   | `header-entry-point.png` | Small and annotated on purpose. It answers one question, "where is the way in", and showing more screen would not answer it better. |
+  | `umbracoffee-live.png`, `umbracoffee-upcoming.png`, `umbracoffee-on-demand.png`, `umbracoffee-search.png`, `umbracoffee-themes.png`, `umbracoffee-reminder.png` | In the add-on's `docs/screenshots/`. umbraCoffee live, before the next show, playing the latest episode, searching by guest, under every theme, and the reminder ten minutes before a show, for the Entertainment listing (live and upcoming) and its umbraCoffee page (all six). The window shots are the window alone at its default size, the reminder a 420×200 corner with the cup. Live and upcoming need a live or upcoming episode: the console commands in [Testing umbraCoffee](src/Umbraco.Community.UmbraDesktop.Entertainment/docs/developer/umbracoffee-testing.md) give one, but name it "Simulated episode", so the 17.x shots answered `next-episode.json` with a real archive episode's id and title instead (puppeteer request interception). Live shows the Episodes tab, because YouTube disables the chat of a past video; retake it during a real show to have the chat in it. |
 
   **Accessories has one shot**, `accessories-desktop.png` in its own `docs/screenshots/`: a few of
   its tools open side by side under Windows 98. It is the add-on's opening image and its only
   listing entry.
+
+## umbraCoffee's data (Entertainment)
+
+umbraCoffee does not call YouTube from customer sites. A scheduled workflow does, and the editor's
+browser reads the result from GitHub. Design:
+[`docs/design/2026-09-30-umbracoffee-v2-design.md`](docs/design/2026-09-30-umbracoffee-v2-design.md).
+Everything below is an owner step except where it says the workflow does it.
+
+**The workflow.** `.github/workflows/umbracoffee-feed.yml` runs every five minutes and by hand
+(Actions tab, "umbraCoffee feed", Run workflow). It runs `tools/umbracoffee-feed/src/run.mjs` on the
+branch `data/umbracoffee` and pushes only when a file changed. The client reads `episodes.json` and
+`next-episode.json` from `raw.githubusercontent.com/.../data/umbracoffee/umbracoffee/`; the address
+is the one constant `UMBRACOFFEE_DATA_BASE_URL`. Scheduled runs only ever use the workflow file on the
+default branch, so nothing happens until it is on `main`.
+
+**The files on the data branch**, all in `umbracoffee/`:
+
+| File | Written by | What it is |
+| --- | --- | --- |
+| `sources.json` | the workflow | Every episode with its title, date and YouTube description |
+| `details.json` | you, with `apply-details.mjs` | Summary and guests per episode, made from the description |
+| `overrides.json` | you, by hand | Your corrections. Always wins. No tool writes it |
+| `episodes.json` | the workflow and `apply-details.mjs` | What the app reads, rebuilt from the three above. No descriptions |
+| `next-episode.json` | the workflow | The upcoming or live episode, if any |
+
+The workflow only commits `sources.json`, `episodes.json` and `next-episode.json`. It reads
+`details.json` and `overrides.json` but never commits them, so your push is the only way they change.
+`tools/umbracoffee-feed/README.md` has every command and the file shapes.
+
+**Fill in new episodes, about once a month.** Summaries and guests are written locally, never by the
+workflow and never on a customer's site, so a new episode shows with no summary until you do this.
+Run from the repository root, with `<dir>` the `umbracoffee/` folder of a data branch checkout:
+
+1. To get the workflow's latest `sources.json`, pull the data branch.
+2. To see what needs doing, run `node tools/umbracoffee-feed/src/pending.mjs <dir> > pending.json`.
+   It lists new episodes and ones whose title or description changed. An empty array means nothing
+   to do.
+3. To write the answers, give a Claude Code session `tools/umbracoffee-feed/prompts/episode-details.md`
+   and `pending.json`, and ask it to run the prompt once per episode and write all answers, each with
+   its `videoId`, to `results.json`.
+4. To save them, run `node tools/umbracoffee-feed/src/apply-details.mjs <dir> results.json`. It
+   refuses the whole file if one answer is wrong and names each bad one; fix those and run it again.
+5. To check them, read the answers marked uncertain, and run
+   `node tools/umbracoffee-feed/src/guests.mjs <dir>` for new spellings of known guests. Put fixes in
+   `overrides.json`, then apply again (an empty `[]` results file is enough) or let the workflow
+   rebuild `episodes.json`.
+6. To publish, commit `details.json`, `episodes.json` and any `overrides.json` change, and push the
+   data branch.
+
+**One guest, one name.** The guest filter groups people by name, so "Jesper" and "Jesper
+Mayntzhusen" would be two guests. `guestNames` in `overrides.json` maps a spelling to the name it
+means, as an exact match, and a guest that becomes a duplicate within an episode is dropped. `guests.mjs`
+lists the pairs that look like one person spelled two ways.
+
+```json
+{
+  "version": 1,
+  "guestNames": { "Jesper": "Jesper Mayntzhusen" },
+  "episodes": { "<videoId>": { "summary": "...", "guests": [{ "name": "...", "affiliation": null }], "guestsUnnamed": false } }
+}
+```
+
+Both parts are optional. Under `episodes`, each field you give (`summary`, `guests`, `guestsUnnamed`)
+wins over `details.json` for that episode, and the fields you leave out still come from it.
+
+**The data branch.** Nothing to create by hand: if `data/umbracoffee` does not exist, the workflow
+creates it as an orphan branch on its first run (the "Check out the data branch" step) and pushes the
+first files to it. Protect nothing on it, or the push fails. Run the workflow once by hand after the
+merge and look at `raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/data/umbracoffee/umbracoffee/episodes.json`.
+
+**The YouTube key.** Without `YOUTUBE_API_KEY` the workflow still keeps the episode list current, but
+`next-episode.json` stays empty, so there is no countdown, cup or reminder. To create the free key:
+
+1. In the Google Cloud console create a project (any name). No billing account is needed.
+2. Under APIs and services, Library, enable **YouTube Data API v3** for that project.
+3. Under Credentials, create an **API key**. Under its restrictions choose "Restrict key", API
+   restrictions, and allow only YouTube Data API v3. Leave application restrictions off: the calls
+   come from GitHub's runners, whose addresses change.
+4. In the repository, Settings, Secrets and variables, Actions, add a repository secret named
+   `YOUTUBE_API_KEY` with the key.
+
+The default quota is 10,000 units a day and the workflow spends one unit per lookup, a few a day
+normally and one a run while an episode is coming up or live. The tool never prints the key, and its
+tests check that an error message does not contain it.
+
+**Scheduled workflows switch themselves off.** GitHub disables scheduled workflows in a public
+repository after 60 days without repository activity. What was
+checked: the design's assumption that development on `main` counts, which is the reason no keepalive
+was built. What was **not** checked: whether a push to `data/umbracoffee` alone counts, since the
+first 60 days have not passed. So do not rely on the data branch. The fallback if the workflow is
+found switched off is to enable it again in the Actions tab (a disabled scheduled workflow stays off
+until someone does) and run it by hand. A monthly no-op commit to `main` is the next step if that
+ever happens twice. The client already copes with a stopped workflow: a stale next-episode file is
+ignored and the app falls back to the episode list, which does not go stale in a harmful way.
+
+**Refresh the shipped snapshot before packing.** The package carries a copy of the episode list for
+when GitHub cannot be reached (`backoffice/src/umbracoffee/snapshot/episodes.snapshot.json` in the
+Entertainment project). Nothing does this in CI, so before tagging:
+
+```bash
+curl -L -o episodes.json https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/data/umbracoffee/umbracoffee/episodes.json
+node tools/umbracoffee-feed/src/snapshot.mjs episodes.json
+```
+
+The snapshot is the version 2 `episodes.json` whole, summaries and guests included; `snapshot.mjs`
+refuses an older version. It stamps `snapshotAt` with the file's own date, which is the "showing
+episodes up to" date users see when offline. Fill in new episodes first, so the snapshot has their
+summaries. Review the diff and commit it with the release. Delete `episodes.json` afterwards.
+
+**The one-off backfill.** The RSS feed stops at the 15 newest videos, so the older episodes are
+added once by hand with `backfill.mjs`. The workflow never does this. The order against the
+workflow's runs does not matter: for episodes still in the feed, the workflow brings the title and
+description up to date itself. Collect the ids with their upload dates as `id,published` lines (an
+ISO date, for example `aRkc0fRxQjw,2026-09-25T11:27:38Z`; bare ids are refused, since oEmbed has no
+dates) and run
+`node tools/umbracoffee-feed/src/backfill.mjs <dir> < ids.csv`. It asks oEmbed for each unknown id's
+title, skips ids it already has or oEmbed does not know, adds the rest to `sources.json` with an
+empty description and rebuilds `episodes.json`. Commit both and push the data branch. The scrape
+itself is not kept in the repository.
+
+The dry run of `run.mjs` against the real feed with no key, and the tool's tests (`node --test` in
+`tools/umbracoffee-feed`, also run by the build action), are the checks that exist. The workflow
+itself has not run on GitHub yet.
 
 ## Traps this repository has actually hit
 

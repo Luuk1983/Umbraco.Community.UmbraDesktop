@@ -10,13 +10,20 @@ import {
   U4_TASK_ACTIVE,
   U4_WELL,
 } from './palette.js';
-import { U4_TASKBAR_HEIGHT, U4_TASKBAR_PADDING } from './metrics.js';
+import {
+  U4_CLOCK_PADDING,
+  U4_TASKBAR_HEIGHT,
+  U4_TASKBAR_PADDING,
+  U4_TRAY_BORDER,
+  U4_TRAY_HIGHLIGHT,
+  U4_TRAY_PADDING,
+} from './metrics.js';
 
 /**
  * The taskbar is the one surface with no Umbraco 4 antecedent: v4 was a web application and had
  * nothing of the kind. So rather than being copied, it is assembled from v4's own vocabulary —
- * raised grey buttons with a white top edge, a hairline along the bar, and the clock in a sunken
- * white well — which keeps it period-correct while being invented outright.
+ * raised grey buttons with a white top edge, a hairline along the bar, and the tray, clock last, in
+ * a sunken white well — which keeps it period-correct while being invented outright.
  *
  * Nothing here positions the launcher. That panel is mounted inside this component's shadow root,
  * so the base rule owns its geometry, and for this theme that rule needs only the two palette
@@ -120,20 +127,30 @@ export default css`
     box-shadow: inset 1px 1px 2px rgba(40, 70, 110, 0.2);
     font-weight: 700;
   }
-  /* The clock sits in a sunken white well, as every v4 field did. The base leaves it an inline
-     flex item sized by its own text, so it has to be stretched and re-padded before an edge
-     around it means anything. */
-  .clock {
-    align-self: stretch;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
+  /* The tray sits in a sunken white well, as every v4 field did. The well is the tray's rather than
+     the clock's (design D16), so anything in the tray beside the time sits in the same white field.
+     Its edge used to be the clock's. Its leading padding is the bar's own, so an icon sits as far
+     inside the well's edge as the buttons sit inside the bar's, and it is taken out of the clock's,
+     so a tray holding only the clock is the box the clock was.
+
+     The highlight under the top edge is an inset shadow, painted under the tray's children, so the
+     tray's top is padded by its width: otherwise the clock's hover fill, or a tray item's, would
+     cover it. The tray is stretched to the bar, so that padding comes out of the clock's height and
+     the well keeps its size. */
+  .tray {
     margin-left: ${U4_TASKBAR_PADDING}px;
-    padding: 0 7px;
-    border: 1px solid ${unsafeCSS(U4_EDGE)};
+    padding-top: ${U4_TRAY_HIGHLIGHT}px;
+    padding-left: ${U4_TRAY_PADDING}px;
+    border: ${U4_TRAY_BORDER}px solid ${unsafeCSS(U4_EDGE)};
     border-radius: 3px;
     background: ${unsafeCSS(U4_WELL)};
-    box-shadow: inset 1px 1px 0 #e2ded6;
+    box-shadow: inset ${U4_TRAY_HIGHLIGHT}px ${U4_TRAY_HIGHLIGHT}px 0 #e2ded6;
+  }
+  /* The base already stretches the clock to fill the well top to bottom. Its trailing padding holds
+     the time off the edge of the well; its leading padding is what is left once the tray has taken
+     its share, so the two still add up to the old well. */
+  .clock {
+    padding: 0 ${U4_CLOCK_PADDING}px 0 ${U4_CLOCK_PADDING - U4_TRAY_PADDING}px;
     font-size: 11px;
     /* The base dims the clock to 0.85 against a dark bar. On a warm grey one that just reads as a
        rendering artefact. */
