@@ -886,7 +886,10 @@ describe('fit', () => {
    * bit, so the clip and not the clamp ended it. The summary must end on a whole line, with the
    * ellipsis the clamp draws, at whatever height the details get.
    */
-  it('ends the summary on a whole line inside the details at any height, never cut through a line', async () => {
+  it('ends the summary on a whole line inside the details at any height, never cut through a line', async function () {
+    // Seven windows mounted one after another, each waited on until its fit settles: on CI's busy
+    // runner that ran past mocha's 5 s default once (2026-10-11), with every window fitting right.
+    this.timeout(20_000);
     const long = 'Covers the end of Hacktoberfest, the product update and a release candidate, with packages and events. '.repeat(8);
     const episodes = [{ ...withDetails()[0]!, summary: long }, ...EPISODES.slice(1)];
     for (const size of [
