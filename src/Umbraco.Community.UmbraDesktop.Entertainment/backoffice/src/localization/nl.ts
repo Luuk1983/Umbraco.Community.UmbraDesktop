@@ -11,7 +11,6 @@
  */
 export default {
   umbraDesktopEntertainment: {
-    groupGames: 'Spellen',
     minesweeper: 'Minesweeper',
     minesweeperNewGame: 'Nieuw spel',
     minesweeperMinesLeft: 'Mijnen over',
@@ -23,6 +22,7 @@ export default {
     minesweeperFlagged: 'gemarkeerd',
     minesweeperMine: 'mijn',
     minesweeperEmpty: 'leeg',
+    minesweeperEasy: 'Makkelijk',
     snake: 'Snake',
     snakeNewGame: 'Nieuw spel',
     snakeScore: 'Score',
@@ -32,6 +32,8 @@ export default {
     snakePaused: 'Gepauzeerd. Druk op spatie om verder te gaan',
     snakeOver: 'Game over. Druk op spatie om opnieuw te spelen',
     snakeWon: 'Je hebt het hele veld gevuld!',
+    snakeClassic: 'Klassiek',
+    snakeOpenLeaderboard: 'Ranglijst openen',
     solitaire: 'Solitaire',
     solitaireNewGame: 'Nieuw spel',
     solitaireSettings: 'Instellingen',
@@ -67,6 +69,10 @@ export default {
     solitaireSuitH: 'harten',
     solitaireSuitD: 'ruiten',
     solitaireSuitC: 'klaveren',
+    solitaireRule: 'Hoogste score wint, inclusief tijdbonus',
+    solitaireBonus: 'incl. {0} tijdbonus',
+    solitaireLeaderboard: 'Ranglijst',
+    solitaireShowLeaderboard: 'Ranglijst tonen',
     groupMedia: 'Media',
     umbraCoffee: 'umbraCoffee',
     umbraCoffeeTray: 'umbraCoffee',

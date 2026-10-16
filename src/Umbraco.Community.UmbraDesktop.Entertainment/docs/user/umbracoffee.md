@@ -8,7 +8,7 @@ image: ../screenshots/umbracoffee-live.png
 
 # umbraCoffee
 
-umbraCoffee is the Umbraco community's monthly live show. UmbraDesktop Entertainment puts it on the
+umbraCoffee is the Umbraco community's monthly live show. The UmbraDesktop Entertainment Add-on puts it on the
 desktop in a window of its own, in the launcher's **Media** group. It comes with the same package as
 the [games](games.md), so installing it is the same one command.
 

@@ -1,0 +1,7 @@
+{
+  "id": "arcade",
+  "name": "UmbraDesktop Arcade",
+  "packageId": "Umbraco.Community.UmbraDesktop.Services.Arcade",
+  "repository": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop",
+  "docsRoot": "src/Umbraco.Community.UmbraDesktop.Services.Arcade/docs"
+}

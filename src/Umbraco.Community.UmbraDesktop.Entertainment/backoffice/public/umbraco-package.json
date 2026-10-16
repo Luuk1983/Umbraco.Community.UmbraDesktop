@@ -1,7 +1,7 @@
 {
 	"$schema": "../../umbraco-package-schema.json",
 	"id": "Umbraco.Community.UmbraDesktop.Entertainment",
-	"name": "UmbraDesktop Entertainment",
+	"name": "UmbraDesktop Entertainment Add-on",
 	"version": "GetsGenerated",
 	"extensions": [
 		{

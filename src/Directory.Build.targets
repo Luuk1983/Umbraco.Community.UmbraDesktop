@@ -39,14 +39,18 @@
 	     computed: the host's own MinVer version from this build, the same number as the add-on's
 	     because both are versioned off one tag (design D13).
 
-	     Filtered to the host by file name, so it does nothing in the host itself, in the test
-	     projects, or to any other project reference an add-on might gain. `_GetProjectReferenceVersions`
+	     The Arcade is bounded the same way, for the same reason: Entertainment is the first add-on to
+	     depend on another add-on, and compiles against the Arcade from this commit, so its floor is
+	     this release and a bare ">=" would again claim to work with every later major.
+
+	     Filtered to the host and the Arcade by file name, so it does nothing in the host itself, in
+	     the test projects, or to any other project reference an add-on might gain. `_GetProjectReferenceVersions`
 	     is a private NuGet target and could change under an SDK update without warning, so the
 	     build-packages action checks every add-on's packed range and fails the run if this ever
 	     stops applying. -->
 	<Target Name="BoundHostRange" AfterTargets="_GetProjectReferenceVersions">
 		<ItemGroup>
-			<_ProjectReferencesWithVersions Condition="'%(Filename)' == 'Umbraco.Community.UmbraDesktop'">
+			<_ProjectReferencesWithVersions Condition="'%(Filename)' == 'Umbraco.Community.UmbraDesktop' Or '%(Filename)' == 'Umbraco.Community.UmbraDesktop.Services.Arcade'">
 				<ProjectVersion>[%(ProjectVersion), $(UmbraDesktopUmbracoMajorCeiling)]</ProjectVersion>
 			</_ProjectReferencesWithVersions>
 		</ItemGroup>

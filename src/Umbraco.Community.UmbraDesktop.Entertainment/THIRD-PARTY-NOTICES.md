@@ -1,6 +1,6 @@
 # Third-party notices
 
-UmbraDesktop Entertainment is licensed under the MIT License (see `LICENSE` in the repository).
+The UmbraDesktop Entertainment Add-on is licensed under the MIT License (see `LICENSE` in the repository).
 It includes the third-party material below, which keeps its own licence.
 
 ## Roboto Slab (card rank outlines)

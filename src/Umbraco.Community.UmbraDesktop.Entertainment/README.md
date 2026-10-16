@@ -1,6 +1,6 @@
 ![UmbraDesktop](../Umbraco.Community.UmbraDesktop/Package-image_128_128.png)
 
-# UmbraDesktop Entertainment
+# UmbraDesktop Entertainment Add-on
 
 Games and media for UmbraDesktop. Minesweeper, Snake and Solitaire, and umbraCoffee, the Umbraco community's monthly live show, each in a window of its own on the desktop, themed along with everything else.
 
@@ -10,10 +10,12 @@ Games and media for UmbraDesktop. Minesweeper, Snake and Solitaire, and umbraCof
 
 Install it and the launcher grows a Games group and a Media group. Open an app and it gets a window like everything else, in whichever theme you picked, so Minesweeper under the Windows 98 theme looks like Minesweeper, and under macOS it does not.
 
-- **Minesweeper.** The real one: three difficulties, flags, flood fill, a mine counter and a timer.
+- **Minesweeper.** The real one: flags, flood fill, a mine counter and a timer.
 - **Snake.** The classic, with arrow keys or WASD, a snake that speeds up as it grows, and your best score remembered.
 - **Solitaire.** Klondike with draw one or draw three, Windows-style scoring, a bouncing cascade when you win, and a choice of card backs. A game you have not finished survives a refresh.
 - **umbraCoffee.** The live show with its chat, a countdown to the next episode, and every past episode searchable by title, topic or guest. A coffee cup beside the clock and a reminder tell you when an episode starts.
+
+Scores go to the Arcade leaderboards, with a notification when somebody takes first place from you.
 
 ![Solitaire open in its own window on the UmbraDesktop desktop, a Klondike game on the card table with the stock, waste, four foundations and seven columns, and the settings button in the top right corner.](docs/screenshots/entertainment-games-solitaire.png)
 

@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import {
   UMBRADESKTOP_DRAG_LONG_PRESS_MS,
   UMBRADESKTOP_DRAG_SCROLL_BAND_PX,
+  UMBRADESKTOP_DRAG_SCROLL_ROUNDING_PX,
   UMBRADESKTOP_DRAG_SCROLL_STEP_PX,
   UmbraDesktopTileDragController,
   edgeScrollStep,
@@ -143,19 +144,32 @@ describe('edge scrolling', () => {
   /** A 400x300 scroller at 100,100, in the shape getBoundingClientRect returns. */
   const box = { left: 100, right: 500, top: 100, bottom: 400 };
 
+  /** Content well past the scroller's height, so it has somewhere to scroll. */
+  const range = 600;
+
   it('scrolls up in the top band and down in the bottom band', () => {
-    expect(edgeScrollStep(box, 300, box.top + UMBRADESKTOP_DRAG_SCROLL_BAND_PX / 2)).to.equal(-UMBRADESKTOP_DRAG_SCROLL_STEP_PX);
-    expect(edgeScrollStep(box, 300, box.bottom - UMBRADESKTOP_DRAG_SCROLL_BAND_PX / 2)).to.equal(UMBRADESKTOP_DRAG_SCROLL_STEP_PX);
+    expect(edgeScrollStep(box, 300, box.top + UMBRADESKTOP_DRAG_SCROLL_BAND_PX / 2, range)).to.equal(-UMBRADESKTOP_DRAG_SCROLL_STEP_PX);
+    expect(edgeScrollStep(box, 300, box.bottom - UMBRADESKTOP_DRAG_SCROLL_BAND_PX / 2, range)).to.equal(UMBRADESKTOP_DRAG_SCROLL_STEP_PX);
   });
 
   it('does not scroll in the middle', () => {
-    expect(edgeScrollStep(box, 300, 250)).to.equal(0);
+    expect(edgeScrollStep(box, 300, 250, range)).to.equal(0);
   });
 
   it('does not scroll with the pointer outside the scroller, such as over the remove pane below it', () => {
-    expect(edgeScrollStep(box, 300, box.bottom + 20)).to.equal(0);
-    expect(edgeScrollStep(box, 300, box.top - 20)).to.equal(0);
-    expect(edgeScrollStep(box, box.left - 20, box.top + 5)).to.equal(0);
-    expect(edgeScrollStep(box, box.right + 20, box.bottom - 5)).to.equal(0);
+    expect(edgeScrollStep(box, 300, box.bottom + 20, range)).to.equal(0);
+    expect(edgeScrollStep(box, 300, box.top - 20, range)).to.equal(0);
+    expect(edgeScrollStep(box, box.left - 20, box.top + 5, range)).to.equal(0);
+    expect(edgeScrollStep(box, box.right + 20, box.bottom - 5, range)).to.equal(0);
+  });
+
+  it('does not scroll a scroller whose only room is the browser rounding its fractional height', () => {
+    // A launcher body 79.3px tall around 79.3px of content reports scrollHeight 80 and clientHeight
+    // 79. Scrolling that pixel moved every group up under the pointer as a drag started.
+    expect(edgeScrollStep(box, 300, box.bottom - UMBRADESKTOP_DRAG_SCROLL_BAND_PX / 2, UMBRADESKTOP_DRAG_SCROLL_ROUNDING_PX)).to.equal(0);
+    expect(edgeScrollStep(box, 300, box.top + UMBRADESKTOP_DRAG_SCROLL_BAND_PX / 2, UMBRADESKTOP_DRAG_SCROLL_ROUNDING_PX)).to.equal(0);
+    expect(edgeScrollStep(box, 300, box.bottom - UMBRADESKTOP_DRAG_SCROLL_BAND_PX / 2, UMBRADESKTOP_DRAG_SCROLL_ROUNDING_PX + 1)).to.equal(
+      UMBRADESKTOP_DRAG_SCROLL_STEP_PX,
+    );
   });
 });

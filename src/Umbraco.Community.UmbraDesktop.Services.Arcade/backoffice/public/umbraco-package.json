@@ -1,0 +1,14 @@
+{
+	"$schema": "../../umbraco-package-schema.json",
+	"id": "Umbraco.Community.UmbraDesktop.Services.Arcade",
+	"name": "UmbraDesktop Arcade service",
+	"version": "GetsGenerated",
+	"extensions": [
+		{
+			"type": "bundle",
+			"alias": "Umbraco.Community.UmbraDesktop.Services.Arcade.Bundle",
+			"name": "UmbraDesktop Arcade Bundle",
+			"js": "/App_Plugins/Umbraco.Community.UmbraDesktop.Services.Arcade/umbradesktop-services-arcade.js"
+		}
+	]
+}

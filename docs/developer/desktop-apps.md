@@ -470,6 +470,17 @@ shipped it. Do not reach for it.
 This is opt-in by construction. An app that never writes that selector never needs to know the
 attribute exists, and §4 alone is enough to be correct everywhere.
 
+### Not your app's own element?
+
+The desktop stamps the attribute on app elements only. An element that a package lets apps place
+inside their own windows, such as the Arcade's result card and leaderboard panel, is not an app, so
+nothing stamps it. It can read the active theme's id from the `theme` observable on the desktop's
+settings context (§7.2) and stamp itself, after which the same `:host([data-umbradesktop-theme=...])`
+rules work. The Arcade's
+[`theme.controller.ts`](../../src/Umbraco.Community.UmbraDesktop.Services.Arcade/backoffice/src/pieces/theme.controller.ts)
+is the worked example: a small controller that does exactly that, and stamps nothing outside the
+desktop, which leaves the unbranched rules.
+
 ### The theme ids are a published API
 
 ```
@@ -490,8 +501,8 @@ never the other way round. A sixth theme must not be able to break your app.
 ## 6. Groups
 
 `meta.group` is a launcher group alias: one of the desktop's own, or one a package defines in its
-catalogue. The Entertainment add-on does exactly that for Games, so its games and their heading ship
-together and the desktop knows nothing about either. An app naming a group nobody defines lands in
+catalogue. The Arcade add-on does exactly that for Games, and every game package depends on the
+Arcade, so a game and its heading always ship together and the desktop knows nothing about either. An app naming a group nobody defines lands in
 the reserved More group, which is honest rather than a failure. [package-catalogues.md](package-catalogues.md)
 §4 lists the desktop's groups and their weights, for placing one of your own among them.
 
@@ -625,13 +636,14 @@ should follow the same two, or the user who asked for 24 hour sees "2:30 PM" in 
 "14:30" a few centimetres below it. `this.localize.date` does not know about either setting.
 
 The desktop publishes them through the context it provides to everything inside it, apps included.
-**This is public API**: the alias, the two members below and their behaviour are kept stable.
+**This is public API**: the alias, the members below and their behaviour are kept stable.
 
 | | |
 |---|---|
 | Context alias | `'UmbraDesktopSettingsContext'` |
 | `formatDateTime(date, options)` | Formats `date` with `Intl.DateTimeFormat` options, exactly as the taskbar clock does: the user's culture, their hour override when `options` asks for an hour, and the hour padded to suit the cycle. Returns a string |
 | `locale` | An observable that emits whenever either setting changes. Observe it and redraw; its value is the desktop's own and not something to read |
+| `theme` | An observable of the active theme's id, one of the ids in §5. Published API since the Arcade's pieces use it to stamp themselves (§5) |
 
 Those two members are the whole contract. The context also carries the user's other settings and
 the setters the settings dialog uses. They are not part of it, so do not build on them.
@@ -678,6 +690,8 @@ The Accessories Clock and umbraCoffee in the Entertainment package are the worke
 `{ hour: 'numeric', minute: '2-digit' }` and its episode dates pass `{ dateStyle: 'medium' }`, both
 through one function in `umbracoffee/desktop-format.ts`, so the window and the tray cup cannot
 disagree.
+
+A service your app shares with others belongs in a [desktop context](desktop-contexts.md).
 
 ### 7.3 Remembering where your app is
 

@@ -28,6 +28,7 @@ import { UmbraDesktopTrayContext } from '../taskbar/tray/tray.context.js';
 import { watchNotifications } from '../notifications/notification-watcher.js';
 import { drawsOwnElement } from '../notifications/own-element.js';
 import { UMBRADESKTOP_DESKTOP_SOURCE_ID } from '../notifications/types.js';
+import { UmbraDesktopPackageContextsController } from '../package-contexts.controller.js';
 import type { DesktopLabelResponseModel } from '../../api/types.gen';
 import './window.element.js';
 import './taskbar.element.js';
@@ -76,6 +77,12 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    * clock. Windows feed it from their frames; this element feeds it from its own document.
    */
   #notifications = new UmbraDesktopNotificationCentreContext(this, this.#manager);
+
+  /**
+   * Package contexts (`umbraDesktopContext`), alive from connect to disconnect only, so a package
+   * service never outlives a visit to the desktop. See package-contexts.controller.ts.
+   */
+  #packageContexts = new UmbraDesktopPackageContextsController(this);
 
   /**
    * Resolves the curated catalogue and the packages' apps into the launcher's list, for the whole
@@ -170,6 +177,8 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   constructor() {
     super();
+    // Lets the manager's published `openApp(alias)` resolve an alias against what the user can launch.
+    this.#manager.useApps(() => this.#catalogue.getApps());
     // Reopens this user's windows once their settings have loaded, and keeps the layout saved. The
     // desktop holds its first paint while it does; see `reportWindowsRestoring`.
     const layout = new UmbraDesktopWindowLayoutController(this, {
@@ -348,6 +357,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     // section (via the taskbar's Exit) unmounts this element and restores it.
     this.#setOuterChrome(true);
     this.#watchOwnNotifications();
+    this.#packageContexts.start();
     // A move in the DOM disconnects and reconnects in one task, and the consumer does not call back
     // for a context it still holds, so the attachment dropped on disconnect is restored here.
     if (!this.#detachFromPackageSettings && this.#packageSettings) {
@@ -413,6 +423,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     this.#setOuterChrome(false);
     this.#stopOwnNotifications?.();
     this.#stopOwnNotifications = undefined;
+    this.#packageContexts.stop();
   }
 
   /**

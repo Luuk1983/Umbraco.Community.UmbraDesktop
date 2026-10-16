@@ -1,9 +1,10 @@
 /**
  * English (en) strings for the `umbraDesktopEntertainment` area.
  *
- * This package's own dictionary: the Games and Media groups' headings, which this package's catalogue
+ * This package's own dictionary: the Media group's heading, which this package's catalogue
  * manifest defines, each app's name, which its manifest points at through `meta.label`, and
- * everything the apps themselves say.
+ * everything the apps themselves say. The Games heading is the Arcade's, since its catalogue
+ * defines that group.
  *
  * The element passes each of these to `localize.termOrDefault` with the same English as its
  * fallback, so a backoffice where this dictionary failed to load renders words rather than raw
@@ -12,8 +13,6 @@
  */
 export default {
   umbraDesktopEntertainment: {
-    // The launcher group this package's catalogue manifest defines (bundle.manifests.ts).
-    groupGames: 'Games',
     // The window title, taskbar label and launcher tile text, all from meta.label.
     minesweeper: 'Minesweeper',
     // In-game chrome.
@@ -29,6 +28,7 @@ export default {
     minesweeperFlagged: 'flagged',
     minesweeperMine: 'mine',
     minesweeperEmpty: 'empty',
+    minesweeperEasy: 'Easy',
     // Snake: the window title, then everything the game says.
     snake: 'Snake',
     snakeNewGame: 'New game',
@@ -39,6 +39,9 @@ export default {
     snakePaused: 'Paused. Press space to carry on',
     snakeOver: 'Game over. Press space to play again',
     snakeWon: 'You filled the board!',
+    // Snake's one Arcade board, and the Best chip's tooltip once it opens the leaderboard.
+    snakeClassic: 'Classic',
+    snakeOpenLeaderboard: 'Open the leaderboard',
     // Solitaire: the window title, then everything the game says.
     solitaire: 'Solitaire',
     solitaireNewGame: 'New game',
@@ -76,6 +79,12 @@ export default {
     solitaireSuitH: 'hearts',
     solitaireSuitD: 'diamonds',
     solitaireSuitC: 'clubs',
+    // Solitaire on the Arcade: its rule line, the card's bonus line ({0} is the bonus), and the
+    // settings dialog's Leaderboard section.
+    solitaireRule: 'Highest score wins, time bonus included',
+    solitaireBonus: 'incl. {0} time bonus',
+    solitaireLeaderboard: 'Leaderboard',
+    solitaireShowLeaderboard: 'Show the leaderboard',
     // umbraCoffee. The group it sits in, then its name as an app and as a tray switch, the same word
     // in both places because the switch in Desktop settings is found by the show's name.
     groupMedia: 'Media',

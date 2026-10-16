@@ -1,6 +1,6 @@
 ![UmbraDesktop](../Umbraco.Community.UmbraDesktop/Package-image_128_128.png)
 
-# UmbraDesktop Accessories
+# UmbraDesktop Accessories Add-on
 
 The small tools for UmbraDesktop. Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Disk Cleanup and System Information, the ones Windows kept under Start > Programs > Accessories, each in a window of its own on the desktop, and a screen saver you set in Desktop settings.
 

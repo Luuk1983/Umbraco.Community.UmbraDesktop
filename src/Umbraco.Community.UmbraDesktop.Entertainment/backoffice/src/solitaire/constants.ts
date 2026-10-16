@@ -4,6 +4,8 @@
  * import sizes without pulling the lazy-loaded game into the main chunk, as Snake's does.
  */
 
+import type { DrawCount } from './rules.js';
+
 /** Columns in the tableau. */
 export const SOLITAIRE_COLUMNS = 7;
 /** Foundation piles. */
@@ -54,6 +56,13 @@ export const DEAL_STAGGER_MS = 28;
 export const FLIP_MS = 220;
 /** Pause between auto-finish moves, in ms. */
 export const AUTO_FINISH_STEP_MS = 110;
+/**
+ * How long a win waits for the Arcade's answer before showing Solitaire's own win screen, in ms.
+ * The win screen holds back while the score is on its way so it does not flash and give way to the
+ * card; a stalled server must not leave the player with no win screen at all. A card that arrives
+ * later still replaces it.
+ */
+export const SOLITAIRE_RESULT_WAIT_MS = 4000;
 /** Pointer travel in px before a press becomes a drag. */
 export const DRAG_THRESHOLD_PX = 4;
 
@@ -115,3 +124,16 @@ export const SOLITAIRE_MIN_CONTENT_SIZE = {
   w: Math.ceil(tableWidthFor(CARD_MIN_WIDTH_PX)),
   h: Math.ceil(tableHeightFor(CARD_MIN_WIDTH_PX)),
 } as const;
+
+/** This game's `umbraDesktopGame` alias, its identity on the Arcade. Final once shipped. */
+export const SOLITAIRE_GAME_ALIAS = 'Umbraco.Community.UmbraDesktop.Entertainment.Solitaire.Game';
+
+/**
+ * The Arcade board a won game scores on: one per draw mode, because a draw-3 score and a draw-1
+ * score are not comparable (design D13).
+ * @param drawCount How many cards the game being scored draws.
+ * @returns The board's alias in the game manifest's leaderboards.
+ */
+export function solitaireBoard(drawCount: DrawCount): 'draw-1' | 'draw-3' {
+  return `draw-${drawCount}`;
+}

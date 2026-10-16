@@ -7,8 +7,8 @@ sidebar_position: 2
 
 # Developer guide
 
-How to extend the games in UmbraDesktop Entertainment from your own package, and how to test
-umbraCoffee. For using them, see the user guide on the [games](../user/games.md) and
+How to extend the games in the UmbraDesktop Entertainment Add-on from your own package, and how to
+test umbraCoffee. For using them, see the user guide on the [games](../user/games.md) and
 [umbraCoffee](../user/umbracoffee.md).
 
 - [Adding a card back or a card face set to Solitaire](solitaire-decks.md): the two manifest types,

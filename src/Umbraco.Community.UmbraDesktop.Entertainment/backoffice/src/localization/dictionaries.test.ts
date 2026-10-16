@@ -28,6 +28,7 @@ const SOLITAIRE_KEYS = [
   'solitaireBackRabbit', 'solitaireBackCodegarden', 'solitaireBackCodeCabin', 'solitaireBackDutchUmbracoAlliance',
   'solitaireFacesClassic', 'solitaireCardName', 'solitaireFaceDown', 'solitaireRank1', 'solitaireRank11',
   'solitaireRank12', 'solitaireRank13', 'solitaireSuitS', 'solitaireSuitH', 'solitaireSuitD', 'solitaireSuitC',
+  'solitaireRule', 'solitaireBonus', 'solitaireLeaderboard', 'solitaireShowLeaderboard',
 ];
 
 describe('entertainment dictionaries', () => {
@@ -48,6 +49,13 @@ describe('entertainment dictionaries', () => {
       const name = String(dictionary.umbraDesktopEntertainment.solitaireCardName);
       expect(name).to.include('{0}');
       expect(name).to.include('{1}');
+    }
+  });
+
+  /** The bonus line on the Arcade card takes the number as its one argument. */
+  it('keep the placeholder in the time bonus line', () => {
+    for (const dictionary of [en, nl]) {
+      expect(String(dictionary.umbraDesktopEntertainment.solitaireBonus)).to.include('{0}');
     }
   });
 });

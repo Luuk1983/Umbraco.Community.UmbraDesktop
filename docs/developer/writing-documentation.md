@@ -2,7 +2,7 @@
 id: writing-documentation
 title: Writing documentation
 description: How the docs are structured, the front matter and Markdown every page uses, and the writing style.
-sidebar_position: 7
+sidebar_position: 8
 ---
 
 # Writing documentation
@@ -48,7 +48,7 @@ Only the `user/` and `developer/` folders inside a product's docs root are publi
 that root is `docs/`, which is why `docs/design/` and `docs/plans/` can live beside them unpublished.
 
 Each package keeps its own docs in its own folder, the way an add-on in another repository would.
-UmbraDesktop Entertainment's are in `src/Umbraco.Community.UmbraDesktop.Entertainment/docs/`, and
+The UmbraDesktop Entertainment Add-on's are in `src/Umbraco.Community.UmbraDesktop.Entertainment/docs/`, and
 nothing in them relies on being in this repository. Link from one product to another by an absolute
 URL, such as its NuGet page or its page on GitHub, never by a relative path into its folder. Within
 a product, links are always relative.

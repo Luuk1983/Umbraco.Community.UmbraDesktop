@@ -9,6 +9,8 @@ import {
   UMBRACOFFEE_TRAY_ALIAS,
 } from './umbracoffee/constants.js';
 import { SOLITAIRE_CONTENT_SIZE, SOLITAIRE_MIN_CONTENT_SIZE } from './solitaire/constants.js';
+import en from './localization/en.js';
+import nl from './localization/nl.js';
 
 /**
  * What the manifest promises the desktop, asserted where it can be read without a desktop.
@@ -132,24 +134,48 @@ it('registers the built-in card backs and face set through their own manifest ty
   expect(manifests.filter((m) => m.type === 'umbraDesktopSolitaireFaces').length).to.equal(1);
 });
 
-/** The one catalogue this package registers. */
-const catalogue = manifests.find((manifest) => manifest.type === 'umbraDesktopCatalogue');
+/** Every `umbraDesktopGame` this package registers, as the Arcade will read them. */
+const games = manifests.filter((m) => m.type === 'umbraDesktopGame') as unknown as Array<{
+  alias: string;
+  meta: { app: string; leaderboards: Array<{ alias: string; better: string; format: string }> };
+}>;
+
+it('puts all three games on the Arcade, each linked to its app', () => {
+  expect(games.map((g) => [g.alias, g.meta.app])).to.deep.equal([
+    ['Umbraco.Community.UmbraDesktop.Entertainment.Minesweeper.Game', 'Umbraco.Community.UmbraDesktop.Entertainment.Minesweeper'],
+    ['Umbraco.Community.UmbraDesktop.Entertainment.Snake.Game', 'Umbraco.Community.UmbraDesktop.Entertainment.Snake'],
+    ['Umbraco.Community.UmbraDesktop.Entertainment.Solitaire.Game', 'Umbraco.Community.UmbraDesktop.Entertainment.Solitaire'],
+  ]);
+});
+
+it('scores Minesweeper as a time, Snake and Solitaire as points', () => {
+  expect(games.map((g) => g.meta.leaderboards.map((b) => `${b.alias}:${b.better}:${b.format}`))).to.deep.equal([
+    ['easy:lower:time'],
+    ['default:higher:points'],
+    ['draw-1:higher:points', 'draw-3:higher:points'],
+  ]);
+});
 
 /**
- * The Games group is this package's own now, label and all, so this is the only place that says it
- * exists. The bounds are literals because the host's list cannot be imported from here: after its
- * System (50) and before its Experimental (70), the weights the host publishes so packages can place
- * against them (package catalogues design D10, D11).
+ * Solitaire says how it is won itself (settled point 8): the rule the Arcade would derive from its
+ * boards, "Highest score wins", leaves out the time bonus that decides most games.
  */
-it('defines the games group itself, between System and Experimental', () => {
-  const groups =
-    (catalogue as { meta?: { groups?: Array<{ alias: string; label: string; weight?: number }> } } | undefined)?.meta
-      ?.groups ?? [];
-  const games = groups.find((group) => group.alias === 'games');
-  expect(games, 'the package must define the group its games name').to.not.equal(undefined);
-  expect(games!.label, "a token from this package's own dictionary").to.equal('#umbraDesktopEntertainment_groupGames');
-  expect(games!.weight).to.be.greaterThan(50);
-  expect(games!.weight).to.be.lessThan(70);
+it("gives Solitaire's boards their own rule line, from a key both dictionaries have", () => {
+  const rules = games.map((g) => (g.meta as { rule?: string }).rule);
+  expect(rules).to.deep.equal([undefined, undefined, '#umbraDesktopEntertainment_solitaireRule']);
+  for (const dictionary of [en, nl]) {
+    expect(typeof (dictionary.umbraDesktopEntertainment as Record<string, unknown>).solitaireRule, 'the key is there').to.equal('string');
+  }
+});
+
+/** The package's one catalogue manifest, which defines Media. */
+const catalogue = manifests.find((m) => m.type === 'umbraDesktopCatalogue');
+
+/** The Arcade's catalogue defines Games, since every game brings the Arcade, so this one must not define it again. */
+it('defines only Media, leaving the Games group to the Arcade', () => {
+  expect(manifests.filter((m) => m.type === 'umbraDesktopCatalogue')).to.have.lengthOf(1);
+  const groups = (catalogue as { meta?: { groups?: Array<{ alias: string }> } } | undefined)?.meta?.groups ?? [];
+  expect(groups.map((group) => group.alias)).to.deep.equal(['media']);
 });
 
 /**

@@ -74,3 +74,9 @@ export const SNAKE_CONTENT_SIZE = {
 
 /** The smallest content box the window may be dragged to: the whole board, since a grid does not reflow. */
 export const SNAKE_MIN_CONTENT_SIZE = SNAKE_CONTENT_SIZE;
+
+/** This game's `umbraDesktopGame` alias, its identity on the Arcade. Final once shipped. */
+export const SNAKE_GAME_ALIAS = 'Umbraco.Community.UmbraDesktop.Entertainment.Snake.Game';
+
+/** The one board Snake scores on, higher wins. Its alias in the game manifest's leaderboards. */
+export const SNAKE_BOARD_ALIAS = 'default';

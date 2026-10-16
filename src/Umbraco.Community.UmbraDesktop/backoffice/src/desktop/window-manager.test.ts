@@ -831,6 +831,30 @@ describe('restoring saved windows', () => {
   });
 });
 
+describe('openApp', () => {
+  it('opens an app by alias from the apps it was given, and says whether it did', () => {
+    const ctx = manager();
+    ctx.useApps(() => [APP]);
+
+    expect(ctx.openApp('probe')).to.equal(true);
+    expect(windowsOf(ctx).map((w) => w.app.alias)).to.deep.equal(['probe']);
+  });
+
+  it('opens nothing for an alias that is not an app the user can launch', () => {
+    const ctx = manager();
+    ctx.useApps(() => [APP]);
+
+    expect(ctx.openApp('hidden')).to.equal(false);
+    expect(windowsOf(ctx)).to.have.lengthOf(0);
+  });
+
+  it('opens nothing before it has been given apps', () => {
+    const ctx = manager();
+
+    expect(ctx.openApp('probe')).to.equal(false);
+  });
+});
+
 it('opens settings instead of a window for an app that opens settings', () => {
   const ctx = manager();
   ctx.open({ ...APP, alias: 'shortcut', opensSettings: 'My Package' });

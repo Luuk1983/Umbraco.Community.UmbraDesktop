@@ -1,31 +1,31 @@
-import { MINESWEEPER_CONTENT_SIZE, MINESWEEPER_MIN_CONTENT_SIZE } from './minesweeper/constants.js';
-import { SNAKE_CONTENT_SIZE, SNAKE_MIN_CONTENT_SIZE } from './snake/constants.js';
+import {
+  MINESWEEPER_CONTENT_SIZE,
+  MINESWEEPER_EASY_BOARD,
+  MINESWEEPER_GAME_ALIAS,
+  MINESWEEPER_MIN_CONTENT_SIZE,
+} from './minesweeper/constants.js';
+import { SNAKE_BOARD_ALIAS, SNAKE_CONTENT_SIZE, SNAKE_GAME_ALIAS, SNAKE_MIN_CONTENT_SIZE } from './snake/constants.js';
 import {
   UMBRACOFFEE_APP_ALIAS,
   UMBRACOFFEE_CONTENT_SIZE,
   UMBRACOFFEE_MIN_CONTENT_SIZE,
   UMBRACOFFEE_TRAY_ALIAS,
 } from './umbracoffee/constants.js';
-import { SOLITAIRE_CONTENT_SIZE, SOLITAIRE_MIN_CONTENT_SIZE } from './solitaire/constants.js';
+import { SOLITAIRE_CONTENT_SIZE, SOLITAIRE_GAME_ALIAS, SOLITAIRE_MIN_CONTENT_SIZE } from './solitaire/constants.js';
 import { backManifests, facesManifests } from './solitaire/backs.js';
 import type {} from './solitaire/extensions.js';
 import { manifests as localizationManifests } from './localization/manifest.js';
 
 /**
- * The Games and Media groups, defined by the package whose apps fill them.
+ * The Media group, defined by the package whose app fills it.
  *
- * The host used to reserve `games` on this package's behalf, which made it the one group on the
- * desktop that existed only for somebody else's apps. A catalogue manifest lets the package own its
- * heading as well as its games, so the host now knows nothing about games at all (design D10 of
- * `docs/design/2026-09-25-package-catalogues-design.md`).
+ * Games is not here: the Arcade's catalogue defines it, since every game now brings the Arcade
+ * (Arcade design section 3), and the games below still name `group: 'games'`.
  *
- * This weight is on the launcher's own scale, lower first, unlike the games' root `weight` below,
- * which is Umbraco's. 60 places Games after the host's System (50) and before its Experimental (70),
- * the slot it always had; the host publishes those weights for exactly this (design D11).
- *
- * Media is 65, after Games and still before Experimental (umbraCoffee design D13). It holds
- * umbraCoffee today, and Winamp and the video player will join it, which is why it is named for
- * what it holds rather than for the one app in it now.
+ * This weight is on the launcher's own scale, lower first, unlike the apps' root `weight` below,
+ * which is Umbraco's. Media is 65, after the Arcade's Games (60) and before the host's Experimental
+ * (70) (umbraCoffee design D13). It holds umbraCoffee today, and Winamp and the video player will
+ * join it, which is why it is named for what it holds rather than for the one app in it now.
  *
  * No `entries`: an entry deep-links one of the package's own backoffice screens, and this package has
  * none.
@@ -35,10 +35,7 @@ const catalogue: UmbExtensionManifest = {
   alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Catalogue',
   name: 'UmbraDesktop Entertainment catalogue',
   meta: {
-    groups: [
-      { alias: 'games', label: '#umbraDesktopEntertainment_groupGames', weight: 60 },
-      { alias: 'media', label: '#umbraDesktopEntertainment_groupMedia', weight: 65 },
-    ],
+    groups: [{ alias: 'media', label: '#umbraDesktopEntertainment_groupMedia', weight: 65 }],
   },
 };
 
@@ -83,7 +80,7 @@ const minesweeper: UmbExtensionManifest = {
     label: '#umbraDesktopEntertainment_minesweeper',
     // A native Umbraco icon alias. Anything else falls back to icon-box.
     icon: 'icon-bomb',
-    // The group this package's catalogue above defines, label and localisation included.
+    // The Games group, which the Arcade's catalogue defines.
     group: 'games',
     // The app's **content** box, derived from the board rather than typed, so it cannot come to
     // disagree with the grid it has to hold. The host adds the active theme's chrome, which is the
@@ -155,6 +152,63 @@ const solitaire: UmbExtensionManifest = {
 };
 
 /**
+ * The three games on the Arcade (design D13). Each alias is the game's identity in the Arcade's
+ * database, so like an app alias it is final once shipped. The Arcade reads these; the games submit
+ * through `shared/arcade.ts`, and play exactly as before when the Arcade is not there.
+ *
+ * The Games launcher group is no longer defined here: the Arcade's catalogue owns it, since every
+ * game now brings the Arcade (design section 3). The apps below still name `group: 'games'`.
+ */
+const games: UmbExtensionManifest[] = [
+  {
+    type: 'umbraDesktopGame',
+    alias: MINESWEEPER_GAME_ALIAS,
+    name: 'Minesweeper scores',
+    weight: 1000,
+    meta: {
+      app: 'Umbraco.Community.UmbraDesktop.Entertainment.Minesweeper',
+      label: '#umbraDesktopEntertainment_minesweeper',
+      icon: 'icon-bomb',
+      leaderboards: [
+        { alias: MINESWEEPER_EASY_BOARD, label: '#umbraDesktopEntertainment_minesweeperEasy', better: 'lower', format: 'time' },
+      ],
+    },
+  },
+  {
+    type: 'umbraDesktopGame',
+    alias: SNAKE_GAME_ALIAS,
+    name: 'Snake scores',
+    weight: 900,
+    meta: {
+      app: 'Umbraco.Community.UmbraDesktop.Entertainment.Snake',
+      label: '#umbraDesktopEntertainment_snake',
+      icon: 'icon-game',
+      leaderboards: [
+        // "Classic" rather than repeating the game's name on its one board; the alias is unchanged, so nothing stored moves.
+        { alias: SNAKE_BOARD_ALIAS, label: '#umbraDesktopEntertainment_snakeClassic', better: 'higher', format: 'points' },
+      ],
+    },
+  },
+  {
+    type: 'umbraDesktopGame',
+    alias: SOLITAIRE_GAME_ALIAS,
+    name: 'Solitaire scores',
+    weight: 800,
+    meta: {
+      app: 'Umbraco.Community.UmbraDesktop.Entertainment.Solitaire',
+      label: '#umbraDesktopEntertainment_solitaire',
+      icon: 'icon-playing-cards',
+      // Said by the game, not derived: "Highest score wins" would leave out the time bonus that decides most games.
+      rule: '#umbraDesktopEntertainment_solitaireRule',
+      leaderboards: [
+        { alias: 'draw-1', label: '#umbraDesktopEntertainment_solitaireDrawOne', better: 'higher', format: 'points' },
+        { alias: 'draw-3', label: '#umbraDesktopEntertainment_solitaireDrawThree', better: 'higher', format: 'points' },
+      ],
+    },
+  },
+];
+
+/**
  * umbraCoffee: the community's monthly live show, watched in a window (umbraCoffee design §6.1).
  *
  * Registered the way the games are, for the reasons Minesweeper's comment gives, with two
@@ -223,14 +277,15 @@ const umbraCoffeeTray: UmbExtensionManifest = {
  *
  * `UmbExtensionManifest` is a global type from `@umbraco-cms/backoffice/extension-types`, wired up
  * in tsconfig's `types`, so there is nothing to import for it. The `umbraDesktopApp`,
- * `umbraDesktopCatalogue`, `umbraDesktopTrayItem` and `umbraDesktopDocs` arms of that union are contributed by
- * `umbradesktop-app.d.ts` in this folder, for the reason given there.
+ * `umbraDesktopCatalogue`, `umbraDesktopTrayItem`, `umbraDesktopGame` and `umbraDesktopDocs` arms of
+ * that union are contributed by `umbradesktop-app.d.ts` in this folder, for the reason given there.
  */
 export const manifests: Array<UmbExtensionManifest> = [
   catalogue,
   minesweeper,
   snake,
   solitaire,
+  ...games,
   umbraCoffee,
   umbraCoffeeTray,
   docs,
