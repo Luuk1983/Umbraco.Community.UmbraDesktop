@@ -46,7 +46,7 @@ surface for search (option B below).
 | # | Decision | Why |
 | --- | --- | --- |
 | D1 | **Search lives inside the launcher.** Typing replaces the launcher's body with results; an empty field is the launcher as it is. | Matches Windows Start and GNOME, and the way All apps already works. A separate Spotlight-style bar was considered and is a new surface for five themes to style. |
-| D2 | **Apps, Documents and Media are full sections; every other source folds into one "Also in" line with counts.** | Data Types, Templates and the rest are rarely what someone is looking for, and full sections for each would dilute the results. Folded rather than dropped, so nothing becomes unreachable. Umbraco already hides each source from users without its section, so most editors never see the settings sources at all. |
+| D2 | **Apps, Documents and Media are full sections; every other source gets a compact section of its own.** Revised in §11: this first said every other source folds into one "Also in" line with counts. | Data Types, Templates and the rest are rarely what someone is looking for, so they get fewer results each. Umbraco already hides each source from users without its section, so most editors never see the settings sources at all. |
 | D3 | **Sources come from core's `globalSearch` registrations**, not a list of our own. | The section-permission conditions are on those manifests, not on the providers, so reading them gives the same gating as the native modal. Third-party sources appear without any work here. |
 | D4 | **Each source's provider is called directly with paging**, not through the `globalSearch` api. | `UmbGlobalSearchBase.search` passes only `{ query }`, so the server's default `take=100` applies. Ten sources at 100 items per keystroke is heavy; full sections ask for 5, folded ones for 1, because they need only the total. |
 | D5 | **Help pages are a folded source.** | Help already has a search over the docs. Whether its results are useful next to content is to be judged in a running backoffice; removing it is one line. |
@@ -226,3 +226,34 @@ Also worth knowing:
 - **Reopening the launcher straight after opening a result** can close it again: when the new
   window's editor finishes loading it takes focus, and the launcher closes when focus moves into a
   window. The same happens after opening any app from a tile, so it is not new here.
+
+## 11. Revised after the owner tried it (2026-10-16)
+
+Two changes, both about the list moving and the room it left unused.
+
+- **One update per pause in typing.** Apps were matched on every keystroke while the other sources
+  answered after the 300 ms debounce, so the list moved twice for each pause. Now nothing changes
+  until the sources answer, and then apps and sources change together. The launcher also keeps its
+  own body until the first answer arrives, instead of showing an empty results body first. Apps
+  appear about 0.3 s later than before, which nobody notices while typing. Windows 11 Start updates
+  in two steps as we did; Raycast and Alfred update once, and feel calmer for it.
+- **No "Also in" line.** The panel holds its height while searching, so most of it stayed empty
+  while Data Types, Templates and Help showed only a count behind a click. Every source now gets its
+  own section, with its first results: more for Documents and Media (full), fewer for the rest
+  (compact); the numbers and the layout are in the next point. Show all (N) on any section opens its
+  full list as before. D2 is revised accordingly.
+- **Results side by side, categories stacked, every app.** On the wide launchers (Umbraco, macOS,
+  Windows 11) one list down the left edge left most of the panel empty. The categories stay one band
+  each, top to bottom, which is how Windows and Spotlight read: down to the kind of thing, then
+  across. Within a band the results are a grid at the launcher's own card width
+  (`UMBRADESKTOP_LAUNCHER_CARD_MIN_WIDTH`), best first along the top row: four or five columns in
+  Umbraco and macOS, two in Windows 11, one in the 450 px Start menus of Windows 98 and Umbraco 4,
+  which stay as they were. Putting the categories themselves side by side was tried first and
+  rejected: it mixed them into one grid that no longer read as categories. Apps are no longer
+  capped: they are matched locally, there are at most a few dozen, and an app cut off is one a
+  person cannot find any other way. Documents and Media now show up to 12 and every other source up
+  to 6, enough to fill a few rows; still small against core's default of 100 (D4). The numbers are
+  the same for every theme: a narrow Start menu scrolls, as its launcher does, and per-theme numbers
+  would need a theme token or search code that knows about themes. The cost is a one-letter search,
+  which matches most apps (a name matches when it contains the text anywhere) and pushes the other
+  categories down.

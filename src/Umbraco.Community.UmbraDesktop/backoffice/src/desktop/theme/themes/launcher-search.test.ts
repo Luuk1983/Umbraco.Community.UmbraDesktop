@@ -1,5 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { UMBRADESKTOP_THEMES } from './index.js';
+import { UMBRADESKTOP_WIN98_THEME } from './win98/index.js';
+import { UMBRADESKTOP_UMBRACO4_THEME } from './umbraco4/index.js';
 import { adoptIconStandIn, mountLauncher, stubApp } from '../../components/launcher.test-helper.js';
 import type { UmbraDesktopLauncherMount } from '../../components/launcher.test-helper.js';
 import type { UmbraDesktopSearchItem, UmbraDesktopSearchSource } from '../../search/types.js';
@@ -14,8 +16,8 @@ import type { UmbraDesktopSearchItem, UmbraDesktopSearchSource } from '../../sea
 /** Mounting a launcher under a theme imports that theme's sheets, which is slow in a busy run. */
 const TIMEOUT_MS = 30_000;
 
-/** Two apps whose names start with the query, so the Apps section has rows of different lengths. */
-const APPS = [stubApp('Home page builder'), stubApp('Homes')];
+/** Eight apps matching the query, more than any cap the Apps section once had, of different lengths. */
+const APPS = ['Home page builder', 'Homes', 'Home 3', 'Home 4', 'Home 5', 'Home 6', 'Home 7', 'Home 8'].map((name) => stubApp(name));
 
 /**
  * A document result.
@@ -30,10 +32,11 @@ const doc = (name: string): UmbraDesktopSearchItem => ({
   open: { kind: 'entity', entityType: 'document', unique: name, href: `section/content/workspace/document/edit/${name}` },
 });
 
-/** One full source and one folded one, so the view has two sections and an Also in line. */
+/** Two full sources and one compact one, so the view has four bands, Documents with two results. */
 const SOURCES: UmbraDesktopSearchSource[] = [
   { alias: 'docs', label: 'Documents', weight: 10, prominence: 'full', search: async () => ({ items: [doc('Home'), doc('Homeward')], total: 2 }) },
-  { alias: 'types', label: 'Data Types', weight: 0, prominence: 'folded', search: async () => ({ items: [], total: 3 }) },
+  { alias: 'media', label: 'Media', weight: 5, prominence: 'full', search: async () => ({ items: [doc('Home photo')], total: 1 }) },
+  { alias: 'types', label: 'Data Types', weight: 0, prominence: 'compact', search: async () => ({ items: [doc('Homepage type')], total: 1 }) },
 ];
 
 /**
@@ -47,7 +50,7 @@ async function searched(theme: (typeof UMBRADESKTOP_THEMES)[number]): Promise<Um
   const input = mount.root.querySelector<HTMLInputElement>('.search-input')!;
   input.value = 'hom';
   input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-  for (let i = 0; i < 50 && !mount.root.querySelector('.search-results:not(.pending) .also-in'); i++) await mount.settle();
+  for (let i = 0; i < 50 && !mount.root.querySelector('.search-results:not(.pending) [data-source="types"]'); i++) await mount.settle();
   return mount;
 }
 
@@ -108,17 +111,26 @@ for (const theme of UMBRADESKTOP_THEMES) {
     }
   });
 
-  it(`${theme.name}: the sections and the Also in line share one column`, async function () {
+  it(`${theme.name}: the categories stack, and their results sit side by side where the panel is wide`, async function () {
     this.timeout(TIMEOUT_MS);
     const mount = await searched(theme);
     try {
-      const blocks = [...mount.root.querySelectorAll<HTMLElement>('.search-results > .result-group, .search-results > .also-in')];
-      expect(blocks.length, 'Apps, Documents and Also in are drawn').to.equal(3);
-      const edges = blocks.map((block) => {
-        const rect = block.getBoundingClientRect();
-        return [Math.round(rect.left), Math.round(rect.width)];
-      });
-      for (const edge of edges) expect(edge, 'left edge and width').to.deep.equal(edges[0]);
+      // One band per category, top to bottom, each the full width of the results.
+      const groups = [...mount.root.querySelectorAll<HTMLElement>('.search-results > .result-group')];
+      expect(groups.map((g) => g.dataset.source)).to.deep.equal(['apps', 'docs', 'media', 'types']);
+      const boxes = groups.map((g) => g.getBoundingClientRect());
+      for (const box of boxes) expect([Math.round(box.left), Math.round(box.width)], 'every band spans the results').to.deep.equal([Math.round(boxes[0].left), Math.round(boxes[0].width)]);
+      for (let i = 1; i < boxes.length; i++) expect(boxes[i].top, 'each band below the one before').to.be.at.least(boxes[i - 1].bottom - 1);
+
+      // Within a band the results flow across. The retro Start menus are one narrow column, as their
+      // own launcher is; every other theme's panel is wide enough for at least two.
+      const narrow = theme === UMBRADESKTOP_WIN98_THEME || theme === UMBRADESKTOP_UMBRACO4_THEME;
+      const tops = (source: string) => [...mount.root.querySelectorAll<HTMLElement>(`[data-source="${source}"] .result`)].map((r) => Math.round(r.getBoundingClientRect().top));
+      const apps = tops('apps');
+      expect(apps.length, 'every matching app').to.equal(APPS.length);
+      for (const [label, [first, second]] of [['apps', apps], ['documents', tops('docs')]] as const) {
+        expect(narrow ? first < second : first === second, `${label} beside one another`).to.equal(true);
+      }
     } finally {
       mount.remove();
     }

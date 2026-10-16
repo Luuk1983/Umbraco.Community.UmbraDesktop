@@ -6,14 +6,17 @@ import type { UmbraDesktopSearchSection, UmbraDesktopSearchSource, UmbraDesktopS
 export const UMBRADESKTOP_SEARCH_DEBOUNCE_MS = 300;
 
 /**
- * How many results to ask for. A full section shows its best few; a folded source needs only its
- * total, which every core source returns beside its items; a drilled-down list loads a page at a
- * time. Small on purpose: every source is asked on each search (design D4).
+ * How many results to ask each source for. Enough to fill a few rows of a section whose results sit
+ * side by side: 12 for Documents and Media, which are what people mostly search for, and 6 for the
+ * rest. Every source returns its total beside its items, which is what Show all counts. A
+ * drilled-down list loads a page at a time. Still small: every source is asked on each search, and
+ * core's own default of 100 is what design D4 avoids. The same for every theme; a narrow Start menu
+ * scrolls, as its launcher does. Apps are not here: they are matched locally, and all are shown.
  */
-export const UMBRADESKTOP_SEARCH_TAKE = { apps: 6, full: 5, folded: 1, page: 20 } as const;
+export const UMBRADESKTOP_SEARCH_TAKE = { full: 12, compact: 6, page: 20 } as const;
 
 /** Nothing typed. */
-export const UMBRADESKTOP_SEARCH_EMPTY_STATE: UmbraDesktopSearchState = { query: '', apps: [], sections: [], folded: [], pending: false };
+export const UMBRADESKTOP_SEARCH_EMPTY_STATE: UmbraDesktopSearchState = { query: '', apps: [], sections: [], others: [], pending: false };
 
 /** What the engine needs from its host. */
 export interface UmbraDesktopSearchEngineOptions {
@@ -32,9 +35,12 @@ export interface UmbraDesktopSearchEngineOptions {
 }
 
 /**
- * Turns what was typed into what a search view draws: matching apps at once, then each source's
- * results once typing pauses, grouped into full sections and folded counts, plus one source's full
- * list while drilled into.
+ * Turns what was typed into what a search view draws: matching apps and each source's first results
+ * once typing pauses, in full and compact sections, plus one source's full list while drilled into.
+ *
+ * Results change in one go per pause, apps included. Matching apps on every keystroke while the
+ * server's answer came 300 ms later moved the list twice for each pause; and the previous results
+ * stay until the new ones are complete, so the list never flashes empty.
  *
  * It knows nothing of the launcher, which is what lets a taskbar button or a Search app reuse it
  * (design §8). Every query is numbered, and any answer for a number that is no longer current is
@@ -52,6 +58,8 @@ export class UmbraDesktopSearchEngine {
   #timer?: ReturnType<typeof setTimeout>;
   /** The latest state. */
   #state = UMBRADESKTOP_SEARCH_EMPTY_STATE;
+  /** The latest text asked for, trimmed; ahead of the state's query while its answer is pending. */
+  #query = '';
   /** The host's callbacks. */
   #options: UmbraDesktopSearchEngineOptions;
   /** True once disposed. */
@@ -85,10 +93,10 @@ export class UmbraDesktopSearchEngine {
    */
   setSources(sources: ReadonlyArray<UmbraDesktopSearchSource>): void {
     this.#sources = [...sources].sort((a, b) => b.weight - a.weight);
-    if (!this.#state.query) return;
+    if (!this.#query) return;
     this.#generation++;
     this.#emit({ ...this.#state, pending: true, drill: undefined });
-    this.#schedule(this.#state.query);
+    this.#schedule(this.#query);
   }
 
   /**
@@ -99,13 +107,13 @@ export class UmbraDesktopSearchEngine {
     const trimmed = query.trim();
     this.#generation++;
     clearTimeout(this.#timer);
+    this.#query = trimmed;
     if (!trimmed) {
       this.#emit(UMBRADESKTOP_SEARCH_EMPTY_STATE);
       return;
     }
-    // The previous results stay while the new ones load, so the list does not flash empty on every
-    // keystroke.
-    this.#emit({ ...this.#state, query: trimmed, apps: this.#matchApps(trimmed), pending: true, drill: undefined });
+    // Only marked pending: what is shown stays until the answer replaces all of it at once.
+    this.#emit({ ...this.#state, pending: true, drill: undefined });
     this.#schedule(trimmed);
   }
 
@@ -116,7 +124,7 @@ export class UmbraDesktopSearchEngine {
   async drill(alias: string): Promise<void> {
     const source = this.#sources.find((s) => s.alias === alias);
     if (!source || !this.#state.query) return;
-    const known = [...this.#state.sections, ...this.#state.folded].find((s) => s.source === source);
+    const known = [...this.#state.sections, ...this.#state.others].find((s) => s.source === source);
     this.#emit({ ...this.#state, drill: { source, items: [], total: known?.total ?? 0, loading: true } });
     await this.#loadPage(source, this.#generation, 0);
   }
@@ -142,12 +150,13 @@ export class UmbraDesktopSearchEngine {
   }
 
   /**
-   * The apps for a query, capped.
+   * The apps for a query, all of them. Uncapped because a user has at most a few dozen apps, all
+   * already in memory, and an app that matches but is cut off is one they cannot find any other way.
    * @param query The trimmed query.
-   * @returns The best apps.
+   * @returns The matching apps, best first.
    */
   #matchApps(query: string): UmbraDesktopApp[] {
-    return rankApps(this.#apps, this.#options.nameOf, query).slice(0, UMBRADESKTOP_SEARCH_TAKE.apps);
+    return rankApps(this.#apps, this.#options.nameOf, query);
   }
 
   /**
@@ -161,15 +170,16 @@ export class UmbraDesktopSearchEngine {
   }
 
   /**
-   * Ask every source at once, each for its own take. A source that throws or reports an error is
-   * left out; the rest still show (design §6).
+   * Ask every source at once, each for its own take, and show their answers with the matching apps
+   * in one update. A source that throws or reports an error is left out; the rest still show
+   * (design §6).
    * @param query The trimmed query.
    * @param generation The query's number.
    */
   async #run(query: string, generation: number): Promise<void> {
     const answers = await Promise.all(
       this.#sources.map(async (source): Promise<UmbraDesktopSearchSection | undefined> => {
-        const take = source.prominence === 'full' ? UMBRADESKTOP_SEARCH_TAKE.full : UMBRADESKTOP_SEARCH_TAKE.folded;
+        const take = source.prominence === 'full' ? UMBRADESKTOP_SEARCH_TAKE.full : UMBRADESKTOP_SEARCH_TAKE.compact;
         try {
           const page = await source.search(query, { skip: 0, take });
           return { source, items: page.items, total: page.total };
@@ -182,8 +192,10 @@ export class UmbraDesktopSearchEngine {
     const found = answers.filter((a): a is UmbraDesktopSearchSection => !!a && a.total > 0);
     this.#emit({
       ...this.#state,
+      query,
+      apps: this.#matchApps(query),
       sections: found.filter((a) => a.source.prominence === 'full'),
-      folded: found.filter((a) => a.source.prominence === 'folded').map((a) => ({ ...a, items: [] })),
+      others: found.filter((a) => a.source.prominence === 'compact'),
       pending: false,
     });
   }

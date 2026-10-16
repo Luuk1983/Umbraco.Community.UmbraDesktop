@@ -11,7 +11,7 @@ const item = (name: string): UmbraDesktopSearchItem => ({
 });
 
 /** A source over a fixed list of names, recording every call. */
-function source(alias: string, prominence: 'full' | 'folded', names: string[], weight = 0) {
+function source(alias: string, prominence: 'full' | 'compact', names: string[], weight = 0) {
   const calls: Array<{ query: string; paging: UmbraDesktopSearchPaging }> = [];
   const src: UmbraDesktopSearchSource = {
     alias,
@@ -39,17 +39,19 @@ const until = async (check: () => boolean) => {
   expect(check(), 'condition reached').to.equal(true);
 };
 
-it('groups prominent sources into sections and folds the rest into counts', async () => {
+it('gives prominent sources full sections and the rest compact ones, each with its first results', async () => {
   const docs = source('docs', 'full', ['Home', 'Homework'], 10);
-  const types = source('types', 'folded', ['Home page', 'Home item', 'Other'], 5);
+  const types = source('types', 'compact', [...Array.from({ length: 8 }, (_, i) => `Home ${i}`), 'Other'], 5);
   const { e } = engine();
   e.setSources([types.src, docs.src]);
   e.setQuery('home');
   await until(() => !e.state.pending);
+  // Up to 12 for Documents and Media and 6 for the rest: enough to fill a few rows side by side.
+  expect(UMBRADESKTOP_SEARCH_TAKE).to.include({ full: 12, compact: 6 });
   expect(e.state.sections.map((s) => [s.source.alias, s.items.map((i) => i.name), s.total])).to.deep.equal([['docs', ['Home', 'Homework'], 2]]);
-  expect(e.state.folded.map((s) => [s.source.alias, s.total])).to.deep.equal([['types', 2]]);
+  expect(e.state.others.map((s) => [s.source.alias, s.items.length, s.total])).to.deep.equal([['types', 6, 8]]);
   expect(docs.calls[0].paging).to.deep.equal({ skip: 0, take: UMBRADESKTOP_SEARCH_TAKE.full });
-  expect(types.calls[0].paging).to.deep.equal({ skip: 0, take: UMBRADESKTOP_SEARCH_TAKE.folded });
+  expect(types.calls[0].paging).to.deep.equal({ skip: 0, take: UMBRADESKTOP_SEARCH_TAKE.compact });
 });
 
 it('orders sections by the source weight, heaviest first', async () => {
@@ -69,16 +71,48 @@ it('leaves out a source that found nothing', async () => {
   e.setQuery('home');
   await until(() => !e.state.pending);
   expect(e.state.sections).to.deep.equal([]);
-  expect(e.state.folded).to.deep.equal([]);
+  expect(e.state.others).to.deep.equal([]);
 });
 
-it('matches apps at once, before the sources answer', () => {
-  const { e } = engine(1000);
+it('shows matching apps together with what the sources found, in one update', async () => {
+  const docs = source('docs', 'full', ['Log entry']);
+  const { e, states } = engine(30);
   e.setApps([{ alias: 'log', name: 'Log Viewer' } as UmbraDesktopApp]);
+  e.setSources([docs.src]);
   e.setQuery('log');
-  expect(e.state.apps.map((a) => a.alias)).to.deep.equal(['log']);
+  expect(e.state.apps, 'no apps before the sources answer').to.deep.equal([]);
+  expect(e.state.query, 'nothing is shown for the text yet').to.equal('');
+  await until(() => !e.state.pending);
+  const withApps = states.filter((s) => s.apps.length > 0);
+  expect(withApps.length, 'apps appear once').to.equal(1);
+  expect(withApps[0].sections.map((s) => s.source.alias), 'in the same update as the documents').to.deep.equal(['docs']);
+  expect(withApps[0].query).to.equal('log');
+});
+
+it('keeps showing the previous results while the next ones load', async () => {
+  const docs = source('docs', 'full', ['Home', 'Homework']);
+  const { e } = engine(30);
+  e.setApps([{ alias: 'home', name: 'Home app' } as UmbraDesktopApp]);
+  e.setSources([docs.src]);
+  e.setQuery('home');
+  await until(() => !e.state.pending);
+  e.setQuery('homew');
   expect(e.state.pending).to.equal(true);
-  e.dispose();
+  expect(e.state.query).to.equal('home');
+  expect(e.state.apps.map((a) => a.alias)).to.deep.equal(['home']);
+  expect(e.state.sections[0].items.map((i) => i.name)).to.deep.equal(['Home', 'Homework']);
+  await until(() => !e.state.pending);
+  expect(e.state.query).to.equal('homew');
+  expect(e.state.apps).to.deep.equal([]);
+  expect(e.state.sections[0].items.map((i) => i.name)).to.deep.equal(['Homework']);
+});
+
+it('shows every matching app, however many', async () => {
+  const { e } = engine();
+  e.setApps(Array.from({ length: 12 }, (_, i) => ({ alias: `a${i}`, name: `Log ${i}` }) as UmbraDesktopApp));
+  e.setQuery('log');
+  await until(() => !e.state.pending && e.state.query === 'log');
+  expect(e.state.apps.length).to.equal(12);
 });
 
 it('asks the sources once for a burst of typing, with the last text', async () => {

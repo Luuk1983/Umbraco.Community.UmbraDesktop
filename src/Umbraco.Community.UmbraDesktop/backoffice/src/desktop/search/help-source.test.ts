@@ -14,9 +14,9 @@ function product(): UmbraDesktopHelpProduct {
   return buildHelpProduct('/docs', files)!;
 }
 
-it('is a folded source that opens Help on the page and heading found', async () => {
+it('is a compact source that opens Help on the page and heading found', async () => {
   const src = helpSearchSource(async () => [product()]);
-  expect(src.prominence).to.equal('folded');
+  expect(src.prominence).to.equal('compact');
   const page = await src.search('snap', { skip: 0, take: 10 });
   expect(page.total).to.be.greaterThan(0);
   expect(page.items[0].open.kind).to.equal('help');

@@ -85,7 +85,6 @@ export default {
     filterApps: 'Filter apps',
     noAppsMatch: 'No apps match',
     searchApps: 'Apps',
-    searchAlsoIn: 'Also in',
     searchShowAll: 'Show all (%0%)',
     searchShowMore: 'Show more',
     searchNoResults: 'No results',

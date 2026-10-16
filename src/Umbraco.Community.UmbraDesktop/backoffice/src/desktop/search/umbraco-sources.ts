@@ -8,7 +8,7 @@ import type { UmbraDesktopSearchItem, UmbraDesktopSearchPaging, UmbraDesktopSear
  * top frame never provides.
  */
 
-/** The two sources drawn as full sections; every other is folded (design D2). */
+/** The two sources drawn as full sections; every other is compact (design D2). */
 export const UMBRADESKTOP_FULL_SEARCH_ALIASES: ReadonlyArray<string> = ['Umb.GlobalSearch.Document', 'Umb.GlobalSearch.Media'];
 
 /** One culture's name, as core's document and media items carry them. */
@@ -121,7 +121,7 @@ export function umbracoSearchSource(
     alias: manifest.alias,
     label: manifest.meta.label,
     weight: manifest.weight ?? 0,
-    prominence: UMBRADESKTOP_FULL_SEARCH_ALIASES.includes(manifest.alias) ? 'full' : 'folded',
+    prominence: UMBRADESKTOP_FULL_SEARCH_ALIASES.includes(manifest.alias) ? 'full' : 'compact',
     async search(query, paging) {
       const current = culture();
       const { data, error } = await provider.search({ query, paging, culture: current });

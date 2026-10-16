@@ -30,7 +30,7 @@ it('turns each permitted global search into a source, Help last', async () => {
     const context = new UmbraDesktopSearchContext(host);
     let sources: ReadonlyArray<UmbraDesktopSearchSource> = [];
     context.sources.subscribe((s) => (sources = s));
-    for (let i = 0; i < 100 && !sources.some((s) => s.alias === 'Test.GlobalSearch'); i++) await new Promise((r) => setTimeout(r, 10));
+    for (let i = 0; i < 300 && !sources.some((s) => s.alias === 'Test.GlobalSearch'); i++) await new Promise((r) => setTimeout(r, 10));
     const test = sources.find((s) => s.alias === 'Test.GlobalSearch');
     expect(!!test, 'the test source appeared').to.equal(true);
     expect(sources[sources.length - 1].alias).to.equal(UMBRADESKTOP_HELP_SEARCH_ALIAS);

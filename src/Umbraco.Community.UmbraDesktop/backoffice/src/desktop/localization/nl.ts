@@ -79,7 +79,6 @@ export default {
     filterApps: 'Apps filteren',
     noAppsMatch: 'Geen apps gevonden',
     searchApps: 'Apps',
-    searchAlsoIn: 'Ook in',
     searchShowAll: 'Alles tonen (%0%)',
     searchShowMore: 'Meer tonen',
     searchNoResults: 'Geen resultaten',

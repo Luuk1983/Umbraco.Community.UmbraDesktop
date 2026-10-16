@@ -47,7 +47,7 @@ it('asks the provider for the page and culture, and is full only for documents a
   const docs = umbracoSearchSource({ alias: 'Umb.GlobalSearch.Document', weight: 800, meta: { label: 'Documents', searchProviderAlias: 'p' } }, provider, () => 'en-US');
   const types = umbracoSearchSource({ alias: 'Umb.GlobalSearch.DataType', meta: { label: 'Data Types', searchProviderAlias: 'p' } }, provider, () => undefined);
   expect([docs.prominence, docs.weight, docs.label]).to.deep.equal(['full', 800, 'Documents']);
-  expect([types.prominence, types.weight]).to.deep.equal(['folded', 0]);
+  expect([types.prominence, types.weight]).to.deep.equal(['compact', 0]);
   const page = await docs.search('home', { skip: 0, take: 5 });
   expect(seen[0]).to.deep.equal({ query: 'home', paging: { skip: 0, take: 5 }, culture: 'en-US' });
   expect(page.total).to.equal(7);

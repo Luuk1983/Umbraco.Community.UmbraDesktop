@@ -15,8 +15,11 @@ const doc = (name: string, unique = name, href: string | undefined = `section/co
   open: { kind: 'entity', entityType: 'document', unique, href },
 });
 
+/** A list of documents, for sources with more than a section shows. */
+const many = (n: number) => Array.from({ length: n }, (_, i) => doc(`Home ${i}`, `k${i}`));
+
 /** A source answering every query with the given items. */
-const fixed = (alias: string, prominence: 'full' | 'folded', items: UmbraDesktopSearchItem[], weight = 0, total = items.length): UmbraDesktopSearchSource => ({
+const fixed = (alias: string, prominence: 'full' | 'compact', items: UmbraDesktopSearchItem[], weight = 0, total = items.length): UmbraDesktopSearchSource => ({
   alias,
   label: alias,
   weight,
@@ -32,9 +35,9 @@ async function type(mount: UmbraDesktopLauncherMount, text: string) {
   await mount.settle();
 }
 
-/** Wait for the sources to answer and the launcher to draw it. */
+/** Wait for the sources to answer and the launcher to draw it: a results body that is not pending. */
 async function results(mount: UmbraDesktopLauncherMount) {
-  for (let i = 0; i < 50 && mount.root.querySelector('.search-results.pending'); i++) await new Promise((r) => setTimeout(r, 5));
+  for (let i = 0; i < 100 && !mount.root.querySelector('.search-results:not(.pending)'); i++) await new Promise((r) => setTimeout(r, 5));
   await mount.settle();
 }
 
@@ -57,6 +60,7 @@ it('replaces the groups with results as soon as there is text, and brings them b
   const m = await mount();
   try {
     await type(m, 'log');
+    await results(m);
     expect(!!m.root.querySelector('.search-results')).to.equal(true);
     expect(!!m.root.querySelector('.body .card')).to.equal(false);
     await type(m, '');
@@ -87,18 +91,45 @@ it('keeps the same field while switching, so typing is not interrupted', async (
   }
 });
 
-it('shows apps, then full sections, then the other sources folded into one line', async () => {
+it('shows apps, then the full sections, then every other source in a compact section of its own', async () => {
   const m = await mount({
-    searchSources: [fixed('Documents', 'full', [doc('Home')], 800), fixed('Data Types', 'folded', [doc('x')], 400, 3)],
+    searchSources: [fixed('Documents', 'full', [doc('Home')], 800), fixed('Data Types', 'compact', many(9), 400)],
   });
   try {
     await type(m, 'o');
     await results(m);
-    const groups = [...m.root.querySelectorAll<HTMLElement>('.result-group')].map((g) => g.dataset.source);
-    expect(groups).to.deep.equal(['apps', 'Documents']);
-    expect(m.root.querySelector('.also-in')?.textContent).to.contain('Data Types');
-    expect(m.root.querySelector('.also-in')?.textContent).to.contain('3');
+    const groups = [...m.root.querySelectorAll<HTMLElement>('.search-results > .result-group')].map((g) => g.dataset.source);
+    expect(groups, 'one band per category, stacked').to.deep.equal(['apps', 'Documents', 'Data Types']);
+    const types = m.root.querySelector<HTMLElement>('.result-group[data-source="Data Types"]')!;
+    expect(types.querySelectorAll('.result').length, 'its first six results').to.equal(6);
+    // Unthemed mounts draw term keys rather than English, so the count is not in the text to check.
+    expect(!!types.querySelector('.show-all'), 'and a way to the other three').to.equal(true);
     expect(m.root.querySelector('[data-key="document:Home"] .result-detail')?.textContent).to.equal('Home › News');
+  } finally {
+    m.remove();
+  }
+});
+
+it('keeps the launcher as it is until the results arrive, then shows apps and sources together', async () => {
+  let release!: () => void;
+  const slow: UmbraDesktopSearchSource = {
+    alias: 'Documents',
+    label: 'Documents',
+    weight: 0,
+    prominence: 'full',
+    search: () => new Promise((resolve) => (release = () => resolve({ items: [doc('Log entry', KEY)], total: 1 }))),
+  };
+  const m = await mount({ groups: [{ alias: 'g', label: 'G', weight: 0 }], apps: [stubApp('Log Viewer', 'g')], searchSources: [slow] });
+  try {
+    await type(m, 'log');
+    await new Promise((r) => setTimeout(r, 20));
+    await m.settle();
+    expect(!!m.root.querySelector('.search-results'), 'no results body yet').to.equal(false);
+    expect(!!m.root.querySelector('.body .card'), 'the groups stay').to.equal(true);
+    release();
+    await results(m);
+    expect(!!m.root.querySelector('[data-key="app:Log Viewer"]'), 'the app').to.equal(true);
+    expect(!!m.root.querySelector(`[data-key="document:${KEY}"]`), 'and the document, together').to.equal(true);
   } finally {
     m.remove();
   }
@@ -119,6 +150,7 @@ it('launches an app from the results', async () => {
   const m = await mount();
   try {
     await type(m, 'log');
+    await results(m);
     m.root.querySelector<HTMLElement>('[data-key="app:Log Viewer"]')!.click();
     expect(m.launched.map((a) => a.alias)).to.deep.equal(['Log Viewer']);
   } finally {
@@ -194,6 +226,7 @@ it('closes the launcher after opening anything', async () => {
     let launched = 0;
     m.launcher.addEventListener('launched', () => launched++);
     await type(m, 'log');
+    await results(m);
     m.root.querySelector<HTMLElement>('.result')!.click();
     expect(launched).to.equal(1);
   } finally {
@@ -207,8 +240,6 @@ async function press(m: UmbraDesktopLauncherMount, key: string) {
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true }));
   await m.settle();
 }
-
-const many = (n: number) => Array.from({ length: n }, (_, i) => doc(`Home ${i}`, `k${i}`));
 
 it('drills into a section with Show all, and Back returns with the text kept', async () => {
   const m = await mount({ apps: [], searchSources: [fixed('Documents', 'full', many(25))] });
@@ -227,14 +258,14 @@ it('drills into a section with Show all, and Back returns with the text kept', a
   }
 });
 
-it('drills into a folded source from the Also in line', async () => {
-  const m = await mount({ apps: [], searchSources: [fixed('Data Types', 'folded', many(3))] });
+it('drills into a compact source with its Show all', async () => {
+  const m = await mount({ apps: [], searchSources: [fixed('Data Types', 'compact', many(9))] });
   try {
     await type(m, 'home');
     await results(m);
-    m.root.querySelector<HTMLElement>('.also[data-source="Data Types"]')!.click();
+    m.root.querySelector<HTMLElement>('.result-group[data-source="Data Types"] .show-all')!.click();
     await results(m);
-    expect(m.root.querySelectorAll('.drill .result').length).to.equal(3);
+    expect(m.root.querySelectorAll('.drill .result').length).to.equal(9);
   } finally {
     m.remove();
   }
@@ -260,6 +291,7 @@ it('opens the first result with Enter in the field', async () => {
   const m = await mount();
   try {
     await type(m, 'log');
+    await results(m);
     await press(m, 'Enter');
     expect(m.launched.map((a) => a.alias)).to.deep.equal(['Log Viewer']);
   } finally {
@@ -290,6 +322,7 @@ it('clears the text with Escape, back to the launcher, and lets the next Escape 
   let count: ((e: KeyboardEvent) => void) | undefined;
   try {
     await type(m, 'log');
+    await results(m);
     let escaped = 0;
     count = (e: KeyboardEvent) => {
       if (e.key === 'Escape') escaped++;
@@ -308,7 +341,7 @@ it('clears the text with Escape, back to the launcher, and lets the next Escape 
 });
 
 it('goes back from a drilled-down list with Escape before clearing anything', async () => {
-  const m = await mount({ apps: [], searchSources: [fixed('Documents', 'full', many(8))] });
+  const m = await mount({ apps: [], searchSources: [fixed('Documents', 'full', many(15))] });
   try {
     await type(m, 'home');
     await results(m);
@@ -327,6 +360,7 @@ it('steps back through back(), as the taskbar asks on Escape from a result row',
   const m = await mount();
   try {
     await type(m, 'log');
+    await results(m);
     expect(m.launcher.back()).to.equal(true);
     await m.settle();
     expect(!!m.root.querySelector('.search-results')).to.equal(false);
@@ -339,19 +373,30 @@ it('steps back through back(), as the taskbar asks on Escape from a result row',
 });
 
 it('keeps loading while the end of a drilled-down list is already in view, without any scrolling', async () => {
+  // A stand-in for the browser's observer that reports the button in view each time it starts
+  // watching, as a real one does for a visible element, so a short list in a tall panel can be
+  // shown without depending on rendering: a background tab, which is what CI runs tests in, never
+  // fires a real observer at all.
+  const real = window.IntersectionObserver;
+  window.IntersectionObserver = class {
+    /** @param callback Told the target is in view. */
+    constructor(private callback: IntersectionObserverCallback) {}
+    /** @param target Reported as in view, once, as the browser's first report would. */
+    observe(target: Element) {
+      queueMicrotask(() => this.callback([{ isIntersecting: true, target } as IntersectionObserverEntry], this as never));
+    }
+    /** Nothing to stop. */
+    disconnect() {}
+  } as never;
   const m = await mount({ apps: [], searchSources: [fixed('Documents', 'full', many(45))] });
   try {
-    // Small enough that every row fits on the page, as a short list does in a tall panel: Show more
-    // is in view from the moment the list appears, so no scroll will ever bring it into view.
-    m.launcher.style.setProperty('zoom', '0.2');
-    // The panel's height cap is zoomed with it, so lift the cap too, or the list scrolls inside it.
-    m.launcher.style.setProperty('--umbradesktop-launcher-max-height', '5000px');
     await type(m, 'home');
     await results(m);
     m.root.querySelector<HTMLElement>('.show-all')!.click();
     for (let i = 0; i < 100 && m.root.querySelectorAll('.drill .result').length < 45; i++) await new Promise((r) => setTimeout(r, 10));
     expect(m.root.querySelectorAll('.drill .result').length).to.equal(45);
   } finally {
+    window.IntersectionObserver = real;
     m.remove();
   }
 });
@@ -361,11 +406,13 @@ for (const [control, label] of [['.ctl.all-apps', 'All apps'], ['.ctl.arrange', 
     const m = await mount();
     try {
       await type(m, 'log');
+      await results(m);
       m.root.querySelector<HTMLElement>(control)!.click();
       await m.settle();
       expect(m.launcher.back()).to.equal(true);
       await m.settle();
       await type(m, 'logs');
+      await results(m);
       expect(!!m.root.querySelector('.search-results'), 'typing searches again').to.equal(true);
     } finally {
       m.remove();
@@ -374,7 +421,7 @@ for (const [control, label] of [['.ctl.all-apps', 'All apps'], ['.ctl.arrange', 
 }
 
 it('moves from the field to the first result, not to the Show all beside its heading', async () => {
-  const m = await mount({ apps: [], searchSources: [fixed('Documents', 'full', many(8))] });
+  const m = await mount({ apps: [], searchSources: [fixed('Documents', 'full', many(15))] });
   try {
     await type(m, 'home');
     await results(m);

@@ -6,10 +6,11 @@
 import type { UmbraDesktopApp } from '../types';
 
 /**
- * How a source is drawn: `full` as a section of its own (Documents, Media), `folded` as one count in
- * the "Also in" line (design D2).
+ * How large a source's section is: `full` for the few sources people mostly search for (Documents,
+ * Media), with more results, and `compact` for the rest, with a few results each, flowing beside
+ * one another where the panel is wide (design D2, as revised in §11).
  */
-export type UmbraDesktopSearchProminence = 'full' | 'folded';
+export type UmbraDesktopSearchProminence = 'full' | 'compact';
 
 /** One page of a source's results, as core's providers page them. */
 export interface UmbraDesktopSearchPaging {
@@ -62,7 +63,7 @@ export interface UmbraDesktopSearchSource {
   label: string;
   /** Heavier sources come first, as in the native modal's tabs. */
   weight: number;
-  /** Whether it is drawn as a section or folded into a count. */
+  /** Whether its section is full or compact. */
   prominence: UmbraDesktopSearchProminence;
   /**
    * Search one page. Throws when the source fails, which leaves it out of the results.
@@ -77,7 +78,7 @@ export interface UmbraDesktopSearchSource {
 export interface UmbraDesktopSearchSection {
   /** The source. */
   source: UmbraDesktopSearchSource;
-  /** The results shown; empty for a folded source, which shows only its count. */
+  /** The results shown, its first few. */
   items: UmbraDesktopSearchItem[];
   /** How many it found in all. */
   total: number;
@@ -91,15 +92,18 @@ export interface UmbraDesktopSearchDrill extends UmbraDesktopSearchSection {
 
 /** Everything a search view draws. */
 export interface UmbraDesktopSearchState {
-  /** The trimmed query; empty when nothing is being searched. */
+  /**
+   * The trimmed query the results are for; empty when nothing has been found for any text yet. It
+   * lags what is typed until the sources answer, because results change only in one go.
+   */
   query: string;
   /** The matching apps, best first. */
   apps: UmbraDesktopApp[];
   /** The full sections that found something, heaviest source first. */
   sections: UmbraDesktopSearchSection[];
-  /** The folded sources that found something, with their totals. */
-  folded: UmbraDesktopSearchSection[];
-  /** True while the sources have not answered the current query. */
+  /** The compact sections that found something, heaviest source first. */
+  others: UmbraDesktopSearchSection[];
+  /** True while the sources have not answered the latest text. */
   pending: boolean;
   /** The source drilled into, if any. */
   drill?: UmbraDesktopSearchDrill;

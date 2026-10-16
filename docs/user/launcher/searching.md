@@ -17,13 +17,16 @@ what you pick in a window on the desktop.
 
 ## What it finds
 
-Results come in this order:
+Results appear when you pause typing, all at once, in this order:
 
-1. **Apps**, matched by name as you type.
+1. **Apps**, every one whose name matches.
 2. **Documents** and **Media**, the best few of each. A document shows where it is in the content
    tree.
-3. **Also in**: the other places that found something, such as Document Types, Templates or
-   **Help**, with how many each found.
+3. Every other place that found something, such as Document Types, Templates or **Help**, each with
+   its first few results.
+
+Each place is a band of its own. On a wide launcher its results sit side by side, best first; on a
+narrow one they are one list.
 
 You only see places you have access to. Without the Settings section, for example, there are no
 Document Types or Data Types.
@@ -31,7 +34,6 @@ Document Types or Data Types.
 ## See everything one place found
 
 - To see all of a section's results, select **Show all** beside its heading.
-- To see the results of a place under **Also in**, select it.
 - To load more, scroll to the end of the list, or select **Show more**.
 - To go back to the mixed results, select **Back**, or press Escape.
 

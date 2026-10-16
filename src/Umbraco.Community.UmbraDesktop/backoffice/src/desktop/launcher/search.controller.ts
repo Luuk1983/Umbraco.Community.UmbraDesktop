@@ -3,7 +3,8 @@ import { UmbraDesktopSearchEngine } from '../search/search-engine';
 import type { UmbraDesktopSearchItem, UmbraDesktopSearchSection, UmbraDesktopSearchSource } from '../search/types';
 import { sectionUrlFromHref } from '../windows/entity-window';
 import { escapeClearsFilter } from './drawer.controller';
-import { css, html } from '@umbraco-cms/backoffice/external/lit';
+import { UMBRADESKTOP_LAUNCHER_CARD_MIN_WIDTH } from './geometry';
+import { css, html, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import type { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
 /** What a search result does, which the launcher owns. */
@@ -19,8 +20,9 @@ export interface UmbraDesktopSearchActions {
    */
   open(item: UmbraDesktopSearchItem): void;
   /**
-   * Called when the field gains or loses text, which is when the launcher switches body.
-   * @param active True when there is text to search for.
+   * Called when there come to be results to show, or stop being, which is when the launcher switches
+   * body: when the first answer for typed text arrives, and when the field is emptied.
+   * @param active True while there are results for some text to show.
    */
   changed(active: boolean): void;
 }
@@ -53,6 +55,8 @@ export class UmbraDesktopSearchController {
   #engine: UmbraDesktopSearchEngine;
   /** The field's text, untrimmed, so the field shows exactly what was typed. */
   #value = '';
+  /** Whether the host was last told there are results to show. */
+  #showing = false;
   /** Loads the next page when Show more scrolls into view. */
   #observer?: IntersectionObserver;
   /** The Show more button being watched. */
@@ -76,17 +80,12 @@ export class UmbraDesktopSearchController {
     this.#actions = actions;
     this.#engine = new UmbraDesktopSearchEngine({
       nameOf: (app) => host.localize.string(app.name),
-      onChange: () => host.requestUpdate(),
+      onChange: (state) => this.#changed(state.query !== ''),
       /** @returns The current override, if any. */
       get debounceMs() {
         return debounceMs();
       },
     });
-  }
-
-  /** @returns True while there is text to search for. */
-  get active(): boolean {
-    return this.#value.trim() !== '';
   }
 
   /** @returns True while one source's full list is shown. */
@@ -113,10 +112,8 @@ export class UmbraDesktopSearchController {
    * @param value The new text.
    */
   input(value: string): void {
-    const was = this.active;
     this.#value = value;
     this.#engine.setQuery(value);
-    if (was !== this.active) this.#actions.changed(this.active);
     this.#host.requestUpdate();
   }
 
@@ -157,6 +154,20 @@ export class UmbraDesktopSearchController {
     this.#observer.observe(more);
   }
 
+  /**
+   * Redraw, and tell the host when results start or stop being shown. Driven by the engine's state
+   * rather than by the field, so the launcher keeps its own body while the first answer is on its
+   * way and swaps to the results in one go when it arrives (design §11).
+   * @param showing Whether there are results for some text.
+   */
+  #changed(showing: boolean): void {
+    if (showing !== this.#showing) {
+      this.#showing = showing;
+      this.#actions.changed(showing);
+    }
+    this.#host.requestUpdate();
+  }
+
   /** Stop: no late answer redraws a launcher that has closed. */
   dispose(): void {
     this.#engine.dispose();
@@ -188,14 +199,18 @@ export class UmbraDesktopSearchController {
   }
 
   /**
-   * The body while searching: the mixed results, or one source's full list.
+   * The body while searching: the mixed results, or one source's full list. One band per category,
+   * stacked: every matching app, then each source, full ones first. Within a band the results flow
+   * across a grid at the launcher's card width, best first along the top row, so a wide panel uses
+   * its width instead of one long list down its left edge, and a Start menu's narrow panel keeps a
+   * single column.
    * @returns The template.
    */
   render() {
     const state = this.#engine.state;
     if (state.drill) return this.#renderDrill(state.drill);
     const localize = this.#host.localize;
-    const nothing = !state.pending && state.apps.length === 0 && state.sections.length === 0 && state.folded.length === 0;
+    const nothing = !state.pending && state.apps.length === 0 && state.sections.length === 0 && state.others.length === 0;
     let first = true;
     /** True for the first row only, which is what Enter in the field opens. */
     const isFirst = () => {
@@ -208,47 +223,38 @@ export class UmbraDesktopSearchController {
         ${state.apps.length
           ? html`<section class="result-group" data-source="apps">
               <div class="lh result-head"><span>${localize.term('umbraDesktop_searchApps')}</span></div>
-              ${state.apps.map((app) =>
-                this.#row(`app:${app.alias}`, app.icon, localize.string(app.name), undefined, true, isFirst(), () => this.#actions.launch(app)),
-              )}
+              <div class="result-grid">
+                ${state.apps.map((app) =>
+                  this.#row(`app:${app.alias}`, app.icon, localize.string(app.name), undefined, true, isFirst(), () => this.#actions.launch(app)),
+                )}
+              </div>
             </section>`
           : ''}
-        ${state.sections.map(
-          (section) => html`<section class="result-group" data-source=${section.source.alias}>
-            <div class="lh result-head">
-              <span>${localize.string(section.source.label)}</span>
-              ${section.total > section.items.length
-                ? html`<button class="show-all" @click=${() => void this.#engine.drill(section.source.alias)}>
-                    ${localize.term('umbraDesktop_searchShowAll', section.total)}
-                  </button>`
-                : ''}
-            </div>
-            ${section.items.map((item) => this.#itemRow(item, isFirst()))}
-          </section>`,
-        )}
-        ${state.folded.length ? this.#renderAlsoIn(state.folded) : ''}
+        ${[...state.sections, ...state.others].map((section) => this.#renderSection(section, isFirst))}
         ${nothing ? html`<p class="empty-note">${localize.term('umbraDesktop_searchNoResults')}</p>` : ''}
       </div>
     `;
   }
 
   /**
-   * The folded sources, one line.
-   * @param folded The folded sources that found something.
+   * One source's section: its heading, Show all when it found more than it shows, and its rows.
+   * @param section The source and its first results.
+   * @param isFirst Says whether a row is the first drawn, which is the one Enter opens.
    * @returns The template.
    */
-  #renderAlsoIn(folded: ReadonlyArray<UmbraDesktopSearchSection>) {
+  #renderSection(section: UmbraDesktopSearchSection, isFirst: () => boolean) {
     const localize = this.#host.localize;
-    return html`
-      <div class="also-in">
-        <span>${localize.term('umbraDesktop_searchAlsoIn')}</span>
-        ${folded.map(
-          (section) => html`<button class="also" data-source=${section.source.alias} @click=${() => void this.#engine.drill(section.source.alias)}>
-            ${localize.string(section.source.label)} <span class="count">${section.total}</span>
-          </button>`,
-        )}
+    return html`<section class="result-group" data-source=${section.source.alias}>
+      <div class="lh result-head">
+        <span>${localize.string(section.source.label)}</span>
+        ${section.total > section.items.length
+          ? html`<button class="show-all" @click=${() => void this.#engine.drill(section.source.alias)}>
+              ${localize.term('umbraDesktop_searchShowAll', section.total)}
+            </button>`
+          : ''}
       </div>
-    `;
+      <div class="result-grid">${section.items.map((item) => this.#itemRow(item, isFirst()))}</div>
+    </section>`;
   }
 
   /**
@@ -267,7 +273,7 @@ export class UmbraDesktopSearchController {
           </button>
           <span class="lh">${localize.string(drill.source.label)} (${drill.total})</span>
         </div>
-        ${drill.items.map((item, index) => this.#itemRow(item, index === 0))}
+        <div class="result-grid">${drill.items.map((item, index) => this.#itemRow(item, index === 0))}</div>
         ${drill.items.length < drill.total
           ? html`<button class="more" ?disabled=${drill.loading} @click=${() => void this.#engine.more()}>
               ${localize.term('umbraDesktop_searchShowMore')}
@@ -328,7 +334,7 @@ export class UmbraDesktopSearchController {
     }
     const app = state.apps[0];
     if (app) return () => this.#actions.launch(app);
-    const item = state.sections.flatMap((s) => s.items).find(canOpen);
+    const item = [...state.sections, ...state.others].flatMap((s) => s.items).find(canOpen);
     return item ? () => this.#actions.open(item) : undefined;
   }
 
@@ -433,7 +439,6 @@ export const searchStyles = css`
     gap: var(--uui-size-space-3);
   }
   .show-all,
-  .also,
   .more {
     padding: var(--uui-size-space-1) var(--uui-size-space-2);
     border: none;
@@ -445,7 +450,6 @@ export const searchStyles = css`
     cursor: pointer;
   }
   .show-all:hover,
-  .also:hover,
   .more:hover {
     background: var(--umbradesktop-launcher-hover-background, var(--uui-color-surface-alt, rgba(0, 0, 0, 0.05)));
   }
@@ -473,16 +477,24 @@ export const searchStyles = css`
     cursor: default;
     opacity: 0.6;
   }
-  .also-in {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--uui-size-space-2);
-    color: var(--umbradesktop-launcher-text-muted, var(--umbradesktop-launcher-text, var(--uui-color-text)));
-    font-size: var(--uui-type-small-size);
+  /* A category's results, as many columns as fit at the width of the launcher's own group cards, so
+     they line up with the groups they replace, filled a row at a time so the best come first along
+     the top. A wide panel puts them side by side, and a Start menu's narrow one, Windows 98 or
+     Umbraco 4, keeps one column as its launcher does. The categories themselves stay stacked. */
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(${unsafeCSS(UMBRADESKTOP_LAUNCHER_CARD_MIN_WIDTH)}px, 100%), 1fr));
+    column-gap: var(--uui-size-space-5);
   }
-  .also .count {
-    opacity: 0.7;
+  /* A row keeps to its column: a long name or location is cut with an ellipsis rather than widening
+     the column past its neighbours. */
+  .result-grid > .result {
+    min-width: 0;
+  }
+  .result .row-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .drill-head {
     display: flex;

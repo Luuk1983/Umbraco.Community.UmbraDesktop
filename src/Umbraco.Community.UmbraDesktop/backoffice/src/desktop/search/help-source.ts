@@ -7,7 +7,7 @@ import type { UmbraDesktopSearchSource } from './types';
 export const UMBRADESKTOP_HELP_SEARCH_ALIAS = 'umbraDesktop.search.help';
 
 /**
- * Help's docs search as a folded source (design D5), over every product's user guide: the
+ * Help's docs search as a compact source (design D5), over every product's user guide: the
  * developer guide is not what someone searching from the launcher is after. The docs load on the
  * first search rather than when the desktop opens, and only once; a failed load stays failed for
  * the session, which leaves Help out of "Also in" rather than retrying on every keystroke.
@@ -21,7 +21,7 @@ export function helpSearchSource(load: () => Promise<ReadonlyArray<UmbraDesktopH
     label: '#umbraDesktop_searchHelp',
     // After every core source, whatever weight a package gives its own.
     weight: Number.MIN_SAFE_INTEGER,
-    prominence: 'folded',
+    prominence: 'compact',
     async search(query, { skip, take }) {
       products ??= load();
       const found = (await products).flatMap((product) =>
