@@ -192,13 +192,32 @@ for (const typesetting of typesettings) {
 }
 
 /**
+ * Whether a system font is installed: a sample drawn in it differs in width from the generic fallback.
+ * `document.fonts.check` cannot answer this for system fonts, which are not in the document's font set.
+ * @param family The font family.
+ * @returns Whether the browser can draw it.
+ */
+function hasFont(family: string): boolean {
+  const context = document.createElement('canvas').getContext('2d')!;
+  const sample = 'mmmmmmmmmmlli 0123456789';
+  context.font = '32px monospace';
+  const fallback = context.measureText(sample).width;
+  context.font = `32px "${family}", monospace`;
+  return context.measureText(sample).width !== fallback;
+}
+
+/**
  * Minesweeper's old well under Umbraco 4, where the card used to sit: 258px square, the theme's
  * Verdana as the app font, and a shown player's run that was not a best (the "Your best 35.4 · 3rd of
  * 12" line, the chase line, Leaderboard and Play again). Verdana's width wrapped three of those lines
  * and the card scrolled by 5px in the real window; the theme's body font in `look.ts` is what fixes it.
  * The card now covers the whole game (the cases above); this tighter square stays as the guard on that font.
+ *
+ * It only means something where Tahoma is installed (Windows and macOS), so it skips itself elsewhere:
+ * CI's Linux has neither Tahoma nor Verdana, falls back to a wider font, and is covered by the cases above.
  */
-it('fits the compact card in a 258px square under Umbraco 4 without scrolling', async () => {
+it('fits the compact card in a 258px square under Umbraco 4 without scrolling', async function () {
+  if (!hasFont('Tahoma')) this.skip();
   const later: ArcadeGameResult = { ...result, isPersonalBest: false, previousBest: 35_420, value: 61_230, rank: 3, rankText: '3rd' };
   const { wrapper } = await arcadeHarness({ games: [game], board: { ...board, players: 12 }, theme: 'umbraco4' });
   wrapper.style.setProperty('--umbradesktop-app-font', 'Verdana, Geneva, Tahoma, "DejaVu Sans", sans-serif');

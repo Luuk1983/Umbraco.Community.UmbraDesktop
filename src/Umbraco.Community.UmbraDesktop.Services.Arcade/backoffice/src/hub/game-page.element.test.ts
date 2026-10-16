@@ -127,7 +127,23 @@ it('gives a moderator a menu per row and Reset this board, and nobody else', asy
   expect(admin.root.querySelector('[data-action="reset-board"]')).to.not.equal(null);
 });
 
-it('shows a menu on keyboard focus, in the list and on the podium', async () => {
+/**
+ * Whether this browser reports no hover, as a touch screen does, and as CI's headless Chrome on Linux
+ * does. The page then shows every menu from the start (its `@media (hover: none)` rule), so there is
+ * no "hidden until wanted" to test there.
+ */
+const noHover = () => matchMedia('(hover: none)').matches;
+
+it('shows every menu from the start where nothing can hover', async () => {
+  const { root } = await page({ board: board({ canModerate: true }) });
+  const menus = [...root.querySelectorAll<HTMLElement>('umb-dropdown.more')];
+  expect(menus.length, 'the menus are there').to.be.above(0);
+  const opacity = noHover() ? '1' : '0';
+  await waitUntil(() => menus.every((menu) => getComputedStyle(menu).opacity === opacity), `every menu at opacity ${opacity}`);
+});
+
+it('shows a menu on keyboard focus, in the list and on the podium', async function () {
+  if (noHover()) this.skip();
   const { root } = await page({ board: board({ canModerate: true }) });
   for (const where of ['.list .lr', '.podium .pod[data-rank="1"]']) {
     const menu = root.querySelector(`${where} umb-dropdown.more`) as HTMLElement;
@@ -140,7 +156,8 @@ it('shows a menu on keyboard focus, in the list and on the podium', async () => 
   }
 });
 
-it('shows a menu on hover, in the list and on the podium', async () => {
+it('shows a menu on hover, in the list and on the podium', async function () {
+  if (noHover()) this.skip();
   const { root } = await page({ board: board({ canModerate: true }) });
   after(() => resetMouse());
   for (const where of ['.list .lr', '.podium .pod[data-rank="1"]']) {
