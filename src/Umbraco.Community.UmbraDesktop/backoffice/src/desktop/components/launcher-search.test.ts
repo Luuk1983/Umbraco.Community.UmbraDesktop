@@ -241,7 +241,31 @@ async function press(m: UmbraDesktopLauncherMount, key: string) {
   await m.settle();
 }
 
+/**
+ * Stand in for the browser's IntersectionObserver for one test. A real one depends on whether the
+ * test's tab renders and on how much of the list fits in view: in CI's tab it fired, and a list that
+ * now fits beside itself loaded its next page before the test could press Show more. `never` keeps
+ * paging to the button; `always` reports every watched element in view, as a visible one is.
+ * @param mode Whether the stand-in ever reports an element in view.
+ * @returns Puts the real observer back.
+ */
+function observeAs(mode: 'never' | 'always'): () => void {
+  const real = window.IntersectionObserver;
+  window.IntersectionObserver = class {
+    /** @param callback Told the target is in view, when the mode says so. */
+    constructor(private callback: IntersectionObserverCallback) {}
+    /** @param target Reported as in view once, in `always` mode, as the browser's first report would. */
+    observe(target: Element) {
+      if (mode === 'always') queueMicrotask(() => this.callback([{ isIntersecting: true, target } as IntersectionObserverEntry], this as never));
+    }
+    /** Nothing to stop. */
+    disconnect() {}
+  } as never;
+  return () => (window.IntersectionObserver = real);
+}
+
 it('drills into a section with Show all, and Back returns with the text kept', async () => {
+  const restore = observeAs('never');
   const m = await mount({ apps: [], searchSources: [fixed('Documents', 'full', many(25))] });
   try {
     await type(m, 'home');
@@ -254,6 +278,7 @@ it('drills into a section with Show all, and Back returns with the text kept', a
     expect(!!m.root.querySelector('.drill')).to.equal(false);
     expect(m.root.querySelector<HTMLInputElement>('.search-input')!.value).to.equal('home');
   } finally {
+    restore();
     m.remove();
   }
 });
@@ -272,6 +297,7 @@ it('drills into a compact source with its Show all', async () => {
 });
 
 it('loads the next page with Show more, and offers no more at the end', async () => {
+  const restore = observeAs('never');
   const m = await mount({ apps: [], searchSources: [fixed('Documents', 'full', many(25))] });
   try {
     await type(m, 'home');
@@ -283,6 +309,7 @@ it('loads the next page with Show more, and offers no more at the end', async ()
     expect(m.root.querySelectorAll('.drill .result').length).to.equal(25);
     expect(!!m.root.querySelector('.more')).to.equal(false);
   } finally {
+    restore();
     m.remove();
   }
 });
