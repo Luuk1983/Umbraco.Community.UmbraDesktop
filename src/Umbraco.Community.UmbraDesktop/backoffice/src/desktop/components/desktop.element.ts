@@ -19,6 +19,7 @@ import type { UmbraDesktopPackageSettingsContext } from '../settings/package-set
 import { UmbraDesktopWindowLayoutController } from '../windows/layout.controller.js';
 import { UmbraDesktopHelpContext } from '../help/help.context.js';
 import { takeHelpDeepLink } from '../help/help-deep-link.js';
+import { UmbraDesktopSearchContext } from '../search/search.context.js';
 import type { UmbraDesktopWallpaperView } from '../settings/wallpaper-view.js';
 import { UmbraDesktopThemeContext } from '../theme/theme.context.js';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -189,6 +190,9 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     this.observe(layout.restoring, (restoring) => this.reportWindowsRestoring(restoring === true));
     // Opens Help at a page, for the desktop's own code and for the event and deep link below.
     this.#help = new UmbraDesktopHelpContext(this, { manager: this.#manager, apps: this.#catalogue.apps });
+    // The sources the launcher's search asks (launcher search design §5.1). Provided here, for the
+    // desktop's lifetime, because the launcher is unmounted on every close.
+    new UmbraDesktopSearchContext(this);
     // The system tray's public face: package tray items and the two calls packages get (umbraCoffee
     // design §7). Created here without keeping a reference, since providing it is its whole job on
     // this element and nothing here calls it; a field nobody reads fails `noUnusedLocals`. Here

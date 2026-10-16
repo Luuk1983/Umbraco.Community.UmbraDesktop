@@ -1,0 +1,43 @@
+---
+id: searching
+title: Searching
+description: Find apps, content, media and more from the launcher, and open what you find in a window.
+sidebar_position: 3
+---
+
+# Searching
+
+The search field at the top of the launcher finds apps and things in Umbraco together, and opens
+what you pick in a window on the desktop.
+
+- To search, open the launcher and type. The cursor is already in the search field.
+- To open a result, select it, or press Enter to open the first one.
+- To move through the results with the keyboard, use the arrow keys.
+- To go back to your apps and groups, press Escape. Press it again to close the launcher.
+
+## What it finds
+
+Results appear when you pause typing, all at once, in this order:
+
+1. **Apps**, every one whose name matches.
+2. **Documents** and **Media**, the best few of each. A document shows where it is in the content
+   tree.
+3. Every other place that found something, such as Document Types, Templates or **Help**, each with
+   its first few results.
+
+Each place is a band of its own. On a wide launcher its results sit side by side, best first; on a
+narrow one they are one list.
+
+You only see places you have access to. Without the Settings section, for example, there are no
+Document Types or Data Types.
+
+## See everything one place found
+
+- To see all of a section's results, select **Show all** beside its heading.
+- To load more, scroll to the end of the list, or select **Show more**.
+- To go back to the mixed results, select **Back**, or press Escape.
+
+## Where results open
+
+A document, media item or other result opens in a window with just its editor. If it is already
+open in a window, that window comes to the front instead. A Help result opens Help on that page.

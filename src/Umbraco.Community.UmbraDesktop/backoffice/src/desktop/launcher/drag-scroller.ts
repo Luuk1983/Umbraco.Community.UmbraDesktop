@@ -1,5 +1,5 @@
 /** Which body the launcher panel shows. */
-export type UmbraDesktopLauncherMode = 'launcher' | 'drawer' | 'arrange';
+export type UmbraDesktopLauncherMode = 'launcher' | 'drawer' | 'arrange' | 'search';
 
 /**
  * Where a drag may need to scroll, per mode, outermost first. The base scrolls the first of each,
@@ -11,6 +11,7 @@ export type UmbraDesktopLauncherMode = 'launcher' | 'drawer' | 'arrange';
 const CANDIDATES: Record<UmbraDesktopLauncherMode, ReadonlyArray<string>> = {
   launcher: ['.body', '.cards'],
   drawer: ['.body'],
+  search: ['.body'],
   arrange: ['.layout-pane', '.layout-pane .cards'],
 };
 

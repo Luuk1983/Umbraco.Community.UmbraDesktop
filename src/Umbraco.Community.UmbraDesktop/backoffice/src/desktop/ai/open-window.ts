@@ -1,6 +1,7 @@
 import type { DeskView, UmbraDesktopLocalise } from './desk-snapshot';
 import type { UmbraDesktopApp } from '../types';
 import { matchByLabel } from './name-match';
+import { backofficeUrl, entityWindowAlias, entityWindowApp, findEntityWindow } from '../windows/entity-window';
 import { UMB_EDIT_DOCUMENT_WORKSPACE_PATH_PATTERN } from '@umbraco-cms/backoffice/document';
 import { UMB_EDIT_MEDIA_WORKSPACE_PATH_PATTERN } from '@umbraco-cms/backoffice/media';
 
@@ -12,23 +13,6 @@ import { UMB_EDIT_MEDIA_WORKSPACE_PATH_PATTERN } from '@umbraco-cms/backoffice/m
  * because in a single-page shell following a link is a navigation and the chat panel resets. On the
  * desktop the answer is a second window beside the chat, and both survive.
  */
-
-/** Backoffice mount path, as `url-inference.ts` has it: core's patterns are relative to it. */
-const BACKOFFICE_PATH = '/umbraco';
-
-/**
- * Mount a core path pattern's output under the backoffice.
- *
- * `generateAbsolute` is absolute within the backoffice router and returns no leading slash, so a
- * plain concatenation produces `/umbracosection/...` — a URL that loads, badly, as a relative path.
- * Normalised rather than assumed, because "absolute" meaning "no leading slash" is surprising
- * enough that it could equally be corrected in a future version.
- * @param path A path from `UmbPathPattern.generateAbsolute`.
- * @returns The URL to put in a window's iframe.
- */
-function backofficeUrl(path: string): string {
-  return `${BACKOFFICE_PATH}/${path.replace(/^\/+/, '')}`;
-}
 
 /**
  * The entity types this tool can build a window for, and how.
@@ -49,17 +33,6 @@ const OPENABLE: Record<string, { icon: string; path: (unique: string) => string 
   },
 };
 
-/**
- * The size a window opened this way gets.
- *
- * The catalogue's convention for a `workspace-only` entry, which is the same shape: one workspace
- * with no section sidebar to lean on, so it opens larger than a section would and carries a floor
- * below which the workspace's own layout stops working.
- */
-const CONTENT_SIZE = { w: 1200, h: 780 };
-/** The resize floor that goes with {@link CONTENT_SIZE}. */
-const CONTENT_MIN_SIZE = { w: 900, h: 540 };
-
 /** What the tool decided to do. */
 export type OpenWindowPlan =
   /** There is no desktop here; say so and open nothing. */
@@ -70,19 +43,6 @@ export type OpenWindowPlan =
   | { kind: 'focus'; windowId: string; message: string }
   /** Open this. */
   | { kind: 'open'; app: UmbraDesktopApp; message: string };
-
-/**
- * The app alias for one target.
- *
- * Per-target because window identity keys off the alias, so this is what makes "the same document
- * twice" one window rather than two, via the manager's own `allowMultiple` check.
- * @param entityType The entity type.
- * @param unique The entity's key.
- * @returns A stable alias for that target.
- */
-function aliasFor(entityType: string, unique: string): string {
-  return `umbradesktop-ai-open:${entityType}:${unique}`;
-}
 
 /**
  * An alias no open window is using, derived from a base one.
@@ -103,31 +63,6 @@ function freeAlias(desk: DeskView, base: string): string {
   let n = 2;
   while (taken.has(`${base}#${n}`)) n += 1;
   return `${base}#${n}`;
-}
-
-/**
- * A window already showing this target, if there is one.
- *
- * Two ways to match, and both are needed. The subject is the real one: the user very often already
- * has the thing open in their Content window, and opening a second window onto one document is
- * exactly the conflict the overwrite guard exists to warn about, so causing it here would be
- * perverse. The alias covers the gap the subject leaves, between a window opening and its frame
- * reporting what it loaded.
- * @param desk The desktop to search.
- * @param entityType The entity type wanted.
- * @param unique The key wanted.
- * @returns The window's id, or undefined.
- */
-function findOpenTarget(desk: DeskView, entityType: string, unique: string): string | undefined {
-  const alias = aliasFor(entityType, unique);
-  for (const win of desk.getWindows()) {
-    if (win.app.alias === alias) return win.id;
-    const shows = desk
-      .subjectsOf(win.id)
-      .some((subject) => subject.entityType === entityType && subject.unique === unique);
-    if (shows) return win.id;
-  }
-  return undefined;
 }
 
 /**
@@ -260,7 +195,7 @@ export function planOpenWindow(
 
   const label = typeof args.name === 'string' && args.name.trim() ? args.name.trim() : entityType;
 
-  const existing = newWindow ? undefined : findOpenTarget(desk, entityType, unique);
+  const existing = newWindow ? undefined : findEntityWindow(desk, entityType, unique);
   if (existing) {
     return {
       kind: 'focus',
@@ -269,27 +204,23 @@ export function planOpenWindow(
     };
   }
 
-  const alias = newWindow ? freeAlias(desk, aliasFor(entityType, unique)) : aliasFor(entityType, unique);
+  const alias = newWindow ? freeAlias(desk, entityWindowAlias(entityType, unique)) : entityWindowAlias(entityType, unique);
   return {
     kind: 'open',
     message: newWindow
       ? `Opened a second window on "${label}". Both windows now show the same ${entityType}, which is exactly the situation UmbraDesktop's overwrite warning is for: saving one after editing the other will overwrite it, and the window with unsaved changes will be marked once the other saves.`
       : `Opened "${label}" in a window on the desktop, beside this chat.`,
-    app: {
-      alias,
+    app: entityWindowApp({
+      entityType,
+      unique,
       name: label,
       icon: openable.icon,
-      content: { kind: 'iframe', url: backofficeUrl(openable.path(unique)) },
-      // One workspace, deep-linked, so the section's tree would be navigation nobody asked for. It
-      // is also the profile whose size convention `CONTENT_SIZE` follows.
-      chromeProfile: 'workspace-only',
-      defaultSize: CONTENT_SIZE,
-      minSize: CONTENT_MIN_SIZE,
-      // Normally false, so the manager focuses instead of stacking and a repeated call is
-      // idempotent even when `findOpenTarget` missed — a race this plan cannot see, since it is
-      // computed before the open. A deliberate duplicate has to allow itself, or the manager would
-      // undo the very thing that was asked for.
+      url: backofficeUrl(openable.path(unique)),
+      alias,
+      // Normally false, so the manager focuses instead of stacking and a repeated call is idempotent
+      // even when `findEntityWindow` missed. A deliberate duplicate has to allow itself, or the
+      // manager would undo the very thing that was asked for.
       allowMultiple: newWindow,
-    },
+    }),
   };
 }
