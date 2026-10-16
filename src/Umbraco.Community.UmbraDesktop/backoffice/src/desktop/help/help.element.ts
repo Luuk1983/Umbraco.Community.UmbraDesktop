@@ -1,9 +1,5 @@
 import { css, customElement, html, nothing, property, repeat, state, svg } from '@umbraco-cms/backoffice/external/lit';
-import { UmbExtensionsManifestInitializer } from '@umbraco-cms/backoffice/extension-api';
-import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
-import { normaliseDocsManifests } from './docs-sources';
-import { loadHelpProducts, serverDocsFetcher } from './help-loader';
 import {
   helpGuides,
   resolveHelpTarget,
@@ -13,47 +9,17 @@ import {
   type UmbraDesktopHelpView,
 } from './help-navigation';
 import type { UmbraDesktopHelpCategory, UmbraDesktopHelpPage, UmbraDesktopHelpProduct } from './help-product';
+import { loadHelpProductsFromRegistry } from './help-registry';
 import { renderHelpPage } from './help-render';
 import { searchHelp } from './help-search';
 import { formatHelpTarget, parseHelpTarget, type UmbraDesktopHelpTarget } from './help-target';
 import { UMBRADESKTOP_APP_LOCATION_EVENT } from '../constants';
-
-/** Console lines already printed this visit, so reopening Help does not repeat them. */
-const printed = new Set<string>();
 
 /**
  * How far below the top of the scroll area a heading counts as the section being read, for "On this
  * page". About two lines, so a heading just scrolled to is current rather than the one above it.
  */
 const READING_LINE = 48;
-
-/**
- * Loads the products registered through `umbraDesktopDocs`, the only route there is (Help design
- * D3). Resolves on the registry's first answer: docs manifests arrive with their packages' bundles,
- * which are loaded before anyone can open the desktop, so there is no later answer worth waiting for.
- * @param host The Help element, which owns the initializer and the requests.
- * @returns The products, in picker order.
- */
-async function loadFromRegistry(host: UmbLitElement): Promise<UmbraDesktopHelpProduct[]> {
-  const manifests = await new Promise<unknown[]>((resolve) => {
-    new UmbExtensionsManifestInitializer(
-      host,
-      umbExtensionsRegistry,
-      'umbraDesktopDocs',
-      null,
-      (permitted) => resolve(permitted.map((controller) => controller.manifest)),
-      'umbraDesktopHelpDocs',
-    );
-  });
-  const { sources, reports } = normaliseDocsManifests(manifests, window.location.origin);
-  const loaded = await loadHelpProducts(sources, serverDocsFetcher(host));
-  for (const report of [...reports, ...loaded.reports]) {
-    if (printed.has(report.key)) continue;
-    printed.add(report.key);
-    console.warn(report.message);
-  }
-  return loaded.products;
-}
 
 /** The arrow beside a category in the sidebar, pointing right; the stylesheet turns it down when open. */
 const chevron = svg`<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -92,7 +58,7 @@ export class UmbraDesktopHelpElement extends UmbLitElement {
    * How the products are loaded. The registry and the server by default; a test replaces it before
    * the element connects, so the element can be tested without either.
    */
-  loadProducts: (host: UmbLitElement) => Promise<UmbraDesktopHelpProduct[]> = loadFromRegistry;
+  loadProducts: (host: UmbLitElement) => Promise<UmbraDesktopHelpProduct[]> = loadHelpProductsFromRegistry;
 
   /** Every installed product, or undefined while loading. */
   @state()

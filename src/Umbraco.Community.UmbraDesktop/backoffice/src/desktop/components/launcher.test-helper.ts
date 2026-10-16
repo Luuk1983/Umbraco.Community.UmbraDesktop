@@ -1,6 +1,10 @@
 import './launcher.element.js';
 import type { UmbraDesktopLauncherElement } from './launcher.element.js';
-import type { UmbraDesktopApp, UmbraDesktopGroup } from '../types.js';
+import type { UmbraDesktopApp, UmbraDesktopGroup, UmbraDesktopWindow } from '../types.js';
+import type { UmbraDesktopWorkspaceSubject } from '../dirty-watcher.js';
+import type { UmbraDesktopSearchSource } from '../search/types.js';
+import { UMBRADESKTOP_SEARCH_CONTEXT } from '../search/search.context-token.js';
+import { UMBRADESKTOP_HELP_CONTEXT } from '../help/help.context-token.js';
 import type { UmbraDesktopLauncherLayout } from '../settings/types.js';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
@@ -46,7 +50,7 @@ export async function adoptIconStandIn(mount: UmbraDesktopLauncherMount): Promis
 }
 
 /**
- * Mounting a launcher with the three contexts it reads, stubbed to the parts it uses.
+ * Mounting a launcher with the contexts it reads, stubbed to the parts it uses.
  *
  * A plain host appended to the body rather than an open-wc `fixture`, for the reason
  * `launcher-long-names.test.ts` gives: a fixture belongs to mocha's per-test teardown, and a mount
@@ -69,6 +73,10 @@ export interface UmbraDesktopLauncherMount {
   writes: UmbraDesktopLauncherWrite[];
   /** Every app the launcher asked the window manager to open. */
   launched: UmbraDesktopApp[];
+  /** Every Help target the launcher asked Help to open, from a search result. */
+  helpOpened: string[];
+  /** Every window id the launcher asked the window manager to bring forward. */
+  focused: string[];
   /** Wait for the launcher to render whatever the last action changed. */
   settle(): Promise<void>;
   /** Take the mount out of the page. */
@@ -100,6 +108,14 @@ export interface UmbraDesktopLauncherMountOptions {
    * the launcher renders on the base look alone, with its terms as raw keys.
    */
   theme?: UmbraDesktopTheme;
+  /** The search sources the stand-in search context offers; none when omitted. */
+  searchSources?: UmbraDesktopSearchSource[];
+  /** The open windows the stand-in window manager reports, for "already open" lookups. */
+  windows?: UmbraDesktopWindow[];
+  /** What each open window reports it is editing, by window id. */
+  subjects?: Record<string, UmbraDesktopWorkspaceSubject[]>;
+  /** Overrides search's debounce, so a test need not wait 300 ms per search. */
+  searchDebounceMs?: number;
 }
 
 /** Whether this page has the English terms registered yet; they only need registering once. */
@@ -163,12 +179,29 @@ export async function mountLauncher(options: UmbraDesktopLauncherMountOptions): 
   } as never).hostConnected();
 
   const launched: UmbraDesktopApp[] = [];
+  const focused: string[] = [];
   new UmbContextProvider(wrapper, UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, {
     open: (app: UmbraDesktopApp) => launched.push(app),
+    focus: (id: string) => focused.push(id),
+    getWindows: () => options.windows ?? [],
+    subjectsOf: (id: string) => options.subjects?.[id] ?? [],
+    getHostElement: () => wrapper,
+  } as never).hostConnected();
+
+  const sources = new UmbArrayState<UmbraDesktopSearchSource>(options.searchSources ?? [], (s) => s.alias);
+  new UmbContextProvider(wrapper, UMBRADESKTOP_SEARCH_CONTEXT, {
+    sources: sources.asObservable(),
+    getHostElement: () => wrapper,
+  } as never).hostConnected();
+
+  const helpOpened: string[] = [];
+  new UmbContextProvider(wrapper, UMBRADESKTOP_HELP_CONTEXT, {
+    open: (target: string) => helpOpened.push(target) > 0,
     getHostElement: () => wrapper,
   } as never).hostConnected();
 
   const launcher = document.createElement('umbradesktop-launcher') as UmbraDesktopLauncherElement;
+  if (options.searchDebounceMs !== undefined) launcher.searchDebounceMs = options.searchDebounceMs;
   if (options.launcherWidth !== undefined) {
     launcher.style.setProperty('--umbradesktop-launcher-width', `${options.launcherWidth}px`);
     launcher.style.setProperty('--umbradesktop-launcher-arrange-width', `${options.launcherWidth}px`);
@@ -184,7 +217,7 @@ export async function mountLauncher(options: UmbraDesktopLauncherMountOptions): 
     if (sheet) launcher.shadowRoot!.adoptedStyleSheets = [...launcher.shadowRoot!.adoptedStyleSheets, sheet];
     await settle();
   }
-  return { launcher, root: launcher.shadowRoot!, writes, launched, settle, remove: () => wrapper.remove() };
+  return { launcher, root: launcher.shadowRoot!, writes, launched, helpOpened, focused, settle, remove: () => wrapper.remove() };
 }
 
 /**

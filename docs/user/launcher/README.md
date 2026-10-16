@@ -8,5 +8,6 @@ description: Opening apps from the launcher, and arranging it the way you want i
 
 - [Using the launcher](using-the-launcher.md): how apps are grouped, how to find one, pinning, and
   the footer with Desktop settings and Exit desktop.
+- [Searching](searching.md): find apps, content, media and Help pages, and open them in a window.
 - [Arranging the launcher](arranging-the-launcher.md): move, pin and remove tiles, and rename,
   reorder, create or delete groups.

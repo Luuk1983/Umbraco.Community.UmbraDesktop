@@ -27,8 +27,9 @@ Nothing is hidden just because it has not been curated. See
 
 ## Find an app
 
-- To find an app by name, type in the search box at the top of the launcher.
-- To see every app from A to Z, select **All apps**, next to the search box. It has a filter of its
+- To find an app, or anything else, type in the search field at the top of the launcher. See
+  [Searching](searching.md).
+- To see every app from A to Z, select **All apps**, next to the search field. It has a filter of its
   own and no groups.
 
 ## Pinned apps
@@ -53,5 +54,5 @@ Pins are stored on your Umbraco account, so they follow you to any browser you s
 
 ## Closing the launcher
 
-Escape closes the launcher, or steps back to it first from **All apps** or **Arrange**. The launcher
+Escape closes the launcher, or steps back to it first from **All apps**, **Arrange** or a search. The launcher
 stays open when you switch to another program and back.

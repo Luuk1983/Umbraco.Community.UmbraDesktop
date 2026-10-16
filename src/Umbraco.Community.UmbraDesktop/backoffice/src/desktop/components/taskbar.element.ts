@@ -46,7 +46,6 @@ import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/b
 import type { PropertyValues } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { umbConfirmModal, umbOpenModal } from '@umbraco-cms/backoffice/modal';
-import { UMB_SEARCH_MODAL } from '@umbraco-cms/backoffice/search';
 import { UMB_CURRENT_USER_MODAL } from '@umbraco-cms/backoffice/current-user';
 
 /**
@@ -542,9 +541,6 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     await umbOpenModal(this, modal).catch(() => undefined);
   }
 
-  /** Open the native backoffice search modal. */
-  #onSearch = () => this.#openFromLauncher(UMB_SEARCH_MODAL);
-
   /** Open the native current-user modal (profile, MFA, etc.). */
   #onProfile = () => this.#openFromLauncher(UMB_CURRENT_USER_MODAL);
 
@@ -592,7 +588,6 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       <umbradesktop-launcher
         class="launcher"
         @launched=${() => this.#setPanel(undefined)}
-        @search=${this.#onSearch}
         @profile=${this.#onProfile}
         @settings=${this.#onSettings}
         @exit=${this.#onExit}

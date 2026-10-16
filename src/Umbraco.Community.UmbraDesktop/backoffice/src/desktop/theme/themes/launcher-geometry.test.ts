@@ -383,22 +383,20 @@ for (const theme of UMBRADESKTOP_THEMES) {
 }
 
 for (const theme of UMBRADESKTOP_THEMES) {
-  it(`${theme.name}: the header row fits the search placeholder on one line beside All apps and Arrange`, async function () {
+  it(`${theme.name}: the header row fits the search placeholder beside All apps and Arrange`, async function () {
     this.timeout(TIMEOUT_MS);
     const mount = await mountLauncher({ apps: APPS, groups: GROUPS, theme });
     await adoptIconStandIn(mount);
     try {
-      const label = mount.root.querySelector<HTMLElement>('.hdr .search span')!;
-      const range = document.createRange();
-      range.selectNodeContents(label);
-      // A rect per line the text takes; the Start menu themes wrapped it onto five. Where the row
-      // is short of room it ends in an ellipsis rather than wrapping, which on this 800px page is
-      // macOS, whose row is a band in the middle of the screen.
-      // Counted by distinct tops, since Lit's marker beside the text can add a rect on the same line.
-      const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
-      expect(lines.size, 'the placeholder takes one line').to.equal(1);
+      // The field is an input now, which never wraps, so the check is that its placeholder is not
+      // cut off: measured with the input's own font, against the room the input has. Not on macOS,
+      // whose row is a band in the middle of the screen and ellipsises on this 800px page.
+      const input = mount.root.querySelector<HTMLInputElement>('.hdr .search-input')!;
+      const style = getComputedStyle(input);
+      const context = document.createElement('canvas').getContext('2d')!;
+      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
       if (theme !== UMBRADESKTOP_MACOS_THEME) {
-        expect(label.scrollWidth, 'and all of it shows').to.be.at.most(label.clientWidth + 1);
+        expect(context.measureText(input.placeholder).width, 'all of the placeholder shows').to.be.at.most(input.clientWidth + 1);
       }
       for (const control of mount.root.querySelectorAll<HTMLElement>('.hdr .ctl')) {
         expect(control.scrollWidth, `${control.className} keeps its label inside it`).to.be.at.most(control.clientWidth + 1);

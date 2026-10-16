@@ -32,8 +32,8 @@ async function clickAndCapture(selector: string): Promise<string[]> {
   return seen;
 }
 
-it('asks its host to open search rather than opening the modal itself', async () => {
-  expect(await clickAndCapture('.search')).to.deep.equal(['search']);
+it('searches in place rather than asking its host to open the native search modal', async () => {
+  expect(await clickAndCapture('.search-input')).to.deep.equal([]);
 });
 
 it('asks its host to open the user profile rather than opening the modal itself', async () => {

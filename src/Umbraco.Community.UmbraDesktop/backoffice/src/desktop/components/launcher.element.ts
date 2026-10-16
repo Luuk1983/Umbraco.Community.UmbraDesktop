@@ -27,8 +27,14 @@ import type { UmbraDesktopWindowManagerContext } from '../window-manager.context
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
 import { UmbraDesktopDrawerController, drawerStyles } from '../launcher/drawer.controller.js';
 import { UmbraDesktopArrangeController, arrangeStyles } from '../launcher/arrange.controller.js';
+import { UmbraDesktopSearchController, searchStyles } from '../launcher/search.controller.js';
+import type { UmbraDesktopSearchItem } from '../search/types.js';
+import { UMBRADESKTOP_SEARCH_CONTEXT } from '../search/search.context-token.js';
+import { UMBRADESKTOP_HELP_CONTEXT } from '../help/help.context-token.js';
+import type { UmbraDesktopHelpContext } from '../help/help.context';
+import { entityWindowApp, findEntityWindow, sectionUrlFromHref } from '../windows/entity-window.js';
 import { UMBRADESKTOP_LAUNCHER_CARD_MIN_WIDTH, UMBRADESKTOP_LAUNCHER_DEFAULT_WIDTH } from '../launcher/geometry.js';
-import { css, customElement, html, repeat, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
+import { css, customElement, html, property, repeat, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import type { UmbCurrentUserModel } from '@umbraco-cms/backoffice/current-user';
@@ -61,7 +67,8 @@ export interface UmbraDesktopLauncherConfirm {
 const HELD_HEIGHT = '--launcher-held-height';
 
 /**
- * The start-menu-style launcher panel: search, the Pinned place, the user's groups as cards of
+ * The start-menu-style launcher panel: a search field that turns the body into results while it
+ * has text, the Pinned place, the user's groups as cards of
  * icon tiles, and a footer (user, desktop settings, log out, exit). What it draws is
  * `resolveLauncher`'s view of the catalogue plus the user's changes to it (see the 2026-09-27
  * launcher layout design). Mounted by `<umbradesktop-taskbar>`, which owns the panel's open/close
@@ -76,7 +83,7 @@ const HELD_HEIGHT = '--launcher-held-height';
  * outside it — including a pointer inside a modal it opened. Umbraco proxies a modal's context
  * requests through the element that opened it, so a modal owned by the launcher loses its
  * context origin on the first click inside it, and every later `getContext` hangs forever with
- * no error at all. Instead the footer reports intent (`search`, `profile`, `settings`, `exit`)
+ * no error at all. Instead the footer reports intent (`profile`, `settings`, `exit`)
  * and the taskbar, which lives as long as the desktop, owns the modal. The one question the
  * launcher asks, arrange mode's Reset, goes the same way: a `confirm` event carrying
  * {@link UmbraDesktopLauncherConfirm}, which the taskbar answers from a modal it owns while holding
@@ -154,6 +161,30 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   });
 
   /**
+   * Overrides search's debounce, for tests. Read each time a search is scheduled rather than once at
+   * construction, so the test helper can set it after `createElement` has run the constructor.
+   */
+  @property({ attribute: false })
+  searchDebounceMs?: number;
+
+  /** The Help context, which a Help result opens Help through. */
+  #help?: UmbraDesktopHelpContext;
+
+  /**
+   * Search: the field in the header row and the results body. A controller for the same reason as
+   * the drawer: the theme's launcher sheet only reaches this shadow root.
+   */
+  #search = new UmbraDesktopSearchController(
+    this,
+    {
+      launch: (app) => this.#open(app),
+      open: (item) => this.#openResult(item),
+      changed: (active) => this.#searching(active),
+    },
+    () => this.searchDebounceMs,
+  );
+
+  /**
    * The one drag controller. Normal mode and arrange mode share it, because both render into this
    * shadow root and a drop means the same thing in both.
    */
@@ -194,7 +225,10 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     new UmbraDesktopThemeStyles(this, 'launcher');
     this.consumeContext(UMBRADESKTOP_APP_CATALOGUE_CONTEXT, (ctx) => {
       if (!ctx) return;
-      this.observe(ctx.apps, (apps) => (this._apps = apps));
+      this.observe(ctx.apps, (apps) => {
+        this._apps = apps;
+        this.#search.setApps(apps);
+      });
       this.observe(ctx.catalogueGroups, (groups) => (this._catalogueGroups = groups));
     });
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
@@ -210,6 +244,11 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       if (!ctx) return;
       this.observe(ctx.currentUser, (user) => (this._currentUser = user));
     });
+    this.consumeContext(UMBRADESKTOP_SEARCH_CONTEXT, (ctx) => {
+      if (!ctx) return;
+      this.observe(ctx.sources, (sources) => this.#search.setSources(sources));
+    });
+    this.consumeContext(UMBRADESKTOP_HELP_CONTEXT, (ctx) => (this.#help = ctx ?? undefined));
   }
 
   /** What the catalogue says exists, in the shape the layout functions take. */
@@ -276,12 +315,19 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   }
 
   /**
-   * Step back one level, which is what Escape does: from All apps or arrange mode to the launcher.
-   * The taskbar asks this first and closes the launcher only when there is nowhere to step back to.
+   * Step back one level, which is what Escape does: from search's drilled-down list to its results,
+   * from search to the launcher, from All apps or arrange mode to the launcher. The taskbar asks
+   * this first and closes the launcher only when there is nowhere to step back to.
    * @returns True when it stepped back, false when it was already showing the launcher.
    */
   back(): boolean {
     if (this._mode === 'launcher') return false;
+    if (this._mode === 'search') {
+      if (this.#search.drilled) this.#search.closeDrill();
+      else this.#search.clear();
+      this.#search.focusField();
+      return true;
+    }
     void this.#setMode('launcher');
     return true;
   }
@@ -306,6 +352,50 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   #open(app: UmbraDesktopApp) {
     this.#manager?.open(app);
     this.dispatchEvent(new CustomEvent('launched'));
+  }
+
+  /**
+   * Open a search result: Help on its page, or a content item in a window of its own, or the window
+   * already showing it. Never a navigation of the backoffice, which is what issue #6 was.
+   * @param item The result.
+   */
+  #openResult(item: UmbraDesktopSearchItem) {
+    const open = item.open;
+    if (open.kind === 'help') {
+      this.#help?.open(open.target);
+    } else {
+      const url = sectionUrlFromHref(open.href);
+      if (!url || !this.#manager) return;
+      const existing = findEntityWindow(this.#manager, open.entityType, open.unique);
+      if (existing) this.#manager.focus(existing);
+      else this.#manager.open(entityWindowApp({ entityType: open.entityType, unique: open.unique, name: item.name, icon: item.icon, url }));
+    }
+    this.dispatchEvent(new CustomEvent('launched'));
+  }
+
+  /**
+   * Switch between the launcher and search as the field gains and loses text. Not through
+   * `#setMode`, which moves focus to the control that opened a mode: here focus has to stay in the
+   * field the user is typing in. The height is held as it is for All apps, so results arriving do
+   * not make the panel jump.
+   * @param active True when the field has text.
+   */
+  #searching(active: boolean) {
+    if (active && this._mode === 'launcher') {
+      this.style.setProperty(HELD_HEIGHT, `${this.getBoundingClientRect().height}px`);
+      this._mode = 'search';
+    } else if (!active && this._mode === 'search') {
+      this._mode = 'launcher';
+    }
+  }
+
+  /**
+   * The caret starts in the search field, so opening the launcher and typing searches.
+   * @param changed The properties that changed in the first update.
+   */
+  override firstUpdated(changed: Map<PropertyKey, unknown>) {
+    super.firstUpdated(changed);
+    this.#search.focusField();
   }
 
   /**
@@ -335,6 +425,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   override disconnectedCallback() {
     if (this._mode === 'arrange') this.#arrange.flush();
     this.#drag.cancel();
+    this.#search.dispose();
     super.disconnectedCallback();
   }
 
@@ -351,6 +442,10 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
    * @param mode The body to show.
    */
   async #setMode(mode: UmbraDesktopLauncherMode) {
+    // Leaving search for All apps or Arrange empties the field: kept, it would come back holding
+    // text over a launcher that is not searching it, and typing on would not search until the
+    // field was emptied first, since search only switches body when the field gains text.
+    if (this._mode === 'search' && mode !== 'search') this.#search.clear();
     const from = this._mode;
     if (from === 'launcher' && mode !== 'launcher') this.style.setProperty(HELD_HEIGHT, `${this.getBoundingClientRect().height}px`);
     if (mode === 'drawer') this.#drawer.reset();
@@ -380,6 +475,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
   override updated(changed: Map<PropertyKey, unknown>) {
     super.updated(changed);
     if (this._mode === 'arrange') this.#arrange.afterRender();
+    if (this._mode === 'search') this.#search.afterRender();
     this.#holdHeight();
   }
 
@@ -397,11 +493,6 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     }
     const height = this.getBoundingClientRect().height;
     if (height > (parseFloat(this.style.getPropertyValue(HELD_HEIGHT)) || 0)) this.style.setProperty(HELD_HEIGHT, `${height}px`);
-  }
-
-  /** Ask the taskbar to open the native backoffice search modal. */
-  #requestSearch() {
-    this.dispatchEvent(new CustomEvent('search'));
   }
 
   /** Ask the taskbar to open the desktop settings dialog. */
@@ -624,10 +715,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     const pinTarget = this._dragging && view.pinned.length === 0;
     return html`
       <div class="hdr ${pinTarget ? 'pinning' : ''}">
-        <button class="search" @click=${this.#requestSearch}>
-          <umb-icon name="icon-search"></umb-icon>
-          <span>${this.localize.term('umbraDesktop_search')}</span>
-        </button>
+        ${this.#search.renderField()}
         <button class="ctl all-apps" @click=${() => this.#setMode('drawer')}>
           <umb-icon name="icon-thumbnails-small"></umb-icon>
           <span>${this.localize.term('umbraDesktop_allApps')}</span>
@@ -639,7 +727,9 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
         </button>
         ${pinTarget ? this.#renderPinTarget() : ''}
       </div>
-      <div class="body">${empty ? this.#renderEmpty() : html`${this.#renderPinned(view)} ${this.#renderGroups(view)}`}</div>
+      ${this._mode === 'search'
+        ? this.#search.render()
+        : html`<div class="body">${empty ? this.#renderEmpty() : html`${this.#renderPinned(view)} ${this.#renderGroups(view)}`}</div>`}
       <div class="foot ${this._dragging ? 'dragging' : ''}">${this.#renderFooter()} ${this._dragging ? this.#renderRemovePane() : ''}</div>
     `;
   }
@@ -716,15 +806,6 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       }
       .search:hover {
         border-color: var(--umbradesktop-launcher-border-emphasis, var(--uui-color-border-emphasis, var(--uui-color-border)));
-      }
-      /* One line, ending in an ellipsis where the row is short of room, rather than wrapping: the
-         field shares its row with All apps and Arrange, and a placeholder wrapped onto three to five
-         lines made the whole row that tall. */
-      .search span {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
       .search umb-icon {
         flex-shrink: 0;
@@ -1139,6 +1220,7 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
       }
     `,
     drawerStyles,
+    searchStyles,
     arrangeStyles,
   ];
 }
