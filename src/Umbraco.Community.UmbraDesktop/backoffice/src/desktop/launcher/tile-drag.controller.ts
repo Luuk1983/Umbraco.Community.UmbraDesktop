@@ -39,6 +39,15 @@ export const UMBRADESKTOP_DRAG_SCROLL_BAND_PX = 40;
 export const UMBRADESKTOP_DRAG_SCROLL_STEP_PX = 12;
 
 /**
+ * The largest scroll range, in px, that is the browser rounding rather than content to scroll to.
+ * Chrome rounds a scroller's `clientHeight` and its `scrollHeight` separately, so a box with a
+ * fractional height around content of exactly that height reports a range of one pixel. The
+ * launcher's body is such a box whenever its groups fit, and a tile pressed in the body's bottom
+ * band scrolled that pixel on the drag's first frame, moving every group up under the pointer.
+ */
+export const UMBRADESKTOP_DRAG_SCROLL_ROUNDING_PX = 1;
+
+/**
  * How far, in px, the ghost sits below and right of a mouse or pen pointer. Beside the pointer
  * rather than centred on it, because what the user is aiming at is the landing bar at the pointer,
  * and a ghost over the pointer covered exactly that.
@@ -56,13 +65,16 @@ export const UMBRADESKTOP_DRAG_GHOST_TOUCH_LIFT_PX = 40;
  * its bottom band, and not at all anywhere else. Outside the scroller's box counts as anywhere
  * else, which is what keeps the remove pane usable: it sits just below the body, and scrolling
  * whenever the pointer was below the body's top edge ran the list to the bottom for as long as the
- * pointer rested on the pane.
+ * pointer rested on the pane. Nor does a scroller whose only room is rounding (see
+ * {@link UMBRADESKTOP_DRAG_SCROLL_ROUNDING_PX}).
  * @param box The scroller's client rect.
  * @param x The pointer's client x.
  * @param y The pointer's client y.
+ * @param range How far the scroller can scroll in all, its `scrollHeight` less its `clientHeight`.
  * @returns A signed step in px, or 0.
  */
-export function edgeScrollStep(box: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>, x: number, y: number): number {
+export function edgeScrollStep(box: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>, x: number, y: number, range: number): number {
+  if (range <= UMBRADESKTOP_DRAG_SCROLL_ROUNDING_PX) return 0;
   if (x < box.left || x > box.right || y < box.top || y > box.bottom) return 0;
   if (y < box.top + UMBRADESKTOP_DRAG_SCROLL_BAND_PX) return -UMBRADESKTOP_DRAG_SCROLL_STEP_PX;
   if (y > box.bottom - UMBRADESKTOP_DRAG_SCROLL_BAND_PX) return UMBRADESKTOP_DRAG_SCROLL_STEP_PX;
@@ -337,7 +349,7 @@ export class UmbraDesktopTileDragController {
     if (!active) return;
     const scroller = this.#options.scroller();
     if (scroller) {
-      const step = edgeScrollStep(scroller.getBoundingClientRect(), active.x, active.y);
+      const step = edgeScrollStep(scroller.getBoundingClientRect(), active.x, active.y, scroller.scrollHeight - scroller.clientHeight);
       const before = scroller.scrollTop;
       if (step !== 0) scroller.scrollTop += step;
       if (scroller.scrollTop !== before) this.#track();
