@@ -17,8 +17,9 @@ import { UmbraDesktopWindowElement } from '../../components/window.element.js';
  * which is exactly the failure mode the themes' own geometry tests exist for.
  *
  * The last test here is the one that earns its keep. The preview restates the chrome's own token
- * fallbacks, because the Umbraco identity theme ships an empty palette and a preview painted from
- * palettes alone would render it as nothing at all. That restatement is a second copy of a number,
+ * fallbacks, because a palette is partial by design and a preview painted from palettes alone would
+ * render every token a theme leaves alone as nothing at all. That restatement is a second copy of
+ * a number,
  * so it is held against the first copy on every run.
  */
 
@@ -244,4 +245,28 @@ it('draws what it is given on the desktop, behind the window, at desktop scale',
 it('reserves the taskbar the way the desktop does, so a bottom corner clears it', async () => {
   const { scene } = await previewOf(UMBRADESKTOP_THEMES[0]);
   expect(getComputedStyle(scene).getPropertyValue('--umbradesktop-taskbar-reserve').trim()).to.not.equal('');
+});
+
+it('splits the window black and white under high contrast, so the setting reads at this size', async () => {
+  // Umbraco's high contrast is a light scheme, so a preview painted from its tokens looked like
+  // Light under four themes and dark under macOS, which states its own. Neither said "contrast".
+  for (const theme of UMBRADESKTOP_THEMES) {
+    const element = await fixture<UmbraDesktopThemePreviewElement>(
+      html`<umbradesktop-theme-preview .theme=${theme} .variant=${'dark'} .highContrast=${true}></umbradesktop-theme-preview>`,
+    );
+    await element.updateComplete;
+
+    const image = getComputedStyle(element.shadowRoot!.querySelector('.body')!).backgroundImage;
+
+    expect(image, theme.name).to.contain('rgb(0, 0, 0)').and.contain('rgb(255, 255, 255)');
+  }
+});
+
+it('leaves the window body to the theme when contrast is not high', async () => {
+  const element = await fixture<UmbraDesktopThemePreviewElement>(
+    html`<umbradesktop-theme-preview .theme=${UMBRADESKTOP_THEMES[0]}></umbradesktop-theme-preview>`,
+  );
+  await element.updateComplete;
+
+  expect(getComputedStyle(element.shadowRoot!.querySelector('.body')!).backgroundImage).to.equal('none');
 });

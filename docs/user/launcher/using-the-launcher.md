@@ -11,6 +11,7 @@ The launcher is where apps are opened.
 
 - To open the launcher, select the launcher button on the taskbar.
 - To open an app, select its tile. It opens in a window.
+- To see an app's full name, point at its tile. A name too long for the tile ends in an ellipsis.
 
 ![The launcher: a search box, a Pinned row at the top, and every other app grouped by what it does.](../../screenshots/launcher.png)
 
@@ -18,7 +19,7 @@ The launcher is where apps are opened.
 
 Apps are grouped by what they do: Editing, Workflow, Marketing and sales, Development,
 Synchronisation, Security, Advanced security, Diagnostics, Automation, AI and System. A package can
-bring a heading of its own, such as the Entertainment add-on's Games. Empty groups never show.
+bring a heading of its own, such as the Entertainment add-on's Games and Media. Empty groups never show.
 
 Any section that no catalogue entry covers still shows up, under **More**, with a generic icon.
 Nothing is hidden just because it has not been curated. See

@@ -27,7 +27,11 @@ export const UMBRADESKTOP_BACKOFFICE_THEME_PICKER_MODAL_ALIAS =
  * are their own issues, and this is the field they need.
  */
 export interface UmbraDesktopSettingsModalData {
-  /** Id of the category to open at. Unknown or absent opens the list. */
+  /**
+   * Id of one of the desktop's categories, or the name of a package with settings, to open at.
+   * Unknown or absent opens the list. A package name is held until that package's settings arrive,
+   * because they are registered after the panel opens.
+   */
   category?: string;
 }
 

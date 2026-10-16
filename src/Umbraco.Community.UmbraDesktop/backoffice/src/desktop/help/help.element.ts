@@ -821,13 +821,14 @@ export class UmbraDesktopHelpElement extends UmbLitElement {
         margin-top: 48px;
       }
 
+      /* Set the way a uui-box headline is: bold, at the size of the text around it, and in the case
+         it was written in. Umbraco has no small spaced-out capitals anywhere, so a heading set like
+         that reads as borrowed from another product. */
       .developers h2 {
         margin: 0 0 8px;
         color: var(--help-muted);
-        font-size: 0.8em;
+        font-size: 1em;
         font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
       }
 
       .developers ul {
@@ -898,12 +899,10 @@ export class UmbraDesktopHelpElement extends UmbLitElement {
         gap: 4px;
       }
 
+      /* Set as '.developers h2' is, for the same reason. */
       .field-label {
         color: var(--help-muted);
-        font-size: 0.8em;
         font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
       }
 
       select,
@@ -1057,13 +1056,12 @@ export class UmbraDesktopHelpElement extends UmbLitElement {
         font-size: 0.875em;
       }
 
+      /* Set as '.developers h2' is, at the size of the entries under it. */
       .toc h2 {
         margin: 0 0 10px;
         color: var(--help-muted);
-        font-size: 0.85em;
+        font-size: 1em;
         font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
       }
 
       .toc ul {

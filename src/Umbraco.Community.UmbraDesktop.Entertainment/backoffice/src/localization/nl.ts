@@ -4,7 +4,10 @@
  * "Minesweeper" is left untranslated on purpose: the Dutch Windows shipped it as Mijnenveger, but
  * the name a player is looking for in a launcher is the one they know the game by, and in practice
  * that is the English one. The game's own words are translated, since those are read rather than
- * searched for. "Snake" is the same word in Dutch, so the question does not arise.
+ * searched for. "Snake" is the same word in Dutch, so the question does not arise. Nor does it for
+ * "umbraCoffee", which is the show's name, or "Media". "Taakbalk" and "bureaubladinstellingen" are
+ * the host's own Dutch names for where the tray switch lives, written mid-sentence the way the host
+ * writes them there, and have to stay in step with them.
  */
 export default {
   umbraDesktopEntertainment: {
@@ -70,5 +73,83 @@ export default {
     solitaireBonus: 'incl. {0} tijdbonus',
     solitaireLeaderboard: 'Ranglijst',
     solitaireShowLeaderboard: 'Ranglijst tonen',
+    groupMedia: 'Media',
+    umbraCoffee: 'umbraCoffee',
+    umbraCoffeeTray: 'umbraCoffee',
+    umbraCoffeeTrayAbout:
+      'Een kopje koffie bij de klok als umbraCoffee bijna begint of live is, en een herinnering tien minuten vooraf en als de uitzending begint.',
+    umbraCoffeeStartsAt: 'Begint om %0%',
+    umbraCoffeeRemindersWhere:
+      'Het kopje in het systeemvak en de herinneringen zet je uit onder Taakbalk in de bureaubladinstellingen.',
+    umbraCoffeeSoonHeadline: 'Zet de waterkoker aan, umbraCoffee begint zo',
+    umbraCoffeeLiveHeadline: 'Pak een bakkie, umbraCoffee is live!',
+    umbraCoffeeToastSoon: 'Zet de waterkoker aan',
+    umbraCoffeeToastLive: 'Pak een bakkie!',
+    umbraCoffeeOnAir: 'Live',
+    umbraCoffeeWatchNow: 'Nu kijken',
+    umbraCoffeeStartingNow: 'Begint nu',
+    umbraCoffeeClockMin: 'min',
+    umbraCoffeeClockSec: 'sec',
+    umbraCoffeeWatch: 'Bekijken',
+    umbraCoffeeStopReminding: 'Niet meer herinneren',
+    umbraCoffeeTrayUpcoming: 'umbraCoffee over %0% min: %1%',
+    umbraCoffeeTrayLive: 'umbraCoffee is live: %0%',
+    // ---- umbraCoffee window (round 2, addendum 2026-10-01 (2)) ----
+    umbraCoffeeLive: 'Live',
+    umbraCoffeeUpcoming: 'Binnenkort',
+    umbraCoffeeLatest: 'Nieuwste aflevering',
+    umbraCoffeeStartedAt: 'Begonnen %0%',
+    umbraCoffeeWith: 'Met',
+    umbraCoffeeAnd: 'en',
+    umbraCoffeeStartsRelative: 'Begint %0%',
+    umbraCoffeeStartsIn: 'Begint over',
+    umbraCoffeeDays: 'dagen',
+    umbraCoffeeHours: 'uur',
+    umbraCoffeeMinutes: 'minuten',
+    umbraCoffeeWatchLast: 'Bekijk de laatste aflevering',
+    umbraCoffeeChat: 'Chat',
+    umbraCoffeeEpisodes: 'Afleveringen',
+    umbraCoffeeChatNote:
+      'Iedereen kan meelezen. Om te reageren log je in bij YouTube in deze browser en sta je cookies van derden toe.',
+    umbraCoffeeSettings: 'Instellingen',
+    umbraCoffeeClose: 'Sluiten',
+    umbraCoffeeDone: 'Klaar',
+    umbraCoffeeReminders: 'Herinneringen',
+    umbraCoffeeRemindMe: 'Herinner mij',
+    umbraCoffeeRemindAbout:
+      'Een herinnering tien minuten voordat een aflevering begint, en als de uitzending begint. Dezelfde schakelaar als umbraCoffee onder Taakbalk in de bureaubladinstellingen.',
+    umbraCoffeeRemindOffline: 'De umbraCoffee-feed is niet bereikbaar, dus herinneringen staan uit tot hij weer bereikbaar is.',
+    umbraCoffeeFeedUnavailable: 'Feed niet bereikbaar',
+    umbraCoffeeUnavailable:
+      'De umbraCoffee-feed is niet bereikbaar. De afleveringen tot %0% worden getoond. Herinneringen staan uit tot hij weer bereikbaar is.',
+    umbraCoffeeUnavailableNoDate:
+      'De umbraCoffee-feed is niet bereikbaar. De afleveringen uit het package worden getoond. Herinneringen staan uit tot hij weer bereikbaar is.',
+    umbraCoffeeSearchLabel: 'Afleveringen zoeken',
+    umbraCoffeeSearchPlaceholder: 'Titel, onderwerp of gast',
+    umbraCoffeeClearSearch: 'Zoekopdracht wissen',
+    umbraCoffeeMatches: '%0% afleveringen',
+    umbraCoffeeMatchesOne: '1 aflevering',
+    umbraCoffeeNoMatches: 'Geen afleveringen gevonden.',
+    umbraCoffeeClearFilters: 'Alle afleveringen tonen',
+    umbraCoffeeNowPlaying: 'Speelt nu',
+    umbraCoffeePaused: 'Gepauzeerd',
+    umbraCoffeeShowMore: 'Toon meer',
+    umbraCoffeeAllEpisodes: 'Alle afleveringen op YouTube',
+    // ---- end umbraCoffee window ----
+    // ---- media-player (shared player and control bar) ----
+    mediaPlayerFrame: 'Video',
+    mediaPlayerPlay: 'Afspelen',
+    mediaPlayerSeek: 'Positie',
+    mediaPlayerLive: 'Live',
+    mediaPlayerMute: 'Dempen',
+    mediaPlayerVolume: 'Volume',
+    mediaPlayerCaptions: 'Ondertiteling',
+    mediaPlayerFullscreen: 'Volledig scherm',
+    mediaPlayerWatchOnYouTube: 'Bekijken op YouTube',
+    mediaPlayerBack: '%0% seconden terug',
+    mediaPlayerForward: '%0% seconden vooruit',
+    mediaPlayerSpeed: 'Afspeelsnelheid: %0%',
+    mediaPlayerSeekValue: '%0% van %1%',
+    // ---- end media-player ----
   },
 };

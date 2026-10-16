@@ -31,12 +31,13 @@ theme/themes/<id>/
   preview.css.ts    rules adopted into the settings picker's miniature (§1.2)
 ```
 
-Every file except `index.ts` is optional. The **Umbraco** theme is one `index.ts` with an empty
-palette and no sheets at all — every chrome token carries today's value as its CSS fallback, and an
-app token's fallback is carried by the app itself (§3), so setting nothing renders exactly what
-shipped before theming existed. Read
+Every file except `index.ts` is optional. The **Umbraco** theme ships a palette, a `window` sheet and
+a `taskbar` sheet and nothing else, and it is the one to read first: every value in its palette is a
+`--uui-*` reference, so one palette follows the backoffice's Light, Dark and High contrast settings
+with no dark variant of its own, and it answers no app token (§3), so an app's own fallback stays the
+Umbraco look. Read
 [`themes/umbraco/index.ts`](../../src/Umbraco.Community.UmbraDesktop/backoffice/src/desktop/theme/themes/umbraco/index.ts)
-first; it is the shortest complete theme there can be.
+and its `palette.ts`, which is the shortest theme that still has a point of view.
 
 Then register it, and that is the only file outside your folder you touch:
 
@@ -127,10 +128,11 @@ the active one.
 
 ### 1.3 The base is the Umbraco look, and yours probably is not
 
-Every chrome component's own CSS is the **Umbraco** design: its fallbacks are `--uui-*` values, and
-where it has an opinion of its own — how a group of things is labelled, say — that opinion is copied
-from the backoffice, because the identity theme is what it has to render as when a palette sets
-nothing.
+Every chrome component's own CSS is the **Umbraco** design as it was before the theme had a palette
+of its own: its fallbacks are `--uui-*` values, and where it has an opinion of its own — how a group
+of things is labelled, say — that opinion is copied from the backoffice. The Umbraco theme restyles
+that foundation now (a navy caption, round buttons, a tab-shaped taskbar group), but what a palette
+does not set still lands on it, so the foundation stays Umbraco's.
 
 So if your theme imitates an operating system, expect to override rather than inherit wherever the
 two disagree, and prefer looking the part over matching the base. A launcher group heading is the
@@ -281,7 +283,7 @@ shipped once and only macOS showed it, being the one theme that states that colo
 
 Which of the three is in force is Umbraco's setting, not this package's, and this package does not
 store a copy of it: `theme.context.ts` reads core's `UMB_THEME_CONTEXT`, and Desktop settings →
-Appearance → **Backoffice colours** writes back to the same context, which is also what the
+Appearance → **Backoffice theme** writes back to the same context, which is also what the
 current-user modal writes to. So a theme can be tried under all three from one screen, and there is
 no second value to keep in step. The row lists whatever the extension registry holds under type
 `theme`, so a backoffice theme your own package registers shows up there without touching this
@@ -310,6 +312,7 @@ prefix is for:
 | `strip-button-*` | The toolbar buttons in those strips: the path strip's Preview, the pane header's controls and a floating attached window's Dock. Corner radius, the hover fill, text and shadow, and the pressed fill, text and shadow. Separate from a crumb's hover, because a crumb is a link and these are buttons: Windows 98 hovers a crumb in navy and raises a button. A theme that styles the path strip must set the pressed pair, or it gets Umbraco's own "you are here" pink |
 | `dock-zone-*` | The zones inside an owner window where a dragged attached window can dock: border, radius, fill and label colours, and an `active` border, fill and label for the zone under the pointer. Keep the active one strong: it is drawn over a window, often a white one |
 | `task-group-*` | The box on the taskbar around a window's button and its floating attached windows' buttons: gap, padding, border, radius and background |
+| `tray-*` | The system tray at the trailing end of the bar, which holds the tray items and then the clock: `tray-gap`, the space between them. Anything your theme draws around the tray, a well, a push to the edge or a separator, goes on a `.tray` rule in your sheet and never on `.clock`, or the items land outside it. With nothing in it but the clock, the tray has to be the box the clock alone would be. `components/taskbar-tray.test.ts` measures that for the Umbraco theme, and each other shipped theme's `taskbar.test.ts` for its own. Items are centred on the bar, and the clock stretches to the tray's full height. A tray item's flyout should open in the top layer (the popover API or a dialog), since a theme may make the tray a stacking context, as Windows 11 does |
 | `toasts-*`, `toast-*` | The desktop's notifications ([design](../design/2026-09-27-desktop-notifications-design.md)). `toasts-*` places the stack: its `top`, `right`, `bottom` and `left` offsets and its flex `direction`. The default hangs it above the taskbar at the trailing edge and grows it upwards; macOS sets `top`, clears `bottom` to `auto` and turns the direction to `column`, which is all a theme with its bar or a menu bar at the top needs. `toast-*` is one toast's surface: width, background, backdrop, text, border, radius and shadow, each falling back to the matching `launcher-*` token, so a theme that styled its launcher has styled its toasts. `toast-positive-color` is the success edge; the other severities read the `notice-*` colours |
 | `scrollback-*` | The list behind the clock. It is drawn on the `launcher-*` surface outright, so it has only its gap above the bar (`scrollback-bottom`), its radius, and `scrollback-hover-text` for a theme whose launcher hover fill is a selection bar that needs its own text colour, as Windows 98's navy does. There is no horizontal token: the list hangs from wherever your theme puts the clock, measured, so a dock that carries its clock mid-screen needs nothing. The toasts stand aside while it is open |
 | `app-*` | The surface a self-contained app (a game, a calculator, shipped in another package) paints itself with: surface, raised and sunken surfaces, a two-tone bevel edge and its width, corner radius, two text colours, an accent with the text that reads on it, and the UI font |
@@ -319,13 +322,13 @@ chrome group is checked against the CSS that actually reads it, in `tokens.test.
 nothing reads cannot sit there as dead weight. The app group has no reader in this package at all;
 its consumers live in the other packages that ship apps, so it is a published contract instead,
 checked in `app-tokens.test.ts`. That test also holds the one asymmetry worth knowing before you
-touch a palette: every theme other than the Umbraco identity theme must set **all** of the app
+touch a palette: every theme other than the Umbraco theme must set **all** of the app
 tokens, never a subset, because a chrome token's fallback lives in the component that reads it,
 but an app token's fallback lives in the app itself (`UMBRADESKTOP_APP_TOKEN_FALLBACKS`, and those
-values *are* the Umbraco look). The identity theme leans on exactly that: it answers neither group,
-which is what makes "the Umbraco theme is unchanged" a structural guarantee. Any other theme that
+values *are* the Umbraco look). The Umbraco theme leans on exactly that: it answers the chrome group
+and never the app one, so an app under it is the Umbraco look by construction. Any other theme that
 answered the chrome group but not the app one would render a correct desktop around an app painted
-in the identity theme's colours.
+in the Umbraco theme's colours.
 
 Each token is named for the CSS property it feeds, so `titlebar-border-bottom` sets a
 `border-bottom` and `window-border` sets the `border` shorthand. You never have to guess which
@@ -689,10 +692,10 @@ divider does the grouping.
 Two traps if you draw the divider, and the macOS dock walked into both.
 
 **Your theme probably already has a separator, and the two have to match.** The dock's rule before
-the clock is a `border-left`, and the base leaves the clock an inline item sized by its own text, so
-that border came out about 13px tall next to a 42px divider three buttons away. Two rules of
-different heights on one bar read as a rendering fault. Both now take their height from one
-constant, and `theme/themes/macos/taskbar.test.ts` measures the clock's.
+the tray is a `border-left`. It was the clock's, and the base leaves the clock an inline item sized
+by its own text, so that border came out about 13px tall next to a 42px divider three buttons away.
+Two rules of different heights on one bar read as a rendering fault. Both now take their height from
+one constant, and `theme/themes/macos/taskbar.test.ts` measures the tray's.
 
 **Size it to the icons, not to the buttons.** Matching them at the *tile's* height was the first fix
 and it made the dock a row of boxes: the tile is 42px and the glyph inside it is 24px, so a rule
@@ -769,7 +772,7 @@ geometry tokens are the right shape — and between them they cover most of what
 
 | Theme | Launcher | How |
 |---|---|---|
-| Umbraco | Corner panel above the bar | The defaults; sets nothing |
+| Umbraco | Corner panel above the bar | The defaults; the theme leaves the launcher alone |
 | Win98 | Start menu, flush to the corner | `launcher-left: 0`, and `launcher-bottom` left to default to the bar's reserve |
 | Umbraco 4 | Corner panel, same anchor | Also just `launcher-left: 0` — v4 kept its Sections panel exactly there |
 | macOS | Full-screen surface above the dock | A **sheet** rule in `taskbar.css.ts`, since `left`/`right`/`width`/`height` all have to move together |

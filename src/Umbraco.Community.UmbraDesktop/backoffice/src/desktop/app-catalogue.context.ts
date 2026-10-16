@@ -15,6 +15,8 @@ import { deriveApps } from './derive-apps.js';
 import { normaliseRegisteredApps } from './registered-apps.js';
 import type { ManifestUmbraDesktopCatalogue } from './catalogue.extension.js';
 import { normalisePackageCatalogues, type UmbraDesktopPackageCatalogue } from './package-catalogues.js';
+import { mergeNotBeside } from './beside/beside-model.js';
+import { UMBRADESKTOP_VIEWS_NOT_BESIDE } from './beside/not-beside.js';
 import { mergeCatalogues, type UmbraDesktopAppClaim } from './merge-catalogues.js';
 import { isFiniteNumber, isNonEmptyString, isRecord } from './manifest-values.js';
 import { UMBRADESKTOP_SECTION_ALIAS } from './constants.js';
@@ -205,6 +207,17 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
    * returning one back in catalogue order.
    */
   public readonly catalogueGroups = this.#catalogueGroups.asObservable();
+
+  /** Backs {@link viewsNotBeside}. */
+  #viewsNotBeside = new UmbArrayState<string>([], (alias) => alias);
+
+  /**
+   * Every workspace view alias kept out of the Open beside button: the desktop's own list and every
+   * permitted package catalogue's `workspaceViewsNotBeside` (issue #131). Published from here
+   * because this is where package catalogues are read, so a package's list follows its conditions
+   * and its arrival exactly as its launcher entries do.
+   */
+  public readonly viewsNotBeside = this.#viewsNotBeside.asObservable();
 
   /** The catalogue being resolved. */
   #catalogue: UmbraDesktopCatalogue;
@@ -572,11 +585,13 @@ export class UmbraDesktopAppCatalogueContext extends UmbContextBase {
     this.#pendingDiagnostics.clear();
     this.#sections = this.#resolveSections();
     const registered = this.#normaliseRegisteredApps();
+    const packages = this.#normalisePackageCatalogues();
     const merged = mergeCatalogues({
       curated: this.#catalogue,
-      packages: this.#normalisePackageCatalogues(),
+      packages,
       apps: this.#appClaims(registered),
     });
+    this.#viewsNotBeside.setValue([...mergeNotBeside(UMBRADESKTOP_VIEWS_NOT_BESIDE, packages)]);
     for (const report of merged.reports) this.#diagnose(report.key, report.message);
     this.#merged = merged.catalogue;
     this.#entrySources = merged.entrySources;

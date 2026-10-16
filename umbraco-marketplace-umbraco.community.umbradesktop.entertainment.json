@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop Entertainment Add-on",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "Games for UmbraDesktop. An optional add-on that puts Minesweeper, Snake and Solitaire on the desktop, each in a window of its own and themed along with the rest of it.",
+  "Description": "Games and media for UmbraDesktop. An optional add-on that puts Minesweeper, Snake, Solitaire and umbraCoffee on the desktop, each in a window of its own and themed along with the rest of it.",
   "PackageType": "Package",
   "LicenseTypes": [
     "Free"
@@ -34,7 +34,17 @@
     "fun",
     "add-on",
     "themes",
-    "launcher"
+    "launcher",
+    "umbracoffee",
+    "youtube",
+    "community",
+    "media",
+    "live stream",
+    "live-stream",
+    "video-player",
+    "reminders",
+    "search",
+    "guests"
   ],
   "RelatedPackages": [
     {
@@ -50,6 +60,10 @@
   ],
   "Screenshots": [
     {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/entertainment-games.png",
+      "Caption": "All three games at once, each in a window of its own under the Umbraco theme with its own button on the taskbar."
+    },
+    {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/entertainment-games-minesweeper.png",
       "Caption": "Minesweeper in a window of its own, under the Windows 98 theme. It arrives in the launcher's Games group and gets a taskbar button like any other app."
     },
@@ -64,6 +78,14 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Services.Arcade/docs/screenshots/arcade-overview.png",
       "Caption": "The Arcade, which comes with the games: boards you lead, your top threes and colleagues playing, then a tile per game with your best beside the leader. Each game also shows your result and the leaderboard while you play."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/umbracoffee-live.png",
+      "Caption": "umbraCoffee while a show is live: the stream with its own control bar, the episode's title, guest and summary under it, and the Chat and Episodes tabs beside it."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Entertainment/docs/screenshots/umbracoffee-upcoming.png",
+      "Caption": "umbraCoffee before the next show: a countdown where the picture will be, the start time written like the desktop's clock, and the coming episode at the top of the list."
     }
   ]
 }

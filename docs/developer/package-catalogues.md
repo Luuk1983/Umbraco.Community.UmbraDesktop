@@ -21,6 +21,7 @@ sidebar_position: 5
 | A heading of your own in the launcher | A `umbraDesktopCatalogue` group |
 | An app that is its own element, with no backoffice route behind it | A `umbraDesktopApp`. See [desktop-apps.md](desktop-apps.md) |
 | Your section to appear at all | Nothing: any section a user can reach already shows up under More |
+| Settings for what your package adds to the desktop | A `umbraDesktopPackageSettings`. See [package-settings.md](package-settings.md) |
 
 A catalogue is data only. It loads no code, so a static `umbraco-package.json` can carry it as
 well as a bundle can.
@@ -115,8 +116,9 @@ places your group among the desktop's, which are fixed so you can rely on them:
 | Experimental | 70 |
 | More, always last | 9999 |
 
-Accessories, from the Accessories add-on, sits at 55, and Games, from the Arcade add-on that every game
-package brings, at 60. A group without a weight sorts before Editing, so always give one. An entry naming a group nobody defines lands under More.
+Accessories, from the Accessories add-on, sits at 55, Games, from the Arcade that every game add-on
+brings, at 60, and Media, from the Entertainment add-on, at 65. A group without a weight sorts
+before Editing, so always give one. An entry naming a group nobody defines lands under More.
 
 ## 5. Replacing one of the desktop's tiles
 
@@ -177,7 +179,34 @@ The desktop's npm package is private, so copy the declaration. The Entertainment
 `umbradesktop-app.d.ts` is a complete one to start from. The desktop promises that these types only
 ever gain optional fields, so a copy that falls behind still describes a valid manifest.
 
-## 11. Checklist
+## 11. Keeping a workspace view from opening beside the editor
+
+A document window can keep one of its views open beside the editor (see
+[Views beside the editor](../user/windows/views-beside-the-editor.md)). The desktop builds the view
+on its own page and answers everything it asks for from the document window, so most views work
+without changes. It already leaves out views of an editor kind (`contentEditor`,
+`contentTypeDesignEditor`, `collection`, `contentCollection`, `tree`) and views that hold a router of
+their own, which it detects in the rendered view.
+
+If one of your document workspace views is offered and does not work beside the editor, list its alias
+in `workspaceViewsNotBeside`:
+
+```json
+{
+  "type": "umbraDesktopCatalogue",
+  "alias": "My.Package.DesktopCatalogue",
+  "name": "My Package desktop catalogue",
+  "meta": {
+    "workspaceViewsNotBeside": ["My.Package.WorkspaceView.Stats"]
+  }
+}
+```
+
+The field can be the only thing a catalogue carries. Lists from every package add up with the
+desktop's own, so there is nothing for two packages to disagree about. A value that is not a list of
+aliases is ignored, and the console says so.
+
+## 12. Checklist
 
 - [ ] Every entry alias is namespaced, or deliberately one of the desktop's.
 - [ ] Every group has a weight, and a label from your own dictionary.
@@ -185,3 +214,5 @@ ever gain optional fields, so a copy that falls behind still describes a valid m
 - [ ] Each replacement starts from the entry it replaces.
 - [ ] The tile opens in a window with the chrome profile you chose, under all five themes.
 - [ ] The console has no `[UmbraDesktop]` lines about your manifest.
+- [ ] Any document workspace view of yours that breaks beside the editor is in
+      `workspaceViewsNotBeside`.

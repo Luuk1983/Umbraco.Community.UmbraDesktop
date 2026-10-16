@@ -23,7 +23,7 @@ src/Umbraco.Community.UmbraDesktop.Services.Arcade/
   docs/                         high scores: a service package games depend on, never installed alone
 docs/                           UmbraDesktop's docs root (product.json)
   user/<category>/              the user guide, one page per feature
-  developer/                    how it works, theming, apps, catalogues, attached windows
+  developer/                    how it works, theming, apps, catalogues, attached windows, progress
   developer/writing-documentation.md   the rules every docs page follows. Read before writing one
   design/                       dated design docs, one per feature. Not published
   screenshots/                  every screenshot the READMEs, docs and marketplace use

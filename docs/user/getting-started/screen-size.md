@@ -2,7 +2,7 @@
 id: screen-size
 title: Screen size
 description: How much room the desktop needs, and what to expect on smaller screens.
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 # Screen size

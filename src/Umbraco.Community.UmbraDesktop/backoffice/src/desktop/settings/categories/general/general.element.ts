@@ -17,7 +17,8 @@ const REOPEN_CHOICES: ReadonlyArray<{ value: UmbraDesktopReopenWindows; term: st
 
 /**
  * The settings that are not about how the desktop looks: whether you land on it when you sign in,
- * and when it reopens the windows you had open.
+ * when it reopens the windows you had open, and whether a document window offers to open its
+ * workspace view beside the editor.
  *
  * Called General rather than System or Startup on purpose. Startup describes the only setting here
  * and would be wrong the moment a second one arrives; System means machine-level things — display,
@@ -34,6 +35,10 @@ export class UmbraDesktopSettingsGeneralElement extends UmbLitElement {
   @state()
   private _reopenWindows: UmbraDesktopReopenWindows = 'session';
 
+  /** Whether document windows offer to open their workspace view beside the editor. */
+  @state()
+  private _viewsBeside = true;
+
   #settings?: UmbraDesktopSettingsContext;
 
   constructor() {
@@ -43,11 +48,12 @@ export class UmbraDesktopSettingsGeneralElement extends UmbLitElement {
       if (!context) return;
       this.observe(context.bootIntoDesktop, (enabled) => (this._bootIntoDesktop = enabled === true));
       this.observe(context.reopenWindows, (mode) => (this._reopenWindows = mode ?? 'session'));
+      this.observe(context.viewsBeside, (enabled) => (this._viewsBeside = enabled !== false));
     });
   }
 
   /**
-   * Two settings, each with the sentence that stops it looking broken.
+   * Three settings, each with the sentence that stops it looking broken.
    *
    * No sub-headings, unlike the groups under Appearance: each control's own label says what it
    * does, and a heading over a single control would be a label for a label.
@@ -78,6 +84,13 @@ export class UmbraDesktopSettingsGeneralElement extends UmbLitElement {
         @change=${(event: Event) =>
           this.#settings?.setReopenWindows((event.target as HTMLSelectElement).value as UmbraDesktopReopenWindows)}></uui-select>
       <p class="hint">${this.localize.term('umbraDesktop_reopenWindowsDescription')}</p>
+      <uui-toggle
+        class="spaced"
+        label=${this.localize.term('umbraDesktop_viewsBeside')}
+        ?checked=${this._viewsBeside}
+        @change=${(event: Event) =>
+          this.#settings?.setViewsBeside(!!(event.target as HTMLInputElement | null)?.checked)}></uui-toggle>
+      <p class="hint">${this.localize.term('umbraDesktop_viewsBesideDescription')}</p>
     `;
   }
 
@@ -100,6 +113,10 @@ export class UmbraDesktopSettingsGeneralElement extends UmbLitElement {
       uui-select {
         display: block;
         max-width: 240px;
+      }
+      /* The same gap above a toggle that the select's label puts above the select. */
+      .spaced {
+        margin-top: var(--uui-size-space-5);
       }
     `,
   ];

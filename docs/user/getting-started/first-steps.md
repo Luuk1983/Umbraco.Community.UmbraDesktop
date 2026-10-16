@@ -2,7 +2,7 @@
 id: first-steps
 title: First steps
 description: Open the desktop, open an app, and find Desktop settings and the way out.
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 # First steps
@@ -16,6 +16,9 @@ your avatar.
 
 The Desktop section's own tab in the section bar is hidden on purpose, so it does not clutter the
 list. The header icon is the way in.
+
+The first time, the desktop opens on a short [welcome wizard](welcome.md) that asks for your
+language, a theme, and whether to open the desktop when you sign in.
 
 To skip this step every time, turn on
 [Open the desktop when I sign in](../settings/starting-in-the-desktop.md).

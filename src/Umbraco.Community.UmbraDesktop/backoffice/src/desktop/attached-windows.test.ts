@@ -156,6 +156,22 @@ describe('opening attached content', () => {
     expect(heights[1] - heights[0]).to.equal(20);
   });
 
+  it('opens floating when asked to, even where a pane would fit, which is what Shift-click asks', () => {
+    const { ctx, doc } = withDocument();
+    const before = get(ctx, doc).rect;
+    const id = ctx.openAttached(doc, attachedApp(), 'right', { floating: true })!;
+    expect(get(ctx, doc).panes ?? []).to.have.lengthOf(0);
+    expect(get(ctx, doc).rect, 'the owner keeps its size').to.deep.equal(before);
+    expect(get(ctx, id)).to.include({ owner: doc, active: true });
+  });
+
+  it('focuses a kind already open as a pane rather than opening a second one as a window', () => {
+    const { ctx, doc } = withDocument();
+    const first = ctx.openAttached(doc, attachedApp(), 'right');
+    expect(ctx.openAttached(doc, attachedApp(), 'right', { floating: true })).to.equal(first);
+    expect(ctx.getWindows()).to.have.lengthOf(1);
+  });
+
   it('opens nothing new for a kind already open as a pane', () => {
     const { ctx, doc } = withDocument();
     const first = ctx.openAttached(doc, attachedApp(), 'right');

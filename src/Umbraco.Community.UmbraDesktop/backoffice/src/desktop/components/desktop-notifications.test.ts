@@ -86,3 +86,32 @@ it('hands the document its own toasts back when the desktop goes', async () => {
 
   expect(containerRoot.querySelector('style'), 'leaving the desktop lifts the hiding rule').to.equal(null);
 });
+
+/** A layout of the kind a package raises on the desktop, which the desktop draws itself (D15). */
+customElements.define('umbradesktop-test-desktop-layout', class extends HTMLElement {});
+
+/**
+ * Whether core has been told to close a handler; its promise settles inside 'close()'.
+ * @param handler One of core's handlers.
+ * @returns A function that says whether it has closed yet.
+ */
+function closeTracker(handler: { onClose(): Promise<unknown> }): () => boolean {
+  let closed = false;
+  void handler.onClose().then(() => (closed = true));
+  return () => closed;
+}
+
+it('closes what it drew with its own element when the desktop goes, and hands plain ones back', async () => {
+  const desktop = await mountDesktop();
+  await waitUntil(() => containerRoot.querySelector('style'), undefined, POLL_WAIT);
+  const own = context.stay('default', { elementName: 'umbradesktop-test-desktop-layout', data: { message: 'Reminder' } });
+  const plain = context.stay('danger', { data: { message: 'You are offline' } });
+  const ownClosed = closeTracker(own);
+  const plainClosed = closeTracker(plain);
+
+  desktop.remove();
+  await Promise.resolve();
+
+  expect(ownClosed(), 'its buttons would reach for a desktop that has gone').to.equal(true);
+  expect(plainClosed(), 'still true, so the classic backoffice shows it').to.equal(false);
+});

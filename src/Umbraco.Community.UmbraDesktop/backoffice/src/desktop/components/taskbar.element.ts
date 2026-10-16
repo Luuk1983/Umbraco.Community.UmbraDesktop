@@ -1,5 +1,5 @@
 import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
-import { UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
+import { UMBRADESKTOP_CHROME_ICON_PX, UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
 import { taskActivation } from '../window-model';
 import { exitDialogContent } from '../exit-message.js';
 import { formatClock, msUntilNextMinute } from '../clock-format.js';
@@ -15,6 +15,9 @@ import { UMBRADESKTOP_DEFAULT_SETTINGS } from '../settings/settings-store.js';
 import { taskbarRowFeatures } from '../taskbar/features/index.js';
 import type { UmbraDesktopFullscreenState, UmbraDesktopTaskbarFeatureContext } from '../taskbar/features/types';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
+import { UMBRADESKTOP_TRAY_CONTEXT } from '../taskbar/tray/tray.context-token.js';
+import { UmbraDesktopTrayItemsController } from '../taskbar/tray/tray-items.controller.js';
+import type { UmbraDesktopTrayItem } from '../taskbar/tray/tray-items.js';
 import './launcher.element.js';
 import type { UmbraDesktopLauncherConfirm, UmbraDesktopLauncherElement } from './launcher.element.js';
 import './scrollback.element.js';
@@ -24,6 +27,21 @@ import { attentionCount } from '../notifications/scrollback.js';
 import { UMBRADESKTOP_SETTINGS_MODAL } from '../settings/modal-tokens.js';
 import { noticeIconName, windowNotices, worstSeverity } from '../notices/notices.js';
 import type { UmbraDesktopNoticeSeverity } from '../notices/types.js';
+import { progressCaption } from '../progress/progress.js';
+import {
+  UMBRADESKTOP_PROGRESS_OFFSET_PX,
+  UMBRADESKTOP_PROGRESS_TRACK_DEFAULT,
+  progressStyles,
+  renderProgress,
+} from '../progress/progress-view.js';
+
+/**
+ * How far the base pulls a task button's icon left, in px, to balance the transparent padding inside
+ * Umbraco's glyphs. Named because the busy ring has to follow it: the pull leaves the icon hanging
+ * out of the wrapper the ring is drawn against, and a ring sized to the wrapper came out 2px small and
+ * off-centre, which `theme/progress.test.ts` measured.
+ */
+const TASK_ICON_PULL_PX = 2;
 import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import type { PropertyValues } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
@@ -46,9 +64,10 @@ function focusIsInFrame(): boolean {
 
 /**
  * The bottom panel: Umbraco-logo start button (opens the app launcher), running-window
- * buttons, clock, exit. The launcher panel itself (search/favourites/recent/grouped
- * tiles/footer) is `<umbradesktop-launcher>`, mounted here — this element owns the start
- * button, the panel's open/close + dismissal wiring, and every modal the panel asks for.
+ * buttons, the tray with the clock at its end, exit. The launcher panel itself
+ * (search/favourites/recent/grouped tiles/footer) is `<umbradesktop-launcher>`, mounted here — this
+ * element owns the start button, the panel's open/close + dismissal wiring, and every modal the
+ * panel asks for.
  *
  * Modal ownership lives here rather than in the launcher deliberately: the launcher is
  * unmounted on the first pointer down outside it, and Umbraco resolves a modal's contexts
@@ -125,6 +144,19 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   #catalogue?: UmbraDesktopAppCatalogueContext;
 
   /**
+   * The packages' tray item elements: loads one per switched-on item, keeps it, and orders the lot
+   * by appearance (umbraCoffee design D14). `#renderTray` draws its `entries`, keyed by alias.
+   */
+  #trayItems = new UmbraDesktopTrayItemsController(this);
+
+  /**
+   * The packages' tray items as the tray context last listed them, switched on or not. Kept because
+   * the elements depend on two inputs that arrive separately, these and {@link _features}, and a
+   * change to either has to sync against the latest of the other.
+   */
+  #trayItemList: ReadonlyArray<UmbraDesktopTrayItem> = [];
+
+  /**
    * The pending clock repaint, as a `setTimeout` handle rather than an interval: each tick schedules
    * the next one for the moment the minute turns over. Replaced on every tick, and on every other
    * route into {@link #tick}, so only one is ever live.
@@ -162,7 +194,10 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
       // the row while the launcher is still open, and a feature switched off in the settings panel
       // close its space while the panel is still up.
       this.observe(ctx.pinned, (pinned) => (this._pinned = pinned));
-      this.observe(ctx.taskbarFeatures, (features) => (this._features = features ?? {}));
+      this.observe(ctx.taskbarFeatures, (features) => {
+        this._features = features ?? {};
+        this.#syncTrayItems();
+      });
       // Re-ticked rather than left to the timer, which now sleeps until the minute turns over: without
       // this the old format could sit on screen for the best part of a minute and read as broken.
       this.observe(ctx.locale, (locale) => {
@@ -170,6 +205,32 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         this.#tick();
       });
     });
+    this.consumeContext(UMBRADESKTOP_TRAY_CONTEXT, (ctx) => {
+      if (!ctx) return;
+      // Observed, not sampled: a package bundle that registers late, or an item whose conditions
+      // flip, changes the list mid-session, and the tray follows it as the launcher follows apps.
+      this.observe(ctx.items, (items) => {
+        this.#trayItemList = items ?? [];
+        this.#syncTrayItems();
+      });
+    });
+  }
+
+  /**
+   * Bring the tray's package items in line with the latest item list and switches. Called from both
+   * observations rather than from `willUpdate`, so an unrelated render (every clock tick is one) does
+   * not sync. Not awaited: each element joins the tray as it loads, and the controller never rejects.
+   *
+   * It does not wait for the user's stored switches, and it cannot tell whether they have arrived:
+   * the settings context seeds `taskbarFeatures` with the defaults, `{}`, which reads every item as
+   * on. Correctness therefore relies on the desktop not mounting this element until settings are
+   * read (the `_settingsLoaded` gate in `desktop.element.ts`'s `render`). By then the settings
+   * context emits the stored switches, and since it is consumed before the tray context, the first
+   * sync already has them. Mounting the taskbar before that would briefly load, and draw, items the
+   * user switched off.
+   */
+  #syncTrayItems() {
+    void this.#trayItems.sync(this.#trayItemList, this._features);
   }
 
   override connectedCallback() {
@@ -309,14 +370,25 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     // The words, not just the shape: this is the accessible name and the tooltip, so the state is
     // readable to a screen reader and on a monochrome display. `notices[0]` is the worst notice,
     // which is the one the badge is drawing.
-    const label = worst ? `${name} — ${this.localize.term(notices[0].title)}` : name;
+    // Work in progress joins the same sentence, last, so "Media — Unsaved changes — Uploading 14 of
+    // 50" reads in order of what the editor can lose. The ring is decoration for that reason: these
+    // words are what a screen reader and a tooltip get. Issue #108.
+    const caption = progressCaption(
+      w.progress,
+      (key, ...args) => this.localize.term(key, ...args),
+      (value) => this.localize.string(value),
+    );
+    const label = [name, worst ? this.localize.term(notices[0].title) : '', caption].filter(Boolean).join(' — ');
     return html`
       <button
         class="task window ${w.active ? 'active' : ''}"
         title=${label}
         aria-label=${label}
         @click=${() => this.#onTaskClick(w)}>
-        <umb-icon class="task-icon" name=${w.app.icon}></umb-icon>
+        <span class="progress-anchor">
+          <umb-icon class="task-icon" name=${w.app.icon}></umb-icon>
+          ${renderProgress(w.progress, caption, true)}
+        </span>
         <span class="task-label">${name}</span>
         ${this.#renderBadge(worst)}
       </button>
@@ -501,6 +573,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           this.#manager?.unsavedWindows().length ?? 0,
           this.#manager?.conflictedWindows().length ?? 0,
           (key, ...args) => this.localize.term(key, ...args),
+          this.#manager?.busyWindows().length ?? 0,
         ),
         confirmLabel: this.localize.term('umbraDesktop_exitConfirm'),
         cancelLabel: this.localize.term('umbraDesktop_exitStay'),
@@ -647,6 +720,37 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
   }
 
   /**
+   * The system tray: package tray items, then the host's own tray features, then the clock nearest
+   * the corner. Windows lays its corner out the same way, clock and notifications at the edge, quick
+   * settings next, everything else beyond (design D14).
+   *
+   * One box for all of it because every theme that draws a tray draws one box: Windows 98's sunken
+   * well holds the icons and the time together, and a well around the clock alone would leave the
+   * icons outside it. An empty tray renders the clock alone, and must look exactly like the clock did
+   * before the tray existed. `taskbar-tray.test.ts` measures that for the Umbraco theme, which is
+   * the base chrome, and each other shipped theme's `taskbar.test.ts` measures it for its own.
+   *
+   * Always rendered, unlike the feature row, which draws nothing when it is empty: the clock is
+   * always in here, so the tray is never an empty box, only a tray with nothing beside the time.
+   *
+   * Package items go through `repeat` keyed by alias, never as a plain array. Lit matches a plain
+   * array to the page by position, so when an item listed earlier finishes loading later, or one in
+   * the middle is switched off, every element after it would be taken out and put back, disconnecting
+   * it and restarting the item. `taskbar-tray-items.test.ts` pins both cases.
+   * @returns The tray's template.
+   */
+  #renderTray() {
+    const context = this.#featureContext;
+    const host = taskbarRowFeatures('tray', this._features, context).flatMap((feature) => feature.render(context));
+    const items = repeat(
+      this.#trayItems.entries,
+      (entry) => entry.alias,
+      (entry) => entry.element,
+    );
+    return html`<div class="tray">${items}${host}${this.#renderClock()}</div>`;
+  }
+
+  /**
    * The clock, which is also the way into the scrollback, and the dot that says something in there
    * is worth a look.
    *
@@ -695,8 +799,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         <div class="cluster">
           <button
             class="start ${this._panel === 'launcher' ? 'active' : ''}"
-            title="Open apps"
-            aria-label="Open apps"
+            title=${this.localize.term('umbraDesktop_openApps')}
+            aria-label=${this.localize.term('umbraDesktop_openApps')}
             @click=${this.#toggleLauncher}>
             <umb-icon name="icon-umbraco"></umb-icon>
           </button>
@@ -720,13 +824,26 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
             )}
           </div>
         </div>
-        ${this.#renderClock()}
+        ${this.#renderTray()}
       </div>
     `;
   }
 
   static override styles = [
+    progressStyles,
     css`
+      /* The taskbar's colours for the progress ring, from its own tokens: the bar is a dark ground
+         where the caption is a light one, so the fill is the backoffice's current-item pink here
+         rather than the caption's blue, and the failure colour is a lighter red that still reads
+         on navy. Issue #108. */
+      .task .progress {
+        --_progress-fill: var(--umbradesktop-taskbar-progress-fill, var(--uui-color-current, #f5c1bc));
+        --_progress-track: var(--umbradesktop-taskbar-progress-track, ${UMBRADESKTOP_PROGRESS_TRACK_DEFAULT});
+        --_progress-failed: var(--umbradesktop-taskbar-progress-failed, #ff6b8b);
+        /* The ring reaches as far left as the pulled icon does. Same specificity as a theme's strip
+           rule and earlier in the cascade, so a theme drawing a strip positions it unaffected. */
+        left: calc(-1 * var(--umbradesktop-progress-offset, ${UMBRADESKTOP_PROGRESS_OFFSET_PX}px) - ${TASK_ICON_PULL_PX}px);
+      }
       :host {
         position: relative;
         display: block;
@@ -759,7 +876,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
         }
       }
       /* Start + running windows travel together, so a theme can centre them as one group
-         (Windows 11, macOS) while the clock stays pinned to its own edge. The gap is
+         (Windows 11, macOS) while the tray stays pinned to its own edge. The gap is
          inherited from what '.bar' used to apply between them directly: wrapping the two in
          a cluster takes them out of the bar's flex flow, so it has to be restated here or
          the start button ends up sitting against the first task button. */
@@ -939,10 +1056,10 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
          four themes that restate this rule. Every theme's copy was renamed with this one. */
       .task .task-icon {
         flex-shrink: 0;
-        font-size: 18px;
+        font-size: ${UMBRADESKTOP_CHROME_ICON_PX}px;
         /* Umbraco icon glyphs carry transparent padding inside their box, making the space
            before the icon read wider than the space after the label; pull it back to balance. */
-        margin-left: -2px;
+        margin-left: -${TASK_ICON_PULL_PX}px;
       }
       .task-label {
         overflow: hidden;
@@ -1041,6 +1158,30 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           --umbradesktop-notice-info-color,
           var(--umbradesktop-titlebar-dirty-color, var(--umbradesktop-taskbar-text, var(--uui-color-header-contrast)))
         );
+      }
+      /* The tray: package items, host tray features, then the clock. It owns the tray's box so a
+         theme can draw one well around all of it; the clock keeps its own padding and hover, which
+         is what makes a tray holding only the clock the same box the clock used to be. A theme that
+         draws a well, a push or a separator puts it here, never on '.clock', or the first item in
+         the tray lands outside it.
+
+         Items are centred, because an icon is shorter than the bar and would otherwise sit at the
+         top of it beside the time. The clock is not affected: '.clock' says 'align-self: stretch'
+         below, so it still fills the tray top to bottom and its hover covers the whole height. */
+      .tray {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        align-self: stretch;
+        gap: var(--umbradesktop-tray-gap, var(--uui-size-space-1));
+      }
+      /* A tray item says it has nothing to show by setting 'hidden' on itself. A plain rule here
+         would already beat an item's own ':host { display: ... }', because for normal declarations
+         the tree the host sits in wins over the host's shadow root. The '!important' is for an item
+         whose script sets its own 'style.display', which no normal rule outranks. What it cannot
+         beat is an item declaring ':host { display: ... !important }', so a tray item must not. */
+      .tray > [hidden] {
+        display: none !important;
       }
       /* A button now, because it opens the scrollback, so the UA's button face is taken off first and
          the clock still looks like the clock under every theme that styles '.clock'. The font is

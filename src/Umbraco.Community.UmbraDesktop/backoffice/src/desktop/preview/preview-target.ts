@@ -48,3 +48,35 @@ export function previewTargetFromPath(pathname: string): UmbraDesktopPreviewTarg
     segment: segment || undefined,
   };
 }
+
+/**
+ * A document route's workspace view: the edit route, its variant segment, then core's `view/` and
+ * the view's pathname (`UMB_WORKSPACE_VIEW_PATH_PATTERN`). Anything a view routes below itself is
+ * left out, since it does not change which view is on screen.
+ */
+const VIEW_ROUTE = /(\/workspace\/document\/edit\/[0-9a-f-]{36}(?:\/[^/]+)?)\/view\/([^/?#]+)/i;
+
+/**
+ * The pathname of the workspace view a document window shows, read off its route: `info` from
+ * `…/edit/{id}/en-US/view/info`. A split view puts every split's view under the one variant
+ * segment, and this is the one the route names, which is the first split's. Pure.
+ * @param pathname The frame's `location.pathname`.
+ * @returns The view's pathname, or undefined when the route is not a document or names no view,
+ * which is the case while the document shows its first view.
+ */
+export function workspaceViewPathname(pathname: string): string | undefined {
+  const match = VIEW_ROUTE.exec(pathname);
+  return match ? decodeURIComponent(match[2]) : undefined;
+}
+
+/**
+ * A document route with its workspace view taken off, which is the route core shows the editor's
+ * first view on: its workspace editor registers an empty path that repeats the first view. What a
+ * window switches back to once its view has moved beside it. Pure.
+ * @param pathname The frame's `location.pathname`.
+ * @returns The same route without `/view/…`, or the route unchanged when it names no view.
+ */
+export function withoutWorkspaceView(pathname: string): string {
+  const match = VIEW_ROUTE.exec(pathname);
+  return match ? pathname.substring(0, match.index) + match[1] : pathname;
+}

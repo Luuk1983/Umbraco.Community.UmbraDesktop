@@ -1,0 +1,1348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>umbraCoffee Redesign Mock</title>
+<meta name="description" content="Static design mock of the redesigned umbraCoffee app in UmbraDesktop, under all five themes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   Page (the presentation around the mocks)
+   ========================================================================== */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:#e9ebf0;color:#1d2230;font:15px/1.55 Lato,"Helvetica Neue",Helvetica,Arial,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer}
+a{color:inherit;text-decoration:none}
+.page{max-width:1240px;margin:0 auto;padding:48px 24px 96px}
+.kicker{margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5a6072}
+h1{margin:0 0 12px;font-size:36px;line-height:1.12;font-weight:900;letter-spacing:-.01em;color:#141a33}
+.lead{margin:0;font-size:17px;color:#3c4254;max-width:70ch}
+.intro{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:40px;align-items:start;margin-top:32px}
+.changes{margin:0;padding:24px 24px 24px 24px;background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(20,26,51,.08)}
+.changes h2{margin:0 0 12px;font-size:16px}
+.changes ul{margin:0;padding:0 0 0 20px;display:grid;gap:8px;color:#2f3547}
+.changes li::marker{color:#283a97}
+.rules{margin-top:16px;padding-top:16px;border-top:1px solid #e3e5ea;font-size:13px;color:#4a5064}
+.rules b{color:#1d2230}
+section.s{margin-top:80px}
+.s-head{display:flex;align-items:center;gap:16px;margin-bottom:8px}
+.s-num{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#1b264f;color:#fff;font-weight:900;font-size:16px}
+h2.s-title{margin:0;font-size:26px;line-height:1.2;color:#141a33}
+.s-lead{margin:0 0 24px 52px;max-width:74ch;color:#3c4254}
+h3.sub{display:flex;align-items:baseline;gap:12px;margin:48px 0 12px;font-size:18px;color:#141a33}
+h3.sub small{font-size:14px;font-weight:400;color:#5a6072}
+.scene{position:relative;border-radius:16px;padding:40px 32px;overflow:hidden;box-shadow:0 1px 2px rgba(20,26,51,.1)}
+.scene > .win{margin:0 auto;max-width:1040px}
+.scene.tight{padding:32px 24px}
+.notes{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px 32px}
+.notes li{display:flex;gap:12px;font-size:14px;color:#3c4254}
+.notes b{color:#1d2230}
+.pin-n,.pin{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#e5007e;color:#fff;font:700 12px/1 Lato,Arial,sans-serif;flex:none}
+.pin-n.dot{background:#fff;color:#e5007e;box-shadow:inset 0 0 0 2px #e5007e}
+.pin{position:absolute;z-index:6;box-shadow:0 0 0 2px #fff,0 2px 6px rgba(0,0,0,.35);pointer-events:none}
+.has-pin{position:relative}
+.aside-note{margin:12px 0 0;font-size:13px;color:#5a6072}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:24px;align-items:start}
+.decide{margin-top:24px;padding:20px 24px;background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(20,26,51,.08)}
+.decide ol{margin:8px 0 0;padding-left:20px;display:grid;gap:6px}
+
+/* Wallpapers, one per theme, from each theme's own palette. */
+.wp-umbraco{background:radial-gradient(70% 90% at 12% 8%,rgba(53,68,177,.8),transparent 60%),radial-gradient(55% 70% at 92% 18%,rgba(43,195,124,.32),transparent 62%),radial-gradient(70% 80% at 60% 115%,rgba(223,42,93,.38),transparent 60%),linear-gradient(160deg,#10163a,#1b264f 55%,#0c1030)}
+.wp-u4{background:linear-gradient(180deg,#dbe1e8 0%,#bcc6d3 100%)}
+.wp-mac{background:linear-gradient(155deg,#4a3f78 0%,#3b6ea5 55%,#2f8f96 100%)}
+.wp-w11{background:radial-gradient(120% 100% at 50% 42%,#1f5c96 0%,#12356e 45%,#060f2b 100%)}
+.wp-98{background:#008080}
+
+/* "Today" sketch */
+.today{margin:0}
+.today figcaption{margin-top:8px;font-size:13px;color:#5a6072;text-align:center}
+.td-win{background:#fff;border:1px solid #d8d7d9;border-radius:3px;box-shadow:0 6px 16px rgba(0,0,0,.12);overflow:hidden;font-size:10px;color:#060606}
+.td-tb{height:22px;display:flex;align-items:center;padding:0 8px;font-weight:700;border-bottom:1px solid #d8d7d9}
+.td-frame{position:relative;aspect-ratio:16/9;background:linear-gradient(135deg,#3b2b22,#150f0c)}
+.td-frame::before{content:"";position:absolute;left:8px;right:8px;bottom:18px;height:3px;background:linear-gradient(90deg,#f00 38%,rgba(255,255,255,.35) 38%)}
+.td-frame::after{content:"\25B6   \2759\2759    0:10 / 50:19                    CC  \2699  \26F6";position:absolute;left:8px;bottom:4px;color:#fff;font-size:8px;white-space:pre;opacity:.9}
+.td-yt{position:absolute;top:6px;left:8px;color:#fff;font-size:8px;opacity:.9}
+.td-bar{display:flex;gap:8px;padding:6px 8px;border-bottom:1px solid #999}
+.td-bar b{flex:1}
+.td-bar span{color:#666}
+.td-list{padding:4px 8px}
+.td-list div{display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid #aaa}
+.td-list div:first-child{border-top:0}
+.td-foot{margin:4px 8px 8px;padding:6px;background:#f3f3f5;box-shadow:0 0 0 1px #999;color:#444}
+
+/* ==========================================================================
+   Icons
+   ========================================================================== */
+.i{width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+
+/* ==========================================================================
+   Theme tokens. Window chrome first, then the app, then the player.
+   ========================================================================== */
+.t-umbraco{
+  --w-bg:#fff;--w-border:1px solid #d8d7d9;--w-radius:3px;
+  --w-shadow:0 12px 24px rgba(0,0,0,.3),0 6px 16px rgba(0,0,0,.1),0 0 2px rgba(0,0,0,.1);
+  --tb-h:40px;--tb-pad:9px;--tb-bg:#fff;--tb-border:1px solid #d8d7d9;--tb-text:#060606;--tb-fs:14px;--tb-fw:700;--tb-icon:18px;--c-w:46px;--c-color:#060606;
+  --font:Lato,"Helvetica Neue",Helvetica,Arial,sans-serif;--fs:14px;
+  --text:#060606;--muted:#515054;--disabled:#9b9b9b;--app-bg:#f3f3f5;--head-bg:#fff;--head-border:1px solid #d8d7d9;
+  --surface:#fff;--sunken:#f3f3f5;--line:#e4e4e6;--border:#d8d7d9;--radius:3px;--card-radius:3px;
+  --card-shadow:0 1px 6px rgba(0,0,0,.1),0 0 1px rgba(0,0,0,.1);
+  --accent:#283a97;--accent-soft:#eceefa;--interactive:#1b264f;--live:#d0003b;--link:#1b264f;--sel-bg:#f3f3f5;--icon-color:#1b264f;
+  --bar-bg:#fff;--bar-text:#060606;--bar-icon:#1b264f;--bar-muted:#515054;--track:#d8d7d9;--fill:#283a97;--buf:#b3b3b8;
+  --knob:#283a97;--knob-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.35);--play-bg:#1b264f;--play-fg:#fff;--play-radius:3px;
+  --btn-hover:#f3f3f5;--on-color:#283a97;--on-bg:#eceefa;--golive-bg:#1b264f;--golive-fg:#fff;
+}
+.t-u4{
+  --w-bg:#f8f7f4;--w-border:1px solid #8f8a80;--w-radius:3px;--w-shadow:0 6px 20px rgba(28,36,48,.32);
+  --tb-h:25px;--tb-pad:7px;--tb-bg:linear-gradient(180deg,#fbfaf7 0%,#f1efea 48%,#ddd9d0 100%);--tb-border:1px solid #b4afa4;--tb-text:#2c2a26;--tb-fs:11px;--tb-fw:700;--tb-icon:15px;--c-w:26px;--c-color:#57534b;
+  --font:Verdana,Geneva,Tahoma,"DejaVu Sans",sans-serif;--fs:11px;
+  --text:#2c2a26;--muted:#6b675f;--disabled:#a39f96;--app-bg:#f8f7f4;--head-bg:#fff;--head-border:1px solid #d3cec3;
+  --surface:#fff;--sunken:#f8f7f4;--line:#d3cec3;--border:#9d988e;--radius:2px;--card-radius:0;--card-shadow:none;--card-border:1px solid #b4afa4;
+  --accent:#7ba7d4;--accent-soft:#cfe3f5;--interactive:#2c2a26;--live:#b23a2d;--link:#1f4e8c;--sel-bg:#cfe3f5;--icon-color:#57534b;
+  --bar-text:#2c2a26;--bar-icon:#2c2a26;--bar-muted:#6b675f;
+}
+.t-mac{
+  --w-bg:#fff;--w-border:1px solid rgba(0,0,0,.16);--w-radius:10px;--w-shadow:0 16px 40px rgba(0,0,0,.34);
+  --tb-h:30px;--tb-pad:10px;--tb-bg:linear-gradient(#f8f8f8,#e8e8e8);--tb-border:1px solid #cfcfcf;--tb-text:#4d4d4d;--tb-fs:11px;--tb-fw:600;--tb-icon:0px;--c-w:12px;--c-color:#4d4d4d;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;--fs:13px;
+  --text:#1d1d1f;--muted:#6e6e73;--disabled:#b0b0b5;--app-bg:#f5f5f7;--head-bg:#fff;--head-border:1px solid rgba(0,0,0,.1);
+  --surface:#fff;--sunken:#e8e8ed;--line:rgba(0,0,0,.1);--border:#7f7f85;--radius:6px;--card-radius:10px;
+  --card-shadow:0 0 0 .5px rgba(0,0,0,.14),0 1px 3px rgba(0,0,0,.08);
+  --accent:#0067cc;--accent-soft:#e5f0fb;--interactive:#0067cc;--live:#d70015;--link:#0067cc;--sel-bg:#e8e8ed;--icon-color:#3a3a3c;
+}
+.t-w11{
+  --w-bg:#202020;--w-border:1px solid rgba(255,255,255,.09);--w-radius:8px;--w-shadow:0 16px 40px rgba(0,0,0,.6);
+  --tb-h:32px;--tb-pad:12px;--tb-bg:#202020;--tb-border:0;--tb-text:#fff;--tb-fs:12px;--tb-fw:400;--tb-icon:16px;--c-w:46px;--c-color:#fff;
+  --font:"Segoe UI Variable Text","Segoe UI",-apple-system,system-ui,"Noto Sans",sans-serif;--fs:14px;
+  --text:#fff;--muted:#c5c5c5;--disabled:#6f6f6f;--app-bg:linear-gradient(135deg,#262b35 0%,#202020 55%,#1f1f22 100%);--head-bg:transparent;--head-border:0;
+  --surface:rgba(255,255,255,.045);--sunken:#1c1c1c;--line:rgba(255,255,255,.08);--border:#8a8a8a;--radius:4px;--card-radius:8px;
+  --card-shadow:none;--card-border:1px solid rgba(255,255,255,.08);
+  --accent:#4cc2ff;--accent-soft:rgba(76,194,255,.16);--interactive:#4cc2ff;--live:#c42b1c;--link:#4cc2ff;--sel-bg:rgba(255,255,255,.06);--icon-color:#fff;
+}
+.t-98{
+  --w-bg:#c0c0c0;--w-border:0;--w-radius:0;
+  --b-raised:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf;
+  --b-pressed:inset -1px -1px #fff,inset 1px 1px #000,inset -2px -2px #dfdfdf,inset 2px 2px #808080;
+  --b-sunken:inset -1px -1px #fff,inset 1px 1px #808080,inset -2px -2px #dfdfdf,inset 2px 2px #000;
+  --b-field:inset 1px 1px #808080,inset -1px -1px #fff;
+  --dither:repeating-conic-gradient(#fff 0 25%,#c0c0c0 0 50%) 0 0/2px 2px;
+  --w-shadow:var(--b-raised);
+  --tb-h:22px;--tb-pad:2px;--tb-bg:linear-gradient(to right,#000080,#1084d0);--tb-border:0;--tb-text:#fff;--tb-fs:11px;--tb-fw:700;--tb-icon:14px;--c-w:20px;--c-color:#000;
+  --font:"MS Sans Serif","Microsoft Sans Serif",Tahoma,Verdana,sans-serif;--fs:11px;
+  --text:#000;--muted:#4d4d4d;--disabled:#808080;--app-bg:#c0c0c0;--head-bg:#c0c0c0;--head-border:0;
+  --surface:#c0c0c0;--sunken:#fff;--line:#808080;--border:#000;--radius:0;--card-radius:0;--card-shadow:none;
+  --accent:#000080;--accent-soft:#000080;--interactive:#000080;--live:#800000;--link:#000080;--sel-bg:#000080;--icon-color:#000;
+}
+
+/* ==========================================================================
+   Window chrome, shared shape
+   ========================================================================== */
+.win{position:relative;display:flex;flex-direction:column;overflow:hidden;background:var(--w-bg);border:var(--w-border);border-radius:var(--w-radius);box-shadow:var(--w-shadow)}
+.tb{position:relative;flex:none;display:flex;align-items:center;justify-content:space-between;gap:6px;height:var(--tb-h);padding-left:var(--tb-pad);background:var(--tb-bg);border-bottom:var(--tb-border);color:var(--tb-text)}
+.tb-title{display:inline-flex;align-items:center;gap:6px;min-width:0;font-family:var(--font);font-weight:var(--tb-fw);font-size:var(--tb-fs);color:var(--tb-text);white-space:nowrap}
+.tb-title .i{font-size:var(--tb-icon)}
+.tb-ctrls{display:inline-flex;align-self:stretch;flex:none}
+.c{display:inline-flex;align-items:center;justify-content:center;width:var(--c-w);height:100%;color:var(--c-color)}
+.g{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.2;stroke-linecap:square}
+.g-reload{width:16px;height:16px;stroke-width:1.6;stroke-linecap:round}
+.win-body{flex:1;min-height:0;display:flex;flex-direction:column}
+
+/* Umbraco 4 chrome */
+.t-u4 .tb-title{text-shadow:0 1px 0 rgba(255,255,255,.75)}
+.t-u4 .c.reload{margin-right:4px}
+
+/* macOS chrome: lights on the left, title centred on the bar, no app icon */
+.t-mac .tb{justify-content:flex-start;padding:0 10px}
+.t-mac .tb-ctrls{order:-1;align-self:center;align-items:center;gap:8px;margin-right:8px}
+.t-mac .tb-title{position:absolute;inset:0;justify-content:center;pointer-events:none}
+.t-mac .tb-title .i{display:none}
+.t-mac .c{position:relative;width:12px;height:12px;border-radius:50%;border:.5px solid rgba(0,0,0,.16)}
+.t-mac .c .g{display:none}
+.t-mac .c.close{order:1;background:#ff5f57}
+.t-mac .c.min{order:2;background:#febc2e}
+.t-mac .c.max{order:3;background:#28c840}
+.t-mac .c.reload{order:4;width:22px;height:22px;margin-left:10px;border:0;color:#4d4d4d}
+.t-mac .c.reload .g{display:block;width:14px;height:14px}
+
+/* Windows 11 chrome */
+.t-w11 .tb-title .i{stroke-width:1.5}
+
+/* Windows 98 chrome: raised frame, navy caption, bevelled caption buttons, sunken body well */
+.t-98 .win{padding:3px}
+.t-98 .tb{gap:2px}
+.t-98 .tb-ctrls{align-self:center;align-items:center;margin-right:2px}
+.t-98 .c{height:18px;background:#c0c0c0;box-shadow:var(--b-raised)}
+.t-98 .c.reload{margin-right:2px}
+.t-98 .c.close{margin-left:2px}
+.t-98 .g{width:12px;height:12px;stroke-width:1;shape-rendering:crispEdges;stroke-linecap:butt}
+.t-98 .g-reload{stroke-width:1.4;shape-rendering:geometricPrecision}
+.t-98 .win-body{padding:2px;box-shadow:var(--b-sunken)}
+.t-98 .i{stroke-width:1.6}
+
+/* ==========================================================================
+   The app: layout
+   ========================================================================== */
+.app{container-name:app bar;container-type:inline-size;flex:1;min-height:0;background:var(--app-bg);color:var(--text);font-family:var(--font);font-size:var(--fs);line-height:1.45}
+.app-head{display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--head-bg);border-bottom:var(--head-border)}
+.head-main{flex:1;min-width:0}
+.eyebrow{display:flex;align-items:center;gap:8px;min-height:20px;font-size:12px;color:var(--muted);white-space:nowrap}
+.eyebrow .meta{overflow:hidden;text-overflow:ellipsis}
+.ep-title{margin:4px 0 0;font-size:20px;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.pill{display:inline-flex;align-items:center;gap:6px;flex:none;height:20px;padding:0 8px;border-radius:10px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1}
+.pill i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill .i{font-size:12px;stroke-width:2}
+.pill.live{background:var(--live);color:#fff}
+.pill.next{background:var(--accent-soft);color:var(--accent)}
+.pill.neutral{background:var(--sunken);color:var(--text);box-shadow:inset 0 0 0 1px var(--border)}
+.hosts{display:flex;align-items:center;gap:8px;flex:none}
+.avs{display:flex}
+.av{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--c);color:#fff;font-size:12px;font-weight:700;box-shadow:0 0 0 2px var(--av-ring,#fff)}
+.av+.av{margin-left:-6px}
+.hosts-t{display:grid;line-height:1.3}
+.hosts-t b{font-size:13px}
+.hosts-t small{font-size:12px;color:var(--muted)}
+.icon-btn{display:inline-grid;place-items:center;flex:none;width:32px;height:32px;border-radius:var(--radius);color:var(--icon-color)}
+.icon-btn .i{font-size:18px}
+.icon-btn.sm{width:28px;height:28px}
+.icon-btn.sm .i{font-size:15px}
+.head-sep{width:1px;align-self:stretch;margin:4px 0;background:var(--line)}
+
+.app-main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;padding:16px;align-items:stretch}
+.app-main.solo{grid-template-columns:minmax(0,1fr)}
+.col{display:grid;gap:16px;align-content:start;min-width:0}
+.player{container:bar/inline-size;position:relative;min-width:0;background:var(--surface);border-radius:var(--card-radius);box-shadow:var(--card-shadow);border:var(--card-border,0);overflow:hidden}
+.stage-well{position:relative}
+.stage{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}
+.panel{contain:size;display:flex;flex-direction:column;min-width:0;background:var(--surface);border-radius:var(--card-radius);box-shadow:var(--card-shadow);border:var(--card-border,0);overflow:hidden}
+.panel-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.card{background:var(--surface);border-radius:var(--card-radius);box-shadow:var(--card-shadow);border:var(--card-border,0)}
+
+/* The YouTube frame placeholder. Everything inside .yt is YouTube's, not ours. */
+.thumb,.yt,.hero-art{--fb:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-opacity='.4' stroke-width='.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 5.5c-.9-.9.9-1.6 0-2.5M8.5 5.5c-.9-.9.9-1.6 0-2.5M2.5 7.5h8v2.5a3 3 0 0 1-3 3h-2a3 3 0 0 1-3-3zM10.5 8.5h.75a1.5 1.5 0 0 1 0 3h-1M1.5 14.5h11'/%3E%3C/svg%3E") center/30% no-repeat,radial-gradient(120% 90% at 18% 12%,hsl(var(--h) 60% 48%) 0%,transparent 60%),linear-gradient(135deg,hsl(var(--h) 48% 30%),hsl(calc(var(--h) + 36) 52% 12%))}
+.thumb{position:relative;display:block;aspect-ratio:16/9;background:var(--img) center/cover no-repeat,var(--fb);overflow:hidden}
+.yt{position:absolute;inset:0;background:var(--img) center/cover no-repeat,var(--img2) center/cover no-repeat,var(--fb);font-family:Roboto,Arial,sans-serif}
+.yt-top{position:absolute;top:12px;left:12px;right:12px;display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;text-shadow:0 1px 2px rgba(0,0,0,.6);opacity:.92}
+.yt-av{flex:none;width:28px;height:28px;border-radius:50%;background:#5b3a29 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 7.5h8v2.5a3 3 0 0 1-3 3h-2a3 3 0 0 1-3-3zM10.5 8.5h.75a1.5 1.5 0 0 1 0 3h-1'/%3E%3C/svg%3E") center/60% no-repeat;box-shadow:0 0 0 1px rgba(255,255,255,.3)}
+.yt-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.yt-mark{position:absolute;right:12px;bottom:10px;display:flex;align-items:center;gap:4px;color:#fff;font:700 12px/1 Roboto,Arial,sans-serif;letter-spacing:-.02em;opacity:.7;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.yt-logo{display:inline-block;width:18px;height:13px;border-radius:3px;background:#f00;position:relative}
+.yt-logo::after{content:"";position:absolute;left:7px;top:3.5px;border-left:5px solid #fff;border-top:3px solid transparent;border-bottom:3px solid transparent}
+.frame-label{position:absolute;left:0;top:0;font:700 10px/1 Lato,Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(229,0,126,.0)}
+
+/* ==========================================================================
+   Side panel: tabs, chat frame, episodes
+   ========================================================================== */
+.tabs{position:relative;flex:none;display:flex;gap:4px;height:48px;padding:0 8px;border-bottom:1px solid var(--line)}
+.tab{position:relative;display:inline-flex;align-items:center;gap:8px;padding:0 12px;font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap}
+.tab .i{font-size:16px}
+.tab.on{color:var(--text)}
+.tab.on::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--accent)}
+.tab.off{color:var(--disabled);cursor:not-allowed}
+.tab-hint{font-size:11px;font-weight:400}
+.tab-count{display:inline-grid;place-items:center;min-width:20px;height:18px;padding:0 6px;border-radius:9px;background:var(--sunken);color:var(--muted);font-size:11px}
+.chat-cap{position:relative;flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px 6px 16px;font-size:12px;color:var(--muted)}
+.frame-tag{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.frame-tag .yt-logo{transform:scale(.85)}
+
+.ytchat{flex:1;min-height:0;display:flex;flex-direction:column;margin:0 8px 8px;border:1px solid #e5e5e5;border-radius:4px;background:#fff;color:#0f0f0f;font:13px/1.4 Roboto,Arial,sans-serif;overflow:hidden}
+.ytc-head{flex:none;display:flex;align-items:center;gap:4px;height:40px;padding:0 12px;border-bottom:1px solid #e5e5e5;font-size:14px;font-weight:500}
+.ytc-head .i{font-size:14px}
+.ytc-head .sp{flex:1}
+.ytc-head .dots{letter-spacing:1px;color:#606060}
+.ytc-list{flex:1;min-height:0;list-style:none;margin:0;padding:8px 12px;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;overflow:hidden}
+.ytc-list li{display:flex;gap:10px;align-items:flex-start}
+.ytc-av{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--c);color:#fff;font-size:11px}
+.ytc-name{color:#606060;font-weight:500;margin-right:6px}
+.ytc-name.host{background:#e8eaf6;color:#3949ab;padding:0 4px;border-radius:2px}
+.ytc-foot{flex:none;display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid #e5e5e5}
+.ytc-foot .ytc-av{width:24px;height:24px}
+.ytc-input{flex:1;display:flex;align-items:center;height:32px;padding:0 12px;border-radius:16px;background:#f2f2f2;color:#606060}
+.ytc-count{font-size:11px;color:#606060}
+.ytchat.dark{background:#0f0f0f;color:#f1f1f1;border-color:#303030}
+.ytchat.dark .ytc-head,.ytchat.dark .ytc-foot{border-color:#303030}
+.ytchat.dark .ytc-name{color:#aaa}
+.ytchat.dark .ytc-name.host{background:#263159;color:#c5cae9}
+.ytchat.dark .ytc-input{background:#272727;color:#aaa}
+.ytchat.dark .ytc-count,.ytchat.dark .ytc-head .dots{color:#aaa}
+
+.eps{flex:1;min-height:0;list-style:none;margin:0;padding:8px;display:grid;gap:2px;align-content:start;overflow:hidden}
+.ep{display:grid;grid-template-columns:112px minmax(0,1fr);gap:12px;align-items:center;padding:8px;border-radius:var(--radius)}
+.ep .thumb{border-radius:2px}
+.ep-t{font-size:13px;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ep-d{margin-top:2px;font-size:12px;color:var(--muted)}
+.ep-d b{font-weight:700;color:var(--accent)}
+.ep.cur{background:var(--sel-bg);box-shadow:inset 3px 0 0 var(--accent)}
+.ep.next .ep-d b{color:var(--accent)}
+.dur{position:absolute;right:4px;bottom:4px;padding:0 4px;border-radius:2px;background:rgba(0,0,0,.8);color:#fff;font:700 11px/16px Lato,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.dur.sched{background:var(--interactive)}
+.eps-all{position:relative;flex:none;display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-top:1px solid var(--line);font-size:13px;font-weight:700;color:var(--link)}
+.eps-all .i{font-size:15px}
+
+/* ==========================================================================
+   The media player control bar (shared component, default arrangement)
+   ========================================================================== */
+.cb{position:relative;display:grid;gap:2px;padding:6px 12px 8px;background:var(--bar-bg);color:var(--bar-text)}
+.cb-seek{display:flex;align-items:center;height:16px}
+.cb-track{position:relative;flex:1;height:4px;border-radius:2px;background:var(--track)}
+.cb-track.chap{display:flex;gap:3px;background:none}
+.seg{position:relative;height:4px;border-radius:2px;background:var(--track);overflow:hidden}
+.seg i,.cb-fill,.cb-buf{position:absolute;left:0;top:0;bottom:0;border-radius:inherit}
+.seg i,.cb-fill{background:var(--fill)}
+.cb-buf{background:var(--buf)}
+.cb-knob{position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--knob);box-shadow:var(--knob-shadow)}
+.cb-row{display:flex;align-items:center;gap:2px;height:36px;min-width:0}
+.cb-play{display:grid;place-items:center;flex:none;width:36px;height:36px;margin-right:6px;border-radius:var(--play-radius);background:var(--play-bg);color:var(--play-fg)}
+.cb-play .i{font-size:18px}
+.cb-btn{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:var(--radius);color:var(--bar-icon)}
+.cb-btn .i{font-size:20px}
+.cb-btn.is-on{color:var(--on-color);background:var(--on-bg)}
+.cb-btn.is-hover{background:var(--btn-hover)}
+.cb-slider{position:relative;flex:none;width:56px;height:4px;margin:0 10px 0 4px;border-radius:2px;background:var(--track)}
+.cb-slider i{position:absolute;left:0;top:0;bottom:0;border-radius:inherit;background:var(--fill)}
+.cb-slider b{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--knob);box-shadow:var(--knob-shadow)}
+.cb-st{flex:none;min-width:36px;font-size:12px;color:var(--bar-muted);font-variant-numeric:tabular-nums}
+.cb-st:first-child{margin-right:10px;color:var(--bar-text)}
+.cb-st.r{margin-left:10px;text-align:right}
+.t-u4 .cb-st{font-size:11px}
+.cb-time{padding:0 8px;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.cb-time span{color:var(--bar-muted)}
+.cb-chapter{display:inline-flex;align-items:center;gap:6px;min-width:0;padding-left:6px;font-size:13px;color:var(--bar-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cb-chapter .i{font-size:14px}
+.cb-live{display:inline-flex;align-items:center;gap:6px;flex:none;height:24px;margin-left:2px;padding:0 8px;border-radius:var(--radius);font-size:12px;font-weight:700;letter-spacing:.06em}
+.cb-live i{width:8px;height:8px;border-radius:50%;background:var(--live)}
+.cb-live.behind{color:var(--bar-muted)}
+.cb-live.behind i{background:var(--bar-muted)}
+.cb-behind{font-size:12px;color:var(--bar-muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.cb-golive{display:inline-flex;align-items:center;gap:6px;flex:none;height:28px;margin-left:8px;padding:0 10px;border-radius:var(--radius);background:var(--golive-bg);color:var(--golive-fg);font-size:12px;font-weight:700;white-space:nowrap}
+.cb-golive i{width:7px;height:7px;border-radius:50%;background:#ff4d7a}
+.cb-grow{flex:1;min-width:4px}
+.cb-div{flex:none;width:1px;height:20px;margin:0 8px;background:var(--line)}
+.cb-yt{display:inline-flex;align-items:center;gap:6px;flex:none;height:32px;padding:0 8px;border-radius:var(--radius);color:var(--link);font-size:13px;font-weight:700;white-space:nowrap}
+.cb-yt .i{font-size:16px}
+.cb-speed{width:auto;padding:0 8px;font-size:12px;font-weight:700}
+.cb-more{display:none}
+.cb-msg{display:inline-flex;align-items:center;gap:6px;padding-left:4px;font-size:13px;color:var(--bar-muted);white-space:nowrap;overflow:hidden}
+.cb-msg .i{font-size:15px}
+.cb-file{display:inline-flex;align-items:center;gap:6px;min-width:0;padding:0 8px;height:24px;border-radius:var(--radius);background:var(--sunken);font-size:12px;color:var(--bar-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cb-file .i{font-size:14px;color:var(--bar-muted)}
+.cb .dis,.cb [aria-disabled=true]{opacity:.38}
+.cb .dis-track{opacity:.5}
+
+/* Umbraco 4 player: raised v4 buttons, white well scrubber, small gradients */
+.t-u4 .cb{padding:6px 8px 6px;gap:4px;background:linear-gradient(180deg,#f7f6f2 0%,#ebe8e2 45%,#dcd8d0 100%);border-top:1px solid #b4afa4}
+.t-u4 .cb-track,.t-u4 .seg{height:8px;border-radius:0;background:#fff;box-shadow:inset 0 0 0 1px #9d988e,inset 0 2px 2px rgba(0,0,0,.08)}
+.t-u4 .cb-track.chap{background:none;box-shadow:none;gap:2px}
+.t-u4 .cb-fill,.t-u4 .seg i,.t-u4 .cb-slider i{background:linear-gradient(180deg,#bcd5ee,#7ba7d4);box-shadow:inset 0 0 0 1px #5f8fbf}
+.t-u4 .cb-knob{width:10px;height:16px;margin:-8px 0 0 -5px;border-radius:2px;background:linear-gradient(180deg,#fbfaf7,#f1efea 48%,#ddd9d0);box-shadow:inset 0 0 0 1px #8f8a80,inset 0 2px 0 -1px #fff}
+.t-u4 .cb-row{height:26px;gap:3px}
+.t-u4 .cb-btn,.t-u4 .cb-play{width:26px;height:24px;margin:0;border-radius:2px;color:#2c2a26;background:linear-gradient(180deg,#fbfaf7 0%,#f1efea 48%,#ddd9d0 100%);box-shadow:inset 0 0 0 1px #9d988e,inset 0 2px 0 -1px #fff}
+.t-u4 .cb-play{width:34px;margin-right:4px}
+.t-u4 .cb-btn .i,.t-u4 .cb-play .i{font-size:14px;stroke-width:1.6}
+.t-u4 .cb-btn.is-on{background:#cfe3f5;box-shadow:inset 0 0 0 1px #7ba7d4}
+.t-u4 .cb-slider{height:6px;border-radius:0;background:#fff;box-shadow:inset 0 0 0 1px #9d988e}
+.t-u4 .cb-slider b{width:8px;height:12px;margin:-6px 0 0 -4px;border-radius:2px;background:linear-gradient(180deg,#fbfaf7,#ddd9d0);box-shadow:inset 0 0 0 1px #8f8a80}
+.t-u4 .cb-live{height:18px;border-radius:2px;background:linear-gradient(180deg,#d4574a 0%,#b23a2d 100%);color:#fff;font-size:10px;margin-left:6px;box-shadow:inset 0 0 0 1px #92291d}
+.t-u4 .cb-live i{width:6px;height:6px;background:#fff}
+.t-u4 .cb-div{background:#b4afa4;box-shadow:1px 0 0 #fff}
+.t-u4 .cb-yt{height:24px;font-size:11px;font-weight:400;text-decoration:underline}
+.t-u4 .cb-st{flex:none;min-width:36px;font-size:12px;color:var(--bar-muted);font-variant-numeric:tabular-nums}
+.cb-st:first-child{margin-right:10px;color:var(--bar-text)}
+.cb-st.r{margin-left:10px;text-align:right}
+.t-u4 .cb-st{font-size:11px}
+.cb-time{font-size:11px}
+.t-u4 .app-head{padding:8px 12px}
+.t-u4 .ep-title{font-size:15px;margin-top:3px}
+.t-u4 .eyebrow{font-size:11px}
+.t-u4 .pill{height:16px;border-radius:2px;font-size:10px;padding:0 6px}
+.t-u4 .pill.live{background:linear-gradient(180deg,#d4574a 0%,#b23a2d 100%);box-shadow:inset 0 0 0 1px #92291d}
+.t-u4 .av{border-radius:2px;width:24px;height:24px;font-size:11px}
+.t-u4 .av+.av{margin-left:2px}
+.t-u4 .hosts-t b{font-size:11px}
+.t-u4 .hosts-t small{font-size:10px}
+.t-u4 .icon-btn{width:26px;height:24px;border-radius:2px;background:linear-gradient(180deg,#fbfaf7 0%,#f1efea 48%,#ddd9d0 100%);box-shadow:inset 0 0 0 1px #9d988e,inset 0 2px 0 -1px #fff}
+.t-u4 .icon-btn .i{font-size:14px;stroke-width:1.6}
+.t-u4 .app-main{padding:12px;gap:12px}
+.t-u4 .panel{box-shadow:none;border:0;background:transparent}
+.t-u4 .tabs{height:auto;padding:0 0 0 6px;gap:2px;align-items:flex-end;border-bottom:1px solid #b4afa4}
+.t-u4 .tab{height:23px;padding:0 10px;font-size:11px;font-weight:400;color:#2c2a26;background:linear-gradient(180deg,#fbfaf7 0%,#ebe8e2 100%);border:1px solid #b4afa4;border-bottom:0;border-radius:3px 3px 0 0}
+.t-u4 .tab .i{font-size:13px;stroke-width:1.6}
+.t-u4 .tab.on{height:26px;margin-bottom:-1px;background:#fff;font-weight:700}
+.t-u4 .tab.on::after{display:none}
+.t-u4 .tab.off{color:#a39f96}
+.t-u4 .panel-body{background:#fff;border:1px solid #b4afa4;border-top:0}
+.t-u4 .chat-cap{font-size:10px;padding:4px 6px 4px 10px;background:linear-gradient(180deg,#f7f6f2,#ebe8e2);border-bottom:1px solid #d3cec3;margin-bottom:6px}
+.t-u4 .chat-cap .icon-btn{width:22px;height:20px}
+.t-u4 .chat-cap .icon-btn .i{font-size:12px}
+.t-u4 .ytchat{margin:0 6px 6px;border-radius:0}
+
+/* macOS player: QuickTime and Music. Transport, an LCD well, tools. Below the picture, never on it. */
+.cbmac{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 12px;background:linear-gradient(180deg,rgba(252,252,253,.97),rgba(240,240,243,.97));border-top:1px solid rgba(0,0,0,.1);color:#1d1d1f;font-family:var(--font)}
+.m-l,.m-r{display:flex;align-items:center;gap:2px}
+.m-play{display:grid;place-items:center;width:36px;height:36px;color:#1d1d1f}
+.m-play .i{font-size:26px}
+.cbmac .cb-btn{width:28px;height:28px;border-radius:6px;color:#3a3a3c}
+.cbmac .cb-btn .i{font-size:19px;stroke-width:1.6}
+.cbmac .cb-btn.is-on{color:#0067cc;background:rgba(0,103,204,.1)}
+.m-lcd{display:grid;align-content:center;gap:3px;min-width:0;height:48px;padding:4px 12px;border-radius:7px;background:linear-gradient(180deg,#eeeef1,#e5e5ea);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2),inset 0 1px 2px rgba(0,0,0,.06);text-align:center}
+.m-lcd-t{display:grid;line-height:1.25;min-width:0}
+.m-lcd-t b{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-lcd-t span{font-size:11px;color:#6e6e73;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-lcd-s{display:flex;align-items:center;gap:8px;font-size:10px;color:#6e6e73;font-variant-numeric:tabular-nums}
+.m-lcd-s .cb-track{height:3px;background:rgba(0,0,0,.14)}
+.m-lcd-s .cb-fill{background:#6e6e73}
+.m-t{min-width:34px}
+.m-live{display:inline-flex;align-items:center;gap:4px;color:#d70015;font-weight:700;letter-spacing:.04em}
+.m-live i{width:6px;height:6px;border-radius:50%;background:#d70015}
+.m-vol{display:flex;align-items:center;gap:6px;margin-right:6px;color:#3a3a3c}
+.m-vol .i{font-size:17px;stroke-width:1.6}
+.m-vol .cb-slider{width:64px;height:3px;margin:0;background:rgba(0,0,0,.16)}
+.m-vol .cb-slider i{background:#6e6e73}
+.m-vol .cb-slider b{width:12px;height:12px;margin:-6px 0 0 -6px;background:#fff;box-shadow:0 0 0 .5px rgba(0,0,0,.25),0 1px 3px rgba(0,0,0,.25)}
+.cbmac .cb-yt{height:28px;padding:0 6px;color:#0067cc;font-size:12px;font-weight:500}
+.cbmac .cb-yt .i{font-size:14px}
+.t-mac .app-head{padding:12px 16px}
+.t-mac .ep-title{font-size:17px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",system-ui,sans-serif}
+.t-mac .pill{border-radius:5px;letter-spacing:.02em}
+.t-mac .icon-btn{border-radius:6px}
+.t-mac .hosts-t b{font-weight:600}
+.t-mac .tabs{height:auto;margin:10px 12px 4px;padding:2px;gap:0;border:0;border-radius:8px;background:rgba(0,0,0,.06)}
+.t-mac .tab{flex:1;justify-content:center;height:24px;border-radius:6px;font-size:12px;font-weight:500;color:#2c2c2e}
+.t-mac .tab.on{background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.14),0 0 0 .5px rgba(0,0,0,.08)}
+.t-mac .tab.on::after{display:none}
+.t-mac .tab .i{font-size:14px;stroke-width:1.6}
+.t-mac .chat-cap{padding:4px 8px 4px 14px}
+.t-mac .ytchat{border-radius:8px}
+
+/* Windows 11 player: the new Media Player on dark Mica */
+.cb11{display:grid;gap:2px;padding:8px 16px 8px;background:rgba(28,28,28,.96);border-top:1px solid rgba(255,255,255,.06);color:#fff;font-family:var(--font)}
+.c11-seek{display:flex;align-items:center;gap:16px;height:20px;font-size:12px;color:#c5c5c5;font-variant-numeric:tabular-nums}
+.c11-seek .cb-track{height:4px;background:rgba(255,255,255,.28)}
+.c11-seek .cb-fill{background:#4cc2ff}
+.c11-seek .cb-knob{width:20px;height:20px;margin:-10px 0 0 -10px;background:radial-gradient(circle,#4cc2ff 0 5px,#454545 5.5px);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.c11-t{min-width:36px}
+.c11-t.r{text-align:right}
+.c11-live{display:inline-flex;align-items:center;gap:6px;height:20px;padding:0 8px;border-radius:4px;background:#c42b1c;color:#fff;font-size:11px;font-weight:600;letter-spacing:.04em}
+.c11-live i{width:6px;height:6px;border-radius:50%;background:#fff}
+.c11-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:52px}
+.c11-l{display:flex;align-items:center;gap:8px;min-width:0}
+.c11-c{display:flex;align-items:center;gap:8px}
+.c11-r{display:flex;align-items:center;justify-content:flex-end;gap:2px}
+.c11-play{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#4cc2ff;color:#1b1b1b}
+.c11-play .i{font-size:20px}
+.cb11 .cb-btn{width:36px;height:36px;border-radius:4px;color:#fff}
+.cb11 .cb-btn .i{font-size:18px;stroke-width:1.5}
+.cb11 .cb-btn.is-on{color:#4cc2ff;background:rgba(255,255,255,.06)}
+.cb11 .cb-yt{color:#4cc2ff;font-weight:400;font-size:13px;padding:0 8px;height:32px}
+.cb11 .cb-yt .i{stroke-width:1.5}
+.cb11 .dis{opacity:.36}
+.t-w11 .app-head{padding:12px 16px 4px}
+.t-w11 .ep-title{font-size:20px;font-weight:600;font-family:"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif}
+.t-w11 .pill{border-radius:4px;font-weight:600}
+.t-w11 .av{--av-ring:#23262d}
+.t-w11 .hosts-t b{font-weight:600}
+.t-w11 .icon-btn{border-radius:4px}
+.t-w11 .icon-btn .i{stroke-width:1.5}
+.t-w11 .tabs{height:44px;padding:0 4px;border:0}
+.t-w11 .tab{font-size:14px;font-weight:400;color:#c5c5c5}
+.t-w11 .tab .i{stroke-width:1.5}
+.t-w11 .tab.on{color:#fff;font-weight:600}
+.t-w11 .tab.on::after{left:50%;right:auto;width:16px;margin-left:-8px;bottom:4px;height:3px;border-radius:2px}
+.t-w11 .chat-cap{color:#c5c5c5}
+.t-w11 .ytchat{border-radius:6px}
+
+/* Windows 98 player: Windows Media Player 6.4 */
+.cb98{padding:4px 4px 2px;background:#c0c0c0;color:#000;font:11px/1.2 var(--font)}
+.w98-seek{position:relative;height:26px;margin:0 8px}
+.w98-groove{position:absolute;left:0;right:0;top:9px;height:4px;background:#c0c0c0;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000}
+.w98-ticks{position:absolute;left:0;right:0;top:21px;height:4px;background:repeating-linear-gradient(90deg,#000 0 1px,transparent 1px 10%)}
+.w98-ticks::after{content:"";position:absolute;right:0;top:0;width:1px;height:4px;background:#000}
+.w98-thumb{position:absolute;top:1px;width:11px;height:20px;margin-left:-6px;background:#c0c0c0;box-shadow:var(--b-raised)}
+.w98-row{display:flex;align-items:center;height:28px;gap:0}
+.w98-b{display:grid;place-items:center;width:24px;height:22px;background:#c0c0c0;box-shadow:var(--b-raised);color:#000}
+.w98-b .i{font-size:12px;stroke-width:1.6}
+.w98-b.pressed{background:var(--dither);box-shadow:var(--b-pressed)}
+.w98-b.pressed .i{transform:translate(1px,1px)}
+.w98-b.dis{color:#808080}
+.w98-b.dis .i{filter:drop-shadow(1px 1px 0 #fff)}
+.w98-sep{width:2px;height:20px;margin:0 4px;box-shadow:inset 1px 0 #808080,inset -1px 0 #fff}
+.w98-btn{height:22px;padding:0 10px;background:#c0c0c0;box-shadow:var(--b-raised);font:11px var(--font);white-space:nowrap}
+.w98-btn.dis{color:#808080;text-shadow:1px 1px 0 #fff}
+.w98-vol{display:flex;align-items:center;gap:4px;margin-right:8px}
+.w98-vol .i{font-size:14px;stroke-width:1.4}
+.w98-mini{position:relative;width:64px;height:22px}
+.w98-mini .w98-groove{top:9px}
+.w98-thumb.sm{top:1px;width:9px;height:18px;margin-left:-5px}
+.w98-status{display:flex;gap:2px;margin-top:2px}
+.w98-pane{display:flex;align-items:center;gap:4px;height:18px;padding:0 6px;box-shadow:var(--b-field);white-space:nowrap}
+.w98-pane.grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.w98-dot{width:7px;height:7px;border-radius:50%;background:#f00;box-shadow:inset -1px -1px #800000}
+.t-98 .app-head{padding:6px 8px 8px;box-shadow:inset 0 -1px #fff,inset 0 -2px #808080;margin-bottom:0}
+.t-98 .ep-title{font:700 13px/1.3 Tahoma,Verdana,sans-serif;margin-top:4px}
+.t-98 .eyebrow{font-size:11px;color:#000}
+.t-98 .pill{height:16px;border-radius:0;padding:0 5px;font-size:11px;font-weight:700;letter-spacing:0;text-transform:none}
+.t-98 .pill.live{background:#800000}
+.t-98 .av{border-radius:0;width:24px;height:24px;box-shadow:var(--b-sunken);font-size:11px}
+.t-98 .av+.av{margin-left:2px}
+.t-98 .hosts-t b{font-size:11px}
+.t-98 .hosts-t small{font-size:11px;color:#000}
+.t-98 .icon-btn{width:24px;height:22px;background:#c0c0c0;box-shadow:var(--b-raised);color:#000}
+.t-98 .icon-btn .i{font-size:13px}
+.t-98 .app-main{padding:8px;gap:8px}
+.t-98 .player{background:#c0c0c0}
+.t-98 .stage-well{padding:2px;box-shadow:var(--b-sunken)}
+.t-98 .panel{background:transparent}
+.t-98 .tabs{height:auto;padding:2px 0 0 2px;gap:0;border:0;align-items:flex-end}
+.t-98 .tab{height:18px;padding:0 10px;gap:4px;font-size:11px;font-weight:400;color:#000;background:#c0c0c0;border-radius:3px 3px 0 0;box-shadow:inset 1px 1px #fff,inset -1px 0 #000,inset -2px 0 #808080,inset 2px 2px #dfdfdf}
+.t-98 .tab .i{font-size:12px}
+.t-98 .tab.on{z-index:1;height:21px;margin:0 -2px -2px;padding:0 12px 2px}
+.t-98 .tab.on::after{display:none}
+.t-98 .tab-count{display:inline;min-width:0;height:auto;padding:0;background:none;color:inherit;font-size:11px}
+.t-98 .tab-count::before{content:"("}.t-98 .tab-count::after{content:")"}
+.t-98 .tab.off{color:#808080;text-shadow:1px 1px 0 #fff}
+.t-98 .panel-body{padding:8px 6px 6px;background:#c0c0c0;box-shadow:var(--b-raised)}
+.t-98 .chat-cap{padding:0 0 6px 2px;color:#000;font-size:11px}
+.t-98 .chat-cap .icon-btn{width:20px;height:18px}
+.t-98 .chat-cap .icon-btn .i{font-size:11px}
+.t-98 .ytchat{margin:0;padding:2px;border:0;border-radius:0;box-shadow:var(--b-sunken)}
+
+/* ==========================================================================
+   States: upcoming hero, details card, buttons, chips
+   ========================================================================== */
+.hero{position:relative;aspect-ratio:16/9;background:#1b264f;color:#fff;overflow:clip}
+.hero-art{position:absolute;inset:-48px;background:var(--img) center/cover no-repeat,var(--fb);filter:blur(28px) saturate(115%);opacity:.5}
+.hero-shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,28,64,.96) 0%,rgba(27,38,79,.86) 55%,rgba(27,38,79,.55) 100%)}
+.hero-in{position:relative;height:100%;display:grid;grid-template-columns:minmax(0,1fr) 30%;gap:24px;align-items:center;padding:28px 32px}
+.hero-eyebrow{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#f5c1bc}
+.hero h4{margin:6px 0 6px;font-size:30px;font-weight:900;line-height:1.1}
+.hero-when{display:flex;align-items:center;gap:8px;margin:0 0 20px;font-size:15px;color:rgba(255,255,255,.92)}
+.hero-when .i{font-size:16px}
+.hero-when span{color:rgba(255,255,255,.7)}
+.count{position:relative;display:inline-flex;gap:8px;margin-bottom:20px}
+.count div{width:88px;padding:12px 0 10px;border-radius:3px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);text-align:center}
+.count div > b{display:block;font-size:40px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.count div > span{display:block;margin-top:6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.78)}
+.hero-actions{position:relative;display:flex;gap:8px;flex-wrap:wrap}
+.hero-note{margin:12px 0 0;font-size:12px;color:rgba(255,255,255,.72)}
+.hero-thumb{position:relative}
+.hero-thumb .thumb{border-radius:3px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.hero-thumb small{display:block;margin-top:10px;font-size:12px;color:rgba(255,255,255,.75)}
+.tag{position:absolute;left:8px;top:8px;display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:2px;background:rgba(0,0,0,.72);color:#fff;font:700 11px/1 Lato,Arial,sans-serif}
+.btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:3px;font-size:14px;font-weight:700;white-space:nowrap}
+.btn .i{font-size:16px}
+.btn.light{background:#fff;color:#1b264f}
+.btn.ghost{color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)}
+.btn.secondary{height:32px;padding:0 12px;font-size:13px;background:#f3f3f5;color:#1b264f}
+.btn.primary{height:32px;padding:0 12px;font-size:13px;background:#1b264f;color:#fff}
+.btn.on-light{background:#eceefa;color:#283a97}
+
+.details{position:relative;padding:16px 20px}
+.det-top{display:flex;gap:16px;align-items:flex-start}
+.det-top > div:first-child{flex:1;min-width:0}
+.details h4{margin:0;font-size:18px;line-height:1.3}
+.det-meta{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.det-actions{display:flex;gap:8px;flex:none}
+.det-desc{margin:12px 0 0;font-size:14px;color:#2f2f33;max-width:72ch}
+.chaps{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.chaps-l{font-size:12px;font-weight:700;color:var(--muted);margin-right:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:3px;background:#f3f3f5;font-size:12px;white-space:nowrap}
+.chip span{color:var(--muted);font-variant-numeric:tabular-nums}
+.chip.on{background:#283a97;color:#fff}
+.chip.on span{color:rgba(255,255,255,.8)}
+.about{position:relative;display:flex;align-items:center;gap:16px;padding:14px 20px;font-size:13px;color:var(--muted)}
+.about b{color:var(--text)}
+.about .i{font-size:18px;color:var(--accent)}
+
+/* ==========================================================================
+   Responsive: side panel under the player, compact control bar
+   ========================================================================== */
+/* Two containers. 'app' is the window's content box and decides where the side panel goes: beside
+   the player while the player can stay at least 480px wide next to the 320px panel, else under it.
+   'bar' is the player (or a bare control bar) and decides how much the bar shows, so the bar
+   adapts to its own width whichever layout put it there. */
+@container app (max-width: 880px){
+  .app-main{grid-template-columns:minmax(0,1fr)}
+  .panel{contain:none;height:340px}
+}
+@container app (max-width: 560px){
+  .app-head{gap:10px;padding:10px 12px}
+  .ep-title{font-size:17px}
+  .hosts-t{display:none}
+  .app-main{padding:0;gap:0}
+  .player,.panel{border-radius:0;box-shadow:none}
+  .panel{border-top:1px solid var(--line);height:320px}
+  .tabs{padding:0 4px}
+  .tab{flex:1;justify-content:center}
+}
+@container bar (max-width: 600px){
+  .hero-in{grid-template-columns:minmax(0,1fr)}
+  .hero-thumb{display:none}
+  .det-top{flex-direction:column}
+  .cb-yt span{display:none}
+  .cb-slider,.m-vol .cb-slider{display:none}
+  .cbmac .cb-yt{font-size:0;gap:0}
+  .c11-l .cb-yt{font-size:0;gap:0}
+  .w98-mini{display:none}
+}
+@container bar (max-width: 520px){
+  .cb .opt,.cb .cb-div{display:none}
+  .cb .cb-more{display:grid}
+}
+
+/* ==========================================================================
+   Control bar strip
+   ========================================================================== */
+.strip{display:grid;gap:16px}
+.strip-row{display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;align-items:center}
+.strip-label b{display:block;font-size:15px;color:#141a33}
+.strip-label span{font-size:13px;color:#5a6072}
+.strip-cell{border-radius:10px;padding:16px;overflow:hidden}
+.strip-cell .app{margin:0 auto;border-radius:var(--w-radius);overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:760px;background:var(--surface)}
+.t-w11 .strip-cell .app,.strip-cell.t-w11 .app{background:#202020}
+.t-98.strip-cell .app{box-shadow:var(--b-raised);padding:3px;border-radius:0}
+.peek{height:44px;background:var(--img) center 85%/cover no-repeat,var(--fb);position:relative;--fb:linear-gradient(135deg,hsl(var(--h) 48% 30%),hsl(calc(var(--h) + 36) 52% 12%))}
+.peek.local{background:radial-gradient(40% 120% at 70% 100%,rgba(255,196,120,.55),transparent 70%),linear-gradient(180deg,#2b2440,#161226)}
+.peek-tag{position:absolute;left:8px;bottom:6px;font:700 10px/1 Lato,Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.75)}
+.t-98.strip-cell .peek{box-shadow:inset 0 0 0 2px #000}
+@media (max-width: 860px){.strip-row{grid-template-columns:1fr;gap:8px}}
+
+/* ==========================================================================
+   Tray cup and reminder toasts (Umbraco theme)
+   ========================================================================== */
+.tray-scene{position:relative;height:360px;border-radius:12px;overflow:hidden}
+.taskbar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;height:50px;padding:0 6px;background:rgba(16,20,46,.72);border-top:1px solid rgba(255,255,255,.14);box-shadow:0 -4px 18px rgba(0,0,0,.4);color:#fff;font-family:Lato,Arial,sans-serif}
+.start{display:grid;place-items:center;width:40px;height:40px;border-radius:3px}
+.start span{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#fff;color:#1b264f;font-weight:900;font-size:14px}
+.task{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:3px;font-size:13px;color:#fff}
+.task .i{font-size:18px}
+.task.on{background:rgba(255,255,255,.12);box-shadow:inset 0 -2px 0 #f5c1bc}
+.tray{margin-left:auto;display:flex;align-items:stretch;height:50px}
+.cup{position:relative;display:grid;place-items:center;width:36px;border-radius:3px;color:#fff}
+.cup svg{width:18px;height:18px;overflow:visible}
+.cup .body,.cup .steam path{fill:none;stroke:currentColor;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round}
+.cup .dot{fill:#ff3b6b;stroke:#141a3a;stroke-width:1}
+.cup.hover{background:rgba(255,255,255,.1)}
+.clock{display:grid;place-items:center;padding:0 10px;font-size:13px;line-height:1.2;text-align:center;color:#fff}
+.clock small{display:block;font-size:11px;opacity:.8}
+.tip{position:absolute;right:48px;bottom:60px;padding:6px 10px;border-radius:3px;background:#1b264f;color:#fff;font:13px/1.3 Lato,Arial,sans-serif;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.35)}
+.tip::after{content:"";position:absolute;right:24px;bottom:-5px;border:5px solid transparent;border-bottom:0;border-top-color:#1b264f}
+.toast{position:absolute;right:12px;bottom:112px;display:flex;align-items:flex-start;width:372px;background:#fff;color:#060606;border:1px solid #d8d7d9;border-left:4px solid var(--ta,#3879ff);border-radius:3px;box-shadow:0 6px 16px rgba(0,0,0,.1),0 0 2px rgba(0,0,0,.1),0 12px 24px rgba(0,0,0,.25);font:12px/1.4 Lato,Arial,sans-serif;overflow:hidden}
+.toast.live{--ta:#d0003b}
+.toast-in{flex:1;min-width:0;display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:12px 4px 12px 12px}
+.toast-in .thumb{border-radius:2px}
+.toast-meta{display:flex;align-items:center;gap:6px;font-size:11px;color:#515054}
+.toast-meta .i{font-size:12px}
+.toast h5{margin:2px 0 2px;font-size:14px;line-height:1.3;display:flex;align-items:center;gap:8px}
+.toast p{margin:0;color:#2f2f33}
+.toast-actions{display:flex;gap:8px;margin-top:10px}
+.toast-actions .btn{height:28px;padding:0 10px;font-size:12px}
+.toast-actions .link{white-space:nowrap;height:28px;display:inline-flex;align-items:center;padding:0 4px;font-size:12px;font-weight:700;color:#1b264f;text-decoration:underline;text-underline-offset:2px}
+.toast-x{flex:none;display:grid;place-items:center;width:32px;height:32px;margin:4px 4px 0 0;color:#515054}
+.toast-x .i{font-size:14px}
+.toast .pill{height:18px;font-size:10px}
+.cups{display:flex;gap:16px;margin-top:16px}
+.cup-card{flex:1;display:flex;align-items:center;gap:16px;padding:16px;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(20,26,51,.08)}
+.cup-big{display:grid;place-items:center;width:64px;height:64px;border-radius:12px;background:#1b264f;color:#fff}
+.cup-big svg{width:36px;height:36px;overflow:visible}
+.cup-big .body,.cup-big .steam path{fill:none;stroke:currentColor;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round}
+.cup-big .dot{fill:#ff3b6b;stroke:#1b264f;stroke-width:.8}
+.cup-card b{display:block;color:#141a33}
+.cup-card span{font-size:13px;color:#5a6072}
+
+@media (max-width: 900px){
+  .intro{grid-template-columns:1fr}
+  .s-lead{margin-left:0}
+  .scene{padding:24px 16px}
+  .two{grid-template-columns:1fr}
+}
+
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l10.6-6.8a.8.8 0 0 0 0-1.4L9.2 4.5A.8.8 0 0 0 8 5.2z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-vol" viewBox="0 0 24 24"><path d="M4 9.5h3.2L11.5 6v12l-4.3-3.5H4z" fill="currentColor"/><path d="M15 9.2a4 4 0 0 1 0 5.6M17.6 6.6a7.6 7.6 0 0 1 0 10.8"/></symbol>
+  <symbol id="i-cc" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M10.6 10.3A2.2 2.2 0 1 0 10.6 13.7M17 10.3A2.2 2.2 0 1 0 17 13.7"/></symbol>
+  <symbol id="i-pip" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><rect x="12" y="11.5" width="6.5" height="5" rx="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V6a2 2 0 0 1 2-2h3M15 4h3a2 2 0 0 1 2 2v3M20 15v3a2 2 0 0 1-2 2h-3M9 20H6a2 2 0 0 1-2-2v-3"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 11.5c0 3.9-3.6 7-8 7-1.1 0-2.2-.2-3.1-.6L4.5 19.5l1.3-3.6C4.7 14.7 4 13.2 4 11.5c0-3.9 3.6-7 8-7s8 3.1 8 7z"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.8" cy="6.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.8" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.8" cy="17.5" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-back10" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M6.5 3v3.9h3.9"/><text x="12.3" y="15.2" font-size="7.4" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="Arial,sans-serif">10</text></symbol>
+  <symbol id="i-fwd10" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M17.5 3v3.9h-3.9"/><text x="11.7" y="15.2" font-size="7.4" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="Arial,sans-serif">10</text></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16.5v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.6" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M15 4.5v15"/></symbol>
+  <symbol id="i-popout" viewBox="0 0 24 24"><rect x="3" y="7" width="12" height="12" rx="2"/><path d="M9 4h9a2 2 0 0 1 2 2v9"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+  <symbol id="i-chap" viewBox="0 0 24 24"><path d="M5 5v14M9 7h10M9 12h8M9 17h10"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 4v16M16 4v16M4 9h4M4 15h4M16 9h4M16 15h4"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M20.5 16l-5-5-8.5 8"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20z"/><path d="M14 3.5v4h4"/></symbol>
+  <symbol id="i-cup" viewBox="0 0 16 16"><path d="M5.5 5.5c-.9-.9.9-1.6 0-2.5M8.5 5.5c-.9-.9.9-1.6 0-2.5" stroke-width="1.25"/><path d="M2.5 7.5h8v2.5a3 3 0 0 1-3 3h-2a3 3 0 0 1-3-3zM10.5 8.5h.75a1.5 1.5 0 0 1 0 3h-1M1.5 14.5h11" stroke-width="1.25"/></symbol>
+  <symbol id="w-reload" viewBox="0 0 16 16"><path d="M8 2.6 A5.4 5.4 0 1 0 13.4 8"/><path d="M7.6 0.5 L11.7 2.6 L7.6 4.7 Z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="w-min" viewBox="0 0 12 12"><line x1="2.5" y1="6.5" x2="9.5" y2="6.5"/></symbol>
+  <symbol id="w-max" viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></symbol>
+  <symbol id="w-close" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9"/><line x1="9" y1="3" x2="3" y2="9"/></symbol>
+</svg>
+<main class="page">
+
+  <p class="kicker">UmbraDesktop · Entertainment package · design mock</p>
+  <h1>umbraCoffee, redesigned</h1>
+  <p class="lead">A proper player for the monthly community live stream, native to each theme. This page is a static mock: every state is drawn below, top to bottom. Nothing here is built yet.</p>
+
+  <div class="intro">
+    <div class="changes">
+      <h2>What changes compared to today</h2>
+      <ul>
+        <li>YouTube's own controls are switched off. Our control bar sits under the picture and looks like the theme.</li>
+        <li>The picture stays YouTube's embedded player, and we never draw on top of it.</li>
+        <li>A header says what is on, whether it is live, and who is hosting.</li>
+        <li>Chat and Episodes share one side panel with tabs, so the player keeps its size.</li>
+        <li>Before a stream there is a real countdown with the date and time, and a way to watch the last episode.</li>
+        <li>Episodes get thumbnails and dates instead of a plain text list.</li>
+        <li>Each theme gets a player in its own style, from Windows Media Player 6.4 to QuickTime.</li>
+        <li>The same player will play local files in the Video Player app later.</li>
+      </ul>
+      <p class="rules"><b>Rules the design keeps.</b> YouTube's picture is 16:9 and never smaller than 200 by 200. Nothing of ours goes over it: no overlay controls, no gradients, no badges. YouTube may still show its own title and logo inside its frame, and the mock draws that hint so it stays honest.</p>
+    </div>
+    <figure class="today">
+      <div class="td-win">
+        <div class="td-tb">umbraCoffee</div>
+        <div class="td-frame"><span class="td-yt">umbraCoffee - The September Shift</span></div>
+        <div class="td-bar"><b>The September Shift</b><span>Latest episode</span></div>
+        <div class="td-list">
+          <div><span>Episodes</span><span></span></div>
+          <div><span>Back To School</span><span>Aug 28</span></div>
+          <div><span>Summer Vibes Only</span><span>Jul 31</span></div>
+          <div><span>Codegarden 2026 Wrapped</span><span>Jun 26</span></div>
+        </div>
+        <div class="td-foot">The tray cup and the reminders can be switched off under Taskbar in Desktop settings.</div>
+      </div>
+      <figcaption>Today, for contrast: YouTube's controls, a flat list, a footer line.</figcaption>
+    </figure>
+  </div>
+
+  <!-- ============================================================ 1 -->
+  <section class="s">
+    <div class="s-head"><span class="s-num">1</span><h2 class="s-title">Umbraco theme: live, upcoming, on demand</h2></div>
+    <p class="s-lead">The default theme, drawn with the backoffice's own UUI values: Lato, white boxes on the light grey ground, the navy primary button, 3px corners. The window opens at 640 by 360 for the player plus 320 for the side panel, as today.</p>
+
+    <h3 class="sub">1a. Live <small>A stream is on. Chat is the open tab.</small></h3>
+    <div class="scene wp-umbraco t-umbraco"><div class="win">
+  <div class="tb"><span class="tb-title"><svg class="i" aria-hidden="true"><use href="#i-cup"/></svg><span class="tb-text">umbraCoffee</span></span>
+    <span class="tb-ctrls"><span class="c reload" title="Reload"><svg class="g g-reload" aria-hidden="true"><use href="#w-reload"/></svg></span><span class="c min"><svg class="g g-min" aria-hidden="true"><use href="#w-min"/></svg></span><span class="c max"><svg class="g g-max" aria-hidden="true"><use href="#w-max"/></svg></span><span class="c close"><svg class="g g-close" aria-hidden="true"><use href="#w-close"/></svg></span></span></div>
+  <div class="win-body"><div class="app">
+    <header class="app-head has-pin"><span class="pin" style="right:268px;top:50%;margin-top:-11px">1</span>
+    <div class="head-main"><div class="eyebrow"><span class="pill live"><i></i>Live now</span><span class="meta">Started 12:31 · Friday 25 September</span></div><h3 class="ep-title">The September Shift</h3></div>
+    <div class="hosts"><span class="avs"><span class="av" style="--c:#8d5b3f">M</span><span class="av" style="--c:#3b5ba5">C</span></span><span class="hosts-t"><b>Marcin and Callum</b><small>Your hosts</small></span></div>
+    <span class="head-sep"></span>
+    <button type="button" class="icon-btn" title="Hide the side panel"><svg class="i" aria-hidden="true"><use href="#i-panel"/></svg></button>
+  </header>
+    <div class="app-main">
+      <section class="player"><div class="stage-well"><div class="stage"><div class="yt" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/sddefault.jpg');--img2:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22">
+    <div class="yt-top"><span class="yt-av"></span><span class="yt-title">umbraCoffee - The September Shift</span></div>
+    <div class="yt-mark"><span class="yt-logo"></span>YouTube</div>
+  </div></div></div><div class="cb has-pin"><span class="pin" style="left:46%;top:30px">2</span>
+      <div class="cb-seek"><div class="cb-track"><i class="cb-buf" style="width:100%"></i><i class="cb-fill" style="width:100%"></i><i class="cb-knob" style="left:100%"></i></div></div>
+      <div class="cb-row">
+        <button type="button" class="cb-play" title="Pause"><svg class="i" aria-hidden="true"><use href="#i-pause"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Volume"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg></button><span class="cb-slider opt"><i style="width:70%"></i><b style="left:70%"></b></span>
+        <span class="cb-live" title="You are watching live"><i></i>LIVE</span>
+        <span class="cb-grow"></span>
+        <button type="button" class="cb-btn opt is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button>
+      <button type="button" class="cb-btn opt" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button>
+      <button type="button" class="cb-btn cb-more" title="More: volume, captions, picture in picture"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg></button>
+      <button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button>
+        <span class="cb-div"></span><a class="cb-yt" href="#" title="Watch on YouTube"><svg class="i" aria-hidden="true"><use href="#i-ext"/></svg><span>Watch on YouTube</span></a>
+      </div>
+    </div></section>
+      <aside class="panel">
+    <nav class="tabs has-pin"><span class="pin" style="right:8px;top:12px">3</span><span class="tab on"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>Chat</span><span class="tab"><svg class="i" aria-hidden="true"><use href="#i-list"/></svg>Episodes <span class="tab-count">15</span></span></nav>
+    <div class="panel-body">
+      <div class="chat-cap"><span class="pin" style="right:40px;top:4px">4</span><span class="frame-tag"><span class="yt-logo"></span>Live chat from YouTube</span><button type="button" class="icon-btn sm" title="Pop out the chat"><svg class="i" aria-hidden="true"><use href="#i-popout"/></svg></button></div>
+      <div class="ytchat">
+    <div class="ytc-head">Top chat <svg class="i" aria-hidden="true"><use href="#i-chev"/></svg><span class="sp"></span><span class="dots">&#8942;</span></div>
+    <ul class="ytc-list"><li><span class="ytc-av" style="--c:#c2185b">S</span><span><span class="ytc-name">Sofie</span>Morning from Aarhus, second coffee already</span></li><li><span class="ytc-av" style="--c:#1565c0">R</span><span><span class="ytc-name">Ravi</span>Is the new minor release in the news bit today?</span></li><li><span class="ytc-av" style="--c:#2e7d32">T</span><span><span class="ytc-name">Tom</span>That package spotlight last month got me to finally try it</span></li><li><span class="ytc-av" style="--c:#6a1b9a">L</span><span><span class="ytc-name">Lena</span>Hi Marcin, hi Callum!</span></li><li><span class="ytc-av" style="--c:#3b5ba5">C</span><span><span class="ytc-name host">Callum</span>Welcome all, grab a coffee, we are just getting going</span></li><li><span class="ytc-av" style="--c:#ef6c00">J</span><span><span class="ytc-name">Jonas</span>Watching from inside the backoffice for once</span></li><li><span class="ytc-av" style="--c:#00838f">P</span><span><span class="ytc-name">Priya</span>The upgrade notes were really clear this time</span></li></ul>
+    <div class="ytc-foot"><span class="ytc-av" style="--c:#7b8794">L</span><span class="ytc-input">Chat...</span><span class="ytc-count">0/200</span></div>
+  </div>
+    </div>
+  </aside>
+    </div>
+  </div></div>
+</div></div>
+    <ol class="notes"><li><span class="pin-n">1</span><div><b>Header.</b> What is on, that it is live, and who is hosting. All of it is in the answer we already poll every five minutes.</div></li><li><span class="pin-n dot">&#9679;</span><div><b>The picture.</b> YouTube's embedded player with controls=0. We draw nothing over it. YouTube still shows its own title and logo inside the frame, as drawn.</div></li><li><span class="pin-n">2</span><div><b>Our control bar.</b> Directly below the picture: play and pause, volume, LIVE, captions, picture in picture, full screen, and Watch on YouTube.</div></li><li><span class="pin-n">3</span><div><b>One side panel, two tabs.</b> Chat and Episodes share the 320px panel, so opening the list never shrinks the video. The panel button in the header hides it and the player grows.</div></li><li><span class="pin-n">4</span><div><b>The chat is YouTube’s page.</b> Its own frame with its own look, labelled "Live chat from YouTube", with a pop out button.</div></li></ol>
+
+    <h3 class="sub">1b. Upcoming <small>YouTube has scheduled the next stream.</small></h3>
+    <div class="scene wp-umbraco t-umbraco"><div class="win">
+  <div class="tb"><span class="tb-title"><svg class="i" aria-hidden="true"><use href="#i-cup"/></svg><span class="tb-text">umbraCoffee</span></span>
+    <span class="tb-ctrls"><span class="c reload" title="Reload"><svg class="g g-reload" aria-hidden="true"><use href="#w-reload"/></svg></span><span class="c min"><svg class="g g-min" aria-hidden="true"><use href="#w-min"/></svg></span><span class="c max"><svg class="g g-max" aria-hidden="true"><use href="#w-max"/></svg></span><span class="c close"><svg class="g g-close" aria-hidden="true"><use href="#w-close"/></svg></span></span></div>
+  <div class="win-body"><div class="app">
+    <header class="app-head has-pin"><span class="pin" style="right:268px;top:50%;margin-top:-11px">1</span>
+    <div class="head-main"><div class="eyebrow"><span class="pill next"><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg>Upcoming</span><span class="meta">Scheduled on YouTube</span></div><h3 class="ep-title">Spooky Season 2026</h3></div>
+    <div class="hosts"><span class="avs"><span class="av" style="--c:#8d5b3f">M</span><span class="av" style="--c:#3b5ba5">C</span></span><span class="hosts-t"><b>Marcin and Callum</b><small>Your hosts</small></span></div>
+    <span class="head-sep"></span>
+    <button type="button" class="icon-btn" title="Hide the side panel"><svg class="i" aria-hidden="true"><use href="#i-panel"/></svg></button>
+  </header>
+    <div class="app-main">
+      <div class="col">
+        <section class="player">
+          <div class="stage-well"><div class="hero has-pin">
+            <div class="hero-art" style="--img:url('https://i.ytimg.com/vi/P3-3mxtv7RE/hqdefault.jpg');--h:20"></div><div class="hero-shade"></div>
+            <div class="hero-in">
+              <div>
+                <div class="hero-eyebrow">Next live episode</div>
+                <h4>Spooky Season 2026</h4>
+                <p class="hero-when"><svg class="i" aria-hidden="true"><use href="#i-cal"/></svg>Friday 30 October, 12:30 <span>11:30 UK</span></p>
+                <div class="count has-pin"><span class="pin" style="right:-10px;top:-10px">2</span><div><b>2</b><span>days</span></div><div><b>04</b><span>hours</span></div><div><b>17</b><span>minutes</span></div></div>
+                <div class="hero-actions has-pin"><span class="pin" style="left:-12px;top:-12px">3</span><button type="button" class="btn light"><svg class="i" aria-hidden="true"><use href="#i-bell"/></svg>Remind me</button><button type="button" class="btn ghost"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg>Watch the last episode</button></div>
+                <p class="hero-note">Reminds you 10 minutes before and when it goes live. Also under Desktop settings, Taskbar.</p>
+              </div>
+              <div class="hero-thumb"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/P3-3mxtv7RE/mqdefault.jpg');--h:20"><span class="tag">Scheduled</span></span><small>With Marcin and Callum</small></div>
+            </div>
+          </div></div>
+          <div class="cb has-pin"><span class="pin" style="left:4px;bottom:2px">4</span>
+      <div class="cb-seek dis-track"><div class="cb-track"></div></div>
+      <div class="cb-row">
+        <button type="button" class="cb-play dis" aria-disabled="true" title="Nothing to play yet"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button>
+        <button type="button" class="cb-btn opt dis" title="Volume"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg></button><span class="cb-slider opt dis"><i style="width:70%"></i><b style="left:70%"></b></span>
+        <span class="cb-msg"><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg>Starts 30 Oct, 12:30</span>
+        <span class="cb-grow"></span>
+        <button type="button" class="cb-btn opt is-on dis" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button>
+      <button type="button" class="cb-btn opt dis" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button>
+      <button type="button" class="cb-btn cb-more" title="More: volume, captions, picture in picture"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg></button>
+      <button type="button" class="cb-btn dis" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button>
+        <span class="cb-div"></span><a class="cb-yt" href="#" title="Waiting room on YouTube"><svg class="i" aria-hidden="true"><use href="#i-ext"/></svg><span>Waiting room on YouTube</span></a>
+      </div>
+    </div>
+        </section>
+        <section class="card about has-pin"><svg class="i" aria-hidden="true"><use href="#i-cup"/></svg><span><b>umbraCoffee</b> is the monthly community live stream with Marcin and Callum: news, packages and people. Last Friday of the month, 11:30 UK, 12:30 CET.</span></section>
+      </div>
+      <aside class="panel">
+    <nav class="tabs has-pin"><span class="pin" style="right:8px;top:13px">5</span><span class="tab off" title="Chat opens when the stream starts"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>Chat <span class="tab-hint">at 12:30</span></span><span class="tab on"><svg class="i" aria-hidden="true"><use href="#i-list"/></svg>Episodes <span class="tab-count">15</span></span></nav>
+    <div class="panel-body">
+      <ul class="eps has-pin"><li class="ep next"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/P3-3mxtv7RE/mqdefault.jpg');--h:20"><span class="dur sched">12:30</span></span><div><div class="ep-t">Spooky Season 2026</div><div class="ep-d"><b>Next</b> · Fri 30 Oct, 12:30</div></div></li><li class="ep"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/mqdefault.jpg');--h:22"><span class="dur">50:19</span></span><div><div class="ep-t">The September Shift</div><div class="ep-d">Fri 25 Sep 2026</div></div></li><li class="ep"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/Mp-5Uy7pZ9E/mqdefault.jpg');--h:205"><span class="dur">58:42</span></span><div><div class="ep-t">Back To School</div><div class="ep-d">Fri 28 Aug 2026</div></div></li><li class="ep"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/RaFus8cVC24/mqdefault.jpg');--h:40"><span class="dur">1:01:05</span></span><div><div class="ep-t">Summer Vibes Only</div><div class="ep-d">Fri 31 Jul 2026</div></div></li><li class="ep"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/mEa90pJb0Bw/mqdefault.jpg');--h:330"><span class="dur">47:30</span></span><div><div class="ep-t">Codegarden 2026 Wrapped 🌯</div><div class="ep-d">Fri 26 Jun 2026</div></div></li><li class="ep"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/bmfrLgNfQ_g/mqdefault.jpg');--h:150"><span class="dur">2:12:48</span></span><div><div class="ep-t">LIVE at #Codegarden 2026!</div><div class="ep-d">Thu 11 Jun 2026</div></div></li></ul>
+      <a class="eps-all has-pin" href="#">All episodes on YouTube <svg class="i" aria-hidden="true"><use href="#i-ext"/></svg></a>
+    </div>
+  </aside>
+    </div>
+  </div></div>
+</div></div>
+    <ol class="notes"><li><span class="pin-n">1</span><div><b>Header.</b> Upcoming, the episode title, the hosts. Same place as when live, so the window does not rearrange when it starts.</div></li><li><span class="pin-n">2</span><div><b>Countdown.</b> Days, hours and minutes, ticking once a minute like today. The date and the UK time sit right above it.</div></li><li><span class="pin-n">3</span><div><b>Remind me and Watch the last episode.</b> Remind me is the same switch as in Desktop settings, which is why the old footer line can go. The note under it says where else it lives.</div></li><li><span class="pin-n">4</span><div><b>The control bar stays, disabled.</b> It says when the stream starts. Disable, not hide: the bar is where people look for the player.</div></li><li><span class="pin-n">5</span><div><b>Chat is disabled until 12:30.</b> Episodes is open instead, with the next episode on top. The stage keeps the 16:9 shape so nothing jumps when the stream starts.</div></li></ol>
+    <p class="aside-note">The upcoming title and thumbnail are placeholders (last October's thumbnail). YouTube gives a scheduled stream its own title and thumbnail, and the app shows those.</p>
+
+    <h3 class="sub">1c. On demand <small>Nothing live. The latest episode is loaded, paused.</small></h3>
+    <div class="scene wp-umbraco t-umbraco"><div class="win">
+  <div class="tb"><span class="tb-title"><svg class="i" aria-hidden="true"><use href="#i-cup"/></svg><span class="tb-text">umbraCoffee</span></span>
+    <span class="tb-ctrls"><span class="c reload" title="Reload"><svg class="g g-reload" aria-hidden="true"><use href="#w-reload"/></svg></span><span class="c min"><svg class="g g-min" aria-hidden="true"><use href="#w-min"/></svg></span><span class="c max"><svg class="g g-max" aria-hidden="true"><use href="#w-max"/></svg></span><span class="c close"><svg class="g g-close" aria-hidden="true"><use href="#w-close"/></svg></span></span></div>
+  <div class="win-body"><div class="app">
+    <header class="app-head has-pin"><span class="pin" style="right:268px;top:50%;margin-top:-11px">1</span>
+    <div class="head-main"><div class="eyebrow"><span class="pill neutral">Latest episode</span><span class="meta">Friday 25 September 2026</span></div><h3 class="ep-title">The September Shift</h3></div>
+    <div class="hosts"><span class="avs"><span class="av" style="--c:#8d5b3f">M</span><span class="av" style="--c:#3b5ba5">C</span></span><span class="hosts-t"><b>Marcin and Callum</b><small>Your hosts</small></span></div>
+    <span class="head-sep"></span>
+    <button type="button" class="icon-btn" title="Hide the side panel"><svg class="i" aria-hidden="true"><use href="#i-panel"/></svg></button>
+  </header>
+    <div class="app-main">
+      <div class="col">
+        <section class="player"><div class="stage-well"><div class="stage"><div class="yt" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/sddefault.jpg');--img2:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22">
+    <div class="yt-top"><span class="yt-av"></span><span class="yt-title">umbraCoffee - The September Shift</span></div>
+    <div class="yt-mark"><span class="yt-logo"></span>YouTube</div>
+  </div></div></div><div class="cb has-pin"><span class="pin" style="left:4px;bottom:2px">2</span>
+      <div class="cb-seek"><span class="cb-st">12:08</span><div class="cb-track chap"><span class="seg" style="width:6.29%"><i style="width:100%"></i></span><span class="seg" style="width:29.55%"><i style="width:60.3%"></i></span><span class="seg" style="width:27.10%"><i style="width:0%"></i></span><span class="seg" style="width:28.98%"><i style="width:0%"></i></span><span class="seg" style="width:8.08%"><i style="width:0%"></i></span><i class="cb-knob" style="left:24.11%"></i></div><span class="cb-st r">50:19</span></div>
+      <div class="cb-row">
+        <button type="button" class="cb-play" title="Play"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Back 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-back10"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Forward 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-fwd10"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Volume"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg></button><span class="cb-slider opt"><i style="width:70%"></i><b style="left:70%"></b></span>
+        <span class="cb-chapter opt"><svg class="i" aria-hidden="true"><use href="#i-chap"/></svg>Community news</span>
+        <span class="cb-grow"></span>
+        <button type="button" class="cb-btn cb-speed opt" title="Playback speed">1x</button>
+        <button type="button" class="cb-btn opt is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button>
+      <button type="button" class="cb-btn opt" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button>
+      <button type="button" class="cb-btn cb-more" title="More: volume, captions, picture in picture"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg></button>
+      <button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button>
+        <a class="cb-yt" href="#" title="Watch on YouTube"><svg class="i" aria-hidden="true"><use href="#i-ext"/></svg><span>Watch on YouTube</span></a>
+      </div>
+    </div></section>
+        <section class="card details has-pin"><span class="pin" style="right:8px;bottom:8px">3</span>
+          <div class="det-top"><div><h4>The September Shift</h4><p class="det-meta">Friday 25 September 2026 · 50:19 · with Marcin and Callum</p></div>
+            <div class="det-actions"><button type="button" class="btn secondary"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg>Copy link</button><a class="btn secondary" href="#"><svg class="i" aria-hidden="true"><use href="#i-ext"/></svg>Watch on YouTube</a></div></div>
+          <p class="det-desc">Welcome to your monthly dose of #umbraCoffee! Marcin and Callum, with their guests, drive through the community news and happenings.</p>
+          <div class="chaps"><span class="chaps-l">Chapters</span><span class="chip"><span>0:00</span>Welcome</span><span class="chip on"><span>3:10</span>Community news</span><span class="chip"><span>18:02</span>Package spotlight</span><span class="chip"><span>31:40</span>Guest</span><span class="chip"><span>46:15</span>Wrap up</span></div>
+        </section>
+      </div>
+      <aside class="panel">
+    <nav class="tabs has-pin"><span class="pin" style="right:8px;top:13px">4</span><span class="tab off" title="Chat is there while a stream is live"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>Chat <span class="tab-hint">live only</span></span><span class="tab on"><svg class="i" aria-hidden="true"><use href="#i-list"/></svg>Episodes <span class="tab-count">15</span></span></nav>
+    <div class="panel-body">
+      <ul class="eps has-pin"><li class="ep cur"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/mqdefault.jpg');--h:22"><span class="dur">50:19</span></span><div><div class="ep-t">The September Shift</div><div class="ep-d"><b>Playing</b> · Fri 25 Sep 2026</div></div></li><li class="ep"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/Mp-5Uy7pZ9E/mqdefault.jpg');--h:205"><span class="dur">58:42</span></span><div><div class="ep-t">Back To School</div><div class="ep-d">Fri 28 Aug 2026</div></div></li><li class="ep"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/RaFus8cVC24/mqdefault.jpg');--h:40"><span class="dur">1:01:05</span></span><div><div class="ep-t">Summer Vibes Only</div><div class="ep-d">Fri 31 Jul 2026</div></div></li><li class="ep"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/mEa90pJb0Bw/mqdefault.jpg');--h:330"><span class="dur">47:30</span></span><div><div class="ep-t">Codegarden 2026 Wrapped 🌯</div><div class="ep-d">Fri 26 Jun 2026</div></div></li><li class="ep"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/bmfrLgNfQ_g/mqdefault.jpg');--h:150"><span class="dur">2:12:48</span></span><div><div class="ep-t">LIVE at #Codegarden 2026!</div><div class="ep-d">Thu 11 Jun 2026</div></div></li><li class="ep"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/cCqq76ItuB4/mqdefault.jpg');--h:260"><span class="dur">55:10</span></span><div><div class="ep-t">Agents, Codegarden, Tees</div><div class="ep-d">Fri 29 May 2026</div></div></li><li class="ep"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/uY9pZz5NHaQ/mqdefault.jpg');--h:190"><span class="dur">1:03:22</span></span><div><div class="ep-t">AI in Umbraco</div><div class="ep-d">Fri 24 Apr 2026</div></div></li></ul>
+      <a class="eps-all has-pin" href="#"><span class="pin" style="right:8px;top:11px">5</span>All episodes on YouTube <svg class="i" aria-hidden="true"><use href="#i-ext"/></svg></a>
+    </div>
+  </aside>
+    </div>
+  </div></div>
+</div></div>
+    <ol class="notes"><li><span class="pin-n">1</span><div><b>Header.</b> Latest episode and its date. Picking another episode changes the header and the player together.</div></li><li><span class="pin-n">2</span><div><b>Scrubber with time.</b> Elapsed and total, back and forward 10 seconds, speed. Chapters are optional: segments on the scrubber and chips below, only when the description has timestamps.</div></li><li><span class="pin-n">3</span><div><b>Episode details.</b> Title, date, hosts and the first line of the description, with Copy link and Watch on YouTube.</div></li><li><span class="pin-n">4</span><div><b>Episodes with thumbnails.</b> The playing one is marked. Chat is disabled, not hidden, and says it is for live streams.</div></li><li><span class="pin-n">5</span><div><b>All episodes on YouTube.</b> At the end of the list, for everything older than the feed.</div></li><li><span class="pin-n dot">&#9679;</span><div><b>About durations.</b> The RSS feed has no durations. They need the YouTube Data API, or the badge is left out. The durations drawn here are illustrative.</div></li></ol>
+
+    <h3 class="sub">1d. Narrow window <small>About 480px wide, live, a little behind the live edge.</small></h3>
+    <div class="scene wp-umbraco t-umbraco"><div class="win" style="max-width:480px">
+  <div class="tb"><span class="tb-title"><svg class="i" aria-hidden="true"><use href="#i-cup"/></svg><span class="tb-text">umbraCoffee</span></span>
+    <span class="tb-ctrls"><span class="c reload" title="Reload"><svg class="g g-reload" aria-hidden="true"><use href="#w-reload"/></svg></span><span class="c min"><svg class="g g-min" aria-hidden="true"><use href="#w-min"/></svg></span><span class="c max"><svg class="g g-max" aria-hidden="true"><use href="#w-max"/></svg></span><span class="c close"><svg class="g g-close" aria-hidden="true"><use href="#w-close"/></svg></span></span></div>
+  <div class="win-body"><div class="app">
+    <header class="app-head has-pin">
+    <div class="head-main"><div class="eyebrow"><span class="pill live"><i></i>Live now</span><span class="meta">Started 12:31 · Friday 25 September</span></div><h3 class="ep-title">The September Shift</h3></div>
+    <div class="hosts"><span class="avs"><span class="av" style="--c:#8d5b3f">M</span><span class="av" style="--c:#3b5ba5">C</span></span><span class="hosts-t"><b>Marcin and Callum</b><small>Your hosts</small></span></div>
+    <span class="head-sep"></span>
+    <button type="button" class="icon-btn" title="Hide the side panel"><svg class="i" aria-hidden="true"><use href="#i-panel"/></svg></button>
+  </header>
+    <div class="app-main">
+      <section class="player"><div class="stage-well"><div class="stage"><div class="yt" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/sddefault.jpg');--img2:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22">
+    <div class="yt-top"><span class="yt-av"></span><span class="yt-title">umbraCoffee - The September Shift</span></div>
+    <div class="yt-mark"><span class="yt-logo"></span>YouTube</div>
+  </div></div></div><div class="cb has-pin">
+      <div class="cb-seek"><div class="cb-track"><i class="cb-buf" style="width:100%"></i><i class="cb-fill" style="width:94%"></i><i class="cb-knob" style="left:94%"></i></div></div>
+      <div class="cb-row">
+        <button type="button" class="cb-play" title="Pause"><svg class="i" aria-hidden="true"><use href="#i-pause"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Volume"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg></button><span class="cb-slider opt"><i style="width:70%"></i><b style="left:70%"></b></span>
+        <span class="cb-live behind"><i></i>LIVE</span><span class="cb-behind">2:14 behind</span><button type="button" class="cb-golive"><i></i>Go to live</button>
+        <span class="cb-grow"></span>
+        <button type="button" class="cb-btn opt is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button>
+      <button type="button" class="cb-btn opt" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button>
+      <button type="button" class="cb-btn cb-more" title="More: volume, captions, picture in picture"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg></button>
+      <button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button>
+        <span class="cb-div"></span><a class="cb-yt" href="#" title="Watch on YouTube"><svg class="i" aria-hidden="true"><use href="#i-ext"/></svg><span>Watch on YouTube</span></a>
+      </div>
+    </div></section>
+      <aside class="panel">
+    <nav class="tabs has-pin"><span class="tab on"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>Chat</span><span class="tab"><svg class="i" aria-hidden="true"><use href="#i-list"/></svg>Episodes <span class="tab-count">15</span></span></nav>
+    <div class="panel-body">
+      <div class="chat-cap"><span class="frame-tag"><span class="yt-logo"></span>Live chat from YouTube</span><button type="button" class="icon-btn sm" title="Pop out the chat"><svg class="i" aria-hidden="true"><use href="#i-popout"/></svg></button></div>
+      <div class="ytchat">
+    <div class="ytc-head">Top chat <svg class="i" aria-hidden="true"><use href="#i-chev"/></svg><span class="sp"></span><span class="dots">&#8942;</span></div>
+    <ul class="ytc-list"><li><span class="ytc-av" style="--c:#c2185b">S</span><span><span class="ytc-name">Sofie</span>Morning from Aarhus, second coffee already</span></li><li><span class="ytc-av" style="--c:#1565c0">R</span><span><span class="ytc-name">Ravi</span>Is the new minor release in the news bit today?</span></li><li><span class="ytc-av" style="--c:#2e7d32">T</span><span><span class="ytc-name">Tom</span>That package spotlight last month got me to finally try it</span></li><li><span class="ytc-av" style="--c:#6a1b9a">L</span><span><span class="ytc-name">Lena</span>Hi Marcin, hi Callum!</span></li><li><span class="ytc-av" style="--c:#3b5ba5">C</span><span><span class="ytc-name host">Callum</span>Welcome all, grab a coffee, we are just getting going</span></li><li><span class="ytc-av" style="--c:#ef6c00">J</span><span><span class="ytc-name">Jonas</span>Watching from inside the backoffice for once</span></li><li><span class="ytc-av" style="--c:#00838f">P</span><span><span class="ytc-name">Priya</span>The upgrade notes were really clear this time</span></li></ul>
+    <div class="ytc-foot"><span class="ytc-av" style="--c:#7b8794">L</span><span class="ytc-input">Chat...</span><span class="ytc-count">0/200</span></div>
+  </div>
+    </div>
+  </aside>
+    </div>
+  </div></div>
+</div></div>
+    <ol class="notes"><li><span class="pin-n dot">&#9679;</span><div><b>The side panel drops under the player.</b> Once the player cannot stay 480px wide beside the 320px panel, the tabs move under the picture. The player takes the full width.</div></li><li><span class="pin-n dot">&#9679;</span><div><b>The bar keeps the essentials.</b> Play, LIVE, Go to live and full screen stay. Volume, captions and picture in picture move into More, and Watch on YouTube becomes its icon.</div></li><li><span class="pin-n dot">&#9679;</span><div><b>Behind the live edge.</b> LIVE turns grey, the bar says how far behind, and Go to live appears. At the edge, LIVE is red and there is nothing to press.</div></li></ol>
+  </section>
+
+  <!-- ============================================================ 2 -->
+  <section class="s">
+    <div class="s-head"><span class="s-num">2</span><h2 class="s-title">Live, under the other four themes</h2></div>
+    <p class="s-lead">Same component, same parts, same order of importance. Each theme restyles the chrome and the player in its own idiom, and three of them rearrange the bar the way their own media player does. Nothing is removed under any theme.</p>
+
+    <h3 class="sub">2a. Umbraco 4 <small>The 2010 backoffice</small></h3>
+    <div class="scene wp-u4 t-u4"><div class="win">
+  <div class="tb"><span class="tb-title"><svg class="i" aria-hidden="true"><use href="#i-cup"/></svg><span class="tb-text">umbraCoffee</span></span>
+    <span class="tb-ctrls"><span class="c reload" title="Reload"><svg class="g g-reload" aria-hidden="true"><use href="#w-reload"/></svg></span><span class="c min"><svg class="g g-min" aria-hidden="true"><use href="#w-min"/></svg></span><span class="c max"><svg class="g g-max" aria-hidden="true"><use href="#w-max"/></svg></span><span class="c close"><svg class="g g-close" aria-hidden="true"><use href="#w-close"/></svg></span></span></div>
+  <div class="win-body"><div class="app">
+    <header class="app-head has-pin">
+    <div class="head-main"><div class="eyebrow"><span class="pill live"><i></i>Live now</span><span class="meta">Started 12:31 · Friday 25 September</span></div><h3 class="ep-title">The September Shift</h3></div>
+    <div class="hosts"><span class="avs"><span class="av" style="--c:#8d5b3f">M</span><span class="av" style="--c:#3b5ba5">C</span></span><span class="hosts-t"><b>Marcin and Callum</b><small>Your hosts</small></span></div>
+    <span class="head-sep"></span>
+    <button type="button" class="icon-btn" title="Hide the side panel"><svg class="i" aria-hidden="true"><use href="#i-panel"/></svg></button>
+  </header>
+    <div class="app-main">
+      <section class="player"><div class="stage-well"><div class="stage"><div class="yt" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/sddefault.jpg');--img2:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22">
+    <div class="yt-top"><span class="yt-av"></span><span class="yt-title">umbraCoffee - The September Shift</span></div>
+    <div class="yt-mark"><span class="yt-logo"></span>YouTube</div>
+  </div></div></div><div class="cb has-pin">
+      <div class="cb-seek"><div class="cb-track"><i class="cb-buf" style="width:100%"></i><i class="cb-fill" style="width:100%"></i><i class="cb-knob" style="left:100%"></i></div></div>
+      <div class="cb-row">
+        <button type="button" class="cb-play" title="Pause"><svg class="i" aria-hidden="true"><use href="#i-pause"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Volume"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg></button><span class="cb-slider opt"><i style="width:70%"></i><b style="left:70%"></b></span>
+        <span class="cb-live" title="You are watching live"><i></i>LIVE</span>
+        <span class="cb-grow"></span>
+        <button type="button" class="cb-btn opt is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button>
+      <button type="button" class="cb-btn opt" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button>
+      <button type="button" class="cb-btn cb-more" title="More: volume, captions, picture in picture"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg></button>
+      <button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button>
+        <span class="cb-div"></span><a class="cb-yt" href="#" title="Watch on YouTube"><svg class="i" aria-hidden="true"><use href="#i-ext"/></svg><span>Watch on YouTube</span></a>
+      </div>
+    </div></section>
+      <aside class="panel">
+    <nav class="tabs has-pin"><span class="tab on"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>Chat</span><span class="tab"><svg class="i" aria-hidden="true"><use href="#i-list"/></svg>Episodes <span class="tab-count">15</span></span></nav>
+    <div class="panel-body">
+      <div class="chat-cap"><span class="frame-tag"><span class="yt-logo"></span>Live chat from YouTube</span><button type="button" class="icon-btn sm" title="Pop out the chat"><svg class="i" aria-hidden="true"><use href="#i-popout"/></svg></button></div>
+      <div class="ytchat">
+    <div class="ytc-head">Top chat <svg class="i" aria-hidden="true"><use href="#i-chev"/></svg><span class="sp"></span><span class="dots">&#8942;</span></div>
+    <ul class="ytc-list"><li><span class="ytc-av" style="--c:#c2185b">S</span><span><span class="ytc-name">Sofie</span>Morning from Aarhus, second coffee already</span></li><li><span class="ytc-av" style="--c:#1565c0">R</span><span><span class="ytc-name">Ravi</span>Is the new minor release in the news bit today?</span></li><li><span class="ytc-av" style="--c:#2e7d32">T</span><span><span class="ytc-name">Tom</span>That package spotlight last month got me to finally try it</span></li><li><span class="ytc-av" style="--c:#6a1b9a">L</span><span><span class="ytc-name">Lena</span>Hi Marcin, hi Callum!</span></li><li><span class="ytc-av" style="--c:#3b5ba5">C</span><span><span class="ytc-name host">Callum</span>Welcome all, grab a coffee, we are just getting going</span></li><li><span class="ytc-av" style="--c:#ef6c00">J</span><span><span class="ytc-name">Jonas</span>Watching from inside the backoffice for once</span></li><li><span class="ytc-av" style="--c:#00838f">P</span><span><span class="ytc-name">Priya</span>The upgrade notes were really clear this time</span></li></ul>
+    <div class="ytc-foot"><span class="ytc-av" style="--c:#7b8794">L</span><span class="ytc-input">Chat...</span><span class="ytc-count">0/200</span></div>
+  </div>
+    </div>
+  </aside>
+    </div>
+  </div></div>
+</div></div>
+    <ol class="notes"><li><span class="pin-n dot">&#9679;</span><div><b>Verdana 11px, warm grey, small gradients.</b> Raised v4 buttons with a 1px edge, the scrubber as a white well with v4's pale blue fill, a red gradient LIVE tag.</div></li><li><span class="pin-n dot">&#9679;</span><div><b>v4 tabs.</b> Rounded top corners, the open tab white and joined to its pane, exactly how v4 drew a tab strip.</div></li></ol>
+
+    <h3 class="sub">2b. macOS <small>QuickTime and Music</small></h3>
+    <div class="scene wp-mac t-mac"><div class="win">
+  <div class="tb"><span class="tb-title"><svg class="i" aria-hidden="true"><use href="#i-cup"/></svg><span class="tb-text">umbraCoffee</span></span>
+    <span class="tb-ctrls"><span class="c reload" title="Reload"><svg class="g g-reload" aria-hidden="true"><use href="#w-reload"/></svg></span><span class="c min"><svg class="g g-min" aria-hidden="true"><use href="#w-min"/></svg></span><span class="c max"><svg class="g g-max" aria-hidden="true"><use href="#w-max"/></svg></span><span class="c close"><svg class="g g-close" aria-hidden="true"><use href="#w-close"/></svg></span></span></div>
+  <div class="win-body"><div class="app">
+    <header class="app-head has-pin">
+    <div class="head-main"><div class="eyebrow"><span class="pill live"><i></i>Live now</span><span class="meta">Started 12:31 · Friday 25 September</span></div><h3 class="ep-title">The September Shift</h3></div>
+    <div class="hosts"><span class="avs"><span class="av" style="--c:#8d5b3f">M</span><span class="av" style="--c:#3b5ba5">C</span></span><span class="hosts-t"><b>Marcin and Callum</b><small>Your hosts</small></span></div>
+    <span class="head-sep"></span>
+    <button type="button" class="icon-btn" title="Hide the side panel"><svg class="i" aria-hidden="true"><use href="#i-panel"/></svg></button>
+  </header>
+    <div class="app-main">
+      <section class="player"><div class="stage-well"><div class="stage"><div class="yt" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/sddefault.jpg');--img2:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22">
+    <div class="yt-top"><span class="yt-av"></span><span class="yt-title">umbraCoffee - The September Shift</span></div>
+    <div class="yt-mark"><span class="yt-logo"></span>YouTube</div>
+  </div></div></div><div class="cbmac">
+    <div class="m-l"><button type="button" class="cb-btn" title="Back 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-back10"/></svg></button><button type="button" class="m-play" title="Pause"><svg class="i" aria-hidden="true"><use href="#i-pause"/></svg></button><button type="button" class="cb-btn dis" style="opacity:.35" title="Forward 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-fwd10"/></svg></button></div>
+    <div class="m-lcd">
+      <div class="m-lcd-t"><b>The September Shift</b><span>umbraCoffee · Live with Marcin and Callum</span></div>
+      <div class="m-lcd-s"><span class="m-t">Started 12:31</span><div class="cb-track"><i class="cb-fill" style="width:100%"></i></div><span class="m-t"><span class="m-live"><i></i>LIVE</span></span></div>
+    </div>
+    <div class="m-r"><span class="m-vol"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg><span class="cb-slider"><i style="width:70%"></i><b style="left:70%"></b></span></span><button type="button" class="cb-btn is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button><button type="button" class="cb-btn" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button><button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button><a class="cb-yt" href="#" title="Watch on YouTube">YouTube <svg class="i" aria-hidden="true"><use href="#i-ext"/></svg></a></div>
+  </div></section>
+      <aside class="panel">
+    <nav class="tabs has-pin"><span class="tab on"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>Chat</span><span class="tab"><svg class="i" aria-hidden="true"><use href="#i-list"/></svg>Episodes <span class="tab-count">15</span></span></nav>
+    <div class="panel-body">
+      <div class="chat-cap"><span class="frame-tag"><span class="yt-logo"></span>Live chat from YouTube</span><button type="button" class="icon-btn sm" title="Pop out the chat"><svg class="i" aria-hidden="true"><use href="#i-popout"/></svg></button></div>
+      <div class="ytchat">
+    <div class="ytc-head">Top chat <svg class="i" aria-hidden="true"><use href="#i-chev"/></svg><span class="sp"></span><span class="dots">&#8942;</span></div>
+    <ul class="ytc-list"><li><span class="ytc-av" style="--c:#c2185b">S</span><span><span class="ytc-name">Sofie</span>Morning from Aarhus, second coffee already</span></li><li><span class="ytc-av" style="--c:#1565c0">R</span><span><span class="ytc-name">Ravi</span>Is the new minor release in the news bit today?</span></li><li><span class="ytc-av" style="--c:#2e7d32">T</span><span><span class="ytc-name">Tom</span>That package spotlight last month got me to finally try it</span></li><li><span class="ytc-av" style="--c:#6a1b9a">L</span><span><span class="ytc-name">Lena</span>Hi Marcin, hi Callum!</span></li><li><span class="ytc-av" style="--c:#3b5ba5">C</span><span><span class="ytc-name host">Callum</span>Welcome all, grab a coffee, we are just getting going</span></li><li><span class="ytc-av" style="--c:#ef6c00">J</span><span><span class="ytc-name">Jonas</span>Watching from inside the backoffice for once</span></li><li><span class="ytc-av" style="--c:#00838f">P</span><span><span class="ytc-name">Priya</span>The upgrade notes were really clear this time</span></li></ul>
+    <div class="ytc-foot"><span class="ytc-av" style="--c:#7b8794">L</span><span class="ytc-input">Chat...</span><span class="ytc-count">0/200</span></div>
+  </div>
+    </div>
+  </aside>
+    </div>
+  </div></div>
+</div></div>
+    <ol class="notes"><li><span class="pin-n dot">&#9679;</span><div><b>Transport, LCD, tools.</b> Music's layout: skip and play on the left, an LCD well in the middle with the title and a thin scrubber, volume and tools on the right.</div></li><li><span class="pin-n dot">&#9679;</span><div><b>Frosted, but below the picture.</b> The bar looks like a translucent toolbar, and sits under the video like every other theme. Tabs are a segmented control.</div></li></ol>
+
+    <h3 class="sub">2c. Windows 11 <small>The new Media Player, dark Mica</small></h3>
+    <div class="scene wp-w11 t-w11"><div class="win">
+  <div class="tb"><span class="tb-title"><svg class="i" aria-hidden="true"><use href="#i-cup"/></svg><span class="tb-text">umbraCoffee</span></span>
+    <span class="tb-ctrls"><span class="c reload" title="Reload"><svg class="g g-reload" aria-hidden="true"><use href="#w-reload"/></svg></span><span class="c min"><svg class="g g-min" aria-hidden="true"><use href="#w-min"/></svg></span><span class="c max"><svg class="g g-max" aria-hidden="true"><use href="#w-max"/></svg></span><span class="c close"><svg class="g g-close" aria-hidden="true"><use href="#w-close"/></svg></span></span></div>
+  <div class="win-body"><div class="app">
+    <header class="app-head has-pin">
+    <div class="head-main"><div class="eyebrow"><span class="pill live"><i></i>Live now</span><span class="meta">Started 12:31 · Friday 25 September</span></div><h3 class="ep-title">The September Shift</h3></div>
+    <div class="hosts"><span class="avs"><span class="av" style="--c:#8d5b3f">M</span><span class="av" style="--c:#3b5ba5">C</span></span><span class="hosts-t"><b>Marcin and Callum</b><small>Your hosts</small></span></div>
+    <span class="head-sep"></span>
+    <button type="button" class="icon-btn" title="Hide the side panel"><svg class="i" aria-hidden="true"><use href="#i-panel"/></svg></button>
+  </header>
+    <div class="app-main">
+      <section class="player"><div class="stage-well"><div class="stage"><div class="yt" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/sddefault.jpg');--img2:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22">
+    <div class="yt-top"><span class="yt-av"></span><span class="yt-title">umbraCoffee - The September Shift</span></div>
+    <div class="yt-mark"><span class="yt-logo"></span>YouTube</div>
+  </div></div></div><div class="cb11">
+    <div class="c11-seek"><span class="c11-t">12:31</span><div class="cb-track"><i class="cb-fill" style="width:100%"></i><i class="cb-knob" style="left:100%"></i></div><span class="c11-t r"><span class="c11-live"><i></i>LIVE</span></span></div>
+    <div class="c11-row">
+      <div class="c11-l"><a class="cb-yt" href="#"><svg class="i" aria-hidden="true"><use href="#i-ext"/></svg>Watch on YouTube</a></div>
+      <div class="c11-c"><button type="button" class="cb-btn" title="Back 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-back10"/></svg></button><button type="button" class="c11-play" title="Pause"><svg class="i" aria-hidden="true"><use href="#i-pause"/></svg></button><button type="button" class="cb-btn dis" title="Forward 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-fwd10"/></svg></button></div>
+      <div class="c11-r"><button type="button" class="cb-btn" title="Volume"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg></button><button type="button" class="cb-btn is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button><button type="button" class="cb-btn" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button><button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button><button type="button" class="cb-btn" title="More"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg></button></div>
+    </div>
+  </div></section>
+      <aside class="panel">
+    <nav class="tabs has-pin"><span class="tab on"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>Chat</span><span class="tab"><svg class="i" aria-hidden="true"><use href="#i-list"/></svg>Episodes <span class="tab-count">15</span></span></nav>
+    <div class="panel-body">
+      <div class="chat-cap"><span class="frame-tag"><span class="yt-logo"></span>Live chat from YouTube</span><button type="button" class="icon-btn sm" title="Pop out the chat"><svg class="i" aria-hidden="true"><use href="#i-popout"/></svg></button></div>
+      <div class="ytchat dark">
+    <div class="ytc-head">Top chat <svg class="i" aria-hidden="true"><use href="#i-chev"/></svg><span class="sp"></span><span class="dots">&#8942;</span></div>
+    <ul class="ytc-list"><li><span class="ytc-av" style="--c:#c2185b">S</span><span><span class="ytc-name">Sofie</span>Morning from Aarhus, second coffee already</span></li><li><span class="ytc-av" style="--c:#1565c0">R</span><span><span class="ytc-name">Ravi</span>Is the new minor release in the news bit today?</span></li><li><span class="ytc-av" style="--c:#2e7d32">T</span><span><span class="ytc-name">Tom</span>That package spotlight last month got me to finally try it</span></li><li><span class="ytc-av" style="--c:#6a1b9a">L</span><span><span class="ytc-name">Lena</span>Hi Marcin, hi Callum!</span></li><li><span class="ytc-av" style="--c:#3b5ba5">C</span><span><span class="ytc-name host">Callum</span>Welcome all, grab a coffee, we are just getting going</span></li><li><span class="ytc-av" style="--c:#ef6c00">J</span><span><span class="ytc-name">Jonas</span>Watching from inside the backoffice for once</span></li><li><span class="ytc-av" style="--c:#00838f">P</span><span><span class="ytc-name">Priya</span>The upgrade notes were really clear this time</span></li></ul>
+    <div class="ytc-foot"><span class="ytc-av" style="--c:#7b8794">L</span><span class="ytc-input">Chat...</span><span class="ytc-count">0/200</span></div>
+  </div>
+    </div>
+  </aside>
+    </div>
+  </div></div>
+</div></div>
+    <ol class="notes"><li><span class="pin-n dot">&#9679;</span><div><b>Media Player layout.</b> Scrubber on top with time at both ends, a round accent play button in the middle, tools on the right. Segoe UI Variable, 4px corners.</div></li><li><span class="pin-n dot">&#9679;</span><div><b>Dark variant on purpose.</b> This shows the theme’s dark palette. YouTube’s chat has a dark mode too, and follows it. Tabs are a SelectorBar with the short accent pill.</div></li></ol>
+
+    <h3 class="sub">2d. Windows 98 <small>Windows Media Player 6.4</small></h3>
+    <div class="scene wp-98 t-98"><div class="win">
+  <div class="tb"><span class="tb-title"><svg class="i" aria-hidden="true"><use href="#i-cup"/></svg><span class="tb-text">umbraCoffee</span></span>
+    <span class="tb-ctrls"><span class="c reload" title="Reload"><svg class="g g-reload" aria-hidden="true"><use href="#w-reload"/></svg></span><span class="c min"><svg class="g g-min" aria-hidden="true"><use href="#w-min"/></svg></span><span class="c max"><svg class="g g-max" aria-hidden="true"><use href="#w-max"/></svg></span><span class="c close"><svg class="g g-close" aria-hidden="true"><use href="#w-close"/></svg></span></span></div>
+  <div class="win-body"><div class="app">
+    <header class="app-head has-pin">
+    <div class="head-main"><div class="eyebrow"><span class="pill live"><i></i>Live now</span><span class="meta">Started 12:31 · Friday 25 September</span></div><h3 class="ep-title">The September Shift</h3></div>
+    <div class="hosts"><span class="avs"><span class="av" style="--c:#8d5b3f">M</span><span class="av" style="--c:#3b5ba5">C</span></span><span class="hosts-t"><b>Marcin and Callum</b><small>Your hosts</small></span></div>
+    <span class="head-sep"></span>
+    <button type="button" class="icon-btn" title="Hide the side panel"><svg class="i" aria-hidden="true"><use href="#i-panel"/></svg></button>
+  </header>
+    <div class="app-main">
+      <section class="player"><div class="stage-well"><div class="stage"><div class="yt" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/sddefault.jpg');--img2:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22">
+    <div class="yt-top"><span class="yt-av"></span><span class="yt-title">umbraCoffee - The September Shift</span></div>
+    <div class="yt-mark"><span class="yt-logo"></span>YouTube</div>
+  </div></div></div><div class="cb98">
+    <div class="w98-seek"><div class="w98-groove"></div><div class="w98-ticks"></div><span class="w98-thumb" style="left:100%"></span></div>
+    <div class="w98-row">
+      <button type="button" class="w98-b pressed" title="Play"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button>
+      <button type="button" class="w98-b" title="Pause"><svg class="i" aria-hidden="true"><use href="#i-pause"/></svg></button>
+      <button type="button" class="w98-b" title="Stop"><svg class="i" aria-hidden="true"><use href="#i-stop"/></svg></button>
+      <span class="w98-sep"></span>
+      <button type="button" class="w98-b" title="Back 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-back10"/></svg></button>
+      <button type="button" class="w98-b dis" title="Forward 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-fwd10"/></svg></button>
+      <span class="w98-sep"></span>
+      <button type="button" class="w98-b pressed" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button>
+      <button type="button" class="w98-b" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button>
+      <button type="button" class="w98-b" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button>
+      <span class="cb-grow"></span>
+      <span class="w98-vol"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg><span class="w98-mini"><span class="w98-groove"></span><span class="w98-thumb sm" style="left:70%"></span></span></span>
+      <button type="button" class="w98-btn">Watch on YouTube</button>
+    </div>
+    <div class="w98-status"><span class="w98-pane">Playing</span><span class="w98-pane grow">Live broadcast: umbraCoffee - The September Shift</span><span class="w98-pane"><i class="w98-dot"></i>LIVE</span></div>
+  </div></section>
+      <aside class="panel">
+    <nav class="tabs has-pin"><span class="tab on"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>Chat</span><span class="tab"><svg class="i" aria-hidden="true"><use href="#i-list"/></svg>Episodes <span class="tab-count">15</span></span></nav>
+    <div class="panel-body">
+      <div class="chat-cap"><span class="frame-tag"><span class="yt-logo"></span>Live chat from YouTube</span><button type="button" class="icon-btn sm" title="Pop out the chat"><svg class="i" aria-hidden="true"><use href="#i-popout"/></svg></button></div>
+      <div class="ytchat">
+    <div class="ytc-head">Top chat <svg class="i" aria-hidden="true"><use href="#i-chev"/></svg><span class="sp"></span><span class="dots">&#8942;</span></div>
+    <ul class="ytc-list"><li><span class="ytc-av" style="--c:#c2185b">S</span><span><span class="ytc-name">Sofie</span>Morning from Aarhus, second coffee already</span></li><li><span class="ytc-av" style="--c:#1565c0">R</span><span><span class="ytc-name">Ravi</span>Is the new minor release in the news bit today?</span></li><li><span class="ytc-av" style="--c:#2e7d32">T</span><span><span class="ytc-name">Tom</span>That package spotlight last month got me to finally try it</span></li><li><span class="ytc-av" style="--c:#6a1b9a">L</span><span><span class="ytc-name">Lena</span>Hi Marcin, hi Callum!</span></li><li><span class="ytc-av" style="--c:#3b5ba5">C</span><span><span class="ytc-name host">Callum</span>Welcome all, grab a coffee, we are just getting going</span></li><li><span class="ytc-av" style="--c:#ef6c00">J</span><span><span class="ytc-name">Jonas</span>Watching from inside the backoffice for once</span></li><li><span class="ytc-av" style="--c:#00838f">P</span><span><span class="ytc-name">Priya</span>The upgrade notes were really clear this time</span></li></ul>
+    <div class="ytc-foot"><span class="ytc-av" style="--c:#7b8794">L</span><span class="ytc-input">Chat...</span><span class="ytc-count">0/200</span></div>
+  </div>
+    </div>
+  </aside>
+    </div>
+  </div></div>
+</div></div>
+    <ol class="notes"><li><span class="pin-n dot">&#9679;</span><div><b>A trackbar, square buttons, a status bar.</b> The seek is a grooved trackbar with a raised thumb and ticks. Play is pressed in while playing. Sunken status panes say Playing, what, and LIVE.</div></li><li><span class="pin-n dot">&#9679;</span><div><b>No hover states.</b> Like the rest of this theme, buttons respond to a press, not to the pointer. Tabs are the Windows 98 tab control.</div></li></ol>
+  </section>
+
+  <!-- ============================================================ 3 -->
+  <section class="s">
+    <div class="s-head"><span class="s-num">3</span><h2 class="s-title">The control bar, close up</h2></div>
+    <p class="s-lead">On demand this time, so the scrubber and times show. Each bar is drawn directly under the bottom edge of the picture. The last row is the same bar driving a local file in an HTML video element, which is what the Video Player app will use.</p>
+    <div class="strip">
+      
+  <div class="strip-row">
+    <div class="strip-label"><b>Umbraco</b><span>UUI buttons, navy play, violet progress</span></div>
+    <div class="strip-cell t-umbraco wp-umbraco"><div class="app"><div class="peek" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22"><span class="peek-tag">Bottom of the YouTube picture</span></div><div class="cb has-pin">
+      <div class="cb-seek"><span class="cb-st">12:08</span><div class="cb-track chap"><span class="seg" style="width:6.29%"><i style="width:100%"></i></span><span class="seg" style="width:29.55%"><i style="width:60.3%"></i></span><span class="seg" style="width:27.10%"><i style="width:0%"></i></span><span class="seg" style="width:28.98%"><i style="width:0%"></i></span><span class="seg" style="width:8.08%"><i style="width:0%"></i></span><i class="cb-knob" style="left:24.11%"></i></div><span class="cb-st r">50:19</span></div>
+      <div class="cb-row">
+        <button type="button" class="cb-play" title="Play"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Back 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-back10"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Forward 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-fwd10"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Volume"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg></button><span class="cb-slider opt"><i style="width:70%"></i><b style="left:70%"></b></span>
+        <span class="cb-chapter opt"><svg class="i" aria-hidden="true"><use href="#i-chap"/></svg>Community news</span>
+        <span class="cb-grow"></span>
+        <button type="button" class="cb-btn cb-speed opt" title="Playback speed">1x</button>
+        <button type="button" class="cb-btn opt is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button>
+      <button type="button" class="cb-btn opt" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button>
+      <button type="button" class="cb-btn cb-more" title="More: volume, captions, picture in picture"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg></button>
+      <button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button>
+        <a class="cb-yt" href="#" title="Watch on YouTube"><svg class="i" aria-hidden="true"><use href="#i-ext"/></svg><span>Watch on YouTube</span></a>
+      </div>
+    </div></div></div>
+  </div>
+      
+  <div class="strip-row">
+    <div class="strip-label"><b>Umbraco 4</b><span>Raised gradients, white well</span></div>
+    <div class="strip-cell t-u4 wp-u4"><div class="app"><div class="peek" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22"><span class="peek-tag">Bottom of the YouTube picture</span></div><div class="cb has-pin">
+      <div class="cb-seek"><span class="cb-st">12:08</span><div class="cb-track chap"><span class="seg" style="width:6.29%"><i style="width:100%"></i></span><span class="seg" style="width:29.55%"><i style="width:60.3%"></i></span><span class="seg" style="width:27.10%"><i style="width:0%"></i></span><span class="seg" style="width:28.98%"><i style="width:0%"></i></span><span class="seg" style="width:8.08%"><i style="width:0%"></i></span><i class="cb-knob" style="left:24.11%"></i></div><span class="cb-st r">50:19</span></div>
+      <div class="cb-row">
+        <button type="button" class="cb-play" title="Play"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Back 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-back10"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Forward 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-fwd10"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Volume"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg></button><span class="cb-slider opt"><i style="width:70%"></i><b style="left:70%"></b></span>
+        <span class="cb-chapter opt"><svg class="i" aria-hidden="true"><use href="#i-chap"/></svg>Community news</span>
+        <span class="cb-grow"></span>
+        <button type="button" class="cb-btn cb-speed opt" title="Playback speed">1x</button>
+        <button type="button" class="cb-btn opt is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button>
+      <button type="button" class="cb-btn opt" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button>
+      <button type="button" class="cb-btn cb-more" title="More: volume, captions, picture in picture"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg></button>
+      <button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button>
+        <a class="cb-yt" href="#" title="Watch on YouTube"><svg class="i" aria-hidden="true"><use href="#i-ext"/></svg><span>Watch on YouTube</span></a>
+      </div>
+    </div></div></div>
+  </div>
+      
+  <div class="strip-row">
+    <div class="strip-label"><b>macOS</b><span>Transport, LCD, tools</span></div>
+    <div class="strip-cell t-mac wp-mac"><div class="app"><div class="peek" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22"><span class="peek-tag">Bottom of the YouTube picture</span></div><div class="cbmac">
+    <div class="m-l"><button type="button" class="cb-btn" title="Back 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-back10"/></svg></button><button type="button" class="m-play" title="Play"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button><button type="button" class="cb-btn" style="" title="Forward 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-fwd10"/></svg></button></div>
+    <div class="m-lcd">
+      <div class="m-lcd-t"><b>The September Shift</b><span>umbraCoffee · Friday 25 September 2026</span></div>
+      <div class="m-lcd-s"><span class="m-t">12:08</span><div class="cb-track"><i class="cb-fill" style="width:24.1%"></i></div><span class="m-t">-38:11</span></div>
+    </div>
+    <div class="m-r"><span class="m-vol"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg><span class="cb-slider"><i style="width:70%"></i><b style="left:70%"></b></span></span><button type="button" class="cb-btn is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button><button type="button" class="cb-btn" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button><button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button><a class="cb-yt" href="#" title="Watch on YouTube">YouTube <svg class="i" aria-hidden="true"><use href="#i-ext"/></svg></a></div>
+  </div></div></div>
+  </div>
+      
+  <div class="strip-row">
+    <div class="strip-label"><b>Windows 11</b><span>Round play, accent scrubber</span></div>
+    <div class="strip-cell t-w11 wp-w11"><div class="app"><div class="peek" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22"><span class="peek-tag">Bottom of the YouTube picture</span></div><div class="cb11">
+    <div class="c11-seek"><span class="c11-t">12:08</span><div class="cb-track"><i class="cb-fill" style="width:24.1%"></i><i class="cb-knob" style="left:24.1%"></i></div><span class="c11-t r">50:19</span></div>
+    <div class="c11-row">
+      <div class="c11-l"><a class="cb-yt" href="#"><svg class="i" aria-hidden="true"><use href="#i-ext"/></svg>Watch on YouTube</a></div>
+      <div class="c11-c"><button type="button" class="cb-btn" title="Back 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-back10"/></svg></button><button type="button" class="c11-play" title="Play"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button><button type="button" class="cb-btn" title="Forward 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-fwd10"/></svg></button></div>
+      <div class="c11-r"><button type="button" class="cb-btn" title="Volume"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg></button><button type="button" class="cb-btn is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button><button type="button" class="cb-btn" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button><button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button><button type="button" class="cb-btn" title="More"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg></button></div>
+    </div>
+  </div></div></div>
+  </div>
+      
+  <div class="strip-row">
+    <div class="strip-label"><b>Windows 98</b><span>Trackbar, bevels, status bar</span></div>
+    <div class="strip-cell t-98 wp-98"><div class="app"><div class="peek" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22"><span class="peek-tag">Bottom of the YouTube picture</span></div><div class="cb98">
+    <div class="w98-seek"><div class="w98-groove"></div><div class="w98-ticks"></div><span class="w98-thumb" style="left:24.1%"></span></div>
+    <div class="w98-row">
+      <button type="button" class="w98-b" title="Play"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button>
+      <button type="button" class="w98-b pressed" title="Pause"><svg class="i" aria-hidden="true"><use href="#i-pause"/></svg></button>
+      <button type="button" class="w98-b" title="Stop"><svg class="i" aria-hidden="true"><use href="#i-stop"/></svg></button>
+      <span class="w98-sep"></span>
+      <button type="button" class="w98-b" title="Back 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-back10"/></svg></button>
+      <button type="button" class="w98-b" title="Forward 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-fwd10"/></svg></button>
+      <span class="w98-sep"></span>
+      <button type="button" class="w98-b pressed" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button>
+      <button type="button" class="w98-b" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button>
+      <button type="button" class="w98-b" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button>
+      <span class="cb-grow"></span>
+      <span class="w98-vol"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg><span class="w98-mini"><span class="w98-groove"></span><span class="w98-thumb sm" style="left:70%"></span></span></span>
+      <button type="button" class="w98-btn">Watch on YouTube</button>
+    </div>
+    <div class="w98-status"><span class="w98-pane">Paused</span><span class="w98-pane grow">umbraCoffee - The September Shift</span><span class="w98-pane">00:12:08 / 00:50:19</span></div>
+  </div></div></div>
+  </div>
+      
+  <div class="strip-row">
+    <div class="strip-label"><b>Local file</b><span>Same bar, HTML video source</span></div>
+    <div class="strip-cell t-umbraco wp-umbraco"><div class="app"><div class="peek local"><span class="peek-tag">Local file, HTML video</span></div><div class="cb">
+      <div class="cb-seek"><span class="cb-st">3:12</span><div class="cb-track"><i class="cb-buf" style="width:41%"></i><i class="cb-fill" style="width:7.8%"></i><i class="cb-knob" style="left:7.8%"></i></div><span class="cb-st r">41:05</span></div>
+      <div class="cb-row">
+        <button type="button" class="cb-play" title="Pause"><svg class="i" aria-hidden="true"><use href="#i-pause"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Back 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-back10"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Forward 10 seconds"><svg class="i" aria-hidden="true"><use href="#i-fwd10"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Volume"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg></button><span class="cb-slider opt"><i style="width:70%"></i><b style="left:70%"></b></span>
+        <span class="cb-file opt"><svg class="i" aria-hidden="true"><use href="#i-film"/></svg>codegarden-2026-keynote.mp4</span>
+        <span class="cb-grow"></span>
+        <button type="button" class="cb-btn cb-speed opt" title="Playback speed">1x</button>
+        <button type="button" class="cb-btn opt is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button>
+      <button type="button" class="cb-btn opt" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button>
+      <button type="button" class="cb-btn cb-more" title="More: volume, captions, picture in picture"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg></button>
+      <button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button>
+        <a class="cb-yt" href="#" title="Show in Media"><svg class="i" aria-hidden="true"><use href="#i-image"/></svg><span>Show in Media</span></a>
+      </div>
+    </div></div></div>
+  </div>
+      
+  <div class="strip-row">
+    <div class="strip-label"><b>Behind live</b><span>Umbraco, live, 2:14 behind</span></div>
+    <div class="strip-cell t-umbraco wp-umbraco"><div class="app"><div class="peek" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/hqdefault.jpg');--h:22"><span class="peek-tag">Bottom of the YouTube picture</span></div><div class="cb has-pin">
+      <div class="cb-seek"><div class="cb-track"><i class="cb-buf" style="width:100%"></i><i class="cb-fill" style="width:94%"></i><i class="cb-knob" style="left:94%"></i></div></div>
+      <div class="cb-row">
+        <button type="button" class="cb-play" title="Pause"><svg class="i" aria-hidden="true"><use href="#i-pause"/></svg></button>
+        <button type="button" class="cb-btn opt" title="Volume"><svg class="i" aria-hidden="true"><use href="#i-vol"/></svg></button><span class="cb-slider opt"><i style="width:70%"></i><b style="left:70%"></b></span>
+        <span class="cb-live behind"><i></i>LIVE</span><span class="cb-behind">2:14 behind</span><button type="button" class="cb-golive"><i></i>Go to live</button>
+        <span class="cb-grow"></span>
+        <button type="button" class="cb-btn opt is-on" title="Captions"><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg></button>
+      <button type="button" class="cb-btn opt" title="Picture in picture"><svg class="i" aria-hidden="true"><use href="#i-pip"/></svg></button>
+      <button type="button" class="cb-btn cb-more" title="More: volume, captions, picture in picture"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg></button>
+      <button type="button" class="cb-btn" title="Full screen"><svg class="i" aria-hidden="true"><use href="#i-full"/></svg></button>
+        <span class="cb-div"></span><a class="cb-yt" href="#" title="Watch on YouTube"><svg class="i" aria-hidden="true"><use href="#i-ext"/></svg><span>Watch on YouTube</span></a>
+      </div>
+    </div></div></div>
+  </div>
+    </div>
+    <ol class="notes"><li><span class="pin-n dot">&#9679;</span><div><b>One component, two sources.</b> The bar talks to a source: the YouTube player API, or an HTML video element. The buttons do not know which. Anything a source cannot do is disabled, not hidden.</div></li><li><span class="pin-n dot">&#9679;</span><div><b>Local files get what YouTube cannot.</b> A buffered range on the scrubber, the file name, and Show in Media instead of Watch on YouTube.</div></li><li><span class="pin-n dot">&#9679;</span><div><b>Same order everywhere.</b> Play first, then position, then volume and tools, then the way out. A theme changes the look and the arrangement, never the set.</div></li></ol>
+  </section>
+
+  <!-- ============================================================ 4 -->
+  <section class="s">
+    <div class="s-head"><span class="s-num">4</span><h2 class="s-title">Tray cup and reminders</h2></div>
+    <p class="s-lead">Umbraco theme. The cup by the clock shows steam when a stream is coming up and a red dot when it is live. The reminder toast gets the episode's thumbnail and a clear Watch button.</p>
+    <div class="two">
+      <div>
+        <div class="tray-scene wp-umbraco">
+          <div class="toast">
+      <div class="toast-in"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/P3-3mxtv7RE/mqdefault.jpg');--h:20"></span><div>
+        <div class="toast-meta"><svg class="i" aria-hidden="true"><use href="#i-cup"/></svg>umbraCoffee · 12:20 PM</div>
+        <h5>umbraCoffee starts soon</h5>
+        <p>Spooky Season 2026 starts at 12:30, in 10 minutes.</p>
+        <div class="toast-actions"><button type="button" class="btn primary"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg>Watch</button><a class="link" href="#">Stop reminding me</a></div>
+      </div></div>
+      <button type="button" class="toast-x" title="Dismiss"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+          <span class="tip">umbraCoffee in 10 min: Spooky Season 2026</span>
+          <div class="taskbar">
+    <span class="start"><span>U</span></span>
+    <span class="task"><svg class="i" aria-hidden="true"><use href="#i-doc"/></svg>Content</span>
+    <span class="task on"><svg class="i" aria-hidden="true"><use href="#i-image"/></svg>Media</span>
+    <div class="tray"><span class="cup hover" title=""><svg viewBox="0 0 16 16" aria-hidden="true">
+  <g class="steam"><path d="M5.5 5.5c-.9-.9.9-1.6 0-2.5"/><path d="M8.5 5.5c-.9-.9.9-1.6 0-2.5"/></g>
+  <path class="body" d="M2.5 7.5h8v2.5a3 3 0 0 1-3 3h-2a3 3 0 0 1-3-3z"/>
+  <path class="body" d="M10.5 8.5h.75a1.5 1.5 0 0 1 0 3h-1"/>
+  <path class="body" d="M1.5 14.5h11"/>
+  
+</svg></span><span class="clock">12:20 PM<small>10/30/2026</small></span></div>
+  </div>
+        </div>
+        <p class="aside-note">Ten minutes before: the cup steams, the toast offers Watch.</p>
+      </div>
+      <div>
+        <div class="tray-scene wp-umbraco">
+          <div class="toast live">
+      <div class="toast-in"><span class="thumb" style="--img:url('https://i.ytimg.com/vi/aRkc0fRxQjw/mqdefault.jpg');--h:22"></span><div>
+        <div class="toast-meta"><svg class="i" aria-hidden="true"><use href="#i-cup"/></svg>umbraCoffee · 12:31 PM</div>
+        <h5>umbraCoffee is live <span class="pill live"><i></i>Live</span></h5>
+        <p>The September Shift, with Marcin and Callum.</p>
+        <div class="toast-actions"><button type="button" class="btn primary"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg>Watch now</button><a class="link" href="#">Stop reminding me</a></div>
+      </div></div>
+      <button type="button" class="toast-x" title="Dismiss"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+          <span class="tip">umbraCoffee is live: The September Shift</span>
+          <div class="taskbar">
+    <span class="start"><span>U</span></span>
+    <span class="task"><svg class="i" aria-hidden="true"><use href="#i-doc"/></svg>Content</span>
+    <span class="task on"><svg class="i" aria-hidden="true"><use href="#i-image"/></svg>Media</span>
+    <div class="tray"><span class="cup hover" title=""><svg viewBox="0 0 16 16" aria-hidden="true">
+  
+  <path class="body" d="M2.5 7.5h8v2.5a3 3 0 0 1-3 3h-2a3 3 0 0 1-3-3z"/>
+  <path class="body" d="M10.5 8.5h.75a1.5 1.5 0 0 1 0 3h-1"/>
+  <path class="body" d="M1.5 14.5h11"/>
+  <circle class="dot" cx="13" cy="3.5" r="2.5"/>
+</svg></span><span class="clock">12:31 PM<small>9/25/2026</small></span></div>
+  </div>
+        </div>
+        <p class="aside-note">When it goes live: red dot on the cup, a toast with the live edge colour.</p>
+      </div>
+    </div>
+    <div class="cups">
+      <div class="cup-card"><span class="cup-big"><svg viewBox="0 0 16 16" aria-hidden="true">
+  <g class="steam"><path d="M5.5 5.5c-.9-.9.9-1.6 0-2.5"/><path d="M8.5 5.5c-.9-.9.9-1.6 0-2.5"/></g>
+  <path class="body" d="M2.5 7.5h8v2.5a3 3 0 0 1-3 3h-2a3 3 0 0 1-3-3z"/>
+  <path class="body" d="M10.5 8.5h.75a1.5 1.5 0 0 1 0 3h-1"/>
+  <path class="body" d="M1.5 14.5h11"/>
+  
+</svg></span><div><b>Coming up</b><span>Steam rises slowly, and only for people who have not asked for less motion.</span></div></div>
+      <div class="cup-card"><span class="cup-big"><svg viewBox="0 0 16 16" aria-hidden="true">
+  
+  <path class="body" d="M2.5 7.5h8v2.5a3 3 0 0 1-3 3h-2a3 3 0 0 1-3-3z"/>
+  <path class="body" d="M10.5 8.5h.75a1.5 1.5 0 0 1 0 3h-1"/>
+  <path class="body" d="M1.5 14.5h11"/>
+  <circle class="dot" cx="13" cy="3.5" r="2.5"/>
+</svg></span><div><b>Live</b><span>A red dot with a ring in the bar's colour, so it reads on any wallpaper.</span></div></div>
+    </div>
+    <ol class="notes"><li><span class="pin-n dot">&#9679;</span><div><b>Watch opens umbraCoffee and plays.</b> If the window is already open it comes to the front instead of opening a second one.</div></li><li><span class="pin-n dot">&#9679;</span><div><b>Stop reminding me stays.</b> It flips the same switch as Desktop settings, Taskbar. The toast is the one place people meet it, so it stays a plain link rather than a button.</div></li></ol>
+
+    <div class="decide">
+      <b>Choices for you</b>
+      <ol>
+        <li>Durations: add a YouTube Data API key on the server, or leave the badge out?</li>
+        <li>Remind me in the app itself, or keep reminders only in Desktop settings?</li>
+        <li>Chapters from description timestamps: worth building now, or later?</li>
+        <li>Windows 11 in dark, as drawn, or its light palette when the backoffice is light?</li>
+      </ol>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

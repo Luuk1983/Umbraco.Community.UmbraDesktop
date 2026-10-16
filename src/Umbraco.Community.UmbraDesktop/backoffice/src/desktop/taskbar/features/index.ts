@@ -12,10 +12,12 @@ import type {
 /**
  * Every fixed taskbar feature the shell knows about.
  *
- * Curated rather than an extension point, the same way `theme/themes/index.ts` and
- * `settings/categories/index.ts` are: a feature is a folder plus one entry here, and a package
- * cannot add itself. The order within a region is the shell's — as it is in Windows — so the user
- * cannot reorder the row and nothing shifts position when a feature is switched off.
+ * Curated, the same way `theme/themes/index.ts` and `settings/categories/index.ts` are: a feature is
+ * a folder plus one entry here, and a package cannot add itself to this list. The order within a
+ * region is the shell's — as it is in Windows — so the user cannot reorder the row and nothing shifts
+ * position when a feature is switched off. The tray region is open to packages all the same, through
+ * a `umbraDesktopTrayItem` manifest (umbraCoffee design D9), but those items live in `taskbar/tray/`,
+ * never in this list, and nothing in this folder imports from there.
  *
  * Declared in weight order for readability, but read through {@link taskbarFeaturesIn}, which sorts:
  * an array whose order happens to match its weights is one careless insertion away from being two

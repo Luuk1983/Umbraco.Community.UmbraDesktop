@@ -6,7 +6,6 @@ import { CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE } from './clock/constants.js
 import { DISK_CLEANUP_CONTENT_SIZE, DISK_CLEANUP_MIN_CONTENT_SIZE } from './disk-cleanup/constants.js';
 import { NOTEPAD_CONTENT_SIZE, NOTEPAD_MIN_CONTENT_SIZE } from './notepad/constants.js';
 import { PAINT_CONTENT_SIZE, PAINT_MIN_CONTENT_SIZE } from './paint/constants.js';
-import { SCREENSAVER_WINDOW } from './screensaver/constants.js';
 import { SYSTEM_INFO_CONTENT_SIZE, SYSTEM_INFO_MIN_CONTENT_SIZE } from './system-info/constants.js';
 import { STICKY_NOTES_CONTENT_SIZE, STICKY_NOTES_MIN_CONTENT_SIZE } from './sticky-notes/constants.js';
 import en from './localization/en.js';
@@ -32,12 +31,16 @@ interface App {
     defaultSize?: unknown;
     minSize?: unknown;
     allowMultiple?: boolean;
+    opensSettings?: string;
   };
 }
 
 const apps = manifests.filter((manifest) => manifest.type === 'umbraDesktopApp') as unknown as App[];
 
-/** Each app's name and the sizes its constants derive, in launcher order. */
+/**
+ * Every window app's name and the sizes its constants derive, in launcher order. The Screen Saver is
+ * not here: it opens Desktop settings rather than a window, so it has no sizes.
+ */
 const EXPECTED = [
   ['Notepad', NOTEPAD_CONTENT_SIZE, NOTEPAD_MIN_CONTENT_SIZE],
   ['Paint', PAINT_CONTENT_SIZE, PAINT_MIN_CONTENT_SIZE],
@@ -45,24 +48,29 @@ const EXPECTED = [
   ['Calculator', CALCULATOR_CONTENT_SIZE, CALCULATOR_MIN_CONTENT_SIZE],
   ['CharacterMap', CHARACTER_MAP_CONTENT_SIZE, CHARACTER_MAP_MIN_CONTENT_SIZE],
   ['Clock', CLOCK_CONTENT_SIZE, CLOCK_MIN_CONTENT_SIZE],
-  ['ScreenSaver', SCREENSAVER_WINDOW.content, SCREENSAVER_WINDOW.min],
   ['DiskCleanup', DISK_CLEANUP_CONTENT_SIZE, DISK_CLEANUP_MIN_CONTENT_SIZE],
   ['SystemInfo', SYSTEM_INFO_CONTENT_SIZE, SYSTEM_INFO_MIN_CONTENT_SIZE],
 ] as const;
 
 it('registers every accessory, in launcher order', () => {
   const byWeight = [...apps].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
-  expect(byWeight.map((app) => app.alias)).to.deep.equal(
-    EXPECTED.map(([name]) => `Umbraco.Community.UmbraDesktop.Accessories.${name}`),
-  );
+  const order: string[] = EXPECTED.map(([name]) => name);
+  order.splice(order.indexOf('Clock') + 1, 0, 'ScreenSaver');
+  expect(byWeight.map((app) => app.alias)).to.deep.equal(order.map((name) => `Umbraco.Community.UmbraDesktop.Accessories.${name}`));
 });
+
+/** The tile that opens Desktop settings: the one app that is not a window. */
+const SCREENSAVER_ALIAS = 'Umbraco.Community.UmbraDesktop.Accessories.ScreenSaver';
+
+/** The apps that open a window, which is every one but the Screen Saver tile. */
+const windowApps = apps.filter((app) => app.alias !== SCREENSAVER_ALIAS);
 
 /**
  * `element`, never `js`. `js` is the field every other Umbraco extension uses for this, it
  * type-checks, and the desktop does not read it: an app declared that way is dropped at runtime.
  */
-it('declares every app through a lazy `element` loader', () => {
-  for (const app of apps) {
+it('declares every window app through a lazy `element` loader', () => {
+  for (const app of windowApps) {
     expect(typeof app.element, `${app.alias} element`).to.equal('function');
     expect(app.js, `${app.alias} has no js`).to.equal(undefined);
   }
@@ -99,8 +107,35 @@ it('asks for each app’s derived content size, leaving the chrome to the host',
 });
 
 /** Every other app on the desktop opens as many windows as the user asks for, and so do these. */
-it('lets every app open more than one window', () => {
-  for (const app of apps) expect(app.meta.allowMultiple, app.alias).to.not.equal(false);
+it('lets every window app open more than one window', () => {
+  for (const app of windowApps) expect(app.meta.allowMultiple, app.alias).to.not.equal(false);
+});
+
+/**
+ * The screensaver's controls are a box in Desktop settings, under this package's own row, rather
+ * than a window of their own. The label is the same token the tile uses, so the box is headed by the
+ * name people already know it by.
+ */
+it('registers the screensaver as a box under the package’s own row in Desktop settings', () => {
+  const boxes = manifests.filter((manifest) => manifest.type === 'umbraDesktopPackageSettings') as unknown as Array<{
+    alias: string;
+    element?: unknown;
+    meta: { package: string; label: string };
+  }>;
+  expect(boxes.map((box) => [box.alias, box.meta.package, box.meta.label])).to.deep.equal([
+    ['Umbraco.Community.UmbraDesktop.Accessories.Settings.Screensaver', 'UmbraDesktop Accessories', '#umbraDesktopAccessories_screensaver'],
+  ]);
+  expect(typeof boxes[0].element).to.equal('function');
+});
+
+/** The tile stays where people know it, and opens the settings instead of a window. */
+it('keeps the Screen Saver tile, opening Desktop settings instead of a window', () => {
+  const tile = apps.find((app) => app.alias.endsWith('.ScreenSaver')) as unknown as {
+    element?: unknown;
+    meta: { opensSettings?: string };
+  };
+  expect(tile.meta.opensSettings).to.equal('UmbraDesktop Accessories');
+  expect(tile.element).to.equal(undefined);
 });
 
 /**

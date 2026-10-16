@@ -16,6 +16,6 @@ description: The apps the desktop adds, and the packages it knows by name.
 - [Help](help.md): the documentation of the desktop and its add-ons, for the version installed, in
   as many windows as you like, and how to link to a page of it.
 
-Games are not part of this package. They come with the optional
+Games and umbraCoffee are not part of this package. They come with the optional
 [Entertainment add-on](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment),
 which has documentation of its own.

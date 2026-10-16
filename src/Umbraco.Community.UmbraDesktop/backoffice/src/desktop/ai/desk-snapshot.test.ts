@@ -213,3 +213,41 @@ it('says so plainly when the desk is empty but apps exist', () => {
   expect(text.toLowerCase()).to.contain('no windows');
   expect(text).to.contain('Content editor');
 });
+
+it('marks an app that opens Desktop settings, since it opens no window', () => {
+  const view: DeskView = {
+    getWindows: () => [],
+    subjectsOf: () => [],
+    getApps: () => [
+      { alias: 'log', name: 'Log Viewer' },
+      { alias: 'saver', name: 'Screen Saver', opensSettings: 'My Package' },
+    ] as UmbraDesktopApp[],
+  };
+  const text = snapshot(view)!;
+
+  expect(text).to.contain('Screen Saver (opens Desktop settings)');
+  expect(text).to.not.contain('Log Viewer (');
+});
+
+it('says a window is still working, and how far it has got', () => {
+  const text = snapshot(
+    desk([
+      win({
+        id: 'w1',
+        appName: 'Media',
+        progress: { state: 'determinate', fraction: 0.28, completed: 14, total: 50, failed: 0 },
+      }),
+    ]),
+  )!;
+
+  expect(text).to.contain('still working (14 of 50)');
+});
+
+it('says a window is still working with no count when there is none', () => {
+  const text = snapshot(
+    desk([win({ id: 'w1', appName: 'Media', progress: { state: 'indeterminate', completed: 0, failed: 0 } })]),
+  )!;
+
+  expect(text).to.contain('still working');
+  expect(text).to.not.contain('(');
+});

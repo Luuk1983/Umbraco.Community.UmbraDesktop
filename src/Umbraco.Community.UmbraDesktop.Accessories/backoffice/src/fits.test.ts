@@ -26,14 +26,13 @@ import './system-info/system-info.element.js';
  * layout.
  */
 
-/** Each app's tag, by its manifest `name`. */
+/** Each window app's tag, by its manifest `name`. The Screen Saver tile opens settings, not a window, so it has none. */
 const TAGS: Record<string, string> = {
   Notepad: 'umbradesktop-notepad',
   Paint: 'umbradesktop-paint',
   Calculator: 'umbradesktop-calculator',
   Clock: 'umbradesktop-clock',
   StickyNotes: 'umbradesktop-sticky-notes',
-  ScreenSaver: 'umbradesktop-screensaver-panel',
   CharacterMap: 'umbradesktop-character-map',
   DiskCleanup: 'umbradesktop-disk-cleanup',
   SystemInfo: 'umbradesktop-system-info',
@@ -48,7 +47,32 @@ interface App {
   meta: Record<'defaultSize' | 'minSize', { w: number; h: number }>;
 }
 
-const apps = manifests.filter((manifest) => manifest.type === 'umbraDesktopApp') as unknown as App[];
+const apps = (manifests.filter((manifest) => manifest.type === 'umbraDesktopApp') as unknown as App[]).filter(
+  (app) => app.name in TAGS,
+);
+
+/**
+ * How long the page's first painted frame may take. Measured 2026-10-03: the first frame that has
+ * anything to paint took 400 to 2,300ms, against 16ms for every frame after it, and on a loaded
+ * machine it went past the 5-second test timeout. The case that waited on it was always Notepad's,
+ * because Notepad is first in the list, so a cost of the page looked like a fault of one app. A
+ * bare frame does not take it: with nothing on the page yet, that frame comes back in 0ms.
+ */
+const FIRST_PAINT_TIMEOUT_MS = 30_000;
+
+/**
+ * Paints some plain text once before any case runs, so the page's first paint is paid here under
+ * its own limit and every case measures only its app under the usual 5 seconds. Measured with it:
+ * Notepad's first frame went from 367-438ms to 76-114ms, which is its own textarea, and every other
+ * app's stayed at a frame. The frame wait inside each case stays: that frame is where resize
+ * observers run, which is how Clock's overflow was found.
+ */
+before(async function () {
+  this.timeout(FIRST_PAINT_TIMEOUT_MS);
+  const warmUp = await fixture<HTMLDivElement>(html`<div style="width: 400px; height: 300px">Warming up</div>`);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  warmUp.remove();
+});
 
 for (const app of apps) {
   for (const which of ['defaultSize', 'minSize'] as const) {
@@ -71,4 +95,24 @@ for (const app of apps) {
       });
     }
   }
+}
+
+/**
+ * The Screen Saver's settings box is not a window, so it has no declared sizes to measure against.
+ * What it must do is fit a box in Desktop settings, which is about 360px wide at the narrowest and
+ * pads its content, so it is measured in 300px of inner width, under every theme and none: nothing
+ * may overflow sideways, and the host's box grows to the height.
+ */
+for (const theme of THEMES) {
+  it(`the Screen Saver settings fit a 300px column under ${theme ?? 'no theme'}`, async () => {
+    const body = await fixture<HTMLDivElement>(
+      html`<div style="display: flex; flex-direction: column; width: 300px"></div>`,
+    );
+    const element = document.createElement('umbradesktop-screensaver-panel') as HTMLElement & { updateComplete: Promise<unknown> };
+    if (theme) element.setAttribute('data-umbradesktop-theme', theme);
+    body.appendChild(element);
+    await element.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(element.scrollWidth, 'rendered width').to.be.at.most(300);
+  });
 }

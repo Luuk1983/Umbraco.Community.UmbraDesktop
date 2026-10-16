@@ -31,6 +31,13 @@ describe('whether a feature is on', () => {
   it('ignores an entry for another feature', () => {
     expect(isFeatureEnabled({ 'pinned-apps': false }, feature('ai-chat', true))).to.equal(true);
   });
+
+  it('answers for anything with an id and a default, such as a package tray item', () => {
+    // A tray item is not a taskbar feature but shares the stored map, so it asks the same question
+    // with only the two fields the answer depends on. No cast here: this is the type check.
+    expect(isFeatureEnabled({}, { id: 'My.Tray', defaultEnabled: false })).to.equal(false);
+    expect(isFeatureEnabled({ 'My.Tray': true }, { id: 'My.Tray', defaultEnabled: false })).to.equal(true);
+  });
 });
 
 describe('switching a feature', () => {

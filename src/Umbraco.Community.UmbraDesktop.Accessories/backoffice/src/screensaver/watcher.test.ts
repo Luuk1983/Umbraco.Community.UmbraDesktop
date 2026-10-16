@@ -116,7 +116,7 @@ it('stops watching when stopped', () => {
   expect(overlay()).to.equal(null);
 });
 
-/** Preview in the Screen Saver window runs one by hand; the wait running out under it adds none. */
+/** Preview in the screen saver settings runs one by hand; the wait running out under it adds none. */
 it('does not start over one already running from Preview', () => {
   const { pass } = watcher();
   document.body.appendChild(document.createElement('umbradesktop-screensaver'));

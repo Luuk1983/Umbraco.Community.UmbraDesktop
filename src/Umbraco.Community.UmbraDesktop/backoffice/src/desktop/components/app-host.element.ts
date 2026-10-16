@@ -6,13 +6,17 @@ import { UMBRADESKTOP_APP_TOKEN_FALLBACKS } from '../theme/types.js';
 import './loader.element.js';
 import {
   UMBRADESKTOP_APP_DIRTY_EVENT,
+  UMBRADESKTOP_APP_TASKS_EVENT,
   UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS,
   UMBRADESKTOP_DIRTY_ATTRIBUTE,
+  UMBRADESKTOP_TASK_EVENT,
   UMBRADESKTOP_THEME_ATTRIBUTE,
 } from '../constants.js';
 import { customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { loadManifestElement } from '@umbraco-cms/backoffice/extension-api';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+import { applyTaskReport } from '../progress/progress.js';
+import type { UmbraDesktopTask } from '../progress/progress.js';
 import type {
   ClassConstructor,
   ElementLoaderExports,
@@ -256,6 +260,44 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
    */
   #mounting: Promise<void> = Promise.resolve();
 
+  /** The work the mounted app has reported and not yet ended. Emptied with each app. */
+  #tasks: ReadonlyArray<UmbraDesktopTask> = [];
+
+  constructor() {
+    super();
+    this.addEventListener(UMBRADESKTOP_TASK_EVENT, this.#onTask);
+  }
+
+  /**
+   * Take a task report from the mounted app and pass the app's whole task list to the window.
+   *
+   * Stopped here whatever it says, so the event never leaves the window: past this host it would be
+   * heard by the desktop and by whatever else listens there, as a report about nothing in
+   * particular. A report from anything but the current app is ignored, which is what keeps a
+   * replaced app that still has a timer running from reporting into its successor's window.
+   * @param event The app's report.
+   */
+  #onTask = (event: Event) => {
+    event.stopPropagation();
+    if (!this._app || !event.composedPath().includes(this._app)) return;
+    const next = applyTaskReport(this.#tasks, (event as CustomEvent).detail);
+    if (next === this.#tasks) return;
+    this.#tasks = next;
+    this.#reportTasks();
+  };
+
+  /** Drop the app's tasks, for an app that has gone: its work went with it. */
+  #clearTasks(): void {
+    if (this.#tasks.length === 0) return;
+    this.#tasks = [];
+    this.#reportTasks();
+  }
+
+  /** Tell whoever holds this host what the app is doing now. */
+  #reportTasks(): void {
+    this.dispatchEvent(new CustomEvent(UMBRADESKTOP_APP_TASKS_EVENT, { detail: { tasks: this.#tasks } }));
+  }
+
   /** Watches the mounted app's unsaved-work attribute. Replaced with each app, dropped with the host. */
   #dirtyWatch?: MutationObserver;
 
@@ -389,6 +431,7 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
     // Synchronous, so a swap clears the old app in the update this is called from.
     this._app = undefined;
     this.#watchDirty(undefined);
+    this.#clearTasks();
     this._failed = false;
     this._pending = !!load;
     if (load) {

@@ -16,7 +16,7 @@ UmbraDesktop turns the backoffice into a desktop. A launcher opens your sections
 
 - **Real windows, side by side.** Drag, resize, maximise, or snap two windows into halves. [Windows](docs/user/windows/README.md)
 - **A warning before you overwrite someone.** Plain Umbraco lets the second save win silently; the desktop tells you, and never throws away unsaved work without asking. [Overwrite protection](docs/user/windows/overwrite-protection.md)
-- **Your page beside its editor.** A live preview that reloads on every save, headless sites included. [Live preview](docs/user/windows/live-preview.md)
+- **Your page beside its editor.** A live preview that reloads on every save, headless sites included, and the document's Info kept open beside it too. [Live preview](docs/user/windows/live-preview.md), [Views beside the editor](docs/user/windows/views-beside-the-editor.md)
 - **A launcher that fits how you work.** Apps grouped by what they do, pinned to the taskbar, arranged the way you like. [Launcher](docs/user/launcher/README.md)
 - **Five themes.** Umbraco, Umbraco 4, macOS, Windows 11 and Windows 98, each with a wallpaper to match. [Appearance](docs/user/appearance/README.md)
 - **It follows you.** Your settings live on your Umbraco account, and your windows come back after a reload. [Settings](docs/user/settings/README.md)
@@ -50,9 +50,9 @@ UmbraDesktop grants no access of its own. A user only sees apps for the sections
 
 [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories) is an optional add-on with the tools Windows kept under Accessories: Notepad and Paint that edit files in your media library, Sticky Notes of your own and shared with your team, Calculator, Character Map, Clock, a screen saver, Disk Cleanup and System Information. The desktop is unchanged without it.
 
-## Games, if you want them
+## Games and umbraCoffee, if you want them
 
-[`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment) is an optional add-on that puts Minesweeper, Snake and Solitaire on the desktop, each in a window of its own and themed along with everything else. The desktop is unchanged without it.
+[`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment) is an optional add-on that puts Minesweeper, Snake and Solitaire on the desktop, and umbraCoffee, the community's monthly live show, each in a window of its own and themed along with everything else. The desktop is unchanged without it.
 
 ## Documentation
 

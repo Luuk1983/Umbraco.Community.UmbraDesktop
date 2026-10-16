@@ -2,6 +2,8 @@ import { expect } from '@open-wc/testing';
 import '../../../components/taskbar.element.js';
 import { mountThemed, UMBRADESKTOP_THEME_TEST_TIMEOUT_MS } from './mount-themed.js';
 import type { UmbraDesktopThemedMount } from './mount-themed.js';
+import { measureTray, withTrayItem } from '../mount-themed.js';
+import { U4_CLOCK_PADDING, U4_TRAY_BORDER, U4_TRAY_HIGHLIGHT, U4_TRAY_PADDING } from './metrics.js';
 
 /**
  * The taskbar is the one surface with **no Umbraco 4 antecedent at all** — v4 was a web
@@ -71,18 +73,83 @@ it('draws the bar and its buttons as raised v4 surfaces', function () {
   ).to.contain('inset');
 });
 
-it('sits the clock in a sunken well rather than leaving it as bare text', function () {
+it('sits the tray in a sunken well rather than leaving the clock as bare text', function () {
   this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  const tray = bar.root.querySelector('.tray') as HTMLElement;
   const clock = bar.root.querySelector('.clock') as HTMLElement;
+  expect(tray, 'the taskbar should render a tray').to.not.equal(null);
   expect(clock, 'the taskbar should render a clock').to.not.equal(null);
 
-  const style = getComputedStyle(clock);
+  // The well is the tray's, not the clock's (design D16): anything in the tray beside the time
+  // has to sit in the same white field, as it would in any v4 input.
+  const style = getComputedStyle(tray);
   expect(style.backgroundColor, 'the tray is a white well, as every v4 field is').to.equal(
     'rgb(255, 255, 255)',
   );
   expect(style.boxShadow, 'a v4 well is sunken, with its shadow drawn inside it').to.contain('inset');
+  expect(style.borderTopWidth, 'and edged, as every v4 field is').to.equal(`${U4_TRAY_BORDER}px`);
   expect(
-    style.opacity,
+    getComputedStyle(clock).opacity,
     'the base dims the clock against a dark bar; on warm grey that just looks like a fault',
   ).to.equal('1');
+});
+
+it('draws an empty tray as exactly the clock', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  expect(bar.root.querySelector('.tray')!.childElementCount, 'this test is about the empty tray').to.equal(1);
+  const { tray, clock } = measureTray(bar.root);
+  const time = (bar.root.querySelector('.clock-time') as HTMLElement).getBoundingClientRect();
+  // The well's edge, which used to be the clock's own border, and the leading padding the tray took
+  // over from the clock: that is all the tray adds.
+  expect(tray.width - clock.width, 'only its edge and the padding moved off the clock').to.be.closeTo(
+    2 * U4_TRAY_BORDER + U4_TRAY_PADDING,
+    0.5,
+  );
+  expect(tray.height - clock.height, 'the edge top and bottom, and the highlight under the top').to.be.closeTo(
+    2 * U4_TRAY_BORDER + U4_TRAY_HIGHLIGHT,
+    0.5,
+  );
+  expect(tray.right, 'the clock ends against the trailing edge of the well').to.be.closeTo(
+    clock.right + U4_TRAY_BORDER,
+    0.5,
+  );
+  // The box as it was when the clock was the well: the time, the clock's old padding either side
+  // and the edge. The two halves of the split have to add back up to exactly that.
+  expect(tray.width - time.width, 'the well is as wide as it was before the tray existed').to.be.closeTo(
+    2 * U4_CLOCK_PADDING + 2 * U4_TRAY_BORDER,
+    0.5,
+  );
+});
+
+it('holds a tray item inside the well, before the time', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  withTrayItem(bar.root, (item) => {
+    const { tray, clock } = measureTray(bar.root);
+    const box = item.getBoundingClientRect();
+    // Clear of the edge, not merely inside it: an icon starting on the well's border reads as clipped.
+    expect(box.left - tray.left, 'the item starts clear of the edge of the well').to.be.above(U4_TRAY_BORDER);
+    expect(box.right, 'and comes before the clock').to.be.at.most(clock.left + 0.5);
+    expect(box.top, 'within the well top to bottom').to.be.at.least(tray.top + U4_TRAY_BORDER - 0.5);
+    expect(box.bottom).to.be.at.most(tray.bottom - U4_TRAY_BORDER + 0.5);
+  });
+});
+
+/**
+ * The well's sunken look is a 1px inset highlight along its top, and an inset shadow is painted
+ * under the element's children: a fill on the clock or on a full-height tray item would cover it.
+ * Along the leading side the tray's own padding already keeps everything clear of it.
+ */
+it('keeps the clock and a full-height tray item below the well\'s top highlight', function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  const { tray, clock } = measureTray(bar.root);
+  expect(clock.top - tray.top, 'the clock starts below the edge and the highlight').to.be.at.least(
+    U4_TRAY_BORDER + U4_TRAY_HIGHLIGHT - 0.5,
+  );
+  withTrayItem(bar.root, (item) => {
+    item.style.height = 'auto';
+    item.style.alignSelf = 'stretch';
+    const box = item.getBoundingClientRect();
+    const well = measureTray(bar.root).tray;
+    expect(box.top - well.top, 'so does a full-height item').to.be.at.least(U4_TRAY_BORDER + U4_TRAY_HIGHLIGHT - 0.5);
+  });
 });

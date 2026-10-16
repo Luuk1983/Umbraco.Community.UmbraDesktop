@@ -4,6 +4,7 @@ import {
   UMBRADESKTOP_RING_DASHARRAY,
   UMBRADESKTOP_RING_RADIUS,
   UMBRADESKTOP_RING_SPIN_MS,
+  UMBRADESKTOP_RING_TRACK_OPACITY,
   UMBRADESKTOP_RING_VIEWBOX,
   UMBRADESKTOP_WINDOW_RING_SIZE,
   ringMarkSize,
@@ -108,7 +109,7 @@ export class UmbraDesktopLoaderElement extends UmbLitElement {
       stroke: currentColor;
       /* The track is the same colour as the arc, faint. Two tokens would let a theme set them so
          they no longer read as one ring. */
-      opacity: 0.16;
+      opacity: ${UMBRADESKTOP_RING_TRACK_OPACITY};
     }
     .arc {
       fill: none;

@@ -35,8 +35,8 @@ UmbraDesktop grants no access of its own. Every app that opens a piece of the ba
 the section it comes from, so a user only sees apps for sections they could already reach. An editor
 with access to Content and Media gets exactly those apps.
 
-The exception is a self-contained app registered by a package, such as the Minesweeper and Snake
-games from the Entertainment add-on. It has no section behind it, so it is gated by nothing beyond
+The exception is a self-contained app registered by a package, such as the games and umbraCoffee
+from the Entertainment add-on. It has no section behind it, so it is gated by nothing beyond
 its own manifest conditions and access to the desktop itself: everyone who can open the desktop can
 open it. An app of that kind holds no backoffice data, so there is nothing behind it to leak. To
 restrict one, put the condition on its own manifest.

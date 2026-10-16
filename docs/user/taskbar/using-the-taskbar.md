@@ -67,6 +67,17 @@ comes to the front instead. Switching between the windows already open is the jo
 buttons. That is why nothing in the row needs a running indicator, a modifier click or a right-click
 menu.
 
+## The system tray
+
+The other end of the bar is the system tray: the clock, and beside it any icons that packages put
+there, such as the umbraCoffee cup from the Entertainment add-on. A tray icon reports on something
+rather than launching it, and it shows only while it has something to say. The newest sits furthest
+from the clock, so an icon you are used to does not move when another turns up.
+
+To switch a tray icon off, open [Desktop settings](../settings/desktop-settings.md), select
+**Taskbar**, and switch the icon off under **System tray icons**. That heading appears only once a
+package has put an icon there.
+
 ## Under each theme
 
 The row works under all five themes, in each theme's own button style. It is not a system tray: it

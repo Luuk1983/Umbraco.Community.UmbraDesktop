@@ -13,13 +13,16 @@ import type { UmbraDesktopTaskbarFeature } from './types';
 
 /**
  * Whether a feature is on for this user.
+ *
+ * Takes only the two fields the answer depends on, so a package's tray item, which shares the stored
+ * map but is not a taskbar feature, asks the same question rather than a copy of it.
  * @param stored The user's stored choices, or undefined when nothing is stored.
- * @param feature The feature to answer for.
+ * @param feature The feature or tray item to answer for.
  * @returns True when the feature should be active.
  */
 export function isFeatureEnabled(
   stored: Readonly<Record<string, boolean>> | undefined,
-  feature: UmbraDesktopTaskbarFeature,
+  feature: Pick<UmbraDesktopTaskbarFeature, 'id' | 'defaultEnabled'>,
 ): boolean {
   const choice = stored?.[feature.id];
   return typeof choice === 'boolean' ? choice : feature.defaultEnabled;

@@ -1,4 +1,21 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
+import { progressStrip } from '../../../progress/progress-view.js';
+import { WIN98_HILIGHT as WELL_HILIGHT, WIN98_SHADOW as WELL_SHADOW } from './palette.js';
+import { WIN98_CONTROL_GAP as WELL_GAP, WIN98_TRAILING_CONTROLS_WIDTH as WELL_CONTROLS } from './metrics.js';
+
+/** The progress well's size in the caption, in px: the file transfer dialog's bar, cut down. */
+const WELL_WIDTH = 64;
+const WELL_HEIGHT = 12;
+
+/**
+ * The file transfer dialog's blocks: navy in the bar, a pixel of the well between them. As an image
+ * layer, so the same pattern fills determinate, indeterminate and failed alike.
+ * @param colour The block colour.
+ * @param block The block width in px.
+ * @returns The repeating gradient.
+ */
+const blocks = (colour: string, block: number) =>
+  `repeating-linear-gradient(90deg, ${colour} 0 ${block}px, transparent ${block}px ${block + 2}px)`;
 import {
   WIN98_BEVEL_PRESSED,
   WIN98_BEVEL_RAISED,
@@ -251,5 +268,36 @@ export default css`
   .notice-marker.notice-warning,
   .notice-marker.notice-error {
     color: inherit;
+  }
+
+  /* Work in progress (#108): the file transfer dialog's bar, a sunken well of navy blocks, set into
+     the caption before the controls where it is empty anyway. Centred on the caption and taking no
+     height, so no metric moves; the title gives up the well's width while it is shown, so a long
+     title ellipsises before it rather than running underneath. */
+  ${progressStrip('.titlebar', {
+    height: WELL_HEIGHT,
+    inset: `50% ${WELL_CONTROLS + WELL_GAP * 2}px auto auto`,
+  })}
+  .titlebar .progress {
+    width: ${WELL_WIDTH}px;
+    margin-top: -${WELL_HEIGHT / 2}px;
+    box-sizing: border-box;
+    padding: 2px;
+    box-shadow: inset 1px 1px ${unsafeCSS(WELL_SHADOW)}, inset -1px -1px ${unsafeCSS(WELL_HILIGHT)};
+    background: ${unsafeCSS(blocks('var(--_progress-fill)', 6))} content-box 0 0 /
+        calc(var(--umbradesktop-progress-value, 0) * 100%) 100% no-repeat,
+      var(--_progress-track);
+  }
+  .titlebar .progress[data-state='indeterminate'] {
+    background: ${unsafeCSS(blocks('var(--_progress-fill)', 6))} content-box 0 0 / 25% 100% no-repeat,
+      var(--_progress-track);
+  }
+  .titlebar .progress[data-state='failed'] {
+    background: ${unsafeCSS(blocks('var(--_progress-failed)', 6))} content-box 0 0 /
+        calc(var(--umbradesktop-progress-value, 1) * 100%) 100% no-repeat,
+      var(--_progress-track);
+  }
+  .titlebar:has(.progress) .title {
+    margin-right: ${WELL_WIDTH + WELL_GAP * 2}px;
   }
 `;

@@ -2,13 +2,13 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys, sendMouse } from '@web/test-runner-commands';
 import './screensaver-panel.element.js';
 import type { ScreensaverPanelElement } from './screensaver-panel.element.js';
-import { SCREENSAVER_WINDOW } from './constants.js';
+import { SCREENSAVER_MONITOR } from './constants.js';
 import { fixedSettings } from '../settings/settings.source.js';
 import type { AccessoriesScreensaverSettings } from '../settings/settings.js';
 
 /**
- * The Screen Saver window: Windows 98's Screen Saver tab, with a monitor that runs the chosen saver, a list with (None) at the
- * top, a wait in minutes and a Preview button.
+ * The screen saver's settings, a box in Desktop settings: Windows 98's Screen Saver tab, with a monitor that runs the chosen
+ * saver, a list with (None) at the top, a wait in minutes and a Preview button.
  */
 
 /**
@@ -57,7 +57,13 @@ it('runs the chosen saver in the monitor, as a preview, at the monitor’s size'
   const running = monitor(element)!;
   expect([running.getAttribute('saver'), running.hasAttribute('preview')]).to.deep.equal(['flying', true]);
   const box = running.getBoundingClientRect();
-  expect([box.width, box.height]).to.deep.equal([SCREENSAVER_WINDOW.screen.w, SCREENSAVER_WINDOW.screen.h]);
+  expect([box.width, box.height]).to.deep.equal([SCREENSAVER_MONITOR.screen.w, SCREENSAVER_MONITOR.screen.h]);
+});
+
+/** The box brings its own padding, so the panel must not add a second ring of it inside. */
+it('leaves the padding to the box it sits in', async () => {
+  const { element } = await panel();
+  expect(getComputedStyle(element).padding).to.equal('0px');
 });
 
 it('offers every saver, and (None) first', async () => {
@@ -108,7 +114,7 @@ it('runs the chosen saver full screen on Preview, until it is dismissed', async 
  * A dropdown opened with the mouse draws no focus ring; one reached with Tab still does.
  *
  * Chrome gives a clicked select `:focus-visible` straight away, with no key pressed at all, unlike a
- * button. So choosing a screen saver left the accent ring round the list for as long as the window
+ * button. So choosing a screen saver left the accent ring round the list for as long as the box
  * kept focus. The accent is set because the test has no palette, and without it the ring's colour
  * is invalid and the outline computes to none whatever the state. Real mouse and keyboard, since
  * only the browser's own input takes this path.
@@ -131,7 +137,7 @@ it('draws no ring round a dropdown opened with the mouse, and one when Tab reach
 });
 
 /**
- * The choice lives in the user's account now, and a save can fail. The window says so in its own
+ * The choice lives in the user's account now, and a save can fail. The box says so in its own
  * hint line, where the person who just made the choice is looking, rather than in a toast; and it
  * says so when what shows is only the default because the account could not be read.
  */
@@ -156,7 +162,7 @@ describe('when the account does not answer', () => {
     const element = await fixture<ScreensaverPanelElement>(
       html`<umbradesktop-screensaver-panel .source=${source}></umbradesktop-screensaver-panel>`,
     );
-    /** Change the status, and tell the window as the real store does. */
+    /** Change the status, and tell the box as the real store does. */
     const become = async (next: typeof status) => {
       status = next;
       settings.set(settings.value);
@@ -167,7 +173,7 @@ describe('when the account does not answer', () => {
 
   const hint = (element: ScreensaverPanelElement) => element.shadowRoot!.querySelector('.hint')!;
 
-  it('says a choice was not saved, in the window, and takes it back when a save works', async () => {
+  it('says a choice was not saved, in the box, and takes it back when a save works', async () => {
     const { element, become } = await failing();
     await become('unsaved');
     expect(hint(element).textContent).to.contain('not saved');
@@ -180,5 +186,7 @@ describe('when the account does not answer', () => {
     const { element, become } = await failing();
     await become('unread');
     expect(hint(element).textContent).to.contain('could not be read');
+    expect(hint(element).textContent, 'it is not a window any more').to.not.contain('window');
+    expect(hint(element).textContent).to.contain('Desktop settings');
   });
 });

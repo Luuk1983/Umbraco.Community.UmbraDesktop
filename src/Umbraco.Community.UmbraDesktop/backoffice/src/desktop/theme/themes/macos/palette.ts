@@ -60,7 +60,7 @@ export const MACOS_ACCENT = '#0067cc';
 export const MACOS_ACCENT_DARK = '#0a84ff';
 
 /**
- * The hairline the dock separates things with: the rule before the clock, and the rule between the
+ * The hairline the dock separates things with: the rule before the tray, and the rule between the
  * fixed buttons and the open windows.
  *
  * One constant rather than the same literal twice, because the two are the same line and a dock
@@ -105,6 +105,13 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-titlebar-background': 'linear-gradient(#f8f8f8, #e8e8e8)',
   '--umbradesktop-titlebar-border-bottom': `${MACOS_TITLEBAR_BORDER}px solid #cfcfcf`,
   '--umbradesktop-titlebar-text': '#4d4d4d',
+  '--umbradesktop-titlebar-progress-fill': MACOS_ACCENT,
+  '--umbradesktop-titlebar-progress-track': 'transparent',
+  '--umbradesktop-titlebar-progress-failed': '#d70015',
+  // Finder's capsule: a white track with the accent filling it, over the icon.
+  '--umbradesktop-taskbar-progress-fill': MACOS_ACCENT,
+  '--umbradesktop-taskbar-progress-track': 'rgba(255, 255, 255, 0.92)',
+  '--umbradesktop-taskbar-progress-failed': '#d70015',
   '--umbradesktop-titlebar-inactive-opacity': '0.55',
   '--umbradesktop-control-color': '#4d4d4d',
   // The base window sheet's '.ctrl.close:hover' falls back to Umbraco's danger pink, which would
@@ -264,6 +271,12 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   '--umbradesktop-strip-button-on-text': '#ffffff',
   '--umbradesktop-titlebar-border-bottom': `${MACOS_TITLEBAR_BORDER}px solid rgba(0, 0, 0, 0.5)`,
   '--umbradesktop-titlebar-text': '#d0d0d2',
+  '--umbradesktop-titlebar-progress-fill': MACOS_ACCENT_DARK,
+  '--umbradesktop-titlebar-progress-track': 'transparent',
+  '--umbradesktop-titlebar-progress-failed': '#ff453a',
+  '--umbradesktop-taskbar-progress-fill': MACOS_ACCENT_DARK,
+  '--umbradesktop-taskbar-progress-track': 'rgba(40, 40, 40, 0.92)',
+  '--umbradesktop-taskbar-progress-failed': '#ff453a',
   '--umbradesktop-control-color': '#d0d0d2',
   '--umbradesktop-taskbar-background': 'rgba(28, 28, 32, 0.7)',
   '--umbradesktop-taskbar-background-opaque': '#1c1c20',

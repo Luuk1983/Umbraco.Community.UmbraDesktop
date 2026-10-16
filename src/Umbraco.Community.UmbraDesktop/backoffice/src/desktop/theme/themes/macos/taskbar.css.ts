@@ -1,10 +1,30 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { MACOS_DOCK_SEPARATOR, MACOS_FONT } from './palette.js';
-import { MACOS_DOCK_ICON, MACOS_DOCK_TILE, MACOS_TASKBAR_RESERVE } from './metrics.js';
+import {
+  MACOS_DOCK_ICON,
+  MACOS_DOCK_TILE,
+  MACOS_CLOCK_PADDING,
+  MACOS_TASKBAR_RESERVE,
+  MACOS_TRAY_PADDING,
+  MACOS_TRAY_SEPARATOR,
+} from './metrics.js';
+import { progressStrip } from '../../../progress/progress-view.js';
+
+/**
+ * How far the dock icon is lifted inside its tile, in px, to open room for the running dot below
+ * it. Named because the progress capsule is laid over the icon's foot and has to know where that is.
+ */
+const MACOS_DOCK_ICON_LIFT = 4;
+
+/** The gap between the dock icon's box and the tile's edge, on each side. */
+const DOCK_ICON_MARGIN = (MACOS_DOCK_TILE - MACOS_DOCK_ICON) / 2;
+
+/** Height of Finder's copy capsule laid over a dock icon, in px. */
+const DOCK_CAPSULE_HEIGHT = 5;
 
 /**
  * A centred floating dock. The `.cluster` wrapper (start + running windows) is what makes centring
- * possible; the clock keeps its own edge.
+ * possible; the tray, clock last, keeps its own edge.
  */
 export default css`
   :host {
@@ -60,7 +80,7 @@ export default css`
      The tile growing to 42px keeps that: the icon is centred, so it moves down 2px with the box
      while the dot stays 3px off the bottom edge, leaving about 4px still. */
   .task .task-icon {
-    transform: translateY(-4px);
+    transform: translateY(-${MACOS_DOCK_ICON_LIFT}px);
   }
   /* Sanctioned exception: the dock shows icons only. The button keeps its title attribute, so
      the app name is still available as a tooltip and as the accessible name. */
@@ -103,23 +123,29 @@ export default css`
     opacity: 1;
     background: ${unsafeCSS(MACOS_DOCK_SEPARATOR)};
   }
-  /* The dock's second separator, which has to be its first one drawn twice. The base leaves the
-     clock an inline flex item sized by its own text, so this border came out at whatever the clock
-     happened to measure — near enough by luck, and wrong the moment the font changed. Giving the
-     clock an explicit height is what makes the border a stated size rather than a coincidence;
-     there is nothing else here to hang one on.
+  /* The dock's second separator, which has to be its first one drawn twice. It hangs on the tray
+     rather than the clock (design D16), so tray items sit inside the line beside the time instead
+     of out among the windows. The tray is given an explicit height because a border down the side
+     of a box sized by its own text comes out at whatever the text happens to measure, which is how
+     it first came out when it was the clock's: near enough by luck, and wrong the moment the font
+     changed.
+
+     The leading padding is the part of the clock's old long leading padding that moved here with the
+     separator; the clock keeps its short padding on both sides. Together they are the old box, so a
+     tray holding only the clock looks exactly as the clock did. metrics.ts derives the split.
 
      Worth knowing that there is no original to be accurate to: macOS has no clock in the Dock at
      all, it lives in the menu bar. This separator is ours, so the only thing it owes anybody is to
      be the same line as the divider. */
-  .clock {
-    display: inline-flex;
-    align-items: center;
+  .tray {
     align-self: center;
     box-sizing: border-box;
     height: ${MACOS_DOCK_ICON}px;
-    padding: 0 4px 0 10px;
-    border-left: 1px solid ${unsafeCSS(MACOS_DOCK_SEPARATOR)};
+    padding-left: ${MACOS_TRAY_PADDING}px;
+    border-left: ${MACOS_TRAY_SEPARATOR}px solid ${unsafeCSS(MACOS_DOCK_SEPARATOR)};
+  }
+  .clock {
+    padding: 0 ${MACOS_CLOCK_PADDING}px;
     font-size: 11px;
     font-weight: 500;
     opacity: 1;
@@ -186,4 +212,13 @@ export default css`
     background: var(--umbradesktop-notice-error-color, var(--uui-color-danger));
     color: var(--umbradesktop-taskbar-background-opaque, #e9e9ef);
   }
+
+  /* Work in progress (#108): Finder's copy capsule, laid across the foot of the dock icon, inset a
+     little from its sides, with the running dot still clear below. Derived from the tile and the
+     icon so it follows either if they change. */
+  ${progressStrip('.task', {
+    height: DOCK_CAPSULE_HEIGHT,
+    radius: DOCK_CAPSULE_HEIGHT / 2,
+    inset: `auto ${DOCK_ICON_MARGIN + 2}px ${DOCK_ICON_MARGIN + MACOS_DOCK_ICON_LIFT}px ${DOCK_ICON_MARGIN + 2}px`,
+  })}
 `;

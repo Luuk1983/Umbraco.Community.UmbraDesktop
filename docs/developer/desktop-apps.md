@@ -18,7 +18,12 @@ the manifest type. Minesweeper was the first one and Snake the second, both in t
 calculator, a colour picker or a notepad would work the same way.
 
 The Accessories package is the fullest example: Notepad, Paint, Sticky Notes, Calculator, Character
-Map, Clock, Screen Saver, Disk Cleanup and System Information are each one of these.
+Map, Clock, Disk Cleanup and System Information are each one of these. Its Screen Saver tile is an
+app too, but one that opens Desktop settings rather than a window (`meta.opensSettings`, below).
+
+A package can also put an icon in the taskbar's system tray, beside the clock, with a
+`umbraDesktopTrayItem` manifest. That is §9, together with the small tray context packages may call
+and how to raise a notification with buttons on the desktop.
 
 ---
 
@@ -38,6 +43,11 @@ or `chromeProfile`, because an element in a box has none of them, and a catalogu
 If your package registers a *section*, you already appear in the launcher with no work at all: any
 section a user can reach shows up automatically in the More group with a generic icon. Registering
 an app is for the case where there is no section, because there is no route.
+
+Neither of those puts anything outside the launcher. If what you have is not something to open but
+something to report on, a status or a countdown, it belongs in the system tray instead: a
+`umbraDesktopTrayItem`, §9. The tray is the one part of the taskbar packages may add to. A package
+can register all three.
 
 ---
 
@@ -75,8 +85,9 @@ an app is for the case where there is no section, because there is no route.
 | `meta.group` | no | A launcher group alias. Unknown or unset lands you in the reserved More group. See §6 |
 | `meta.defaultSize` | no | **Your app's own box** in px, not the window around it. The desktop adds its titlebar, its frame and whatever else the active theme's chrome costs. See §2.1 |
 | `meta.minSize` | no | The smallest box your app can work in, again yours rather than the window's. Falls back to the desktop's global minimum, and is **floored** at what the chrome itself needs. See §2.1 |
-| `meta.allowMultiple` | no | Whether two windows of your app may be open at once. Defaults to allowed, and leaving it there is almost always right: every other app on this desktop opens as many windows as the user asks for, so `false` makes yours the one tile that quietly refocuses instead. Set it only if a second instance genuinely cannot work — module-level state, an exclusive resource — and note that two instances of an app whose state lives in its own element share nothing at all |
+| `meta.allowMultiple` | no | Whether two windows of your app may be open at once. Defaults to allowed, and leaving it there is almost always right: every other app on this desktop opens as many windows as the user asks for, so `false` makes yours the one tile that quietly refocuses instead. Set it only if a second instance genuinely cannot work — module-level state, an exclusive resource, or a window that could only repeat the first, as a second umbraCoffee window would play the same stream twice — and note that two instances of an app whose state lives in its own element share nothing at all |
 | `meta.resizable` | no | Whether the user may resize or maximize your window. Defaults to allowed. `false` keeps the window at `defaultSize` for its whole life, the way Minesweeper's was on every Windows up to XP: no resize handles, no snapping to a screen edge, a titlebar double-click does nothing, and there is no maximize button, which is left out rather than greyed, as Windows does. The window still moves, minimizes and closes. The window manager enforces it, not the titlebar, so every route to a new size is covered. Worth setting only when your content does not reflow and a bigger window would just be empty margin; Minesweeper and Snake set it, while Solitaire stays resizable |
+| `meta.opensSettings` | no | A package name. Choosing the tile opens Desktop settings at that package's row instead of a window, and `element` is then not needed. For a tool whose settings live in Desktop settings. See [Package settings](package-settings.md#5-opening-your-settings) |
 | `conditions` | no | Umbraco's own conditions, and they are honoured: the desktop observes these manifests through `UmbExtensionsManifestInitializer`, so an app whose conditions are unmet never reaches the launcher, and does so **silently**: nothing is logged, because a condition doing its job is not a fault (§8). **No conditions means always available**, which is usually right: reaching the desktop at all already requires the Desktop section |
 
 **`element` is required in a different sense from everything else marked required here**, and the
@@ -568,6 +579,10 @@ for state that is not lost on close, such as a game in progress: a question nobo
 people to click through the one that matters. Notepad and Paint in the Accessories package are the
 worked examples.
 
+**Tell the desktop about long work with one event.** An export, a render or an upload your app runs
+can show on its window's title bar and taskbar button, and be guarded the way unsaved work is, by
+dispatching `umbradesktop-task` events. See [Showing work in progress](window-progress.md).
+
 **There is no reload or restart control on an app window.** The titlebar draws three buttons —
 minimize, maximize, close — where an iframe window draws four. Reload exists for the iframe kind
 because re-fetching a booting backoffice in place, with the window keeping the route the user
@@ -630,7 +645,10 @@ The desktop publishes them through the context it provides to everything inside 
 | `locale` | An observable that emits whenever either setting changes. Observe it and redraw; its value is the desktop's own and not something to read |
 | `theme` | An observable of the active theme's id, one of the ids in §5. Published API since the Arcade's pieces use it to stamp themselves (§5) |
 
-As with the manifest type (§2), nothing is imported from the host. Declare the shape you use and a
+Those two members are the whole contract. The context also carries the user's other settings and
+the setters the settings dialog uses. They are not part of it, so do not build on them.
+
+As with the tray context (§9.8), nothing is imported from the host. Declare the shape you use and a
 token with the same alias, and consume it:
 
 ```ts
@@ -639,8 +657,9 @@ import type { UmbContextMinimal } from '@umbraco-cms/backoffice/context-api';
 import type { Observable } from '@umbraco-cms/backoffice/external/rxjs';
 
 // UmbContextMinimal, because UmbContextToken requires it; the desktop's context is one.
+// formatDateTime is optional because an older desktop has the context without it.
 interface DesktopDateTime extends UmbContextMinimal {
-  formatDateTime(date: Date, options: Intl.DateTimeFormatOptions): string;
+  formatDateTime?(date: Date, options: Intl.DateTimeFormatOptions): string;
   readonly locale: Observable<unknown>;
 }
 
@@ -652,12 +671,25 @@ this.consumeContext(DESKTOP_SETTINGS, (desktop) => {
   if (desktop) this.observe(desktop.locale, () => this.requestUpdate());
 });
 // …and when rendering, falling back to the backoffice's own formatting:
-const time = this.#desktop?.formatDateTime(now, options) ?? this.localize.date(now, options);
+const time = this.#desktop?.formatDateTime?.(now, options) ?? this.localize.date(now, options);
 ```
 
-**Keep the fallback.** The context is absent in your own tests, and would be under a desktop older
-than this contract, and an app that renders nothing there is worse than one that follows the
-backoffice culture alone. The Accessories Clock is the worked example.
+**Ask for an hour, not a `timeStyle`.** The 12 or 24 hour override applies only when `options` sets
+`hour`. A `timeStyle` has no `hour` in it, so it follows the culture and quietly ignores the Clock
+setting. Spell a time out as `{ hour: 'numeric', minute: '2-digit' }`, which is what the taskbar
+asks for, and never pass `hour` and `timeStyle` together, because `Intl.DateTimeFormat` throws on
+that. A date with no time in it, such as `{ dateStyle: 'medium' }`, has no hour to override and
+gets the user's culture alone.
+
+**Keep the fallback.** The context is absent in your own tests. Under a desktop older than this
+contract it is there, but without `formatDateTime`, which is why the snippet checks for the method
+and not only the context. An app that renders nothing there is worse than one that follows the
+backoffice culture alone.
+
+The Accessories Clock and umbraCoffee in the Entertainment package are the worked examples. umbraCoffee's session times pass
+`{ hour: 'numeric', minute: '2-digit' }` and its episode dates pass `{ dateStyle: 'medium' }`, both
+through one function in `umbracoffee/desktop-format.ts`, so the window and the tray cup cannot
+disagree.
 
 A service your app shares with others belongs in a [desktop context](desktop-contexts.md).
 
@@ -816,9 +848,11 @@ accident you want to miss. If two packages claim one alias, the one whose manife
 weight keeps it and the console names both.
 
 **Three things can make your app not appear, and only two of them say so.** An alias another
-package's manifest also claims, with the higher weight. A manifest the desktop found no `element` in, which includes the case where you wrote `js`
-instead (§3). Both print a line naming your alias. The third is an **unmet `condition`** (§2), and
-it is silent by design: an app whose condition is unmet is doing exactly what the manifest asked, so
+package's manifest also claims, with the higher weight. A manifest the desktop found no `element`
+in, which includes the case where you wrote `js` instead (§3). Both print a line naming your alias.
+An app with `meta.opensSettings` needs no `element`, so the second does not apply to it (see
+[Package settings](package-settings.md#5-opening-your-settings)). The third is an **unmet
+`condition`** (§2), and it is silent by design: an app whose condition is unmet is doing exactly what the manifest asked, so
 there is nothing to warn about, and Umbraco removes it from the list before the desktop sees it.
 That makes it the one to suspect first when your tile is missing and the console has nothing in it,
 and the reason to reach for `conditions` only when you mean it.
@@ -829,7 +863,247 @@ booting second backoffice inside an iframe and there is not one here. Your eleme
 
 ---
 
-## 9. Checklist before you ship
+## 9. Tray items: an icon beside the clock
+
+The system tray is the box at the trailing end of the taskbar that holds the clock. A package can put
+an icon in it with a `umbraDesktopTrayItem` manifest. A tray item reports on something rather than
+opens it: a status, a countdown, a sign that something is live. It is one custom element, drawn in the
+tray while the user has it switched on.
+
+The worked example is the umbraCoffee cup in the Entertainment package,
+`src/Umbraco.Community.UmbraDesktop.Entertainment/backoffice/src/umbracoffee/tray-cup.element.ts`.
+It shows only while an episode is coming up or live, opens the umbraCoffee app when clicked, and
+raises the reminders that §9.9 describes. Everything it uses is in this section, and nothing it does
+is privileged.
+
+### 9.1 The manifest
+
+```ts
+{
+  type: 'umbraDesktopTrayItem',
+  alias: 'My.Status.Tray',
+  name: 'My status',                                // developer-facing
+  element: () => import('./status-tray.element.js'),
+  meta: {
+    label: '#myStatus_trayLabel',                   // the switch's name in Desktop settings
+    description: '#myStatus_trayDescription',       // the line under that switch
+    defaultEnabled: true,
+  },
+  conditions: [],
+}
+```
+
+| Field | Required | Notes |
+|---|---|---|
+| `type` | yes | Always `'umbraDesktopTrayItem'` |
+| `alias` | yes | Unique, and also the key the user's on/off choice is stored under, in the same place as the desktop's own taskbar switches. **Never change it.** A changed alias reads as an item the user has never had an opinion about, so everyone who switched yours off gets it back. Namespace it with your package id |
+| `element` | yes | The icon itself. The same four forms as an app's, §3, and the same rules: `element` is the field that is read, and your module must register its custom element. A manifest with no `element`, including one that wrote `js`, is dropped with a console line (§9.7) |
+| `name` | yes | Developer-facing, required by `ManifestBase` as it is for an app |
+| `meta.label` | yes | The switch's name in Desktop settings. A localisation token (`#area_key`) or a literal |
+| `meta.description` | yes | The line under that switch: what the item puts in the tray. A token or a literal. Required because a switch nobody can decide about is worse than none |
+| `meta.defaultEnabled` | no | Whether the item is on for a user who has never said otherwise. Defaults to `true`, the same default the desktop's own taskbar features ship with: an item that arrives switched off is mostly never found |
+| `conditions` | no | Umbraco's own conditions, honoured exactly as for a `umbraDesktopApp` (§2). An item whose conditions are unmet is left out of the tray and out of Desktop settings, silently |
+
+There is **no `weight`**, on purpose. §9.3 says why.
+
+Your element sits inside the taskbar and inherits its text colour, so an icon drawn in `currentColor`
+(an `umb-icon`, say) follows the theme with no work.
+
+### 9.2 Hide yourself when there is nothing to show
+
+A tray item that has nothing to report sets `hidden` on itself, and removes it when it does:
+
+```ts
+this.hidden = !this.#current;
+```
+
+The desktop watches that attribute and nothing else. It is what takes your item out of the tray, and
+it is also what decides your place in it (§9.3). Rendering an empty template instead leaves a gap the
+size of the tray's spacing and keeps your seat as though you were showing.
+
+**Do not declare `:host { display: ... !important }`.** The tray hides a `[hidden]` item with a rule
+of its own, which already beats a plain `:host { display: ... }` and an inline `style.display` your
+script sets. The one thing it cannot beat is an `!important` display on your own host, and an item
+declaring one can never be hidden.
+
+### 9.3 Where your item sits
+
+Reading outwards from the corner of the screen:
+
+1. The clock.
+2. The desktop's own tray features, like the quick settings Windows keeps next to its clock. None
+   ship yet. Any the desktop adds later sit in its own fixed order, between the clock and every
+   package item.
+3. Package tray items, in the order they appeared. An item that becomes visible joins at the end
+   furthest from the clock and keeps its place while it stays visible. An item that hides and shows
+   again rejoins at the far end, like a program that was closed and started again.
+
+So a package cannot claim a place nearer the clock than an item that was there first, and the
+desktop's own features always sit closer than any package's. That is why there is no `weight`. The
+order is not stored: after a reload, items take their places again as they appear.
+
+### 9.4 Your element lives as long as the desktop
+
+The desktop creates your element when your item is switched on and keeps that same instance while it
+stays on and the desktop stays open. Re-renders of the taskbar, other items loading or being switched
+off, and your item moving place in the tray do not recreate or move it: reordering is done with CSS
+`order`, never by moving the node. So state you hold on the element, a poll or a timer, survives all
+of that.
+
+| Event | What your item sees |
+|---|---|
+| Switched on (or on by default when the desktop opens) | Your element is constructed and inserted. `connectedCallback` fires |
+| User leaves the Desktop section | Your element is removed with the whole desktop. `disconnectedCallback` fires and the instance is let go |
+| User comes back to the desktop | A **new** desktop is built, and with it a new element of yours: constructed, inserted, `connectedCallback` fires |
+| Switched off | Your element is removed and let go. Switching it back on makes a new one |
+
+So start your work in `connectedCallback` and stop it in `disconnectedCallback`. The instance lasts
+only as long as the desktop does, so anything that must survive the user leaving and coming back,
+such as what you have already reminded them about, belongs in storage, not on the element. The cup
+keeps its reminders in `localStorage` for this reason.
+
+### 9.5 The switch in Desktop settings
+
+Every tray item gets a switch in Desktop settings, in the Taskbar group, under the **System tray
+icons** heading, with your `meta.label` as its name and `meta.description` under it. The heading
+appears as soon as one package registers a tray item. The switch is never disabled: an item this user
+may not have is filtered out by its conditions before it gets there.
+
+Your package cannot read that choice. If your app wants to tell the user the icon can be switched
+off, say where ("under Taskbar in Desktop settings"), not whether it is on.
+
+### 9.6 Flyouts go in the top layer
+
+If clicking your icon opens a panel, open it in the top layer, with the popover API or a `<dialog>`.
+A theme may make the tray a stacking context (Windows 11 does), and anything positioned inside it
+with `z-index` alone can end up underneath the windows. The top layer is above all of it under every
+theme.
+
+### 9.7 When your item does not appear
+
+A manifest is dropped, with one `console.warn` naming its alias, when:
+
+- it has no `element`. If it has a `js` instead, the line says so and tells you to rename it
+- its `meta` is missing `label` or `description`
+- its alias is the id of one of the desktop's own taskbar features, since the two would then share one
+  stored switch
+- another tray item already registered the same alias. The first one keeps it
+
+The line reads `[UmbraDesktop] The tray item "<alias>" was dropped because ...`, once per desktop
+rather than on every registry change. An element that fails to load (a module that throws, a path
+the server does not serve) prints one `console.error` saying it could not be drawn, and is not tried
+again until the page reloads. A module that loads but exports no element gets Umbraco's own console
+error rather than this one, and is not retried either. The other items are drawn either way.
+
+The two silent cases are the same as for an app: an unmet condition, and a user who switched your
+item off. Check the switch in Desktop settings before you look for a bug.
+
+### 9.8 The tray context
+
+The desktop provides a small context that package code inside the desktop may call: your tray item,
+your app's element, and an element drawn on a desktop toast (§9.9) can all reach it.
+
+**The alias `UmbraDesktopTrayContext` is public API**, and it is the only thing you need from this
+repository. Consume it with a local `UmbContextToken` of your own, since importing the desktop's token
+would mean importing the desktop's bundle:
+
+```ts
+import { UmbContextToken, type UmbContextMinimal } from '@umbraco-cms/backoffice/context-api';
+import type { Observable } from '@umbraco-cms/backoffice/external/rxjs';
+
+/** The three calls the desktop's tray context offers packages. */
+interface UmbraDesktopTrayContext extends UmbContextMinimal {
+  openApp(alias: string): boolean;
+  setTrayItemEnabled(alias: string, enabled: boolean): boolean;
+  trayItemEnabled(alias: string): Observable<boolean>;
+}
+
+export const UMBRADESKTOP_TRAY_CONTEXT = new UmbContextToken<UmbraDesktopTrayContext>('UmbraDesktopTrayContext');
+```
+
+and in your element, `this.consumeContext(UMBRADESKTOP_TRAY_CONTEXT, (tray) => (this.#tray = tray))`.
+Keep a fallback for when it never arrives: outside the desktop there is no provider. The `extends
+UmbContextMinimal` is not optional: a context token only carries a type that has `getHostElement`,
+and without it `tsc` refuses the token. The desktop's context has it from its base class, and you
+never call it.
+
+| Call | What it does |
+|---|---|
+| `openApp(alias)` | Opens an app as its launcher tile does. Only apps this user may launch are found, so it cannot open anything the launcher would not show. Returns `false` when there is no such app |
+| `setTrayItemEnabled(alias, enabled)` | Switches a tray item on or off for this user, exactly as its switch in Desktop settings does. Only a registered tray item's alias is accepted, never one of the desktop's own features. Returns `false` for anything else. The cup's "Stop reminding me" button is this call with its own alias and `false` |
+| `trayItemEnabled(alias)` | Reads a tray item's switch: emits the current value on subscribe and again whenever it changes, following Desktop settings live, so a switch inside your own app stays in step with the one in Desktop settings. It is the stored choice, else the item's `defaultEnabled`, and it emits `false` for an alias that is not a registered tray item (also until a late-registering item appears, when it flips to its default). Only changes are emitted, never a repeat |
+
+Those three calls are the whole contract. The cup's app-side "Remind me" switch is `trayItemEnabled` to show the state plus `setTrayItemEnabled` to change it. The object also carries members it inherits from Umbraco's
+context base class, and an `items` list the desktop reads itself. Neither is part of the contract, so
+do not build on them.
+
+### 9.9 A notification with buttons
+
+A notification normally reaches the desktop's toast as text: a headline and a message. A package that
+wants buttons on it, like the cup's reminders with **Watch** and **Stop reminding me**, raises it
+with an element of its own, and the desktop's toast then draws that element in place of the text.
+
+Raise it through Umbraco's own notification context, from the desktop's own document: from a tray
+item, or from an app element, since both live in it. Give it `elementName` and `data`, and raise it
+with `peek` and a `duration` rather than `stay`. The desktop draws its own toast from your
+notification and hides the original raised in its document, so a notification that stays until
+closed would linger there after the toast is gone, while a timed one clears itself:
+
+```ts
+import { UMB_NOTIFICATION_CONTEXT } from '@umbraco-cms/backoffice/notification';
+import './reminder-notification.element.js'; // defines the element before it is raised
+
+// In the constructor: keep the context, and raise nothing yet.
+this.consumeContext(UMB_NOTIFICATION_CONTEXT, (notifications) => (this.#notifications = notifications));
+
+// Later, when there is something to say:
+this.#notifications?.peek('default', {
+  elementName: 'my-status-reminder',
+  data: { headline: 'Live now', message: 'The stream has started.', videoId: 'abc123' },
+  duration: 15 * 60 * 1000,
+});
+```
+
+The toast creates your element and sets two properties on it, the way Umbraco hands them to a
+notification layout: `data`, a JSON copy of what you raised, and `notificationHandler`, with these
+members:
+
+| Member | What it is |
+|---|---|
+| `key` | The notification's key |
+| `color` | Its severity: `'default'`, `'positive'`, `'warning'` or `'danger'`. Anything else reads as `'default'` |
+| `duration` | How long it stays in milliseconds, or `null` for until closed |
+| `close()` | Takes the toast down. Call it from your buttons once they have done their job |
+| `onClose()` | A promise that settles once the toast is gone, however it went: your `close()`, the cross, its timer, Clear, a repeat from a window taking the toast over, or the desktop going away |
+
+Nothing else of Umbraco's handler is there, and your element is not wrapped in a
+`uui-toast-notification`. A layout written against those five members works; one that reaches for
+more does not.
+
+Five rules:
+
+- **Define the element before you raise it.** Import its module in the file that raises the
+  notification. If the tag is not defined when the toast is drawn, the toast falls back to text.
+- **Build everything from `data`.** Your element can be created again for the same notification:
+  clicking it in the list behind the clock shows it again as a new toast with a new element. So hold
+  nothing only on the element that the next one would need.
+- **Put `headline` and `message` in `data`.** They are what the scrollback behind the clock lists, what
+  the text fallback shows, and what a repeat is matched on: a notification with the same severity,
+  headline and message as one already showing folds into it, so give two different notifications
+  different text.
+- **Keep `data` plain JSON.** It is copied through JSON, so a function, an element or a class
+  instance in it does not survive. Data that cannot make the trip at all, a cycle or a BigInt, drops
+  the element entirely, and the toast shows the headline and message as text. Put what your buttons
+  need in as values (an alias, an id) and reach the rest through contexts, which your element can
+  consume because it sits inside the desktop. The cup's Watch button calls `openApp` on the tray
+  context this way.
+- **Only from the desktop's own document.** A notification raised inside a window, an iframe with a
+  backoffice of its own, stays text on the desktop, because a window's document can close and the
+  desktop must not hold on to anything from it.
+
+---
+
+## 10. Checklist before you ship
 
 - [ ] Your manifest points at your module through `element`, not `js`: `js` compiles and is ignored
 - [ ] Your module registers its custom element (`customElements.define`, or Lit's `@customElement`)
@@ -854,3 +1128,16 @@ booting second backoffice inside an iframe and there is not one here. Your eleme
 - [ ] Your app does something sensible with a box **larger** than `defaultSize`, because a maximized
       window is one — or it sets `meta.resizable: false`, if a bigger window is only empty margin
       (§2.1)
+
+If you ship a tray item as well (§9):
+
+- [ ] Its `alias` is namespaced and final: it is the key the user's on/off choice is stored under
+- [ ] `meta.label` and `meta.description` are both set, or the item is dropped
+- [ ] It sets `hidden` on itself while it has nothing to show, and declares no
+      `:host { display: ... !important }`
+- [ ] Its `disconnectedCallback` stops everything its `connectedCallback` started, and anything
+      that must outlive the desktop (what it has already reminded about, say) is in storage, not on
+      the element
+- [ ] A flyout it opens is in the top layer: a popover or a `<dialog>`
+- [ ] A notification with buttons has its element defined before it is raised, plain-JSON `data`
+      carrying a `headline` and a `message`, and an element that builds everything from that `data`

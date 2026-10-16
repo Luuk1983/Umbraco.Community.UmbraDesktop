@@ -84,6 +84,13 @@ export const W11_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-titlebar-background': '#f3f3f3',
   '--umbradesktop-titlebar-border-bottom': 'none',
   '--umbradesktop-titlebar-text': '#1a1a1a',
+  // Windows' own taskbar progress colours: green while running, red once it has failed.
+  '--umbradesktop-titlebar-progress-fill': '#0f7b0f',
+  '--umbradesktop-titlebar-progress-track': 'transparent',
+  '--umbradesktop-titlebar-progress-failed': '#c42b1c',
+  '--umbradesktop-taskbar-progress-fill': '#0f7b0f',
+  '--umbradesktop-taskbar-progress-track': 'rgba(0, 0, 0, 0.16)',
+  '--umbradesktop-taskbar-progress-failed': '#c42b1c',
   // Windows fades an inactive caption's text rather than recolouring the bar, and does not touch
   // its buttons — but the base rule fades the controls with the title, so this stays gentle
   // enough that a control still reads as live. `window.css.ts` restores the buttons to full.
@@ -236,6 +243,12 @@ export const W11_DARK: UmbraDesktopPalette = {
   '--umbradesktop-strip-button-on-background': `color-mix(in srgb, ${W11_ACCENT_DARK} 18%, transparent)`,
   '--umbradesktop-strip-button-on-text': W11_ACCENT_DARK,
   '--umbradesktop-titlebar-text': '#ffffff',
+  '--umbradesktop-titlebar-progress-fill': '#6ccb5f',
+  '--umbradesktop-titlebar-progress-track': 'transparent',
+  '--umbradesktop-titlebar-progress-failed': '#ff99a4',
+  '--umbradesktop-taskbar-progress-fill': '#6ccb5f',
+  '--umbradesktop-taskbar-progress-track': 'rgba(255, 255, 255, 0.2)',
+  '--umbradesktop-taskbar-progress-failed': '#ff99a4',
   '--umbradesktop-control-color': '#ffffff',
   '--umbradesktop-control-hover-background': 'rgba(255, 255, 255, 0.08)',
   '--umbradesktop-taskbar-background': 'rgba(32, 32, 32, 0.82)',

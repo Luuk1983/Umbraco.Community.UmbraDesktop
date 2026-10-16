@@ -100,7 +100,7 @@ export default {
     screensaverMinutes: 'minutes',
     screensaverAbout: 'Starts when the desktop has been left alone for the wait. Any key, click or real movement of the mouse brings it back.',
     screensaverUnsaved: 'Your choice is not saved to your account yet. It holds here, and is saved with your next change.',
-    screensaverUnread: 'Your saved choice could not be read, so this shows the default. Open this window again to retry.',
+    screensaverUnread: 'Your saved choice could not be read, so this shows the default. Close Desktop settings and open them again to retry.',
     // Calculator. The key names are what a screen reader says for a key whose face is a symbol,
     // and they follow the Windows calculator's own wording.
     calculatorAdd: 'Plus',

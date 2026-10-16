@@ -121,11 +121,11 @@ export default {
     wallpaperFollowsTheme: 'Achtergrond bij het thema laten passen',
     // bureaubladinstellingen — het thema van de backoffice zelf: een instelling van Umbraco, niet
     // van ons. Genoemd naar wat het verandert, want de rij erboven heet al Thema.
-    backofficeTheme: 'Backoffice-kleuren',
+    backofficeTheme: 'Backoffice-thema',
     backofficeThemeAbout: 'Het lichte, donkere en hoog-contrastthema van Umbraco zelf. Geldt voor de hele backoffice, dus ook voor wat er in elk venster staat.',
-    backofficeThemePickerTitle: 'Kies backoffice-kleuren',
+    backofficeThemePickerTitle: 'Kies een backoffice-thema',
     // één zin per thema, naast de voorvertoning in de kiezer: wat het *is*, niet wat het doet
-    themeAboutUmbraco: 'Het bureaublad zoals het standaard is, opgebouwd uit de kleuren en maatvoering van Umbraco zelf.',
+    themeAboutUmbraco: 'De header van de backoffice op het voorste venster, ronde knoppen en een rustige taakbalk, opgebouwd uit de kleuren van Umbraco zelf.',
     themeAboutUmbraco4: 'De backoffice van 2009 als vensterrand: warmgrijze verlopen, haarfijne panelen en knoppen die indrukken.',
     themeAboutMacos: 'Stoplichten links in elke titelbalk, een zwevend dock en een schermvullende, vervaagde launcher.',
     themeAboutWin11: 'Een vlakke acryl-taakbalk met gecentreerde knoppen, afgeronde vensters en vierkante titelknoppen.',
@@ -199,6 +199,9 @@ export default {
     taskbarFullscreenBrowserMac: 'Je browser staat op volledig scherm. Druk op Control-Command-F om het te verlaten.',
     taskbarFullscreenBrowserChromeOs: 'Je browser staat op volledig scherm. Druk op de toets voor volledig scherm om het te verlaten.',
     settingsBack: 'Terug naar bureaubladinstellingen',
+    settingsAddOns: 'Add-ons',
+    settingsPackageAttribution: 'Deze instellingen komen uit de add-on %0%.',
+    settingsBoxLoadFailed: 'Dit deel van de instellingen kon niet worden geladen.',
     // desktop settings — startup
     bootIntoDesktop: 'Open het bureaublad als ik inlog',
     bootDescription:
@@ -209,6 +212,9 @@ export default {
     reopenWindowsPersistent: 'Altijd',
     reopenWindowsDescription:
       'Deze sessie bewaart je vensters als je de pagina herlaadt of het bureaublad verlaat en terugkomt, tot je het tabblad sluit. Altijd brengt ze ook terug de volgende keer dat je de backoffice opent. Backoffice-vensters openen op de pagina die ze lieten zien; niet-opgeslagen wijzigingen worden niet bewaard.',
+    viewsBeside: 'Aanbieden om werkruimteweergaven naast de editor te openen',
+    viewsBesideDescription:
+      'Zet een zijpaneelknop op de weergave die een documentvenster toont, zoals Info, als die weergave naast de editor werkt. De weergave blijft verbonden met het document, dus hij toont niet-opgeslagen wijzigingen en zijn acties gelden voor het document. Uitzetten sluit alle weergaven die naast een venster open zijn.',
     // bureaubladinstellingen — taal en regio. De eerste rij is de vreemde eend en de regel eronder
     // zegt dat ook: die verandert de hele backoffice en is de enige die opnieuw laden vraagt.
     backofficeLanguage: 'Taal van de backoffice',
@@ -259,6 +265,18 @@ export default {
     exitConflictedSole: 'Dat venster is ook door iemand anders gewijzigd.',
     exitConflictedOne: 'Eén daarvan is ook door iemand anders gewijzigd.',
     exitConflictedMany: '%0% daarvan zijn ook door iemand anders gewijzigd.',
+    // werk dat nog loopt (#108)
+    progressUploading: 'Uploaden',
+    progressWorking: 'Bezig',
+    progressCount: '%0% van %1%',
+    progressFailed: 'Niet afgerond',
+    progressFailedCount: '%0% van %1% mislukt',
+    stopWorkHeadline: 'Stoppen waar dit venster mee bezig is?',
+    stopWorkQuestion: 'Dit venster is nog bezig: %0%. Als je doorgaat, stopt het voordat het klaar is.',
+    stopWorkUnsaved: 'De niet-opgeslagen wijzigingen gaan ook verloren.',
+    stopWorkConfirm: 'Stoppen',
+    exitBusyOne: 'Eén venster is nog bezig, en stopt voordat het klaar is.',
+    exitBusy: '%0% vensters zijn nog bezig, en stoppen voordat ze klaar zijn.',
     // gewijzigd, in de prullenbak of verwijderd onder een venster
     noticeChangedTitle: 'Iemand anders heeft dit gewijzigd terwijl je eraan werkte',
     noticeChangedBody: 'Als je nu opslaat, vervang je hun versie door de jouwe.',
@@ -282,6 +300,7 @@ export default {
       'Sluiten is hier de veilige keuze: je niet-opgeslagen wijzigingen gaan verloren en de versie die iemand anders heeft opgeslagen blijft staan.',
     // Voorbeeld, een gekoppeld venster naast een document
     previewOpen: 'Voorbeeld',
+    previewOpenTitle: 'Voorbeeld naast de editor. Shift-klik om het als venster te openen.',
     previewClose: 'Voorbeeld sluiten',
     dockHere: 'Hier vastzetten',
     dockRelease: 'Loslaten om vast te zetten',
@@ -296,6 +315,12 @@ export default {
     previewDesktop: 'Desktopbreedte',
     previewOption: 'Voorbeeld met',
     previewFailed: 'Het voorbeeld kon niet worden geopend.',
+    // Een werkruimteweergave van een document naast de editor (issue #131)
+    besideOpenTitle: '%0% naast de editor houden. Shift-klik om het als venster te openen.',
+    besideCloseTitle: '%0% naast de editor sluiten',
+    besideTitle: '%0%: %1%',
+    besideWaiting: 'Wachten tot het document in zijn venster geopend is.',
+    besideMissing: 'Deze weergave is niet meer beschikbaar.',
     // Background Jobs app
     backgroundJobsIntro:
       'Alle geplande taken die Umbraco achter je site uitvoert: publiceren, webhooks, opschoningen, en alles wat een pakket heeft toegevoegd. Je kunt hier niets starten of stoppen, dit is een alleen-lezen overzicht van wat het CMS uit zichzelf doet.',
@@ -431,6 +456,29 @@ export default {
     migrationFailedBody:
       'Er is niets verloren gegaan. Je instellingen staan nog in deze browser en het bureaublad probeert het opnieuw de volgende keer dat je inlogt.',
     migrationContinue: 'Doorgaan',
+    // the welcome wizard, shown once to somebody new to the desktop
+    welcomeLabel: 'Je bureaublad instellen',
+    welcomeTitle: 'Welkom bij UmbraDesktop',
+    welcomeLead: 'Je bureaublad voor Umbraco. Drie snelle keuzes en het staat klaar.',
+    welcomeLanguageTitle: 'Kies je taal',
+    welcomeLanguageAbout:
+      'De backoffice en het bureaublad gebruiken deze taal. Waar het bureaublad nog niet vertaald is, staat het in het Engels. Je kunt dit later wijzigen in Bureaublad-instellingen.',
+    welcomeLanguageEnglish: 'Engels',
+    welcomeLanguageFallback:
+      'Het bureaublad is nog niet vertaald in het %0%, dus dat staat in het Engels. De backoffice in de vensters gebruikt het %0%.',
+    welcomeThemeTitle: "Kies je thema's",
+    welcomeThemeAbout: 'Eén voor het bureaublad, één voor de backoffice in de vensters. Je kunt ze allebei later wijzigen.',
+    welcomeDesktopTheme: 'Bureaubladthema',
+    welcomeDesktopThemeAbout: 'Het bureaublad rond je vensters: de taakbalk, de vensterranden en een bijpassende achtergrond.',
+    welcomeBackofficeThemeAbout: 'Alles in de vensters: het lichte, donkere of hoog-contrastthema van Umbraco zelf.',
+    welcomeSignInTitle: 'Beginnen in het bureaublad?',
+    welcomeSignInAbout: 'Sla de klassieke backoffice over en kom direct op je bureaublad.',
+    welcomeSignInHint:
+      'Werkt vanaf de volgende keer dat je de backoffice opent. Je kunt het altijd wijzigen in Bureaublad-instellingen.',
+    welcomeNext: 'Volgende',
+    welcomeBack: 'Vorige',
+    welcomeDone: 'Klaar',
+    welcomeStep: 'Stap %0% van %1%',
     settingsNotSaved:
       'Die instelling kon niet op je account opgeslagen worden. Hij geldt nu wel, maar deze browser vergeet hem.',
     // desktopmeldingen: de toasts, en de geschiedenis achter de klok

@@ -5,10 +5,39 @@ import {
   MINESWEEPER_MIN_CONTENT_SIZE,
 } from './minesweeper/constants.js';
 import { SNAKE_BOARD_ALIAS, SNAKE_CONTENT_SIZE, SNAKE_GAME_ALIAS, SNAKE_MIN_CONTENT_SIZE } from './snake/constants.js';
+import {
+  UMBRACOFFEE_APP_ALIAS,
+  UMBRACOFFEE_CONTENT_SIZE,
+  UMBRACOFFEE_MIN_CONTENT_SIZE,
+  UMBRACOFFEE_TRAY_ALIAS,
+} from './umbracoffee/constants.js';
 import { SOLITAIRE_CONTENT_SIZE, SOLITAIRE_GAME_ALIAS, SOLITAIRE_MIN_CONTENT_SIZE } from './solitaire/constants.js';
 import { backManifests, facesManifests } from './solitaire/backs.js';
 import type {} from './solitaire/extensions.js';
 import { manifests as localizationManifests } from './localization/manifest.js';
+
+/**
+ * The Media group, defined by the package whose app fills it.
+ *
+ * Games is not here: the Arcade's catalogue defines it, since every game now brings the Arcade
+ * (Arcade design section 3), and the games below still name `group: 'games'`.
+ *
+ * This weight is on the launcher's own scale, lower first, unlike the apps' root `weight` below,
+ * which is Umbraco's. Media is 65, after the Arcade's Games (60) and before the host's Experimental
+ * (70) (umbraCoffee design D13). It holds umbraCoffee today, and Winamp and the video player will
+ * join it, which is why it is named for what it holds rather than for the one app in it now.
+ *
+ * No `entries`: an entry deep-links one of the package's own backoffice screens, and this package has
+ * none.
+ */
+const catalogue: UmbExtensionManifest = {
+  type: 'umbraDesktopCatalogue',
+  alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Catalogue',
+  name: 'UmbraDesktop Entertainment catalogue',
+  meta: {
+    groups: [{ alias: 'media', label: '#umbraDesktopEntertainment_groupMedia', weight: 65 }],
+  },
+};
 
 /**
  * Minesweeper, as one `umbraDesktopApp` manifest.
@@ -180,6 +209,36 @@ const games: UmbExtensionManifest[] = [
 ];
 
 /**
+ * umbraCoffee: the community's monthly live show, watched in a window (umbraCoffee design §6.1).
+ *
+ * Registered the way the games are, for the reasons Minesweeper's comment gives, with two
+ * differences. It is in Media, not Games. And it is resizable, the default, because unlike a board a
+ * player and its side panel do reflow: a bigger window is a bigger stream. And it allows one window at a
+ * time: a second would play the same stream twice, and with one, the tray cup and the reminder's Watch
+ * (both `openApp`) bring the open window to the front instead of stacking a new one on each click.
+ */
+const umbraCoffee: UmbExtensionManifest = {
+  type: 'umbraDesktopApp',
+  alias: UMBRACOFFEE_APP_ALIAS,
+  name: 'umbraCoffee',
+  element: () => import('./umbracoffee/umbracoffee.element.js'),
+  // First in its group, on the same scale and with the same spacing as the games.
+  weight: 1000,
+  meta: {
+    label: '#umbraDesktopEntertainment_umbraCoffee',
+    // A native Umbraco icon, and for once an exact one.
+    icon: 'icon-coffee',
+    group: 'media',
+    // The content box a 16:9 player and its side panel (Chat and Episodes) need side by side, summed
+    // from the layout's own constants; see `umbracoffee/constants.ts`.
+    defaultSize: UMBRACOFFEE_CONTENT_SIZE,
+    minSize: UMBRACOFFEE_MIN_CONTENT_SIZE,
+    // One window: see the comment above.
+    allowMultiple: false,
+  },
+};
+
+/**
  * This package's docs, for the desktop's Help app.
  *
  * The build copies `docs/` into this package's own App_Plugins folder (see `vite.config.ts`), and
@@ -195,18 +254,40 @@ const docs: UmbExtensionManifest = {
 };
 
 /**
+ * The coffee cup in the tray, and the reminders it raises (umbraCoffee design §6.2, §6.3).
+ *
+ * One switch for both, under the tray heading in Desktop settings (design D1, D8), which is why the
+ * description names the reminders as well as the cup. `defaultEnabled` is left out because the
+ * host's default is on, which is what D1 asks for. The alias is where that switch is stored, so it is
+ * final once shipped, like an app's.
+ */
+const umbraCoffeeTray: UmbExtensionManifest = {
+  type: 'umbraDesktopTrayItem',
+  alias: UMBRACOFFEE_TRAY_ALIAS,
+  name: 'umbraCoffee tray cup',
+  element: () => import('./umbracoffee/tray-cup.element.js'),
+  meta: {
+    label: '#umbraDesktopEntertainment_umbraCoffeeTray',
+    description: '#umbraDesktopEntertainment_umbraCoffeeTrayAbout',
+  },
+};
+
+/**
  * The bundle Umbraco loads for this package, and the only entry point it has.
  *
  * `UmbExtensionManifest` is a global type from `@umbraco-cms/backoffice/extension-types`, wired up
  * in tsconfig's `types`, so there is nothing to import for it. The `umbraDesktopApp`,
- * `umbraDesktopGame` and `umbraDesktopDocs` arms of that union are contributed by `umbradesktop-app.d.ts` in this
- * folder, for the reason given there.
+ * `umbraDesktopCatalogue`, `umbraDesktopTrayItem`, `umbraDesktopGame` and `umbraDesktopDocs` arms of
+ * that union are contributed by `umbradesktop-app.d.ts` in this folder, for the reason given there.
  */
 export const manifests: Array<UmbExtensionManifest> = [
+  catalogue,
   minesweeper,
   snake,
   solitaire,
   ...games,
+  umbraCoffee,
+  umbraCoffeeTray,
   docs,
   ...backManifests,
   ...facesManifests,

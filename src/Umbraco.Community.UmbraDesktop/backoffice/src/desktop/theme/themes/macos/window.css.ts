@@ -1,4 +1,5 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
+import { progressStrip } from '../../../progress/progress-view.js';
 import { MACOS_FONT, MACOS_TRAFFIC_LIGHTS } from './palette.js';
 import { MACOS_CONTROL_GAP, MACOS_LIGHT_SIZE, MACOS_RELOAD_MARGIN, MACOS_RELOAD_SIZE, MACOS_TITLEBAR_HEIGHT, MACOS_TITLEBAR_PADDING } from './metrics.js';
 
@@ -166,4 +167,10 @@ export default css`
   .notice .notice-actions uui-button {
     --uui-button-border-radius: 6px;
   }
+
+  /* Work in progress (#108): a hairline in the accent along the title bar's foot, as Safari draws a
+     page loading. A strip and not the base ring, which is required here rather than chosen: this
+     theme hides the caption icon the ring is drawn round, and 'theme/progress.test.ts' fails a ring
+     that collapses with it. */
+  ${progressStrip('.titlebar', { height: 2 })}
 `;

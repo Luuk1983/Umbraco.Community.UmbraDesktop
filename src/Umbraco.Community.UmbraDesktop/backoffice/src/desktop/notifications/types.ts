@@ -18,7 +18,8 @@ export type UmbraDesktopNotificationColor = 'default' | 'positive' | 'warning' |
 /**
  * The element a notification was raised with, when it was not core's default layout, and the data
  * it was given. Kept so the notification can be raised again in its source window, where whatever
- * the element offers (core's error viewer, say) can be used.
+ * the element offers (core's error viewer, say) can be used. For a notification the desktop raised
+ * itself, the desktop's toast draws the element directly instead (see `own-element.ts`).
  */
 export interface UmbraDesktopNotificationElement {
   /** The custom element's tag name. */
@@ -80,7 +81,7 @@ export interface UmbraDesktopScrollbackEntry extends UmbraDesktopNotificationOri
   count: number;
   /** When it last arrived, in epoch milliseconds. */
   lastSeen: number;
-  /** The element it was raised with, so a click can raise it again. */
+  /** The element it was raised with, so a click can raise it again, or show it again on the desktop. */
   element?: UmbraDesktopNotificationElement;
 }
 
@@ -97,6 +98,20 @@ export interface UmbraDesktopToast extends UmbraDesktopNotificationOrigin {
    * than a timestamp so two repeats inside the same millisecond still differ.
    */
   generation: number;
+  /**
+   * Every original this toast stands for, one per arrival while it showed, in the order they came:
+   * the source it came from and its key there. Taking the toast down closes each in its source, so
+   * no repeat is left hidden in its document. Added 2026-09-28.
+   */
+  originals: ReadonlyArray<UmbraDesktopNotificationOriginal>;
+}
+
+/** Where the original of a notification lives: its source, and its key in that source. */
+export interface UmbraDesktopNotificationOriginal {
+  /** The source's id: a window id, or {@link UMBRADESKTOP_DESKTOP_SOURCE_ID}. */
+  sourceId: string;
+  /** The notification's key in that source. */
+  key: string;
 }
 
 /**
@@ -113,4 +128,14 @@ export interface UmbraDesktopNotificationSource {
    * @param notification What to raise.
    */
   reraise(notification: UmbraDesktopNotification): void;
+
+  /**
+   * Close the original of a notification this source reported, in its own document, because its
+   * desktop toast has been taken down. Otherwise the original stays hidden in the document's list
+   * until its own timer runs out, which for a staying one is never, and the desktop's own document
+   * would draw it again once the desktop is left. Does nothing for a key it did not report.
+   * Optional, so a source that has no originals to close need not say so. Added 2026-09-28.
+   * @param key The notification's key in this source.
+   */
+  close?(key: string): void;
 }

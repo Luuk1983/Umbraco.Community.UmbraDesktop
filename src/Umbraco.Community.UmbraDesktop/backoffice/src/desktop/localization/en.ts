@@ -127,11 +127,11 @@ export default {
     wallpaperFollowsTheme: 'Match the wallpaper to the theme',
     // desktop settings — the backoffice's own theme, which is Umbraco's setting rather than ours.
     // Named for what it changes, because the row above it is already called Theme.
-    backofficeTheme: 'Backoffice colours',
+    backofficeTheme: 'Backoffice theme',
     backofficeThemeAbout: "Umbraco's own light, dark and high contrast. Applies to the whole backoffice, including what is inside every window.",
-    backofficeThemePickerTitle: 'Choose backoffice colours',
+    backofficeThemePickerTitle: 'Choose a backoffice theme',
     // one sentence per theme, shown beside its preview in the picker: what it *is*, not what it does
-    themeAboutUmbraco: "The desktop as it ships, built from Umbraco's own colours and spacing.",
+    themeAboutUmbraco: "The backoffice's own header on the window in front, round buttons and a quiet taskbar, built from Umbraco's own colours.",
     themeAboutUmbraco4: 'The 2009 backoffice as desktop chrome: warm grey gradients, hairline panels and buttons that press in.',
     themeAboutMacos: 'Traffic lights on the left of every title bar, a floating dock, and a fullscreen blurred launcher.',
     themeAboutWin11: 'A flush acrylic taskbar with its buttons centred, rounded windows and square caption buttons.',
@@ -207,6 +207,14 @@ export default {
     taskbarFullscreenBrowserMac: 'Your browser is in full screen. Press Control-Command-F to leave it.',
     taskbarFullscreenBrowserChromeOs: 'Your browser is in full screen. Press the full screen key to leave it.',
     settingsBack: 'Back to Desktop settings',
+    // Package settings (design 2026-10-03). The heading says whose these are before anything else does.
+    // "Add-ons", the word the docs use for packages that extend the desktop, rather than "packages",
+    // which on the desktop is also Umbraco's own Packages app.
+    settingsAddOns: 'Add-ons',
+    // Names the add-on and nothing else. "Not from UmbraDesktop" read oddly for the desktop's own
+    // add-ons (Accessories, Connections), and the "Add-ons" heading already says it.
+    settingsPackageAttribution: 'These settings come from the %0% add-on.',
+    settingsBoxLoadFailed: 'This part of the settings could not be loaded.',
     // desktop settings — startup
     bootIntoDesktop: 'Open the desktop when I sign in',
     bootDescription:
@@ -217,6 +225,9 @@ export default {
     reopenWindowsPersistent: 'Always',
     reopenWindowsDescription:
       'This session keeps your windows when you reload the page or leave the desktop and come back, until you close the tab. Always also brings them back the next time you open the backoffice. Backoffice windows reopen at the page they were showing; unsaved changes are not kept.',
+    viewsBeside: 'Offer to open workspace views beside the editor',
+    viewsBesideDescription:
+      'Puts a side-panel button on the view a document window shows, such as Info, when that view works next to the editor. The view stays connected to the document, so it shows unsaved edits and its actions apply to the document. Turning this off closes any views open beside a window.',
     // desktop settings — language and region. The first row is the odd one out and its hint says so:
     // it changes the whole backoffice, and it is the only setting here that needs a reload.
     backofficeLanguage: 'Backoffice language',
@@ -267,6 +278,18 @@ export default {
     exitConflictedSole: 'That window has also been changed by someone else.',
     exitConflictedOne: 'One of them has also been changed by someone else.',
     exitConflictedMany: '%0% of them have also been changed by someone else.',
+    // work in progress (#108)
+    progressUploading: 'Uploading',
+    progressWorking: 'Working',
+    progressCount: '%0% of %1%',
+    progressFailed: 'Did not finish',
+    progressFailedCount: '%0% of %1% failed',
+    stopWorkHeadline: 'Stop what this window is doing?',
+    stopWorkQuestion: 'This window is still busy: %0%. If you go ahead, it stops before it finishes.',
+    stopWorkUnsaved: 'Its unsaved changes will be discarded too.',
+    stopWorkConfirm: 'Stop it',
+    exitBusyOne: 'One window is still busy, and will stop before it finishes.',
+    exitBusy: '%0% windows are still busy, and will stop before they finish.',
     // changed, trashed or deleted underneath a window
     noticeChangedTitle: 'Someone else changed this while you were editing it',
     noticeChangedBody: 'Saving now replaces their version with yours.',
@@ -293,6 +316,7 @@ export default {
       'Closing is the safe option here: your unsaved changes are discarded and the version someone else saved is kept.',
     // Preview, an attached window beside a document
     previewOpen: 'Preview',
+    previewOpenTitle: 'Preview beside the editor. Shift-click to open it as a window.',
     previewClose: 'Close the preview',
     dockHere: 'Dock here',
     dockRelease: 'Release to dock',
@@ -307,6 +331,12 @@ export default {
     previewDesktop: 'Desktop width',
     previewOption: 'Preview with',
     previewFailed: 'The preview could not be opened.',
+    // A document's workspace view kept beside its editor (issue #131)
+    besideOpenTitle: 'Keep %0% beside the editor. Shift-click to open it as a window.',
+    besideCloseTitle: 'Close %0% beside the editor',
+    besideTitle: '%0%: %1%',
+    besideWaiting: 'Waiting for the document to open in its window.',
+    besideMissing: 'This view is no longer available.',
     // Background Jobs app
     backgroundJobsIntro:
       'Every scheduled job Umbraco runs behind your site: publishing, webhooks, cleanups, and anything a package added. Nothing here can be started or stopped, it is a read-only view of what the CMS is doing on its own.',
@@ -442,6 +472,29 @@ export default {
     migrationFailedBody:
       'Nothing has been lost. Your settings are still in this browser and the desktop will try again the next time you sign in.',
     migrationContinue: 'Continue',
+    // the welcome wizard, shown once to somebody new to the desktop
+    welcomeLabel: 'Set up your desktop',
+    welcomeTitle: 'Welcome to UmbraDesktop',
+    welcomeLead: "Your desktop for Umbraco. Three quick choices and it's ready.",
+    welcomeLanguageTitle: 'Choose your language',
+    welcomeLanguageAbout:
+      "The backoffice and the desktop use it. Where the desktop isn't translated yet, it shows in English. You can change this later in Desktop settings.",
+    welcomeLanguageEnglish: 'English',
+    welcomeLanguageFallback:
+      "The desktop isn't translated into %0% yet, so it shows in English. The backoffice in its windows uses %0%.",
+    welcomeThemeTitle: 'Choose your themes',
+    welcomeThemeAbout: 'One for the desktop, one for the backoffice inside its windows. You can change both later.',
+    welcomeDesktopTheme: 'Desktop theme',
+    welcomeDesktopThemeAbout: 'The desktop around your windows: the taskbar, the window frames and a wallpaper to match.',
+    welcomeBackofficeThemeAbout: "Everything inside the windows: Umbraco's own light, dark or high contrast.",
+    welcomeSignInTitle: 'Start in the desktop?',
+    welcomeSignInAbout: 'Skip the classic backoffice and land straight on your desktop.',
+    welcomeSignInHint:
+      'Takes effect the next time you open the backoffice. You can always change it in Desktop settings.',
+    welcomeNext: 'Next',
+    welcomeBack: 'Back',
+    welcomeDone: 'Done',
+    welcomeStep: 'Step %0% of %1%',
     settingsNotSaved:
       'That setting could not be saved to your account. It applies for now, but this browser will forget it.',
     // desktop notifications: the toasts, and the scrollback behind the clock

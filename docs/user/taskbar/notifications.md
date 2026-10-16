@@ -21,7 +21,9 @@ window shows once, on the desktop, and not inside the window.
   one the sender asked to keep stays until it is closed. To hold one while reading it, point at it.
 - **Select it to go there.** Selecting a notification brings forward the window that raised it, and
   restores that window if it was minimised. An error with buttons of its own, such as **Full Error
-  Message**, is shown again inside its window, where those buttons work.
+  Message**, is shown again inside its window, where those buttons work. A notification the desktop
+  raises itself, such as an umbraCoffee reminder, has its buttons right on the desktop's own
+  notification.
 
 ## The list behind the clock
 
