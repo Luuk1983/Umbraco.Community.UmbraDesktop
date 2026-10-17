@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { run } from '../src/run.mjs';
 import { sourceHash } from '../src/build.mjs';
+import { parseFeed } from '../src/rss.mjs';
 import { fixture, respond, fakeFetch } from './helpers.mjs';
 
 const NOW = new Date('2026-09-30T09:00:00Z');
@@ -14,6 +15,38 @@ const read = (dir, name) => JSON.parse(readFileSync(join(dir, name), 'utf8'));
 const bytes = (dir) => FILES.map((f) => readFileSync(join(dir, f), 'utf8'));
 const times = (dir) => FILES.map((f) => statSync(join(dir, f)).mtimeMs);
 const pause = () => new Promise((resolve) => setTimeout(resolve, 20));
+/** A wait that returns at once, so a test of a failing feed does not sit out the real retry delays. */
+const noWait = async () => {};
+const feedCalls = (calls) => calls.filter((c) => c.includes('feeds/videos.xml')).length;
+
+/**
+ * A `playlistItems.list` answer describing the same uploads as a feed, the way the API would.
+ * @param {string} xml A feed body.
+ * @param {(entry: object) => object} [edit] Changes an entry before it goes in, for an API that disagrees with the feed.
+ * @returns {string} The answer's JSON.
+ */
+function uploadsOf(xml, edit = (entry) => entry) {
+  const items = parseFeed(xml).map(edit).map((e) => ({ snippet: { title: e.title, description: e.description, resourceId: { kind: 'youtube#video', videoId: e.videoId } } }));
+  return JSON.stringify({ items });
+}
+
+/** A `videos.list` answer saying the given id is a stream that has not started yet. */
+const upcomingAnswer = (id) => JSON.stringify({
+  items: [{ id, snippet: { title: 'umbraCoffee - Fresh', liveBroadcastContent: 'upcoming' }, liveStreamingDetails: { scheduledStartTime: '2026-10-30T11:30:00Z' } }],
+});
+
+/** Collects the warnings a run raises, so a test can assert on them instead of on the console. */
+function warnings() {
+  const messages = [];
+  return { messages, warn: (message) => messages.push(message) };
+}
+
+/** A data folder after one run over the recorded feed with no key: the state every API test starts from. */
+async function primed() {
+  const dir = tempDir();
+  await run({ dir, fetchImpl: fakeFetch({ 'feeds/videos.xml': () => respond(200, feedWith()) }).fetchImpl, now: NOW, warn: () => {} });
+  return dir;
+}
 
 /** The recorded channel feed, optionally with one extra entry prepended. */
 function feedWith(extraId) {
@@ -33,8 +66,10 @@ function feedEdited() {
 test('the first run over an empty directory writes sources, episodes v2 and an empty next-episode file', async () => {
   const dir = tempDir();
   const { fetchImpl, calls } = fakeFetch({ 'feeds/videos.xml': () => respond(200, feedWith()) });
-  const result = await run({ dir, fetchImpl, apiKey: undefined, now: NOW });
+  const { messages, warn } = warnings();
+  const result = await run({ dir, fetchImpl, apiKey: undefined, now: NOW, warn });
   assert.equal(result.changed, true);
+  assert.deepEqual(messages, [], 'no key is a normal setup, not a warning');
 
   const sources = read(dir, 'sources.json');
   assert.equal(sources.version, 1);
@@ -160,18 +195,17 @@ test('a pre-v2 episodes.json seeds sources.json when there is none, so the back 
 });
 
 test('a new id whose lookup says upcoming writes all three files', async () => {
-  const dir = tempDir();
-  const first = fakeFetch({ 'feeds/videos.xml': () => respond(200, feedWith()) });
-  await run({ dir, fetchImpl: first.fetchImpl, now: NOW });
-  const upcoming = JSON.stringify({
-    items: [{ id: 'NEWID000001', snippet: { title: 'umbraCoffee - Fresh', liveBroadcastContent: 'upcoming' }, liveStreamingDetails: { scheduledStartTime: '2026-10-30T11:30:00Z' } }],
-  });
+  const dir = await primed();
+  const { messages, warn } = warnings();
   const second = fakeFetch({
     'feeds/videos.xml': () => respond(200, feedWith('NEWID000001')),
-    'googleapis.com/youtube/v3/videos': () => respond(200, upcoming),
+    'youtube/v3/playlistItems': () => respond(200, uploadsOf(feedWith('NEWID000001'))),
+    'youtube/v3/videos': () => respond(200, upcomingAnswer('NEWID000001')),
   });
-  const result = await run({ dir, fetchImpl: second.fetchImpl, apiKey: 'K', now: new Date('2026-10-29T10:10:00Z') });
+  const result = await run({ dir, fetchImpl: second.fetchImpl, apiKey: 'K', now: new Date('2026-10-29T10:10:00Z'), warn });
   assert.equal(result.changed, true);
+  assert.deepEqual(messages, []);
+  assert.equal(feedCalls(second.calls), 1);
   assert.equal(read(dir, 'sources.json').episodes.length, 16);
   const episodes = read(dir, 'episodes.json');
   assert.equal(episodes.episodes.length, 16);
@@ -183,32 +217,160 @@ test('a new id whose lookup says upcoming writes all three files', async () => {
   rmSync(dir, { recursive: true });
 });
 
-test('an API failure leaves next-episode.json alone instead of dropping the episode', async () => {
+test('when the API lists nothing new or changed the feed is not read at all, and the run is green', async () => {
+  const dir = await primed();
+  // An older episode the newest 15 do not reach: its text is never compared, so it cannot force a read.
+  const sources = read(dir, 'sources.json');
+  sources.episodes.push({ videoId: 'OLD00000001', title: 'From the backfill', published: '2019-01-01T00:00:00Z', description: '' });
+  writeFileSync(join(dir, 'sources.json'), JSON.stringify(sources, null, 2) + '\n');
+  await run({ dir, fetchImpl: fakeFetch({ 'feeds/videos.xml': () => respond(200, feedWith()) }).fetchImpl, now: NOW, warn: () => {} });
+  const before = bytes(dir);
+
+  const { messages, warn } = warnings();
+  const { fetchImpl, calls } = fakeFetch({
+    'feeds/videos.xml': () => respond(404, ''),
+    'youtube/v3/playlistItems': () => respond(200, uploadsOf(feedWith())),
+  });
+  const result = await run({ dir, fetchImpl, apiKey: 'K', now: new Date('2026-10-01T09:00:00Z'), warn, wait: noWait });
+  assert.equal(result.changed, false);
+  assert.equal(feedCalls(calls), 0, 'the feed was read');
+  assert.deepEqual(messages, []);
+  assert.deepEqual(bytes(dir), before);
+  rmSync(dir, { recursive: true });
+});
+
+test('a title or description the API reports changed makes the run read the feed and take its text', async () => {
+  const dir = await primed();
+  const edited = (entry) => (entry.videoId === 'aRkc0fRxQjw' ? { ...entry, description: 'Edited description.' } : entry);
+  const { fetchImpl, calls } = fakeFetch({
+    'feeds/videos.xml': () => respond(200, feedEdited()),
+    'youtube/v3/playlistItems': () => respond(200, uploadsOf(feedWith(), edited)),
+  });
+  const result = await run({ dir, fetchImpl, apiKey: 'K', now: new Date('2026-10-01T09:00:00Z'), warn: () => {} });
+  assert.equal(feedCalls(calls), 1);
+  assert.equal(result.sourcesChanged, true);
+  assert.equal(read(dir, 'sources.json').episodes[0].description, 'Edited description.', 'the text comes from the feed, never the API');
+  assert.equal(read(dir, 'sources.json').episodes[0].title, 'The September Shift (with guests)');
+  rmSync(dir, { recursive: true });
+});
+
+test('a new id while the feed fails: not in sources.json, but in next-episode.json, and the run is green with a warning', async () => {
+  const dir = await primed();
+  const sourcesBefore = readFileSync(join(dir, 'sources.json'), 'utf8');
+  const { messages, warn } = warnings();
+  const { fetchImpl, calls } = fakeFetch({
+    'feeds/videos.xml': () => respond(404, ''),
+    'youtube/v3/playlistItems': () => respond(200, uploadsOf(feedWith('NEWID000001'))),
+    'youtube/v3/videos': () => respond(200, upcomingAnswer('NEWID000001')),
+  });
+  const result = await run({ dir, fetchImpl, apiKey: 'K', now: new Date('2026-10-29T10:10:00Z'), warn, wait: noWait });
+  assert.equal(feedCalls(calls), 3, 'three attempts');
+  assert.equal(readFileSync(join(dir, 'sources.json'), 'utf8'), sourcesBefore);
+  assert.equal(read(dir, 'next-episode.json').episode.videoId, 'NEWID000001');
+  assert.equal(result.nextChanged, true);
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /feed/i);
+  assert.match(messages[0], /404/);
+  rmSync(dir, { recursive: true });
+});
+
+test('a feed that answers without the new id yet adds nothing, and the next run looks again', async () => {
+  const dir = await primed();
+  const sourcesBefore = readFileSync(join(dir, 'sources.json'), 'utf8');
+  const routes = {
+    'feeds/videos.xml': () => respond(200, feedWith()),
+    'youtube/v3/playlistItems': () => respond(200, uploadsOf(feedWith('NEWID000001'))),
+    'youtube/v3/videos': () => respond(200, upcomingAnswer('NEWID000001')),
+  };
+  const first = fakeFetch(routes);
+  await run({ dir, fetchImpl: first.fetchImpl, apiKey: 'K', now: new Date('2026-10-29T10:10:00Z'), warn: () => {} });
+  assert.equal(readFileSync(join(dir, 'sources.json'), 'utf8'), sourcesBefore);
+  assert.equal(read(dir, 'next-episode.json').episode.videoId, 'NEWID000001');
+
+  routes['feeds/videos.xml'] = () => respond(200, feedWith('NEWID000001'));
+  const second = fakeFetch(routes);
+  await run({ dir, fetchImpl: second.fetchImpl, apiKey: 'K', now: new Date('2026-10-29T10:15:00Z'), warn: () => {} });
+  assert.equal(feedCalls(second.calls), 1, 'still new, so the feed is read again');
+  assert.equal(read(dir, 'sources.json').episodes[0].videoId, 'NEWID000001');
+  rmSync(dir, { recursive: true });
+});
+
+test('the feed read retries: two failures and then an answer is a green run with no warning', async () => {
+  const dir = tempDir();
+  let attempt = 0;
+  const { fetchImpl, calls } = fakeFetch({
+    'feeds/videos.xml': () => (++attempt < 3 ? respond(404, '') : respond(200, feedWith())),
+  });
+  const waited = [];
+  const { messages, warn } = warnings();
+  const result = await run({ dir, fetchImpl, now: NOW, warn, wait: async (ms) => { waited.push(ms); } });
+  assert.equal(result.changed, true);
+  assert.equal(feedCalls(calls), 3);
+  assert.equal(waited.length, 2);
+  assert.ok(waited[0] >= 10_000 && waited[1] > waited[0], `waits were ${waited}`);
+  assert.deepEqual(messages, []);
+  assert.equal(read(dir, 'sources.json').episodes.length, 15);
+  rmSync(dir, { recursive: true });
+});
+
+test('an API failure with a feed that answers is green with a warning, and leaves next-episode.json alone', async () => {
   const dir = tempDir();
   const previous = { version: 1, updatedAt: '2026-10-30T09:00:00Z', episode: { videoId: 'P', title: 'T', state: 'upcoming', scheduledStart: '2026-10-30T11:30:00Z', actualStart: null } };
   writeFileSync(join(dir, 'next-episode.json'), JSON.stringify(previous, null, 2) + '\n');
-  const { fetchImpl } = fakeFetch({
+  const { messages, warn } = warnings();
+  const { fetchImpl, calls } = fakeFetch({
     'feeds/videos.xml': () => respond(200, feedWith()),
     'googleapis.com': () => respond(500, 'boom'),
   });
-  await run({ dir, fetchImpl, apiKey: 'K', now: new Date('2026-10-30T10:00:00Z') });
+  await run({ dir, fetchImpl, apiKey: 'K', now: new Date('2026-10-30T10:00:00Z'), warn });
   assert.deepEqual(read(dir, 'next-episode.json'), previous);
+  assert.equal(feedCalls(calls), 1);
+  assert.equal(read(dir, 'sources.json').episodes.length, 15);
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /500/);
+  rmSync(dir, { recursive: true });
+});
+
+test('an API failure and a failing feed is a red run, and the key is in no message', async () => {
+  const secret = 'AIzaSy-SECRET-KEY-123';
+  const dir = await primed();
+  const { messages, warn } = warnings();
+  const fetchImpl = async (url) => {
+    if (String(url).includes('feeds/videos.xml')) return respond(404, '');
+    throw new Error(`connect ECONNREFUSED ${url}`);
+  };
+  await assert.rejects(() => run({ dir, fetchImpl, apiKey: secret, now: NOW, warn, wait: noWait }), (error) => {
+    assert.match(error.message, /404/);
+    assert.ok(!error.message.includes(secret) && !String(error.stack).includes(secret), 'the error leaked the key');
+    return true;
+  });
+  assert.ok(messages.length > 0);
+  assert.ok(messages.every((m) => !m.includes(secret)), 'a warning leaked the key');
   rmSync(dir, { recursive: true });
 });
 
 test('a broken feed fails the run and writes nothing', async () => {
   const dir = tempDir();
-  const { fetchImpl } = fakeFetch({ 'feeds/videos.xml': () => respond(200, '<html>blocked</html>') });
-  await assert.rejects(() => run({ dir, fetchImpl, now: NOW }), /not an Atom feed/);
+  const { fetchImpl, calls } = fakeFetch({ 'feeds/videos.xml': () => respond(200, '<html>blocked</html>') });
+  await assert.rejects(() => run({ dir, fetchImpl, now: NOW, wait: noWait }), /not an Atom feed/);
+  assert.equal(feedCalls(calls), 3, 'a blocked page is retried like any other failure');
   assert.equal(existsSync(join(dir, 'sources.json')), false);
   assert.equal(existsSync(join(dir, 'episodes.json')), false);
   rmSync(dir, { recursive: true });
 });
 
-test('a non-200 feed fails the run', async () => {
+test('without a key a non-200 feed fails the run after three attempts', async () => {
   const dir = tempDir();
-  const { fetchImpl } = fakeFetch({ 'feeds/videos.xml': () => respond(404, '') });
-  await assert.rejects(() => run({ dir, fetchImpl, now: NOW }), /404/);
+  const { fetchImpl, calls } = fakeFetch({ 'feeds/videos.xml': () => respond(404, '') });
+  await assert.rejects(() => run({ dir, fetchImpl, now: NOW, wait: noWait }), /404/);
+  assert.equal(feedCalls(calls), 3);
+  rmSync(dir, { recursive: true });
+});
+
+test('a feed that cannot be reached at all is a failure like any other', async () => {
+  const dir = tempDir();
+  const fetchImpl = async () => { throw new Error('getaddrinfo ENOTFOUND www.youtube.com'); };
+  await assert.rejects(() => run({ dir, fetchImpl, now: NOW, wait: noWait }), /feed/);
   rmSync(dir, { recursive: true });
 });
 

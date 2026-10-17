@@ -273,6 +273,10 @@ and the client pieces listed in §5.2.
 Facts from the build, in the order the plan ran. Where the code and the sections above disagree, the
 code is right.
 
+Since 2026-10-17 each run asks the Data API what is new and reads the feed only when something is,
+because the feed answers 404 for hours at night. That changes §4's run order; see
+[the feed reliability design](2026-10-17-umbracoffee-feed-reliability-design.md).
+
 **Decisions taken for the §10 open questions**
 
 - Data branch `data/umbracoffee`, folder `umbracoffee/`, served from `raw.githubusercontent.com`. One

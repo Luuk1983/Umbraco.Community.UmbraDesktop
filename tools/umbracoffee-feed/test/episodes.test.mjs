@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { stripPrefix, mergeEpisodes, refreshFromFeed } from '../src/episodes.mjs';
+import { stripPrefix, mergeEpisodes, refreshFromFeed, sameText, compareUploads } from '../src/episodes.mjs';
 
 const ep = (videoId, published, title = videoId) => ({ videoId, title, published, description: '' });
 const ids = (result) => result.episodes.map((e) => e.videoId);
@@ -76,4 +76,39 @@ test('refreshFromFeed keeps the stored title when the feed entry has none', () =
   const result = refreshFromFeed(existing, [{ videoId: 'a', title: '  ', published: '2026-09-01T00:00:00Z', description: 'd' }]);
   assert.equal(result.changed, false);
   assert.equal(result.episodes[0].title, 'A');
+});
+
+test('sameText ignores differences in whitespace and line endings, and nothing else', () => {
+  assert.equal(sameText('One  line\r\nand\tanother \n', ' One line\nand another'), true);
+  assert.equal(sameText('', '   \n'), true);
+  assert.equal(sameText('Notes: a', 'Notes: b'), false);
+  assert.equal(sameText('Case', 'case'), false);
+});
+
+test('compareUploads calls an id new when sources.json does not have it', () => {
+  const existing = [{ videoId: 'a', title: 'A', published: '2026-07-01T00:00:00Z', description: 'About a.' }];
+  const result = compareUploads(existing, [
+    { videoId: 'n', title: 'umbraCoffee - N', description: '' },
+    { videoId: 'a', title: 'umbraCoffee - A', description: 'About a.' },
+  ]);
+  assert.deepEqual(result, { newIds: ['n'], changedIds: [] });
+});
+
+test('compareUploads calls a known id changed when its title after stripPrefix or its description differs', () => {
+  const existing = [
+    { videoId: 'a', title: 'A', published: '2026-07-01T00:00:00Z', description: 'About a.' },
+    { videoId: 'b', title: 'B', published: '2026-06-01T00:00:00Z', description: 'About b.' },
+    { videoId: 'c', title: 'C', published: '2026-05-01T00:00:00Z', description: 'About\nc.' },
+  ];
+  const result = compareUploads(existing, [
+    { videoId: 'a', title: 'umbraCoffee - A (with guests)', description: 'About a.' },
+    { videoId: 'b', title: 'umbraCoffee - B', description: 'About b, edited.' },
+    { videoId: 'c', title: '  umbraCoffee - C ', description: 'About \r\n c.' },
+  ]);
+  assert.deepEqual(result, { newIds: [], changedIds: ['a', 'b'] });
+});
+
+test('compareUploads never looks at episodes the API answer does not list', () => {
+  const existing = [{ videoId: 'old', title: 'Old', published: '2019-01-01T00:00:00Z', description: '' }];
+  assert.deepEqual(compareUploads(existing, []), { newIds: [], changedIds: [] });
 });
