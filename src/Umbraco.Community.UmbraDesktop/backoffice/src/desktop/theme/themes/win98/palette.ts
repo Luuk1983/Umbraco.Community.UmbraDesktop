@@ -139,9 +139,13 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   // saying "the window is going here": the move outline, a hollow rectangle in the desktop's own
   // inverted grey that showed the destination and nothing else. So no translucent fill — this
   // theme has no translucency anywhere — and a 3px outline in the shadow grey that reads over both
-  // the teal desktop and a wallpaper.
+  // the teal desktop and a wallpaper. The grey is mid-way, so it also reads on a white window and a
+  // black one (#135). It does keep the base's blur, the one translucent thing in this theme:
+  // Windows 98 had no snapping to be faithful to, and the bare outline was too faint over a white
+  // window. No soft shadow, though, which would be a depth this theme draws nowhere else.
   '--umbradesktop-snap-ghost-background': 'transparent',
   '--umbradesktop-snap-ghost-border': `3px solid ${WIN98_SHADOW}`,
+  '--umbradesktop-snap-ghost-shadow': 'none',
   '--umbradesktop-snap-ghost-radius': '0',
   '--umbradesktop-titlebar-height': `${WIN98_TITLEBAR_HEIGHT}px`,
   '--umbradesktop-path-height': `${WIN98_PATH_HEIGHT}px`,

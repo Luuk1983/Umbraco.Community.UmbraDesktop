@@ -70,6 +70,9 @@ export const UMBRACO_PALETTE: UmbraDesktopPalette = {
   '--umbradesktop-window-radius': `${UMBRACO_WINDOW_RADIUS}px`,
   // The snap ghost stands in for the window that is about to be there, so it takes the same corner.
   '--umbradesktop-snap-ghost-radius': `${UMBRACO_WINDOW_RADIUS}px`,
+  // Filled with the brand rather than the base's grey; the lines stay the base's light border and
+  // dark ring, which are what keep it readable on any ground (#135).
+  '--umbradesktop-snap-ghost-background': umbracoTint(HEADER, 40),
   // Widths are the base's own constants, restated: they are in `metrics`, and a palette that
   // changed one would move where a dragged window stops.
   '--umbradesktop-window-border': `${UMBRADESKTOP_WINDOW_BORDER}px solid ${umbracoTint(HEADER, 30)}`,
