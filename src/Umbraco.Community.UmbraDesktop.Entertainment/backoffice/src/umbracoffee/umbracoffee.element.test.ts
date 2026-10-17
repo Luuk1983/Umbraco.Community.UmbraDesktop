@@ -91,6 +91,34 @@ async function settled(element: UmbraCoffeeAppElement): Promise<void> {
 }
 
 /**
+ * Wait until the window's summary has been fitted to its details: drawn, a whole number of lines,
+ * and ending above their bottom padding. Gives up after two seconds without failing, so a summary
+ * that never fits fails on the case's own assertions, which name the size.
+ *
+ * Never waits on an animation frame. In the full run the runner's pages sit in the background,
+ * where Chrome draws no frames at all: a fixed two frames failed about two runs in three
+ * (2026-10-11), and the one left after that never resolved, so the case hung until its timeout
+ * whenever its page was hidden (CI, 2026-10-17). The fit itself does not need a frame either; the
+ * window fits again once its parts have rendered (see `updated` in the element).
+ * @param element The window.
+ */
+async function fitted(element: UmbraCoffeeAppElement): Promise<void> {
+  await settled(element);
+  await waitUntil(
+    () => {
+      const summary = find(element, '.summary');
+      const info = find(element, '.info');
+      if (!summary || !info || summary.hidden) return false;
+      const lines = summary.getBoundingClientRect().height / parseFloat(getComputedStyle(summary).lineHeight);
+      const inside = info.getBoundingClientRect().bottom - parseFloat(getComputedStyle(info).paddingBottom);
+      return Math.abs(lines - Math.round(lines)) < 0.02 && summary.getBoundingClientRect().bottom <= inside + 0.5;
+    },
+    undefined,
+    { timeout: 2000 },
+  ).catch(() => undefined);
+}
+
+/**
  * Mount the window in a box of an exact size, the way a window body hands it one.
  * @param source The data the store gives, or a fetcher the case controls.
  * @param options Size and desktop.
@@ -887,8 +915,9 @@ describe('fit', () => {
    * ellipsis the clamp draws, at whatever height the details get.
    */
   it('ends the summary on a whole line inside the details at any height, never cut through a line', async function () {
-    // Seven windows mounted one after another, each waited on until its fit settles: on CI's busy
-    // runner that ran past mocha's 5 s default once (2026-10-11), with every window fitting right.
+    // Seven windows, each waited on for up to two seconds until its fit settles. A fit that never
+    // settles fails on the assertions, naming the size, once the wait gives up; the timeout leaves
+    // room for all seven waits so that is what reports rather than mocha's 5 s default.
     this.timeout(20_000);
     const long = 'Covers the end of Hacktoberfest, the product update and a release candidate, with packages and events. '.repeat(8);
     const episodes = [{ ...withDetails()[0]!, summary: long }, ...EPISODES.slice(1)];
@@ -901,23 +930,7 @@ describe('fit', () => {
       UMBRACOFFEE_MIN_CONTENT_SIZE,
     ]) {
       const { element } = await mount(answer({ episodes }), { size });
-      // The fit is measured after layout, on an animation frame. In the full run the test tabs sit in
-      // the background, where frames come late, so a fixed two frames failed about two runs in three
-      // (2026-10-11). Wait until the fit has settled instead; a summary that never fits still fails,
-      // on the assertions below once the wait gives up.
-      await settled(element);
-      await waitUntil(
-        () => {
-          const s = find(element, '.summary');
-          const i = find(element, '.info');
-          if (!s || !i || s.hidden) return false;
-          const n = s.getBoundingClientRect().height / parseFloat(getComputedStyle(s).lineHeight);
-          const inside = i.getBoundingClientRect().bottom - parseFloat(getComputedStyle(i).paddingBottom);
-          return Math.abs(n - Math.round(n)) < 0.02 && s.getBoundingClientRect().bottom <= inside + 0.5;
-        },
-        undefined,
-        { timeout: 2000 },
-      ).catch(() => undefined);
+      await fitted(element);
       const info = find(element, '.info')!;
       const summary = find(element, '.summary');
       const label = `${size.w}x${size.h}`;
@@ -933,8 +946,7 @@ describe('fit', () => {
     }
     // Wide and short: the picture's cap still leaves the details two whole lines of summary.
     const { element } = await mount(answer({ episodes }), { size: { w: 1400, h: 760 } });
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    await settled(element);
+    await fitted(element);
     const summary = find(element, '.summary')!;
     const shown = summary.getBoundingClientRect().height / parseFloat(getComputedStyle(summary).lineHeight);
     expect(Math.round(shown), 'wide and short: two whole lines, not none').to.be.at.least(2);
