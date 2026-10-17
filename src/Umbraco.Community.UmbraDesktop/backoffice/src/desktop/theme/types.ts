@@ -54,6 +54,8 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-notice-badge-size',
   '--umbradesktop-snap-ghost-background',
   '--umbradesktop-snap-ghost-border',
+  '--umbradesktop-snap-ghost-shadow',
+  '--umbradesktop-snap-ghost-backdrop',
   '--umbradesktop-snap-ghost-radius',
   '--umbradesktop-control-width',
   '--umbradesktop-control-color',

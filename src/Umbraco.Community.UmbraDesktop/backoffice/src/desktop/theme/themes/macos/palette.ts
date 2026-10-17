@@ -83,6 +83,9 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-radius': '10px',
   // The snap ghost stands in for the window that is about to be there, so it takes the same corner.
   '--umbradesktop-snap-ghost-radius': '10px',
+  // The base's light line and dark ring, over the same vibrancy as the dock, so the outline reads
+  // as a pane of this desktop's glass rather than a flat grey.
+  '--umbradesktop-snap-ghost-backdrop': 'blur(20px) saturate(180%)',
   '--umbradesktop-window-shadow': '0 8px 24px rgba(0, 0, 0, 0.22)',
   '--umbradesktop-window-shadow-active': '0 16px 40px rgba(0, 0, 0, 0.34)',
   '--umbradesktop-titlebar-height': `${MACOS_TITLEBAR_HEIGHT}px`,

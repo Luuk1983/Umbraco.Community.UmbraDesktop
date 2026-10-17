@@ -31,6 +31,7 @@ import { drawsOwnElement } from '../notifications/own-element.js';
 import { UMBRADESKTOP_DESKTOP_SOURCE_ID } from '../notifications/types.js';
 import { UmbraDesktopPackageContextsController } from '../package-contexts.controller.js';
 import type { DesktopLabelResponseModel } from '../../api/types.gen';
+import { UMBRADESKTOP_SNAP_GHOST_DEFAULTS as SNAP_GHOST } from './snap-ghost.js';
 import './window.element.js';
 import './taskbar.element.js';
 import './desktop-toasts.element.js';
@@ -39,7 +40,7 @@ import '../migrations/migration-screen.element.js';
 import '../welcome/welcome-screen.element.js';
 import type { UmbraDesktopWelcomeChoices } from '../welcome/choices';
 import type { UmbraDesktopMigrationScreenState } from '../migrations/types.js';
-import { css, customElement, html, nothing, repeat, state } from '@umbraco-cms/backoffice/external/lit';
+import { css, customElement, html, nothing, repeat, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
 const OUTER_CHROME_STYLE_ID = 'umbradesktop-outer-chrome';
@@ -692,17 +693,36 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
          the taskbar would hide the very thing the window is being snapped alongside, and that
          relationship is the thing worth recording rather than two literals that happen to differ.
 
-         Sized and placed inline; everything here is only how it is painted, which is why all three
-         are tokens: a theme that draws its windows as Windows 98 bevels has no business showing a
-         translucent rounded rectangle. */
+         Sized and placed inline; everything here is only how it is painted, which is why all of it
+         is tokens: a theme that draws its windows as Windows 98 bevels has no business showing a
+         translucent rounded rectangle.
+
+         It lands on anything: a dark wallpaper, a light one, a maximised window's white page. So the
+         defaults draw two lines, a light border and a dark ring from the shadow, and blur what is
+         behind, and theme/snap-ghost.test.ts holds every theme to reading on white and on black
+         (#135, where a single white line vanished over a white window). The blur reaches into the
+         windows' iframes too: measured in Chrome, stripes in an iframe behind the ghost come out
+         blurred while the same iframe beside it stays sharp. */
       .snap-ghost {
         position: absolute;
         z-index: ${UMBRADESKTOP_Z_SNAP_GHOST};
         box-sizing: border-box;
         pointer-events: none;
-        background: var(--umbradesktop-snap-ghost-background, rgba(255, 255, 255, 0.2));
-        border: var(--umbradesktop-snap-ghost-border, 2px solid rgba(255, 255, 255, 0.6));
-        border-radius: var(--umbradesktop-snap-ghost-radius, 6px);
+        background: var(
+          --umbradesktop-snap-ghost-background,
+          ${unsafeCSS(SNAP_GHOST['--umbradesktop-snap-ghost-background'])}
+        );
+        border: var(--umbradesktop-snap-ghost-border, ${unsafeCSS(SNAP_GHOST['--umbradesktop-snap-ghost-border'])});
+        border-radius: var(--umbradesktop-snap-ghost-radius, ${unsafeCSS(SNAP_GHOST['--umbradesktop-snap-ghost-radius'])});
+        box-shadow: var(--umbradesktop-snap-ghost-shadow, ${unsafeCSS(SNAP_GHOST['--umbradesktop-snap-ghost-shadow'])});
+        backdrop-filter: var(
+          --umbradesktop-snap-ghost-backdrop,
+          ${unsafeCSS(SNAP_GHOST['--umbradesktop-snap-ghost-backdrop'])}
+        );
+        -webkit-backdrop-filter: var(
+          --umbradesktop-snap-ghost-backdrop,
+          ${unsafeCSS(SNAP_GHOST['--umbradesktop-snap-ghost-backdrop'])}
+        );
       }
       umbradesktop-taskbar {
         position: absolute;

@@ -62,6 +62,18 @@ export const W11_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-window-radius': '8px',
   // The snap ghost stands in for the window that is about to be there, so it takes the same corner.
   '--umbradesktop-snap-ghost-radius': '8px',
+  // Windows 11's own snap preview: a dark acrylic over a heavy blur, a faint light edge, and a soft
+  // shadow under it. The edge alone would vanish on white, so a dark hairline rings it, the same
+  // pairing the base defaults use for #135. Identical in the dark variant, as it is on Windows.
+  // The edge was 45% white at first and all but vanished over a dark-mode backoffice page. The blur
+  // is heavier than the taskbar's, as Windows' own preview is, and it darkens with `brightness()`
+  // rather than a heavier grey fill: a grey layer turns whatever colour shows through into grey, so
+  // the outline lost any sense of being glass. All of it looked at in a real backoffice, light and
+  // dark.
+  '--umbradesktop-snap-ghost-background': 'rgba(32, 32, 32, 0.15)',
+  '--umbradesktop-snap-ghost-border': '1px solid rgba(255, 255, 255, 0.75)',
+  '--umbradesktop-snap-ghost-shadow': '0 0 0 1px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(0, 0, 0, 0.3)',
+  '--umbradesktop-snap-ghost-backdrop': 'blur(40px) saturate(180%) brightness(0.8)',
   '--umbradesktop-window-shadow': '0 8px 20px rgba(0, 0, 0, 0.14)',
   '--umbradesktop-window-shadow-active': '0 16px 40px rgba(0, 0, 0, 0.24)',
   '--umbradesktop-titlebar-height': `${W11_TITLEBAR_HEIGHT}px`,
