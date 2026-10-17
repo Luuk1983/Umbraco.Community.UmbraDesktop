@@ -5,6 +5,57 @@ Action runs it from a bare checkout. Tests: `node --test` in this folder. The de
 `docs/design/2026-09-30-umbracoffee-v2-plan.md`, section "Addendum 2026-10-01", and the run order in
 `docs/design/2026-10-17-umbracoffee-feed-reliability-design.md`.
 
+## What starts a run
+
+A Cloudflare Worker, every five minutes. The workflow has a five-minute schedule of its own, but
+GitHub runs it only every three to ten hours, which is too rarely for the countdown and the
+reminders. That schedule stays as a backup. When both start a run at once, the workflow queues the
+second.
+
+The Worker is the one part of umbraCoffee that is not in this repository. Its code, schedule and
+token live in the owner's Cloudflare account, as `umbracoffee-trigger`. To build it again:
+
+1. In GitHub, make a fine-grained personal access token with access to this repository only and
+   one permission: Actions, read and write.
+2. In Cloudflare, create a Worker from the Hello World template, replace its code with the code
+   below, and deploy it.
+3. In the Worker's settings, add a secret named `GITHUB_TOKEN` holding the token, and a cron
+   trigger `*/5 * * * *`. The cron fires on the clock, so the first run comes at the next multiple
+   of five minutes.
+
+```js
+export default {
+  async scheduled(event, env, ctx) {
+    const response = await fetch(
+      "https://api.github.com/repos/Luuk1983/Umbraco.Community.UmbraDesktop/actions/workflows/umbracoffee-feed.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          "User-Agent": "umbracoffee-trigger",
+        },
+        body: JSON.stringify({ ref: "main" }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`GitHub answered ${response.status}: ${await response.text()}`);
+    }
+  },
+};
+```
+
+GitHub refuses a request without a `User-Agent`, so keep that header. The `throw` makes a failed
+call show as an error in the Worker's logs instead of a silent success.
+
+Runs the Worker starts show as `workflow_dispatch` in the Actions tab, and the backup's as
+`schedule`. If only `schedule` runs appear, the Worker's Observability logs show GitHub's answer:
+401 means the token is wrong or revoked, 403 or 404 that it lacks the Actions permission or access
+to this repository. The token has no expiry on purpose. If it leaks, revoke it and put a new one in
+the secret. All it can do is start, cancel or delete workflow runs and turn workflows on or off, in this
+repository only.
+
 ## Each run
 
 1. Ask the YouTube Data API for the channel's newest 15 uploads (1 unit).
