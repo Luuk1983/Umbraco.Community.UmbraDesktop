@@ -12,7 +12,8 @@ it('translates every English key into Dutch, and adds none the English set lacks
 
 /** The overwrite question moved here from Accessories with its words unchanged. */
 it('asks the overwrite question in the words Notepad and Paint always used', () => {
-  expect(en.umbraDesktopServicesMedia).to.deep.equal({
+  const { overwriteHeadline, overwriteQuestion, overwriteConfirm } = en.umbraDesktopServicesMedia;
+  expect({ overwriteHeadline, overwriteQuestion, overwriteConfirm }).to.deep.equal({
     overwriteHeadline: 'Overwrite %0%?',
     overwriteQuestion: '%0% was changed in the media library after you opened it. Overwrite it with your version?',
     overwriteConfirm: 'Overwrite',

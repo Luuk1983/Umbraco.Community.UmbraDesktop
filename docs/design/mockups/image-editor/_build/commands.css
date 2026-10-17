@@ -1,0 +1,62 @@
+/* The alternatives to the menu bar. Added after editor.css and menu.css. */
+.hctl { margin-left: 8px; display: flex; align-self: stretch; }
+.hctl i { width: 46px; display: grid; place-items: center; font-style: normal; font-size: 14px; }
+
+/* B: commands in the title bar */
+.hcap { flex: none; display: flex; align-items: center; gap: 6px; padding-left: 14px; background: #1b264f; color: #fff; font-size: 15px; }
+.happ { display: flex; align-items: center; gap: 9px; margin-right: 14px; }
+.happ .dirty { margin-left: 2px; }
+.hib { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 6px; color: inherit; }
+.hib.on { background: rgba(255, 255, 255, .16); }
+.hib.dk { color: #1b264f; }
+.hib.ghost { visibility: hidden; }
+.hpill { margin: 0 auto; display: flex; padding: 4px; gap: 2px; border-radius: 26px; background: rgba(255, 255, 255, .1); }
+.hpill span { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 22px; font-size: 14.5px; color: #e6e8f2; }
+.hpill span.on { background: #f5c1bc; color: #1b264f; font-weight: 700; }
+.hsave { display: inline-flex; align-items: center; height: 44px; padding: 0 22px; border-radius: 6px; background: #2bc37c; color: #fff; font-weight: 700; margin-right: 4px; }
+.amenu { position: absolute; z-index: 30; width: 340px; padding: 6px; background: #fff; border-radius: 8px; box-shadow: 0 10px 30px rgba(10, 14, 40, .35); color: #303033; font-size: 15px; }
+.pr { display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 12px; border-radius: 6px; color: #1b264f; }
+.pr kbd { margin-left: auto; font: inherit; font-size: 13px; color: #8f8f93; }
+.psep { height: 1px; margin: 6px 4px; background: #ececef; }
+.pzoom { display: flex; align-items: center; gap: 6px; height: 52px; padding: 0 6px 0 12px; color: #1b264f; }
+.pzoom > span:first-child { flex: 1; }
+.pzoom b { min-width: 48px; text-align: center; font-weight: 400; }
+.pzb { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid #d8d7d9; border-radius: 6px; }
+.picons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 4px 4px; }
+.picons span { height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px solid #e3e3e6; border-radius: 6px; color: #1b264f; }
+.picons small { font-size: 11.5px; color: #515054; }
+
+/* C: the File page */
+.ccap .title { flex: 1; }
+.wcap.ccap { background: #1b264f; color: #fff; border-bottom-color: #1b264f; padding-right: 0; }
+.c-bar { justify-content: flex-start; padding-left: 0; gap: 0; }
+.mt.file { width: 96px; color: #fff; background: #1b264f; font-weight: 700; }
+.mt.file::after { background: #f5c1bc; }
+.tsep { width: 1px; height: 30px; background: #e3e3e6; margin: 0 10px 0 0; }
+.c-bar .mt:not(.file) { opacity: .45; }
+.fsheet { position: absolute; z-index: 20; display: flex; background: #f3f3f5; border-radius: 0 0 12px 12px; overflow: hidden; }
+.fnav { flex: none; width: 260px; background: #1b264f; color: #fff; padding: 12px 0; display: flex; flex-direction: column; gap: 2px; }
+.fn { display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 24px; font-size: 16px; }
+.fn.on { background: rgba(255, 255, 255, .12); box-shadow: inset 4px 0 0 #f5c1bc; font-weight: 700; }
+.fn.back { margin-bottom: 14px; color: #c9cde0; font-size: 14.5px; }
+.fbody { flex: 1; padding: 34px 44px; }
+.fbody h2 { margin: 0 0 4px; font-size: 26px; color: #1b264f; }
+.fbody > p { margin: 0 0 22px; color: #515054; font-size: 15px; }
+.rgrid { display: grid; grid-template-columns: repeat(3, 280px); gap: 20px; }
+.rtile { display: flex; flex-direction: column; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
+.rimg { height: 170px; background-repeat: no-repeat; }
+.rtile b { padding: 10px 14px 0; font-size: 15px; color: #303033; }
+.rtile small { padding: 2px 14px 12px; color: #8f8f93; font-size: 13px; }
+.fbtns { display: flex; gap: 12px; margin-top: 26px; }
+.pbtn.big { height: 48px; padding: 0 20px; font-size: 15px; }
+
+/* D: the menu, at finger size */
+.dmenu { display: grid; place-items: center; width: 52px; height: 32px; border-radius: 16px; background: rgba(255, 255, 255, .2); }
+.tsheet { position: absolute; z-index: 30; display: flex; background: #fff; border-radius: 10px; box-shadow: 0 12px 34px rgba(10, 14, 40, .38); overflow: hidden; font-size: 15.5px; color: #1b264f; }
+.tcol { width: 200px; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.tcol.items { width: 330px; border-left: 1px solid #ececef; }
+.tm { display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 14px; border-radius: 8px; }
+.tm.on { background: #f5c1bc; font-weight: 700; }
+.tr2 { display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 14px; border-radius: 8px; }
+.tr2 kbd { margin-left: auto; font: inherit; font-size: 12.5px; color: #a3a3a8; }
+.touch { position: absolute; z-index: 40; width: 46px; height: 46px; margin: -6px 0 0 -6px; border-radius: 50%; background: rgba(53, 68, 177, .25); box-shadow: 0 0 0 2px rgba(53, 68, 177, .55); }

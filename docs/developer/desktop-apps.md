@@ -735,6 +735,33 @@ item, asks where a new file goes, and asks before overwriting a file somebody el
 [Opening and saving media files](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Services.Media/docs/developer/opening-and-saving-media.md),
 has the calls.
 
+### 7.5 Naming your window after what it has open
+
+An editor's window can say which file it has open. Put `data-umbradesktop-title` on your own
+element, and the title bar and taskbar button show its value in place of your app's label:
+
+```ts
+this.setAttribute('data-umbradesktop-title', 'beach.jpg');
+```
+
+Remove the attribute, or set it to an empty string, and the window goes back to your label. The
+value is shown as it is and never translated, so give it the file's own name rather than a
+dictionary key. The unsaved dot still follows `data-umbradesktop-dirty`, beside whatever title you
+set. The Image Editor in the Media add-on is the worked example.
+
+### 7.6 Closing your own window
+
+An app with a Close command of its own, such as one on a File page, closes its window by dispatching
+an event from its element:
+
+```ts
+this.dispatchEvent(new CustomEvent('umbradesktop-close-request', { bubbles: true, composed: true }));
+```
+
+The window closes as if its close button was pressed: if your element carries
+`data-umbradesktop-dirty`, the desktop asks before throwing the work away, and a no keeps the
+window open. You do not need to ask yourself first.
+
 ---
 
 ## 8. Traps

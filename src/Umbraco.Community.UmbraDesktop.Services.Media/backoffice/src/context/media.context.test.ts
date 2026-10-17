@@ -7,6 +7,9 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UmbraDesktopMediaContext } from './media.context.js';
 import type { MediaContextDeps } from './media.context.js';
 import type { MediaSaveRequest } from '../files/media-save.js';
+import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
+import type { UmbCurrentUserContext } from '@umbraco-cms/backoffice/current-user';
+import { UmbBasicState } from '@umbraco-cms/backoffice/observable-api';
 
 /** A bare element to host the context, as the desktop element does in production. */
 @customElement('umbradesktop-media-context-test-host')
@@ -110,4 +113,89 @@ it('lets a call host go when the call fails, and passes the failure on', async (
   await context.open().catch((error) => (thrown = error));
   expect((thrown as Error)?.message).to.equal('no picker');
   expect(context.hasUmbController(hosts[0] as never)).to.equal(false);
+});
+
+it('passes the key to open, so a recent item opens without the picker', async () => {
+  const { deps } = fakes();
+  const seen: Array<{ unique?: string } | undefined> = [];
+  deps.open = async (_host, options) => {
+    seen.push(options);
+    return { status: 'cancelled' };
+  };
+  const { context } = await mount(deps);
+  await context.open({ unique: 'k1' });
+  await context.open();
+  expect(seen[0]).to.deep.equal({ unique: 'k1' });
+  expect(seen[1]?.unique).to.equal(undefined);
+});
+
+/** Storage backed by a map, standing in for the browser's. */
+class MapStorage {
+  /** What is stored. */
+  readonly map = new Map<string, string>();
+  getItem(key: string): string | null {
+    return this.map.get(key) ?? null;
+  }
+  setItem(key: string, value: string): void {
+    this.map.set(key, value);
+  }
+}
+
+it('records what any app opens or saves, and lists it per user', async () => {
+  const { deps } = fakes();
+  const blob = new Blob(['x']);
+  deps.open = async () => ({
+    status: 'opened',
+    unique: 'k1',
+    name: 'Beach',
+    blob,
+    extension: 'jpg',
+    folder: 'f1',
+    folderName: 'Holidays',
+  });
+  deps.save = async (_host, saved) => ({ ok: true, unique: saved.existing ?? 'k2' });
+  const host = await fixture<TestHost>(html`<umbradesktop-media-context-test-host></umbradesktop-media-context-test-host>`);
+  const user = new UmbBasicState<string | undefined>(undefined);
+  host.provideContext(UMB_CURRENT_USER_CONTEXT, {
+    unique: user.asObservable(),
+    getHostElement: () => host,
+  } as unknown as UmbCurrentUserContext);
+  const storage = new MapStorage();
+  const context = new UmbraDesktopMediaContext(host, deps, storage);
+
+  await context.open();
+  expect(await context.recent(), 'nothing until the user is known').to.deep.equal([]);
+  expect(storage.map.size).to.equal(0);
+
+  user.setValue('u1');
+  await context.open();
+  await context.save({ file: new File(['x'], 'notes.txt'), name: 'Notes', folder: 'f3' });
+  await context.save({ file: new File(['x'], 'beach.webp'), name: 'Beach', folder: null, existing: 'k1' });
+  expect(await context.save({ file: new File(['x'], 'x.png'), name: 'X', folder: null }).then(() => 1)).to.equal(1);
+
+  const listed = await context.recent(['jpg', 'webp']);
+  expect(listed.map((e) => e.unique), 'the save over k1 moved it to the top').to.deep.equal(['k1']);
+  expect(listed[0].extension).to.equal('webp');
+  expect(listed[0].folderName, 'the open knew its folder').to.equal('Holidays');
+  expect((await context.recent()).map((e) => e.unique)).to.include('k2');
+
+  context.forgetRecent('k1');
+  expect((await context.recent(['jpg', 'webp'])).length).to.equal(0);
+
+  user.setValue('u2');
+  expect(await context.recent(), 'another user has their own list').to.deep.equal([]);
+});
+
+it('does not record a cancelled open or a failed save', async () => {
+  const { deps } = fakes();
+  deps.save = async () => ({ ok: false, message: 'no' });
+  const host = await fixture<TestHost>(html`<umbradesktop-media-context-test-host></umbradesktop-media-context-test-host>`);
+  host.provideContext(UMB_CURRENT_USER_CONTEXT, {
+    unique: new UmbBasicState<string | undefined>('u1').asObservable(),
+    getHostElement: () => host,
+  } as unknown as UmbCurrentUserContext);
+  const context = new UmbraDesktopMediaContext(host, deps, new MapStorage());
+  await context.open();
+  await context.save(request('a'));
+  expect(await context.recent()).to.deep.equal([]);
 });

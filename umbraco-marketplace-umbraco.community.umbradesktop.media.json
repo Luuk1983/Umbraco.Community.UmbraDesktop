@@ -1,0 +1,63 @@
+{
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "Title": "UmbraDesktop Media Add-on",
+  "Category": "Editor Tools",
+  "AlternateCategory": "Developer Tools",
+  "Description": "Fix an image without leaving the backoffice. The Image Editor crops, adjusts, marks up, redacts and resizes images from the media library, and saves them back or as a copy.",
+  "PackageType": "Package",
+  "LicenseTypes": [
+    "Free"
+  ],
+  "AuthorDetails": {
+    "Name": "Luuk Peters",
+    "Description": "Umbraco developer building packages that extend the CMS with enterprise-grade features.",
+    "Url": "https://github.com/Luuk1983",
+    "SyncContributorsFromRepository": true
+  },
+  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Media/docs/user/image-editor.md",
+  "IssueTrackerUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues",
+  "Tags": [
+    "image editor",
+    "crop",
+    "resize",
+    "redact",
+    "blur",
+    "pixelate",
+    "rotate",
+    "markup",
+    "annotate",
+    "exposure",
+    "WebP",
+    "media library",
+    "umbradesktop",
+    "desktop",
+    "backoffice",
+    "apps",
+    "add-on",
+    "themes",
+    "launcher"
+  ],
+  "RelatedPackages": [
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop",
+      "GroupTitle": "Requires",
+      "Description": "The desktop itself. This package is an add-on to it and installs it as a dependency; the desktop works on its own without the media apps."
+    },
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop.Accessories",
+      "GroupTitle": "Optional add-ons",
+      "Description": "Notepad, Paint, Sticky Notes and the rest of the small tools. Independent of this package: install either, both or neither."
+    },
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop.Entertainment",
+      "GroupTitle": "Optional add-ons",
+      "Description": "Games for the desktop. Independent of this package: install either, both or neither."
+    }
+  ],
+  "Screenshots": [
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Media/docs/screenshots/image-editor.png",
+      "Caption": "The Image Editor cropping a photo to 16:9, with rotate and flip beside it and the image's name, folder, size and zoom in the status bar."
+    }
+  ]
+}

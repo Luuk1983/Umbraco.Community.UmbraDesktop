@@ -186,6 +186,14 @@ export interface UmbraDesktopWindow {
   dirty?: boolean;
 
   /**
+   * What an element app titled its window with, through its `data-umbradesktop-title` attribute, or
+   * absent while it has said nothing. The title bar and the taskbar button say it in place of the
+   * app's label, so an editor's window is named after the file it has open. Written only by the
+   * manager, from `setAppTitle`; shown as it is, never localized. Issue #136.
+   */
+  appTitle?: string;
+
+  /**
    * What the work this window is doing adds up to, or absent while it is doing nothing.
    *
    * Beside `dirty` because it is the same shape of problem — work that closing the window would

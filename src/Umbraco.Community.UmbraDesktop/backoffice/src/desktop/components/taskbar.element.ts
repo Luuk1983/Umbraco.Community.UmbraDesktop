@@ -365,7 +365,8 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     // applies to unsaved work too, because a window you minimized an hour ago is exactly the one
     // whose state you cannot see.
     const worst = worstSeverity(notices);
-    const name = this.localize.string(w.app.name);
+    // An app's own title for its window wins over its label, as it does in the title bar.
+    const name = w.appTitle || this.localize.string(w.app.name);
     // The words, not just the shape: this is the accessible name and the tooltip, so the state is
     // readable to a screen reader and on a monochrome display. `notices[0]` is the worst notice,
     // which is the one the badge is drawing.

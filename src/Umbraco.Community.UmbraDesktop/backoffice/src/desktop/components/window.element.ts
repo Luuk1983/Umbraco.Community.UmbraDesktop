@@ -741,6 +741,30 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   };
 
   /**
+   * A registered app titled its window, or stopped titling it, through the attribute its host
+   * watches. Landed on the manager, so the taskbar button reads the same answer the title bar does.
+   * @param event The host's report.
+   */
+  #onAppTitle = (event: CustomEvent<{ title: string | undefined }>) => {
+    const id = this.window?.id;
+    if (id) this.#manager?.setAppTitle(id, event.detail.title);
+  };
+
+  /**
+   * A registered app asked to close its window, from a Close command of its own. The same
+   * `requestClose` the close button calls, so unsaved work is asked about first. Stopped here: the
+   * request is about this window and nothing above it. The template names the event as a literal,
+   * since Lit binds no interpolated event names; `window-app-title.test.ts` dispatches it through
+   * `UMBRADESKTOP_CLOSE_REQUEST_EVENT`, so the two cannot drift apart unnoticed.
+   * @param event The app's request.
+   */
+  #onAppCloseRequest = (event: Event) => {
+    event.stopPropagation();
+    const id = this.window?.id;
+    if (id) void this.#manager?.requestClose(id);
+  };
+
+  /**
    * A registered app's work, as its host collected it from the app's `umbradesktop-task` events.
    * The app-window half of the frame's upload watch, landing on the same `setTasks` under its own
    * source, so the manager sums the two rather than one overwriting the other. Issue #108 D5.
@@ -1340,6 +1364,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         .props=${w.app.content.props}
         .load=${w.app.content.element}
         @umbradesktop-app-dirty=${this.#onAppDirty}
+        @umbradesktop-app-title=${this.#onAppTitle}
+        @umbradesktop-close-request=${this.#onAppCloseRequest}
         @umbradesktop-app-tasks=${this.#onAppTasks}
         @umbradesktop-app-location=${this.#onAppLocation}></umbradesktop-app-host>`;
       // Keyed only for attached content, whose reload is a remount: it fetches what it shows when it
@@ -1608,7 +1634,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
                 ),
               )}
             </span>
-            <span class="title-text">${this.localize.string(w.app.name)}</span>
+            <span class="title-text">${w.appTitle || this.localize.string(w.app.name)}</span>
             ${(() => {
               const notices = windowNotices(w);
               const worst = worstSeverity(notices);

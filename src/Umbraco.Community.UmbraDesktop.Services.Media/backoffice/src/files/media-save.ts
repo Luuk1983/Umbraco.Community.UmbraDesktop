@@ -6,6 +6,7 @@ import { UmbMediaTypeStructureRepository } from '@umbraco-cms/backoffice/media-t
 import { TemporaryFileStatus, UmbTemporaryFileManager } from '@umbraco-cms/backoffice/temporary-file';
 import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
 import { AREA } from '../shared/area.js';
+import { fileValueFor } from './file-value.js';
 
 /** How a save to the media library went. */
 export type MediaSaveResult =
@@ -51,6 +52,13 @@ export interface MediaSaveRequest {
   expectedUpdateDate?: string | null;
   /** Overwrite `existing` even if it changed since: the person was asked, and said yes. */
   force?: boolean;
+  /**
+   * Whether the picture was cropped, rotated or flipped since it was last saved, so the overwritten
+   * item's focal point and every named crop's coordinates are reset rather than kept pointing at
+   * other pixels. Only an overwrite reads it: a new item has neither. Undefined is false, which keeps
+   * them, as every save did before this field. Issue #136, design D8.
+   */
+  resetFocalPoint?: boolean;
 }
 
 /**
@@ -145,9 +153,16 @@ export type MediaSaver = (request: MediaSaveRequest) => Promise<MediaSaveResult>
  * @returns A {@link MediaSaver}.
  */
 export function createMediaSaver(host: UmbControllerHost): MediaSaver {
-  return async ({ file, name, folder, existing, expectedUpdateDate, force }) => {
+  return async ({ file, name, folder, existing, expectedUpdateDate, force, resetFocalPoint }) => {
     if (existing) {
-      const replaced = await replaceFile(host, existing, file, name, force ? undefined : expectedUpdateDate);
+      const replaced = await replaceFile(
+        host,
+        existing,
+        file,
+        name,
+        force ? undefined : expectedUpdateDate,
+        resetFocalPoint === true,
+      );
       if (replaced) return replaced;
     }
     return createItem(host, file, name, folder);
@@ -233,6 +248,7 @@ async function createItem(
  * @param name The item's name now.
  * @param expectedUpdateDate The update date the document last saw, or undefined to overwrite
  *   whatever is there.
+ * @param resetFocalPoint Whether to reset the focal point and the named crops (see {@link fileValueFor}).
  * @returns How it went, or null when the item is gone and a new one should be created instead.
  */
 async function replaceFile(
@@ -241,6 +257,7 @@ async function replaceFile(
   file: File,
   name: string,
   expectedUpdateDate: string | null | undefined,
+  resetFocalPoint: boolean,
 ): Promise<MediaSaveResult | null> {
   const repository = new UmbMediaDetailRepository(host);
   const { data } = await repository.requestByUnique(unique);
@@ -252,12 +269,10 @@ async function replaceFile(
   const temporaryFileId = await upload(host, file);
   if (!temporaryFileId) return { ok: false };
 
-  // Keep whatever else the value holds (an image's crops and focal point), and point it at the new
-  // file. The server's file-upload and image-cropper editors both take `temporaryFileId` to mean
-  // "replace the file with this one", which is what the dropzone's own scaffold relies on too.
+  // Point the value at the new file, keeping the rest of it unless the picture was reframed.
   const values = data.values.map((value) =>
     value.alias === 'umbracoFile'
-      ? { ...value, value: { ...((value.value as object | null) ?? {}), temporaryFileId } }
+      ? { ...value, value: fileValueFor(value.value, temporaryFileId, resetFocalPoint) }
       : value,
   );
   // Media is invariant, so the one variant carries the name.

@@ -1,0 +1,63 @@
+/* The File page under each theme, on the 800x380 theme stages. */
+
+/* Umbraco */
+.tu-modes { height: 46px; display: flex; align-items: stretch; background: #fff; border-bottom: 1px solid #e3e3e6; color: #303033; }
+.tm2 { display: grid; place-items: center; padding: 0 16px; font-size: 13.5px; }
+.tm2.on { background: #1b264f; color: #fff; font-weight: 700; padding: 0 26px; }
+.tu-page { position: absolute; left: 0; right: 0; top: 86px; bottom: 0; display: flex; }
+.tu-nav { width: 180px; background: #1b264f; color: #fff; padding-top: 10px; display: flex; flex-direction: column; }
+.tu-nav span { height: 42px; display: flex; align-items: center; padding: 0 20px; font-size: 14px; }
+.tu-nav .on { background: rgba(255, 255, 255, .12); box-shadow: inset 4px 0 0 #f5c1bc; font-weight: 700; }
+.tu-body { flex: 1; padding: 18px 24px; background: #f3f3f5; }
+.tu-body h4, .w11-pb h4, .mac-body h4 { margin: 0 0 12px; font-size: 20px; color: #1b264f; }
+.tu-grid, .w11-grid, .mac-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.tu-t { background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
+.tu-t span, .w11-t span, .w98-t span, .mac-t span { display: block; height: 110px; background-size: cover; }
+.tu-t b { display: block; padding: 8px 10px; font-size: 13px; font-weight: 400; color: #303033; }
+
+/* Windows 11 */
+.w11-modes { height: 40px; display: flex; align-items: center; gap: 4px; padding: 0 8px; background: #f3f3f3; font-size: 13.5px; }
+.w11-m { padding: 6px 12px; border-radius: 5px; }
+.w11-m.on { background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .12); font-weight: 600; }
+.w11-page { position: absolute; left: 0; right: 0; top: 72px; bottom: 0; display: flex; background: #f3f3f3; }
+.w11-nav { width: 190px; padding: 8px 6px; display: flex; flex-direction: column; gap: 2px; }
+.w11-nav span { position: relative; height: 36px; display: flex; align-items: center; padding: 0 16px; border-radius: 5px; font-size: 14px; }
+.w11-nav .on { background: rgba(0, 0, 0, .05); }
+.w11-nav .on::before { content: ''; position: absolute; left: 0; top: 10px; width: 3px; height: 16px; border-radius: 2px; background: #005fb8; }
+.w11-pb { flex: 1; padding: 16px 22px; background: #f9f9f9; border-top-left-radius: 8px; border: 1px solid #e5e5e5; border-right: 0; border-bottom: 0; }
+.w11-pb h4 { color: #1a1a1a; font-weight: 600; }
+.w11-t { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; overflow: hidden; }
+.w11-t b { display: block; padding: 8px 10px; font-size: 13px; font-weight: 400; }
+.w11-btn { display: inline-block; margin-top: 14px; padding: 7px 14px; border-radius: 4px; background: #005fb8; color: #fff; font-size: 13.5px; }
+
+/* Windows 98 */
+.w98-modes { display: flex; gap: 2px; padding: 4px 2px 0; }
+.w98-m { padding: 3px 10px; background: #c0c0c0; box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080; }
+.w98-m.on { box-shadow: inset 1px 1px #0a0a0a, inset -1px -1px #fff, inset 2px 2px #808080; background: #d4d4d4; }
+.w98-page { position: absolute; left: 5px; right: 5px; top: 56px; bottom: 5px; display: flex; gap: 8px; padding: 6px; }
+.w98-nav { width: 150px; background: #fff; box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #0a0a0a; padding: 4px; display: flex; flex-direction: column; }
+.w98-nav span { padding: 3px 6px; }
+.w98-nav .on { background: #000080; color: #fff; }
+.w98-pb { flex: 1; }
+.w98-pb fieldset { margin: 0; padding: 8px; border: 0; box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, 1px 1px #fff, -1px -1px #808080; }
+.w98-pb legend { padding: 0 3px; }
+.w98-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.w98-t span { height: 100px; box-shadow: inset 1px 1px #808080, inset -1px -1px #fff; border: 2px solid #c0c0c0; }
+.w98-t b { display: block; padding-top: 3px; font-weight: 400; text-align: center; }
+.w98-btn { display: inline-block; margin-top: 10px; padding: 4px 16px; box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, 0 0 0 1px #000; }
+
+/* macOS */
+.mac-big { left: 30px; top: 22px; width: 740px; height: 420px; }
+.mac-tb { height: 52px; justify-content: flex-start; }
+.mac-seg { margin: 0 auto; display: flex; padding: 2px; border-radius: 7px; background: rgba(0, 0, 0, .07); font-size: 12.5px; }
+.mac-s { padding: 4px 11px; border-radius: 5px; color: #333; }
+.mac-s.on { background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .18); }
+.mac-page { position: absolute; left: 0; right: 0; top: 52px; bottom: 0; display: flex; font: 13px -apple-system, "Helvetica Neue", sans-serif; color: #1d1d1f; }
+.mac-side { width: 170px; padding: 10px 8px; background: rgba(232, 232, 236, .9); display: flex; flex-direction: column; gap: 1px; }
+.mac-side small { padding: 4px 8px; color: #8a8a8e; font-size: 11px; font-weight: 600; }
+.mac-side span { padding: 5px 10px; border-radius: 6px; }
+.mac-side .on { background: rgba(0, 0, 0, .1); font-weight: 600; }
+.mac-body { flex: 1; padding: 16px 22px; background: #fff; }
+.mac-body h4 { color: #1d1d1f; font-size: 17px; font-weight: 700; }
+.mac-t span { border-radius: 6px; }
+.mac-t b { display: block; padding-top: 6px; font-weight: 400; font-size: 12px; text-align: center; }

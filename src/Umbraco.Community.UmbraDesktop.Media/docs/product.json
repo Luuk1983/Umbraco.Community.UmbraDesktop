@@ -1,0 +1,7 @@
+{
+  "id": "media",
+  "name": "UmbraDesktop Media Add-on",
+  "packageId": "Umbraco.Community.UmbraDesktop.Media",
+  "repository": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop",
+  "docsRoot": "src/Umbraco.Community.UmbraDesktop.Media/docs"
+}

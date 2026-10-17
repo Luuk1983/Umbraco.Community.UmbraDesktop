@@ -50,6 +50,10 @@ UmbraDesktop grants no access of its own. A user only sees apps for the sections
 
 [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories) is an optional add-on with the tools Windows kept under Accessories: Notepad and Paint that edit files in your media library, Sticky Notes of your own and shared with your team, Calculator, Character Map, Clock, a screen saver, Disk Cleanup and System Information. The desktop is unchanged without it.
 
+## An image editor, if you want one
+
+[`Umbraco.Community.UmbraDesktop.Media`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) is an optional add-on with an Image Editor that crops, adjusts, marks up, redacts and resizes images from your media library and saves them back or as a copy. The desktop is unchanged without it.
+
 ## Games and umbraCoffee, if you want them
 
 [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment) is an optional add-on that puts Minesweeper, Snake and Solitaire on the desktop, and umbraCoffee, the community's monthly live show, each in a window of its own and themed along with everything else. The desktop is unchanged without it.

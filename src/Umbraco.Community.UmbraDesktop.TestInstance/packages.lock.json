@@ -2961,6 +2961,13 @@
           "Umbraco.Community.UmbraDesktop": "[1.0.0, )"
         }
       },
+      "umbraco.community.umbradesktop.media": {
+        "type": "Project",
+        "dependencies": {
+          "Umbraco.Community.UmbraDesktop": "[1.0.0, )",
+          "Umbraco.Community.UmbraDesktop.Services.Media": "[1.0.0, )"
+        }
+      },
       "Umbraco.Cms.Api.Common": {
         "type": "CentralTransitive",
         "requested": "[17.0.0, 17.99999999.0]",

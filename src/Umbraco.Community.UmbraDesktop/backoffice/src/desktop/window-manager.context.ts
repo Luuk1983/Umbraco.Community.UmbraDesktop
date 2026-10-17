@@ -646,6 +646,22 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   }
 
   /**
+   * Title a window with what its app said, or put its label back. Written by the window element from
+   * the app's `data-umbradesktop-title` attribute; see `UmbraDesktopWindow.appTitle`. An empty title
+   * is no title, so an app clearing the attribute's value and one removing it read the same, and a
+   * report of the title the window already has hands back the same list.
+   * @param id The window.
+   * @param title What the app's attribute says, or undefined when it has none.
+   */
+  public setAppTitle(id: string, title: string | undefined): void {
+    const next = title || undefined;
+    const current = this.#windows.getValue();
+    const target = current.find((w) => w.id === id);
+    if (!target || target.appTitle === next) return;
+    this.#windows.setValue(current.map((w) => (w.id === id ? { ...w, appTitle: next } : w)));
+  }
+
+  /**
    * Record how many times a window's document has had a new saved version. Written by the window
    * element's dirty watcher; see `UmbraDesktopWindow.saves`. Hands back the same list when the count
    * has not moved, because the watcher reports every change to the frame's state and most of those
