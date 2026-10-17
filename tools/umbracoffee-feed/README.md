@@ -2,7 +2,22 @@
 
 Keeps the umbraCoffee data on the `data/umbracoffee` branch. Plain Node, no dependencies, so the
 Action runs it from a bare checkout. Tests: `node --test` in this folder. The design is in
-`docs/design/2026-09-30-umbracoffee-v2-plan.md`, section "Addendum 2026-10-01".
+`docs/design/2026-09-30-umbracoffee-v2-plan.md`, section "Addendum 2026-10-01", and the run order in
+`docs/design/2026-10-17-umbracoffee-feed-reliability-design.md`.
+
+## Each run
+
+1. Ask the YouTube Data API for the channel's newest 15 uploads (1 unit).
+2. Compare them with `sources.json`. An id that is not there is new; a known one whose title or
+   description differs is changed.
+3. Only if something is new or changed, read the RSS feed, with up to three attempts. Its titles
+   and descriptions go into `sources.json`. Nothing from the API is ever stored.
+4. Rebuild `episodes.json`, and look up the new ids and the current episode for `next-episode.json`.
+
+When the feed fails, the episode list waits for a later run, but the next episode still updates,
+because it comes from the API. The run is green with a warning. It is red only when the API and the
+feed both fail. Without `YOUTUBE_API_KEY` the feed is read every run, and `next-episode.json` stays
+empty.
 
 ## The files
 
@@ -35,7 +50,8 @@ Run from the repository root. `<dir>` is the `umbracoffee/` folder of a data bra
 
 | Command | What it is for |
 | --- | --- |
-| `node tools/umbracoffee-feed/src/run.mjs <dir>` | The Action. Reads the feed, updates `sources.json`, rebuilds `episodes.json`, updates `next-episode.json`. Writes nothing when nothing changed |
+| `node tools/umbracoffee-feed/src/run.mjs <dir>` | The Action. Asks the API what is new, reads the feed when something is, updates `sources.json`, rebuilds `episodes.json`, updates `next-episode.json`. Writes nothing when nothing changed |
+| `node tools/umbracoffee-feed/src/report.mjs <dir>` | Needs `YOUTUBE_API_KEY`. Lists the episodes with no description here that YouTube has one for, and those whose description on YouTube says something ours does not. Prints id, title and link, never the text. Writes nothing |
 | `node tools/umbracoffee-feed/src/pending.mjs <dir>` | Prints the episodes that need a summary: new ones, and ones whose title or description changed. JSON, newest first |
 | `node tools/umbracoffee-feed/src/apply-details.mjs <dir> <results.json>` | Checks the session's answers, saves them in `details.json` and rebuilds `episodes.json`. Refuses the whole file if one answer is wrong |
 | `node tools/umbracoffee-feed/src/guests.mjs <dir>` | Lists every guest with their episode count, and pairs that look like one person spelled two ways. Use it to fill `guestNames` |
@@ -60,7 +76,13 @@ Run from the repository root. `<dir>` is the `umbracoffee/` folder of a data bra
 5. Look at the answers marked uncertain, and at `guests.mjs` for new spellings of known guests.
    Put fixes in `overrides.json`, then apply again (an empty `[]` results file is enough) or wait
    for the Action to rebuild `episodes.json`.
-6. Commit `details.json`, `episodes.json` and any `overrides.json` change, and push the data branch.
+6. Check older episodes against YouTube: `YOUTUBE_API_KEY=... node tools/umbracoffee-feed/src/report.mjs <dir>`.
+   The feed only shows edits to the newest 15. For each episode listed, open the link, read the
+   description on YouTube, and write the summary or guests into `overrides.json` yourself. The report
+   prints no text on purpose: YouTube's API rules forbid storing what the API answers or making new
+   data from it. For the same reason, run it on your own machine, never in the Action, whose logs
+   GitHub keeps for 90 days.
+7. Commit `details.json`, `episodes.json` and any `overrides.json` change, and push the data branch.
 
 The Action only reads `details.json` and `overrides.json`. It never commits them, so your push is
 the only way they change.

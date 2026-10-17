@@ -1,6 +1,7 @@
 /**
  * The source list (`sources.json`): cleaning titles, merging new entries in without disturbing old
- * ones, and refreshing the text of the ones the feed still lists.
+ * ones, refreshing the text of the ones the feed still lists, and comparing the list with the API's
+ * newest uploads to decide whether the feed needs reading at all.
  * @module episodes
  */
 
@@ -23,6 +24,39 @@ export function stripPrefix(title) {
   const trimmed = title.trim();
   const stripped = trimmed.replace(/^umbraCoffee\s*[-–—]\s*/i, '');
   return stripped === '' ? trimmed : stripped;
+}
+
+/**
+ * Whether two texts say the same, ignoring only runs of whitespace and line endings. Measured on
+ * 2026-10-17, the API and the feed gave byte-equal titles and descriptions for the newest 15, zero
+ * width spaces included, so this is a guard for line endings rather than a known difference. Anything
+ * looser (case, entities, invisible characters) would hide a real edit.
+ * @param {string} a One text.
+ * @param {string} b The other.
+ * @returns {boolean} True when they differ in whitespace at most.
+ */
+export function sameText(a, b) {
+  const normalise = (text) => text.replace(/\s+/g, ' ').trim();
+  return normalise(a) === normalise(b);
+}
+
+/**
+ * Compares the API's newest uploads with `sources.json`, to decide whether the feed is worth
+ * reading. Only the uploads given are looked at, so an old episode can never force a read.
+ * @param {Episode[]} existing The current list.
+ * @param {Array<{videoId: string, title: string, description: string}>} uploads The API's newest uploads.
+ * @returns {{ newIds: string[], changedIds: string[] }} Ids not in the list yet, and known ids whose title (after {@link stripPrefix}) or description differs, both in the uploads' order.
+ */
+export function compareUploads(existing, uploads) {
+  const known = new Map(existing.map((episode) => [episode.videoId, episode]));
+  const newIds = [];
+  const changedIds = [];
+  for (const upload of uploads) {
+    const episode = known.get(upload.videoId);
+    if (!episode) newIds.push(upload.videoId);
+    else if (!sameText(stripPrefix(upload.title), episode.title) || !sameText(upload.description, episode.description)) changedIds.push(upload.videoId);
+  }
+  return { newIds, changedIds };
 }
 
 /**

@@ -44,7 +44,9 @@ jobs:
       # Writes sources.json, episodes.json and next-episode.json. details.json and overrides.json are
       # made locally (tools/umbracoffee-feed/README.md) and only read here.
       # YOUTUBE_API_KEY is optional: without it the episode list is still kept current and
-      # next-episode.json stays empty. The tool never prints the key.
+      # next-episode.json stays empty. With it, the feed is read only when the API lists something new
+      # or changed, and a failing feed is a warning annotation rather than a red run
+      # (docs/design/2026-10-17-umbracoffee-feed-reliability-design.md). The tool never prints the key.
       - name: Update the data files
         id: feed
         env:
