@@ -41,3 +41,9 @@ unsaved in the window.
 
 Unsaved work is protected the way an unsaved page is: the window shows the unsaved dot, and closing
 it, or leaving the desktop, asks first. **New** and **Open…** ask too.
+
+## For developers
+
+Opening and saving is done by the UmbraDesktop Media service, which installs with Accessories. To
+give an app of your own the same behaviour, see [Opening and saving media
+files](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Services.Media/docs/developer/opening-and-saving-media.md).

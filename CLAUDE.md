@@ -21,6 +21,8 @@ src/Umbraco.Community.UmbraDesktop.Accessories/
   StickyNotes/                  its one piece of server code, tested by .Accessories.Tests
 src/Umbraco.Community.UmbraDesktop.Services.Arcade/
   docs/                         high scores: a service package games depend on, never installed alone
+src/Umbraco.Community.UmbraDesktop.Services.Media/
+  docs/                         opening and saving media files: a service package, the same model
 docs/                           UmbraDesktop's docs root (product.json)
   user/<category>/              the user guide, one page per feature
   developer/                    how it works, theming, apps, catalogues, attached windows, progress

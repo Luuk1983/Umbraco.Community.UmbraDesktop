@@ -82,9 +82,9 @@ export default {
     savedToMedia: 'Saved to the media library.',
     saveFailed: 'Not saved. %0%',
     openFailed: '%0% could not be read.',
-    overwriteHeadline: 'Overwrite %0%?',
-    overwriteQuestion: '%0% was changed in the media library after you opened it. Overwrite it with your version?',
-    overwriteConfirm: 'Overwrite',
+    mediaUnavailable: 'The media library cannot be reached.',
+    // The overwrite question itself is the media service's (umbraDesktopServicesMedia); this is
+    // what Notepad and Paint say when the answer is no.
     overwriteDeclined: 'Not saved: %0% was changed in the media library.',
     notepadNotText: 'Notepad opens text files, and %0% is not one.',
     paintNotImage: 'Paint edits pictures, and %0% is not one it can edit.',

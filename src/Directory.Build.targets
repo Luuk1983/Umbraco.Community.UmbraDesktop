@@ -50,7 +50,7 @@
 	     stops applying. -->
 	<Target Name="BoundHostRange" AfterTargets="_GetProjectReferenceVersions">
 		<ItemGroup>
-			<_ProjectReferencesWithVersions Condition="'%(Filename)' == 'Umbraco.Community.UmbraDesktop' Or '%(Filename)' == 'Umbraco.Community.UmbraDesktop.Services.Arcade'">
+			<_ProjectReferencesWithVersions Condition="'%(Filename)' == 'Umbraco.Community.UmbraDesktop' Or '%(Filename)' == 'Umbraco.Community.UmbraDesktop.Services.Arcade' Or '%(Filename)' == 'Umbraco.Community.UmbraDesktop.Services.Media'">
 				<ProjectVersion>[%(ProjectVersion), $(UmbraDesktopUmbracoMajorCeiling)]</ProjectVersion>
 			</_ProjectReferencesWithVersions>
 		</ItemGroup>

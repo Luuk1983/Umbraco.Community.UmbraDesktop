@@ -2,7 +2,7 @@ import { expect } from '@open-wc/testing';
 import { changedSince } from './media-save.js';
 
 /**
- * Whether a media item was changed by somebody else since a Notepad or Paint window opened or last
+ * Whether a media item was changed by somebody else since an app window opened or last
  * saved it, judged by the item's update date. A save over a changed item asks first, so this is
  * what stands between a person's work and a file somebody replaced in the Media section.
  */

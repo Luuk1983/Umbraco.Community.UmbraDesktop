@@ -3,7 +3,7 @@ import { createSaveFolderPicker, isSaveFolder } from './save-location.js';
 import type { SaveFolderMemory } from './save-location.js';
 
 /**
- * Save As for a new Notepad or Paint file: Umbraco's folder picker, opened on the folder chosen last
+ * Save As for a new file: Umbraco's folder picker, opened on the folder chosen last
  * time, or on the media library root the first time, so choosing at once saves to the root.
  */
 

@@ -3,9 +3,7 @@ import { sendKeys, sendMouse } from '@web/test-runner-commands';
 import './paint.element.js';
 import { PAINT_CANVAS_SIZE, PAINT_MAX_IMAGE_EDGE_PX } from './constants.js';
 import type { PaintElement } from './paint.element.js';
-import type { MediaOpenResult } from '../shared/media-open.js';
-import type { MediaSaveRequest, MediaSaveResult } from '../shared/media-save.js';
-import type { SaveFolderChoice } from '../shared/save-location.js';
+import type { MediaOpenResult, MediaSaveRequest, MediaSaveResult, SaveFolderChoice } from '../shared/media-service.js';
 
 /**
  * Paint as a media library image editor: open an image from the media library, draw on it, save it

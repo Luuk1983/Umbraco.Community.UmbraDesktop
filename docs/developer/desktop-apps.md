@@ -725,6 +725,16 @@ and hands it back without reading it. Each window has its own, so an app that al
 can have each one somewhere else. The Help app is the first to use this: its location is the page it
 shows, such as `umbradesktop/snapping`.
 
+### 7.4 Opening and saving media files
+
+An app that edits files, as Notepad and Paint do, can leave opening and saving to the media service
+package rather than writing it again. It shows Umbraco's media picker, saves a file back as a media
+item, asks where a new file goes, and asks before overwriting a file somebody else changed. Depend on
+`Umbraco.Community.UmbraDesktop.Services.Media` and reach its context by its alias, as
+[Desktop contexts](desktop-contexts.md#services-you-can-use) lists. Its own guide,
+[Opening and saving media files](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Services.Media/docs/developer/opening-and-saving-media.md),
+has the calls.
+
 ---
 
 ## 8. Traps

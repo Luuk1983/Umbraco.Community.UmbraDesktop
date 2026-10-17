@@ -60,6 +60,10 @@ ordinary reuse rather than that.
 
 ## 4. Notepad and Paint work on the media library
 
+> Since 2026-10-17 the opening and saving described here lives in the media service package, not in
+> Accessories' `shared/`, with unchanged behaviour. See
+> [2026-10-17-services-media-design.md](2026-10-17-services-media-design.md).
+
 **Every file lives in the media library** (decided with the repository owner, 2026-09-24, replacing
 a first version that saved to the person's machine by default). Open shows Umbraco's own
 `UMB_MEDIA_PICKER_MODAL`, the picker a media property uses, so it browses, searches and uploads the

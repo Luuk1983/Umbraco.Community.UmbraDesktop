@@ -3,8 +3,8 @@ import { UMB_MEDIA_TREE_PICKER_MODAL } from '@umbraco-cms/backoffice/media';
 import { umbOpenModal } from '@umbraco-cms/backoffice/modal';
 
 /**
- * Save As for Notepad and Paint: where in the media library a new file goes, asked the first time it
- * is saved, as Windows' Notepad and Paint asked.
+ * Save As for every app that saves to the media library: where a new file goes, asked the first
+ * time it is saved, as Windows' Notepad and Paint asked. Notepad and Paint were its first users.
  *
  * Asking replaced a "save new files to" folder in Desktop settings. A setting had to exist for the
  * editors a media start node keeps out of the root, who could not save anywhere without one, and it
@@ -31,9 +31,10 @@ export interface SaveFolderMemory {
 }
 
 /**
- * Remembered for the backoffice session and shared by every Notepad and Paint window, as Windows
- * remembered the last folder a Save As used. Not stored: a folder remembered across sessions can
- * have been deleted or moved in between, and the root is a fine place to start.
+ * Remembered for the backoffice session and shared by every window that saves through this service,
+ * whichever add-on it belongs to, as Windows remembered the last folder a Save As used. Not stored:
+ * a folder remembered across sessions can have been deleted or moved in between, and the root is a
+ * fine place to start.
  */
 const SESSION_MEMORY: SaveFolderMemory = {};
 

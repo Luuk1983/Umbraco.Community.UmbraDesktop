@@ -23,7 +23,8 @@ using the desktop, see the [user guide](../user/README.md).
   tiles and launcher groups with a `umbraDesktopCatalogue` manifest, the desktop's published group
   weights, replacing one of its tiles, and what the console tells you.
 - [Desktop contexts](desktop-contexts.md): run a package service on the desktop only with a
-  `umbraDesktopContext` manifest, and open another app from yours.
+  `umbraDesktopContext` manifest, the service packages you can use (the Arcade's scores, the media
+  service's opening and saving), and open another app from yours.
 - [Package settings](package-settings.md): give your package a row in Desktop settings with a
   `umbraDesktopPackageSettings` manifest, what your box must do, the per-user store, opening your
   settings from your own screens or a launcher tile, and what the console tells you.

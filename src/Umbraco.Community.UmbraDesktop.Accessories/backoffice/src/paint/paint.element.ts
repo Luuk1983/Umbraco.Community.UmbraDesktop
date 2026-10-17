@@ -4,12 +4,8 @@ import { keepFocusOnPress } from '../shared/press-focus.js';
 import { AREA } from '../shared/area.js';
 import { UNSAVED_ATTRIBUTE } from '../shared/unsaved.js';
 import { editableImageType, fileNameFor } from '../shared/media-files.js';
-import { createMediaOpener } from '../shared/media-open.js';
-import type { MediaOpener } from '../shared/media-open.js';
-import { createMediaSaver, createOverwriteQuestion } from '../shared/media-save.js';
-import type { MediaSaver, OverwriteQuestion } from '../shared/media-save.js';
-import { createSaveFolderPicker } from '../shared/save-location.js';
-import type { SaveFolderPicker } from '../shared/save-location.js';
+import { MediaService } from '../shared/media-service.js';
+import type { MediaOpener, MediaSaver, OverwriteQuestion, SaveFolderPicker } from '../shared/media-service.js';
 import {
   PAINT_BRUSH_SIZES,
   PAINT_CANVAS_SIZE,
@@ -119,6 +115,9 @@ export class PaintElement extends UmbLitElement {
    */
   @property({ attribute: false })
   confirmOverwrite?: OverwriteQuestion;
+
+  /** The media service, which does the four above unless a test says otherwise. */
+  readonly #media = new MediaService(this);
 
   /** The folder this picture was saved into, once it has been: null for the root. */
   #folder?: string | null;
@@ -443,7 +442,7 @@ export class PaintElement extends UmbLitElement {
    */
   async open(): Promise<void> {
     if (this.dirty && !(await this.confirmDiscard())) return;
-    const result = await (this.openFromMedia ?? createMediaOpener(this))();
+    const result = await (this.openFromMedia ?? this.#media.open)();
     if (result.status === 'cancelled') return;
     if (result.status === 'failed') {
       this._notice = this.#term('openFailed', `${result.name ?? ''} could not be read.`, result.name ?? '');
@@ -491,7 +490,7 @@ export class PaintElement extends UmbLitElement {
   async save(): Promise<void> {
     let folder = this.#folder ?? null;
     if (!this.#mediaUnique) {
-      const choice = await (this.pickSaveFolder ?? createSaveFolderPicker(this))();
+      const choice = await (this.pickSaveFolder ?? this.#media.pickSaveFolder)();
       if (choice.status === 'cancelled') return;
       folder = choice.folder;
     }
@@ -500,7 +499,7 @@ export class PaintElement extends UmbLitElement {
     const untitled = this.#term('paintUntitled', 'Untitled');
     const name = this._name;
     const drawnBefore = this.#strokes;
-    const saver = this.saveToMedia ?? createMediaSaver(this);
+    const saver = this.saveToMedia ?? this.#media.save;
     const request = {
       file: new File([blob], fileNameFor(name, untitled, this.#extension), { type: this.#type }),
       name: name.trim() || untitled,
@@ -512,7 +511,7 @@ export class PaintElement extends UmbLitElement {
     if (!result.ok && result.conflict) {
       // Named as the media library knows it, which is the name it was opened or last saved under.
       const label = this.#savedName.trim() || untitled;
-      if (!(await (this.confirmOverwrite ?? createOverwriteQuestion(this))(label))) {
+      if (!(await (this.confirmOverwrite ?? this.#media.confirmOverwrite)(label))) {
         this._notice = this.#term('overwriteDeclined', `Not saved: ${label} was changed in the media library.`, label);
         return;
       }

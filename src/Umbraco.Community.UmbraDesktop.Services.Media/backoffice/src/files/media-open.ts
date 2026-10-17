@@ -1,4 +1,4 @@
-import { extensionOf } from './media-files.js';
+import { extensionOf } from './extension.js';
 import { updateDateOf } from './media-save.js';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UMB_MEDIA_PICKER_MODAL, UmbMediaDetailRepository } from '@umbraco-cms/backoffice/media';
