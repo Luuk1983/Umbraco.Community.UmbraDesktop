@@ -5,7 +5,7 @@ import { UMB_MEDIA_PROPERTY_VALUE_ENTITY_TYPE, UmbMediaDetailRepository } from '
 import { UmbMediaTypeStructureRepository } from '@umbraco-cms/backoffice/media-type';
 import { TemporaryFileStatus, UmbTemporaryFileManager } from '@umbraco-cms/backoffice/temporary-file';
 import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
-import { AREA } from './area.js';
+import { AREA } from '../shared/area.js';
 
 /** How a save to the media library went. */
 export type MediaSaveResult =

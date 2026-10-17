@@ -1,0 +1,7 @@
+{
+  "id": "media-service",
+  "name": "UmbraDesktop Media service",
+  "packageId": "Umbraco.Community.UmbraDesktop.Services.Media",
+  "repository": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop",
+  "docsRoot": "src/Umbraco.Community.UmbraDesktop.Services.Media/docs"
+}

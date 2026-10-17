@@ -2,9 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys, sendMouse } from '@web/test-runner-commands';
 import './notepad.element.js';
 import type { NotepadElement } from './notepad.element.js';
-import type { MediaOpenResult } from '../shared/media-open.js';
-import type { MediaSaveRequest, MediaSaveResult } from '../shared/media-save.js';
-import type { SaveFolderChoice } from '../shared/save-location.js';
+import type { MediaOpenResult, MediaSaveRequest, MediaSaveResult, SaveFolderChoice } from '../shared/media-service.js';
 
 /**
  * Notepad as a media library editor: open a text file from the media library, edit it, save it

@@ -124,6 +124,11 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	       The packed range, "[<this release>, 17.99999999.0]", comes from the BoundHostRange target
 	       in src/Directory.Build.targets, which every add-on referencing the host picks up. -->
 	  <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />
+	  <!-- The media service, which opens and saves Notepad's and Paint's files. A reference, not just
+	       a runtime expectation, so installing Accessories installs it: its code is reached by a
+	       context alias and never imported, so nothing else would bring it. Bounded like the host by
+	       the same BoundHostRange target. -->
+	  <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Services.Media\Umbraco.Community.UmbraDesktop.Services.Media.csproj" />
 	</ItemGroup>
 
 </Project>

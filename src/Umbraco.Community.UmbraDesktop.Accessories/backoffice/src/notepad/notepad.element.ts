@@ -3,12 +3,8 @@ import { keepFocusOnPress } from '../shared/press-focus.js';
 import { AREA } from '../shared/area.js';
 import { UNSAVED_ATTRIBUTE } from '../shared/unsaved.js';
 import { fileNameFor, isTextFile } from '../shared/media-files.js';
-import { createMediaOpener } from '../shared/media-open.js';
-import type { MediaOpener } from '../shared/media-open.js';
-import { createMediaSaver, createOverwriteQuestion } from '../shared/media-save.js';
-import type { MediaSaver, OverwriteQuestion } from '../shared/media-save.js';
-import { createSaveFolderPicker } from '../shared/save-location.js';
-import type { SaveFolderPicker } from '../shared/save-location.js';
+import { MediaService } from '../shared/media-service.js';
+import type { MediaOpener, MediaSaver, OverwriteQuestion, SaveFolderPicker } from '../shared/media-service.js';
 import { NOTEPAD_BAR_HEIGHT_PX, NOTEPAD_PADDING_PX } from './constants.js';
 import { caretPosition } from './text.js';
 import { css, customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
@@ -27,9 +23,9 @@ const NEW_DOCUMENT_EXTENSION = 'txt';
  * dialog: a document here is site content, where everyone who works on the site can find it, and
  * the media library already has the permissions, the folders and the recycle bin for it.
  *
- * Nothing about this needs a C# surface of its own: opening and saving go through the backoffice's
- * media picker and repositories, with the permissions the person already has
- * (`shared/media-open.ts`, `shared/media-save.ts`).
+ * Nothing about this needs a C# surface of its own: opening and saving go through the media service
+ * package, which uses the backoffice's media picker and repositories with the permissions the person
+ * already has (`shared/media-service.ts` is this package's line to it).
  *
  * Unsaved text is reported to the desktop with {@link UNSAVED_ATTRIBUTE}, so the window shows the
  * unsaved marker and its close button asks first. New and Open, which are this app's own, ask too.
@@ -69,6 +65,9 @@ export class NotepadElement extends UmbLitElement {
    */
   @property({ attribute: false })
   confirmOverwrite?: OverwriteQuestion;
+
+  /** The media service, which does the four above unless a test says otherwise. */
+  readonly #media = new MediaService(this);
 
   /** The document. */
   @state()
@@ -178,7 +177,7 @@ export class NotepadElement extends UmbLitElement {
    */
   async open(): Promise<void> {
     if (!(await this.#mayDiscard())) return;
-    const opener = this.openFromMedia ?? createMediaOpener(this);
+    const opener = this.openFromMedia ?? this.#media.open;
     const result = await opener();
     if (result.status === 'cancelled') return;
     if (result.status === 'failed') {
@@ -208,14 +207,14 @@ export class NotepadElement extends UmbLitElement {
   async save(): Promise<void> {
     let folder = this.#folder ?? null;
     if (!this.#mediaUnique) {
-      const choice = await (this.pickSaveFolder ?? createSaveFolderPicker(this))();
+      const choice = await (this.pickSaveFolder ?? this.#media.pickSaveFolder)();
       if (choice.status === 'cancelled') return;
       folder = choice.folder;
     }
     const untitled = this.#term('notepadUntitled', 'Untitled');
     const text = this._text;
     const name = this._name;
-    const saver = this.saveToMedia ?? createMediaSaver(this);
+    const saver = this.saveToMedia ?? this.#media.save;
     const request = {
       file: new File([text], fileNameFor(name, untitled, this.#extension), { type: 'text/plain;charset=utf-8' }),
       name: name.trim() || untitled,
@@ -227,7 +226,7 @@ export class NotepadElement extends UmbLitElement {
     if (!result.ok && result.conflict) {
       // Named as the media library knows it, which is the name it was opened or last saved under.
       const label = this._savedName.trim() || untitled;
-      if (!(await (this.confirmOverwrite ?? createOverwriteQuestion(this))(label))) {
+      if (!(await (this.confirmOverwrite ?? this.#media.confirmOverwrite)(label))) {
         this._notice = this.#term('overwriteDeclined', `Not saved: ${label} was changed in the media library.`, label);
         return;
       }

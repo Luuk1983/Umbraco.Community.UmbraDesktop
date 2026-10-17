@@ -97,6 +97,16 @@ The Arcade's context is the worked example: a game consumes it by the alias stri
 small shape it uses. See [Putting your game on the
 Arcade](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Services.Arcade/docs/developer/putting-your-game-on-the-arcade.md).
 
+### Services you can use
+
+Two service packages provide a context like this for other packages to use. Depend on the package,
+and reach its context by its alias:
+
+| Package | Context alias | What it does |
+| --- | --- | --- |
+| `Umbraco.Community.UmbraDesktop.Services.Arcade` | `'UmbraDesktopArcadeContext'` | High scores and leaderboards for games. See [Putting your game on the Arcade](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Services.Arcade/docs/developer/putting-your-game-on-the-arcade.md) |
+| `Umbraco.Community.UmbraDesktop.Services.Media` | `'UmbraDesktopMediaContext'` | Opening a media library file in your app and saving it back, with a check for somebody else's changes. See [Opening and saving media files](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Services.Media/docs/developer/opening-and-saving-media.md) |
+
 ## 5. Opening another app
 
 The window manager is published for one call. **This is public API**: the alias, the member and its
