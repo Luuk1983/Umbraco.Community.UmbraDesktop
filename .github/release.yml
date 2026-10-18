@@ -1,0 +1,32 @@
+# How the GitHub release screen's **Generate release notes** button groups pull requests
+# (RELEASE.md, "Release notes"). Notes are built from pull request titles, not issue titles: an issue
+# title states the problem ("Snap outline is invisible on a light background"), the pull request
+# title states the change ("Make the snap outline readable on any background"), and some changes,
+# umbraCoffee among them, have no issue at all.
+#
+# A pull request gets `bug` or `enhancement` from the issue it closes, copied when it merges by
+# `.github/workflows/sync-release-labels.yml`. One without an issue needs the label by hand, or
+# `ignore-for-release` when a reader of the notes would not care: CI, test, screenshot and
+# release-branch merge-back pull requests.
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+      - duplicate
+      - invalid
+      - wontfix
+  categories:
+    - title: New features
+      labels:
+        - enhancement
+    - title: Bug fixes
+      labels:
+        - bug
+    - title: Documentation
+      labels:
+        - documentation
+    # Anything unlabelled still shows up rather than vanishing, so a missed label is visible in the
+    # draft instead of silently dropping a change from the notes.
+    - title: Other changes
+      labels:
+        - '*'
