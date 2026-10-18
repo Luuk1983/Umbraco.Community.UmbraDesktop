@@ -2,10 +2,10 @@ import { css, html } from '@umbraco-cms/backoffice/external/lit';
 import type { TemplateResult } from '@umbraco-cms/backoffice/external/lit';
 import type { WordKey } from '../shared/words.js';
 import { formatBytes, formatLabel } from './formats.js';
-import type { FilePageDocument } from './types.js';
+import type { FileMenuDocument } from './types.js';
 
 /**
- * Info: what the open file is. Name, folder, dimensions as it will be saved, its size and format
+ * Info: what the open file is, without a heading (the panel's title). Name, folder, dimensions as it will be saved, its size and format
  * now, and when it was last changed. Where the image is used is a later addition (design §5).
  * @param document What is open.
  * @param words The package's words.
@@ -13,11 +13,11 @@ import type { FilePageDocument } from './types.js';
  * @returns The page's content.
  */
 export function renderInfoPage(
-  document: FilePageDocument | null,
+  document: FileMenuDocument | null,
   words: (key: WordKey, ...args: unknown[]) => string,
   lang: string,
 ): TemplateResult {
-  if (!document) return html`<h2>${words('infoHeading')}</h2>`;
+  if (!document) return html``;
   const updated = document.updateDate
     ? new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(document.updateDate))
     : words('infoNeverSaved');
@@ -30,7 +30,6 @@ export function renderInfoPage(
     ['infoUpdated', updated],
   ];
   return html`
-    <h2>${words('infoHeading')}</h2>
     <dl class="info">
       ${rows.map(([label, value]) => html`<dt>${words(label)}</dt><dd>${value}</dd>`)}
     </dl>

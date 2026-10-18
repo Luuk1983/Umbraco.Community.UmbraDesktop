@@ -1,7 +1,7 @@
 import { css } from '@umbraco-cms/backoffice/external/lit';
 
 /**
- * The File page's shared look, painted with the desktop's app tokens so every theme draws it in
+ * The file menu's shared look (and the open view's), painted with the desktop's app tokens so every theme draws it in
  * its own idiom (`docs/developer/desktop-apps.md` §4). Each token is read with the backoffice's own
  * colour as its fallback, so the page still reads outside the desktop. Surfaces are `background:`
  * and never `background-color:`, because a theme's surface token may be a gradient.
@@ -36,7 +36,7 @@ export const filePageStyles = css`
     color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt));
   }
 
-  /* A button the person presses: a big target, per D2, in the theme's control face. */
+  /* A button the person presses: a big target, which works with a finger, in the theme's control face. */
   .button {
     display: inline-flex;
     align-items: center;
@@ -55,10 +55,18 @@ export const filePageStyles = css`
     cursor: pointer;
   }
 
-  /* The one action a page is for: in the accent, with the accent's own text colour. */
+  /* The way into the media library, Open's first choice: in the accent, with its own text colour. */
   .button.primary {
     background: var(--umbradesktop-app-accent, var(--uui-color-selected));
     color: var(--umbradesktop-app-accent-text, var(--uui-color-surface));
+  }
+
+  /* The one action a panel is for, such as Save copy: Umbraco's green Save in the Umbraco themes, and
+     each other theme's own default button. Never the accent, which is selection (design D11). */
+  .button.action {
+    background: var(--umbradesktop-app-action, var(--uui-color-positive));
+    color: var(--umbradesktop-app-action-text, var(--uui-color-positive-contrast));
+    font-weight: 700;
   }
 
   .button:disabled {

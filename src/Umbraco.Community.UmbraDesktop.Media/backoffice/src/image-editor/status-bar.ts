@@ -24,7 +24,7 @@ export function zoomFor(value: number): number {
 }
 
 /**
- * A file size the way the File page writes it: decimal units, one decimal only in megabytes. A copy
+ * A file size the way the file menu writes it: decimal units, one decimal only in megabytes. A copy
  * of Services.Media's `formatBytes`, as nothing is imported between packages.
  * @param bytes The size.
  * @param locale The language.
@@ -57,7 +57,7 @@ export function formatLabel(extension: string): string {
  * @returns The bar.
  */
 export function renderStatusBar(editor: UmbraDesktopImageEditorElement): TemplateResult {
-  const doc = editor.filePageDocument;
+  const doc = editor.fileMenuDocument;
   const notice = editor.notice;
   const lang = editor.localize.lang();
   const zoom = editor.zoom;

@@ -308,6 +308,13 @@ export const WIN98_LIGHT: UmbraDesktopPalette = {
   // `COLOR_HIGHLIGHTTEXT` is literally the answer this token asks for: the colour Windows itself
   // wrote on `COLOR_HIGHLIGHT`. White on that navy is 16:1, the widest margin of any theme here.
   '--umbradesktop-app-accent-text': WIN98_MENU_HILIGHT_TEXT,
+  // Windows 98 has no coloured buttons: its default button is the grey face like any other, told
+  // apart by its frame. So the action is the face, and the app's own bevel does the rest.
+  '--umbradesktop-app-action': WIN98_FACE,
+  '--umbradesktop-app-action-text': WIN98_TEXT,
+  // A selected tab in Windows 98 is raised rather than lined; the navy of a selection is the
+  // nearest a line can say it.
+  '--umbradesktop-app-current': WIN98_MENU_HILIGHT,
   '--umbradesktop-app-font': WIN98_FONT,
 
   // The 16-colour palette has no modern warning colour, so the two severities above `info` borrow

@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { manifests } from './bundle.manifests.js';
-import { defineFakeFilePage, opened, settle } from './image-editor/image-editor.test-helper.js';
-import type { FakeFilePage } from './image-editor/image-editor.test-helper.js';
+import { defineFakeFileMenu, opened, settle } from './image-editor/image-editor.test-helper.js';
+import type { FakeFileMenu } from './image-editor/image-editor.test-helper.js';
 import { MODES } from './image-editor/modes/mode.js';
 import type { UmbraDesktopImageEditorElement } from './image-editor/image-editor.element.js';
 import { UmbContextToken } from '@umbraco-cms/backoffice/context-api';
@@ -15,7 +15,7 @@ import type { UmbContextMinimal } from '@umbraco-cms/backoffice/context-api';
  * model). The theme ids are stamped as attributes only, as there; the palettes only colour.
  */
 
-defineFakeFilePage();
+defineFakeFileMenu();
 
 /** The published theme ids, plus no theme at all. */
 const THEMES = [undefined, 'umbraco', 'umbraco4', 'macos', 'win11', 'win98'];
@@ -49,8 +49,8 @@ async function measure(size: { w: number; h: number }, theme: string | undefined
   box.appendChild(editor);
   await editor.updateComplete;
   await settle(editor);
-  const page = editor.shadowRoot!.querySelector('umbradesktop-media-file-page') as FakeFilePage;
-  page.fire('open', await opened('picture.png'));
+  const menu = editor.shadowRoot!.querySelector('umbradesktop-media-file-menu') as FakeFileMenu;
+  menu.fire('open', await opened('picture.png'));
   const deadline = performance.now() + 5000;
   while (!editor.picture && performance.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
   await settle(editor);

@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { Point } from 'fabric';
-import { control, defineFakeFilePage, mountEditor, openFixture, press, settle } from '../image-editor.test-helper.js';
+import { control, defineFakeFileMenu, mountEditor, openFixture, press, settle } from '../image-editor.test-helper.js';
 import { markObjectsOf } from '../marks.js';
 import en from '../../localization/en.js';
 
@@ -9,17 +9,17 @@ import en from '../../localization/en.js';
  * or restyle and each delete is one step; marks stay objects until saved (design §4.1, §4.2).
  */
 
-defineFakeFilePage();
+defineFakeFileMenu();
 
 const words = en.umbraDesktopMedia;
 
 /** An editor with the fixture open, in Markup. */
 async function marking() {
-  const { editor, page } = await mountEditor();
-  await openFixture(editor, page!);
+  const { editor, menu } = await mountEditor();
+  await openFixture(editor, menu!);
   editor.setMode('markup');
   await settle(editor);
-  return { editor, page: page! };
+  return { editor, menu: menu! };
 }
 
 /** How many steps the history has behind it. */
@@ -166,11 +166,11 @@ it('keeps marks in the picture when it is cropped', async () => {
 });
 
 it('keeps marks as objects after a save; only the saved file is flattened', async () => {
-  const { editor, page } = await marking();
+  const { editor, menu } = await marking();
   control(editor, 'tool-box').click();
   await settle(editor);
   await dragOnCanvas(editor, { x: 10, y: 10 }, { x: 50, y: 40 });
-  page.fire('saved', { unique: 'k1', updateDate: 'd2', name: 'Beach', extension: 'png', folder: 'f1', copy: false, bytes: 1 });
+  menu.fire('saved', { unique: 'k1', updateDate: 'd2', name: 'Beach', extension: 'png', folder: 'f1', copy: false, bytes: 1 });
   await settle(editor);
   expect(editor.state!.marks).to.have.length(1);
   expect(markObjectsOf(editor)).to.have.length(1);

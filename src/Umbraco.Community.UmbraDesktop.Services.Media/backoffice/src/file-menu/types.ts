@@ -1,20 +1,23 @@
 import type { OpenedMedia } from '../files/media-open.js';
 
 /*
- * The File page's published types: what an app gives the `<umbradesktop-media-file-page>` element
- * and what it hears back. Plain data, copied verbatim onto the developer page
+ * The file menu's published types: what an app gives the `<umbradesktop-media-file-menu>` element
+ * (and the `<umbradesktop-media-open-view>` beside it) and what it hears back. Plain data, copied verbatim onto the developer page
  * (`docs/developer/opening-and-saving-media.md`), so an app in another package declares them and
- * imports nothing. Each only ever gains optional fields. Issue #136, design §5.1.
+ * imports nothing. Each only ever gains optional fields. Issue #136, design §5.1 and §14.
  */
 
-/** The File page's pages, by name: what `show()` takes. Close is a command, not a page. */
-export type FilePageName = 'open' | 'save' | 'saveAs' | 'info';
+/**
+ * What `show()` takes: the menu itself, or one of the panels that slide in over it. Save and Close
+ * are commands, not panels.
+ */
+export type FileMenuPanel = 'menu' | 'open' | 'saveAs' | 'info';
 
-/** A format a canvas can write, which is what the File page offers to save in. */
+/** A format a canvas can write, which is what the file menu offers to save in. */
 export type SaveFormat = 'jpeg' | 'png' | 'webp';
 
-/** What the app has open, as the File page shows and saves it. */
-export interface FilePageDocument {
+/** What the app has open, as the file menu shows and saves it. */
+export interface FileMenuDocument {
   /** The media item it came from or was last saved as, or null when it was never saved. */
   unique: string | null;
   /** Its name as the person typed it, which a save renames the item to. */
@@ -74,10 +77,10 @@ export interface FileSavedDetail {
 /** How `save()` went. */
 export type FileSaveOutcome =
   | { status: 'saved'; saved: FileSavedDetail }
-  /** The item's format cannot be kept, so Save as was shown with PNG chosen instead. */
+  /** The item's format cannot be kept, so the menu was shown on Save as with PNG chosen instead. */
   | { status: 'needs-save-as' }
   | { status: 'cancelled' }
   | { status: 'failed'; message?: string };
 
-/** The event a File page fires when the person chose a file to open, with the file. */
+/** The event the file menu or the open view fires when the person chose a file to open, with the file. */
 export type FileOpenEvent = CustomEvent<OpenedMedia>;

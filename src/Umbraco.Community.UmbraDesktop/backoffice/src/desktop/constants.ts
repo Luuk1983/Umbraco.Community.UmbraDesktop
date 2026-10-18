@@ -92,7 +92,7 @@ export const UMBRADESKTOP_APP_TITLE_EVENT = 'umbradesktop-app-title';
  * own close button would: through the unsaved-work guard, so an app marked dirty is asked about
  * first and a "no" keeps the window.
  *
- * For an app with a Close command of its own, such as a File page's. Dispatched with `bubbles` and
+ * For an app with a Close command of its own, such as a file menu's. Dispatched with `bubbles` and
  * `composed`; it has no detail. The window stops it, so it never reaches the desktop. Published in
  * `docs/developer/desktop-apps.md` §7. Issue #136.
  */

@@ -1,7 +1,7 @@
 import type { MediaSaveRequest } from '../files/media-save.js';
-import type { FilePageDeps } from './deps.js';
+import type { FileMenuDeps } from './deps.js';
 import { DEFAULT_QUALITY, copyNameFor, extensionFor, keepFormatFor, mimeFor } from './formats.js';
-import type { FileEncoder, FilePageDocument, FileSaveOutcome, SaveFormat } from './types.js';
+import type { FileEncoder, FileMenuDocument, FileSaveOutcome, SaveFormat } from './types.js';
 
 /** Every choice a save makes: what Save as edits, and what Save takes as given. */
 export interface SaveChoice {
@@ -28,7 +28,7 @@ export interface SaveChoice {
  * @param format A format to start on instead, as Save asks for an item it cannot keep.
  * @returns The choices.
  */
-export function saveAsDefaults(document: FilePageDocument, copyPattern: string, format?: SaveFormat): SaveChoice {
+export function saveAsDefaults(document: FileMenuDocument, copyPattern: string, format?: SaveFormat): SaveChoice {
   return {
     mode: 'replace',
     name: copyNameFor(document.name, copyPattern),
@@ -56,8 +56,8 @@ export function saveAsDefaults(document: FilePageDocument, copyPattern: string, 
  * @returns How it went, with what was written when it was.
  */
 export async function runSave(
-  context: Pick<FilePageDeps['context'], 'save' | 'confirmOverwrite'>,
-  document: FilePageDocument,
+  context: Pick<FileMenuDeps['context'], 'save' | 'confirmOverwrite'>,
+  document: FileMenuDocument,
   choice: SaveChoice,
   encode: FileEncoder,
   resetFocalPoint: boolean,

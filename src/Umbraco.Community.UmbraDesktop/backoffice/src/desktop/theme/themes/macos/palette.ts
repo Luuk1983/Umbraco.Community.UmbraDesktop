@@ -248,6 +248,11 @@ export const MACOS_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-app-accent': MACOS_ACCENT,
   // White, which the darkened accent is chosen to carry: see {@link MACOS_ACCENT}.
   '--umbradesktop-app-accent-text': '#ffffff',
+  // A macOS default button is the accent blue with white on it (5.51:1), in both appearances: the
+  // dark appearance's brighter blue carries white at only 3.6:1, so the dark palette keeps this one.
+  '--umbradesktop-app-action': MACOS_ACCENT,
+  '--umbradesktop-app-action-text': '#ffffff',
+  '--umbradesktop-app-current': MACOS_ACCENT,
   '--umbradesktop-app-font': MACOS_FONT,
 };
 
@@ -319,4 +324,7 @@ export const MACOS_DARK: UmbraDesktopPalette = {
   '--umbradesktop-app-border': '#8e8e93',
   '--umbradesktop-app-text': '#f5f5f7',
   '--umbradesktop-app-text-muted': '#98989d',
+  // A line carries no text, so the brighter dark-appearance blue, which is the one that shows on a
+  // dark bar. The action keeps the light palette's blue; see there.
+  '--umbradesktop-app-current': MACOS_ACCENT_DARK,
 };

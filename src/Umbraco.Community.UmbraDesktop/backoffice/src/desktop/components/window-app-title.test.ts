@@ -18,7 +18,7 @@ import { UmbElementControllerHost } from '@umbraco-cms/backoffice/controller-api
 /**
  * The two channels an app uses to speak for its own window: a title, and a request to close.
  *
- * The Image Editor shows the open file's name in the title bar and closes from its File page, and
+ * The Image Editor shows the open file's name in the title bar and closes from its file menu, and
  * neither needs anything imported from the desktop: the title is an attribute on the app's own
  * element, the close an event from it, the same model as the dirty attribute. Issue #136.
  */

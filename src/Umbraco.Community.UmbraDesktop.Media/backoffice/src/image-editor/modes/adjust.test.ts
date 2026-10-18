@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { control, defineFakeFilePage, mountEditor, openFixture, settle } from '../image-editor.test-helper.js';
+import { control, defineFakeFileMenu, mountEditor, openFixture, settle } from '../image-editor.test-helper.js';
 import en from '../../localization/en.js';
 
 /**
@@ -7,7 +7,7 @@ import en from '../../localization/en.js';
  * preview; one drag is one undo step; Hold to compare and Split view (design §4.1, §4.2).
  */
 
-defineFakeFilePage();
+defineFakeFileMenu();
 
 const words = en.umbraDesktopMedia;
 
@@ -16,8 +16,8 @@ const SLIDERS = ['exposure', 'brightness', 'contrast', 'saturation'] as const;
 
 /** An editor with the fixture open, in Adjust. */
 async function adjusting() {
-  const { editor, page } = await mountEditor();
-  await openFixture(editor, page!);
+  const { editor, menu } = await mountEditor();
+  await openFixture(editor, menu!);
   editor.setMode('adjust');
   await settle(editor);
   return { editor };

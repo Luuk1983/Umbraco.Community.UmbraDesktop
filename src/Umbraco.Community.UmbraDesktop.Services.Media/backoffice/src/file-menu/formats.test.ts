@@ -11,7 +11,7 @@ import {
 } from './formats.js';
 
 /**
- * The formats a File page saves in, and what each choice means for the file's name and address.
+ * The formats the file menu saves in, and what each choice means for the file's name and address.
  * Keep is the item's own format when a canvas can write it; GIF and BMP cannot be kept. Design §6.
  */
 

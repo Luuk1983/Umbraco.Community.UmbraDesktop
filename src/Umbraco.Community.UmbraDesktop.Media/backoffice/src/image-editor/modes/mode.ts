@@ -35,7 +35,7 @@ export interface ModeModule {
   enter?(editor: UmbraDesktopImageEditorElement): void;
   /**
    * Apply what the mode has pending as one step, and take its objects off the canvas, as another
-   * mode becomes the mode, the File page opens, or the editor saves.
+   * mode becomes the mode, the file menu opens, or the editor saves.
    * @param editor The editor.
    */
   leave?(editor: UmbraDesktopImageEditorElement): void;

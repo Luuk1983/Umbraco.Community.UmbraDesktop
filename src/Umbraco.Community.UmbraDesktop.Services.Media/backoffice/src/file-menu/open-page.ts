@@ -3,13 +3,13 @@ import type { TemplateResult } from '@umbraco-cms/backoffice/external/lit';
 import type { MediaOpenOptions } from '../files/media-open.js';
 import type { RecentMediaEntry } from '../recent/recent-media.js';
 import type { WordKey } from '../shared/words.js';
-import { FILE_PAGE_EVENTS, PAGE_GAP } from './constants.js';
-import type { FilePageDeps } from './deps.js';
+import { FILE_MENU_EVENTS, PAGE_GAP } from './constants.js';
+import type { FileMenuDeps } from './deps.js';
 
-/** What the Open page reads from the element that shows it. */
+/** What Open reads from the element that shows it: the file menu, or the open view. */
 export interface OpenPageHost {
   /** The deps in use. */
-  readonly deps: FilePageDeps;
+  readonly deps: FileMenuDeps;
   /** The extensions the app opens. */
   readonly accept: readonly string[];
   /** Whether the app holds unsaved work. */
@@ -25,12 +25,13 @@ export interface OpenPageHost {
 /** A recent entry with its thumbnail, when one was found. */
 type Tile = RecentMediaEntry & { thumbnail?: string };
 
-/** Width of one recent tile, in px; the grid fits as many as the page is wide. */
+/** Width of one recent tile, in px; the grid fits as many as there is room for. */
 export const TILE_WIDTH = 160;
 
 /**
- * The Open page: the recent images as big tiles, and under them Browse and Upload, both of which
- * are Umbraco's media picker (whose own Upload puts a file from the computer into the library).
+ * Open: the recent images as big tiles, and under them Browse and Upload, both of which are
+ * Umbraco's media picker (whose own Upload puts a file from the computer into the library). Drawn in
+ * two places: the file menu's Open panel, and the open view an app puts on its empty canvas (D14).
  *
  * **The list is checked against the server before it is shown.** An entry is only what this browser
  * remembers; the item may have been deleted, trashed, or moved out of this user's reach since. The
@@ -50,16 +51,16 @@ export class OpenPage {
   /** Counts loads, so a slow one that a newer one overtook is dropped. */
   #generation = 0;
 
-  /** Whether an open is running, which disables the page's buttons against a second tap. */
+  /** Whether an open is running, which disables Open's buttons against a second tap. */
   #busy = false;
 
-  /** @param host The element showing the page. */
+  /** @param host The element showing Open. */
   constructor(host: OpenPageHost) {
     this.#host = host;
   }
 
   /**
-   * Read the recent list again and check it against the server. Called each time the page shows.
+   * Read the recent list again and check it against the server. Called each time Open shows.
    *
    * An entry the media library reports gone or in the recycle bin is left out and forgotten; when
    * the library cannot be asked, every entry is kept, since a failed check says nothing about the
@@ -103,7 +104,7 @@ export class OpenPage {
       const result = await host.deps.context.open(options);
       if (result.status === 'opened') {
         const { status: _status, ...file } = result;
-        host.fire(FILE_PAGE_EVENTS.open, file);
+        host.fire(FILE_MENU_EVENTS.open, file);
       } else if (result.status === 'failed') {
         // A recent item that will not open is one this person can no longer reach (moved out of their
         // start node, its file gone): it leaves the list, as a deleted one does.
@@ -111,12 +112,12 @@ export class OpenPage {
           host.deps.context.forgetRecent(options.unique);
           this.#tiles = this.#tiles?.filter((tile) => tile.unique !== options.unique);
         }
-        host.fire(FILE_PAGE_EVENTS.failed, {
+        host.fire(FILE_MENU_EVENTS.failed, {
           message: result.name ? host.words('openFailed', result.name) : host.words('openFailedUnnamed'),
         });
       }
     } catch {
-      host.fire(FILE_PAGE_EVENTS.failed, { message: host.words('openFailedUnnamed') });
+      host.fire(FILE_MENU_EVENTS.failed, { message: host.words('openFailedUnnamed') });
     } finally {
       this.#busy = false;
       host.requestUpdate();
@@ -141,12 +142,16 @@ export class OpenPage {
     </button>`;
   }
 
-  /** @returns The page's content. */
-  render(): TemplateResult {
+  /**
+   * Open's content.
+   * @param heading A heading over it, for the open view; the menu's panel has its title in its header.
+   * @returns The content.
+   */
+  render(heading?: string): TemplateResult {
     const words = (key: WordKey) => this.#host.words(key);
     const tiles = this.#tiles;
     return html`
-      <h2>${words('openHeading')}</h2>
+      ${heading ? html`<h2>${heading}</h2>` : nothing}
       ${tiles === undefined
         ? nothing
         : tiles.length
@@ -165,7 +170,7 @@ export class OpenPage {
   }
 }
 
-/** The Open page's own styles. */
+/** Open's own styles. */
 export const openPageStyles = css`
   .tiles {
     display: grid;

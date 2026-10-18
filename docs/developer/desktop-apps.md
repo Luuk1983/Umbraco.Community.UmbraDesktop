@@ -273,6 +273,9 @@ as `UMBRADESKTOP_APP_TOKEN_FALLBACKS`, so this table cannot quietly go stale aga
 | `--umbradesktop-app-text-muted` | Secondary text | `var(--uui-color-text-alt)` |
 | `--umbradesktop-app-accent` | Selection and focus | `var(--uui-color-selected)` |
 | `--umbradesktop-app-accent-text` | Text and icons **on** an `accent` fill | `var(--uui-color-surface)` |
+| `--umbradesktop-app-action` | The fill of the one main action of a view, such as Save. Never the selection colour, so a Save never reads as a selected tab | `var(--uui-color-positive)` |
+| `--umbradesktop-app-action-text` | Text **on** an `action` fill | `var(--uui-color-positive-contrast)` |
+| `--umbradesktop-app-current` | The mark of the tab or item in use, such as the line under a tab | `var(--uui-color-current)` |
 | `--umbradesktop-app-font` | The theme's UI font stack | `inherit` |
 
 The **Fallback** column is that type-checked data, one value per row. The **What it is** column
@@ -751,7 +754,7 @@ set. The Image Editor in the Media add-on is the worked example.
 
 ### 7.6 Closing your own window
 
-An app with a Close command of its own, such as one on a File page, closes its window by dispatching
+An app with a Close command of its own, such as one in a file menu, closes its window by dispatching
 an event from its element:
 
 ```ts

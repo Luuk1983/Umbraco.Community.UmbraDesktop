@@ -44,6 +44,24 @@ it('never lets a chrome token wander into the app namespace', () => {
   ).to.deep.equal([]);
 });
 
+/**
+ * The Image Editor (issue #136) needed two looks the group did not have. Its Save was drawn in
+ * `accent`, the selection colour, and so looked like the selected mode tab beside it; and a tab in
+ * use was a filled accent block for want of anything else. Umbraco draws neither that way: Save is
+ * its green action button, and the tab in use has a line under it. Both go here rather than into
+ * the app, so every theme can answer them in its own idiom.
+ */
+it("publishes a main action's colours and the mark of the tab in use", () => {
+  const tokens = new Set<string>(UMBRADESKTOP_APP_TOKENS);
+  for (const token of ['--umbradesktop-app-action', '--umbradesktop-app-action-text', '--umbradesktop-app-current']) {
+    expect(tokens.has(token), token).to.equal(true);
+  }
+  const fallbacks = UMBRADESKTOP_APP_TOKEN_FALLBACKS as Record<string, string>;
+  expect(fallbacks['--umbradesktop-app-action']).to.equal('var(--uui-color-positive)');
+  expect(fallbacks['--umbradesktop-app-action-text']).to.equal('var(--uui-color-positive-contrast)');
+  expect(fallbacks['--umbradesktop-app-current']).to.equal('var(--uui-color-current)');
+});
+
 it('has no duplicate app tokens', () => {
   const unique = new Set<string>(UMBRADESKTOP_APP_TOKENS);
   expect(unique.size).to.equal(UMBRADESKTOP_APP_TOKENS.length);
@@ -291,6 +309,8 @@ const CONTRAST_PAIRS: readonly ContrastPair[] = [
   { foreground: '--umbradesktop-app-text', background: '--umbradesktop-app-surface-sunken' },
   { foreground: '--umbradesktop-app-text-muted', background: '--umbradesktop-app-surface' },
   { foreground: '--umbradesktop-app-accent-text', background: '--umbradesktop-app-accent' },
+  // A Save button's label on its own fill: the same promise as the accent's.
+  { foreground: '--umbradesktop-app-action-text', background: '--umbradesktop-app-action' },
 ];
 
 it('keeps every app text pair legible on the ground it is promised against', () => {

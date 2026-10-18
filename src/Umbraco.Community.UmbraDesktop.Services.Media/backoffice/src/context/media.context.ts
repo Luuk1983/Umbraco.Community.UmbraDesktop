@@ -7,9 +7,11 @@ import type { MediaSaveRequest, MediaSaveResult } from '../files/media-save.js';
 import { createSaveFolderPicker } from '../files/save-location.js';
 import type { SaveFolderChoice } from '../files/save-location.js';
 import { UMBRADESKTOP_MEDIA_CONTEXT } from './media.context-token.js';
-// Side-effect import: the File page is defined wherever this context is, so an app that finds the
-// context can render `<umbradesktop-media-file-page>` by its tag and find it defined. Issue #136.
-import '../file-page/file-page.element.js';
+// Side-effect imports: the file menu and the open view are defined wherever this context is, so an
+// app that finds the context can render `<umbradesktop-media-file-menu>` and
+// `<umbradesktop-media-open-view>` by their tags and find them defined. Issue #136.
+import '../file-menu/file-menu.element.js';
+import '../file-menu/open-view.element.js';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import { extensionOf } from '../files/extension.js';
 import { RecentMediaList, browserStorage, recentKeyFor } from '../recent/recent-media.js';

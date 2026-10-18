@@ -2,7 +2,7 @@
  * English (en) strings for the `umbraDesktopMedia` area.
  *
  * The Media group's heading, the Image Editor's name, and everything the editor says itself. The
- * File page's words are Services.Media's own. The code reads its fallback from this file
+ * file menu's words are Services.Media's own. The code reads its fallback from this file
  * (`shared/words.ts`), so a backoffice where this dictionary failed to load still renders words.
  */
 export default {
@@ -10,11 +10,12 @@ export default {
     groupMedia: 'Media',
     imageEditor: 'Image Editor',
 
-    // The mode bar.
-    file: 'File',
+    // The mode bar, and the heading over Open on the empty canvas.
     undo: 'Undo',
     redo: 'Redo',
     save: 'Save',
+    more: 'More',
+    openAnImage: 'Open an image',
     modes: 'Modes',
     modeCrop: 'Crop',
     modeAdjust: 'Adjust',

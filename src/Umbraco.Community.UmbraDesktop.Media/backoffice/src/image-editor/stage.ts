@@ -85,9 +85,9 @@ export class Stage {
       enableRetinaScaling: true,
       allowTouchScrolling: false,
       // Pointer events, not Fabric's default of mouse events plus touch events: a finger, a pen and a
-      // mouse then take one path through every tool, which is what lets the File page's choice of
-      // big targets for touch (D2) extend to the canvas. Found when a test drove a drag with the
-      // pointer events a browser sends and Fabric heard none of them.
+      // mouse then take one path through every tool, which is what lets the big targets the design
+      // chose for touch extend to the canvas. Found when a test drove a drag with the pointer events a
+      // browser sends and Fabric heard none of them.
       enablePointerEvents: true,
       fireRightClick: false,
       stopContextMenu: true,

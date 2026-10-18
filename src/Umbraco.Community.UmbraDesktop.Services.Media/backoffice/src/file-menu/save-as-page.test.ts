@@ -1,23 +1,23 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './file-page.element.js';
-import type { UmbraDesktopMediaFilePageElement } from './file-page.element.js';
-import type { FilePageDeps } from './deps.js';
-import type { FilePageDocument, SaveFormat } from './types.js';
+import './file-menu.element.js';
+import type { UmbraDesktopMediaFileMenuElement } from './file-menu.element.js';
+import type { FileMenuDeps } from './deps.js';
+import type { FileMenuDocument, SaveFormat } from './types.js';
 import type { MediaSaveRequest } from '../files/media-save.js';
 import { MEASURE_DEBOUNCE_MS } from './constants.js';
 import { formatBytes } from './formats.js';
 import en from '../localization/en.js';
 
 /**
- * Save as, Save and Info: the File page's pages about the open file. Save as holds every choice a
+ * Save as, Save and Info: the file menu's panels about the open file. Save as holds every choice a
  * save can make (replace or copy, name and folder, format and quality) and shows the size the file
- * will have, measured by encoding it. Issue #136, design §5 and D4.
+ * will have, measured by encoding it. Issue #136, design §5, §14 and D4.
  */
 
 const words = en.umbraDesktopServicesMedia;
 
 /** A JPEG that is open. */
-const DOC: FilePageDocument = {
+const DOC: FileMenuDocument = {
   unique: 'k1',
   name: 'beach',
   folder: 'f1',
@@ -30,20 +30,20 @@ const DOC: FilePageDocument = {
 };
 
 /**
- * A File page with a document open and fakes for everything outside it.
+ * A file menu with a document open and fakes for everything outside it.
  * @param document What is open.
  * @returns The element and what the fakes saw.
  */
-async function filePage(document: FilePageDocument = DOC) {
+async function fileMenu(document: FileMenuDocument = DOC, saveAnswer: { ok: boolean } = { ok: true }) {
   const seen = { folders: 0, encodes: [] as Array<[SaveFormat, number]>, saves: [] as MediaSaveRequest[] };
-  const deps: FilePageDeps = {
+  const deps: FileMenuDeps = {
     context: {
       open: async () => ({ status: 'cancelled' }),
       recent: async () => [],
       forgetRecent: () => undefined,
       save: async (request) => {
         seen.saves.push(request);
-        return { ok: true, unique: request.existing ?? 'copy1', updateDate: 'd2' };
+        return saveAnswer.ok ? { ok: true, unique: request.existing ?? 'copy1', updateDate: 'd2' } : { ok: false, message: 'The disk is full.' };
       },
       pickSaveFolder: async () => {
         seen.folders++;
@@ -58,13 +58,13 @@ async function filePage(document: FilePageDocument = DOC) {
     seen.encodes.push([format, quality]);
     return new Blob([new Uint8Array(format === 'png' ? 900_000 : quality * 1000)], { type: `image/${format}` });
   };
-  const element = await fixture<UmbraDesktopMediaFilePageElement>(
-    html`<umbradesktop-media-file-page
+  const element = await fixture<UmbraDesktopMediaFileMenuElement>(
+    html`<umbradesktop-media-file-menu
       style="width: 900px; height: 640px"
       .deps=${deps}
       .document=${document}
       .encode=${encode}
-      .preview=${'blob:preview'}></umbradesktop-media-file-page>`,
+      .preview=${'blob:preview'}></umbradesktop-media-file-menu>`,
   );
   return { element, seen };
 }
@@ -73,7 +73,7 @@ const $ = <T extends Element = HTMLElement>(element: HTMLElement, selector: stri
   element.shadowRoot!.querySelector(selector) as T | null;
 
 /** Wait for the debounced measurement and its render. */
-async function measured(element: UmbraDesktopMediaFilePageElement): Promise<void> {
+async function measured(element: UmbraDesktopMediaFileMenuElement): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, MEASURE_DEBOUNCE_MS + 80));
   await element.updateComplete;
   await new Promise((resolve) => setTimeout(resolve));
@@ -81,14 +81,14 @@ async function measured(element: UmbraDesktopMediaFilePageElement): Promise<void
 }
 
 /** Choose a format on Save as. */
-async function choose(element: UmbraDesktopMediaFilePageElement, format: string): Promise<void> {
+async function choose(element: UmbraDesktopMediaFileMenuElement, format: string): Promise<void> {
   $<HTMLButtonElement>(element, `button[data-format="${format}"]`)!.click();
   await element.updateComplete;
 }
 
 describe('Save as', () => {
   it('offers Replace and Save a copy as two big choices, and a copy gets a name and a folder', async () => {
-    const { element, seen } = await filePage();
+    const { element, seen } = await fileMenu();
     element.show('saveAs');
     await element.updateComplete;
     const replace = $<HTMLButtonElement>(element, 'button[data-mode="replace"]')!;
@@ -107,7 +107,7 @@ describe('Save as', () => {
   });
 
   it('lists Keep, JPEG, PNG and WebP, and no AVIF; quality only for JPEG and WebP', async () => {
-    const { element } = await filePage();
+    const { element } = await fileMenu();
     element.show('saveAs');
     await element.updateComplete;
     const formats = [...element.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[data-format]')].map(
@@ -124,7 +124,7 @@ describe('Save as', () => {
   });
 
   it("warns that the address changes for another format than the item's", async () => {
-    const { element } = await filePage();
+    const { element } = await fileMenu();
     element.show('saveAs');
     await element.updateComplete;
     expect($(element, '.warning')).to.equal(null);
@@ -137,7 +137,7 @@ describe('Save as', () => {
   });
 
   it('measures After by encoding the picture, once the choices settle, beside Now', async () => {
-    const { element, seen } = await filePage();
+    const { element, seen } = await fileMenu();
     element.show('saveAs');
     await element.updateComplete;
     expect($(element, '.now')!.textContent).to.contain(formatBytes(2_000_000, 'en'));
@@ -149,7 +149,7 @@ describe('Save as', () => {
   });
 
   it('drops a stale measurement when a newer choice was made', async () => {
-    const { element, seen } = await filePage();
+    const { element, seen } = await fileMenu();
     element.show('saveAs');
     await element.updateComplete;
     await measured(element);
@@ -160,7 +160,7 @@ describe('Save as', () => {
   });
 
   it('starts on PNG with the warning when asked to, as Save does for a GIF', async () => {
-    const { element } = await filePage({ ...DOC, extension: 'gif' });
+    const { element } = await fileMenu({ ...DOC, extension: 'gif' });
     element.show('saveAs', { format: 'png' });
     await element.updateComplete;
     expect($(element, 'button[data-format="png"]')!.getAttribute('aria-pressed')).to.equal('true');
@@ -169,15 +169,15 @@ describe('Save as', () => {
   });
 
   it('shows the picture as it will be saved', async () => {
-    const { element } = await filePage();
+    const { element } = await fileMenu();
     element.show('saveAs');
     await element.updateComplete;
     expect($(element, 'img.preview')!.getAttribute('src')).to.equal('blob:preview');
     expect($(element, '.preview-caption')!.textContent).to.contain('1600 × 1200');
   });
 
-  it('saves a copy into the chosen folder, in the chosen format, and says so', async () => {
-    const { element, seen } = await filePage();
+  it('saves a copy into the chosen folder, in the chosen format, and puts the menu away', async () => {
+    const { element, seen } = await fileMenu();
     let saved: { unique: string; copy: boolean } | undefined;
     element.addEventListener('umbradesktop-media-file-saved', (event) => (saved = (event as CustomEvent).detail));
     element.show('saveAs');
@@ -193,13 +193,25 @@ describe('Save as', () => {
     expect(seen.saves[0].folder).to.equal('f7');
     expect(seen.saves[0].file.name).to.equal('beach (copy).webp');
     expect(saved).to.include({ unique: 'copy1', copy: true });
-    expect(element.shadowRoot!.textContent).to.contain(words.saveSaved);
+    expect(element.open).to.equal(false);
+  });
+
+  it('stays open with the reason when a save fails', async () => {
+    const { element } = await fileMenu(DOC, { ok: false });
+    element.show('saveAs');
+    await element.updateComplete;
+    $<HTMLButtonElement>(element, 'button[data-action="save"]')!.click();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await element.updateComplete;
+    expect(element.open).to.equal(true);
+    expect($(element, '.sheet.panel footer .status')!.textContent).to.contain(words.saveFailed);
+    expect($(element, '.sheet.panel footer .status')!.textContent).to.contain('The disk is full.');
   });
 });
 
 describe('Save', () => {
   it('saves over the item in its own format, and tells the app', async () => {
-    const { element, seen } = await filePage();
+    const { element, seen } = await fileMenu();
     let saved: unknown;
     element.addEventListener('umbradesktop-media-file-saved', (event) => (saved = (event as CustomEvent).detail));
     const outcome = await element.save();
@@ -210,7 +222,7 @@ describe('Save', () => {
   });
 
   it('opens Save as on PNG for an item whose format cannot be kept, and writes nothing', async () => {
-    const { element, seen } = await filePage({ ...DOC, extension: 'gif' });
+    const { element, seen } = await fileMenu({ ...DOC, extension: 'gif' });
     const outcome = await element.save();
     await element.updateComplete;
     expect(outcome).to.deep.equal({ status: 'needs-save-as' });
@@ -219,22 +231,11 @@ describe('Save', () => {
     expect($(element, 'button[data-format="png"]')!.getAttribute('aria-pressed')).to.equal('true');
   });
 
-  it('runs from its page, and says what it did', async () => {
-    const { element, seen } = await filePage();
-    element.show('save');
-    await element.updateComplete;
-    expect(element.shadowRoot!.textContent).to.contain(words.saveLede.replace('%0%', 'beach'));
-    $<HTMLButtonElement>(element, 'button[data-action="save"]')!.click();
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    await element.updateComplete;
-    expect(seen.saves).to.have.length(1);
-    expect(element.shadowRoot!.textContent).to.contain(words.saveSaved);
-  });
 });
 
 describe('Info', () => {
   it("shows the file's name, folder, dimensions, size, format and last update", async () => {
-    const { element } = await filePage();
+    const { element } = await fileMenu();
     element.show('info');
     await element.updateComplete;
     const text = element.shadowRoot!.querySelector('dl.info')!.textContent!;

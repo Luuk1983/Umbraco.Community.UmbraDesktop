@@ -1,6 +1,6 @@
 /**
  * The formats the editor saves in. **A copy** of Services.Media's `SaveFormat` and `mimeFor`
- * (its `file-page/formats.ts`, published on its developer page), since nothing is imported from
+ * (its `file-menu/formats.ts`, published on its developer page), since nothing is imported from
  * another package.
  */
 export type SaveFormat = 'jpeg' | 'png' | 'webp';

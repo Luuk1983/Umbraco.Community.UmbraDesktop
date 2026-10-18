@@ -1,7 +1,7 @@
 import { css, html } from '@umbraco-cms/backoffice/external/lit';
 import type { TemplateResult } from '@umbraco-cms/backoffice/external/lit';
 import type { WordKey } from '../shared/words.js';
-import { MODE_BAR_HEIGHT } from './constants.js';
+import { CURRENT_LINE, MODE_BAR_HEIGHT } from './constants.js';
 import { MODES } from './modes/mode.js';
 import type { Mode } from './modes/mode.js';
 import type { UmbraDesktopImageEditorElement } from './image-editor.element.js';
@@ -16,28 +16,24 @@ const MODE_FACE: Record<Mode, { label: WordKey; icon: string }> = {
 };
 
 /**
- * The mode bar: File, undo and redo, the five modes, and Save at the right (design D1, D2, D3).
+ * The mode bar: undo and redo, the five modes in the middle, and Save and "..." together in the right
+ * corner (design D1, D11, D13). "..." opens Services.Media's file menu, with Open, Save as, Info and
+ * Close; Save stays one click.
+ *
+ * **Two looks that must never be mistaken for each other.** The mode in use is a tab with a line
+ * under it, as Umbraco marks its own tabs; Save is the view's main action, in its own colours. Both
+ * were the accent once, and Save read as the selected tab (§13).
  *
  * **Drawn and disabled, never hidden**: with nothing open the modes, undo, redo and Save are all
  * there and greyed, so the person sees what the editor will offer. Save is enabled only while there
- * is something to save, as the mocks draw it.
+ * is something to save. "..." always works, for Open and Close.
  * @param editor The editor.
  * @returns The bar.
  */
 export function renderModeBar(editor: UmbraDesktopImageEditorElement): TemplateResult {
   const open = editor.hasDocument;
   const history = editor.history;
-  const filing = editor.filing;
-  return html`<div class="bar ${filing ? 'filing' : ''}" role="toolbar" aria-label=${editor.words('imageEditor')}>
-    <button
-      type="button"
-      class="tab file"
-      data-command="file"
-      aria-pressed=${filing ? 'true' : 'false'}
-      @click=${() => editor.showFile('open')}>
-      <umb-icon name="icon-folder-open"></umb-icon><span>${editor.words('file')}</span>
-    </button>
-    <span class="separator" aria-hidden="true"></span>
+  return html`<div class="bar" role="toolbar" aria-label=${editor.words('imageEditor')}>
     <button
       type="button"
       class="icon"
@@ -64,20 +60,26 @@ export function renderModeBar(editor: UmbraDesktopImageEditorElement): TemplateR
           type="button"
           class="tab"
           data-command="mode-${mode}"
-          aria-pressed=${open && !filing && editor.mode === mode ? 'true' : 'false'}
+          aria-pressed=${open && editor.mode === mode ? 'true' : 'false'}
           ?disabled=${!open}
           @click=${() => editor.setMode(mode)}>
           <umb-icon name=${MODE_FACE[mode].icon}></umb-icon><span>${editor.words(MODE_FACE[mode].label)}</span>
         </button>`,
       )}
     </span>
+    <button type="button" class="save" data-command="save" ?disabled=${!open || !editor.dirty} @click=${() => void editor.save()}>
+      ${editor.words('save')}
+    </button>
     <button
       type="button"
-      class="save"
-      data-command="save"
-      ?disabled=${!open || !editor.dirty}
-      @click=${() => void editor.save()}>
-      <umb-icon name="icon-save"></umb-icon><span>${editor.words('save')}</span>
+      class="icon"
+      data-command="more"
+      title=${editor.words('more')}
+      aria-label=${editor.words('more')}
+      aria-haspopup="dialog"
+      aria-expanded=${editor.menuOpen ? 'true' : 'false'}
+      @click=${() => editor.showMenu()}>
+      <uui-symbol-more></uui-symbol-more>
     </button>
   </div>`;
 }
@@ -116,19 +118,21 @@ export const modeBarStyles = css`
     font-size: 18px;
   }
 
+  /* Umbraco's own three dots, as on its entity action menus: not an icon, whose names hold no dots. */
+  .bar button uui-symbol-more {
+    font-size: 18px;
+    color: inherit;
+  }
+
   .bar button.icon {
     width: ${MODE_BAR_HEIGHT - 10}px;
     padding: 0;
   }
 
-  .bar button:not(:disabled):hover {
+  /* The hover ground is for the plain buttons and the tabs. Save keeps its own colours under the
+     pointer: the ground would sit under its light text and hide it (found in a real backoffice). */
+  .bar button:not(:disabled):not(.save):hover {
     background: var(--umbradesktop-app-surface, var(--uui-color-surface));
-  }
-
-  .bar button[aria-pressed='true'] {
-    background: var(--umbradesktop-app-accent, var(--uui-color-selected));
-    color: var(--umbradesktop-app-accent-text, var(--uui-color-surface));
-    font-weight: 700;
   }
 
   .bar button:disabled {
@@ -141,34 +145,42 @@ export const modeBarStyles = css`
     outline-offset: -2px;
   }
 
-  .bar .separator {
-    flex: none;
-    width: 1px;
-    height: ${MODE_BAR_HEIGHT - 20}px;
-    margin: 0 4px;
-    background: var(--umbradesktop-app-border, var(--uui-color-text-alt));
-  }
-
   .bar .tabs {
     flex: 1;
     display: flex;
     justify-content: center;
+    align-self: stretch;
     gap: 2px;
     min-width: 0;
   }
 
-  .bar.filing .tabs button {
-    opacity: 0.6;
+  /* A mode is a tab in Umbraco's own look: the icon over its name, the full height of the bar, and
+     a line under the one in use (D13). */
+  .bar button.tab {
+    flex-direction: column;
+    gap: 2px;
+    height: 100%;
+    min-width: 72px;
+    padding: 0 12px;
+    font-size: 13px;
+    border-radius: 0;
   }
 
-  .bar button.save {
-    background: var(--umbradesktop-app-accent, var(--uui-color-selected));
-    color: var(--umbradesktop-app-accent-text, var(--uui-color-surface));
+  .bar button.tab[aria-pressed='true'] {
     font-weight: 700;
+    box-shadow: inset 0 -${CURRENT_LINE}px 0 0 var(--umbradesktop-app-current, var(--uui-color-current));
   }
 
-  .bar button.save:disabled {
-    background: var(--umbradesktop-app-surface, var(--uui-color-surface));
-    color: var(--umbradesktop-app-text, var(--uui-color-text));
+  /* Save, the main action: Umbraco's green Save in the Umbraco themes, each other theme's own default
+     button. Beside "...", in the corner (D11). */
+  .bar button.save {
+    margin-left: 4px;
+    padding: 0 18px;
+    font-weight: 700;
+    background: var(--umbradesktop-app-action, var(--uui-color-positive));
+    color: var(--umbradesktop-app-action-text, var(--uui-color-positive-contrast));
+    border: var(--umbradesktop-app-edge-width, 1px) solid var(--umbradesktop-app-edge-dark, transparent);
+    box-shadow: inset var(--umbradesktop-app-edge-width, 1px) var(--umbradesktop-app-edge-width, 1px) 0
+      var(--umbradesktop-app-edge-light, transparent);
   }
 `;

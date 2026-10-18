@@ -1,17 +1,17 @@
 import { expect } from '@open-wc/testing';
-import { control, defineFakeFilePage, mountEditor, openFixture, settle } from '../image-editor.test-helper.js';
+import { control, defineFakeFileMenu, mountEditor, openFixture, settle } from '../image-editor.test-helper.js';
 
 /**
  * Resize: width and height in pixels or percent, linked by default; the common widths only shrink;
  * enlarging is allowed by typing; Apply size or another mode applies it as one step (design §4.1).
  */
 
-defineFakeFilePage();
+defineFakeFileMenu();
 
 /** An editor with the 80 × 60 fixture open, in Resize. */
 async function resizing() {
-  const { editor, page } = await mountEditor();
-  await openFixture(editor, page!);
+  const { editor, menu } = await mountEditor();
+  await openFixture(editor, menu!);
   editor.setMode('resize');
   await settle(editor);
   return { editor };

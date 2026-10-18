@@ -123,7 +123,7 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	       The packed range, "[<this release>, 17.99999999.0]", comes from the BoundHostRange target
 	       in src/Directory.Build.targets, which every add-on referencing the host picks up. -->
 	  <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />
-	  <!-- The media service, which opens and saves the Image Editor's files and draws its File page.
+	  <!-- The media service, which opens and saves the Image Editor's files and draws its file menu.
 	       A reference, not just a runtime expectation, so installing this add-on installs it: its
 	       code is reached by a context alias and a tag name and never imported, so nothing else
 	       would bring it. Bounded like the host by the same BoundHostRange target. -->

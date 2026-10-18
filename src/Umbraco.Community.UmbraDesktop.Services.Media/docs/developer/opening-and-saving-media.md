@@ -20,8 +20,8 @@ few calls:
 - **The overwrite question** asks, in Umbraco's own confirm dialog, whether to overwrite an item
   somebody else changed.
 - **Recent files** lists the files this person opened or saved lately, through any app.
-- **The File page** is a ready-made element with Open, Save, Save as, Info and Close, for an app
-  that would rather not build those pages itself.
+- **The file menu** is a ready-made element with Open, Save, Save as, Info and Close, for an app
+  that would rather not build those itself, and **the open view** shows Open on its own.
 
 Everything goes through the backoffice's own pickers and media repositories, so permissions, media
 start nodes and the media types a folder allows apply exactly as they do in the Media section.
@@ -186,23 +186,29 @@ lists all of them. Open one with `open({ unique })`.
 
 An entry is only what the browser remembers. The item may have been deleted, moved to the recycle
 bin or put out of this person's reach since, and then `open` answers `failed`. Call
-`forgetRecent(unique)` to take it off the list. The File page asks the media library about every
+`forgetRecent(unique)` to take it off the list. The file menu asks the media library about every
 entry before it shows the list: it forgets the ones that are gone or in the recycle bin, and one that
 fails to open. When the media library cannot be asked, it keeps them all.
 
-## 7. Use the File page
+## 7. Use the file menu
 
-The File page is a custom element the service defines, `<umbradesktop-media-file-page>`. It is drawn
-over your app's window, with a list of pages on the left: Back to the picture, Open, Save, Save as,
-Info and Close. You give it your document and how to encode it; it runs the opens and saves and tells
-you what happened. The Image Editor in the UmbraDesktop Media Add-on is the worked example.
+The file menu is a custom element the service defines, `<umbradesktop-media-file-menu>`. It slides
+in from the right edge of your app over a dimmed app, the way Umbraco's own side panels do, with
+Open, Save, Save as, Info and Close. Open, Save as and Info each slide their own panel in over it,
+with an arrow back to the menu. You give it your document and how to encode it; it runs the opens and
+saves and tells you what happened. The Image Editor in the UmbraDesktop Media Add-on is the worked
+example: a "..." button beside its Save button opens it.
 
-Use it by its tag name, with these types copied into your package:
+The service also defines `<umbradesktop-media-open-view>`: Open on its own, the recent files with
+Browse and Upload under them, for your app's empty canvas, so the first thing a person sees is what
+they can open.
+
+Use them by their tag names, with these types copied into your package:
 
 ```ts
-type FilePageName = 'open' | 'save' | 'saveAs' | 'info';
+type FileMenuPanel = 'menu' | 'open' | 'saveAs' | 'info';
 type SaveFormat = 'jpeg' | 'png' | 'webp';
-interface FilePageDocument {
+interface FileMenuDocument {
   unique: string | null;          // null: never saved
   name: string;                   // as the person typed it, which a save renames the item to
   folder: string | null;
@@ -220,11 +226,13 @@ type FileSaveOutcome = { status: 'saved'; saved: FileSavedDetail } | { status: '
   | { status: 'cancelled' } | { status: 'failed'; message?: string };
 ```
 
-1. **Render it** in your app, and give it at least 720 × 560 pixels, its smallest size. Smaller,
-   and Save as no longer fits.
+1. **Render the menu** as the last child of your app's element, which must be positioned
+   (`position: relative`): the menu places itself over all of it. Give your app at least
+   520 × 542 pixels, the menu's smallest size. Smaller, and Save as no longer fits.
 
    ```ts
-   html`<umbradesktop-media-file-page
+   html`<umbradesktop-media-file-menu
+     .label=${'Image Editor'}
      .document=${this.document}
      .dirty=${this.dirty}
      .accept=${['jpg', 'jpeg', 'png', 'webp']}
@@ -234,16 +242,19 @@ type FileSaveOutcome = { status: 'saved'; saved: FileSavedDetail } | { status: '
      @umbradesktop-media-file-open=${this.onOpen}
      @umbradesktop-media-file-saved=${this.onSaved}
      @umbradesktop-media-file-failed=${this.onFailed}
-     @umbradesktop-media-file-back=${this.onBack}
-     @umbradesktop-media-file-close=${this.onClose}></umbradesktop-media-file-page>`;
+     @umbradesktop-media-file-hidden=${this.onHidden}
+     @umbradesktop-media-file-close=${this.onClose}></umbradesktop-media-file-menu>`;
    ```
 
-2. **Show and hide it** with `show('open')`, `show('saveAs')` and `hide()`. It reflects an `open`
-   attribute while it shows, and hides itself when the person presses Back.
+2. **Show it** from your own "..." button with `show()`, or straight on a panel with `show('open')`
+   or `show('saveAs')`, for Ctrl+O and Ctrl+Shift+S. It reflects an `open` attribute while it
+   shows. It puts itself away on Escape, a click on the dimmed app and its own buttons, after a
+   successful Save as, and when you call `hide()`; each time it fires `hidden`, so your app can take
+   its view back.
 
 3. **Save from your own button** with `save()`. It writes over the item in its own format. For a
-   file whose format cannot be written back, such as a GIF, it shows Save as with PNG chosen and
-   answers `needs-save-as`.
+   file whose format cannot be written back, such as a GIF, it shows the menu on Save as with PNG
+   chosen and answers `needs-save-as`. The menu's own Save does the same and then puts itself away.
 
 4. **Take what it tells you.** On `open`, the event's `detail` is the opened file, as `open()`
    answers it; check it suits your app, then call `hide()`. On `saved`, take the `detail` as your
@@ -251,14 +262,24 @@ type FileSaveOutcome = { status: 'saved'; saved: FileSavedDetail } | { status: '
    `failed`, show `detail.message`. On `close`, close your window, for example with the desktop's
    `umbradesktop-close-request` event.
 
+5. **Show the open view while nothing is open**, if you want one, with `accept`, `dirty` and a
+   `heading` such as "Open an image". It fires the same `open` and `failed` events as the menu.
+   It reads the recent list when it is connected, so render it while your app is empty and remove it
+   once a file is open.
+
 | Property | Meaning |
 | --- | --- |
-| `document` | What your app has open, or `null`. With `null`, Back, Save, Save as and Info are drawn disabled |
-| `dirty` | Whether your app holds unsaved work. Opening another file asks first |
+| `label` | Your app's name: the menu's title, and what Close says it closes. "Menu" without one |
+| `document` | What your app has open, or `null`. With `null`, Save, Save as and Info are drawn disabled |
+| `dirty` | Whether your app holds unsaved work. Save is enabled only then, and opening another file asks first |
 | `accept` | The extensions your app opens. The recent list shows only those |
 | `encode` | Writes your document in a format and quality. Save as calls it to measure the size after, and every save calls it to make the file |
 | `preview` | An image URL of the picture as it will be saved, for Save as |
 | `resetFocalPoint` | Sent with a save over the item, as `resetFocalPoint` on the request |
+
+The menu draws itself in the desktop's app tokens, so every theme draws it in its own idiom: Save
+copy and the other main actions in `--umbradesktop-app-action`, which is Umbraco's green Save in the
+Umbraco themes. Paint your own Save button with the same token and it matches.
 
 ## 8. When the service is not there
 

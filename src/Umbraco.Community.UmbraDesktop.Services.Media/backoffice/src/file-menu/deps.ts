@@ -7,15 +7,15 @@ import type { UmbraDesktopMediaContext } from '../context/media.context.js';
 import { wordsOf } from '../shared/words.js';
 
 /**
- * What the File page needs from outside itself: the media context's operations, thumbnails for the
+ * What the file menu needs from outside itself: the media context's operations, thumbnails for the
  * recent list, and the discard question. Injectable, so a test needs no backoffice; the element
  * builds the real ones when it is given none.
  */
-export interface FilePageDeps {
+export interface FileMenuDeps {
   /** The media context's operations. */
   context: Pick<UmbraDesktopMediaContext, 'open' | 'recent' | 'forgetRecent' | 'save' | 'pickSaveFolder' | 'confirmOverwrite'>;
   /**
-   * Thumbnail URLs for media items, by key, for the Open page's tiles. Only pictures: an item it
+   * Thumbnail URLs for media items, by key, for Open's tiles. Only pictures: an item it
    * does not answer for is shown without one, because Umbraco's imaging endpoint answers nothing on a
    * failure as well as for a missing item, so its silence says nothing about the item.
    * @param uniques The items.
@@ -23,7 +23,7 @@ export interface FilePageDeps {
    */
   thumbnails(uniques: string[]): Promise<Map<string, string>>;
   /**
-   * Whether media items still exist, and whether they are in the recycle bin, for the Open page to
+   * Whether media items still exist, and whether they are in the recycle bin, for Open to
    * leave out and forget the ones that are gone. Optional; without it every entry is kept.
    * @param uniques The items.
    * @returns Each item that exists, by key; or undefined when the media library could not be asked,
@@ -37,7 +37,7 @@ export interface FilePageDeps {
   confirmDiscard(): Promise<boolean>;
   /**
    * A folder's name, for Save as to say where a copy goes once another folder was chosen. Optional:
-   * without it the page names the folder it was given and nothing more.
+   * without it Save as names the folder it was given and nothing more.
    * @param unique The folder.
    * @returns Its name, or undefined when it cannot be read.
    */
@@ -51,11 +51,11 @@ export const THUMBNAIL_PX = 320;
  * Thumbnails through Umbraco's imaging repository, which caches them and batches the request.
  * `requestResizedItems` rather than `requestThumbnailUrls`, which the 17.5 typings mark deprecated
  * for removal in 18. The server answers only for the items this user can see, and leaves out the
- * deleted and trashed, which is what lets the Open page drop them.
+ * deleted and trashed, which is what lets Open drop them.
  * @param host The element asking.
  * @returns The thumbnail resolver.
  */
-export function createThumbnails(host: UmbControllerHost): FilePageDeps['thumbnails'] {
+export function createThumbnails(host: UmbControllerHost): FileMenuDeps['thumbnails'] {
   return async (uniques) => {
     if (!uniques.length) return new Map();
     const repository = new UmbImagingRepository(host);
@@ -73,7 +73,7 @@ export function createThumbnails(host: UmbControllerHost): FilePageDeps['thumbna
  * @param host The element asking.
  * @returns The question.
  */
-export function createDiscardQuestion(host: UmbControllerHost): FilePageDeps['confirmDiscard'] {
+export function createDiscardQuestion(host: UmbControllerHost): FileMenuDeps['confirmDiscard'] {
   return async () => {
     const localize = new UmbLocalizationController(host);
     const words = wordsOf(localize);
@@ -99,7 +99,7 @@ export function createDiscardQuestion(host: UmbControllerHost): FilePageDeps['co
  * @param host The element asking.
  * @returns The check.
  */
-export function createItemCheck(host: UmbControllerHost): NonNullable<FilePageDeps['items']> {
+export function createItemCheck(host: UmbControllerHost): NonNullable<FileMenuDeps['items']> {
   return async (uniques) => {
     if (!uniques.length) return new Map();
     const repository = new UmbMediaItemRepository(host);
@@ -120,7 +120,7 @@ export function createItemCheck(host: UmbControllerHost): NonNullable<FilePageDe
  * @param host The element asking.
  * @returns The lookup; it answers undefined for anything it cannot read.
  */
-export function createFolderName(host: UmbControllerHost): NonNullable<FilePageDeps['folderName']> {
+export function createFolderName(host: UmbControllerHost): NonNullable<FileMenuDeps['folderName']> {
   return async (unique) => {
     const repository = new UmbMediaItemRepository(host);
     try {

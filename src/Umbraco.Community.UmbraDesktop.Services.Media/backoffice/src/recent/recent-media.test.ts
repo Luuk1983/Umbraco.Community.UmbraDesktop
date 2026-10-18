@@ -3,7 +3,7 @@ import { RECENT_LIMIT, RecentMediaList, recentKeyFor } from './recent-media.js';
 
 /**
  * The media files a person opened or saved lately, through any app, kept in the browser per
- * backoffice user. The File page's Open lists them, so the file you were just working on is one tap
+ * backoffice user. The file menu's Open lists them, so the file you were just working on is one tap
  * away. Issue #136.
  */
 

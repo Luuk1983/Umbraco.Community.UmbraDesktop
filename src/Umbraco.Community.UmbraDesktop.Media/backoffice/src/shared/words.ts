@@ -17,7 +17,7 @@ export function fill(text: string, args: ReadonlyArray<unknown>): string {
 
 /**
  * This package's words, through the backoffice's localization with the English dictionary as the
- * fallback, as Services.Media's File page reads its own: the editor says a lot, and a second copy of
+ * fallback, as Services.Media's file menu reads its own: the editor says a lot, and a second copy of
  * each sentence beside each call would drift from `en.ts`.
  * @param localize The element's localization controller.
  * @returns A function from a key and its arguments to the words.

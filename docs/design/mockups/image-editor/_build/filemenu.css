@@ -1,0 +1,63 @@
+/* The file menu redesign: the new bar, the "..." side panels, the empty canvas. Added last. */
+
+/* The bar */
+.nbar { flex: none; height: 52px; display: flex; align-items: stretch; gap: 4px; padding: 0 12px; background: #fff; border-bottom: 1px solid #e3e3e6; box-sizing: border-box; }
+.nbar > .ib { align-self: center; }
+.nbar .tabs { flex: 1; display: flex; justify-content: center; height: 100%; }
+.nbar .mt.off { opacity: .38; }
+.nright { display: flex; align-items: center; gap: 6px; }
+.saveb { display: inline-flex; align-items: center; height: 36px; padding: 0 20px; border-radius: 3px; background: #2bc37c; color: #fff; font-size: 14px; font-weight: 700; }
+.saveb.off { background: #e3e3e6; color: #8f8f93; }
+.savei { position: relative; width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #c2c2c2; border-radius: 3px; color: #1b264f; background: #fff; box-sizing: border-box; }
+.savei.off { opacity: .38; }
+.savei .udot { position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: #d42054; }
+.more { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 3px; color: #1b264f; }
+.more.on { background: #e9e9eb; }
+
+/* The bar as built, for the comparison */
+.nbar.old { padding-left: 0; }
+.mt.fill.on, .mt.fill.file { color: #fff; background: #1b264f; font-weight: 700; }
+.mt.fill.on::after { display: none; }
+.mt.fill.file { width: 96px; background: none; color: #1b264f; font-weight: 400; }
+.tsep2 { width: 1px; align-self: center; height: 28px; background: #e3e3e6; margin: 0 6px 0 0; }
+.oldsave { display: inline-flex; align-items: center; gap: 7px; height: 52px; padding: 0 18px; background: #1b264f; color: #fff; font-size: 13px; font-weight: 700; }
+
+/* The bar strips */
+.bscreen { container-type: inline-size; width: 100%; aspect-ratio: 1480 / 52; overflow: hidden; border: 1px solid #d8dbe3; border-radius: 4px; }
+.bstage { width: 1480px; height: 52px; transform-origin: 0 0; transform: scale(calc(100cqw / 1480px)); font-family: Lato, "Segoe UI", sans-serif; color: #303033; }
+@supports not (width: 1cqw) { .bstage { transform: scale(.6); } }
+
+/* The side panels, Umbraco's sidebar modal inside the window */
+.sbscrim { position: absolute; z-index: 20; background: rgba(0, 0, 0, .38); }
+.sb { position: absolute; z-index: 21; display: flex; flex-direction: column; background: #f3f3f5; box-shadow: -8px 0 28px rgba(0, 0, 0, .28); }
+.sbh { flex: none; height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 22px; background: #fff; border-bottom: 1px solid #e3e3e6; font-size: 19px; font-weight: 700; color: #1b264f; }
+.sbback { width: 34px; height: 34px; margin-left: -8px; display: grid; place-items: center; border-radius: 3px; }
+.sbb { flex: 1; min-height: 0; padding: 22px; display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+.sbf { flex: none; height: 64px; display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 0 22px; background: #fff; border-top: 1px solid #e3e3e6; }
+
+/* The menu's commands */
+.mlist { background: #fff; border-radius: 3px; box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+.mi { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 0 16px; color: #1b264f; }
+.mi + .mi { border-top: 1px solid #e9e9eb; }
+.mi.hov { background: #f5f6fd; }
+.mi.off { opacity: .4; }
+.mtx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mtx b { font-size: 15.5px; color: #303033; }
+.mtx small { font-size: 13px; color: #6b6b72; }
+.mi kbd { font: 12.5px Lato, "Segoe UI", sans-serif; color: #8f8f93; }
+.chev { color: #8f8f93; display: grid; }
+
+/* Open, in its panel and on the empty canvas */
+.rgrid.sm { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.rgrid.sm .rimg { height: 140px; }
+.obtns { display: flex; gap: 12px; margin-top: 6px; }
+.eopen { width: 860px; margin: 70px auto 0; display: flex; flex-direction: column; gap: 12px; }
+.eopen h2 { margin: 0; font-size: 24px; color: #1b264f; }
+.cv { position: relative; }
+
+/* Save as and Info in a panel */
+.sb .sagrid { gap: 28px; }
+.sb .saform { width: 500px; }
+.sb .sapic { height: 300px; }
+.irow { display: flex; justify-content: space-between; gap: 16px; padding: 4px 0; font-size: 14px; color: #515054; }
+.irow b { font-weight: 400; color: #303033; }

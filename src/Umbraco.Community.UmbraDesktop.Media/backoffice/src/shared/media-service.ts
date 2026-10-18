@@ -7,8 +7,8 @@ import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
  * The Image Editor's line to the media service (`Umbraco.Community.UmbraDesktop.Services.Media`).
  * The types are copies of the service's, as its developer page publishes them, because nothing is
  * imported from another package; Accessories' `shared/media-service.ts` is the model. The editor
- * opens and saves through the service's File page, so what it needs from the context itself is only
- * whether it is there: the File page is defined with it, and without it nothing can be opened.
+ * opens and saves through the service's file menu, so what it needs from the context itself is only
+ * whether it is there: the file menu is defined with it, and without it nothing can be opened.
  */
 
 /** A media file, read and ready to edit. A copy of the service's `OpenedMedia`, with issue #136's fields. */

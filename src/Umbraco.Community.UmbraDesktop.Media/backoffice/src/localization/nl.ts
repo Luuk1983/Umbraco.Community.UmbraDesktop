@@ -4,10 +4,11 @@ export default {
     groupMedia: 'Media',
     imageEditor: 'Afbeeldingseditor',
 
-    file: 'Bestand',
     undo: 'Ongedaan maken',
     redo: 'Opnieuw',
     save: 'Opslaan',
+    more: 'Meer',
+    openAnImage: 'Een afbeelding openen',
     modes: 'Modi',
     modeCrop: 'Bijsnijden',
     modeAdjust: 'Aanpassen',

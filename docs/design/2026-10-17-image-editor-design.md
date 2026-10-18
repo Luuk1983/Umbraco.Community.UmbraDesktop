@@ -3,16 +3,21 @@
 > A real image editor on the desktop, and the first app of a new add-on, UmbraDesktop Media. It
 > opens an image from the media library, crops, adjusts, marks up and redacts it, and saves it back
 > over the same media item or as a copy, so small fixes no longer mean a round trip through the
-> editor's own computer. Its file commands live on a File page that Services.Media offers to every
-> app that opens and saves media files.
+> editor's own computer. Its file commands live in a "..." menu that Services.Media offers to every
+> app that opens and saves media files (§14; it replaced the File page of the first build).
 
-- **Status:** Built 2026-10-17, uncommitted on `136-image-editor`; verified in a real backoffice (§13)
+- **Status:** Built 2026-10-17 and verified in a real backoffice (§13). The file menu that replaces
+  the File page (§14) was designed and built 2026-10-18, uncommitted, and checked in a real
+  backoffice (§14.8)
 - **Date:** 2026-10-17
 - **Issue:** [#136](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/136)
 - **Branch:** `136-image-editor`
 - **Mocks:** [`mockups/image-editor/image-editor.html`](mockups/image-editor/image-editor.html)
   (the editor) and [`mockups/image-editor/commands.html`](mockups/image-editor/commands.html) (the
   four command layouts that were compared). Built by `_build/editor.cjs` and `_build/commands.cjs`.
+  The file menu that replaced the File page (§14):
+  [`mockups/image-editor/file-menu.html`](mockups/image-editor/file-menu.html), built by
+  `_build/file-menu.cjs`.
 
 ---
 
@@ -46,7 +51,8 @@ Apache-2.0 with separately licensed weights, `@imgly/background-removal` is AGPL
 
 Anti-goals, things that would make it a failure even if it worked:
 
-- Commands hidden away. The owner chose the layout in §4 because nothing is in a menu.
+- The command used most hidden away. Save is always one click on screen. (The first build put
+  nothing in a menu at all; after using it, the owner chose a "..." menu for the rarer commands, §14.)
 - A control that one theme drops.
 - A redaction that can be undone from the saved file.
 - Anything GPL, AGPL or commercial in the shipped bundle.
@@ -56,8 +62,8 @@ Anti-goals, things that would make it a failure even if it worked:
 | # | Decision | Why |
 |---|---|---|
 | D1 | Five modes along the top: Crop, Adjust, Markup, Redact, Resize. Each mode has its settings in a panel on the right. | Owner's choice over a Photoshop-style tool rail (mock scene 8). This is for fixing images, not composing them. |
-| D2 | File is the first tab of the mode bar and opens a File page over the window: Open, Save, Save as, Info, Close. No menu bar. | Owner's choice of four layouts (`commands.html`, option C): "the easiest, and fewer things hidden away". Big targets, so it works with a finger. |
-| D3 | Save is a button at the right of the mode bar as well, outside File. Ctrl+S does the same. | The command used most stays on screen. Owner agreed. |
+| D2 | ~~File is the first tab of the mode bar and opens a File page over the window.~~ **Replaced by D11 and D12 (§14).** | Owner's choice of four layouts (`commands.html`, option C). After using it in a real backoffice: "'file' doesn't sound right", and File on the left with Save on the right did not feel like one whole. |
+| D3 | ~~Save is a button at the right of the mode bar as well, outside File.~~ **Replaced by D11 (§14).** Ctrl+S still saves. | Save drawn in the accent colour looked like the selected mode tab. |
 | D4 | Save writes over the item in the same format without asking (except a format that cannot be kept, §6). Save as is a page of File: replace or copy, name and folder for a copy, format, quality, sizes. | One place for every choice, and the quick path stays quick. |
 | D5 | Zoom is in the status bar: out, slider, in, percentage, Fit. | Owner's call. Where Word and the Photos apps put it. |
 | D6 | The File page is an element in Services.Media, not in the editor and not in the core desktop. The Image Editor is its first user. | It is about media files (recent media, the media picker, saving media items), so any app that opens and saves media is a future user. Games are not, which keeps it apart from #112. Owner: "for now it is". |
@@ -65,6 +71,10 @@ Anti-goals, things that would make it a failure even if it worked:
 | D8 | On a save that crops, rotates or flips the picture, the item's focal point and named crops are reset. Other changes keep them. | Owner's choice of the simplest option. Resize, adjust, markup and redact do not move what the fractions point at, so they keep them. |
 | D9 | Our own UI on Fabric.js (MIT) and Cropper.js v2 (MIT). No complete editor library. | §8. The complete MIT editors are archived (TOAST UI) or pull in React (Filerobot), and both have a fixed look no theme can restyle. |
 | D10 | MIT notices ship in the package and in the built file, and the build fails on a bundled package that is not permissive or not listed. | Owner: "make sure we adhere to the MIT license". §9. |
+| D11 | Save and a "..." button share the right corner of the mode bar. Save is Umbraco's green Save button; "..." opens the file menu. Undo and redo are alone on the left. No File tab and no word "File". | Owner, 2026-10-18, option A of `file-menu.html`: "feels the most Umbraco native". One click to save stays; the rest is one click away, in one corner. |
+| D12 | The file menu slides in from the right, inside the editor window, the way Umbraco's own side panels do: Open, Save, Save as, Info, Close. Save acts at once; Open, Save as and Info each slide their own panel over the menu, with an arrow back. | Owner: "not a full screen overlay, but a sliding modal", "almost all options will open a new modal". The panels keep the File page's content, which he liked. |
+| D13 | The modes look like Umbraco's tabs: an icon over the name, and a line under the one in use. | Owner: the image manipulation options should look like Umbraco's own tabs. A filled tab is what made Save read as a tab. |
+| D14 | With nothing open, the empty canvas shows Open's content: recent images, Browse, Upload. | There is no File page left to start on. My call, shown in scene 6 and accepted with the mock. |
 
 ## 4. The window
 
@@ -110,6 +120,10 @@ into the document being edited. This keeps the original pixels in memory for the
 fine: the redaction anti-goal is about the saved file, and the user has the original anyway.
 
 ## 5. The File page (Services.Media)
+
+> **Replaced by the file menu (§14).** What each page offers (Open's recent images, Browse and
+> Upload; Save as's choices; Info) carries over unchanged into the menu's panels. What changed is the
+> container: a menu sliding in from the right instead of a page over the window.
 
 Mock scenes 1, 7a and 7b, and the theme section. A page over the window under the mode bar: a list
 of pages on the left, the chosen page on the right. "Back to the picture" closes it.
@@ -336,3 +350,148 @@ Two more were found by tests that drove real input rather than Fabric's own even
 for mouse and touch events unless `enablePointerEvents` is on, so a pen or a finger took another path
 than the mouse (now on), and the stage never forgot a single finger, so the next touch looked like a
 pinch.
+
+## 14. The file menu (redesign after the real run)
+
+Decided with the owner on 2026-10-18, after he used the first build in a real backoffice. Mock:
+[`mockups/image-editor/file-menu.html`](mockups/image-editor/file-menu.html), bar option A and
+scenes 1 to 6. Decisions D11 to D14 in §3; this section is the detail.
+
+His words: "I don't like the save and file buttons separately. And 'file' doesn't sound right. I
+think we should have one button with ... at the right corner where the save button is. That should
+open the overlay we now have under 'file'. I do like that overlay. It shouldn't be a full screen
+overlay though, but only like a sliding modal with open/save/save as/exit etc. options. Almost all
+options will open a new modal." And: Save drawn like an active mode tab is weird.
+
+Other editors were looked at for the shape (Windows 11 Photos, macOS Photos, iOS Photos): tools as
+a row of tabs, one save button at the right, rarer file commands in a small menu. None has a File
+page. The owner wants it moderately simple, not Photoshop.
+
+### 14.1 The bar
+
+Left to right: undo and redo; the five modes, centred; Save and "..." in the right corner.
+
+- **The modes** are tabs in Umbraco's look (D13): the icon above the name, and a line under the
+  mode in use. No filled background. Disabled and greyed with nothing open, never hidden.
+- **Save** is a text button in Umbraco's Save colours (green in the Umbraco theme). Disabled when
+  there is nothing to save. Ctrl+S does the same. It is never drawn like a tab.
+- **"..."** is an icon button with Umbraco's own three dots (`uui-symbol-more`, as on its entity
+  action menus), and "More" as its label for screen readers. It opens the file menu
+  and shows pressed while the menu is open. Enabled with nothing open, for Open and Close.
+
+### 14.2 The menu
+
+A panel that slides in from the window's right edge over the mode's panel, the full height of the
+window under the title bar, with the rest of the window dimmed. It stays inside the editor window
+and does not use Umbraco's modal manager, whose modals cover the whole backoffice and every other
+window (my call; the owner accepted it with the mock). The title bar stays live, so the window can
+still be moved and closed.
+
+| Command | Line under it | Key | What it does |
+|---|---|---|---|
+| Open | Another image from the media library | Ctrl+O | Slides the Open panel over the menu |
+| Save | Write over *name* | Ctrl+S | Saves at once and puts the menu away |
+| Save as | A copy, or another format | Ctrl+Shift+S | Slides the Save as panel over the menu |
+| Info | Size, format, folder, last change | | Slides the Info panel over the menu |
+| Close | Close the Image Editor | | Closes the window, through the unsaved-changes guard |
+
+Close sits apart from the other four, as in the mock. "Exit" and "Close" are one command, Close
+(my call, accepted with the mock). Save, Save as and Info are disabled with nothing open; Save also
+when there is nothing to save.
+
+The menu goes away on Escape, a click on the dimmed window, its own Close menu button, or "..."
+again. It is a dialog to assistive technology: focus moves to its first enabled command when it
+opens and back to "..." when it closes, and Tab stays inside it. It slides in quickly and simply
+appears under `prefers-reduced-motion` (my calls). The keys work without opening it: Ctrl+O opens the menu straight on the Open panel,
+Ctrl+Shift+S straight on Save as.
+
+### 14.3 The panels
+
+Open, Save as and Info each slide in over the menu, wider than it, with a back arrow before their
+title that returns to the menu. Their content is what the File page's pages had (§5), with their
+buttons moved into the panel's footer, where Umbraco puts a side panel's actions:
+
+- **Open**: the recent images, Browse the media library, Upload from this computer. Footer: Cancel.
+- **Save as**: Replace or Save a copy, name and folder, format, quality, sizes, the preview, the
+  address warning. Footer: Cancel and the green action, which says what it does (Save copy, or
+  Replace *name*).
+- **Info**: the item's details in one box. Footer: Close.
+
+Escape on a panel puts the whole menu away, back to the picture; the arrow is the way back to the
+menu (my call). Opening an image or a successful save puts it away too. A failed save keeps the
+panel open with the reason, as the File page did.
+
+An item whose format cannot be kept (§6): Save, by button or Ctrl+S, opens the menu straight on Save
+as, on PNG with the warning, as it opened File on Save as before.
+
+### 14.4 Nothing open
+
+The editor starts with the canvas showing Open's content (D14): "Open an image", the recent images,
+Browse and Upload. The modes, undo, redo and Save are drawn and greyed; "..." works.
+
+### 14.5 Sizes
+
+The menu is narrower than the panels, and each panel has its own width; every one is capped at the
+window's width, so a small window gets a full-width panel rather than a cut one. Save as's content
+already fits the old File page's body at the smallest window (520 px), so the editor's smallest
+size need not grow. The numbers are the builder's, derived into constants that the CSS and the
+size tests both read, as `FILE_PAGE_MIN_SIZE` is now; the mock's 380, 760, 940 and 460 px are a
+starting point measured on a 1480 px window.
+
+### 14.6 Themes
+
+Two looks are new to the app tokens: the main action's colours (Save, and the green footer
+buttons) and the line under the tab in use. Neither has a token today (`app-accent` is what made
+Save look like a tab), so both go into the desktop's app token group and every theme gets them, per
+`docs/developer/theming.md`: green and Umbraco's pink line in the Umbraco themes, and each other
+theme its own idiom for a default button and a current tab. The panels use the surface, border and
+text tokens the File page already used. The menu and every panel are checked under all five themes
+in a real backoffice.
+
+### 14.7 What changes in code
+
+- Services.Media: the File page element becomes the file menu element, with the menu and the three
+  panels. The element, its tag, `show()` and its events may change name and shape: nothing is
+  released. Open's content is reachable on its own as well, for the empty canvas (D14). The types
+  copied into the Media package (`shared/file-page.ts`) and the developer page
+  (`opening-and-saving-media.md` §7) change in step.
+- Media: the mode bar loses the File tab and gains "..."; Save and the tabs get the new look; the
+  editor renders the menu instead of the page, and Open's content on the empty canvas.
+- The uncommitted hover fix in `mode-bar.ts` (a pressed tab and Save keep their colours under the
+  pointer) is kept in spirit: with the tabs no longer filled, its test changes to what the new look
+  needs, and Save keeps its colours under the pointer.
+- Words: the new labels and lines ("More", each command's line, Close menu, Open an image) go into
+  both packages' `en.ts` and `nl.ts`, which their parity tests hold together.
+- Docs: the user guide page and its screenshot, the developer page §7, and this section's outcome
+  once built.
+
+### 14.8 Outcome (built 2026-10-18)
+
+Built test-first in this branch, uncommitted. Checked in a real backoffice on this worktree's
+instance under all five themes: the empty canvas, opening from it, the bar's look (Save in the action
+colour, the tab in use underlined and not filled), the menu and its three panels at their widths and
+against the window's right edge, the arrow back, Escape, and a real Save from the menu's own Save.
+
+- **Names.** The element is `<umbradesktop-media-file-menu>` (`FILE_MENU_TAG`), in Services.Media's
+  `file-menu/`. Open on its own is `<umbradesktop-media-open-view>` (`OPEN_VIEW_TAG`), which fires
+  the same `open` and `failed` events. `show(panel = 'menu')` takes `'menu' | 'open' | 'saveAs' |
+  'info'`; the Save page is gone, since Save is a command. `-back` became `-hidden`, fired whenever the
+  menu goes away, whatever put it away. A `label` property gives the menu its title and Close its
+  line ("Close Image Editor").
+- **Tokens.** `--umbradesktop-app-action` and `--umbradesktop-app-action-text` (the main action's
+  fill and text, held to 4.5:1 in `app-tokens.test.ts` like the accent pair) and
+  `--umbradesktop-app-current` (the line under the tab in use). Fallbacks are Umbraco's
+  `--uui-color-positive`, `-positive-contrast` and `--uui-color-current`. Umbraco 4 uses a darker
+  green, macOS and Windows 11 their accent button, and Windows 98 its plain grey face with the bevel,
+  since it had no coloured buttons. The Save copy button in Save as uses the same pair.
+- **Sizes.** Menu 380 px, panels 760, 940 and 460 px, each capped at the editor's width.
+  `FILE_MENU_MIN_SIZE` is 520 × 542: Save as's form and the narrowest preview across, and its tallest
+  content (366 px, a copy, measured) between the panel's two 64 px bars. The editor's smallest box is
+  now derived from its own tallest panel (Adjust, 432 px, measured) and the menu's box, which made it
+  542 px tall instead of 608.
+- **"..."** is `uui-symbol-more`, Umbraco's own three dots. `icon-navigation-horizontal`, the first
+  pick, is a double arrow (and already Crop's flip).
+- **A command's line** wraps to two lines and is cut after that. One line was cut short under Umbraco
+  4, whose Verdana is wider, and the Save line carries the item's name, which can be long.
+- The open view is drawn on the canvas over the empty stage; its white page ground is the surface
+  token, not the sunken canvas grey of the mock.

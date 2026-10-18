@@ -20,7 +20,7 @@ export function fill(text: string, args: ReadonlyArray<unknown>): string {
  * fallback, so a backoffice where the dictionary failed to load still renders words.
  *
  * The fallback is read from `en.ts` rather than written out a second time beside each call, which
- * is how the other packages do it: the File page says many more things than one dialog does, and
+ * is how the other packages do it: the file menu says many more things than one dialog does, and
  * two copies of each sentence would drift. `termOrDefault` returns its default unfilled, so the
  * fallback is filled here.
  * @param localize The element's localization controller.

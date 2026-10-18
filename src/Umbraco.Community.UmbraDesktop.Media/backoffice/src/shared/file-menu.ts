@@ -1,21 +1,25 @@
 /*
- * The Image Editor's line to Services.Media's File page, `<umbradesktop-media-file-page>`. The
- * types below are **copies** of the service's (`file-page/types.ts` there), as its developer page
- * publishes them, because nothing is imported from another package: the element is reached by its
- * tag, and these say what it takes and fires.
+ * The Image Editor's line to Services.Media's file menu, `<umbradesktop-media-file-menu>`, and the
+ * open view beside it, `<umbradesktop-media-open-view>`. The types below are **copies** of the
+ * service's (`file-menu/types.ts` there), as its developer page publishes them, because nothing is
+ * imported from another package: the elements are reached by their tags, and these say what they
+ * take and fire.
  */
 
-/** The File page's tag. */
-export const FILE_PAGE_TAG = 'umbradesktop-media-file-page';
+/** The file menu's tag. */
+export const FILE_MENU_TAG = 'umbradesktop-media-file-menu';
 
-/** The File page's pages. */
-export type FilePageName = 'open' | 'save' | 'saveAs' | 'info';
+/** The open view's tag. */
+export const OPEN_VIEW_TAG = 'umbradesktop-media-open-view';
 
-/** A format the File page saves in. */
+/** What `show()` takes: the menu itself, or a panel over it. */
+export type FileMenuPanel = 'menu' | 'open' | 'saveAs' | 'info';
+
+/** A format the file menu saves in. */
 export type SaveFormat = 'jpeg' | 'png' | 'webp';
 
-/** What the editor has open, as the File page shows and saves it. */
-export interface FilePageDocument {
+/** What the editor has open, as the file menu shows and saves it. */
+export interface FileMenuDocument {
   /** The media item, or null when never saved. */
   unique: string | null;
   /** The name the person typed, which a save renames the item to. */
@@ -70,10 +74,10 @@ export type FileSaveOutcome =
   | { status: 'cancelled' }
   | { status: 'failed'; message?: string };
 
-/** The File page element, as far as the editor drives it. */
-export interface FilePageElement extends HTMLElement {
+/** The file menu element, as far as the editor drives it. */
+export interface FileMenuElement extends HTMLElement {
   /** What is open. */
-  document: FilePageDocument | null;
+  document: FileMenuDocument | null;
   /** Whether there is unsaved work. */
   dirty: boolean;
   /** The extensions the editor opens. */
@@ -84,34 +88,46 @@ export interface FilePageElement extends HTMLElement {
   preview?: string;
   /** Whether the next save resets the focal point and named crops. */
   resetFocalPoint: boolean;
+  /** The editor's name: the menu's title, and what Close says it closes. */
+  label?: string;
   /** Whether it shows. */
   open: boolean;
-  /** Show it on a page. */
-  show(page: FilePageName, options?: { format?: SaveFormat }): void;
-  /** Hide it. */
+  /** Show the menu, or a panel over it. */
+  show(panel?: FileMenuPanel, options?: { format?: SaveFormat }): void;
+  /** Put it away. */
   hide(): void;
   /** Save as the Save button does. */
   save(): Promise<FileSaveOutcome>;
 }
 
+/** The open view element, as far as the editor drives it. */
+export interface OpenViewElement extends HTMLElement {
+  /** Whether there is unsaved work. */
+  dirty: boolean;
+  /** The extensions the editor opens. */
+  accept: string[];
+  /** The heading over it. */
+  heading?: string;
+}
+
 /**
- * How long the editor waits for the File page's tag to be defined: Services.Media's bundle defines
+ * How long the editor waits for the file menu's tag to be defined: Services.Media's bundle defines
  * it with its context, which may load a moment after the editor does. Short, because without the
  * service the wait is all the person gets, the figure Accessories waits for the service itself.
  */
-export const FILE_PAGE_WAIT_MS = 500;
+export const FILE_MENU_WAIT_MS = 500;
 
 /**
- * Whether the File page can be used: true once its tag is defined, false if it is not within the
- * wait. A broken install, or a Services.Media that failed to load, is said in words rather than
- * thrown.
+ * Whether the file menu can be used: true once its tag is defined, false if it is not within the
+ * wait. The open view is defined in the same module load, so one answers for both. A broken install,
+ * or a Services.Media that failed to load, is said in words rather than thrown.
  * @param waitMs How long to wait.
  * @returns True when the tag is defined.
  */
-export async function whenFilePage(waitMs: number = FILE_PAGE_WAIT_MS): Promise<boolean> {
-  if (customElements.get(FILE_PAGE_TAG)) return true;
+export async function whenFileMenu(waitMs: number = FILE_MENU_WAIT_MS): Promise<boolean> {
+  if (customElements.get(FILE_MENU_TAG)) return true;
   return Promise.race([
-    customElements.whenDefined(FILE_PAGE_TAG).then(() => true),
+    customElements.whenDefined(FILE_MENU_TAG).then(() => true),
     new Promise<boolean>((resolve) => setTimeout(() => resolve(false), waitMs)),
   ]);
 }

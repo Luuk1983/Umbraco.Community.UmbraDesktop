@@ -4,7 +4,7 @@ import type { OpenableDetail } from './media-open.js';
 
 /**
  * What an open hands an app, mapped from the media item the backoffice returned. Beyond the file
- * itself, an editor needs where the item lives (the File page's Info, and a copy saved next to it)
+ * itself, an editor needs where the item lives (the file menu's Info, and a copy saved next to it)
  * and the focal point it has now (drawn in the Image Editor's Crop mode). Issue #136.
  */
 

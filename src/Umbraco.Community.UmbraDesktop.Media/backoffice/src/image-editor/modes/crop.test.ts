@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { control, defineFakeFilePage, mountEditor, openFixture, press, settle } from '../image-editor.test-helper.js';
+import { control, defineFakeFileMenu, mountEditor, openFixture, press, settle } from '../image-editor.test-helper.js';
 import { cropFrameOf } from './crop.js';
 import en from '../../localization/en.js';
 
@@ -8,17 +8,17 @@ import en from '../../localization/en.js';
  * ratios, rotate and flip, and the focal point drawn with the line about its reset (design §4.1).
  */
 
-defineFakeFilePage();
+defineFakeFileMenu();
 
 const words = en.umbraDesktopMedia;
 
 /** An editor with the 80 × 60 fixture open, in Crop. */
 async function cropping() {
-  const { editor, page } = await mountEditor();
-  await openFixture(editor, page!);
+  const { editor, menu } = await mountEditor();
+  await openFixture(editor, menu!);
   editor.setMode('crop');
   await settle(editor);
-  return { editor, page: page! };
+  return { editor, menu: menu! };
 }
 
 /** How many steps the history has behind it. */
@@ -152,8 +152,8 @@ it('draws the focal point where the item has it, and says a crop resets it', asy
 });
 
 it('draws no focal point for an item without one', async () => {
-  const { editor, page } = await mountEditor();
-  await openFixture(editor, page!, 'picture.png', { focalPoint: null });
+  const { editor, menu } = await mountEditor();
+  await openFixture(editor, menu!, 'picture.png', { focalPoint: null });
   editor.setMode('crop');
   await settle(editor);
   expect(editor.shadowRoot!.querySelector('.focal')).to.equal(null);

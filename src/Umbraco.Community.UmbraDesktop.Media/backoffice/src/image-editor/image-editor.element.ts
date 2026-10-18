@@ -1,11 +1,11 @@
 import { css, customElement, html, nothing, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { wordsOf } from '../shared/words.js';
-import { FILE_PAGE_TAG, whenFilePage } from '../shared/file-page.js';
-import type { FilePageDocument, FilePageElement, FilePageName, FileSavedDetail, FileSaveOutcome } from '../shared/file-page.js';
+import { FILE_MENU_TAG, OPEN_VIEW_TAG, whenFileMenu } from '../shared/file-menu.js';
+import type { FileMenuDocument, FileMenuElement, FileMenuPanel, FileSavedDetail, FileSaveOutcome, OpenViewElement } from '../shared/file-menu.js';
 import { MediaService } from '../shared/media-service.js';
 import type { OpenedMedia } from '../shared/media-service.js';
-import { ACCEPT, MODE_BAR_HEIGHT, PANEL_WIDTH } from './constants.js';
+import { ACCEPT, PANEL_WIDTH } from './constants.js';
 import { decodePicture } from './decode.js';
 import { encodeCanvas } from './encode.js';
 import type { SaveFormat } from './encode.js';
@@ -56,7 +56,7 @@ const MODE_MODULES: Record<Mode, ModeModule> = {
 /** The longest side of Save as's preview, in px: a picture's worth for the page's preview box. */
 const PREVIEW_SIDE = 640;
 
-/** What the editor has open: the File page's document, less what is derived from the picture. */
+/** What the editor has open: the file menu's document, less what is derived from the picture. */
 interface OpenDocument {
   /** The media item, or null when never saved. */
   unique: string | null;
@@ -81,10 +81,11 @@ interface OpenDocument {
  * save it back or as a copy. Issue #136; `docs/design/2026-10-17-image-editor-design.md`.
  *
  * **What it owns, and what it hands on.** The editor owns the picture and its history of states;
- * opening and saving are Services.Media's File page (D6), which it renders by tag name and gives its
- * document, its dirty flag and an encoder. The page runs the media library's own pickers and saves
- * and tells the editor what happened, and the editor takes the facts: a save marks the history saved,
- * a copy moves the editor onto the copy.
+ * opening and saving are Services.Media's file menu (D6, D12), which "..." opens and which it renders
+ * by tag name and gives its document, its dirty flag and an encoder; with nothing open, the service's
+ * open view is on the canvas instead (D14). They run the media library's own pickers and saves and
+ * tell the editor what happened, and the editor takes the facts: a save marks the history saved, a
+ * copy moves the editor onto the copy.
  *
  * **One history of whole states** (`history.ts`), so undo steps back past a save and the unsaved dot
  * follows the saved point; the D8 rule compares with the saved state (`focal.ts`). The picture is
@@ -92,7 +93,7 @@ interface OpenDocument {
  * adjustment as a live GPU filter on top (`stage.ts`).
  *
  * Its window's title is the open item's name and its unsaved dot is its history's, through the two
- * attributes the desktop reads (`data-umbradesktop-title`, `data-umbradesktop-dirty`); File's Close
+ * attributes the desktop reads (`data-umbradesktop-title`, `data-umbradesktop-dirty`); the menu's Close
  * closes the window through the desktop's unsaved guard (`umbradesktop-close-request`).
  */
 @customElement('umbradesktop-image-editor')
@@ -122,9 +123,9 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
   @state()
   mode: Mode = 'crop';
 
-  /** Whether the File page is showing. */
+  /** Whether the file menu is showing, over the whole editor. */
   @state()
-  filing = false;
+  menuOpen = false;
 
   /** What the editor last said in its status bar. */
   @state()
@@ -183,14 +184,14 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
     return !!this._document && (!!this.history?.dirty || this._name !== this._document.savedName);
   }
 
-  /** @returns The File page, once rendered and defined. */
-  get filePage(): FilePageElement | undefined {
-    const page = this.shadowRoot?.querySelector(FILE_PAGE_TAG) as FilePageElement | null;
-    return page && customElements.get(FILE_PAGE_TAG) ? page : undefined;
+  /** @returns The file menu, once rendered and defined. */
+  get fileMenu(): FileMenuElement | undefined {
+    const menu = this.shadowRoot?.querySelector(FILE_MENU_TAG) as FileMenuElement | null;
+    return menu && customElements.get(FILE_MENU_TAG) ? menu : undefined;
   }
 
-  /** @returns What the File page shows and saves: the open item with the picture's size as it will be saved. */
-  get filePageDocument(): FilePageDocument | null {
+  /** @returns What the file menu shows and saves: the open item with the picture's size as it will be saved. */
+  get fileMenuDocument(): FileMenuDocument | null {
     const doc = this._document;
     const current = this.state;
     if (!doc || !current) return null;
@@ -251,7 +252,7 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
    */
   setMode(mode: Mode): void {
     if (!this.hasDocument) return;
-    if (this.filing) this.#hideFile();
+    if (this.menuOpen) this.fileMenu?.hide();
     if (mode === this.mode) return;
     this.#leaveMode();
     this.mode = mode;
@@ -261,41 +262,42 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
   }
 
   /**
-   * Show the File page.
-   * @param page The page.
+   * Show the file menu, from "..." or a key: what the mode has pending is applied first, so Save as
+   * shows and saves what was seen.
+   * @param panel The menu, or the panel to slide in over it.
    * @param options For Save as, the format to start on.
    */
-  showFile(page: FilePageName, options?: { format?: SaveFormat }): void {
-    const filePage = this.filePage;
-    if (!filePage || !this.reachable) {
+  showMenu(panel: FileMenuPanel = 'menu', options?: { format?: SaveFormat }): void {
+    const menu = this.fileMenu;
+    if (!menu || !this.reachable) {
       this.notice = { kind: 'error', text: this.words('unreachable') };
       return;
     }
-    this.#leaveMode();
-    this.filing = true;
-    this.#syncFilePage();
+    if (!this.menuOpen) this.#leaveMode();
+    this.menuOpen = true;
+    this.#syncMenu();
     this.#refreshPreview();
-    filePage.show(page, options);
+    menu.show(panel, options);
   }
 
   /**
-   * Save as the Save button does, through the File page.
+   * Save as the Save button does, through the file menu.
    * @returns How it went, or undefined when there was nothing to save or nowhere to save it.
    */
   async save(): Promise<FileSaveOutcome | undefined> {
-    const page = this.filePage;
+    const menu = this.fileMenu;
     if (!this.hasDocument) return undefined;
-    if (!page || !this.reachable) {
+    if (!menu || !this.reachable) {
       this.notice = { kind: 'error', text: this.words('unreachable') };
       return undefined;
     }
     // What the mode has pending is applied first, so what is saved is what is seen; the mode's
-    // objects come back afterwards unless Save as was shown instead.
+    // objects come back afterwards unless the menu was shown on Save as instead.
     this.#leaveMode();
-    this.#syncFilePage();
-    const outcome = await page.save();
+    this.#syncMenu();
+    const outcome = await menu.save();
     if (outcome.status === 'needs-save-as') {
-      this.filing = true;
+      this.menuOpen = true;
       this.#refreshPreview();
     } else {
       MODE_MODULES[this.mode].enter?.(this);
@@ -381,30 +383,39 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
     this.toggleAttribute('data-umbradesktop-dirty', this.dirty);
     if (this._document) this.setAttribute('data-umbradesktop-title', this._name);
     else this.removeAttribute('data-umbradesktop-title');
-    this.#syncFilePage();
+    this.#syncMenu();
   }
 
-  /** Find out whether the media library is there, and start on Open when it is. */
+  /**
+   * Find out whether the media library is there. When it is, the empty canvas offers Open (D14);
+   * when it is not, the editor says so.
+   */
   async #findService(): Promise<void> {
-    const [page, service] = await Promise.all([whenFilePage(), this.#media.reachable()]);
-    this.reachable = page && service;
+    const [menu, service] = await Promise.all([whenFileMenu(), this.#media.reachable()]);
+    this.reachable = menu && service;
     await this.updateComplete;
-    if (!this.reachable) {
-      this.notice = { kind: 'error', text: this.words('unreachable') };
-      return;
-    }
-    if (!this.hasDocument) this.showFile('open');
+    if (!this.reachable) this.notice = { kind: 'error', text: this.words('unreachable') };
   }
 
-  /** Give the File page what it shows and saves. Its properties are set here rather than bound, since its tag may be defined late. */
-  #syncFilePage(): void {
-    const page = this.filePage;
-    if (!page) return;
-    page.document = this.filePageDocument;
-    page.dirty = this.dirty;
-    page.accept = [...ACCEPT];
-    page.resetFocalPoint = this.resetFocalPoint;
-    page.encode = this.hasDocument
+  /**
+   * Give the file menu what it shows and saves, and the open view what it opens. Their properties
+   * are set here rather than bound, since their tags may be defined late.
+   */
+  #syncMenu(): void {
+    const view = this.shadowRoot?.querySelector(OPEN_VIEW_TAG) as OpenViewElement | null;
+    if (view) {
+      view.accept = [...ACCEPT];
+      view.dirty = this.dirty;
+      view.heading = this.words('openAnImage');
+    }
+    const menu = this.fileMenu;
+    if (!menu) return;
+    menu.label = this.words('imageEditor');
+    menu.document = this.fileMenuDocument;
+    menu.dirty = this.dirty;
+    menu.accept = [...ACCEPT];
+    menu.resetFocalPoint = this.resetFocalPoint;
+    menu.encode = this.hasDocument
       ? async (format, quality) => {
           const picture = this.picture;
           const current = this.state;
@@ -412,10 +423,10 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
           return encodeCanvas(renderDocument(picture, current), format, quality);
         }
       : undefined;
-    page.preview = this.#previewUrl;
+    menu.preview = this.#previewUrl;
   }
 
-  /** Draw Save as's preview of the picture as it will be saved, while the File page shows. */
+  /** Draw Save as's preview of the picture as it will be saved, while the file menu shows. */
   #refreshPreview(): void {
     const picture = this.picture;
     const current = this.state;
@@ -426,15 +437,8 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
       if (!blob) return;
       if (this.#previewUrl) URL.revokeObjectURL(this.#previewUrl);
       this.#previewUrl = URL.createObjectURL(blob);
-      this.#syncFilePage();
+      this.#syncMenu();
     });
-  }
-
-  /** The File page went: the editor's own view is back. */
-  #hideFile(): void {
-    this.filePage?.hide();
-    this.filing = false;
-    MODE_MODULES[this.mode].enter?.(this);
   }
 
   /** Apply what the mode has pending, and take its objects off the canvas. */
@@ -442,13 +446,13 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
     if (this.hasDocument) MODE_MODULES[this.mode].leave?.(this);
   }
 
-  /** The history changed: re-render, redraw, and tell the File page. */
+  /** The history changed: re-render, redraw, and tell the file menu. */
   #changed(): void {
     this._revision++;
     this.#redrawView();
     this.#syncOverlays();
-    if (!this.filing) MODE_MODULES[this.mode].enter?.(this);
-    if (this.filing) this.#refreshPreview();
+    if (!this.menuOpen) MODE_MODULES[this.mode].enter?.(this);
+    if (this.menuOpen) this.#refreshPreview();
   }
 
   /**
@@ -522,9 +526,9 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
   }
 
   /**
-   * The File page opened a file: refuse what the editor does not edit, decode the rest, and start
-   * a history on it.
-   * @param event The page's event, with the file.
+   * The file menu or the open view opened a file: refuse what the editor does not edit, decode the
+   * rest, and start a history on it.
+   * @param event Their event, with the file.
    */
   #onOpen = async (event: Event) => {
     const file = (event as CustomEvent<OpenedMedia>).detail;
@@ -562,8 +566,9 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
     this.cropDraft = null;
     this.notice = animated ? { kind: 'info', text: this.words('animatedGif') } : undefined;
     this.#viewKey = '';
-    this.filePage?.hide();
-    this.filing = false;
+    // Before hiding, so the menu's hidden event finds it closed and leaves the mode to the lines below.
+    this.menuOpen = false;
+    this.fileMenu?.hide();
     this._revision++;
     await this.updateComplete;
     this.#redrawView();
@@ -572,9 +577,9 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
   };
 
   /**
-   * The File page saved: the history is saved there, and the editor takes what was written as its
+   * The file menu saved: the history is saved there, and the editor takes what was written as its
    * document's facts, so after a copy it is on the copy.
-   * @param event The page's event.
+   * @param event The menu's event.
    */
   #onSaved = (event: Event) => {
     const saved = (event as CustomEvent<FileSavedDetail>).detail;
@@ -598,21 +603,22 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
   };
 
   /**
-   * The File page could not open or save: say why.
-   * @param event The page's event.
+   * The file menu or the open view could not open, or the menu could not save: say why.
+   * @param event Their event.
    */
   #onFailed = (event: Event) => {
     const message = (event as CustomEvent<{ message?: string }>).detail?.message;
     this.notice = { kind: 'error', text: message ? message : this.words('notSaved') };
   };
 
-  /** The File page's Back: the editor's own view is back. */
-  #onBack = () => {
-    this.filing = false;
-    MODE_MODULES[this.mode].enter?.(this);
+  /** The file menu went away, whatever put it away: the editor's own view and its mode are back. */
+  #onHidden = () => {
+    if (!this.menuOpen) return;
+    this.menuOpen = false;
+    if (this.hasDocument) MODE_MODULES[this.mode].enter?.(this);
   };
 
-  /** The File page's Close: close the window, through the desktop's unsaved guard. */
+  /** The file menu's Close: close the window, through the desktop's unsaved guard. */
   #onClose = () => {
     this.dispatchEvent(new CustomEvent('umbradesktop-close-request', { bubbles: true, composed: true }));
   };
@@ -623,7 +629,7 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
    * **Shortcuts with Ctrl** are the editor's everywhere except in a field that takes typing, where
    * Ctrl+Z undoes the typing and not a crop. A slider, a checkbox or a button is not such a field:
    * after a slider drag, Ctrl+Z undoes the drag (design §4.2). Ctrl+S and Ctrl+Shift+S work even in
-   * a text field. **While the File page shows, Ctrl+S does nothing**: what Save as writes is what its
+   * a text field. **While the file menu shows, Ctrl+S does nothing**: what Save as writes is what its
    * own button says (a copy, another format), and Save from here would replace the original instead.
    *
    * **Keys without Ctrl** (Space to pan, Enter, Escape, Delete for the mode) are the editor's only
@@ -637,17 +643,17 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
     const key = event.key.toLowerCase();
     if (ctrl && key === 's') {
       event.preventDefault();
-      if (event.shiftKey) this.showFile('saveAs');
-      else if (!this.filing) void this.save();
+      if (event.shiftKey) this.showMenu('saveAs');
+      else if (!this.menuOpen) void this.save();
       return;
     }
     if (target && takesTyping(target)) return;
     if (ctrl && key === 'o') {
       event.preventDefault();
-      this.showFile('open');
+      this.showMenu('open');
       return;
     }
-    if (this.filing || !this.hasDocument) return;
+    if (this.menuOpen || !this.hasDocument) return;
     const onCanvas = !target || target === this || !!this.shadowRoot?.querySelector('.stage')?.contains(target);
     const handled = (() => {
       if (ctrl && key === 'z' && !event.shiftKey) return this.undo(), true;
@@ -678,7 +684,13 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
       <div class="middle">
         <div class="canvas">
           <div class="stage"></div>
-          <div class="overlay">${open && !this.filing ? MODE_MODULES[this.mode].overlay?.(this) ?? nothing : nothing}</div>
+          <div class="overlay">${open && !this.menuOpen ? MODE_MODULES[this.mode].overlay?.(this) ?? nothing : nothing}</div>
+          ${this.reachable && !open
+            ? html`<umbradesktop-media-open-view
+                class="open-view"
+                @umbradesktop-media-file-open=${this.#onOpen}
+                @umbradesktop-media-file-failed=${this.#onFailed}></umbradesktop-media-open-view>`
+            : nothing}
           ${this.reachable === false ? html`<p class="unreachable" role="alert">${this.words('unreachable')}</p>` : nothing}
         </div>
         <aside class="panel" aria-label=${this.words(`mode${this.mode[0].toUpperCase()}${this.mode.slice(1)}` as 'modeCrop')}>
@@ -686,13 +698,12 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
         </aside>
       </div>
       ${renderStatusBar(this)}
-      <umbradesktop-media-file-page
-        class="file-page"
+      <umbradesktop-media-file-menu
         @umbradesktop-media-file-open=${this.#onOpen}
         @umbradesktop-media-file-saved=${this.#onSaved}
         @umbradesktop-media-file-failed=${this.#onFailed}
-        @umbradesktop-media-file-back=${this.#onBack}
-        @umbradesktop-media-file-close=${this.#onClose}></umbradesktop-media-file-page>
+        @umbradesktop-media-file-hidden=${this.#onHidden}
+        @umbradesktop-media-file-close=${this.#onClose}></umbradesktop-media-file-menu>
     `;
   }
 
@@ -778,15 +789,14 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
         border-left: 1px solid var(--umbradesktop-app-border, var(--uui-color-text-alt));
       }
 
-      /* Not '.file', which is the File tab's class in the mode bar. */
-      .file-page {
+      /* Open on the empty canvas (D14), over the stage, which has nothing to show yet. */
+      .open-view {
         position: absolute;
-        top: ${MODE_BAR_HEIGHT}px;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 2;
+        inset: 0;
+        z-index: 1;
       }
+
+      /* The file menu places itself over the whole editor (its own :host), under the title bar. */
     `,
   ];
 }

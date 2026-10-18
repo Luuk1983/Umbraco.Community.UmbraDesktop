@@ -8,7 +8,7 @@ fs.mkdirSync(path.join(__dirname, 'shots'), { recursive: true });
 withPage(async (page) => {
   await page.goto(pathToFileURL(path.join(__dirname, '..', process.argv[2] ?? 'image-editor.html')).href, { waitUntil: 'load' });
   for (const id of await page.$$eval('figure.scene', (fs) => fs.map((f) => f.id))) {
-    const el = await page.$(`#${id} .screen, #${id} .tscreen`);
+    const el = await page.$(`#${id} .screen, #${id} .tscreen, #${id} .bscreen`);
     await el.screenshot({ path: path.join(__dirname, 'shots', `${id}.png`) });
   }
   console.log('done');

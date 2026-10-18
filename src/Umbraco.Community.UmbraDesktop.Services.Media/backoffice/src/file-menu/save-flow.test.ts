@@ -1,17 +1,17 @@
 import { expect } from '@open-wc/testing';
 import { runSave, saveAsDefaults } from './save-flow.js';
 import type { SaveChoice } from './save-flow.js';
-import type { FilePageDeps } from './deps.js';
-import type { FilePageDocument, FileSavedDetail, SaveFormat } from './types.js';
+import type { FileMenuDeps } from './deps.js';
+import type { FileMenuDocument, FileSavedDetail, SaveFormat } from './types.js';
 import type { MediaSaveRequest, MediaSaveResult } from '../files/media-save.js';
 
 /**
- * What a File page save sends to the media context, and what it hands back to the app. Pure apart
+ * What a file menu save sends to the media context, and what it hands back to the app. Pure apart
  * from the context, so every path is driven with a fake. Issue #136, design §6.
  */
 
 /** A document to save. */
-const DOC: FilePageDocument = {
+const DOC: FileMenuDocument = {
   unique: 'k1',
   name: 'beach',
   folder: 'f1',
@@ -27,7 +27,7 @@ const DOC: FilePageDocument = {
 function fakeContext(answers: MediaSaveResult[], overwrite = true) {
   const requests: MediaSaveRequest[] = [];
   let asked = 0;
-  const context: FilePageDeps['context'] = {
+  const context: FileMenuDeps['context'] = {
     open: async () => ({ status: 'cancelled' }),
     recent: async () => [],
     forgetRecent: () => undefined,
@@ -55,7 +55,7 @@ function fakeEncoder() {
 }
 
 /** Keep, as Save would choose it. */
-const keep = (document: FilePageDocument): SaveChoice => saveAsDefaults(document, '%0% (copy)');
+const keep = (document: FileMenuDocument): SaveChoice => saveAsDefaults(document, '%0% (copy)');
 
 it('starts Save as on replace, in the kept format at quality 90, with a copy named from the pattern', () => {
   expect(saveAsDefaults(DOC, '%0% (copy)')).to.deep.equal({
@@ -145,7 +145,7 @@ it('saves over the copy, with its date, once a copy was saved and the document m
   });
 
   // The app takes the saved facts as its document's, then presses Save.
-  const onCopy: FilePageDocument = { ...DOC, ...saved };
+  const onCopy: FileMenuDocument = { ...DOC, ...saved };
   await runSave(context, onCopy, keep(onCopy), encode, false);
   expect(requests[1].existing, 'the copy, never the original').to.equal('copy1');
   expect(requests[1].expectedUpdateDate).to.equal('c1');
@@ -153,7 +153,7 @@ it('saves over the copy, with its date, once a copy was saved and the document m
 
 it('creates an item for a document that was never saved, in its folder', async () => {
   const { context, requests } = fakeContext([]);
-  const never: FilePageDocument = { ...DOC, unique: null, updateDate: undefined };
+  const never: FileMenuDocument = { ...DOC, unique: null, updateDate: undefined };
   const outcome = await runSave(context, never, keep(never), fakeEncoder().encode, true);
   expect(requests[0].existing).to.equal(undefined);
   expect(requests[0].folder).to.equal('f1');
@@ -164,7 +164,7 @@ it('creates an item for a document that was never saved, in its folder', async (
 it("keeps the file's own name on a replace, so its address stays the same in its own format", async () => {
   const { context, requests } = fakeContext([]);
   const { encode } = fakeEncoder();
-  const named: FilePageDocument = { ...DOC, fileName: '16403439029_f500be349b_o.jpg' };
+  const named: FileMenuDocument = { ...DOC, fileName: '16403439029_f500be349b_o.jpg' };
   const kept = await runSave(context, named, keep(named), encode, false);
   expect(requests[0].file.name).to.equal('16403439029_f500be349b_o.jpg');
   expect(kept.status === 'saved' && kept.saved.fileName).to.equal('16403439029_f500be349b_o.jpg');

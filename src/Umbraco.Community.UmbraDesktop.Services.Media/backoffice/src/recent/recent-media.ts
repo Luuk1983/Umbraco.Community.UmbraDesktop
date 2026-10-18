@@ -1,6 +1,6 @@
 /**
  * The media files a person opened or saved lately through the media service, by any app, for the
- * File page's Open: the file you were working on a minute ago is one tap away instead of a walk
+ * file menu's Open: the file you were working on a minute ago is one tap away instead of a walk
  * through the media picker. Issue #136, design §5.
  *
  * Kept in the browser's `localStorage`, one list per backoffice user, because it is a convenience of
@@ -25,7 +25,7 @@ export interface RecentMediaEntry {
   at: number;
 }
 
-/** How many files the list keeps. Twelve fills the Open page's grid without scrolling at its size. */
+/** How many files the list keeps. Twelve fills Open's grid without scrolling at its size. */
 export const RECENT_LIMIT = 12;
 
 /** The storage key prefix, before the user's key. */

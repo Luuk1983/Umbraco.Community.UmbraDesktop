@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { Point } from 'fabric';
-import { control, defineFakeFilePage, mountEditor, openFixture, press, settle } from '../image-editor.test-helper.js';
+import { control, defineFakeFileMenu, mountEditor, openFixture, press, settle } from '../image-editor.test-helper.js';
 import { regionObjectsOf } from '../regions.js';
 import { REDACT_DEFAULT_STRENGTH, redactionBlock } from '../redact.js';
 
@@ -10,15 +10,15 @@ import { REDACT_DEFAULT_STRENGTH, redactionBlock } from '../redact.js';
  * under a region (design §4.1).
  */
 
-defineFakeFilePage();
+defineFakeFileMenu();
 
 /** An editor with the 80 × 60 fixture open, in Redact. */
 async function redacting() {
-  const { editor, page } = await mountEditor();
-  await openFixture(editor, page!);
+  const { editor, menu } = await mountEditor();
+  await openFixture(editor, menu!);
   editor.setMode('redact');
   await settle(editor);
-  return { editor, page: page! };
+  return { editor, menu: menu! };
 }
 
 /** How many steps the history has behind it. */
@@ -126,9 +126,9 @@ it('draws a region redacted on the canvas as soon as it is drawn', async () => {
 });
 
 it('saves none of the original pixels under a region', async () => {
-  const { editor, page } = await redacting();
+  const { editor, menu } = await redacting();
   await dragOnCanvas(editor, new Point(0, 0), new Point(48, 32));
-  const bitmap = await createImageBitmap(await page.encode!('png', 90));
+  const bitmap = await createImageBitmap(await menu.encode!('png', 90));
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const context = canvas.getContext('2d')!;
   context.drawImage(bitmap, 0, 0);

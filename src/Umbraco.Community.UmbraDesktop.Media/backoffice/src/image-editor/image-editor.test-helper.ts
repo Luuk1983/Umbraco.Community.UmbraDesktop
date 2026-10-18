@@ -3,28 +3,29 @@ import { UmbContextToken } from '@umbraco-cms/backoffice/context-api';
 import type { UmbContextMinimal } from '@umbraco-cms/backoffice/context-api';
 import { customElement } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
-import type { FileEncoder, FilePageDocument, FilePageName, FileSaveOutcome, SaveFormat } from '../shared/file-page.js';
+import type { FileEncoder, FileMenuDocument, FileMenuPanel, FileSaveOutcome, SaveFormat } from '../shared/file-menu.js';
 import type { OpenedMedia } from '../shared/media-service.js';
 import { IMAGE_EDITOR_CONTENT_SIZE } from './constants.js';
 import './image-editor.element.js';
 import type { UmbraDesktopImageEditorElement } from './image-editor.element.js';
 
 /**
- * What the editor's tests stand on: a fake of Services.Media's File page under its real tag, a fake
- * media context under its published alias, and a mounted editor in a window-sized box. Nothing here
- * reaches a backoffice; the File page's own behaviour is Services.Media's to test.
+ * What the editor's tests stand on: fakes of Services.Media's file menu and open view under their
+ * real tags, a fake media context under its published alias, and a mounted editor in a window-sized
+ * box. Nothing here reaches a backoffice; the menu's own behaviour is Services.Media's to test.
  */
 
-/** A stand-in File page that records what the editor asks of it and answers as the real one does. */
-export class FakeFilePage extends HTMLElement {
-  document: FilePageDocument | null = null;
+/** A stand-in file menu that records what the editor asks of it and answers as the real one does. */
+export class FakeFileMenu extends HTMLElement {
+  document: FileMenuDocument | null = null;
   dirty = false;
   accept: string[] = [];
   encode?: FileEncoder;
   preview?: string;
   resetFocalPoint = false;
-  /** The pages shown, in order. */
-  shown: Array<{ page: FilePageName; format?: SaveFormat }> = [];
+  label?: string;
+  /** What was shown, in order: the menu or a panel. */
+  shown: Array<{ panel: FileMenuPanel; format?: SaveFormat }> = [];
   /** How many times `save()` was called. */
   saves = 0;
   /** What the next `save()` answers, unless the format cannot be kept. */
@@ -37,13 +38,16 @@ export class FakeFilePage extends HTMLElement {
     this.toggleAttribute('open', value);
   }
 
-  show(page: FilePageName, options: { format?: SaveFormat } = {}): void {
-    this.shown.push({ page, ...options });
+  show(panel: FileMenuPanel = 'menu', options: { format?: SaveFormat } = {}): void {
+    this.shown.push({ panel, ...options });
     this.open = true;
   }
 
+  /** Put it away and say so, as the real menu does whatever put it away. */
   hide(): void {
+    if (!this.open) return;
     this.open = false;
+    this.fire('hidden');
   }
 
   async save(): Promise<FileSaveOutcome> {
@@ -56,7 +60,7 @@ export class FakeFilePage extends HTMLElement {
   }
 
   /**
-   * Fire one of the page's events, as the real page does.
+   * Fire one of the menu's events, as the real menu does.
    * @param name The event's name, without the `umbradesktop-media-file-` prefix.
    * @param detail What it carries.
    */
@@ -65,9 +69,26 @@ export class FakeFilePage extends HTMLElement {
   }
 }
 
-/** Registers the fake under the File page's tag, once per test page. */
-export function defineFakeFilePage(): void {
-  if (!customElements.get('umbradesktop-media-file-page')) customElements.define('umbradesktop-media-file-page', FakeFilePage);
+/** A stand-in open view, which an editor with nothing open shows on its canvas. */
+export class FakeOpenView extends HTMLElement {
+  dirty = false;
+  accept: string[] = [];
+  heading?: string;
+
+  /**
+   * Fire one of the view's events, as the real view does.
+   * @param name The event's name, without the `umbradesktop-media-file-` prefix.
+   * @param detail What it carries.
+   */
+  fire(name: string, detail?: unknown): void {
+    this.dispatchEvent(new CustomEvent(`umbradesktop-media-file-${name}`, { detail, bubbles: true, composed: true }));
+  }
+}
+
+/** Registers the fakes under the file menu's and the open view's tags, once per test page. */
+export function defineFakeFileMenu(): void {
+  if (!customElements.get('umbradesktop-media-file-menu')) customElements.define('umbradesktop-media-file-menu', FakeFileMenu);
+  if (!customElements.get('umbradesktop-media-open-view')) customElements.define('umbradesktop-media-open-view', FakeOpenView);
 }
 
 /**
@@ -88,7 +109,7 @@ const MEDIA = new UmbContextToken<UmbContextMinimal>('UmbraDesktopMediaContext')
 /**
  * An editor mounted in a box of its default size, with the media context provided or not.
  * @param options Whether to provide the context.
- * @returns The editor and its fake File page.
+ * @returns The editor and its fake file menu.
  */
 export async function mountEditor(options: { media?: boolean } = {}) {
   const host = await fixture<TestHost>(
@@ -102,8 +123,8 @@ export async function mountEditor(options: { media?: boolean } = {}) {
   host.appendChild(editor);
   await editor.updateComplete;
   await settle(editor);
-  const page = editor.shadowRoot!.querySelector('umbradesktop-media-file-page') as FakeFilePage | null;
-  return { host, editor, page };
+  const menu = editor.shadowRoot!.querySelector('umbradesktop-media-file-menu') as FakeFileMenu | null;
+  return { host, editor, menu };
 }
 
 /**
@@ -141,20 +162,20 @@ export async function opened(name: string, overrides: Partial<OpenedMedia> = {})
 }
 
 /**
- * Open a fixture in the editor through its File page, as a pick from the media library would.
+ * Open a fixture in the editor through its file menu, as a pick from the media library would.
  * @param editor The editor.
- * @param page Its File page.
+ * @param menu Its file menu.
  * @param name The fixture.
  * @param overrides Fields to change.
  */
 export async function openFixture(
   editor: UmbraDesktopImageEditorElement,
-  page: FakeFilePage,
+  menu: FakeFileMenu,
   name = 'picture.png',
   overrides: Partial<OpenedMedia> = {},
 ): Promise<void> {
   const before = editor.picture;
-  page.fire('open', await opened(name, overrides));
+  menu.fire('open', await opened(name, overrides));
   // The first open on a test page also starts Fabric's GPU filtering, which takes longer than a few
   // ticks; wait for the picture itself, up to a limit, rather than for a guessed number of them.
   const deadline = performance.now() + 5000;

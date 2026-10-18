@@ -2,18 +2,18 @@ import { css, html, nothing } from '@umbraco-cms/backoffice/external/lit';
 import type { TemplateResult } from '@umbraco-cms/backoffice/external/lit';
 import type { WordKey } from '../shared/words.js';
 import { MEASURE_DEBOUNCE_MS, PAGE_GAP, SAVE_AS_FORM_WIDTH, SAVE_AS_PREVIEW_MIN_WIDTH } from './constants.js';
-import type { FilePageDeps } from './deps.js';
+import type { FileMenuDeps } from './deps.js';
 import { SAVE_FORMATS, addressChanges, formatBytes, formatLabel, keepFormatFor } from './formats.js';
 import { saveAsDefaults } from './save-flow.js';
 import type { SaveChoice } from './save-flow.js';
-import type { FileEncoder, FilePageDocument, SaveFormat } from './types.js';
+import type { FileEncoder, FileMenuDocument, SaveFormat } from './types.js';
 
 /** What Save as reads from the element that shows it. */
 export interface SaveAsPageHost {
   /** The deps in use. */
-  readonly deps: FilePageDeps;
+  readonly deps: FileMenuDeps;
   /** What is open. */
-  readonly document: FilePageDocument | null;
+  readonly document: FileMenuDocument | null;
   /** How the app encodes its document. */
   readonly encode?: FileEncoder;
   /** The picture as it will be saved. */
@@ -28,8 +28,6 @@ export interface SaveAsPageHost {
   save(choice: SaveChoice): void;
   /** Render again. */
   requestUpdate(): void;
-  /** What the last save said, rendered under the Save button. */
-  status(): TemplateResult | typeof nothing;
 }
 
 /** Save as's format list: Keep, then each format by name. */
@@ -64,7 +62,7 @@ export class SaveAsPage {
   /** Counts measurements, so a stale one is dropped. */
   #generation = 0;
 
-  /** @param host The element showing the page. */
+  /** @param host The element showing Save as. */
   constructor(host: SaveAsPageHost) {
     this.#host = host;
   }
@@ -165,12 +163,40 @@ export class SaveAsPage {
     </button>`;
   }
 
-  /** @returns The page's content. */
+  /** @returns The choice as it would be saved, or undefined while nothing is open. */
+  #ready(): SaveChoice | undefined {
+    const choice = this.#choice;
+    if (!this.#host.document || !choice) return undefined;
+    return { ...choice, format: this.#resolved(), name: choice.name.trim() };
+  }
+
+  /**
+   * The button that saves: Replace *name* or Save copy, saying what it will do. In the panel's
+   * footer, where Umbraco puts a side panel's actions (design §14.3).
+   * @returns The button, or nothing while nothing is open.
+   */
+  renderAction(): TemplateResult | typeof nothing {
+    const host = this.#host;
+    const document = host.document;
+    const ready = this.#ready();
+    if (!document || !ready) return nothing;
+    const copy = ready.mode === 'copy';
+    return html`<button
+      type="button"
+      class="button action"
+      data-action="save"
+      ?disabled=${host.saving || (copy && !ready.name)}
+      @click=${() => host.save(ready)}>
+      ${copy ? host.words('saveAsSaveCopy') : host.words('saveAsReplace', document.name)}
+    </button>`;
+  }
+
+  /** @returns Save as's content, without its heading (the panel's title) and its button (the footer's). */
   render(): TemplateResult {
     const host = this.#host;
     const document = host.document;
     const choice = this.#choice;
-    if (!document || !choice) return html`<h2>${host.words('saveAsHeading')}</h2>`;
+    if (!document || !choice) return html``;
     const words = host.words.bind(host);
     const copy = choice.mode === 'copy';
     const kept = keepFormatFor(document.extension);
@@ -180,7 +206,6 @@ export class SaveAsPage {
     const folderLabel = where ?? (choice.folder === null ? words('saveAsRoot') : '');
     const formats: FormatChoice[] = ['keep', ...SAVE_FORMATS];
     return html`
-      <h2>${words('saveAsHeading')}</h2>
       <p class="muted">${copy ? words('saveAsCopyLede', document.name) : words('saveAsReplaceLede', document.name)}</p>
       <div class="save-as">
         <div class="form">
@@ -248,17 +273,6 @@ export class SaveAsPage {
                 <umb-icon name="icon-alert"></umb-icon><span>${words('saveAsAddressWarning')}</span>
               </p>`
             : nothing}
-          <div class="actions">
-            <button
-              type="button"
-              class="button primary"
-              data-action="save"
-              ?disabled=${host.saving || (copy && !choice.name.trim())}
-              @click=${() => host.save({ ...choice, format, name: choice.name.trim() })}>
-              ${copy ? words('saveAsSaveCopy') : words('saveAsReplace', document.name)}
-            </button>
-          </div>
-          ${host.status()}
         </div>
         <figure class="preview-box">
           ${host.preview ? html`<img class="preview" src=${host.preview} alt="" />` : html`<span class="preview"></span>`}
