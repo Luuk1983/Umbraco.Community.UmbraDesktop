@@ -226,8 +226,10 @@ export class UmbraDesktopLauncherElement extends UmbLitElement {
     this.consumeContext(UMBRADESKTOP_APP_CATALOGUE_CONTEXT, (ctx) => {
       if (!ctx) return;
       this.observe(ctx.apps, (apps) => {
-        this._apps = apps;
-        this.#search.setApps(apps);
+        // A window its package opens itself is not something to start from here (`hideFromLauncher`).
+        const launchable = apps.filter((app) => !app.hideFromLauncher);
+        this._apps = launchable;
+        this.#search.setApps(launchable);
       });
       this.observe(ctx.catalogueGroups, (groups) => (this._catalogueGroups = groups));
     });

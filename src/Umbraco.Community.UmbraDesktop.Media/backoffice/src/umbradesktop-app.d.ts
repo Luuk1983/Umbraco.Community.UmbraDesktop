@@ -1,61 +1,42 @@
-import type { ManifestElement, ManifestWithDynamicConditions } from '@umbraco-cms/backoffice/extension-api';
+import type {
+  ManifestApi,
+  ManifestElement,
+  ManifestWithDynamicConditions,
+  UmbApi,
+} from '@umbraco-cms/backoffice/extension-api';
 
 /**
- * The desktop's manifest types, `umbraDesktopApp`, `umbraDesktopCatalogue`, `umbraDesktopDocs` and
- * `umbraDesktopPackageSettings`, declared here because a consuming package cannot import them.
- *
- * **This file is a hand-written copy of a contract that lives in another package, and it exists
- * because there is currently no other way.** UmbraDesktop's own `app.extension.ts` and
- * `catalogue.extension.ts` declare these types and register them in Umbraco's
- * `UmbExtensionManifestMap`, but those declarations reach nobody
- * outside its own project: the host's npm package is `private`, its NuGet package ships built
- * JavaScript rather than TypeScript, and `docs/developer/desktop-apps.md` makes a virtue of the contract
- * being structural, so nothing is imported from the host at all.
- *
- * The consequence is not a warning but a build failure, and one whose message points at the wrong
- * thing. Without this file, `type: 'umbraDesktopApp'` matches no arm of the `UmbExtensionManifest`
- * union, TypeScript falls back to `ManifestBase`, and the only complaint is
- * `TS2353: 'element' does not exist in type 'ManifestBase'`. Every other field is quietly accepted,
- * so an author reads that as "my element field is wrong" and goes looking at the loader, which is
- * correct. The one line naming the real problem is not printed.
- *
- * Kept to the fields §2 of the guide documents and no more. It will drift if the host adds a field,
- * and a drifted copy is still better than no types: an extra field the host reads and this file
- * does not know about fails the same way, loudly, at build time.
+ * The desktop manifest types this package registers, declared here because a consuming package
+ * cannot import them. Accessories' `umbradesktop-app.d.ts` explains why this copy has to exist and
+ * what fails without it; this one is cut down to the types this package uses, and carries the host
+ * additions the Media Manager relies on (`hideFromLauncher`, and the attached-page events and
+ * property below).
  */
+
+/** What an `umbraDesktopApp` manifest carries. A copy of the host's `MetaUmbraDesktopApp`. */
 interface MetaUmbraDesktopApp {
   /** Window title, taskbar label and launcher tile text. A localisation token or a literal. */
   label: string;
-  /** Native Umbraco icon alias, e.g. `icon-bomb`. Falls back to `icon-box`. */
+  /** Native Umbraco icon alias. Falls back to `icon-box`. */
   icon?: string;
   /** Launcher group alias. Unknown or unset lands the app in the reserved More group. */
   group?: string;
   /** Opening **content** size in px: the app's own box, with the chrome added by the host. */
   defaultSize?: { w: number; h: number };
-  /**
-   * Smallest **content** box the app can work in; falls back to the desktop's global content
-   * minimum. The host floors the window at what its own chrome needs, so a small number here
-   * cannot cost a window its controls.
-   */
+  /** Smallest **content** box the app can work in. */
   minSize?: { w: number; h: number };
   /** Whether two windows of this app may be open at once. */
   allowMultiple?: boolean;
   /** Whether the window may be resized or maximized. Default: allowed. */
   resizable?: boolean;
   /**
-   * A package name: choosing the tile opens Desktop settings at that package's row instead of a
-   * window, and `element` is then never loaded. How the Screen Saver tile still leads to its settings.
+   * The app has no launcher tile and no search result, and opens only when another app asks for it
+   * with `openApp`. For a window that belongs to a feature rather than to the person, such as Transfers.
    */
-  opensSettings?: string;
+  hideFromLauncher?: boolean;
 }
 
-/**
- * A self-contained desktop app: one custom element, opened in a window.
- *
- * `ManifestElement` is where `element`, `alias`, `name` and `weight` come from, and
- * `ManifestWithDynamicConditions` is what makes Umbraco's own conditions apply, both exactly as in
- * the host's declaration. See {@link MetaUmbraDesktopApp} for why this is written out here.
- */
+/** A self-contained desktop app: one custom element, opened in a window. */
 interface ManifestUmbraDesktopApp extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions {
   /** Discriminates this manifest from every other extension type. */
   type: 'umbraDesktopApp';
@@ -65,7 +46,7 @@ interface ManifestUmbraDesktopApp extends ManifestElement<HTMLElement>, Manifest
 
 /** A launcher group this package defines. A copy of the host's `UmbraDesktopPackageGroup`. */
 interface UmbraDesktopPackageGroup {
-  /** Stable id, named by an app's `meta.group` or an entry's `group`. */
+  /** Stable id, named by an app's `meta.group`. */
   alias: string;
   /** Heading text: a localisation token from this package's dictionary, or a literal. */
   label: string;
@@ -73,54 +54,20 @@ interface UmbraDesktopPackageGroup {
   weight?: number;
 }
 
-/** A deep link into one of this package's backoffice screens. A copy of the host's `UmbraDesktopPackageEntry`. */
-interface UmbraDesktopPackageEntry {
-  /** Stable app id and pin key. Reuse one of the host's aliases to replace that entry. */
-  alias: string;
-  /** Alias of a registered section, dashboard or default-kind menu item; the URL is inferred from it. */
-  ref?: string;
-  /** An explicit backoffice path under `/umbraco/section/` on this site, for what `ref` cannot infer. */
-  url?: string;
-  /** Permission gate; required with a menu-item `ref` or a `url`. */
-  section?: string;
-  /** Window title and tile text; defaults to the referenced extension's label. */
-  name?: string;
-  /** Native Umbraco icon alias; defaults to the referenced extension's icon. */
-  icon?: string;
-  /** How much backoffice chrome the window keeps. Defaults to `full-section`. */
-  chromeProfile?: 'full-section' | 'workspace-only' | 'bare';
-  /** The window body's opening size in px; the host adds the theme's chrome. */
-  defaultSize?: { w: number; h: number };
-  /** The smallest body in px; floored at what the theme's chrome needs. */
-  minSize?: { w: number; h: number };
-  /** Whether two windows of it may be open at once. */
-  allowMultiple?: boolean;
-  /** Whether the window may be resized or maximized. Default: allowed. */
-  resizable?: boolean;
-  /** Position within its group, **lower first**, like the host's own entries. */
-  weight?: number;
-  /** Launcher group alias. */
-  group?: string;
-  /** Mount-independent condition aliases on the referenced extension to answer before showing it. */
-  evaluateConditions?: string[];
-}
-
-/** What a `umbraDesktopCatalogue` manifest carries. A copy of the host's `MetaUmbraDesktopCatalogue`. */
+/**
+ * What a `umbraDesktopCatalogue` manifest carries: a copy of the host's `MetaUmbraDesktopCatalogue`,
+ * less the `entries` this package has no use for, since it has no backoffice screen of its own.
+ */
 interface MetaUmbraDesktopCatalogue {
   /** Launcher groups this package defines. */
   groups?: UmbraDesktopPackageGroup[];
-  /** Deep links into this package's backoffice screens. */
-  entries?: UmbraDesktopPackageEntry[];
 }
 
-/**
- * A package's catalogue: its own launcher groups and backoffice deep links, as data. The host promises
- * these types only ever gain optional fields, which is what keeps this copy correct while it lags.
- */
+/** A package's catalogue: its own launcher groups, as data. Only ever gains optional fields. */
 interface ManifestUmbraDesktopCatalogue extends ManifestWithDynamicConditions {
   /** Discriminates this manifest from every other extension type. */
   type: 'umbraDesktopCatalogue';
-  /** The groups and entries. */
+  /** The groups. */
   meta: MetaUmbraDesktopCatalogue;
 }
 
@@ -130,7 +77,7 @@ interface MetaUmbraDesktopDocs {
   path: string;
 }
 
-/** A package's docs for the Help app, as data. Only ever gains optional fields, like the others. */
+/** A package's docs for the Help app, as data. Only ever gains optional fields. */
 interface ManifestUmbraDesktopDocs extends ManifestWithDynamicConditions {
   /** Discriminates this manifest from every other extension type. */
   type: 'umbraDesktopDocs';
@@ -138,37 +85,57 @@ interface ManifestUmbraDesktopDocs extends ManifestWithDynamicConditions {
   meta: MetaUmbraDesktopDocs;
 }
 
-/** Copy of the host's `MetaUmbraDesktopPackageSettings`. See the top of this file for why it is a copy. */
-interface MetaUmbraDesktopPackageSettings {
-  /** The package's name, plain text: the row it is shown under. */
-  package: string;
-  /** The box's heading, a localisation token or a literal. */
-  label: string;
-}
-
-/** One box of this package's settings in Desktop settings. Only ever gains optional fields, like the others. */
-interface ManifestUmbraDesktopPackageSettings extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions {
+/** A package context on the desktop element. A copy of the host's `ManifestUmbraDesktopContext`. */
+interface ManifestUmbraDesktopContext extends ManifestApi<UmbApi>, ManifestWithDynamicConditions {
   /** Discriminates this manifest from every other extension type. */
-  type: 'umbraDesktopPackageSettings';
-  /** Its package and heading. */
-  meta: MetaUmbraDesktopPackageSettings;
+  type: 'umbraDesktopContext';
 }
 
 declare global {
   /**
-   * Adds `umbraDesktopApp`, `umbraDesktopCatalogue`, `umbraDesktopDocs` and `umbraDesktopPackageSettings`
-   * to Umbraco's own extension type map, which is what makes the manifests assignable to
-   * `UmbExtensionManifest` and so accepted in this package's `manifests` array. Umbraco's own
-   * extension kinds declare themselves the same way, and so does the host.
+   * What `umbradesktop-open-attached` carries: a backoffice page to show beside the app's own window.
+   * A copy of the host's contract (`docs/developer/desktop-apps.md`). One page per key; the same key
+   * again routes the open page, and the page it is already on only renames it.
    */
+  interface UmbraDesktopOpenAttachedDetail {
+    /** The app's own name for the page. */
+    key: string;
+    /** The page, under `/umbraco/section/`. Anything else is refused. */
+    path: string;
+    /** The pane header and window title. */
+    name: string;
+    /** The pane header and window icon. */
+    icon: string;
+    /** Open it as a window even where a pane would fit, as Shift-click asks. */
+    floating?: boolean;
+  }
+
+  /** What `umbradesktop-close-attached` carries: the key of the page to close, asking first if dirty. */
+  interface UmbraDesktopCloseAttachedDetail {
+    /** The key the page was opened under. */
+    key: string;
+  }
+
+  /**
+   * `umbradesktop-app-focus` carries no detail: it brings the app's window and its group forward,
+   * restoring it when minimised (`docs/developer/desktop-apps.md` §7.6).
+   */
+  type UmbraDesktopAppFocusDetail = undefined;
+
+  /**
+   * What the desktop sets as an app element's `attached` property: each key the app has a page open
+   * under, and the page it is on now. Missing once it closes.
+   */
+  type UmbraDesktopAttachedPages = Readonly<Record<string, string>>;
+
+  /** Adds the desktop types to Umbraco's extension type map, so the manifests are `UmbExtensionManifest`s. */
   interface UmbExtensionManifestMap {
     /** This package's desktop apps. */
     umbraDesktopApp: ManifestUmbraDesktopApp;
-    /** This package's launcher groups. */
-    umbraDesktopCatalogue: ManifestUmbraDesktopCatalogue;
     /** This package's docs, for the Help app. */
+    umbraDesktopCatalogue: ManifestUmbraDesktopCatalogue;
     umbraDesktopDocs: ManifestUmbraDesktopDocs;
-    /** This package's boxes in Desktop settings. */
-    umbraDesktopPackageSettings: ManifestUmbraDesktopPackageSettings;
+    /** This package's desktop-level context. */
+    umbraDesktopContext: ManifestUmbraDesktopContext;
   }
 }

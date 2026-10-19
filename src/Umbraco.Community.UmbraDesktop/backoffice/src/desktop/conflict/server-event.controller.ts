@@ -33,7 +33,8 @@ export class UmbraDesktopServerEventController extends UmbControllerBase {
   constructor(host: UmbControllerHost, manager: UmbraDesktopWindowManagerContext) {
     super(host);
     this.#router = createServerEventRouter({
-      windows: () => manager.getWindows(),
+      // Windows and the backoffice pages in their panes (#144), each matched by its own id.
+      windows: () => manager.serverEventTargets(),
       subjectsOf: (id) => manager.subjectsOf(id),
       setServerState: (id, patch) => manager.setServerState(id, patch),
       setRefreshing: (id, refreshing) => manager.setRefreshing(id, refreshing),

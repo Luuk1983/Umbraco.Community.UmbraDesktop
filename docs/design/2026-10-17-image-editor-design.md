@@ -523,3 +523,81 @@ against the window's right edge, the arrow back, Escape, and a real Save from th
   - The menu bounced as it slid in. Focusing the first command while the sheet was still off to the
     right scrolled the menu's box sideways to show it (380 px on the first frame), and the scroll and
     the slide fought until both reached zero. Focus now moves with `preventScroll`.
+
+## 15. Merging with the Media Manager (#144)
+
+The Media Manager (#144, PR #155, design [`2026-10-17-media-manager-design.md`](2026-10-17-media-manager-design.md))
+reached main while this branch was open, and both had created `src/Umbraco.Community.UmbraDesktop.Media`
+from scratch. Merged on 2026-10-19 (main at `dc562b3`), part by part rather than one side wholesale.
+
+### 15.1 The package
+
+| Part | Taken | Why |
+|---|---|---|
+| csproj | This branch's, description and tags covering both apps | It packs `THIRD-PARTY-NOTICES.md` (D10) and references Services.Media, which the Image Editor needs and installing the add-on must bring. Main's had neither, since the Manager bundles no npm code and does not use the media service. |
+| `package.json` | This branch's | Adds Fabric 7.4.0; otherwise identical. |
+| `package-lock.json` | Main's, re-resolved with `npm install` | Main's resolutions are newer; Fabric's tree is added on top. |
+| `packages.lock.json` | This branch's | The one that lists Services.Media. |
+| `vite.config.ts` | This branch's | It has the licence check (D10, §9). It now traces the Manager's chunks too: they bundle no npm package, so only the Image Editor's chunk starts with a notice. Checked in the build output. |
+| `web-test-runner.config.mjs` | This branch's | 20 s per test for the 6000 × 4000 rendering tests; both ran one file at a time. |
+| `tsconfig.json` | Either | Identical. |
+| `umbraco-package.json` | Main's | Only the bundle's display name differed. |
+| `umbradesktop-app.d.ts` | Main's | Cut down to what this package uses, and it carries the host additions the Manager needs (`hideFromLauncher`, `umbraDesktopContext`, the attached-page events). This branch's carried catalogue entries and package settings, which neither app uses. |
+| `localization/manifest.ts` | Main's | Its aliases start with the package id, which main's manifest test holds every alias to; this branch's were `UmbraDesktop.Media.Localization.*`. |
+| `en.ts`, `nl.ts` | Both, one dictionary | Only `groupMedia` was in both, with the same words. Main's `appName` is now `mediaManager`, since the package has two apps. The parity test was the same in both. |
+| `bundle.manifests.ts` and its test | Main's, with the Image Editor added | Main's alias constant (`UMBRADESKTOP_MEDIA_ALIAS`) and tests, with this branch's Image Editor tests folded in. |
+| Help docs manifest, `docs/product.json` | Either | Identical. |
+| `.github/actions/build-packages/action.yml`, the `.slnx`, the TestInstance | Main's | Main already listed the package everywhere; this branch's lines matched them and are kept once. The pack check's comment says Media depends on the media service, which is now true. |
+| C# test project | None | Neither has server code. |
+
+The shared helpers do not overlap. `shared/media-service.ts`, `shared/file-menu.ts`, `shared/words.ts`
+and `shared/area.ts` are the Image Editor's, for reaching Services.Media. The Manager never reaches
+Services.Media: it hosts the Media section's own collection, tree and workspace, and moves and copies
+through `operations/media-api.ts`. Both kept as they are.
+
+### 15.2 The launcher
+
+The group was already one: #144 took this branch's alias, label and weight 52 for its Media group on
+purpose (its design §16). Three choices were the owner's, on 2026-10-19:
+
+- **The Media Manager comes first** in the group. It gets a root `weight` of 1100, above the Image
+  Editor's 1000; left unset it competes as zero and would have sat behind the editor.
+- **The Image Editor shows only for someone who may use the Media section**, the Manager's rule.
+  This replaces "no conditions" (§7, after Accessories): the editor saves to media items, which the
+  management API refuses without the Media section, and two apps of one group should show or hide
+  together.
+- **Different icons**: the Manager `icon-folders`, the Image Editor keeps `icon-picture`. Both had
+  `icon-picture`. `icon-pictures` was chosen first, on the guess from its name that it draws two
+  pictures; in the real launcher it is a camera, so names are no guide: render the icon before
+  choosing it.
+
+### 15.3 The window's title
+
+Two channels for the same thing, and only one may survive. Main's is the published one: an app
+dispatches `umbradesktop-app-title` with `{ title }`, the window shows it on its title bar and taskbar
+button, the title is saved with the layout, and `docs/developer/desktop-apps.md` §7.3 documents it. This
+branch's was an attribute, `data-umbradesktop-title`, watched by the app host, which reported it to the
+window through an internal event of the same name. Main's stays, and this branch's is gone from core:
+the constant, the host's watch, the manager's `setAppTitle` and the window's `appTitle` field.
+
+The Image Editor now dispatches the event, only when its title changes. It also sends an empty title
+as it starts: main saves a window's title with the layout and shows it on a reopened window, while the
+editor reopens empty, so without it a reopened editor would show the last session's file name over an
+empty canvas. A test holds both, and §7.3 of the developer guide says it for any app that reopens
+empty.
+
+The close request (`umbradesktop-close-request`) is this branch's alone and stays: the developer
+guide's §7.7, and its test moved to `window-app-close.test.ts`, since `window-app-title.test.ts` is now
+main's.
+
+### 15.4 Docs and listing
+
+- **User guide**: both pages, the Media Manager first (`sidebar_position` 1 and 2). The Image Editor's
+  page says it is after Media Manager and who sees it.
+- **The add-on's README**: main's opening, then a paragraph and screenshot for each app.
+- **Root README**: main's one line per add-on, with the Image Editor added to the Media line.
+- **`RELEASE.md`**: one row for the package naming both apps and its notices; the lockstep and host
+  floor paragraphs name what both apps need from the host.
+- **Marketplace**: main's Description with one sentence for the Image Editor, the tags of both, both
+  screenshots with the Manager's first, and the documentation link on the user guide folder, since
+  there are two pages.

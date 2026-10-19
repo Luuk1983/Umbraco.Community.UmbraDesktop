@@ -52,3 +52,13 @@ export function watchWindowFrame(windowId: string, onFrame: (frame: HTMLIFrameEl
     if (set!.size === 0) watchers.delete(windowId);
   };
 }
+
+/**
+ * The frame a window has loaded now, for routing it from outside (#144): an app's page beside its
+ * window is announced under its attached id, as a pane or as a floating window.
+ * @param windowId The window, or the attached content's id.
+ * @returns The frame, or undefined while none is loaded.
+ */
+export function currentWindowFrame(windowId: string): HTMLIFrameElement | undefined {
+  return frames.get(windowId);
+}

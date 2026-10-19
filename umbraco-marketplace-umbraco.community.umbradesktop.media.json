@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop Media Add-on",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "Fix an image without leaving the backoffice. The Image Editor crops, adjusts, marks up, redacts and resizes images from the media library, and saves them back or as a copy.",
+  "Description": "Your media library, managed the way you manage files on your own computer: folders in as many windows as you like, dragging between them, copy and paste, and undo. And an Image Editor to crop, redact and resize without leaving the backoffice.",
   "PackageType": "Package",
   "LicenseTypes": [
     "Free"
@@ -14,9 +14,25 @@
     "Url": "https://github.com/Luuk1983",
     "SyncContributorsFromRepository": true
   },
-  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Media/docs/user/image-editor.md",
+  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/tree/main/src/Umbraco.Community.UmbraDesktop.Media/docs/user",
   "IssueTrackerUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues",
   "Tags": [
+    "media",
+    "media library",
+    "media manager",
+    "file manager",
+    "folders",
+    "drag and drop",
+    "move media",
+    "copy media",
+    "clipboard",
+    "paste screenshot",
+    "screenshot to media",
+    "upload",
+    "bulk upload",
+    "folder upload",
+    "undo",
+    "transfers",
     "image editor",
     "crop",
     "resize",
@@ -28,9 +44,9 @@
     "annotate",
     "exposure",
     "WebP",
-    "media library",
     "umbradesktop",
     "desktop",
+    "windows",
     "backoffice",
     "apps",
     "add-on",
@@ -55,6 +71,10 @@
     }
   ],
   "Screenshots": [
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Media/docs/screenshots/media-manager.png",
+      "Caption": "A Media Manager window on the People folder, with an image open beside it in Umbraco's own editor and its card ringed, under the Umbraco theme."
+    },
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Media/docs/screenshots/image-editor.png",
       "Caption": "The Image Editor cropping a photo to 16:9, with rotate and flip beside it and the image's name, folder, size and zoom in the status bar."

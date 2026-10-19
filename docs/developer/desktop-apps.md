@@ -87,6 +87,7 @@ can register all three.
 | `meta.minSize` | no | The smallest box your app can work in, again yours rather than the window's. Falls back to the desktop's global minimum, and is **floored** at what the chrome itself needs. See §2.1 |
 | `meta.allowMultiple` | no | Whether two windows of your app may be open at once. Defaults to allowed, and leaving it there is almost always right: every other app on this desktop opens as many windows as the user asks for, so `false` makes yours the one tile that quietly refocuses instead. Set it only if a second instance genuinely cannot work — module-level state, an exclusive resource, or a window that could only repeat the first, as a second umbraCoffee window would play the same stream twice — and note that two instances of an app whose state lives in its own element share nothing at all |
 | `meta.resizable` | no | Whether the user may resize or maximize your window. Defaults to allowed. `false` keeps the window at `defaultSize` for its whole life, the way Minesweeper's was on every Windows up to XP: no resize handles, no snapping to a screen edge, a titlebar double-click does nothing, and there is no maximize button, which is left out rather than greyed, as Windows does. The window still moves, minimizes and closes. The window manager enforces it, not the titlebar, so every route to a new size is covered. Worth setting only when your content does not reflow and a bigger window would just be empty margin; Minesweeper and Snake set it, while Solitaire stays resizable |
+| `meta.hideFromLauncher` | no | Leaves the app out of the launcher and its search. Defaults to shown. For a window your package opens itself when it has something to show, rather than one people start, as the Media add-on opens its Transfers window when a copy is still running after two seconds. Open it with the window manager's `openApp(alias)`; once open it is a window like any other |
 | `meta.opensSettings` | no | A package name. Choosing the tile opens Desktop settings at that package's row instead of a window, and `element` is then not needed. For a tool whose settings live in Desktop settings. See [Package settings](package-settings.md#5-opening-your-settings) |
 | `conditions` | no | Umbraco's own conditions, and they are honoured: the desktop observes these manifests through `UmbExtensionsManifestInitializer`, so an app whose conditions are unmet never reaches the launcher, and does so **silently**: nothing is logged, because a condition doing its job is not a fault (§8). **No conditions means always available**, which is usually right: reaching the desktop at all already requires the Desktop section |
 
@@ -607,6 +608,10 @@ does, by every route: opened from the launcher, clicked back on (the first click
 lands on the window's focus catcher), brought forward by its titlebar, or restored from its taskbar
 button, which would otherwise keep focus and take the next Space or Enter as another press.
 
+A drag is not a click. While anything is dragged over the page, items or files from the OS, an
+inactive window's focus catcher lets drag events through to your app, so it can take a drop without
+being activated first. The catcher takes clicks again once the drag is over.
+
 | When your window becomes active | What gets focus |
 |---|---|
 | Something inside your app had focus before | That element again: your playfield, text box or button, however deep in your shadow root |
@@ -728,6 +733,21 @@ and hands it back without reading it. Each window has its own, so an app that al
 can have each one somewhere else. The Help app is the first to use this: its location is the page it
 shows, such as `umbradesktop/snapping`.
 
+**Naming your window.** An app that opens several windows can name each one, so they can be told
+apart on the taskbar. Dispatch a title from your element, and the window shows it instead of your
+app's label on its titlebar and taskbar button:
+
+```ts
+this.dispatchEvent(new CustomEvent('umbradesktop-app-title', { detail: { title: 'People' }, bubbles: true, composed: true }));
+```
+
+The title is plain text, never a dictionary key, so localize it yourself first. An empty title gives
+the window your app's label back. The desktop keeps the title with the window's location, so a
+reopened window is named before your app has loaded. The Media Manager names each window after the
+folder it shows. An app that reopens empty rather than where it was should send an empty title as it
+starts, or the reopened window keeps the last session's name: the Image Editor names its window after
+the image it has open, and sends an empty title until one is.
+
 ### 7.4 Opening and saving media files
 
 An app that edits files, as Notepad and Paint do, can leave opening and saving to the media service
@@ -738,21 +758,62 @@ item, asks where a new file goes, and asks before overwriting a file somebody el
 [Opening and saving media files](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Services.Media/docs/developer/opening-and-saving-media.md),
 has the calls.
 
-### 7.5 Naming your window after what it has open
+### 7.5 Showing a backoffice page beside your window
 
-An editor's window can say which file it has open. Put `data-umbradesktop-title` on your own
-element, and the title bar and taskbar button show its value in place of your app's label:
+An app can show one of Umbraco's own pages, such as a media item's editor, beside its window, as the
+Media Manager opens the item you click. The page is attached to your window: a pane inside it when
+there is room, a window grouped with it when there is not, and the person can move it between the
+two. Nothing navigates the backoffice.
+
+1. **Open a page** under a key you choose, with an event from your element:
+
+   ```ts
+   this.dispatchEvent(
+     new CustomEvent('umbradesktop-open-attached', {
+       detail: { key: 'item', path: '/umbraco/section/media/workspace/media/edit/<key>', name: 'Banjo', icon: 'icon-picture' },
+       bubbles: true,
+       composed: true,
+     }),
+   );
+   ```
+
+   Add `floating: true` to open it as a window, which is what a Shift-click should ask for. The
+   `path` must be under `/umbraco/section/`; anything else is refused.
+
+2. **Open another page under the same key** to move the open page there. It routes inside the page,
+   so a workspace with unsaved changes asks first with Umbraco's own dialog, and the person can stay.
+   The name and icon change once the page is there. Sending the page it is already on only renames it.
+
+3. **Close it** with `umbradesktop-close-attached` and `detail: { key }`. It asks first when the page
+   holds unsaved changes.
+
+4. **Read what is open** from your element's `attached` property: each open key and the page it is on
+   now, kept up to date as the page routes, and missing once it closes. Declare it as a property:
+
+   ```ts
+   @property({ attribute: false })
+   attached: Readonly<Record<string, string>> = {};
+   ```
+
+The page is saved in a backoffice of its own, so your app does not hear about the save. If you show
+what the page edits, reload when `attached` says the page has moved on. The rules for attached
+content, and what the desktop guards for you, are in
+[Attached windows](attached-windows.md#9-a-backoffice-page-beside-an-app-window).
+
+### 7.6 Bringing your window forward
+
+An app can bring its own window to the front, as the Media Manager does with the window items were
+dropped into, so the next key acts there. Dispatch an event from your element:
 
 ```ts
-this.setAttribute('data-umbradesktop-title', 'beach.jpg');
+this.dispatchEvent(new CustomEvent('umbradesktop-app-focus', { bubbles: true, composed: true }));
 ```
 
-Remove the attribute, or set it to an empty string, and the window goes back to your label. The
-value is shown as it is and never translated, so give it the file's own name rather than a
-dictionary key. The unsaved dot still follows `data-umbradesktop-dirty`, beside whatever title you
-set. The Image Editor in the Media add-on is the worked example.
+The window comes forward with its group, as a click on its taskbar button brings it, and a minimised
+window is restored first. Use it after something the person did elsewhere landed in your window, not
+to take the focus on your own: a window that jumps forward unasked is one people learn to distrust.
 
-### 7.6 Closing your own window
+### 7.7 Closing your own window
 
 An app with a Close command of its own, such as one in a file menu, closes its window by dispatching
 an event from its element:

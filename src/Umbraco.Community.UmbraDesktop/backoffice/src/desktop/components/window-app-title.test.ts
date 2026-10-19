@@ -1,143 +1,102 @@
 import { expect } from '@open-wc/testing';
 import './window.element.js';
-import './taskbar.element.js';
 import type { UmbraDesktopWindowElement } from './window.element.js';
-import type { UmbraDesktopTaskbarElement } from './taskbar.element.js';
-import type { UmbraDesktopAppHostElement } from './app-host.element.js';
+import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types.js';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token.js';
-import {
-  UMBRADESKTOP_CLOSE_REQUEST_EVENT,
-  UMBRADESKTOP_DIRTY_ATTRIBUTE,
-  UMBRADESKTOP_TITLE_ATTRIBUTE,
-} from '../constants.js';
-import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types.js';
 import { UmbContextProvider } from '@umbraco-cms/backoffice/context-api';
 import { UmbElementControllerHost } from '@umbraco-cms/backoffice/controller-api';
 
 /**
- * The two channels an app uses to speak for its own window: a title, and a request to close.
- *
- * The Image Editor shows the open file's name in the title bar and closes from its file menu, and
- * neither needs anything imported from the desktop: the title is an attribute on the app's own
- * element, the close an event from it, the same model as the dirty attribute. Issue #136.
+ * An app window can name itself (#144): the app dispatches `umbradesktop-app-title` and the window
+ * shows that title instead of the app's name, as the Media Manager does with the folder it shows.
  */
 
-/** An app that can name its window and ask to close it. */
-class TitleProbeAppElement extends HTMLElement {}
-customElements.define('umbradesktop-title-probe-app', TitleProbeAppElement);
+/** A stand-in app that can name its window. */
+class TitledApp extends HTMLElement {
+  /**
+   * Names the window, the way an app would.
+   * @param title The title, or an empty string to go back to the app's name.
+   */
+  name(title: unknown) {
+    this.dispatchEvent(new CustomEvent('umbradesktop-app-title', { detail: { title }, bubbles: true, composed: true }));
+  }
+}
+customElements.define('probe-titled-app', TitledApp);
 
-/** The registered app the window shows. */
 const APP: UmbraDesktopApp = {
-  alias: 'app-title-probe',
-  name: 'Image Editor',
-  icon: 'icon-picture',
-  content: { kind: 'element', element: TitleProbeAppElement },
+  alias: 'titled',
+  name: 'Media Manager',
+  icon: 'icon-pictures',
+  content: { kind: 'element', element: TitledApp },
   chromeProfile: 'bare',
 };
 
-/** A manager whose discard dialog is a recorded answer instead of a modal. */
-class ProbeManager extends UmbraDesktopWindowManagerContext {
-  /** What the stand-in dialog will answer. */
-  public answer = true;
-  /** How many times it was opened. */
-  public asked = 0;
-
-  protected override async _askToDiscard(): Promise<boolean> {
-    this.asked += 1;
-    return this.answer;
-  }
-}
-
-let wrapper: HTMLElement;
-let host: UmbElementControllerHost;
-let manager: ProbeManager;
-let element: UmbraDesktopWindowElement;
-let taskbar: UmbraDesktopTaskbarElement;
-
-beforeEach(async () => {
-  wrapper = document.createElement('div');
-  document.body.appendChild(wrapper);
-  host = new UmbElementControllerHost(wrapper);
-  manager = new ProbeManager(host);
-  new UmbContextProvider(wrapper, UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, manager).hostConnected();
-  taskbar = document.createElement('umbradesktop-taskbar') as UmbraDesktopTaskbarElement;
-  wrapper.appendChild(taskbar);
-  element = document.createElement('umbradesktop-window') as UmbraDesktopWindowElement;
-  wrapper.appendChild(element);
-  manager.open(APP);
-  element.window = current()[0];
-  await element.updateComplete;
-  const body = element.shadowRoot!.querySelector('umbradesktop-app-host') as UmbraDesktopAppHostElement;
-  await body.mountComplete;
-});
-
+let cleanup: Array<() => void> = [];
 afterEach(() => {
-  host.destroy();
-  wrapper.remove();
+  for (const dispose of cleanup) dispose();
+  cleanup = [];
 });
 
-/** The manager's window list, read synchronously. */
-function current(): UmbraDesktopWindow[] {
-  let list: UmbraDesktopWindow[] = [];
-  manager.windows.subscribe((value) => (list = value as UmbraDesktopWindow[])).unsubscribe();
-  return list;
+/**
+ * A window for {@link APP}, mounted, with its app element in place.
+ * @returns The window's state, its element and its app element.
+ */
+async function mounted() {
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position: fixed; left: 0; top: 0; width: 1000px; height: 700px;';
+  document.body.appendChild(wrapper);
+  const host = new UmbElementControllerHost(wrapper);
+  const manager = new UmbraDesktopWindowManagerContext(host);
+  new UmbContextProvider(wrapper, UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, manager).hostConnected();
+  cleanup.push(() => {
+    host.destroy();
+    wrapper.remove();
+  });
+  manager.open(APP);
+  const element = document.createElement('umbradesktop-window') as UmbraDesktopWindowElement;
+  const state = (): UmbraDesktopWindow => manager.getWindows()[0];
+  const sync = () => (element.window = { ...state() });
+  const subscription = manager.windows.subscribe(() => element.isConnected && sync());
+  cleanup.push(() => subscription.unsubscribe());
+  wrapper.appendChild(element);
+  sync();
+  let app: TitledApp | null = null;
+  for (let tries = 0; tries < 40 && !app; tries++) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    app = element.shadowRoot!.querySelector<TitledApp>('probe-titled-app');
+  }
+  /** The titlebar text as drawn. */
+  const titleText = async () => {
+    await element.updateComplete;
+    return element.shadowRoot!.querySelector('.title-text')?.textContent?.trim();
+  };
+  return { state, app: app!, titleText };
 }
 
-/** The app's own element, inside the window's body. */
-function app(): HTMLElement {
-  return element.shadowRoot!.querySelector('umbradesktop-title-probe-app') as HTMLElement;
-}
-
-/** Let a mutation observer report and the manager publish to both surfaces. */
-async function settle(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve));
-  element.window = current()[0];
-  await element.updateComplete;
-  await taskbar.updateComplete;
-}
-
-/** What the title bar says. */
-const titleText = () => element.shadowRoot!.querySelector('.title-text')?.textContent?.trim();
-
-/** What the window's taskbar button says. */
-const taskLabel = () => taskbar.renderRoot.querySelector('.task.window .task-label')?.textContent?.trim();
-
-it("titles the window with the app's title attribute, and falls back to the label without one", async () => {
-  await settle();
-  expect(titleText(), 'the label to start with').to.equal('Image Editor');
-
-  app().setAttribute(UMBRADESKTOP_TITLE_ATTRIBUTE, 'beach.jpg');
-  await settle();
-  expect(titleText()).to.equal('beach.jpg');
-  expect(taskLabel()).to.equal('beach.jpg');
-
-  app().setAttribute(UMBRADESKTOP_TITLE_ATTRIBUTE, '');
-  await settle();
-  expect(titleText(), 'an empty title is no title').to.equal('Image Editor');
-
-  app().setAttribute(UMBRADESKTOP_TITLE_ATTRIBUTE, 'sunset.jpg');
-  await settle();
-  app().removeAttribute(UMBRADESKTOP_TITLE_ATTRIBUTE);
-  await settle();
-  expect(titleText()).to.equal('Image Editor');
-  expect(taskLabel()).to.equal('Image Editor');
+it('shows the title the app reports instead of its name', async () => {
+  const { state, app, titleText } = await mounted();
+  expect(await titleText()).to.equal('Media Manager');
+  app.name('People');
+  expect(state().title).to.equal('People');
+  expect(await titleText()).to.equal('People');
 });
 
-it('closes the window when its app asks, through the unsaved guard', async () => {
-  app().setAttribute(UMBRADESKTOP_DIRTY_ATTRIBUTE, '');
-  await settle();
-  manager.answer = false;
+it('goes back to the app name for an empty title', async () => {
+  const { app, titleText } = await mounted();
+  app.name('People');
+  app.name('');
+  expect(await titleText()).to.equal('Media Manager');
+});
 
-  app().dispatchEvent(new CustomEvent(UMBRADESKTOP_CLOSE_REQUEST_EVENT, { bubbles: true, composed: true }));
-  await new Promise((resolve) => setTimeout(resolve));
-  expect(manager.asked, 'the guard asked').to.equal(1);
-  expect(current(), 'a no keeps it').to.have.lengthOf(1);
+it('draws a title as plain text, never as markup or a dictionary key', async () => {
+  const { app, titleText } = await mounted();
+  app.name('<b>#general_close</b>');
+  expect(await titleText()).to.equal('<b>#general_close</b>');
+});
 
-  app().removeAttribute(UMBRADESKTOP_DIRTY_ATTRIBUTE);
-  await settle();
-  app().dispatchEvent(new CustomEvent(UMBRADESKTOP_CLOSE_REQUEST_EVENT, { bubbles: true, composed: true }));
-  await new Promise((resolve) => setTimeout(resolve));
-  expect(manager.asked, 'a clean window closes without asking').to.equal(1);
-  expect(current()).to.have.lengthOf(0);
+it('ignores a title that is not a string', async () => {
+  const { state, app } = await mounted();
+  app.name(42);
+  expect(state().title).to.equal(undefined);
 });

@@ -143,6 +143,22 @@ it('hands an app its props before it connects', async () => {
   expect(app.seenOnConnect).to.equal('owner-1');
 });
 
+it("hands an app what is open beside it, and later changes without sending its props again (#144)", async () => {
+  const host = await fixture<UmbraDesktopAppHostElement>(html`<umbradesktop-app-host></umbradesktop-app-host>`);
+  host.props = { ownerId: 'owner-1' };
+  host.attached = {};
+  host.load = async () => ({ element: PropsAppElement });
+  await host.mountComplete;
+  const app = host.querySelector('umbradesktop-test-props-app') as PropsAppElement & { attached?: unknown };
+  expect(app.attached, 'before it connects, as props are').to.deep.equal({});
+  // The app has moved on since it opened, as an app with a location does.
+  app.ownerId = 'moved-on';
+  host.attached = { item: '/umbraco/section/media/workspace/media/edit/one' };
+  await host.updateComplete;
+  expect(app.attached).to.deep.equal({ item: '/umbraco/section/media/workspace/media/edit/one' });
+  expect(app.ownerId, 'its props are not assigned again').to.equal('moved-on');
+});
+
 it('mounts the element the manifest loader resolves to', async () => {
   const host = await fixture<UmbraDesktopAppHostElement>(html`<umbradesktop-app-host></umbradesktop-app-host>`);
   host.load = async () => ({ element: TestAppElement });

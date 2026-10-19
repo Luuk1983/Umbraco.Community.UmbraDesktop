@@ -92,9 +92,9 @@ interface OpenDocument {
  * drawn for the view by the same `renderDocument` that draws the file, at the view's size, with the
  * adjustment as a live GPU filter on top (`stage.ts`).
  *
- * Its window's title is the open item's name and its unsaved dot is its history's, through the two
- * attributes the desktop reads (`data-umbradesktop-title`, `data-umbradesktop-dirty`); the menu's Close
- * closes the window through the desktop's unsaved guard (`umbradesktop-close-request`).
+ * Its window's title is the open item's name, through the desktop's `umbradesktop-app-title` event, and
+ * its unsaved dot is its history's, through the attribute the desktop reads (`data-umbradesktop-dirty`);
+ * the menu's Close closes the window through the desktop's unsaved guard (`umbradesktop-close-request`).
  */
 @customElement('umbradesktop-image-editor')
 export class UmbraDesktopImageEditorElement extends UmbLitElement {
@@ -382,9 +382,25 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
 
   protected override updated(): void {
     this.toggleAttribute('data-umbradesktop-dirty', this.dirty);
-    if (this._document) this.setAttribute('data-umbradesktop-title', this._name);
-    else this.removeAttribute('data-umbradesktop-title');
+    this.#sendTitle(this._document ? this._name : '');
     this.#syncMenu();
+  }
+
+  /** The title last given to the window, or undefined before the first. */
+  #sentTitle?: string;
+
+  /**
+   * Name the window after the open item, or give it the app's own name back with an empty title, through
+   * the desktop's `umbradesktop-app-title` (`docs/developer/desktop-apps.md` §7). Said only when it
+   * changes, and said once as the editor starts even with nothing open: the desktop saves a window's
+   * title with the layout and shows it on a reopened window, while the editor reopens empty, so an
+   * empty title is what takes the last session's file name off it.
+   * @param title The item's name, or an empty string with nothing open.
+   */
+  #sendTitle(title: string): void {
+    if (title === this.#sentTitle) return;
+    this.#sentTitle = title;
+    this.dispatchEvent(new CustomEvent('umbradesktop-app-title', { detail: { title }, bubbles: true, composed: true }));
   }
 
   /**

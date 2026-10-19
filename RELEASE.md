@@ -14,7 +14,7 @@ Six packages, from **one tag**, always at the **same version**:
 | `Umbraco.Community.UmbraDesktop.Services.Media` | Service package. Opening and saving media library files for apps. Never installed on its own: Accessories and Media, and any app that edits media files, depend on it. Also defines the file menu and open view elements the Media add-on's Image Editor uses. Frontend only, no C# test project. No Marketplace listing, on purpose. |
 | `Umbraco.Community.UmbraDesktop.Entertainment` | Optional games and media add-on: Minesweeper, Snake, Solitaire and umbraCoffee. |
 | `Umbraco.Community.UmbraDesktop.Accessories` | Optional tools add-on. Notepad, Paint, Sticky Notes, Calculator, Character Map, Clock, Screen Saver, Disk Cleanup and System Information. It has server-side code of its own (the Sticky Notes API) and a C# test project beside it. |
-| `Umbraco.Community.UmbraDesktop.Media` | Optional media add-on, starting with the Image Editor. Frontend only, no C# test project. The one package that bundles npm code (Fabric.js, MIT): it packs a `THIRD-PARTY-NOTICES.md`, and its build fails on a bundled package that is not permissively licensed or not listed there. |
+| `Umbraco.Community.UmbraDesktop.Media` | Optional media add-on: the Media Manager, which hosts Umbraco's own media library in desktop windows and adds dragging, the clipboard, OS file drops, transfers and undo, and the Image Editor. Frontend only, no C# test project. The one package that bundles npm code (Fabric.js, MIT, for the Image Editor): it packs a `THIRD-PARTY-NOTICES.md`, and its build fails on a bundled package that is not permissively licensed or not listed there. |
 
 Lockstep is a decision, not an accident: design D13 in
 [`docs/design/2026-09-06-desktop-apps-design.md`](docs/design/2026-09-06-desktop-apps-design.md)
@@ -29,7 +29,7 @@ host as a `ProjectReference`, never a `PackageReference`: it is then compiled ag
 the same commit, and its packed dependency is `[<this release>, 17.99999999.0]`. The floor is the
 release itself because an add-on registers things only this release's host understands (package
 catalogues; for Entertainment also tray items; for Accessories also the unsaved-work attribute and the settings context's
-`formatDateTime`; for Media also the window title attribute and the close request). The add-ons used to take the host by package range, floored at 17.0.0, which
+`formatDateTime`; for Media also app titles, the close request, pages attached to an app window and apps hidden from the launcher). The add-ons used to take the host by package range, floored at 17.0.0, which
 compiled against 17.0.0 and let consumers keep a host that silently lacked them: on such a host the
 Accessories Clock threw on every render and Notepad closed over unsaved work without asking.
 Upgrading the host on its own within 17 is still fine; the ceiling is why. There is deliberately no
@@ -108,6 +108,21 @@ The notes are written in the GitHub release screen, and its **Generate release n
 against the **previous tag**. If you cut a beta first, the stable release's notes cover only what
 happened after the beta and omit the entire feature line. Hand-curate the body of any stable
 release that had a prerelease before it.
+
+The generated notes list pull request titles, grouped by `.github/release.yml` into new features, bug
+fixes, documentation and other changes. A pull request lands in a group by its `enhancement`, `bug`
+or `documentation` label, which `.github/workflows/sync-release-labels.yml` copies from the issue it
+closes when it merges. So that it does:
+
+- Link the issue, with "Closes #123" in the body or the Development sidebar. A bare mention is not a
+  link.
+- A pull request with no issue needs its type label by hand, or `ignore-for-release` when a reader of
+  the notes would not care: CI, tests, screenshots, merging a release branch back. Anything left
+  unlabelled shows up under **Other changes**, so a missed one is visible in the draft.
+
+The version label (`release/vX.Y.Z`) is for filtering issues, not for the notes, which come from the
+commits between the two tags. Put it on the pull request or the issue, whichever you have open when
+the version is known; the same workflow copies it from the pull request to the issue on merge.
 
 ## Owner-only steps
 
@@ -356,6 +371,7 @@ serving several packages suffixes the file with the **lowercased package ID**:
 - `umbraco-marketplace-umbraco.community.umbradesktop.json` — the host.
 - `umbraco-marketplace-umbraco.community.umbradesktop.entertainment.json` — the games add-on.
 - `umbraco-marketplace-umbraco.community.umbradesktop.accessories.json` — the tools add-on.
+- `umbraco-marketplace-umbraco.community.umbradesktop.media.json` — the media add-on.
 
 **The Arcade has no listing, on purpose** (design D2,
 [`docs/design/2026-10-01-arcade-design.md`](docs/design/2026-10-01-arcade-design.md)). It is

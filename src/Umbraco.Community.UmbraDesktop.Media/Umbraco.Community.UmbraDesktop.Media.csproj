@@ -10,8 +10,8 @@
 	  <Product>Umbraco.Community.UmbraDesktop.Media</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop.Media</PackageId>
 	  <Title>UmbraDesktop Media Add-on</Title>
-	  <Description>Media apps for UmbraDesktop, starting with an Image Editor that crops, adjusts, marks up, redacts and resizes images from the media library and saves them back or as a copy.</Description>
-	  <PackageTags>umbraco;backoffice;desktop;umbradesktop;media;image-editor;crop;resize;redact;umbraco-marketplace</PackageTags>
+	  <Description>Media apps for UmbraDesktop. A Media Manager that opens the media library in desktop windows, one folder per window, with dragging between them, cut, copy and paste, files from your computer, background transfers and undo; and an Image Editor that crops, adjusts, marks up, redacts and resizes images and saves them back or as a copy.</Description>
+	  <PackageTags>umbraco;backoffice;desktop;umbradesktop;media;media-manager;file-manager;drag-and-drop;clipboard;upload;image-editor;crop;resize;redact;umbraco-marketplace</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop.Media</RootNamespace>
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>
@@ -117,13 +117,15 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	  <!-- The host, as the project built beside this one rather than a package from nuget.org. A
 	       package range compiles against the lowest host in range, so this add-on would be built
 	       against 17.0.0 and ship claiming to work with a host that lacks what it relies on: the
-	       package catalogue that defines its launcher group, the unsaved-work attribute, and the
-	       window title attribute and close request the Image Editor uses (issue #136). Built from
+	       package catalogue that defines its launcher group, the unsaved-work attribute, app titles,
+	       and the close request the Image Editor uses (issue #136), and the pages attached to an app
+	       window and apps hidden from the launcher the Media Manager uses (issue #144). Built from
 	       the same commit, the two cannot disagree.
 	       The packed range, "[<this release>, 17.99999999.0]", comes from the BoundHostRange target
 	       in src/Directory.Build.targets, which every add-on referencing the host picks up. -->
 	  <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />
 	  <!-- The media service, which opens and saves the Image Editor's files and draws its file menu.
+	       The Media Manager does not use it: it hosts the Media section's own collection.
 	       A reference, not just a runtime expectation, so installing this add-on installs it: its
 	       code is reached by a context alias and a tag name and never imported, so nothing else
 	       would bring it. Bounded like the host by the same BoundHostRange target. -->

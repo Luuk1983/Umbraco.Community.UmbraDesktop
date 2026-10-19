@@ -137,6 +137,31 @@ describe('reading an app window’s location', () => {
   });
 });
 
+/** An app's own title (#144), kept so a reopened Media Manager is named before its app reports again. */
+describe('a window title', () => {
+  const base = { app: 'game', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 1, active: false };
+
+  it('keeps the title an app gave its window', () => {
+    const [saved] = snapshotLayout([win({ app: GAME, title: 'People' })]).windows;
+    expect(saved.title).to.equal('People');
+  });
+
+  it('keeps nothing for a window with no title of its own', () => {
+    const [saved] = snapshotLayout([win({ app: GAME })]).windows;
+    expect(saved.title).to.equal(undefined);
+  });
+
+  it('reads a stored title back, and drops one that is not a short line of text', () => {
+    const [kept] = parseLayout(JSON.stringify({ version: 1, windows: [{ ...base, title: 'People' }] })).windows;
+    expect(kept.title).to.equal('People');
+    for (const title of [42, '', 'a'.repeat(1001), 'line\nbreak']) {
+      const windows = parseLayout(JSON.stringify({ version: 1, windows: [{ ...base, title }] })).windows;
+      expect(windows.length, String(title)).to.equal(1);
+      expect(windows[0].title, String(title)).to.equal(undefined);
+    }
+  });
+});
+
 describe('the address a restored backoffice window opens at', () => {
   it('is the stored page when it is under the backoffice', () => {
     expect(restoredUrl(CONTENT, '/umbraco/section/content/workspace/document/edit/abc?culture=en#x')).to.equal(

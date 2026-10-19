@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { mountLauncher, stubApp } from './launcher.test-helper.js';
+import { cardsOf, mountLauncher, stubApp } from './launcher.test-helper.js';
 import type { UmbraDesktopLauncherMount } from './launcher.test-helper.js';
 import type { UmbraDesktopSearchItem, UmbraDesktopSearchSource } from '../search/types.js';
 import type { UmbraDesktopWindow, UmbraDesktopApp } from '../types.js';
@@ -454,6 +454,21 @@ it('moves from the field to the first result, not to the Show all beside its hea
     await results(m);
     await press(m, 'ArrowDown');
     expect((m.root.activeElement as HTMLElement).dataset.key).to.equal('document:k0');
+  } finally {
+    m.remove();
+  }
+});
+
+it('leaves an app hidden from the launcher out of its groups and its search', async () => {
+  const transfers: UmbraDesktopApp = { ...stubApp('Transfers'), hideFromLauncher: true };
+  const m = await mountLauncher({ apps: [...APPS, transfers], groups: [], searchDebounceMs: 0 });
+  try {
+    const shown = cardsOf(m.root).flatMap(([, aliases]) => aliases);
+    expect(shown.includes('Transfers'), 'in a group').to.equal(false);
+    expect(shown.includes('Log Viewer'), 'the others are there').to.equal(true);
+    await type(m, 'Transf');
+    await results(m);
+    expect(m.root.querySelector('.search-results')?.textContent?.includes('Transfers'), 'in the search').to.equal(false);
   } finally {
     m.remove();
   }

@@ -68,26 +68,6 @@ export const UMBRADESKTOP_DIRTY_ATTRIBUTE = 'data-umbradesktop-dirty';
 export const UMBRADESKTOP_APP_DIRTY_EVENT = 'umbradesktop-app-dirty';
 
 /**
- * The attribute a registered app puts on its **own element** to title its window: the title bar
- * and the taskbar button say its value in place of the app's label.
- *
- * For an app whose window is about one thing, as an editor is about the file it has open, so the
- * window says which file without the app drawing a second title inside it. Present and non-empty
- * is a title; absent or empty is the app's label, as before. An attribute for the reasons
- * {@link UMBRADESKTOP_DIRTY_ATTRIBUTE} is one: a `setAttribute` is all an app writes, it imports
- * nothing, and the value is readable at any moment. The value is shown as it is, never localized.
- * Published in `docs/developer/desktop-apps.md` §7. Issue #136.
- */
-export const UMBRADESKTOP_TITLE_ATTRIBUTE = 'data-umbradesktop-title';
-
-/**
- * The event `<umbradesktop-app-host>` fires when its app's {@link UMBRADESKTOP_TITLE_ATTRIBUTE}
- * changes, and once whenever an app is mounted, with `{ title: string | undefined }`. Internal, the
- * counterpart of {@link UMBRADESKTOP_APP_DIRTY_EVENT}: it is how the host tells its window.
- */
-export const UMBRADESKTOP_APP_TITLE_EVENT = 'umbradesktop-app-title';
-
-/**
  * The event a registered app dispatches from its own element to close its window, as the window's
  * own close button would: through the unsaved-work guard, so an app marked dirty is asked about
  * first and a "no" keeps the window.
@@ -436,6 +416,38 @@ export const UMBRADESKTOP_PINNED_GROUP_ID = '@pinned';
  * contract for any app, documented in `docs/developer/desktop-apps.md`.
  */
 export const UMBRADESKTOP_APP_LOCATION_EVENT = 'umbradesktop-app-location';
+
+/**
+ * The event an app element dispatches to name its window, with `{ title: string }` in `detail`,
+ * bubbling and composed (#144). The window shows the title instead of the app's name on its titlebar
+ * and taskbar button, and an empty title gives the name back. Public contract for any app,
+ * documented in `docs/developer/desktop-apps.md`.
+ */
+export const UMBRADESKTOP_APP_TITLE_EVENT = 'umbradesktop-app-title';
+
+/**
+ * The event an app element dispatches to show a backoffice page beside its own window (#144), with
+ * `{ key, path, name, icon, floating? }` in `detail`, bubbling and composed. One page per key: the same
+ * key again routes the open page's frame, so a workspace holding unsaved changes asks first, inside
+ * the frame. `path` must be under `/umbraco/section/`. Public contract for any app, documented in
+ * `docs/developer/desktop-apps.md` and `docs/developer/attached-windows.md`.
+ */
+export const UMBRADESKTOP_APP_OPEN_ATTACHED_EVENT = 'umbradesktop-open-attached';
+
+/**
+ * The event an app element dispatches to close the page it opened beside its window under a key,
+ * with `{ key }` in `detail`, bubbling and composed (#144). Asks first when the page holds unsaved
+ * changes. Public contract for any app, documented with the open event.
+ */
+export const UMBRADESKTOP_APP_CLOSE_ATTACHED_EVENT = 'umbradesktop-close-attached';
+
+/**
+ * The event an app element dispatches to bring its own window, and the window's group, to the front,
+ * restoring it when minimised (#144): what the Media Manager does for the window items were dropped
+ * into, so the next key acts there. Bubbling and composed, no detail. Public contract for any app,
+ * documented in `docs/developer/desktop-apps.md`.
+ */
+export const UMBRADESKTOP_APP_FOCUS_EVENT = 'umbradesktop-app-focus';
 
 /**
  * The event any package can dispatch to open Help at a page, with `{ target: string }` in `detail`,

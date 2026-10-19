@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { announceWindowFrame, forgetWindowFrame, watchWindowFrame } from './owner-frames';
+import { announceWindowFrame, currentWindowFrame, forgetWindowFrame, watchWindowFrame } from './owner-frames';
 
 /**
  * Where a view beside the editor finds its owner's frame (design §4.5): the owner announces its
@@ -55,4 +55,13 @@ it('stops telling a watcher that stopped', () => {
   stop();
   announceWindowFrame('w1', frame());
   expect(seen).to.deep.equal([]);
+});
+
+it('says which frame a window has loaded now, and nothing once it has gone', () => {
+  const first = frame();
+  expect(currentWindowFrame('w1')).to.equal(undefined);
+  announceWindowFrame('w1', first);
+  expect(currentWindowFrame('w1')).to.equal(first);
+  forgetWindowFrame('w1');
+  expect(currentWindowFrame('w1')).to.equal(undefined);
 });

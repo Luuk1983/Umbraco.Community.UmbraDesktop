@@ -16,8 +16,8 @@ under the macOS theme does not.
 
 The games ship in their own package rather than in UmbraDesktop, because a desktop and a minesweeper
 are not the same product, and nobody should have to take the second to get the first. The same
-package also brings [umbraCoffee](umbracoffee.md), the community's monthly live show, in a **Media**
-group of its own.
+package also brings [umbraCoffee](umbracoffee.md), the community's monthly live show, in an
+**Entertainment** group of its own.
 
 ## Install
 

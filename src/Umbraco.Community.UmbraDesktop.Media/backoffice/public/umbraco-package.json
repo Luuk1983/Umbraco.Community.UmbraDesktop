@@ -7,7 +7,7 @@
 		{
 			"type": "bundle",
 			"alias": "Umbraco.Community.UmbraDesktop.Media.Bundle",
-			"name": "UmbraDesktop Media Bundle",
+			"name": "UmbraDesktop Media Add-on Bundle",
 			"js": "/App_Plugins/Umbraco.Community.UmbraDesktop.Media/umbradesktop-media.js"
 		}
 	]

@@ -7,12 +7,10 @@ import './loader.element.js';
 import {
   UMBRADESKTOP_APP_DIRTY_EVENT,
   UMBRADESKTOP_APP_TASKS_EVENT,
-  UMBRADESKTOP_APP_TITLE_EVENT,
   UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS,
   UMBRADESKTOP_DIRTY_ATTRIBUTE,
   UMBRADESKTOP_TASK_EVENT,
   UMBRADESKTOP_THEME_ATTRIBUTE,
-  UMBRADESKTOP_TITLE_ATTRIBUTE,
 } from '../constants.js';
 import { customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { loadManifestElement } from '@umbraco-cms/backoffice/extension-api';
@@ -184,6 +182,17 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
   props?: Readonly<Record<string, unknown>>;
 
   /**
+   * What the app's window has open beside it, assigned onto the app as its `attached` property (#144):
+   * each key the app opened a backoffice page under, and the page it is on now.
+   *
+   * Its own property rather than one of `props`, because it changes while the app runs and `props`
+   * are assigned again as a whole: an app whose `location` property had moved on since it opened
+   * would be sent back to where it started each time a page beside it routed.
+   */
+  @property({ attribute: false })
+  attached?: Readonly<Record<string, string>>;
+
+  /**
    * The app's manifest alias, set by the window alongside `load`, and read only when a load fails.
    *
    * A plain field rather than a `@property`, which is the whole point of it being here at all: this
@@ -300,52 +309,32 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
     this.dispatchEvent(new CustomEvent(UMBRADESKTOP_APP_TASKS_EVENT, { detail: { tasks: this.#tasks } }));
   }
 
-  /**
-   * Watches the mounted app's unsaved-work and title attributes. Replaced with each app, dropped
-   * with the host.
-   */
+  /** Watches the mounted app's unsaved-work attribute. Replaced with each app, dropped with the host. */
   #dirtyWatch?: MutationObserver;
 
   /**
-   * Report the app's unsaved-work and title attributes to whoever holds this host, now and whenever
-   * either changes.
+   * Report the app's unsaved-work attribute to whoever holds this host, now and whenever it changes.
    *
-   * A `MutationObserver` on the two attributes, rather than events the app fires, because the
-   * attributes are the contract (see {@link UMBRADESKTOP_DIRTY_ATTRIBUTE} and
-   * {@link UMBRADESKTOP_TITLE_ATTRIBUTE}): an app writes a `toggleAttribute` or a `setAttribute` and
-   * imports nothing. One observer, since both are watched for exactly as long, and each mutation
-   * reports only the attribute it changed. Both are reported once straight away, so an app that is
-   * already unsaved or titled when it mounts is counted, and so a swap from one app to another
-   * clears the old app's answers rather than leaving them standing.
+   * A `MutationObserver` on the one attribute, rather than an event the app fires, because the
+   * attribute is the contract (see {@link UMBRADESKTOP_DIRTY_ATTRIBUTE}): an app writes a
+   * `toggleAttribute` and imports nothing. Reported once straight away, so an app that is already
+   * unsaved when it mounts is counted, and so a swap from an unsaved app to a clean one clears the
+   * flag rather than leaving the old app's answer standing.
    * @param app The app element to watch, or undefined to stop watching.
    */
   #watchDirty(app?: HTMLElement): void {
     this.#dirtyWatch?.disconnect();
     this.#dirtyWatch = undefined;
     if (!app) return;
-    const reportDirty = () =>
+    const report = () =>
       this.dispatchEvent(
         new CustomEvent(UMBRADESKTOP_APP_DIRTY_EVENT, {
           detail: { dirty: app.hasAttribute(UMBRADESKTOP_DIRTY_ATTRIBUTE) },
         }),
       );
-    const reportTitle = () =>
-      this.dispatchEvent(
-        new CustomEvent(UMBRADESKTOP_APP_TITLE_EVENT, {
-          detail: { title: app.getAttribute(UMBRADESKTOP_TITLE_ATTRIBUTE) || undefined },
-        }),
-      );
-    this.#dirtyWatch = new MutationObserver((mutations) => {
-      const changed = new Set(mutations.map((mutation) => mutation.attributeName));
-      if (changed.has(UMBRADESKTOP_DIRTY_ATTRIBUTE)) reportDirty();
-      if (changed.has(UMBRADESKTOP_TITLE_ATTRIBUTE)) reportTitle();
-    });
-    this.#dirtyWatch.observe(app, {
-      attributes: true,
-      attributeFilter: [UMBRADESKTOP_DIRTY_ATTRIBUTE, UMBRADESKTOP_TITLE_ATTRIBUTE],
-    });
-    reportDirty();
-    reportTitle();
+    this.#dirtyWatch = new MutationObserver(report);
+    this.#dirtyWatch.observe(app, { attributes: true, attributeFilter: [UMBRADESKTOP_DIRTY_ATTRIBUTE] });
+    report();
   }
 
   /**
@@ -412,6 +401,9 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
     super.willUpdate(changed);
     if (changed.has('load')) this.#mounting = this.#mount();
     else if (changed.has('props') && this.props && this._app) Object.assign(this._app, this.props);
+    if (changed.has('attached') && this.attached && this._app && !changed.has('load')) {
+      (this._app as HTMLElement & { attached?: unknown }).attached = this.attached;
+    }
     if (changed.has('chromeThemeId')) this.#stampTheme(this._app);
   }
 
@@ -488,6 +480,7 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
         // itself a frame later. Assigning `_app` first is what would put it in the DOM.
         this.#stampTheme(app);
         if (this.props) Object.assign(app, this.props);
+        if (this.attached) (app as HTMLElement & { attached?: unknown }).attached = this.attached;
         this._pending = false;
         this._app = app;
         this.#watchDirty(app);

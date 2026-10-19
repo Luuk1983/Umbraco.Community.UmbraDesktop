@@ -2,11 +2,17 @@
 
 # UmbraDesktop Media Add-on
 
-Media apps for UmbraDesktop, starting with an Image Editor: crop, adjust, mark up, redact and resize an image from the media library, and save it back or as a copy, without leaving the backoffice.
+The media library, the way you manage files on your own computer. Open folders in as many windows as you like, drag between them, cut, copy and paste, drop files and whole folders from your computer, and undo what you did, on top of everything the Media section already does. And an Image Editor to fix an image without leaving the backoffice.
 
-[![NuGet](https://img.shields.io/nuget/v/Umbraco.Community.UmbraDesktop.Media)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) [![License](https://img.shields.io/github/license/Luuk1983/Umbraco.Community.UmbraDesktop)](../../LICENSE)
+[![NuGet](https://img.shields.io/nuget/v/Umbraco.Community.UmbraDesktop.Media)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) [![NuGet Downloads](https://img.shields.io/nuget/dt/Umbraco.Community.UmbraDesktop.Media)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) [![License](https://img.shields.io/github/license/Luuk1983/Umbraco.Community.UmbraDesktop)](../../LICENSE)
+
+![A Media Manager window on the People folder in a two-column grid of photos, with one photo open beside it in Umbraco's own media editor and its card ringed in pink, under the Umbraco theme.](docs/screenshots/media-manager.png)
+
+The Media Manager hosts Umbraco's own media library inside its windows rather than rebuilding it, so every media type, including your own, and every package that adds to the Media section keep working in it. The Media section stays exactly as Umbraco ships it.
 
 ![The Image Editor in a window on the desktop, cropping a photo of a lounge to 16:9: the crop frame with its thirds and handles over the picture, the Crop panel with the ratios, rotate and flip, and the note that a crop resets the focal point, and the status bar with the file's name, folder, size and zoom.](docs/screenshots/image-editor.png)
+
+The Image Editor works on an image from the media library and saves it back or as a copy:
 
 - **Crop, rotate and flip**, free or to a ratio, with the image's focal point shown.
 - **Adjust** exposure, brightness, contrast and saturation, and compare with the original.
@@ -19,9 +25,9 @@ Media apps for UmbraDesktop, starting with an Image Editor: crop, adjust, mark u
 dotnet add package Umbraco.Community.UmbraDesktop.Media
 ```
 
-That is all. UmbraDesktop comes with it if you do not have it yet, and the Image Editor appears in a Media group in the launcher for anyone who can reach the desktop. You need Umbraco 17 and .NET 10.
+That is all. UmbraDesktop comes with it if you do not have it yet, and the Media Manager and the Image Editor appear in a Media group in the launcher for anyone who can reach the desktop and the Media section. You need Umbraco 17 and .NET 10.
 
-[Image Editor](docs/user/image-editor.md) explains how to use it.
+[Media Manager](docs/user/media-manager.md) and [Image Editor](docs/user/image-editor.md) explain how to use them.
 
 ## License
 

@@ -20,7 +20,32 @@ const BAR = ['undo', 'redo', 'mode-crop', 'mode-adjust', 'mode-markup', 'mode-re
 /** The open view on the canvas, or null. */
 const openView = (editor: HTMLElement) => editor.shadowRoot!.querySelector('umbradesktop-media-open-view') as FakeOpenView | null;
 
+/**
+ * Every title each editor gave its window through the desktop's `umbradesktop-app-title`, in order.
+ * Heard at the document rather than on the editor, because an editor speaks in its first update,
+ * before a test could listen on it; and only an event that bubbles out composed is heard there, which
+ * is what the window needs too.
+ */
+const titlesSent = new WeakMap<EventTarget, unknown[]>();
+document.addEventListener('umbradesktop-app-title', (event) => {
+  const from = event.composedPath()[0];
+  titlesSent.set(from, [...(titlesSent.get(from) ?? []), (event as CustomEvent<{ title?: unknown }>).detail?.title]);
+});
+
+/** The last title an editor gave its window, or undefined when it never gave one. */
+const title = (editor: HTMLElement) => titlesSent.get(editor)?.slice(-1)[0];
+
 describe('with nothing open', () => {
+  /**
+   * The desktop saves a window's title with the layout and shows it again on a reopened window, but
+   * the editor reopens empty: so it gives the window its own name back as it starts, rather than
+   * leave the last session's file name over an empty canvas.
+   */
+  it("gives the window the app's own name as it starts, with an empty title", async () => {
+    const { editor } = await mountEditor();
+    expect(titlesSent.get(editor)).to.deep.equal(['']);
+  });
+
   it('shows Open on the empty canvas, and no menu (D14)', async () => {
     const { editor, menu } = await mountEditor();
     const view = openView(editor);
@@ -110,7 +135,8 @@ describe('opening', () => {
     for (const command of ['mode-crop', 'mode-adjust', 'mode-markup', 'mode-redact', 'mode-resize']) {
       expect(control(editor, command).disabled, command).to.equal(false);
     }
-    expect(editor.getAttribute('data-umbradesktop-title')).to.equal('Beach');
+    expect(title(editor)).to.equal('Beach');
+    expect(titlesSent.get(editor), 'said once each time the title changed').to.deep.equal(['', 'Beach']);
     expect(menu!.open).to.equal(false);
     expect(openView(editor), 'Open goes once a picture is open').to.equal(null);
     const status = editor.shadowRoot!.querySelector('.status')!;
@@ -127,7 +153,7 @@ describe('opening', () => {
     const deadline = performance.now() + 5000;
     while (!editor.picture && performance.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
     await settle(editor);
-    expect(editor.getAttribute('data-umbradesktop-title')).to.equal('Beach');
+    expect(title(editor)).to.equal('Beach');
     expect(openView(editor)).to.equal(null);
   });
 
@@ -145,7 +171,7 @@ describe('opening', () => {
     await settle(editor);
     expect(editor.shadowRoot!.querySelector('.status')!.textContent).to.contain(words.refusedSvg.replace('%0%', 'Logo'));
     expect(control(editor, 'mode-crop').disabled).to.equal(true);
-    expect(editor.hasAttribute('data-umbradesktop-title')).to.equal(false);
+    expect(title(editor), 'no title').to.equal('');
   });
 
   it('opens an animated GIF with a notice that saving keeps the first frame', async () => {
@@ -213,7 +239,7 @@ describe('saving', () => {
     menu!.fire('saved', { unique: 'copy1', updateDate: 'c1', name: 'Beach (copy)', extension: 'webp', folder: 'f9', folderName: 'Other', copy: true, bytes: 90 });
     await settle(editor);
     expect(menu!.document).to.include({ unique: 'copy1', updateDate: 'c1', name: 'Beach (copy)', extension: 'webp', folder: 'f9' });
-    expect(editor.getAttribute('data-umbradesktop-title')).to.equal('Beach (copy)');
+    expect(title(editor)).to.equal('Beach (copy)');
   });
 
   it('tells the file menu to reset the focal point after a turn, not after a resize', async () => {
@@ -300,7 +326,7 @@ describe('the status bar', () => {
     name.dispatchEvent(new Event('input'));
     await settle(editor);
     expect(menu!.document?.name).to.equal('Sunset');
-    expect(editor.getAttribute('data-umbradesktop-title')).to.equal('Sunset');
+    expect(title(editor)).to.equal('Sunset');
     expect(editor.hasAttribute('data-umbradesktop-dirty'), 'a rename is saved like any change').to.equal(true);
   });
 

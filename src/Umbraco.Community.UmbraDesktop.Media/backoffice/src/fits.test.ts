@@ -20,8 +20,11 @@ defineFakeFileMenu();
 /** The published theme ids, plus no theme at all. */
 const THEMES = [undefined, 'umbraco', 'umbraco4', 'macos', 'win11', 'win98'];
 
-/** The editor's manifest sizes. */
-const app = manifests.find((manifest) => manifest.type === 'umbraDesktopApp') as unknown as {
+/**
+ * The editor's manifest sizes, found by its alias: the package registers the Media Manager first, and
+ * the first app found used to be the editor only while it was the package's one app.
+ */
+const app = manifests.find((manifest) => manifest.alias === 'Umbraco.Community.UmbraDesktop.Media.ImageEditor') as unknown as {
   meta: Record<'defaultSize' | 'minSize', { w: number; h: number }>;
 };
 

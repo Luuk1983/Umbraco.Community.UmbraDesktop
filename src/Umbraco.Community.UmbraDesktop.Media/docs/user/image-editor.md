@@ -2,7 +2,7 @@
 id: image-editor
 title: Image Editor
 description: Crop, adjust, mark up, redact and resize an image from the media library, and save it back or as a copy.
-sidebar_position: 1
+sidebar_position: 2
 image: ../screenshots/image-editor.png
 ---
 
@@ -10,7 +10,8 @@ image: ../screenshots/image-editor.png
 
 The Image Editor fixes an image from the media library without leaving the backoffice: crop it,
 correct its light, mark it up, hide what should not be seen, shrink it, and save it back over the
-same media item or as a copy. It is in the **Media** group of the launcher.
+same media item or as a copy. It is in the launcher's **Media** group, after **Media Manager**, for
+everyone who may use the Media section.
 
 ![The Image Editor cropping a photo to 16:9, with the crop frame over the picture and the Crop panel beside it.](../screenshots/image-editor.png)
 

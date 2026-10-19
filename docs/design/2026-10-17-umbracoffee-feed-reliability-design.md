@@ -13,7 +13,8 @@
   addendum of 2026-10-01 in [the v2 plan](2026-09-30-umbracoffee-v2-plan.md). Where they disagree,
   this document is newer
 - **After this:** a Cloudflare Worker that triggers the workflow every five minutes, because GitHub's
-  scheduler runs it only every three to ten hours. Separate work, not in this document
+  scheduler runs it only every three to ten hours. Live since 2026-10-17; it lives outside the
+  repository, so `tools/umbracoffee-feed/README.md`, "What starts a run", has its code and setup
 
 ---
 
