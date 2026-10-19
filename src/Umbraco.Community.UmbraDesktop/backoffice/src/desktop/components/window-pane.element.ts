@@ -2,8 +2,14 @@ import type { UmbraDesktopPane } from '../types.js';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context.js';
 import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-token.js';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
-import { UMBRADESKTOP_PATH_HEIGHT } from '../constants.js';
+import { UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS, UMBRADESKTOP_OPEN_HELP_EVENT, UMBRADESKTOP_PATH_HEIGHT } from '../constants.js';
+import { startFrameWatches, UmbraDesktopFrameThemeController } from '../frame-watches.js';
+import type { UmbraDesktopFrameSink } from '../frame-watches.js';
+import { announceWindowFrame, forgetWindowFrame } from '../beside/owner-frames.js';
+import { UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT } from '../notifications/notification-centre.context-token.js';
+import type { UmbraDesktopNotificationCentreContext } from '../notifications/notification-centre.context.js';
 import './app-host.element.js';
+import './loader.element.js';
 import { css, customElement, html, keyed, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
@@ -35,6 +41,12 @@ export interface UmbraDesktopPaneDragDetail {
  * **Every class inside is prefixed `pane-`,** for the reason `window-path.element` gives: this element
  * adopts the active theme's whole `window` sheet, so a selector a theme wrote for the frame (`.title`,
  * `.ctrl`) would otherwise land on this markup too.
+ *
+ * The body is an element app, or a backoffice page (#144): a frame on a backoffice route, which gets
+ * the frame watches a window's frame gets (`frame-watches.ts`), reports its unsaved changes and its
+ * page to the manager under the pane's id, and is announced under that id for whoever routes it.
+ * While a page holds unsaved changes, Pop out is greyed and closing or reloading asks, because each
+ * of those remounts the frame and would throw the changes away.
  *
  * Design: `docs/design/2026-09-27-attached-windows-design.md` D3.
  */
@@ -68,14 +80,123 @@ export class UmbraDesktopWindowPaneElement extends UmbLitElement {
   @state()
   private _generation = 0;
 
+  /**
+   * Whether a page body is still booting, which covers it so the backoffice's own header never
+   * flashes into view, exactly as a window covers its frame. Lowered once the header is stripped, or
+   * after the window's deadline.
+   */
+  @state()
+  private _loading = true;
+
   /** The window manager, for the header's actions. */
   #manager?: UmbraDesktopWindowManagerContext;
+
+  /** Where a page's notifications go instead of into its frame. */
+  #notifications?: UmbraDesktopNotificationCentreContext;
+
+  /** Stops the page frame's watches; replaced on every load, called on disconnect. */
+  #stopFrameWatches?: () => void;
+
+  /** The pane id the page frame was last announced under, to take back on disconnect. */
+  #announced?: string;
+
+  /** Keeps a page on the desktop's light or dark theme, as a window's frame is kept. */
+  #frameTheme = new UmbraDesktopFrameThemeController(
+    this,
+    () => this.#frame()?.contentDocument ?? undefined,
+    () => this.#frame()?.contentWindow?.location.reload(),
+  );
 
   constructor() {
     super();
     new UmbraDesktopThemeStyles(this, 'window');
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (manager) => (this.#manager = manager));
+    this.consumeContext(UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT, (centre) => (this.#notifications = centre ?? undefined));
   }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.#stopFrameWatches?.();
+    this.#stopFrameWatches = undefined;
+    if (this.#announced) forgetWindowFrame(this.#announced);
+    this.#announced = undefined;
+  }
+
+  /**
+   * The page body's frame, when the pane draws one.
+   * @returns The frame, or undefined for an element body.
+   */
+  #frame(): HTMLIFrameElement | undefined {
+    return (this.renderRoot?.querySelector('iframe.pane-content') as HTMLIFrameElement | null) ?? undefined;
+  }
+
+  /**
+   * A page body loaded, or loaded again: start its watches and announce it, as a window does for
+   * its own frame. The pane's id is read now, so every report lands on the pane this frame belongs to.
+   * @param event The frame's load event.
+   */
+  #onFrameLoad = (event: Event): void => {
+    const iframe = event.target as HTMLIFrameElement;
+    const pane = this.pane;
+    const ownerId = this.ownerId;
+    if (!pane || !ownerId) return;
+    this.#stopFrameWatches = startFrameWatches(iframe, this.#frameSink(ownerId, pane), [
+      'chrome',
+      'dirty',
+      'location',
+      'help',
+      'notifications',
+      'theme',
+    ]);
+    this.#announced = pane.id;
+    announceWindowFrame(pane.id, iframe);
+    window.setTimeout(() => (this._loading = false), UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS);
+  };
+
+  /**
+   * Where a page frame's watches report: the manager, under the pane's id.
+   * @param ownerId The owner window.
+   * @param pane The pane.
+   * @returns The sink.
+   */
+  #frameSink(ownerId: string, pane: UmbraDesktopPane): UmbraDesktopFrameSink {
+    const centre = this.#notifications;
+    return {
+      chromeProfile: pane.app.chromeProfile,
+      narrow: true,
+      loaded: () => (this._loading = false),
+      applyTheme: () => this.#frameTheme.apply(),
+      setDirty: (dirty) => this.#manager?.setPaneDirty(ownerId, pane.id, dirty),
+      setLocation: (location) => this.#manager?.setPaneLocation(ownerId, pane.id, location),
+      // Under the pane's own id, so server events reach the page as they reach a window's.
+      setSubjects: (subjects) => this.#manager?.setSubjects(pane.id, subjects),
+      openHelp: (target) =>
+        this.dispatchEvent(new CustomEvent(UMBRADESKTOP_OPEN_HELP_EVENT, { detail: { target }, bubbles: true, composed: true })),
+      // No centre, no watcher, for the reason the window gives: a watcher hides the frame's own toasts.
+      notifications: centre ? { centre, sourceId: pane.id, source: () => this.pane?.app.name ?? '' } : undefined,
+    };
+  }
+
+  /**
+   * Close the pane: at once when it holds nothing, after core's discard dialog when its page holds
+   * unsaved changes. Clean closes stay synchronous, as they always were.
+   */
+  #onClose = (): void => {
+    const pane = this.pane;
+    if (!pane || !this.ownerId || !this.#manager) return;
+    if (pane.dirty) void this.#manager.requestCloseAttached(this.ownerId, pane.id);
+    else this.#manager.closeAttached(this.ownerId, pane.id);
+  };
+
+  /** Reload the content by remounting it, asking first when its page holds unsaved changes. */
+  #onReload = async (): Promise<void> => {
+    const pane = this.pane;
+    if (pane?.dirty && this.ownerId && this.#manager) {
+      if (!(await this.#manager.confirmDiscardAttached(this.ownerId, pane.id))) return;
+    }
+    if (pane?.app.content.kind === 'iframe') this._loading = true;
+    this._generation += 1;
+  };
 
   /**
    * Start pulling the pane out by its header.
@@ -117,13 +238,16 @@ export class UmbraDesktopWindowPaneElement extends UmbLitElement {
       <div class="pane-header" @pointerdown=${this.#onHeaderDown}>
         <umb-icon class="pane-icon" name=${pane.app.icon}></umb-icon>
         <span class="pane-title">${this.localize.string(pane.app.name)}</span>
-        <button class="pane-button pane-reload" type="button" title="Reload" aria-label="Reload" @click=${() => (this._generation += 1)}>
+        <button class="pane-button pane-reload" type="button" title="Reload" aria-label="Reload" @click=${this.#onReload}>
           <svg class="pane-glyph" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3"></path></svg>
         </button>
+        <!-- Greyed rather than hidden while the page holds unsaved changes, with the reason as its
+             title: popping out remounts the frame, which would lose them. -->
         <button
           class="pane-button pane-popout"
           type="button"
-          title="Pop out"
+          ?disabled=${!!pane.dirty}
+          title=${pane.dirty ? this.localize.term('umbraDesktop_attachedUnsaved') : 'Pop out'}
           aria-label="Pop out"
           @click=${() => this.ownerId && this.#manager?.undock(this.ownerId, pane.id)}>
           <!-- Picture in picture: a frame with a small filled window in its corner, which says "make
@@ -139,7 +263,7 @@ export class UmbraDesktopWindowPaneElement extends UmbLitElement {
           type="button"
           title="Close"
           aria-label="Close"
-          @click=${() => this.ownerId && this.#manager?.closeAttached(this.ownerId, pane.id)}>
+          @click=${this.#onClose}>
           <svg class="pane-glyph" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
         </button>
       </div>
@@ -154,8 +278,11 @@ export class UmbraDesktopWindowPaneElement extends UmbLitElement {
                 .props=${content.props}
                 .load=${content.element}></umbradesktop-app-host>`,
             )
-          : keyed(this._generation, html`<iframe class="pane-content" src=${content.url}></iframe>`)}
+          : keyed(this._generation, html`<iframe class="pane-content" src=${content.url} @load=${this.#onFrameLoad}></iframe>`)}
         ${this.inactive ? html`<div class="pane-catcher"></div>` : nothing}
+        ${content.kind === 'iframe' && this._loading
+          ? html`<div class="pane-loading"><umbradesktop-loader></umbradesktop-loader></div>`
+          : nothing}
       </div>
     `;
   }
@@ -221,7 +348,11 @@ export class UmbraDesktopWindowPaneElement extends UmbLitElement {
         color: inherit;
         cursor: pointer;
       }
-      .pane-button:hover {
+      .pane-button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .pane-button:hover:not(:disabled) {
         background: var(
           --umbradesktop-strip-button-hover-background,
           var(--umbradesktop-path-link-hover-background, var(--uui-color-surface-emphasis))
@@ -256,6 +387,14 @@ export class UmbraDesktopWindowPaneElement extends UmbLitElement {
       .pane-catcher {
         position: absolute;
         inset: 0;
+      }
+      .pane-loading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--umbradesktop-pane-background, var(--umbradesktop-window-background, var(--uui-color-surface)));
       }
     `,
   ];

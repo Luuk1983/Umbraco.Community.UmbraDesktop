@@ -328,6 +328,7 @@ export default {
     attachedTo: 'Attached to',
     dock: 'Dock',
     dockNoRoom: 'Not enough room beside %0% to dock',
+    attachedUnsaved: 'Save or discard your changes first',
     previewTitle: 'Preview: %0%',
     previewUnsaved: 'You have unsaved changes. The preview shows the last saved version.',
     previewOpenInTab: 'Open in a new browser tab',

@@ -450,6 +450,43 @@ describe('opening an app window at a location', () => {
     expect(opened.app).to.equal(HELP);
     expect(opened.location).to.equal(undefined);
   });
+
+  /** Published API: the Media Manager's "Open in new window" opens a manager at a folder (#144). */
+  it('openApp passes a location on, opening a new window at it', () => {
+    const ctx = manager();
+    ctx.useApps(() => [HELP]);
+    expect(ctx.openApp('help', { location: 'folder=a' })).to.equal(true);
+    expect(ctx.openApp('help', { location: 'folder=b' })).to.equal(true);
+    expect(windowsOf(ctx).map((w) => w.location)).to.eql(['folder=a', 'folder=b']);
+  });
+});
+
+/**
+ * An app window can name itself (#144): the Media Manager calls each window after the folder it
+ * shows, because four windows all titled "Media Manager" cannot be told apart.
+ */
+describe('window titles', () => {
+  it('sets and clears a title on the named window only', () => {
+    const ctx = manager();
+    ctx.open({ ...APP, alias: 'a' });
+    ctx.open({ ...APP, alias: 'b' });
+    const [a, b] = windowsOf(ctx);
+    ctx.setTitle(a.id, 'People');
+    expect(windowsOf(ctx).map((w) => w.title)).to.eql(['People', undefined]);
+    ctx.setTitle(a.id, '');
+    expect(windowsOf(ctx)[0].title, 'an empty title goes back to the app name').to.equal(undefined);
+    expect(windowsOf(ctx)[1].id).to.equal(b.id);
+  });
+
+  it('does not re-render for a title that did not change', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    const [w] = windowsOf(ctx);
+    ctx.setTitle(w.id, 'People');
+    const before = windowsOf(ctx);
+    ctx.setTitle(w.id, 'People');
+    expect(windowsOf(ctx)).to.equal(before);
+  });
 });
 
 describe('single-window apps', () => {
@@ -786,6 +823,12 @@ describe('restoring saved windows', () => {
     expect(restored.snapped).to.equal('left');
     expect(restored.restoreRect).to.eql({ x: 1, y: 2, w: 300, h: 200 });
     expect(restored.active, 'focus is the restorer’s to give, once every window is back').to.equal(false);
+  });
+
+  it('reopens a window with the title its app last gave it', () => {
+    const ctx = manager();
+    ctx.restoreWindow({ app: 'section', rect: { x: 0, y: 0, w: 100, h: 100 }, state: 'normal', z: 1, active: false, title: 'People' }, SECTION);
+    expect(windowsOf(ctx)[0].title).to.equal('People');
   });
 
   it('stacks restored windows above what is open, in the order they are restored', () => {

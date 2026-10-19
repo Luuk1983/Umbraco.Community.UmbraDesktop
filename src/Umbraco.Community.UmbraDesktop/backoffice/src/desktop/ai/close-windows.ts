@@ -2,6 +2,7 @@ import type { DeskView, UmbraDesktopLocalise } from './desk-snapshot';
 import { isBusy } from '../progress/progress.js';
 import type { UmbraDesktopWindow } from '../types';
 import { matchByLabel } from './name-match';
+import { windowName } from '../window-model';
 
 /**
  * Decides which windows the agent's "tidy up my desk" tool should close. Pure: the api applies it.
@@ -67,7 +68,7 @@ export function planCloseWindows(
   const labelled = desk
     .getWindows()
     .filter((win) => win.id !== selfWindowId)
-    .map((win) => ({ item: win, label: localise(win.app.name) }));
+    .map((win) => ({ item: win, label: windowName(win, localise) }));
 
   const wanted = Array.isArray(args.apps)
     ? args.apps.filter((name): name is string => typeof name === 'string' && name.trim() !== '')
@@ -105,20 +106,20 @@ export function planCloseWindows(
   if (closing.length > 0) {
     sentences.push(
       `Closed ${closing.length === 1 ? 'the window' : `${closing.length} windows`}: ${list(
-        closing.map((win) => localise(win.app.name)),
+        closing.map((win) => windowName(win, localise)),
       )}.`,
     );
   }
   if (skipped.length > 0) {
     sentences.push(
-      `Left ${list(skipped.map((win) => localise(win.app.name)))} open, because ${
+      `Left ${list(skipped.map((win) => windowName(win, localise)))} open, because ${
         skipped.length === 1 ? 'it has' : 'they have'
       } unsaved changes. Tell the user to save or discard there first; this tool will not close over unsaved work.`,
     );
   }
   if (working.length > 0) {
     sentences.push(
-      `Left ${list(working.map((win) => localise(win.app.name)))} open, because ${
+      `Left ${list(working.map((win) => windowName(win, localise)))} open, because ${
         working.length === 1 ? 'it is' : 'they are'
       } still working, and closing would stop that. Tell the user to let it finish first.`,
     );

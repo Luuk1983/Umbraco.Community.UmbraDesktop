@@ -51,6 +51,14 @@ export interface MetaUmbraDesktopApp {
    */
   resizable?: boolean;
   /**
+   * Whether the launcher and its search leave the app out. Default: shown.
+   *
+   * For a window a package opens itself, when it has something to show, rather than one people
+   * start: the Media add-on's Transfers window opens when a copy is still running after two seconds.
+   * `openApp` still opens it, and once open it is a window like any other.
+   */
+  hideFromLauncher?: boolean;
+  /**
    * A package name: choosing this tile opens Desktop settings at that package's row instead of a
    * window, and `element` is then not needed (design §6). For a tool whose settings moved into
    * Desktop settings, such as the Accessories Screen Saver, so the tile people know still leads there.

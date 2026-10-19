@@ -1,17 +1,13 @@
 import type { Rect, UmbraDesktopPane, UmbraDesktopWindow } from '../types';
 import type { UmbraDesktopResizeEdges } from '../window-model';
-import { clampResizeOrigin, clampWindowPosition, isResizable, resizeRect, restoreDragPosition } from '../window-model';
-import { injectChromeStyles } from '../chrome-injector';
-import { watchWorkspaceDirtyState } from '../dirty-watcher.js';
-import { watchFrameUploads } from '../progress/upload-watcher.js';
+import { clampResizeOrigin, clampWindowPosition, isResizable, resizeRect, restoreDragPosition, windowName } from '../window-model';
+import { startFrameWatches, UmbraDesktopFrameThemeController } from '../frame-watches.js';
+import type { UmbraDesktopFrameSink } from '../frame-watches.js';
 import { progressCaption } from '../progress/progress.js';
 import type { UmbraDesktopTask } from '../progress/progress.js';
 import { UMBRADESKTOP_PROGRESS_TRACK_DEFAULT, progressStyles, renderProgress } from '../progress/progress-view.js';
-import { watchNotifications } from '../notifications/notification-watcher.js';
 import { UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT } from '../notifications/notification-centre.context-token.js';
 import type { UmbraDesktopNotificationCentreContext } from '../notifications/notification-centre.context.js';
-import { resolveThemeSync, syncThemeStylesheet } from '../iframe-theme.js';
-import type { UmbraDesktopThemeManifest } from '../iframe-theme.js';
 import {
   UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS,
   UMBRADESKTOP_CONTROL_WIDTH,
@@ -58,6 +54,7 @@ import './loader.element.js';
 import './window-pane.element.js';
 import { UmbraDesktopWindowPaneElement, type UmbraDesktopPaneDragDetail } from './window-pane.element.js';
 import { attachedKind, paneTotal } from '../window-group.js';
+import { attachedPageAlias, attachedPaths, createAttachedPageApp, readAttachedRequest } from '../windows/attached-page.js';
 import { previewTargetFromPath, withoutWorkspaceView } from '../preview/preview-target.js';
 import { createPreviewApp, UMBRADESKTOP_PREVIEW_APP_ALIAS } from '../preview/preview-model.js';
 import { besideAppAlias, besideContentIds, createBesideApp } from '../beside/beside-model.js';
@@ -66,8 +63,6 @@ import { besideOfferIn, shownViewIn, watchFrameViews } from '../beside/beside-of
 import { announceWindowFrame, forgetWindowFrame } from '../beside/owner-frames.js';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
-import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
-import { UMB_THEME_CONTEXT, UMB_THEME_LIGHT_ALIAS } from '@umbraco-cms/backoffice/themes';
 
 /** The eight resize handles: direction (for the cursor class) + which edges each pulls. */
 const RESIZE_HANDLES: ReadonlyArray<{ dir: string; edges: UmbraDesktopResizeEdges }> = [
@@ -119,6 +114,14 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
 
   @state()
   private _dragging = false;
+
+  /**
+   * Whether something is being dragged over the page: items between windows, or files from the OS.
+   * The focus catcher lets a drag through while it is, since a drag is not a click (see the
+   * catcher's comment in `render`).
+   */
+  @state()
+  private _dragOverPage = false;
 
   @state()
   private _loading = true;
@@ -203,6 +206,15 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   private _bodyGeneration = 0;
 
   /**
+   * What this app window has open beside it, for its app's `attached` property (#144): each key the
+   * app opened a page under, and the page it is on. Read from the whole window list, because a
+   * floating page is a window of its own and its routes do not touch this window's state. Replaced
+   * only when the answer changes, so the app is not told the same thing on every move and focus.
+   */
+  @state()
+  private _attached: Readonly<Record<string, string>> = {};
+
+  /**
    * Every dock zone on offer; this window draws the ones that are its own. See the manager's
    * `dockZones` for why the owner draws them rather than the desktop.
    */
@@ -229,36 +241,18 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   #manager?: UmbraDesktopWindowManagerContext;
 
   /**
-   * Stops the current frame's unsaved-changes watcher. Replaced on every frame load — a reload
-   * hands us a new document, and the listeners on the old one are gone with it — and called on
-   * disconnect so a closed window leaves nothing subscribed inside a frame that is about to die.
+   * Stops the current frame's shared watches (`frame-watches.ts`): unsaved changes, uploads, location,
+   * Help and notifications. Replaced on every frame load, because a reload hands us a new document
+   * and the listeners on the old one are gone with it, and called on disconnect so a closed window
+   * leaves nothing subscribed inside a frame that is about to die.
    */
-  #stopDirtyWatch?: () => void;
+  #stopFrameWatches?: () => void;
 
   /**
    * Stops the current frame's path watcher. Replaced and released on exactly the same occasions as
-   * {@link #stopDirtyWatch}, and for the same reason: both hold subscriptions inside a document
-   * that a reload replaces and a close destroys.
+   * {@link #stopFrameWatches}, and for the same reason. Window-only, so not one of the shared watches.
    */
   #stopPathWatch?: () => void;
-
-  /**
-   * Stops the current frame's media upload watcher. Replaced and released on the same occasions as
-   * {@link #stopDirtyWatch}, for the same reason. Issue #108.
-   */
-  #stopUploadWatch?: () => void;
-
-  /** Stops following the frame's router for the window layout; see `#startLocationWatch`. */
-  #stopLocationWatch?: () => void;
-
-  /** Stops passing the frame's requests for Help on; see `#startHelpRequests`. */
-  #stopHelpRequests?: () => void;
-
-  /**
-   * Stops the current frame's notification watcher and takes it off the centre's list of sources.
-   * Replaced and released on the same occasions as {@link #stopDirtyWatch}, for the same reason.
-   */
-  #stopNotificationWatch?: () => void;
 
   /** Where this window's notifications go instead of into its own frame. */
   #notifications?: UmbraDesktopNotificationCentreContext;
@@ -272,18 +266,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   #resizeStartPointer = { x: 0, y: 0 };
   #resizeStartRect: Rect = { x: 0, y: 0, w: 0, h: 0 };
 
-  /** The backoffice light/dark theme in force, as `UMB_THEME_CONTEXT` reports it. */
-  #themeAlias: string = UMB_THEME_LIGHT_ALIAS;
-
-  /** Every registered `theme` extension, so a theme's stylesheet can be looked up by alias. */
-  #themes: ReadonlyArray<UmbraDesktopThemeManifest> = [];
-
-  /**
-   * The alias this frame was last brought in line with. Undefined until the first sync, which is
-   * what keeps a frame that booted on a JS-loaded theme from reloading itself on sight — and,
-   * since the reload path re-enters through the load handler, from doing so forever.
-   */
-  #syncedAlias?: string;
+  /** Keeps the frame on the desktop's light or dark theme; see `UmbraDesktopFrameThemeController`. */
+  #frameTheme = new UmbraDesktopFrameThemeController(this, () => this.#frameDocument(), () => this.#onReload());
 
   constructor() {
     super();
@@ -292,16 +276,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
       if (ctx) this.observe(ctx.dockZones, (zones) => (this._dockZones = zones ?? []), '_umbraDesktopDockZones');
+      if (ctx) this.observe(ctx.windows, (list) => this.#readAttached(list), '_umbraDesktopAttachedPages');
     });
     this.consumeContext(UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT, (ctx) => {
       this.#notifications = ctx ?? undefined;
-    });
-    this.consumeContext(UMB_THEME_CONTEXT, (context) => {
-      if (!context) return;
-      this.observe(context.theme, (alias) => {
-        this.#themeAlias = alias || UMB_THEME_LIGHT_ALIAS;
-        this.#applyFrameTheme();
-      });
     });
     // The desktop's chrome theme, which is a different thing from Umbraco's light/dark above: that
     // one decides a *variant*, this one decides which of the five chromes is being painted. Only an
@@ -350,26 +328,23 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         '_umbraDesktopViewsNotBeside',
       );
     });
-    this.observe(umbExtensionsRegistry.byType('theme'), (themes) => {
-      this.#themes = themes;
-      this.#applyFrameTheme();
-    });
+  }
+
+  override connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener('dragenter', this.#onPageDragEnter, true);
+    for (const type of ['drop', 'dragend', 'pointermove']) document.addEventListener(type, this.#onPageDragEnd, true);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    this.#stopDirtyWatch?.();
-    this.#stopDirtyWatch = undefined;
-    this.#stopUploadWatch?.();
-    this.#stopUploadWatch = undefined;
+    document.removeEventListener('dragenter', this.#onPageDragEnter, true);
+    for (const type of ['drop', 'dragend', 'pointermove']) document.removeEventListener(type, this.#onPageDragEnd, true);
+    this._dragOverPage = false;
+    this.#stopFrameWatches?.();
+    this.#stopFrameWatches = undefined;
     this.#stopPathWatch?.();
     this.#stopPathWatch = undefined;
-    this.#stopLocationWatch?.();
-    this.#stopLocationWatch = undefined;
-    this.#stopHelpRequests?.();
-    this.#stopHelpRequests = undefined;
-    this.#stopNotificationWatch?.();
-    this.#stopNotificationWatch = undefined;
     this.#stopBesideWatch?.();
     this.#stopBesideWatch = undefined;
     window.clearTimeout(this.#besideTimer);
@@ -386,54 +361,29 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     return iframe?.contentDocument ?? undefined;
   }
 
-  /**
-   * Put the frame's backoffice on the same light/dark theme as the desktop around it.
-   *
-   * A frame only takes its theme from its own head, and Umbraco's theme context only reads the
-   * stored alias once, when it boots — so a window that was already open when the theme changed
-   * would otherwise stay on the old one until it was reloaded. Swapping the same stylesheet link
-   * Umbraco itself swaps costs the user nothing; reloading would cost them anything unsaved in a
-   * content editor, which is far too much for a display preference.
-   *
-   * Iframe-only, and the guard that makes it so is the `!doc` return: an element window has no
-   * frame, so `#frameDocument` gives nothing and this leaves even `#syncedAlias` alone. That
-   * matters more than it looks now that reload means "new game" for an element body, because the
-   * branch below reloads a window on a theme it cannot mirror. Reaching it with an element body
-   * would throw a player's board away every time somebody toggled dark mode. An element app needs
-   * none of this in the first place: it is in this document, so it takes the theme by inheritance.
-   */
-  #applyFrameTheme(): void {
-    const doc = this.#frameDocument();
-    if (!doc) return;
-    const sync = resolveThemeSync(this.#themes, this.#themeAlias);
-    if (sync.mirrorable) {
-      syncThemeStylesheet(doc, sync);
-    } else if (this.#syncedAlias !== undefined && this.#syncedAlias !== this.#themeAlias) {
-      // A theme whose CSS is a loader function has no link to copy. Reloading hands the job to
-      // the frame's own theme context, which loads it exactly as it would on a fresh boot.
-      this.#onReload();
-    }
-    this.#syncedAlias = this.#themeAlias;
-  }
-
   #onIframeLoad(e: Event) {
     const iframe = e.target as HTMLIFrameElement;
     if (!this.window) return;
     // Keep the loader up until the header is actually stripped, so the booting
     // backoffice (with its own header) never flashes into view.
-    injectChromeStyles(iframe, this.window.app.chromeProfile, () => (this._loading = false));
-    this.#startDirtyWatch(iframe);
+    // Every backoffice window reports its location, strip or not, since every one of them can be
+    // reopened.
+    this.#stopFrameWatches = startFrameWatches(iframe, this.#frameSink(), [
+      'chrome',
+      'uploads',
+      'dirty',
+      'location',
+      'help',
+      'notifications',
+    ]);
     this.#startPathWatch(iframe);
-    this.#startLocationWatch(iframe);
-    this.#startHelpRequests(iframe);
-    this.#startNotificationWatch(iframe);
     this.#startBesideWatch(iframe);
     // Told after the watches, so a view beside this window remounts against a page whose own
     // watchers are already running.
     if (this.window) announceWindowFrame(this.window.id, iframe);
     // A frame boots on the stored alias, so it is normally already right — but a theme changed
     // while it was still loading would have been missed, and the reload path lands here too.
-    this.#applyFrameTheme();
+    this.#frameTheme.apply();
     // Safety net: reveal anyway if the shell never reports ready. The same deadline the element
     // path gives its own loader, for the reason the constant carries.
     window.setTimeout(() => (this._loading = false), UMBRADESKTOP_BODY_LOAD_TIMEOUT_MS);
@@ -464,76 +414,36 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   }
 
   /**
-   * Watch the freshly loaded frame for unsaved changes, reporting them to the manager so the
-   * titlebar can mark this window and every guard can read it.
-   *
-   * Restarted rather than reused on each load, because a reload replaces the frame's document and
-   * takes the previous watcher's listeners with it. The window is reset to clean at the same time:
-   * whatever the frame held a moment ago, it has just been re-fetched from the server.
-   * @param iframe The window's freshly loaded frame.
+   * Where this window's frame watches report: the manager, under this window's id, and this element
+   * for what it draws itself. Built per load; the reports read `this.window` when they arrive, since
+   * the window's state object is replaced on every manager update.
+   * @returns The sink.
    */
-  /**
-   * Follow the page the frame is on, for the window layout to reopen the window there.
-   *
-   * The address, not the crumbs: the path strip's watcher reads the workspace's structure, which
-   * says what the page is but not how to get back to it. Reported once on load, then on each of the
-   * frame router's `changestate` events and the browser's `popstate`. Restarted on each load, like
-   * the other watches, because a reload replaces the frame's window and its listeners with it. Every
-   * backoffice window reports, strip or not, since every one of them can be reopened.
-   * @param iframe The window's freshly loaded frame.
-   */
-  #startLocationWatch(iframe: HTMLIFrameElement) {
-    this.#stopLocationWatch?.();
-    this.#stopLocationWatch = undefined;
-    const frame = iframe.contentWindow;
-    if (!frame || !iframe.contentDocument) return;
-    const report = () => {
-      const w = this.window;
-      if (!w) return;
-      let location: string;
-      try {
-        const { pathname, search, hash } = frame.location;
-        location = pathname + search + hash;
-      } catch {
-        // The frame has gone cross-origin, which a backoffice frame never does. Nothing to record.
-        return;
-      }
-      if (location.startsWith('/')) this.#manager?.setLocation(w.id, location);
+  #frameSink(): UmbraDesktopFrameSink {
+    const id = this.window?.id ?? '';
+    const centre = this.#notifications;
+    return {
+      chromeProfile: this.window?.app.chromeProfile,
+      // Attached content is narrower than the backoffice's own minimum by design (#144).
+      narrow: !!this.window?.owner,
+      // Keep the loader up until the header is actually stripped, so the booting backoffice (with its
+      // own header) never flashes into view.
+      loaded: () => (this._loading = false),
+      setDirty: (dirty) => this.#manager?.setDirty(id, dirty),
+      setSubjects: (subjects) => {
+        this.#manager?.setSubjects(id, subjects);
+        this._document = subjects.some((s) => s.entityType === 'document');
+      },
+      setSaves: (saves) => this.#manager?.setSaves(id, saves),
+      setLocation: (location) => this.#manager?.setLocation(id, location),
+      setTasks: (tasks) => this.#manager?.setTasks(id, 'frame', tasks),
+      openHelp: (target) =>
+        this.dispatchEvent(new CustomEvent(UMBRADESKTOP_OPEN_HELP_EVENT, { detail: { target }, bubbles: true, composed: true })),
+      // No centre, no watcher: a watcher hides the frame's toasts once it is listening, so starting
+      // one with nowhere to send what it hears would swallow every notification in the window. A
+      // window outside a desktop keeps drawing its own, which is the direction to fail in.
+      notifications: centre ? { centre, sourceId: id, source: () => this.window?.app.name ?? '' } : undefined,
     };
-    report();
-    // Umbraco's router fires changestate on the frame's window whenever it changes the route, and
-    // popstate covers the browser's own back and forward.
-    frame.addEventListener('changestate', report);
-    frame.addEventListener('popstate', report);
-    this.#stopLocationWatch = () => {
-      frame.removeEventListener('changestate', report);
-      frame.removeEventListener('popstate', report);
-    };
-  }
-
-  /**
-   * Pass requests for Help made inside the frame on to the desktop (Help design D9).
-   *
-   * A package's own screen runs in this frame, a document of its own where the desktop's Help
-   * context cannot be reached and where an event stops at the frame's window. So the window listens
-   * there and dispatches the request again on itself, in this document, where it bubbles to the
-   * desktop like any other. Only the target string is carried across: the detail object belongs to
-   * the frame's realm and is not handed on. Restarted on each load, like the other watches.
-   * @param iframe The window's freshly loaded frame.
-   */
-  #startHelpRequests(iframe: HTMLIFrameElement) {
-    this.#stopHelpRequests?.();
-    this.#stopHelpRequests = undefined;
-    const frame = iframe.contentWindow;
-    if (!frame) return;
-    const forward = (event: Event) => {
-      const target = (event as CustomEvent<{ target?: unknown }>).detail?.target;
-      if (typeof target !== 'string') return;
-      event.stopPropagation();
-      this.dispatchEvent(new CustomEvent(UMBRADESKTOP_OPEN_HELP_EVENT, { detail: { target }, bubbles: true, composed: true }));
-    };
-    frame.addEventListener(UMBRADESKTOP_OPEN_HELP_EVENT, forward);
-    this.#stopHelpRequests = () => frame.removeEventListener(UMBRADESKTOP_OPEN_HELP_EVENT, forward);
   }
 
   /**
@@ -695,41 +605,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   };
 
   /**
-   * Take the freshly loaded frame's notifications over, so they show once on the desktop rather than
-   * inside this window, and register the frame as where a notification can be raised again.
-   *
-   * Restarted on each load, as the other two watchers are, which is what makes a reloaded window
-   * watched again: the reload replaces the document and with it the context being listened to.
-   *
-   * **No centre, no watcher.** A watcher hides the frame's toasts once it is listening, so starting
-   * one with nowhere to send what it hears would swallow every notification in the window. A window
-   * outside a desktop keeps drawing its own, which is the direction to fail in.
-   * @param iframe The window's freshly loaded frame.
-   */
-  #startNotificationWatch(iframe: HTMLIFrameElement) {
-    this.#stopNotificationWatch?.();
-    this.#stopNotificationWatch = undefined;
-    const id = this.window?.id;
-    const doc = iframe.contentDocument;
-    const centre = this.#notifications;
-    if (!id || !doc || !centre) return;
-    const watch = watchNotifications(doc, {
-      // The app's name as the catalogue has it, possibly a `#key`: the centre localizes it when it is
-      // drawn, so an entry follows a language change rather than keeping the one it arrived in.
-      onRaised: (notification) => centre.raise(notification, { sourceId: id, source: this.window?.app.name ?? '' }),
-      onClosed: (key) => centre.closed(id, key),
-    });
-    const unregister = centre.registerSource(id, watch);
-    this.#stopNotificationWatch = () => {
-      unregister();
-      watch.stop();
-    };
-  }
-
-  /**
    * A registered app said whether it holds unsaved work, through the attribute its host watches.
    *
-   * The app-window half of what {@link #startDirtyWatch} does for an iframe, and it lands on the
+   * The app-window half of what the frame's dirty watch does for an iframe, and it lands on the
    * same `setDirty`, which is the point: the titlebar marker, the taskbar marker and the close guard
    * need no idea which kind of window they are guarding. No subjects to report, since an app's work
    * is not a document the server can change underneath it.
@@ -750,33 +628,6 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     const id = this.window?.id;
     if (id) this.#manager?.setTasks(id, 'app', event.detail.tasks);
   };
-
-  #startDirtyWatch(iframe: HTMLIFrameElement) {
-    this.#stopDirtyWatch?.();
-    this.#stopDirtyWatch = undefined;
-    this.#stopUploadWatch?.();
-    this.#stopUploadWatch = undefined;
-    const id = this.window?.id;
-    const doc = iframe.contentDocument;
-    if (!id || !doc) return;
-    // A reload replaces the document and every upload in it, so whatever the old frame reported is
-    // over: cleared here rather than left for a watcher that will never hear from that frame again.
-    this.#manager?.setTasks(id, 'frame', []);
-    this.#stopUploadWatch = watchFrameUploads(doc, (tasks) => this.#manager?.setTasks(id, 'frame', tasks));
-    this.#manager?.setDirty(id, false);
-    // Subjects cleared too, not left standing. A reload replaces the frame's document, so the
-    // previous subjects' getters close over a dead realm, and between the reload starting and the
-    // new watcher's first report a server event could match a document this window is no longer
-    // showing.
-    this.#manager?.setSubjects(id, []);
-    this._document = false;
-    this.#stopDirtyWatch = watchWorkspaceDirtyState(doc, (state) => {
-      this.#manager?.setDirty(id, state.dirty);
-      this.#manager?.setSubjects(id, state.subjects);
-      this.#manager?.setSaves(id, state.saves);
-      this._document = state.subjects.some((s) => s.entityType === 'document');
-    });
-  }
 
   /**
    * Route the frame to a crumb the strip reported.
@@ -815,7 +666,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * since reloading discards them exactly as closing the window would.
    *
    * Deliberately separate from {@link #onReload}, which must stay silent. Its other caller is
-   * {@link #applyFrameTheme}, reloading a frame to pick up a theme whose CSS is a loader function
+   * the frame theme controller, reloading a frame to pick up a theme whose CSS is a loader function
    * rather than a link — a display preference the user did not aim at this window, and one that
    * would otherwise interrogate every dirty window the moment the backoffice theme changed.
    *
@@ -1139,6 +990,20 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.#onFocus();
   };
 
+  /** A drag came over the page, from inside it or from the OS. */
+  #onPageDragEnter = () => {
+    this._dragOverPage = true;
+  };
+
+  /**
+   * A drag ended: dropped, or let go. Files dragged off the page and let go elsewhere send neither,
+   * so the pointer moving again ends it too: the browser sends no pointer event during a drag. Not
+   * dragleave, whose `relatedTarget` Chrome leaves empty inside the page as well.
+   */
+  #onPageDragEnd = () => {
+    if (this._dragOverPage) this._dragOverPage = false;
+  };
+
   /** The app host in the body, for an element window once it has rendered. */
   get #appHost(): HTMLElement | undefined {
     return this.shadowRoot?.querySelector<HTMLElement>('umbradesktop-app-host') ?? undefined;
@@ -1341,7 +1206,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         .load=${w.app.content.element}
         @umbradesktop-app-dirty=${this.#onAppDirty}
         @umbradesktop-app-tasks=${this.#onAppTasks}
-        @umbradesktop-app-location=${this.#onAppLocation}></umbradesktop-app-host>`;
+        @umbradesktop-app-location=${this.#onAppLocation}
+        @umbradesktop-app-title=${this.#onAppTitle}
+        @umbradesktop-app-focus=${this.#onAppFocus}
+        .attached=${w.owner ? undefined : this._attached}
+        @umbradesktop-open-attached=${this.#onOpenAttached}
+        @umbradesktop-close-attached=${this.#onCloseAttached}></umbradesktop-app-host>`;
       // Keyed only for attached content, whose reload is a remount: it fetches what it shows when it
       // connects. An ordinary element app keeps the plain commit this method's doc argues for, and a
       // window never changes between the two, so neither path ever remounts the other's app.
@@ -1364,6 +1234,84 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   };
 
   /**
+   * Names the window after what an app says it shows (#144), as the Media Manager names each window
+   * after its folder. Stopped here for the reason {@link #onAppLocation} gives. Anything but a string
+   * says nothing and is ignored; an empty string gives the window its app's name back.
+   * @param event The app's {@link UMBRADESKTOP_APP_TITLE_EVENT}.
+   */
+  #onAppTitle = (event: Event): void => {
+    event.stopPropagation();
+    const title = (event as CustomEvent<{ title?: unknown }>).detail?.title;
+    const w = this.window;
+    if (w && typeof title === 'string') this.#manager?.setTitle(w.id, title);
+  };
+
+  /**
+   * Bring this window forward because its app asked (#144), as a click on its taskbar button would:
+   * the group rises with it and a minimised window comes back. Stopped here, like the app's other
+   * events.
+   * @param event The app's {@link UMBRADESKTOP_APP_FOCUS_EVENT}.
+   */
+  #onAppFocus = (event: Event): void => {
+    event.stopPropagation();
+    const w = this.window;
+    if (w) this.#manager?.focus(w.id);
+  };
+
+  /**
+   * Keep `_attached` in step with the window list, for an ordinary app window.
+   * @param list The open windows.
+   */
+  #readAttached(list: ReadonlyArray<UmbraDesktopWindow>): void {
+    const w = this.window;
+    if (!w || w.owner || w.app.content.kind !== 'element') return;
+    const next = attachedPaths(list, w.id);
+    if (JSON.stringify(next) !== JSON.stringify(this._attached)) this._attached = next;
+  }
+
+  /**
+   * An app asked for a backoffice page beside its window (#144). Opened as attached content, a pane
+   * where it fits and a window where it does not or where the app asked to float. A key already open
+   * is routed instead, inside its frame, so core asks about unsaved changes first, or only renamed
+   * when it is already on that page; it comes forward either way. Stopped here, like the app's other events, and refused for an attached window, which
+   * cannot own one, and for a path off the backoffice.
+   * @param event The app's {@link UMBRADESKTOP_APP_OPEN_ATTACHED_EVENT}.
+   */
+  #onOpenAttached = (event: Event): void => {
+    event.stopPropagation();
+    const w = this.window;
+    const request = readAttachedRequest((event as CustomEvent).detail);
+    if (!w || w.owner || !request || !this.#manager) return;
+    const open = attachedKind(this.#manager.getWindows(), w.id, attachedPageAlias(w.id, request.key));
+    if (!open) {
+      this.#manager.openAttached(w.id, createAttachedPageApp(w.id, request), 'right', { floating: request.floating });
+      return;
+    }
+    const id = open.kind === 'pane' ? open.pane.id : open.window.id;
+    this.#manager.focus(open.kind === 'pane' ? w.id : id);
+    // Asked for the page it is already on, which core may have extended with a view: it is named
+    // again rather than routed, which would reset that view.
+    const at = (open.kind === 'pane' ? open.pane.location : open.window.location) ?? '';
+    const here = at === request.path || at.startsWith(`${request.path}/`) || at.startsWith(`${request.path}?`);
+    if (here) this.#manager.relabelAttached(w.id, id, { name: request.name, icon: request.icon });
+    else this.#manager.routeAttached(w.id, id, { path: request.path, name: request.name, icon: request.icon });
+  };
+
+  /**
+   * An app asked for the page under a key to close (#144), which asks first when it holds unsaved
+   * changes. Stopped here, like the open event.
+   * @param event The app's {@link UMBRADESKTOP_APP_CLOSE_ATTACHED_EVENT}.
+   */
+  #onCloseAttached = (event: Event): void => {
+    event.stopPropagation();
+    const w = this.window;
+    const key = (event as CustomEvent<{ key?: unknown }>).detail?.key;
+    if (!w || typeof key !== 'string' || !this.#manager) return;
+    const open = attachedKind(this.#manager.getWindows(), w.id, attachedPageAlias(w.id, key));
+    if (open) void this.#manager.requestCloseAttached(w.id, open.kind === 'pane' ? open.pane.id : open.window.id);
+  };
+
+  /**
    * The strip under a floating attached window's titlebar: what it belongs to, in words, and the
    * button that docks it back there.
    *
@@ -1377,7 +1325,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   #renderAttachedStrip(w: UmbraDesktopWindow) {
     if (!w.owner || !this.#manager) return nothing;
     const owner = this.#manager.getWindows().find((o) => o.id === w.owner);
-    const ownerName = owner ? this.localize.string(owner.app.name) : '';
+    const ownerName = owner ? windowName(owner, (value) => this.localize.string(value)) : '';
     const canDock = this.#manager.canDock(w.id);
     return html`<div class="attached-strip">
       <span class="attached-strip-text"
@@ -1387,7 +1335,11 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         class="attached-dock"
         type="button"
         ?disabled=${!canDock}
-        title=${canDock ? this.localize.term('umbraDesktop_dock') : this.localize.term('umbraDesktop_dockNoRoom', ownerName)}
+        title=${canDock
+          ? this.localize.term('umbraDesktop_dock')
+          : w.dirty
+            ? this.localize.term('umbraDesktop_attachedUnsaved')
+            : this.localize.term('umbraDesktop_dockNoRoom', ownerName)}
         @click=${() => this.#manager?.dock(w.id)}>
         <!-- A frame with its side panel filled in, on the side it will dock to: the pane this window
              becomes. The pane header's pop-out glyph is the same frame with a small window in its
@@ -1608,7 +1560,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
                 ),
               )}
             </span>
-            <span class="title-text">${this.localize.string(w.app.name)}</span>
+            <span class="title-text">${windowName(w, (value) => this.localize.string(value))}</span>
             ${(() => {
               const notices = windowNotices(w);
               const worst = worstSeverity(notices);
@@ -1733,9 +1685,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
                window its first click, and that is the intended trade: click-to-focus then act is
                what every OS window does, and a stray click landing on a card or a mine in a window
                the user was not looking at is the worse outcome. 'window-body.test.ts' pins it so
-               the catcher cannot quietly become iframe-only. -->
+               the catcher cannot quietly become iframe-only. A drag is not a click: while one is over
+               the page the catcher lets it through, so a drop can land in an inactive window. -->
           ${!w.active
-            ? html`<div class="focus-catcher" @pointerdown=${this.#onCatcherPointerDown}></div>`
+            ? html`<div class="focus-catcher" ?drag-through=${this._dragOverPage} @pointerdown=${this.#onCatcherPointerDown}></div>`
             : ''}
           ${this._loading ? html`<div class="loading"><umbradesktop-loader></umbradesktop-loader></div>` : ''}
         </div>
@@ -2033,6 +1986,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         position: absolute;
         inset: 0;
         z-index: 1;
+      }
+      .focus-catcher[drag-through] {
+        pointer-events: none;
       }
       .rh {
         position: absolute;

@@ -1,7 +1,7 @@
 /**
  * English (en) strings for the `umbraDesktopEntertainment` area.
  *
- * This package's own dictionary: the Media group's heading, which this package's catalogue
+ * This package's own dictionary: the Entertainment group's heading, which this package's catalogue
  * manifest defines, each app's name, which its manifest points at through `meta.label`, and
  * everything the apps themselves say. The Games heading is the Arcade's, since its catalogue
  * defines that group.
@@ -87,7 +87,7 @@ export default {
     solitaireShowLeaderboard: 'Show the leaderboard',
     // umbraCoffee. The group it sits in, then its name as an app and as a tray switch, the same word
     // in both places because the switch in Desktop settings is found by the show's name.
-    groupMedia: 'Media',
+    groupEntertainment: 'Entertainment',
     umbraCoffee: 'umbraCoffee',
     umbraCoffeeTray: 'umbraCoffee',
     umbraCoffeeTrayAbout:

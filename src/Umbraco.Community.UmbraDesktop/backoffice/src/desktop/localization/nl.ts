@@ -312,6 +312,7 @@ export default {
     attachedTo: 'Hoort bij',
     dock: 'Vastzetten',
     dockNoRoom: 'Te weinig ruimte naast %0% om vast te zetten',
+    attachedUnsaved: 'Sla je wijzigingen eerst op of verwerp ze',
     previewTitle: 'Voorbeeld: %0%',
     previewUnsaved: 'Je hebt niet-opgeslagen wijzigingen. Het voorbeeld toont de laatst opgeslagen versie.',
     previewOpenInTab: 'Openen in een nieuw browsertabblad',

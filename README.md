@@ -54,6 +54,10 @@ UmbraDesktop grants no access of its own. A user only sees apps for the sections
 
 [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment) is an optional add-on that puts Minesweeper, Snake and Solitaire on the desktop, and umbraCoffee, the community's monthly live show, each in a window of its own and themed along with everything else. The desktop is unchanged without it.
 
+## A media manager, if you want one
+
+[`Umbraco.Community.UmbraDesktop.Media`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) is an optional add-on that opens your media library in desktop windows, one folder per window, with dragging between them, copy and paste, files from your computer and undo, on top of everything the Media section does. The desktop is unchanged without it.
+
 ## Documentation
 
 - The [user guide](docs/user/README.md) covers installing, using and setting up the desktop, one short page per feature.

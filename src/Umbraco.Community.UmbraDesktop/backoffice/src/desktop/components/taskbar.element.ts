@@ -1,6 +1,6 @@
 import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
 import { UMBRADESKTOP_CHROME_ICON_PX, UMBRADESKTOP_UNSAVED_MARKER_SIZE } from '../constants.js';
-import { taskActivation } from '../window-model';
+import { taskActivation, windowName } from '../window-model';
 import { exitDialogContent } from '../exit-message.js';
 import { formatClock, msUntilNextMinute } from '../clock-format.js';
 import { suppressBootForSession } from '../boot/boot-storage.js';
@@ -365,7 +365,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
     // applies to unsaved work too, because a window you minimized an hour ago is exactly the one
     // whose state you cannot see.
     const worst = worstSeverity(notices);
-    const name = this.localize.string(w.app.name);
+    const name = windowName(w, (value) => this.localize.string(value));
     // The words, not just the shape: this is the accessible name and the tooltip, so the state is
     // readable to a screen reader and on a monochrome display. `notices[0]` is the worst notice,
     // which is the one the badge is drawing.
@@ -812,7 +812,7 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
                 // One box around the owner and its floating windows, each still its own button. The
                 // box is the signal that they belong together, not the labels, so it survives the
                 // themes that draw icon-only tiles. Design D6.
-                return html`<div class="task-group" role="group" aria-label=${this.localize.string(w.app.name)}>
+                return html`<div class="task-group" role="group" aria-label=${windowName(w, (value) => this.localize.string(value))}>
                   ${[w, ...floating].map((member) => this.#renderTask(member))}
                 </div>`;
               },

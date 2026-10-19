@@ -155,6 +155,7 @@ export function normaliseRegisteredApps(
       minSize: read(meta.minSize, isSize, 'meta.minSize'),
       allowMultiple: read(meta.allowMultiple, isBoolean, 'meta.allowMultiple'),
       resizable: read(meta.resizable, isBoolean, 'meta.resizable'),
+      hideFromLauncher: read(meta.hideFromLauncher, isBoolean, 'meta.hideFromLauncher'),
       opensSettings,
     });
   }

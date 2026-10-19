@@ -96,6 +96,11 @@ export interface UmbraDesktopApp {
   resizable?: boolean;
   /** Open Desktop settings at this package instead of a window. */
   opensSettings?: string;
+  /**
+   * Left out of the launcher and its search: an app a package opens itself, such as the Media
+   * add-on's Transfers window. `openApp` still opens it.
+   */
+  hideFromLauncher?: boolean;
   /** Sort weight within its group (ascending). */
   weight?: number;
   /** Curatorial group alias; undefined → the reserved "More" group. */
@@ -148,6 +153,8 @@ export interface UmbraDesktopRegisteredApp {
   resizable?: boolean;
   /** Open Desktop settings at this package instead of a window. */
   opensSettings?: string;
+  /** The manifest's `meta.hideFromLauncher`: left out of the launcher and its search. */
+  hideFromLauncher?: boolean;
 }
 
 /** A position/size rectangle in desktop pixels. */
@@ -300,6 +307,16 @@ export interface UmbraDesktopWindow {
   location?: string;
 
   /**
+   * The title an app window gave itself, shown instead of its app's name on the titlebar and the
+   * taskbar button. Plain text, never a dictionary key.
+   *
+   * Set by the app with `umbradesktop-app-title`, so several windows of one app can be told apart:
+   * the Media Manager names each window after the folder it shows (#144). Absent for every window
+   * whose app has not named it, which keeps the app's own name.
+   */
+  title?: string;
+
+  /**
    * The id of the window this one is attached to, when it is a floating attached window.
    *
    * A floating attached window belongs to its owner: the two rise as one layer, minimizing the owner
@@ -354,6 +371,18 @@ export interface UmbraDesktopPane {
    * window's rect is not the place to read the difference from.
    */
   grew?: number;
+  /**
+   * Whether the pane's backoffice page holds unsaved changes (#144). Only a page pane can: an element
+   * pane holds no work (`docs/developer/attached-windows.md` §2). While it does, the owner counts as
+   * dirty, closing asks, and the pane may not move between pane and window, since moving remounts it.
+   */
+  dirty?: boolean;
+  /**
+   * The page a backoffice page pane is on now, as a path on this site, when it has routed since it
+   * opened. Kept apart from the app's `url`, which the frame was loaded from and which must not
+   * change under it, so popping the pane out opens the window on the page it had reached.
+   */
+  location?: string;
 }
 
 /** Whether an app was maintainer-certified or auto-derived as an untested fallback. */

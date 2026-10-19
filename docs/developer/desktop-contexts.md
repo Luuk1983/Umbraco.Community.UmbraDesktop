@@ -115,7 +115,7 @@ behaviour are kept stable.
 | | |
 |---|---|
 | Context alias | `'UmbraDesktopWindowManagerContext'` |
-| `openApp(alias)` | Opens the app with that manifest alias, as the launcher would, and returns `true`. Returns `false` when the current user cannot launch it, or no such app exists |
+| `openApp(alias, options?)` | Opens the app with that manifest alias, as the launcher would, and returns `true`. Returns `false` when the current user cannot launch it, or no such app exists. `options.location` opens it at a location, handed to its element as `location` (see [Remembering where your app is](desktop-apps.md#73-remembering-where-your-app-is)); the Media Manager's "Open in new window" opens a folder this way. An older desktop ignores `options` |
 
 Declare the shape you use and a token with the same alias, and consume it:
 

@@ -550,3 +550,15 @@ export function resnapWindows(
   });
   return changed ? next : (windows as UmbraDesktopWindow[]);
 }
+
+/**
+ * What a window is called on its titlebar and taskbar button: the title its app gave it, or its
+ * app's name. The title is plain text and goes out as it is; only the app's name, which may be a
+ * `#key`, goes through the dictionary.
+ * @param w The window.
+ * @param localize Resolves an app name that may be a dictionary key.
+ * @returns The name to show.
+ */
+export function windowName(w: Pick<UmbraDesktopWindow, 'app' | 'title'>, localize: (value: string) => string): string {
+  return w.title || localize(w.app.name);
+}

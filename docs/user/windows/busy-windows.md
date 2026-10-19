@@ -42,3 +42,6 @@ A window whose work has failed closes without asking, because nothing in it is s
 
 The desktop shows uploads in Media without any change to Umbraco. Apps from other packages can
 report their own work too. See [Showing work in progress](../../developer/window-progress.md).
+
+The Media Manager add-on shows its moves, copies and uploads in a Transfers window of its own. See
+[Media Manager](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Media/docs/user/media-manager.md#transfers).

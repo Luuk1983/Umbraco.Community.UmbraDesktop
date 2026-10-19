@@ -172,35 +172,36 @@ it("gives Solitaire's boards their own rule line, from a key both dictionaries h
 const catalogue = manifests.find((m) => m.type === 'umbraDesktopCatalogue');
 
 /** The Arcade's catalogue defines Games, since every game brings the Arcade, so this one must not define it again. */
-it('defines only Media, leaving the Games group to the Arcade', () => {
+it('defines only Entertainment, leaving the Games group to the Arcade', () => {
   expect(manifests.filter((m) => m.type === 'umbraDesktopCatalogue')).to.have.lengthOf(1);
   const groups = (catalogue as { meta?: { groups?: Array<{ alias: string }> } } | undefined)?.meta?.groups ?? [];
-  expect(groups.map((group) => group.alias)).to.deep.equal(['media']);
+  expect(groups.map((group) => group.alias)).to.deep.equal(['entertainment']);
 });
 
 /**
- * Media is this package's second group, for umbraCoffee now and Winamp and the video player later
- * (umbraCoffee design D13). 65 puts it after Games (60) and before the host's Experimental (70).
+ * Entertainment is this package's second group, for umbraCoffee now and a web radio player later.
+ * It was Media (umbraCoffee design D13) until the Media add-on took that name for its tools
+ * (2026-10-18). 65 puts it after Games (60) and before the host's Experimental (70).
  */
-it('defines a media group after Games and before Experimental', () => {
+it('defines an entertainment group after Games and before Experimental', () => {
   const groups =
     (catalogue as { meta?: { groups?: Array<{ alias: string; label: string; weight?: number }> } } | undefined)?.meta
       ?.groups ?? [];
-  const media = groups.find((group) => group.alias === 'media');
-  expect(media, 'the package must define the group umbraCoffee names').to.not.equal(undefined);
-  expect(media!.label, "a token from this package's own dictionary").to.equal('#umbraDesktopEntertainment_groupMedia');
-  expect(media!.weight).to.equal(65);
+  const entertainment = groups.find((group) => group.alias === 'entertainment');
+  expect(entertainment, 'the package must define the group umbraCoffee names').to.not.equal(undefined);
+  expect(entertainment!.label, "a token from this package's own dictionary").to.equal('#umbraDesktopEntertainment_groupEntertainment');
+  expect(entertainment!.weight).to.equal(65);
 });
 
-/** umbraCoffee is an app like the games, but in Media, and resizable because a player can grow. */
-it('registers umbraCoffee in the media group, resizable', () => {
+/** umbraCoffee is an app like the games, but in Entertainment, and resizable because a player can grow. */
+it('registers umbraCoffee in the entertainment group, resizable', () => {
   const app = manifests.find((manifest) => manifest.alias === UMBRACOFFEE_APP_ALIAS) as
     | { type: string; element?: unknown; meta: { group: string; resizable?: boolean } }
     | undefined;
   expect(app, 'the package should register umbraCoffee').to.not.equal(undefined);
   expect(app!.type).to.equal('umbraDesktopApp');
   expect(typeof app!.element, 'declared through `element`, as a loader').to.equal('function');
-  expect(app!.meta.group).to.equal('media');
+  expect(app!.meta.group).to.equal('entertainment');
   expect(app!.meta.resizable).to.not.equal(false);
 });
 

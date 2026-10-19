@@ -8,7 +8,7 @@ Games and media for UmbraDesktop. Minesweeper, Snake and Solitaire, and umbraCof
 
 ![Solitaire, Snake and Minesweeper open side by side as three windows on the UmbraDesktop desktop under the Umbraco theme, each with its own button on the taskbar.](docs/screenshots/entertainment-games.png)
 
-Install it and the launcher grows a Games group and a Media group. Open an app and it gets a window like everything else, in whichever theme you picked, so Minesweeper under the Windows 98 theme looks like Minesweeper, and under macOS it does not.
+Install it and the launcher grows a Games group and an Entertainment group. Open an app and it gets a window like everything else, in whichever theme you picked, so Minesweeper under the Windows 98 theme looks like Minesweeper, and under macOS it does not.
 
 - **Minesweeper.** The real one: flags, flood fill, a mine counter and a timer.
 - **Snake.** The classic, with arrow keys or WASD, a snake that speeds up as it grows, and your best score remembered.
