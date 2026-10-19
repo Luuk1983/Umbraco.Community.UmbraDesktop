@@ -108,6 +108,21 @@ against the **previous tag**. If you cut a beta first, the stable release's note
 happened after the beta and omit the entire feature line. Hand-curate the body of any stable
 release that had a prerelease before it.
 
+The generated notes list pull request titles, grouped by `.github/release.yml` into new features, bug
+fixes, documentation and other changes. A pull request lands in a group by its `enhancement`, `bug`
+or `documentation` label, which `.github/workflows/sync-release-labels.yml` copies from the issue it
+closes when it merges. So that it does:
+
+- Link the issue, with "Closes #123" in the body or the Development sidebar. A bare mention is not a
+  link.
+- A pull request with no issue needs its type label by hand, or `ignore-for-release` when a reader of
+  the notes would not care: CI, tests, screenshots, merging a release branch back. Anything left
+  unlabelled shows up under **Other changes**, so a missed one is visible in the draft.
+
+The version label (`release/vX.Y.Z`) is for filtering issues, not for the notes, which come from the
+commits between the two tags. Put it on the pull request or the issue, whichever you have open when
+the version is known; the same workflow copies it from the pull request to the issue on merge.
+
 ## Owner-only steps
 
 Nothing in CI can do these.

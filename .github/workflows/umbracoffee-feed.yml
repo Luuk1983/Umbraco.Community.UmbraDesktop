@@ -2,11 +2,13 @@ name: umbraCoffee feed
 
 # Keeps the files umbraCoffee reads (docs/design/2026-09-30-umbracoffee-v2-design.md, section 4, and
 # the 2026-10-01 addendum in the v2 plan) on the `data/umbracoffee` branch, so a customer's browser reads GitHub and a customer's server
-# never calls YouTube. Every five minutes is GitHub's shortest schedule; runs often start 10 to 15
-# minutes late, which the client's freshness window already allows for.
+# never calls YouTube.
 on:
+  # A backup only. GitHub runs this every three to ten hours rather than every five minutes.
   schedule:
     - cron: '*/5 * * * *'
+  # What actually starts most runs: a Cloudflare Worker, every five minutes. It lives outside this
+  # repository; tools/umbracoffee-feed/README.md, "What starts a run", has its code and how to rebuild it.
   workflow_dispatch:
 
 permissions:
