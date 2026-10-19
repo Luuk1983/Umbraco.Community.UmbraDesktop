@@ -1,6 +1,7 @@
 import type { UmbraDesktopApp, UmbraDesktopWindow } from '../types';
 import { isBusy } from '../progress/progress.js';
 import type { UmbraDesktopWorkspaceSubject } from '../dirty-watcher';
+import { windowName } from '../window-model';
 
 /**
  * Turns the desk into the paragraph the agent reads when it asks what the desktop is.
@@ -52,7 +53,7 @@ function describeWindow(
   subjects: ReadonlyArray<UmbraDesktopWorkspaceSubject>,
   localise: UmbraDesktopLocalise,
 ): string {
-  const parts: string[] = [localise(win.app.name)];
+  const parts: string[] = [windowName(win, localise)];
   if (win.active) parts.push('in front');
   if (win.state === 'minimized') parts.push('minimized');
   // Identity and nothing else, deliberately. Reading the document is the agent's job and it has

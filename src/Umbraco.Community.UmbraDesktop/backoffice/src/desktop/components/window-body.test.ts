@@ -380,6 +380,40 @@ it('covers an inactive element body with the focus catcher, so the first click o
 });
 
 /**
+ * A drag is not a click. While something is dragged over the page, items between windows or files
+ * from the OS, an inactive window's catcher lets the drag through to the app beneath, which decides
+ * whether it takes a drop there; otherwise a drop could only ever land in the active window, and the
+ * Media Manager's drags between windows found no target (owner's test, 2026-10-18). Once the drag
+ * ends, by a drop, by letting go anywhere, or by the pointer moving again after it left the page, the
+ * catcher takes clicks again.
+ */
+it('lets a drag through the focus catcher of an inactive window, and catches clicks again after', async () => {
+  const win = await mountWindow({ kind: 'element', element: loadTestApp }, { active: false });
+  try {
+    await settleHost(win.root);
+    const catcher = () => getComputedStyle(win.root.querySelector('.focus-catcher')!).pointerEvents;
+    const seen: string[] = [catcher()];
+    for (const end of [
+      () => new DragEvent('drop', { bubbles: true, composed: true }),
+      () => new DragEvent('dragend', { bubbles: true, composed: true }),
+      // Files dragged off the page and let go elsewhere send no drop or dragend here; the pointer
+      // moving again says the drag is over, since no pointer event is sent during one.
+      () => new PointerEvent('pointermove', { bubbles: true, composed: true }),
+    ]) {
+      document.body.dispatchEvent(new DragEvent('dragenter', { bubbles: true, composed: true }));
+      await win.element.updateComplete;
+      seen.push(catcher());
+      document.body.dispatchEvent(end());
+      await win.element.updateComplete;
+      seen.push(catcher());
+    }
+    expect(seen).to.deep.equal(['auto', 'none', 'auto', 'none', 'auto', 'none', 'auto']);
+  } finally {
+    win.dispose();
+  }
+});
+
+/**
  * The theme id has to land on the app's *own* element, and this is the assertion that says so.
  *
  * It shipped on the host instead, which is the app element's parent, and the design (D9, §6.2)

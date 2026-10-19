@@ -9,14 +9,14 @@ image: ../screenshots/umbracoffee-live.png
 # umbraCoffee
 
 umbraCoffee is the Umbraco community's monthly live show. The UmbraDesktop Entertainment Add-on puts it on the
-desktop in a window of its own, in the launcher's **Media** group. It comes with the same package as
+desktop in a window of its own, in the launcher's **Entertainment** group. It comes with the same package as
 the [games](games.md), so installing it is the same one command.
 
 ![The umbraCoffee window while a show is live: the stream with its control bar under it, then the episode's title, a Live tag with the start time and the guest, and a summary. Beside it are the Chat and Episodes tabs, with the episode list open and the live episode at the top.](../screenshots/umbracoffee-live.png)
 
 ## Watch
 
-To open it, open the launcher and select **umbraCoffee** in the Media group. The window opens on
+To open it, open the launcher and select **umbraCoffee** in the Entertainment group. The window opens on
 whatever matters now:
 
 - **Live:** the stream, with **Chat** and **Episodes** tabs beside it, open on **Chat**. Reading the

@@ -39,3 +39,6 @@ Later mockups, one set per feature, named after the design doc they belong to:
   every theme, in four states, for
   [`../2026-10-03-window-progress-design.md`](../2026-10-03-window-progress-design.md). The Umbraco
   theme is drawn both ways that were considered; the ring round the icon is the one built.
+- **[media-manager/](./media-manager/)**: the Media Manager scenario by scenario, in four batches,
+  for [`../2026-10-17-media-manager-design.md`](../2026-10-17-media-manager-design.md). Generated
+  from `media-manager/_build`; its README says how.

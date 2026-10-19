@@ -50,7 +50,9 @@ import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from './window-manager.context-to
 import { minWindowSizeForContent, windowSizeForContent } from './window-chrome';
 import { windowShowsPath } from './path/crumbs.js';
 import { openDesktopSettings } from './settings/open-settings.js';
-import { appAtLocation, restoredUrl } from './windows/layout';
+import { appAtLocation, appAtPage, restoredUrl } from './windows/layout';
+import { currentWindowFrame } from './beside/owner-frames';
+import { routeFrame } from './frame-watches';
 import type { UmbraDesktopSavedWindow } from './windows/layout';
 import type { UmbraDesktopThemeMetrics } from './theme/types';
 import type { UmbraDesktopKeepVisible } from './window-model';
@@ -105,8 +107,8 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
 
   /**
    * The identity of the last **non-empty** subject set each window reported, so {@link setSubjects}
-   * can tell "this window now shows a different document" from the empty gap `#startDirtyWatch`
-   * deliberately passes through on every frame reload.
+   * can tell "this window now shows a different document" from the empty gap the frame watches
+   * deliberately pass through on every frame reload (`frame-watches.ts`, the dirty watch).
    *
    * Identity, not the subjects themselves: comparing the objects `dirty-watcher.ts` hands over would
    * never match, because it rebuilds them on every keystroke (see its own `evaluate`). This stores
@@ -116,6 +118,23 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * from nothing" and clearing flags that were never set.
    */
   #lastSubjectIdentity = new Map<string, string>();
+
+  /**
+   * What each window's own content last said about unsaved changes, apart from its panes (#144).
+   *
+   * A window's `dirty` is what every guard and marker reads, and it now has two sources: the window's
+   * own content and a backoffice page in one of its panes. Each reports on its own, so the window's
+   * own report is kept here and `dirty` is the two combined. Without it, the owner's watcher saying
+   * "clean" would clear the mark of a pane still holding an edit.
+   */
+  #ownDirty = new Map<string, boolean>();
+
+  /**
+   * Attached pages routed to a new page and not yet there, by attached content id (#144). Their name
+   * and icon change only once the frame reports the new page, because core may ask about unsaved
+   * changes on the way and the editor may stay where they were.
+   */
+  #routing = new Map<string, { path: string; name: string; icon: string }>();
 
   /**
    * The localizer for the two dialogs this context opens.
@@ -222,14 +241,39 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * another app (the Arcade's Play button): `open` takes the resolved app the launcher holds, which a
    * package cannot build. An app hidden by a condition is not in the list, so it cannot be opened
    * this way either.
+   *
+   * A location opens the app there, as {@link open} does: how the Media Manager opens a folder in a
+   * new window (#144). An optional parameter, so the published shape only gains.
    * @param alias The app's manifest alias.
+   * @param options Where the app should open.
+   * @param options.location The app's own location string, handed to its element as `location`.
    * @returns Whether a window was opened or focused.
    */
-  public openApp(alias: string): boolean {
+  public openApp(alias: string, options: { location?: string } = {}): boolean {
     const app = this.#appSource?.().find((each) => each.alias === alias);
     if (!app) return false;
-    this.open(app);
+    this.open(app, typeof options?.location === 'string' ? { location: options.location } : {});
     return true;
+  }
+
+  /**
+   * Name a window, or give it back its app's name with an empty title. Written without a re-render
+   * when nothing changed, because an app reports its title whenever it moves, and most moves keep it.
+   * @param id The window.
+   * @param title The title, plain text.
+   */
+  public setTitle(id: string, title: string): void {
+    const current = this.#windows.getValue();
+    const target = current.find((w) => w.id === id);
+    const next = title || undefined;
+    if (!target || target.title === next) return;
+    this.#windows.setValue(
+      current.map((w) => {
+        if (w.id !== id) return w;
+        const { title: _old, ...rest } = w;
+        return next ? { ...rest, title: next } : rest;
+      }),
+    );
   }
 
   /**
@@ -319,6 +363,7 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     };
     if (url && app.content.kind === 'iframe') win.location = url;
     if (appLocation) win.location = appLocation;
+    if (saved.title) win.title = saved.title;
     if (saved.snapped) win.snapped = saved.snapped;
     if (saved.restoreRect) win.restoreRect = { ...saved.restoreRect };
     const next = [...current, win];
@@ -336,7 +381,9 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     const current = this.#windows.getValue();
     const target = current.find((w) => w.id === id);
     if (!target || target.location === location) return;
-    this.#windows.setValue(current.map((w) => (w.id === id ? { ...w, location } : w)));
+    // A floating attached page renames itself once it reaches the page it was routed to (#144).
+    const app = target.owner ? this.#arrived(id, target.app, location) : target.app;
+    this.#windows.setValue(current.map((w) => (w.id === id ? { ...w, app, location } : w)));
   }
 
   /**
@@ -394,10 +441,151 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     const current = this.#windows.getValue();
     const owner = current.find((w) => w.id === ownerId);
     if (owner?.panes?.some((p) => p.id === id)) {
-      this.#windows.setValue(current.map((w) => (w.id === ownerId ? removePane(w, id) : w)));
+      this.#routing.delete(id);
+      this.#subjects.delete(id);
+      this.#lastSubjectIdentity.delete(id);
+      // Settled, because the pane may have been what made its owner dirty.
+      this.#windows.setValue(this.#settleDirty(current.map((w) => (w.id === ownerId ? removePane(w, id) : w)), ownerId));
       return;
     }
     this.close(id);
+  }
+
+  /**
+   * Ask, if there is anything to lose, whether attached content's unsaved changes may be discarded
+   * (#144): core's discard dialog for a dirty pane, the window's own guard for a floating window.
+   * @param ownerId The owner.
+   * @param id The attached content's id.
+   * @returns True when it may go.
+   */
+  public async confirmDiscardAttached(ownerId: string, id: string): Promise<boolean> {
+    const owner = this.#windows.getValue().find((w) => w.id === ownerId);
+    const pane = owner?.panes?.find((p) => p.id === id);
+    if (pane) return pane.dirty ? this._askToDiscard() : true;
+    return this.confirmDiscard(id);
+  }
+
+  /**
+   * Close attached content the way its close button does: asking first when it holds unsaved
+   * changes, and keeping it when the answer is no (#144). {@link closeAttached} stays unconditional
+   * for the features that close their own clean content, as a toggle does.
+   * @param ownerId The owner.
+   * @param id The attached content's id.
+   * @returns True when it closed.
+   */
+  public async requestCloseAttached(ownerId: string, id: string): Promise<boolean> {
+    if (!(await this.confirmDiscardAttached(ownerId, id))) return false;
+    this.closeAttached(ownerId, id);
+    return true;
+  }
+
+  /**
+   * Record whether a backoffice page pane holds unsaved changes (#144), written by the pane's frame
+   * watch. The owner is marked while any of its panes is, so its titlebar, its taskbar button, its
+   * close button and Exit all guard the pane's work without knowing it is there.
+   * @param ownerId The owner.
+   * @param paneId The pane.
+   * @param dirty Whether it holds unsaved changes.
+   */
+  public setPaneDirty(ownerId: string, paneId: string, dirty: boolean): void {
+    const current = this.#windows.getValue();
+    const owner = current.find((w) => w.id === ownerId);
+    const pane = owner?.panes?.find((p) => p.id === paneId);
+    if (!owner || !pane || (pane.dirty ?? false) === dirty) return;
+    const marked = current.map((w) =>
+      w.id === ownerId ? { ...w, panes: (w.panes ?? []).map((p) => (p.id === paneId ? { ...p, dirty } : p)) } : w,
+    );
+    this.#windows.setValue(this.#settleDirty(marked, ownerId));
+  }
+
+  /**
+   * Record the page a backoffice page pane is on (#144), written by the pane's frame watch, so the
+   * owner can tell its app what is open beside it and a pop out opens on the same page.
+   * @param ownerId The owner.
+   * @param paneId The pane.
+   * @param location The page, as a path on this site.
+   */
+  public setPaneLocation(ownerId: string, paneId: string, location: string): void {
+    const current = this.#windows.getValue();
+    const pane = current.find((w) => w.id === ownerId)?.panes?.find((p) => p.id === paneId);
+    if (!pane || pane.location === location) return;
+    const app = this.#arrived(paneId, pane.app, location);
+    this.#windows.setValue(
+      current.map((w) =>
+        w.id === ownerId ? { ...w, panes: (w.panes ?? []).map((p) => (p.id === paneId ? { ...p, app, location } : p)) } : w,
+      ),
+    );
+  }
+
+  /**
+   * Route an attached page to another page through its frame's own history, as a link inside it
+   * would (#144). A workspace holding unsaved changes asks first, inside the frame, with core's own
+   * dialog. The name and icon follow once the frame reports it is there, so a No leaves the header
+   * naming the page that is still on screen.
+   * @param ownerId The owner.
+   * @param id The attached page's id, as a pane or a floating window.
+   * @param page Where to go, and what to call it there.
+   * @param page.path The page, as a path on this site.
+   * @param page.name Its name.
+   * @param page.icon Its icon.
+   * @returns False when the page has no frame loaded to route, which happens only while it is booting.
+   */
+  public routeAttached(ownerId: string, id: string, page: { path: string; name: string; icon: string }): boolean {
+    const current = this.#windows.getValue();
+    const isPane = current.find((w) => w.id === ownerId)?.panes?.some((p) => p.id === id) ?? false;
+    const isWindow = current.some((w) => w.id === id && w.owner === ownerId);
+    const frame = isPane || isWindow ? currentWindowFrame(id) : undefined;
+    if (!frame) return false;
+    this.#routing.set(id, page);
+    routeFrame(frame, page.path);
+    return true;
+  }
+
+  /**
+   * Rename attached content in place, keeping its page (#144): an app naming the page it already
+   * shows, as the Media Manager does once a new item is saved and has a name. Any route still on its
+   * way is dropped, since the app has said what it wants shown.
+   * @param ownerId The owner.
+   * @param id The attached content's id, as a pane or a floating window.
+   * @param label The new name and icon.
+   * @param label.name Its name.
+   * @param label.icon Its icon.
+   */
+  public relabelAttached(ownerId: string, id: string, label: { name: string; icon: string }): void {
+    this.#routing.delete(id);
+    const current = this.#windows.getValue();
+    const relabel = (app: UmbraDesktopApp) => (app.name === label.name && app.icon === label.icon ? app : { ...app, ...label });
+    const next = current.map((w) => {
+      if (w.id === id && w.owner === ownerId) {
+        const app = relabel(w.app);
+        return app === w.app ? w : { ...w, app };
+      }
+      if (w.id !== ownerId || !w.panes?.some((p) => p.id === id)) return w;
+      const panes = w.panes.map((p) => {
+        if (p.id !== id) return p;
+        const app = relabel(p.app);
+        return app === p.app ? p : { ...p, app };
+      });
+      return panes.every((p, i) => p === w.panes![i]) ? w : { ...w, panes };
+    });
+    if (next.some((w, i) => w !== current[i])) this.#windows.setValue(next);
+  }
+
+  /**
+   * The app of attached content after its frame reported a page: renamed when that is the page it was
+   * routed to, and unchanged otherwise. The frame's url is left alone, so the frame is not reloaded.
+   * @param id The attached content's id.
+   * @param app Its app.
+   * @param location The page the frame reported.
+   * @returns The app to keep.
+   */
+  #arrived(id: string, app: UmbraDesktopApp, location: string): UmbraDesktopApp {
+    const routing = this.#routing.get(id);
+    if (!routing || !(location === routing.path || location.startsWith(`${routing.path}/`) || location.startsWith(`${routing.path}?`))) {
+      return app;
+    }
+    this.#routing.delete(id);
+    return { ...app, name: routing.name, icon: routing.icon };
   }
 
   /**
@@ -410,15 +598,21 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * @param ownerId The owner.
    * @param paneId The pane to pop out.
    * @param at Where to put the new window's top-left corner, when a drag decides it.
-   * @returns The floating window's id, which is the pane's, or undefined when there was no such pane.
+   * @returns The floating window's id, which is the pane's, or undefined when there was no such pane,
+   * or when it holds unsaved changes, which moving it would lose.
    */
   public undock(ownerId: string, paneId: string, at?: { x: number; y: number }): string | undefined {
     const current = this.#windows.getValue();
     const owner = current.find((w) => w.id === ownerId);
     const pane = owner?.panes?.find((p) => p.id === paneId);
-    if (!owner || !pane) return undefined;
+    // Moving remounts the content, which would throw a dirty page's edits away (#144).
+    if (!owner || !pane || pane.dirty) return undefined;
     const without = current.map((w) => (w.id === ownerId ? removePane(w, paneId) : w));
-    let next = this.#withFloating(without, ownerId, pane.id, pane.app, pane.side, pane.width);
+    let next = this.#withFloating(without, ownerId, pane.id, appAtPage(pane.app, pane.location), pane.side, pane.width);
+    // A backoffice page opens its window on the page it had reached, and the window says so.
+    if (pane.location && pane.app.content.kind === 'iframe') {
+      next = next.map((w) => (w.id === pane.id ? { ...w, location: pane.location } : w));
+    }
     if (at) next = moveWindow(next, pane.id, at.x, at.y);
     this.#windows.setValue(focusGroup(next, pane.id));
     return pane.id;
@@ -550,7 +744,21 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     const floating = current.find((w) => w.id === id);
     if (!floating?.owner) return;
     const docked = this.#docked(current, id, floating.dockSide ?? 'right');
-    if (docked) this.#windows.setValue(docked);
+    if (!docked) return;
+    this.#forget(id);
+    this.#windows.setValue(docked);
+  }
+
+  /**
+   * Drop what the manager keeps off the model for a window that is no longer one, as a floating
+   * window that became a pane is.
+   * @param id The window.
+   */
+  #forget(id: string): void {
+    this.#subjects.delete(id);
+    this.#lastSubjectIdentity.delete(id);
+    this.#tasks.delete(id);
+    this.#ownDirty.delete(id);
   }
 
   /**
@@ -612,9 +820,15 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     const remaining = removeGroup(current, id);
     for (const gone of current) {
       if (remaining.includes(gone)) continue;
+      for (const pane of gone.panes ?? []) {
+        this.#subjects.delete(pane.id);
+        this.#lastSubjectIdentity.delete(pane.id);
+      }
       this.#subjects.delete(gone.id);
       this.#lastSubjectIdentity.delete(gone.id);
       this.#tasks.delete(gone.id);
+      this.#ownDirty.delete(gone.id);
+      this.#routing.delete(gone.id);
     }
     this.#windows.setValue(remaining);
   }
@@ -638,11 +852,28 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    */
   public setDirty(id: string, dirty: boolean): void {
     const current = this.#windows.getValue();
-    let next = setWindowDirty(current, id, dirty);
+    if (!current.some((w) => w.id === id)) return;
+    this.#ownDirty.set(id, dirty);
+    const next = this.#settleDirty(current, id);
+    if (next !== current) this.#windows.setValue(next);
+  }
+
+  /**
+   * The list with a window's `dirty` set from its two sources: its own content's last report and its
+   * panes (#144). Going clean clears the conflict flags, as {@link setDirty} explains.
+   * @param windows The current window list.
+   * @param id The window.
+   * @returns The new list, or the same one when nothing changed.
+   */
+  #settleDirty(windows: UmbraDesktopWindow[], id: string): UmbraDesktopWindow[] {
+    const target = windows.find((w) => w.id === id);
+    if (!target) return windows;
+    const dirty = (this.#ownDirty.get(id) ?? false) || (target.panes ?? []).some((p) => p.dirty === true);
+    let next = setWindowDirty(windows, id, dirty);
     if (!dirty) {
       next = setWindowAcknowledged(setWindowServerState(next, id, { changedElsewhere: false }), id, false);
     }
-    if (next !== current) this.#windows.setValue(next);
+    return next;
   }
 
   /**
@@ -722,7 +953,25 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * @param patch The flags to set; see {@link UmbraDesktopServerStatePatch}.
    */
   public setServerState(id: string, patch: UmbraDesktopServerStatePatch): void {
+    // A backoffice page in a pane (#144) has no notices of its own. Its item deleted, there is nothing
+    // left to show or save, so it closes, without asking; trashed, it has already been reloaded in
+    // place by the router when clean, and core shows it trashed.
+    const owner = this.#windows.getValue().find((w) => w.panes?.some((p) => p.id === id));
+    if (owner) {
+      if (patch.deleted) this.closeAttached(owner.id, id);
+      return;
+    }
     this.#windows.setValue(setWindowServerState(this.#windows.getValue(), id, patch));
+  }
+
+  /**
+   * What server events are matched against: every window, and every backoffice page in a pane, each
+   * with whether it holds unsaved changes (#144). A pane reports what it shows under its own id, as a
+   * window does, so a clean page whose item changed elsewhere is reloaded in place like a window.
+   * @returns The ids and their unsaved state.
+   */
+  public serverEventTargets(): ReadonlyArray<{ id: string; dirty?: boolean }> {
+    return this.#windows.getValue().flatMap((w) => [w, ...(w.panes ?? []).map((p) => ({ id: p.id, dirty: p.dirty }))]);
   }
 
   /**
@@ -1198,7 +1447,9 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     if (!pending || pending.id !== id || !bounds) return;
     if (pending.dock) {
       const docked = this.#docked(this.#windows.getValue(), id, pending.dock);
-      if (docked) this.#windows.setValue(docked);
+      if (!docked) return;
+      this.#forget(id);
+      this.#windows.setValue(docked);
       return;
     }
     if (!pending.target) return;
@@ -1224,12 +1475,15 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    */
   #docked(windows: UmbraDesktopWindow[], id: string, side: UmbraDesktopDockSide): UmbraDesktopWindow[] | undefined {
     const floating = windows.find((w) => w.id === id);
-    if (!floating?.owner) return undefined;
+    // Docking remounts the content, which would throw a dirty page's edits away (#144).
+    if (!floating?.owner || floating.dirty) return undefined;
     const ownerId = floating.owner;
+    // A backoffice page docks on the page it had reached, which its window's location says.
+    const page = floating.app.content.kind === 'iframe' ? floating.location : undefined;
     const docked = this.#withPane(
       windows.filter((w) => w.id !== id),
       ownerId,
-      { id, app: floating.app, side, width: floating.rect.w },
+      { id, app: appAtPage(floating.app, page), side, width: floating.rect.w, ...(page ? { location: page } : {}) },
     );
     return docked ? focusGroup(docked, ownerId) : undefined;
   }

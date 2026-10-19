@@ -42,11 +42,15 @@ Do not use it for:
   ever opened by a feature, from a control on or in its owner.
 - **Something that outlives its owner.** Closing the owner closes it, and so does the owner moving
   to a different document. If your content should survive either, it is a window of its own.
-- **Editing.** Attached content should be read-only. The desktop does not guard unsaved work in a
-  pane, and a pane is where your content usually is. The preview, a diff and a read-only copy from
-  another environment hold nothing to lose. The one exception is a view that edits its owner's own
-  work rather than holding any (§8): the work stays in the owner, so the pane still has nothing to
-  lose.
+- **Editing in your own element.** An element you build should be read-only. Moving between pane
+  and window remounts it, and the desktop cannot see what an element holds. The preview, a diff and a
+  read-only copy from another environment hold nothing to lose. A view that edits its owner's own
+  work (§8) is fine too: the work stays in the owner.
+
+  A backoffice page is the exception, because the desktop can see its unsaved changes (§9). While
+  one holds some, the desktop greys Pop out and Dock with "Save or discard your changes first", and
+  closing the pane, the owner or the page's window asks with Umbraco's own discard dialog. So an
+  editor that needs to edit beside a window should be one of Umbraco's own pages, not an element.
 - **A second level.** Attached content cannot own attached content. `openAttached` refuses a
   floating attached window as an owner.
 
@@ -119,7 +123,7 @@ between the two.
   `content.props` onto the element before it connects, and again if they change. A constructor takes
   no arguments and runs before the assignment.
 - **Fetch on connect.** Reload, dock, undock and pop out all remount the element, so anything it
-  holds is rebuilt. That is the reason attached content must hold no unsaved work.
+  holds is rebuilt. That is the reason an element must hold no unsaved work.
 - **Fill whatever box you are given.** A pane's width comes from its splitter and a floating window's
   from its frame. Do not assume a width, and keep working down to your `minSize.w`.
 - **Resize yourself by kind, not by id.** A device-width button calls
@@ -159,8 +163,10 @@ Do not re-implement any of these. Each is tested, and a second copy would drift.
 - Minimizing: the owner takes its floating windows with it, and restoring it brings back what went
   with it.
 - Closing: closing the owner closes its attached content, asking first about unsaved work in its
-  floating windows. The owner moving to a different document closes it too. A reload of the same
-  document does not.
+  panes and floating windows. The owner moving to a different document closes it too. A reload of
+  the same document does not.
+- Unsaved work in a backoffice page (§9): the owner's titlebar and taskbar marker, Exit's warning,
+  greyed Pop out and Dock, and the question before closing or reloading it.
 - The taskbar group box.
 - Theming. The pane header and the strip take the path strip's height and tokens, and their buttons
   take the `strip-button-*` tokens. See `docs/developer/theming.md` §3.
@@ -188,6 +194,14 @@ Do not re-implement any of these. Each is tested, and a second copy would drift.
   pop out straight away.
 - **A slow fetch can land after a newer one.** Count your requests and drop an answer that is not
   the latest, as the preview's `#fetch` counter does.
+- **Umbraco will not lay out below 920px on its own.** Its app element has a minimum width of 920, so
+  a backoffice page in a narrower frame is drawn at 920 and loses its right side: the Save button and
+  the workspace's views. The desktop lifts that minimum in attached content only (`narrow` in
+  `frame-watches.ts`). Core's media workspace lays out properly at 560.
+- **Tell a frame's router only about a route that happened.** Routing a page pushes on its history;
+  a workspace with unsaved changes refuses the push and opens its dialog. A `popstate` sent after a
+  refused push makes the router navigate again, and core closes its dialog when it does, so the
+  editor never sees the question. `routeFrame` sends it only when the address moved.
 
 ## 7. The worked example
 
@@ -253,13 +267,60 @@ does.
 | `beside/beside-host.element.ts` | The element in the pane: building, remounting and bridging the view |
 | `components/window.element.ts`, `#onBeside` | The toggle, and Shift-click for a window |
 
-## 9. Checklist
+## 9. A backoffice page beside an app window
 
-- [ ] An element app with a per-feature `alias`, sensible `defaultSize` and `minSize`, and `props`
+An app window can show one of Umbraco's own pages beside itself: the Media Manager opens the media
+item you click in core's own media workspace, beside the folder. This is the third consumer, and the
+first whose content holds unsaved work. User guide:
+[Media Manager](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Media/docs/user/media-manager.md).
+Reasoning: [the Media Manager design](../design/2026-10-17-media-manager-design.md) §8 and its plan's
+decisions 1 and 2.
+
+**An app asks with events, not with `openAttached`.** A package cannot import the window manager, so
+the app element dispatches `umbradesktop-open-attached` with a key and a path, and reads what is open
+from its `attached` property. [Building a desktop app](desktop-apps.md#75-showing-a-backoffice-page-beside-your-window)
+has the calls. The window turns the request into attached content of `content.kind: 'iframe'` under
+the alias `umbradesktop-attached:<window id>:<key>`, so there is one page per key.
+
+**The page is a frame on its own route, and gets a window's watches.** Chrome stripping to the
+workspace, the theme, unsaved changes, notifications, Help and the address are the same watches a
+backoffice window gives its frame, from one shared module, `frame-watches.ts`, whether the page is a
+pane or a window. A pane reports its unsaved changes and its address to the manager under its own id
+(`setPaneDirty`, `setPaneLocation`), and the owner counts as dirty while any of its panes is.
+
+**One page per key, routed rather than replaced.** Asking for another page under an open key pushes
+it on the frame's own history (`routeAttached`), so the workspace's own guard asks about unsaved
+changes inside the frame. The header takes the new name once the frame reports the new address, so a
+No leaves it naming the page still on screen. Asking for the page it is on only renames it.
+
+**Unsaved work is guarded, not lost.** Pop out and Dock remount the frame, so both are greyed while
+the page is dirty, with "Save or discard your changes first" as their title, and the manager refuses
+them too (`undock`, `dock`). Closing the pane asks (`requestCloseAttached`), closing the owner asks,
+and the pane's reload asks. A page that moves between pane and window opens on the address it had
+reached, not the one it was opened on.
+
+**Server events reach it as they reach a window.** A pane reports what its page shows under its own
+id, and the server-event router matches a pane like a window (`serverEventTargets`). A clean page
+whose item is trashed elsewhere reloads in place, so core shows it read-only; an item deleted for good
+closes the pane, without asking, since nothing is left to save.
+
+| File | What it shows |
+| --- | --- |
+| `frame-watches.ts` | The watches a backoffice frame gets, the theme controller, `routeFrame` |
+| `windows/attached-page.ts` | Reading an app's request, the page's app, and the paths an app is told |
+| `components/window.element.ts`, `#onOpenAttached` | The events, the `attached` property, routing or renaming an open page |
+| `components/window-pane.element.ts` | A page pane: watches, the loader, Pop out greyed, close and reload asking |
+| `window-manager.context.ts` | `setPaneDirty`, `setPaneLocation`, `routeAttached`, `relabelAttached`, `requestCloseAttached`, `serverEventTargets` |
+
+## 10. Checklist
+
+- [ ] An element app with a per-feature `alias`, sensible `defaultSize` and `minSize`, and `props`,
+      or a backoffice page opened with `umbradesktop-open-attached`
 - [ ] Opened by a feature, from a control outside the titlebar, which toggles and shows as pressed
 - [ ] Reads props in `connectedCallback` and fetches on connect
 - [ ] Works as a pane and as a floating window, from `minSize.w` upward
-- [ ] Holds no unsaved work
+- [ ] Holds no unsaved work in an element; unsaved work only in a backoffice page, which the desktop
+      guards
 - [ ] Follows the owner by changes in `saves`, `changedElsewhere` and `dirty`, not by every emission
 - [ ] Resizes itself with `setAttachedContentWidth`, if at all
 - [ ] Has a way out when its content cannot be shown

@@ -17,15 +17,18 @@ import type {} from './solitaire/extensions.js';
 import { manifests as localizationManifests } from './localization/manifest.js';
 
 /**
- * The Media group, defined by the package whose app fills it.
+ * The Entertainment group, defined by the package whose app fills it.
  *
  * Games is not here: the Arcade's catalogue defines it, since every game now brings the Arcade
  * (Arcade design section 3), and the games below still name `group: 'games'`.
  *
  * This weight is on the launcher's own scale, lower first, unlike the apps' root `weight` below,
- * which is Umbraco's. Media is 65, after the Arcade's Games (60) and before the host's Experimental
- * (70) (umbraCoffee design D13). It holds umbraCoffee today, and Winamp and the video player will
- * join it, which is why it is named for what it holds rather than for the one app in it now.
+ * which is Umbraco's. Entertainment is 65, after the Arcade's Games (60) and before the host's
+ * Experimental (70) (umbraCoffee design D13). It holds umbraCoffee today, and a web radio player
+ * will join it, which is why it is named for what it holds rather than for the one app in it now.
+ * It was Media until the Media add-on took that name for the tools that work on the media library
+ * (2026-10-18): watching a show is not managing media, and two packages defining one group at two
+ * weights is a clash the desktop reports.
  *
  * No `entries`: an entry deep-links one of the package's own backoffice screens, and this package has
  * none.
@@ -35,7 +38,7 @@ const catalogue: UmbExtensionManifest = {
   alias: 'Umbraco.Community.UmbraDesktop.Entertainment.Catalogue',
   name: 'UmbraDesktop Entertainment catalogue',
   meta: {
-    groups: [{ alias: 'media', label: '#umbraDesktopEntertainment_groupMedia', weight: 65 }],
+    groups: [{ alias: 'entertainment', label: '#umbraDesktopEntertainment_groupEntertainment', weight: 65 }],
   },
 };
 
@@ -212,7 +215,7 @@ const games: UmbExtensionManifest[] = [
  * umbraCoffee: the community's monthly live show, watched in a window (umbraCoffee design §6.1).
  *
  * Registered the way the games are, for the reasons Minesweeper's comment gives, with two
- * differences. It is in Media, not Games. And it is resizable, the default, because unlike a board a
+ * differences. It is in Entertainment, not Games. And it is resizable, the default, because unlike a board a
  * player and its side panel do reflow: a bigger window is a bigger stream. And it allows one window at a
  * time: a second would play the same stream twice, and with one, the tray cup and the reminder's Watch
  * (both `openApp`) bring the open window to the front instead of stacking a new one on each click.
@@ -228,7 +231,7 @@ const umbraCoffee: UmbExtensionManifest = {
     label: '#umbraDesktopEntertainment_umbraCoffee',
     // A native Umbraco icon, and for once an exact one.
     icon: 'icon-coffee',
-    group: 'media',
+    group: 'entertainment',
     // The content box a 16:9 player and its side panel (Chat and Episodes) need side by side, summed
     // from the layout's own constants; see `umbracoffee/constants.ts`.
     defaultSize: UMBRACOFFEE_CONTENT_SIZE,

@@ -38,6 +38,11 @@ export interface UmbraDesktopSavedWindow {
    * `umbradesktop/snapping`. Absent for a backoffice window, and for an app that never reports one.
    */
   appLocation?: string;
+  /**
+   * The title an app gave its window (#144), so a reopened window is named before its app reports
+   * one again. Absent for a window that kept its app's name.
+   */
+  title?: string;
 }
 
 /** The longest app location kept. A target string is a few dozen characters; this only bounds junk. */
@@ -87,6 +92,7 @@ export function snapshotLayout(windows: ReadonlyArray<UmbraDesktopWindow>): Umbr
         if (w.restoreRect) saved.restoreRect = { ...w.restoreRect };
         if (w.app.content.kind === 'iframe' && w.location) saved.location = w.location;
         if (w.app.content.kind === 'element' && isAppLocation(w.location)) saved.appLocation = w.location;
+        if (isAppLocation(w.title)) saved.title = w.title;
         return saved;
       }),
   };
@@ -103,6 +109,19 @@ export function snapshotLayout(windows: ReadonlyArray<UmbraDesktopWindow>): Umbr
 export function appAtLocation(app: UmbraDesktopApp, location: string): UmbraDesktopApp {
   if (app.content.kind !== 'element') return app;
   return { ...app, content: { ...app.content, props: { ...app.content.props, location } } };
+}
+
+/**
+ * A copy of a backoffice app that loads another page on this site, for attached content moving
+ * between pane and window on the page it had reached (#144). A copy, for the reason
+ * {@link appAtLocation} gives.
+ * @param app The app.
+ * @param page The page, as a path on this site, or undefined to keep the app's own.
+ * @returns The copy; an element app, or no page, returns the app as it is.
+ */
+export function appAtPage(app: UmbraDesktopApp, page: string | undefined): UmbraDesktopApp {
+  if (!page || app.content.kind !== 'iframe') return app;
+  return { ...app, content: { ...app.content, url: page } };
 }
 
 /**
@@ -159,7 +178,7 @@ export function restoredUrl(app: UmbraDesktopApp, location: string | undefined):
  */
 function savedWindow(value: unknown): UmbraDesktopSavedWindow | undefined {
   if (!isRecord(value)) return undefined;
-  const { app, rect, state, z, active, snapped, restoreRect, location, appLocation } = value;
+  const { app, rect, state, z, active, snapped, restoreRect, location, appLocation, title } = value;
   if (typeof app !== 'string' || !app) return undefined;
   if (!isRect(rect)) return undefined;
   if (state !== 'normal' && state !== 'minimized' && state !== 'maximized') return undefined;
@@ -175,6 +194,8 @@ function savedWindow(value: unknown): UmbraDesktopSavedWindow | undefined {
   if (typeof location === 'string' && isSitePath(location)) saved.location = location;
   // The same for an app's own location: a bad one reopens the app where it starts.
   if (isAppLocation(appLocation)) saved.appLocation = appLocation;
+  // A title is checked as an app location is, a short line of text, and a bad one is only dropped.
+  if (isAppLocation(title)) saved.title = title;
   return saved;
 }
 

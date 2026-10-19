@@ -3,6 +3,7 @@ import { UmbraDesktopWindowManagerContext } from './window-manager.context';
 import type { UmbraDesktopApp, UmbraDesktopWindow } from './types';
 import { UmbElementControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UMBRADESKTOP_DEFAULT_METRICS } from './constants';
+import { announceWindowFrame, forgetWindowFrame } from './beside/owner-frames';
 
 /**
  * The window manager's side of attached content: the pure rules live in `window-group.ts` and are
@@ -450,5 +451,247 @@ describe('the saved-version signal', () => {
     const before = ctx.getWindows();
     ctx.setSaves(doc, 2);
     expect(ctx.getWindows()).to.equal(before);
+  });
+});
+
+/**
+ * A backoffice page as attached content (#144, plan task 2.2): an iframe app, the way the Media
+ * Manager shows a media item beside its window.
+ * @param url The page.
+ * @returns The app.
+ */
+function pageApp(url = '/umbraco/section/media/workspace/media/edit/one'): UmbraDesktopApp {
+  return {
+    alias: 'page',
+    name: 'Page',
+    icon: 'icon-picture',
+    content: { kind: 'iframe', url },
+    chromeProfile: 'workspace-only',
+    defaultSize: { w: 400, h: 500 },
+    minSize: { w: 300, h: 300 },
+  };
+}
+
+describe('attached content with unsaved changes', () => {
+  it('marks its owner dirty while a pane holds unsaved changes', () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    ctx.setPaneDirty(doc, id, true);
+    expect(get(ctx, doc).panes?.[0].dirty).to.equal(true);
+    expect(get(ctx, doc).dirty, 'the titlebar marker and Exit read the owner').to.equal(true);
+    expect(ctx.unsavedWindows().map((w) => w.id)).to.deep.equal([doc]);
+    ctx.setPaneDirty(doc, id, false);
+    expect(get(ctx, doc).dirty).to.equal(false);
+  });
+
+  it("keeps the owner dirty when the owner's own content reports clean", () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    ctx.setPaneDirty(doc, id, true);
+    ctx.setDirty(doc, false);
+    expect(get(ctx, doc).dirty).to.equal(true);
+  });
+
+  it('asks before closing an owner whose pane is dirty', async () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    ctx.setPaneDirty(doc, id, true);
+    ctx.answer = false;
+    await ctx.requestClose(doc);
+    expect(ctx.asked).to.equal(1);
+    expect(ctx.getWindows()).to.have.lengthOf(1);
+  });
+
+  it('asks before closing a dirty pane, and No keeps it', async () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    ctx.setPaneDirty(doc, id, true);
+    ctx.answer = false;
+    expect(await ctx.requestCloseAttached(doc, id)).to.equal(false);
+    expect(get(ctx, doc).panes).to.have.lengthOf(1);
+    ctx.answer = true;
+    expect(await ctx.requestCloseAttached(doc, id)).to.equal(true);
+    expect(get(ctx, doc).panes ?? []).to.have.lengthOf(0);
+    expect(get(ctx, doc).dirty, 'the owner is clean once the pane is gone').to.equal(false);
+    expect(ctx.asked).to.equal(2);
+  });
+
+  it('closes a clean pane without asking', async () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    expect(await ctx.requestCloseAttached(doc, id)).to.equal(true);
+    expect(ctx.asked).to.equal(0);
+    expect(get(ctx, doc).panes ?? []).to.have.lengthOf(0);
+  });
+
+  it('asks before closing a dirty floating attached window', async () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right', { floating: true })!;
+    ctx.setDirty(id, true);
+    ctx.answer = false;
+    expect(await ctx.requestCloseAttached(doc, id)).to.equal(false);
+    expect(ctx.getWindows()).to.have.lengthOf(2);
+  });
+
+  it('refuses to pop out a dirty pane', () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    ctx.setPaneDirty(doc, id, true);
+    expect(ctx.undock(doc, id)).to.equal(undefined);
+    expect(get(ctx, doc).panes).to.have.lengthOf(1);
+  });
+
+  it('refuses to dock a dirty floating window, and says it cannot', () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right', { floating: true })!;
+    ctx.setDirty(id, true);
+    expect(ctx.canDock(id)).to.equal(false);
+    ctx.dock(id);
+    expect(ctx.getWindows()).to.have.lengthOf(2);
+  });
+
+  it('pops a clean page out and docks it again, keeping its id and the page it moved to', () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp('/umbraco/section/media/workspace/media/edit/one'), 'right')!;
+    ctx.setPaneLocation(doc, id, '/umbraco/section/media/workspace/media/edit/two');
+    expect(get(ctx, doc).panes?.[0].location).to.equal('/umbraco/section/media/workspace/media/edit/two');
+    ctx.undock(doc, id);
+    const floating = get(ctx, id);
+    expect(floating.app.content).to.deep.include({ url: '/umbraco/section/media/workspace/media/edit/two' });
+    expect(floating.location).to.equal('/umbraco/section/media/workspace/media/edit/two');
+    ctx.setLocation(id, '/umbraco/section/media/workspace/media/edit/three');
+    ctx.dock(id);
+    const pane = get(ctx, doc).panes?.[0];
+    expect(pane?.id).to.equal(id);
+    expect(pane?.app.content).to.deep.include({ url: '/umbraco/section/media/workspace/media/edit/three' });
+    expect(pane?.location).to.equal('/umbraco/section/media/workspace/media/edit/three');
+  });
+
+  it('does not re-render for a pane location that did not change', () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    ctx.setPaneLocation(doc, id, '/umbraco/section/media/workspace/media/edit/two');
+    const before = ctx.getWindows();
+    ctx.setPaneLocation(doc, id, '/umbraco/section/media/workspace/media/edit/two');
+    expect(ctx.getWindows()).to.equal(before);
+  });
+});
+
+describe('routing a page beside its owner', () => {
+  /** A page the test server serves, so a frame can route to real same-origin paths. */
+  const SERVED = new URL('./attached-windows.test.ts', import.meta.url).pathname;
+
+  /** Frames made by a case, removed after it. */
+  let frames: HTMLIFrameElement[] = [];
+  afterEach(() => {
+    for (const each of frames) each.remove();
+    frames = [];
+  });
+
+  /**
+   * A loaded same-origin frame, announced under an attached content id as its pane would announce it.
+   * @param id The attached content's id.
+   * @returns The frame.
+   */
+  async function announcedFrame(id: string): Promise<HTMLIFrameElement> {
+    const frame = document.createElement('iframe');
+    frame.src = SERVED;
+    const loaded = new Promise((resolve) => frame.addEventListener('load', resolve, { once: true }));
+    document.body.appendChild(frame);
+    frames.push(frame);
+    await loaded;
+    announceWindowFrame(id, frame);
+    return frame;
+  }
+
+  const TWO = '/umbraco/section/media/workspace/media/edit/two';
+
+  it('routes the frame through its own history, and renames the pane once it arrives', async () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    const frame = await announcedFrame(id);
+    expect(ctx.routeAttached(doc, id, { path: TWO, name: 'Two', icon: 'icon-two' })).to.equal(true);
+    expect(frame.contentWindow!.location.pathname).to.equal(TWO);
+    expect(get(ctx, doc).panes?.[0].app.name, 'not before the frame says it is there').to.equal('Page');
+    ctx.setPaneLocation(doc, id, `${TWO}/view/media`);
+    const pane = get(ctx, doc).panes?.[0];
+    expect(pane?.app).to.deep.include({ name: 'Two', icon: 'icon-two' });
+    expect(pane?.app.content, 'the frame is not reloaded').to.deep.include({ url: '/umbraco/section/media/workspace/media/edit/one' });
+    forgetWindowFrame(id);
+  });
+
+  it("keeps the name when the frame stays where it was, as when core's dialog is answered No", async () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    await announcedFrame(id);
+    ctx.routeAttached(doc, id, { path: TWO, name: 'Two', icon: 'icon-two' });
+    ctx.setPaneLocation(doc, id, '/umbraco/section/media/workspace/media/edit/one/view/media');
+    expect(get(ctx, doc).panes?.[0].app.name).to.equal('Page');
+    forgetWindowFrame(id);
+  });
+
+  it('renames a floating page once its window arrives', async () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right', { floating: true })!;
+    await announcedFrame(id);
+    ctx.routeAttached(doc, id, { path: TWO, name: 'Two', icon: 'icon-two' });
+    ctx.setLocation(id, TWO);
+    expect(get(ctx, id).app.name).to.equal('Two');
+    forgetWindowFrame(id);
+  });
+
+  it('says it could not route a page whose frame has not loaded', () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    expect(ctx.routeAttached(doc, id, { path: TWO, name: 'Two', icon: 'icon-two' })).to.equal(false);
+  });
+});
+
+describe('server events reaching a page beside its owner', () => {
+  const subject = (unique: string) => ({ entityType: 'media', unique }) as never;
+
+  it("lists a pane's page among the targets of server events, with its unsaved state", () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    ctx.setPaneDirty(doc, id, true);
+    expect(ctx.serverEventTargets().map((t) => [t.id, !!t.dirty])).to.deep.equal([
+      [doc, true],
+      [id, true],
+    ]);
+  });
+
+  it('closes a pane whose item was deleted, without asking', () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    ctx.setPaneDirty(doc, id, true);
+    ctx.setServerState(id, { deleted: true });
+    expect(get(ctx, doc).panes ?? []).to.have.lengthOf(0);
+    expect(ctx.asked).to.equal(0);
+  });
+
+  it('keeps a pane whose item was trashed, for core to show it trashed', () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    ctx.setServerState(id, { trashed: true });
+    expect(get(ctx, doc).panes).to.have.lengthOf(1);
+  });
+
+  it("keeps a pane's subjects without closing anything, and forgets them when it closes", () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    ctx.setSubjects(id, [subject('one')]);
+    ctx.setSubjects(id, [subject('two')]);
+    expect(get(ctx, doc).panes, 'a page routing to another item is not its owner moving').to.have.lengthOf(1);
+    expect(ctx.subjectsOf(id).map((s) => s.unique)).to.deep.equal(['two']);
+    ctx.closeAttached(doc, id);
+    expect(ctx.subjectsOf(id)).to.deep.equal([]);
+  });
+
+  it("forgets a pane's subjects when its owner closes", () => {
+    const { ctx, doc } = withDocument();
+    const id = ctx.openAttached(doc, pageApp(), 'right')!;
+    ctx.setSubjects(id, [subject('one')]);
+    ctx.close(doc);
+    expect(ctx.subjectsOf(id)).to.deep.equal([]);
   });
 });

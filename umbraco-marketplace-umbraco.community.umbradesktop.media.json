@@ -1,0 +1,60 @@
+{
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "Title": "UmbraDesktop Media Add-on",
+  "Category": "Editor Tools",
+  "AlternateCategory": "Developer Tools",
+  "Description": "Your media library, managed the way you manage files on your own computer: folders in as many windows as you like, dragging between them, copy and paste, and undo.",
+  "PackageType": "Package",
+  "LicenseTypes": [
+    "Free"
+  ],
+  "AuthorDetails": {
+    "Name": "Luuk Peters",
+    "Description": "Umbraco developer building packages that extend the CMS with enterprise-grade features.",
+    "Url": "https://github.com/Luuk1983",
+    "SyncContributorsFromRepository": true
+  },
+  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Media/docs/user/media-manager.md",
+  "IssueTrackerUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues",
+  "Tags": [
+    "media",
+    "media library",
+    "media manager",
+    "file manager",
+    "folders",
+    "drag and drop",
+    "move media",
+    "copy media",
+    "clipboard",
+    "paste screenshot",
+    "screenshot to media",
+    "upload",
+    "bulk upload",
+    "folder upload",
+    "undo",
+    "transfers",
+    "umbradesktop",
+    "desktop",
+    "windows",
+    "backoffice",
+    "add-on"
+  ],
+  "RelatedPackages": [
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop",
+      "GroupTitle": "Requires",
+      "Description": "The desktop itself. This package is an add-on to it and installs it as a dependency; the desktop works on its own without the Media Manager."
+    },
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop.Accessories",
+      "GroupTitle": "Optional add-ons",
+      "Description": "The small tools for the desktop, Notepad and Paint among them. Independent of this package: install either, both or neither."
+    }
+  ],
+  "Screenshots": [
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Media/docs/screenshots/media-manager.png",
+      "Caption": "A Media Manager window on the People folder, with an image open beside it in Umbraco's own editor and its card ringed, under the Umbraco theme."
+    }
+  ]
+}

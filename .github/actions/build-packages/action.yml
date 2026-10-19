@@ -31,6 +31,7 @@ runs:
           src/Umbraco.Community.UmbraDesktop.Services.Media/package-lock.json
           src/Umbraco.Community.UmbraDesktop.Entertainment/package-lock.json
           src/Umbraco.Community.UmbraDesktop.Accessories/package-lock.json
+          src/Umbraco.Community.UmbraDesktop.Media/package-lock.json
 
     # Safe to key on the lock files because RestorePackagesWithLockFile is on repo-wide
     # (src/Directory.Build.props), so every packages.lock.json is committed and exact. They
@@ -41,7 +42,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: nuget-${{ runner.os }}-${{ hashFiles('src/Umbraco.Community.UmbraDesktop/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Media/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Entertainment/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/packages.lock.json') }}
+        key: nuget-${{ runner.os }}-${{ hashFiles('src/Umbraco.Community.UmbraDesktop/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Media/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Entertainment/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Media/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/packages.lock.json') }}
         restore-keys: nuget-${{ runner.os }}-
 
     # Per project rather than by solution, and deliberately. The solution also holds the test
@@ -59,6 +60,7 @@ runs:
         dotnet restore src/Umbraco.Community.UmbraDesktop.Services.Media/Umbraco.Community.UmbraDesktop.Services.Media.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Entertainment/Umbraco.Community.UmbraDesktop.Entertainment.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Accessories/Umbraco.Community.UmbraDesktop.Accessories.csproj
+        dotnet restore src/Umbraco.Community.UmbraDesktop.Media/Umbraco.Community.UmbraDesktop.Media.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Accessories.Tests/Umbraco.Community.UmbraDesktop.Accessories.Tests.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests.csproj
 
@@ -70,6 +72,7 @@ runs:
         (cd src/Umbraco.Community.UmbraDesktop.Services.Media && npm ci)
         (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm ci)
         (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm ci)
+        (cd src/Umbraco.Community.UmbraDesktop.Media && npm ci)
 
     - name: Test frontend
       shell: bash
@@ -79,6 +82,7 @@ runs:
         (cd src/Umbraco.Community.UmbraDesktop.Services.Media && npm test)
         (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm test)
         (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm test)
+        (cd src/Umbraco.Community.UmbraDesktop.Media && npm test)
 
     # The umbraCoffee data tool (tools/umbracoffee-feed) is not shipped, but the scheduled workflow
     # that keeps the data branch runs it unattended, so a broken change is only found there, in the
@@ -97,6 +101,7 @@ runs:
         (cd src/Umbraco.Community.UmbraDesktop.Services.Media && npm run build)
         (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm run build)
         (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm run build)
+        (cd src/Umbraco.Community.UmbraDesktop.Media && npm run build)
 
     - name: Build
       shell: bash
@@ -106,6 +111,7 @@ runs:
         dotnet build src/Umbraco.Community.UmbraDesktop.Services.Media/ --configuration Release --no-restore
         dotnet build src/Umbraco.Community.UmbraDesktop.Entertainment/ --configuration Release --no-restore
         dotnet build src/Umbraco.Community.UmbraDesktop.Accessories/ --configuration Release --no-restore
+        dotnet build src/Umbraco.Community.UmbraDesktop.Media/ --configuration Release --no-restore
 
     # Named by project file, never by directory or solution: a path that matches no project makes
     # `dotnet test` report success while running nothing.
@@ -127,6 +133,7 @@ runs:
         dotnet pack src/Umbraco.Community.UmbraDesktop.Services.Media/ --configuration Release --no-build --output "${{ inputs.output }}"
         dotnet pack src/Umbraco.Community.UmbraDesktop.Entertainment/ --configuration Release --no-build --output "${{ inputs.output }}"
         dotnet pack src/Umbraco.Community.UmbraDesktop.Accessories/ --configuration Release --no-build --output "${{ inputs.output }}"
+        dotnet pack src/Umbraco.Community.UmbraDesktop.Media/ --configuration Release --no-build --output "${{ inputs.output }}"
 
     # A package that installs cleanly and does nothing is this repository's worst failure mode, and
     # it looks identical to success everywhere else. In the release workflow this is also the last

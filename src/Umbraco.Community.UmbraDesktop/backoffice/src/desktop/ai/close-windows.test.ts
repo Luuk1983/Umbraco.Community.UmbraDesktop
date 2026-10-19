@@ -170,3 +170,11 @@ it('closes a window whose work has failed: nothing is left to stop', () => {
 
   expect(outcome.windowIds).to.deep.equal(['a']);
 });
+
+/** A window an app named (#144) is asked for by that name, as its titlebar shows it. */
+it('finds a window by the title its app gave it', () => {
+  const outcome = plan(desk([win('a', 'Media Manager', { title: 'People' }), win('b', 'Media Manager', { title: 'Products' }), win(SELF, 'Copilot')]), {
+    apps: ['People'],
+  });
+  expect(outcome.windowIds).to.deep.equal(['a']);
+});

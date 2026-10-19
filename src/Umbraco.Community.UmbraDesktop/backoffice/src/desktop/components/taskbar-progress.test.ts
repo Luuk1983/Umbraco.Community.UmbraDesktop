@@ -101,3 +101,10 @@ it('leaves a failure visible on the button', async () => {
   expect(progress()?.getAttribute('data-state')).to.equal('failed');
   expect(button().getAttribute('title')).to.match(/^Media — .*progressFailedCount/);
 });
+
+/** An app's own title (#144) names its button, so four Media Manager windows can be told apart. */
+it('names the button after the window title when the app gave one', async () => {
+  manager.setTitle(only(), 'People');
+  await taskbar.updateComplete;
+  expect(button().getAttribute('title')).to.equal('People');
+});

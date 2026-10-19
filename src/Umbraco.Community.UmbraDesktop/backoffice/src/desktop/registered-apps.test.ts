@@ -284,3 +284,12 @@ it('reports an opensSettings that is not text, and still needs an element then',
   expect(ignored.map((i) => i.field)).to.deep.equal(['meta.opensSettings']);
   expect(dropped.length).to.equal(1);
 });
+
+it('carries hideFromLauncher through, and drops a value that is not a boolean', () => {
+  const [hidden] = normaliseRegisteredApps([manifest({ meta: { label: 'Transfers', hideFromLauncher: true } })]).apps;
+  expect(hidden.hideFromLauncher).to.equal(true);
+  const [wrong] = normaliseRegisteredApps([
+    manifest({ meta: { label: 'Transfers', hideFromLauncher: 'yes' as unknown as boolean } }),
+  ]).apps;
+  expect(wrong.hideFromLauncher).to.equal(undefined);
+});

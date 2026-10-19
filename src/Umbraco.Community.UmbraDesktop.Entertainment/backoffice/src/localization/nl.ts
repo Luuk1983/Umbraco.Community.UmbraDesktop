@@ -73,7 +73,7 @@ export default {
     solitaireBonus: 'incl. {0} tijdbonus',
     solitaireLeaderboard: 'Ranglijst',
     solitaireShowLeaderboard: 'Ranglijst tonen',
-    groupMedia: 'Media',
+    groupEntertainment: 'Entertainment',
     umbraCoffee: 'umbraCoffee',
     umbraCoffeeTray: 'umbraCoffee',
     umbraCoffeeTrayAbout:

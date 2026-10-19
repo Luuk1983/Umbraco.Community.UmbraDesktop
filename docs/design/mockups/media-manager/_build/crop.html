@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Crop</title>
+<!--
+  Cuts core's card thumbnails out of the spike screenshots and shrinks the wallpaper, so the mock's
+  cards are the real ones. Run through serve.py, which saves each POST into _build/img.
+-->
+<pre id="out">running</pre>
+<script>
+  /** Card image areas, inside the 1px border: [file, x, y, w, h]. */
+  const CROPS = {
+    knitted: ['p1-folder-nostub.png', 66, 181, 270, 159],
+    banjo: ['p1-folder-nostub.png', 356, 181, 270, 159],
+    jumpsuit: ['p1-folder-nostub.png', 646, 181, 270, 159],
+    bowling: ['p1-folder-nostub.png', 66, 399, 270, 159],
+    pingpong: ['p1-folder-nostub.png', 356, 399, 270, 159],
+    unicorn: ['p1-folder-nostub.png', 646, 399, 270, 159],
+    tattoo: ['p1-folder-nostub.png', 66, 617, 270, 65],
+    biker: ['p1-folder-nostub.png', 356, 617, 270, 65],
+    ravi: ['p5-two.png', 694, 499, 270, 159],
+    janae: ['p5-two.png', 984, 499, 270, 159],
+    erica: ['p5-two.png', 1274, 499, 270, 159],
+    poornima: ['p5-two.png', 694, 717, 270, 159],
+    emmanuel: ['p5-two.png', 984, 717, 270, 159],
+    busra: ['p5-two.png', 1274, 717, 270, 159],
+  };
+  /** Pixels to read colours from: [file, x, y]. */
+  const SAMPLES = {
+    titlebar: ['p1-folder-nostub.png', 500, 60], taskbar: ['p1-folder-nostub.png', 1000, 975],
+    taskActive: ['p1-folder-nostub.png', 450, 975], underline: ['p1-folder-nostub.png', 400, 997],
+    body: ['p1-folder-nostub.png', 500, 170], cardBorder: ['p1-folder-nostub.png', 65, 300],
+    cardName: ['p1-folder-nostub.png', 200, 360], createBorder: ['p1-folder-nostub.png', 65, 138],
+    createBg: ['p1-folder-nostub.png', 100, 130], filterBorder: ['p1-folder-nostub.png', 500, 122],
+    filterBg: ['p1-folder-nostub.png', 500, 130], inactiveTitle: ['p5-two.png', 500, 60],
+    selBorder: ['p2-selected.png', 66, 300], selBorder2: ['p2-selected.png', 65, 300], check: ['p2-selected.png', 87, 201],
+    rowBorder: ['p3-A.png', 400, 282], tableBg: ['p3-A.png', 400, 250], nameText: ['p3-A.png', 150, 256],
+  };
+  const hex = (v) => '#' + [v[0], v[1], v[2]].map((n) => n.toString(16).padStart(2, '0')).join('');
+  const load = async (f) => { const im = new Image(); im.src = 'shots/' + f; await im.decode(); return im; };
+  const save = (name, dataUrl) => fetch('/save', { method: 'POST', body: JSON.stringify({ name, dataUrl }) });
+  (async () => {
+    const cache = {};
+    const get = async (f) => (cache[f] ??= await load(f));
+    const out = { samples: {} };
+    for (const [k, [f, x, y]] of Object.entries(SAMPLES)) {
+      const im = await get(f); const c = new OffscreenCanvas(im.width, im.height); const g = c.getContext('2d');
+      g.drawImage(im, 0, 0); out.samples[k] = hex(g.getImageData(x, y, 1, 1).data);
+    }
+    for (const [k, [f, x, y, w, h]] of Object.entries(CROPS)) {
+      const im = await get(f); const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(im, x, y, w, h, 0, 0, w, h);
+      await save(k + '.jpg', c.toDataURL('image/jpeg', 0.82));
+    }
+    const wp = await get('aurora-flow.png'); const W = 1600, H = 1000; const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const s = Math.max(W / wp.width, H / wp.height); const dw = wp.width * s, dh = wp.height * s;
+    c.getContext('2d').drawImage(wp, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    await save('wallpaper.jpg', c.toDataURL('image/jpeg', 0.6));
+    out.wallpaper = [wp.width, wp.height];
+    document.getElementById('out').textContent = JSON.stringify(out);
+  })().catch((e) => (document.getElementById('out').textContent = 'ERR ' + e));
+</script>

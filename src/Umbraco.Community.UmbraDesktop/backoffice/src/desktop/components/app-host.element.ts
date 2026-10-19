@@ -182,6 +182,17 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
   props?: Readonly<Record<string, unknown>>;
 
   /**
+   * What the app's window has open beside it, assigned onto the app as its `attached` property (#144):
+   * each key the app opened a backoffice page under, and the page it is on now.
+   *
+   * Its own property rather than one of `props`, because it changes while the app runs and `props`
+   * are assigned again as a whole: an app whose `location` property had moved on since it opened
+   * would be sent back to where it started each time a page beside it routed.
+   */
+  @property({ attribute: false })
+  attached?: Readonly<Record<string, string>>;
+
+  /**
    * The app's manifest alias, set by the window alongside `load`, and read only when a load fails.
    *
    * A plain field rather than a `@property`, which is the whole point of it being here at all: this
@@ -390,6 +401,9 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
     super.willUpdate(changed);
     if (changed.has('load')) this.#mounting = this.#mount();
     else if (changed.has('props') && this.props && this._app) Object.assign(this._app, this.props);
+    if (changed.has('attached') && this.attached && this._app && !changed.has('load')) {
+      (this._app as HTMLElement & { attached?: unknown }).attached = this.attached;
+    }
     if (changed.has('chromeThemeId')) this.#stampTheme(this._app);
   }
 
@@ -466,6 +480,7 @@ export class UmbraDesktopAppHostElement extends UmbLitElement {
         // itself a frame later. Assigning `_app` first is what would put it in the DOM.
         this.#stampTheme(app);
         if (this.props) Object.assign(app, this.props);
+        if (this.attached) (app as HTMLElement & { attached?: unknown }).attached = this.attached;
         this._pending = false;
         this._app = app;
         this.#watchDirty(app);
