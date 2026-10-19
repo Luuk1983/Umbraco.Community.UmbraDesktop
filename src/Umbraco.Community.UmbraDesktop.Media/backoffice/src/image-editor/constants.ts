@@ -7,14 +7,40 @@
 /** Width of the mode panel on the right, in px: the 320px panel of the mocks (design §4). */
 export const PANEL_WIDTH = 320;
 
-/** Height of the mode bar along the top, in px: undo, redo, the five modes, Save and "...". */
-export const MODE_BAR_HEIGHT = 48;
 
 /** Height of the status bar along the bottom, in px: the file's facts on the left, zoom on the right. */
 export const STATUS_BAR_HEIGHT = 36;
 
 /** The narrowest canvas still worth editing on, in px. */
 export const MIN_CANVAS_WIDTH = 400;
+
+/** A mode tab's icon, in px, drawn over its name. */
+export const TAB_ICON_SIZE = 18;
+
+/** The line a mode tab's name takes, in px. */
+export const TAB_LABEL_HEIGHT = 16;
+
+/** The gap between a mode tab's icon and its name, in px. */
+export const TAB_GAP = 4;
+
+/**
+ * The room above a mode tab's icon and below its name, in px. At 5 the tabs looked squashed (the
+ * owner, on the first build of the tab look); Umbraco's own header tabs leave about this much.
+ */
+export const TAB_ROOM = 10;
+
+/** Height of the mode bar along the top, in px: a mode tab, icon over name, with its room round it. */
+export const MODE_BAR_HEIGHT = TAB_ROOM * 2 + TAB_ICON_SIZE + TAB_GAP + TAB_LABEL_HEIGHT;
+
+/**
+ * How much of the text colour washes a bar button under the pointer, in percent. A wash rather than
+ * a surface token because it shows on any ground: under the Umbraco theme the raised, plain and
+ * sunken surfaces are a hair apart, and both of the first two hovers were barely visible.
+ */
+export const HOVER_WASH = 10;
+
+/** Height of the bar's other buttons (undo, redo, Save, "..."), in px, centred in it. */
+export const BAR_BUTTON_HEIGHT = 38;
 
 /** Thickness of the line under the mode in use, in px: the line under Umbraco's own tab (D13). */
 export const CURRENT_LINE = 3;

@@ -105,6 +105,16 @@ function whole(state: EditorState): Box {
   return { x: 0, y: 0, w: size.w, h: size.h };
 }
 
+/**
+ * The picture as it is now, in the turned picture's space: the crop applied, or all of it. Crop
+ * shows this and nothing more (design §14.8), so a frame is held inside it and a further crop cuts
+ * further in. The draft is kept in the turned picture's space, as the crop is; the canvas's world
+ * starts at this area's corner, so the frame is placed and read back through it.
+ */
+function area(state: EditorState): Box {
+  return state.crop ? { ...state.crop } : whole(state);
+}
+
 /** @returns The ratio in force, as width over height, or null for free. */
 function ratioOf(editor: UmbraDesktopImageEditorElement): number | null {
   const state = editor.state!;
@@ -120,20 +130,22 @@ function placeFrame(editor: UmbraDesktopImageEditorElement): void {
   const frame = cropFrameOf(editor);
   const draft = editor.cropDraft;
   if (!frame || !draft) return;
-  frame.set({ left: draft.x, top: draft.y, width: draft.w, height: draft.h, scaleX: 1, scaleY: 1 });
+  const { x, y } = area(editor.state!);
+  frame.set({ left: draft.x - x, top: draft.y - y, width: draft.w, height: draft.h, scaleX: 1, scaleY: 1 });
   frame.world = { ...editor.stage!.world };
   frame.setCoords();
   editor.stage!.canvas.requestRenderAll();
 }
 
 /**
- * Set the draft, held inside the picture and to the ratio, and move the frame to it.
+ * Set the draft, held inside the picture as it is now and to the ratio, and move the frame to it.
  * @param editor The editor.
- * @param rect The frame as drawn.
+ * @param rect The frame as drawn, in the turned picture's space.
  */
 function setDraft(editor: UmbraDesktopImageEditorElement, rect: Box): void {
-  const state = editor.state!;
-  editor.cropDraft = constrainCrop(rect, orientedSize(state.source, state.rotation), ratioOf(editor));
+  const shown = area(editor.state!);
+  const held = constrainCrop({ ...rect, x: rect.x - shown.x, y: rect.y - shown.y }, { w: shown.w, h: shown.h }, ratioOf(editor));
+  editor.cropDraft = { ...held, x: held.x + shown.x, y: held.y + shown.y };
   placeFrame(editor);
 }
 
@@ -145,7 +157,8 @@ function setDraft(editor: UmbraDesktopImageEditorElement, rect: Box): void {
 function frameMoved(editor: UmbraDesktopImageEditorElement, final: boolean): void {
   const frame = cropFrameOf(editor);
   if (!frame) return;
-  const rect = { x: frame.left, y: frame.top, w: frame.width * frame.scaleX, h: frame.height * frame.scaleY };
+  const { x, y } = area(editor.state!);
+  const rect = { x: frame.left + x, y: frame.top + y, w: frame.width * frame.scaleX, h: frame.height * frame.scaleY };
   if (final) setDraft(editor, rect);
   else editor.cropDraft = { x: Math.round(rect.x), y: Math.round(rect.y), w: Math.round(rect.w), h: Math.round(rect.h) };
 }
@@ -175,12 +188,24 @@ function applyDraft(editor: UmbraDesktopImageEditorElement): void {
   editor.apply({ ...state, crop: next, size });
 }
 
-/** Throw the frame away: back to the crop applied, or the whole picture. */
+/** Throw the frame away, Escape: back round the picture as it is now. */
 function discardDraft(editor: UmbraDesktopImageEditorElement): void {
   const state = editor.state;
   if (!state) return;
-  editor.cropDraft = state.crop ? { ...state.crop } : whole(state);
+  editor.cropDraft = area(state);
   placeFrame(editor);
+}
+
+/**
+ * Reset: the whole picture back, as one step Undo takes back when a crop was applied, and the frame
+ * round all of it. With no crop applied it only puts the frame back.
+ */
+function resetCrop(editor: UmbraDesktopImageEditorElement): void {
+  const state = editor.state;
+  if (!state) return;
+  editor.cropDraft = whole(state);
+  if (state.crop) applyDraft(editor);
+  else placeFrame(editor);
 }
 
 /**
@@ -199,13 +224,17 @@ function reorient(editor: UmbraDesktopImageEditorElement, op: (state: EditorStat
 }
 
 /**
- * Choose a ratio, or turn a fixed one the other way, and fit the frame to it.
+ * Choose a ratio, or turn a fixed one the other way. A fixed ratio gets the largest frame of its
+ * shape the picture holds, centred; Free keeps the frame as it is. Fitting the new shape inside the
+ * frame as it was made the frame smaller on every switch between portrait and landscape (found by
+ * the owner in a real backoffice).
  * @param editor The editor.
  * @param change What changed.
  */
 function chooseRatio(editor: UmbraDesktopImageEditorElement, change: Partial<CropSettings>): void {
   Object.assign(settings(editor), change);
-  setDraft(editor, editor.cropDraft ?? whole(editor.state!));
+  const state = editor.state!;
+  setDraft(editor, ratioOf(editor) ? area(state) : (editor.cropDraft ?? area(state)));
   editor.requestUpdate();
 }
 
@@ -218,10 +247,10 @@ export const cropMode: ModeModule = {
     const stage = editor.stage;
     const state = editor.state;
     if (!stage || !state) return;
-    // The frame starts from the crop applied each time: the mode is entered after every change to
-    // the history, and anything pending was applied when the mode was last left, so a frame kept
-    // from before would describe a picture that has since been turned or undone.
-    editor.cropDraft = state.crop ? { ...state.crop } : whole(state);
+    // The frame starts round the picture as it is each time: the mode is entered after every change
+    // to the history, and anything pending was applied when the mode was last left, so a frame kept
+    // from before would describe a picture that has since been cropped, turned or undone.
+    editor.cropDraft = area(state);
     let frame = cropFrameOf(editor);
     if (!frame) {
       frame = new CropFrame({
@@ -284,8 +313,10 @@ export const cropMode: ModeModule = {
     const draft = editor.cropDraft;
     const state = editor.state;
     if (!stage || !draft || !state) return html``;
-    const below = stage.toScreen({ x: draft.x + draft.w / 2, y: draft.y + draft.h });
-    const above = stage.toScreen({ x: draft.x + draft.w / 2, y: draft.y });
+    // The canvas holds the picture as it is now, so everything is placed from that area's corner.
+    const shown = area(state);
+    const below = stage.toScreen({ x: draft.x - shown.x + draft.w / 2, y: draft.y - shown.y + draft.h });
+    const above = stage.toScreen({ x: draft.x - shown.x + draft.w / 2, y: draft.y - shown.y });
     // Under the frame, or over its bottom edge when the frame runs past the canvas, and never off it:
     // the size is what Apply crop will make, and must stay readable whatever the zoom.
     const view = stage.viewport;
@@ -296,9 +327,12 @@ export const cropMode: ModeModule = {
       Math.max(LABEL_GAP, above.y + LABEL_GAP),
       view.h - LABEL_GAP - LABEL_HEIGHT,
     );
-    const focal = editor.focalPoint
-      ? stage.toScreen(orientPoint(state, { x: editor.focalPoint.left * state.source.w, y: editor.focalPoint.top * state.source.h }))
+    // The focal point where it falls on the picture as it is now, and not at all once a crop cut it off.
+    const point = editor.focalPoint
+      ? orientPoint(state, { x: editor.focalPoint.left * state.source.w, y: editor.focalPoint.top * state.source.h })
       : null;
+    const inside = !!point && point.x >= shown.x && point.x <= shown.x + shown.w && point.y >= shown.y && point.y <= shown.y + shown.h;
+    const focal = point && inside ? stage.toScreen({ x: point.x - shown.x, y: point.y - shown.y }) : null;
     return html`<span class="crop-size" style="left: ${labelX}px; top: ${labelY}px"
         >${editor.words('dimensions', draft.w, draft.h)}</span
       >${focal
@@ -360,7 +394,7 @@ export const cropMode: ModeModule = {
         <p class="focal-note"><umb-icon name="icon-crosshair"></umb-icon> ${editor.words('focalNote')}</p>
       </section>
       <div class="actions">
-        <button type="button" data-command="crop-reset" @click=${() => discardDraft(editor)}>${editor.words('reset')}</button>
+        <button type="button" data-command="crop-reset" @click=${() => resetCrop(editor)}>${editor.words('reset')}</button>
         <button type="button" class="primary" data-command="crop-apply" @click=${() => applyDraft(editor)}>
           ${editor.words('applyCrop')}
         </button>

@@ -16,7 +16,7 @@ import { History } from './history.js';
 import { adjustMatrix, isIdentity } from './adjust.js';
 import { renderDocument } from './render.js';
 import type { Picture } from './render.js';
-import { NEUTRAL_ADJUST, initialState, orientedSize, outputSize } from './state.js';
+import { NEUTRAL_ADJUST, initialState, outputSize } from './state.js';
 import type { EditorState, Point, Rect, Size } from './state.js';
 import { Stage, VIEW_TEXTURE_LIMIT } from './stage.js';
 import { modeBarStyles, renderModeBar } from './mode-bar.js';
@@ -335,13 +335,14 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
   }
 
   /**
-   * Where the world of the view starts in oriented space: the crop's corner outside Crop, where the
-   * world is the cropped picture, and the picture's own corner in Crop, where it is the whole of it.
+   * Where the world of the view starts in oriented space: the crop's corner, since the world is the
+   * picture as cropped, in every mode. Crop showed the whole picture once, and an applied crop then
+   * changed nothing on screen (found by the owner; design §14.8).
    * @returns The offset.
    */
   get worldOffset(): Point {
     const crop = this.state?.crop;
-    return this.mode === 'crop' || !crop ? { x: 0, y: 0 } : { x: crop.x, y: crop.y };
+    return crop ? { x: crop.x, y: crop.y } : { x: 0, y: 0 };
   }
 
   /**
@@ -456,16 +457,16 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
   }
 
   /**
-   * The state the view draws: in Crop the whole turned picture, so the frame can be drawn anywhere
-   * on it; otherwise the cropped picture. Never resized (the zoom shows the size), never adjusted
-   * (the GPU filter does), never with its marks and regions (the modes draw those as objects).
+   * The state the view draws: the cropped picture, in every mode, so Crop shows a crop once it is
+   * applied. Never resized (the zoom shows the size), never adjusted (the GPU filter does), never with
+   * its marks and regions (the modes draw those as objects).
    * @param current The document.
    * @returns The view's state.
    */
   #viewState(current: EditorState): EditorState {
     return {
       ...current,
-      crop: this.mode === 'crop' ? null : current.crop,
+      crop: current.crop,
       size: null,
       adjust: { ...NEUTRAL_ADJUST },
       marks: [],
@@ -482,8 +483,8 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
     const view = this.#viewState(current);
     const world = outputSize(view);
     const out = outputSize(current);
-    const outPerWorld = this.mode === 'crop' ? out.w / (current.crop?.w ?? orientedSize(current.source, current.rotation).w) : out.w / world.w;
-    const key = JSON.stringify([view.rotation, view.flipH, view.flipV, view.crop, this.mode === 'crop', out]);
+    const outPerWorld = out.w / world.w;
+    const key = JSON.stringify([view.rotation, view.flipH, view.flipV, view.crop, out]);
     if (key !== this.#viewKey || sharpen) {
       const { w, h } = stage.viewport;
       const dpr = window.devicePixelRatio || 1;

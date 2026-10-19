@@ -118,12 +118,13 @@ it('applies the frame as one step from Apply crop, from Enter, and on leaving th
   await settle(editor);
   expect(steps(editor)).to.equal(2);
 
-  control(editor, 'ratio-4:3').click();
+  // 3:2, not 4:3: on this 4:3 picture a 4:3 frame is the whole picture now, which is no crop at all.
+  control(editor, 'ratio-3:2').click();
   await settle(editor);
   editor.setMode('adjust');
   await settle(editor);
   expect(steps(editor)).to.equal(3);
-  expect(Math.abs(editor.state!.crop!.w / editor.state!.crop!.h - 4 / 3)).to.be.below(0.05);
+  expect(Math.abs(editor.state!.crop!.w / editor.state!.crop!.h - 3 / 2)).to.be.below(0.05);
 });
 
 it('throws the frame away with Escape and with Reset, adding no step', async () => {
@@ -199,4 +200,102 @@ it('shades the picture outside the frame', async () => {
   await settle(editor);
   const shaded = sample();
   expect(shaded[0] + shaded[1] + shaded[2], `${open} → ${shaded}`).to.be.lessThan((open[0] + open[1] + open[2]) * 0.8);
+});
+
+/**
+ * The owner, in a real backoffice: switching 4:3 between portrait and landscape made the frame
+ * smaller each time (712, 401, 301, 226, 170, 128, 96 px wide), because each change fitted the new
+ * shape inside the frame as it was. A ratio or a way round now gives the largest frame of that shape
+ * the picture holds, centred, however often it is switched.
+ */
+it('gives a ratio the largest frame the picture holds, however often it is turned', async () => {
+  const { editor } = await cropping();
+  control(editor, 'ratio-4:3').click();
+  await settle(editor);
+  const landscape = { ...editor.cropDraft! };
+  expect(landscape).to.deep.equal({ x: 0, y: 0, w: 80, h: 60 });
+  for (let i = 0; i < 3; i++) {
+    control(editor, 'orientation-portrait').click();
+    await settle(editor);
+    expect(editor.cropDraft, `portrait ${i}`).to.deep.equal({ x: 18, y: 0, w: 45, h: 60 });
+    control(editor, 'orientation-landscape').click();
+    await settle(editor);
+    expect(editor.cropDraft, `landscape ${i}`).to.deep.equal(landscape);
+  }
+  control(editor, 'ratio-16:9').click();
+  await settle(editor);
+  expect(editor.cropDraft, '16:9, centred').to.deep.equal({ x: 0, y: 8, w: 80, h: 45 });
+});
+
+/**
+ * The owner, in a real backoffice: Apply crop and Reset seemed to do nothing. Apply did crop, but
+ * Crop always showed the whole picture with the frame over it, so nothing changed on screen; and
+ * Reset only went back to the crop applied, which was the frame already. Decided 2026-10-18: Crop
+ * shows the picture as it is, so Apply cuts it on screen and a further crop cuts further in, and Reset
+ * brings the whole picture back.
+ */
+describe('Apply crop and Reset show what they do', () => {
+  /** Apply a square crop: the middle 60 × 60 of the 80 × 60 picture. */
+  async function squared() {
+    const crop = await cropping();
+    control(crop.editor, 'ratio-1:1').click();
+    await settle(crop.editor);
+    control(crop.editor, 'crop-apply').click();
+    await settle(crop.editor);
+    return crop;
+  }
+
+  it('shows only the cropped picture once applied, with the frame round all of it', async () => {
+    const { editor } = await squared();
+    expect(editor.state!.crop).to.deep.equal({ x: 10, y: 0, w: 60, h: 60 });
+    expect(editor.stage!.world, 'the canvas holds the cropped picture').to.deep.equal({ w: 60, h: 60 });
+    expect(editor.cropDraft).to.deep.equal({ x: 10, y: 0, w: 60, h: 60 });
+    const frame = cropFrameOf(editor)!;
+    expect({ x: frame.left, y: frame.top, w: frame.width, h: frame.height }, 'the frame in the canvas').to.deep.equal({ x: 0, y: 0, w: 60, h: 60 });
+  });
+
+  it('crops further in from a cropped picture', async () => {
+    const { editor } = await squared();
+    control(editor, 'ratio-16:9').click();
+    await settle(editor);
+    expect(editor.cropDraft, 'the largest 16:9 in the square').to.deep.equal({ x: 10, y: 13, w: 60, h: 34 });
+    expect(cropFrameOf(editor)!.top, 'in the canvas').to.equal(13);
+    control(editor, 'crop-apply').click();
+    await settle(editor);
+    expect(editor.state!.crop).to.deep.equal({ x: 10, y: 13, w: 60, h: 34 });
+    expect(editor.stage!.world).to.deep.equal({ w: 60, h: 34 });
+  });
+
+  it('brings the whole picture back with Reset, as one step that Undo takes back', async () => {
+    const { editor } = await squared();
+    expect(steps(editor)).to.equal(1);
+    control(editor, 'crop-reset').click();
+    await settle(editor);
+    expect(editor.state!.crop).to.equal(null);
+    expect(steps(editor)).to.equal(2);
+    expect(editor.stage!.world).to.deep.equal({ w: 80, h: 60 });
+    expect(editor.cropDraft).to.deep.equal({ x: 0, y: 0, w: 80, h: 60 });
+    editor.undo();
+    await settle(editor);
+    expect(editor.state!.crop).to.deep.equal({ x: 10, y: 0, w: 60, h: 60 });
+  });
+
+  it('throws a frame away with Escape, back to the cropped picture, adding no step', async () => {
+    const { editor } = await squared();
+    control(editor, 'ratio-16:9').click();
+    await settle(editor);
+    press(editor, 'Escape');
+    await settle(editor);
+    expect(editor.cropDraft).to.deep.equal({ x: 10, y: 0, w: 60, h: 60 });
+    expect(steps(editor)).to.equal(1);
+  });
+
+  it('draws the focal point where it falls on the cropped picture', async () => {
+    const { editor } = await squared();
+    const focal = editor.shadowRoot!.querySelector('.focal') as HTMLElement;
+    // The fixture's focal point is at (20, 30) on the picture: (10, 30) once 10 px are cut off the left.
+    const screen = editor.stage!.toScreen({ x: 10, y: 30 });
+    expect(parseFloat(focal.style.left)).to.be.closeTo(screen.x, 1);
+    expect(parseFloat(focal.style.top)).to.be.closeTo(screen.y, 1);
+  });
 });

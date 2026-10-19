@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { control, defineFakeFileMenu, mountEditor, openFixture, opened, press, settle } from './image-editor.test-helper.js';
 import type { FakeOpenView } from './image-editor.test-helper.js';
-import { ACCEPT } from './constants.js';
+import { ACCEPT, HOVER_WASH } from './constants.js';
 import { rotate } from './geometry.js';
 import en from '../localization/en.js';
 
@@ -404,11 +404,68 @@ describe('the look (D11, D13)', () => {
   });
 
   /**
+   * The owner, on the first build of the tab look: the hover was barely visible, the bar's raised
+   * ground going one step lighter. The sunken ground was tried next and was no better under the
+   * Umbraco theme, whose surfaces are a hair apart. Under the pointer a button now takes a wash of the
+   * text colour, which shows on any ground in any theme, and Save darkens. No line under a hovered
+   * tab: one in the border colour was tried, and under the Umbraco theme it was darker than the pale
+   * line under the tab in use, so the hovered tab looked the more selected of the two.
+   */
+  it('shows clearly which button is under the pointer', async () => {
+    const { sendMouse, setViewport } = await import('@web/test-runner-commands');
+    // Wide enough for the whole editor, so the pointer can reach Save and "..." at its right.
+    await setViewport({ width: 1300, height: 900 });
+    const { editor, menu } = await mountEditor();
+    paint(editor);
+    editor.style.setProperty('--umbradesktop-app-text', 'rgb(20, 20, 30)');
+    editor.style.setProperty('--umbradesktop-app-border', 'rgb(120, 120, 128)');
+    await openFixture(editor, menu!);
+    editor.apply(rotate(editor.state!, 'right'));
+    await settle(editor);
+    // What the wash computes to, from a probe given the same mix of the same text colour.
+    const probe = document.createElement('div');
+    probe.style.background = `color-mix(in srgb, rgb(20, 20, 30) ${HOVER_WASH}%, transparent)`;
+    document.body.append(probe);
+    const wash = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    const hover = async (command: string) => {
+      const box = control(editor, command).getBoundingClientRect();
+      await sendMouse({ type: 'move', position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)] });
+      return getComputedStyle(control(editor, command));
+    };
+    expect(HOVER_WASH, 'enough to see').to.be.at.least(8);
+    expect((await hover('undo')).backgroundColor, 'undo').to.equal(wash);
+    expect((await hover('more')).backgroundColor, '"..."').to.equal(wash);
+    const tab = await hover('mode-adjust');
+    expect(tab.backgroundColor, 'a tab').to.equal(wash);
+    expect(tab.boxShadow, 'no line that could pass for the one in use').to.equal('none');
+    expect((await hover('mode-crop')).boxShadow, 'the tab in use keeps its own line').to.contain('rgb(245, 193, 188)');
+    expect((await hover('save')).filter, 'Save darkens').to.contain('brightness');
+    await sendMouse({ type: 'move', position: [0, 0] });
+  });
+
+  /**
+   * The owner, on the first build of the tab look: the tabs were squashed, the icon almost touching
+   * the top of the bar. Umbraco's own header tabs leave room above the icon and below the name.
+   */
+  it('gives a tab room above its icon and below its name', async () => {
+    const { editor, menu } = await mountEditor();
+    await openFixture(editor, menu!);
+    const tab = control(editor, 'mode-crop').getBoundingClientRect();
+    const icon = control(editor, 'mode-crop').querySelector('umb-icon')!.getBoundingClientRect();
+    const label = control(editor, 'mode-crop').querySelector('span')!.getBoundingClientRect();
+    expect(icon.top - tab.top, 'room above the icon').to.be.at.least(10);
+    expect(tab.bottom - label.bottom, 'room below the name, over the line').to.be.at.least(8);
+  });
+
+  /**
    * Found in a real backoffice: hovering the pressed mode or Save painted the hover's light ground
    * under their light text, so they vanished under the pointer.
    */
   it('keeps Save and the mode in use as they are under the pointer', async () => {
-    const { sendMouse } = await import('@web/test-runner-commands');
+    const { sendMouse, setViewport } = await import('@web/test-runner-commands');
+    // Wide enough for the whole editor: Save is past the default 800px, where the pointer cannot go.
+    await setViewport({ width: 1300, height: 900 });
     const { editor, menu } = await mountEditor();
     paint(editor);
     await openFixture(editor, menu!);

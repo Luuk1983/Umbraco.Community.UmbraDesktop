@@ -336,10 +336,14 @@ export class UmbraDesktopMediaFileMenuElement extends UmbLitElement {
     return this.shadowRoot?.querySelector(this._panel ? '.sheet.panel' : '.sheet.menu') ?? null;
   }
 
-  /** Put focus on the first thing the top sheet offers: the first command, or a panel's arrow back. */
+  /**
+   * Put focus on the first thing the top sheet offers: the first command, or a panel's arrow back.
+   * Without scrolling: the sheet is still off to the right while it slides in, and a plain focus()
+   * scrolled this element sideways to show it, so the menu bounced (found by the owner).
+   */
   #focusFirst(): void {
     if (!this.open) return;
-    this.#topSheet()?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    this.#topSheet()?.querySelector<HTMLElement>(FOCUSABLE)?.focus({ preventScroll: true });
   }
 
   /**

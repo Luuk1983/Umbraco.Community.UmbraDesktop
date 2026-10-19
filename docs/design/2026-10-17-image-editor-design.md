@@ -95,7 +95,9 @@ With nothing open, the modes, undo, redo and Save are drawn and disabled, never 
   left and right (90°) and flip horizontal and vertical are buttons in this panel and apply at once.
   The item's current focal point is drawn on the picture in this mode, so the editor can see it,
   with a line in the panel saying a crop, rotate or flip resets it on save (D8). Apply crop, Enter
-  or switching mode applies the frame; Escape or Reset throws it away.
+  or switching mode applies the frame; Escape throws it away. Since 2026-10-18 (§14.8) Crop shows the
+  picture as cropped, so an applied crop shows at once and a further crop cuts further in, and Reset
+  brings the whole picture back as one step.
 - **Adjust.** Exposure, brightness, contrast, saturation. Each slider is zero in the middle, and a
   double-click puts it back. The picture updates while dragging. Hold to compare shows the original;
   Split view shows original and adjusted side by side with a line to drag. One drag is one undo step.
@@ -495,3 +497,29 @@ against the window's right edge, the arrow back, Escape, and a real Save from th
   4, whose Verdana is wider, and the Save line carries the item's name, which can be long.
 - The open view is drawn on the canvas over the empty stage; its white page ground is the surface
   token, not the sunken canvas grey of the mock.
+- **The tabs' room.** The first build fitted the tabs into the old 48 px bar, 5 px above the icon,
+  and the owner found them squashed. The bar's height is now derived from a tab: 10 px of room
+  (`TAB_ROOM`) above the icon and below the name, which makes it 58 px; the other buttons keep their
+  38 px. A test holds the room, with the icon given a box of its own, since Umbraco's icons draw
+  nothing in the test browser and an empty icon measured as no height at all.
+- **The hover.** The bar's buttons first went one step lighter under the pointer, the plain surface
+  on the raised one, which the owner could barely see; the sunken surface was no better under the
+  Umbraco theme, whose three surfaces are a hair apart. A button under the pointer now takes a 10%
+  wash of the text colour (`HOVER_WASH`), which shows on any theme's ground, and Save darkens. A line
+  under a hovered tab was tried and dropped: in the border colour it was darker than the Umbraco
+  theme's pale in-use line, so the hovered tab looked the selected one.
+- **Three things the owner found in Crop and the menu**, each with a test that failed first:
+  - Switching a fixed ratio between portrait and landscape shrank the frame on every switch (712,
+    401, 301, 226 px wide...), because each change fitted the new shape inside the frame as it was.
+    A fixed ratio now gets the largest frame of its shape the picture holds, centred; Free keeps the
+    frame.
+  - Apply crop and Reset seemed to do nothing. Apply did crop, but Crop always showed the whole
+    picture with the frame over it, so nothing changed on screen; Reset went back to the crop
+    applied, which was the frame already. Decided with the owner: Crop shows the picture as it is,
+    like every other mode (the world is the cropped picture, `worldOffset` the crop's corner), so
+    Apply cuts it on screen and a further crop cuts further in. Reset brings the whole picture back,
+    as one step Undo takes back. Escape still throws an unapplied frame away. A crop can no longer be
+    widened by dragging; Reset or Undo is the way back.
+  - The menu bounced as it slid in. Focusing the first command while the sheet was still off to the
+    right scrolled the menu's box sideways to show it (380 px on the first frame), and the scroll and
+    the slide fought until both reached zero. Focus now moves with `preventScroll`.

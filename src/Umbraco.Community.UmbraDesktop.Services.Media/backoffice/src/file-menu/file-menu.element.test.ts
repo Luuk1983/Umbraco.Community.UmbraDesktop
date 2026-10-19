@@ -306,3 +306,26 @@ it('is never wider than the app it is in', async () => {
   expect(sheet.width).to.equal(600);
   expect(sheet.right).to.equal(bounds.right);
 });
+
+/**
+ * The owner, in a real backoffice: the menu bounced, going too far left before snapping into place.
+ * Focusing the first command while the menu was still off to the right made the browser scroll the
+ * menu's box sideways to show it (380 px on the first frame), and the scroll and the slide fought
+ * until both reached zero. Focus moves without scrolling now.
+ */
+it('slides in without scrolling its box to the command it focuses', async () => {
+  const { element } = await menu(DOC);
+  const scrolled: number[] = [];
+  element.show();
+  await element.updateComplete;
+  for (let i = 0; i < 6; i++) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    scrolled.push(element.scrollLeft);
+  }
+  expect(element.shadowRoot!.activeElement, 'focus still moves').to.equal(command(element, 'open'));
+  expect(scrolled.every((value) => value === 0), `scrolled ${scrolled.join(', ')}`).to.equal(true);
+  element.show('saveAs');
+  await element.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(element.scrollLeft, 'nor for a panel').to.equal(0);
+});

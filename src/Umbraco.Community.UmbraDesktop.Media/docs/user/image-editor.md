@@ -40,8 +40,10 @@ is shown upright, however the phone held it.
 2. Optional: to keep a shape, select a ratio under **Aspect ratio**, such as **1:1** or **16:9**, and
    **Portrait** or **Landscape**.
 3. Drag the frame or its handles. Its size in pixels is shown under it.
-4. To crop, select **Apply crop**, or press Enter. To throw the frame away, select **Reset** or press
-   Escape.
+4. To crop, select **Apply crop**, or press Enter. The picture is cropped at once. To throw the frame
+   away instead, press Escape.
+
+To cut further in, crop again. To get the whole picture back, select **Reset**, or **Undo**.
 
 To turn the image, select **Rotate left** or **Rotate right**. To mirror it, select **Flip
 horizontal** or **Flip vertical**. Both happen at once.

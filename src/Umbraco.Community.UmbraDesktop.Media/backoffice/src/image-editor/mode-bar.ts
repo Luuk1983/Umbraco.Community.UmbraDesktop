@@ -1,7 +1,15 @@
 import { css, html } from '@umbraco-cms/backoffice/external/lit';
 import type { TemplateResult } from '@umbraco-cms/backoffice/external/lit';
 import type { WordKey } from '../shared/words.js';
-import { CURRENT_LINE, MODE_BAR_HEIGHT } from './constants.js';
+import {
+  BAR_BUTTON_HEIGHT,
+  CURRENT_LINE,
+  HOVER_WASH,
+  MODE_BAR_HEIGHT,
+  TAB_GAP,
+  TAB_ICON_SIZE,
+  TAB_LABEL_HEIGHT,
+} from './constants.js';
 import { MODES } from './modes/mode.js';
 import type { Mode } from './modes/mode.js';
 import type { UmbraDesktopImageEditorElement } from './image-editor.element.js';
@@ -102,7 +110,7 @@ export const modeBarStyles = css`
     align-items: center;
     justify-content: center;
     gap: 6px;
-    height: ${MODE_BAR_HEIGHT - 10}px;
+    height: ${BAR_BUTTON_HEIGHT}px;
     padding: 0 10px;
     font: inherit;
     font-family: var(--umbradesktop-app-font, inherit);
@@ -125,14 +133,20 @@ export const modeBarStyles = css`
   }
 
   .bar button.icon {
-    width: ${MODE_BAR_HEIGHT - 10}px;
+    width: ${BAR_BUTTON_HEIGHT}px;
     padding: 0;
   }
 
-  /* The hover ground is for the plain buttons and the tabs. Save keeps its own colours under the
-     pointer: the ground would sit under its light text and hide it (found in a real backoffice). */
+  /* Under the pointer a plain button or a tab takes a wash of the text colour, which shows on any
+     theme's ground (two surface tokens were tried first, and the owner could barely see either).
+     Save keeps its own colours and darkens instead: a ground would sit under its light text and hide
+     it (found in a real backoffice). */
   .bar button:not(:disabled):not(.save):hover {
-    background: var(--umbradesktop-app-surface, var(--uui-color-surface));
+    background: color-mix(in srgb, var(--umbradesktop-app-text, var(--uui-color-text)) ${HOVER_WASH}%, transparent);
+  }
+
+  .bar button.save:not(:disabled):hover {
+    filter: brightness(0.9);
   }
 
   .bar button:disabled {
@@ -158,12 +172,22 @@ export const modeBarStyles = css`
      a line under the one in use (D13). */
   .bar button.tab {
     flex-direction: column;
-    gap: 2px;
+    gap: ${TAB_GAP}px;
     height: 100%;
     min-width: 72px;
     padding: 0 12px;
     font-size: 13px;
+    line-height: ${TAB_LABEL_HEIGHT}px;
     border-radius: 0;
+  }
+
+  /* A box of its own size, so the room round it is the bar's to give and not the icon font's. */
+  .bar button.tab umb-icon {
+    display: block;
+    flex: none;
+    width: ${TAB_ICON_SIZE}px;
+    height: ${TAB_ICON_SIZE}px;
+    font-size: ${TAB_ICON_SIZE}px;
   }
 
   .bar button.tab[aria-pressed='true'] {
