@@ -2,6 +2,8 @@ import type { UmbFileDropzoneDroppedItems } from '@umbraco-cms/backoffice/dropzo
 import { itemAt } from '../selection/item-at.js';
 import { renderedItems } from '../selection/rendered-items.js';
 import { targetAt, treeKeys } from '../drag/targets.js';
+import { refusalTerm } from '../operations/rules.js';
+import type { UmbraDesktopMediaAccess } from '../operations/rules.js';
 import type { UmbraDesktopDropTarget } from '../drag/targets.js';
 import { clearTarget, lightTarget } from '../drag/light.js';
 import { UMBRADESKTOP_MEDIA_DRAG_TYPE } from '../drag/drag-session.js';
@@ -33,6 +35,8 @@ export interface UmbraDesktopOsDropOperations {
    * @param parent The folder, null for the root.
    */
   upload(items: UmbFileDropzoneDroppedItems, parent: string | null): Promise<void>;
+  /** What the person may reach, when known: the Media root without root access takes no files. */
+  access?(): UmbraDesktopMediaAccess | undefined;
 }
 
 /**
@@ -46,6 +50,9 @@ const OVERLAY = 'UMB-DROPZONE-MEDIA';
 
 /** The label's word for a refused target. */
 const REFUSED_BIN = 'umbraDesktopMedia_uploadNotToBin';
+
+/** The label's word for a folder out of the person's reach. */
+const REFUSED_ACCESS = refusalTerm('access');
 
 /** The OS drop controller. */
 export class UmbraDesktopMediaOsDropController {
@@ -123,7 +130,15 @@ export class UmbraDesktopMediaOsDropController {
     const path = pathAt(event.clientX, event.clientY);
     const target = targetAt(path, this.#windows(), (unique) => this.#refs.get(unique)?.isFolder);
     this.#clear();
-    if (!target || target.kind === 'window') return;
+    if (!target) return;
+    if (this.#outOfReach(target)) {
+      // Nobody uploads there, core's dropzone over the window's own area included.
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this.#resetCore();
+      return;
+    }
+    if (target.kind === 'window') return;
     // Ours: core's overlay must not upload into the folder the window shows as well, and the browser
     // must not open the file in place of the backoffice, which it does with a drop nobody takes.
     event.preventDefault();
@@ -187,9 +202,16 @@ export class UmbraDesktopMediaOsDropController {
       this.#clear();
       return;
     }
-    const refused = target.kind === 'bin';
+    const outOfReach = this.#outOfReach(target);
+    const refused = target.kind === 'bin' || outOfReach;
     const name = this.#name(target);
-    const lines = refused ? [{ key: REFUSED_BIN, args: [] }] : name === undefined ? [] : [{ key: 'umbraDesktopMedia_uploadTo', args: [name] }];
+    const lines = outOfReach
+      ? [{ key: REFUSED_ACCESS, args: [] }]
+      : target.kind === 'bin'
+        ? [{ key: REFUSED_BIN, args: [] }]
+        : name === undefined
+          ? []
+          : [{ key: 'umbraDesktopMedia_uploadTo', args: [name] }];
     const signature = `${target.kind}|${'unique' in target ? target.unique : ''}|${'via' in target ? target.via : ''}|${lines.length}`;
     if (this.#drawn?.window !== target.window || this.#drawn.signature !== signature) {
       this.#clear();
@@ -198,6 +220,18 @@ export class UmbraDesktopMediaOsDropController {
       this.#drawn = { window: target.window, signature };
     }
     if (lines.length) target.window.setLabel({ lines, refused, x: event.clientX, y: event.clientY });
+  }
+
+  /**
+   * Whether a target is out of the person's reach: the Media root, to someone without root access.
+   * Every other folder a window shows them is in their reach, since core shows nothing else.
+   * @param target The target.
+   * @returns True when files may not go there.
+   */
+  #outOfReach(target: UmbraDesktopDropTarget<UmbraDesktopDragWindowHandle>): boolean {
+    if (target.kind === 'bin' || target.unique !== null) return false;
+    const access = this.#ops.access?.();
+    return !!access && !access.root;
   }
 
   /**

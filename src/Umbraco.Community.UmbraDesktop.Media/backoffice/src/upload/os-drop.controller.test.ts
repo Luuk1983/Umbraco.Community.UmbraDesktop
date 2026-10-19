@@ -88,7 +88,7 @@ function managerWindow(place: UmbraDesktopMediaPlace) {
  * @param windows The manager windows.
  * @returns What was uploaded.
  */
-function controller(windows: UmbraDesktopDragWindowHandle[]) {
+function controller(windows: UmbraDesktopDragWindowHandle[], access?: { root: boolean; starts: Set<string> }) {
   const uploads: Array<{ names: string[]; parent: string | null }> = [];
   const api = {
     item: async (unique: string) => ({ data: refs[unique] }),
@@ -98,6 +98,7 @@ function controller(windows: UmbraDesktopDragWindowHandle[]) {
     {
       api,
       upload: async (items: UmbFileDropzoneDroppedItems, parent: string | null) => void uploads.push({ names: items.files.map((file) => file.name), parent }),
+      access: () => access,
     },
     () => windows,
   );
@@ -185,6 +186,21 @@ describe('files from the OS over a manager window', () => {
     const drop = at(win.overlay, 'drop', data, bin);
     await tick();
     expect([drop.defaultPrevented, uploads.length]).to.deep.equal([true, 0]);
+  });
+
+  it('refuses the Media root to a person without root access, even over core\u2019s own dropzone', async () => {
+    const win = managerWindow({ kind: 'root' });
+    const { uploads } = controller([win.handle], { root: false, starts: new Set([PEOPLE]) });
+    const data = osFiles();
+    const open = { x: 550, y: 350 };
+    at(win.overlay, 'dragover', data, open);
+    await tick();
+    at(win.overlay, 'dragover', data, open);
+    expect(win.label()).to.deep.include({ refused: true });
+    expect(win.label()?.lines[0].key).to.equal('umbraDesktopMedia_refusedAccess');
+    const drop = at(win.overlay, 'drop', data, open);
+    await tick();
+    expect([drop.defaultPrevented, uploads.length], 'kept from core\u2019s dropzone too').to.deep.equal([true, 0]);
   });
 
   it('opens a closed tree folder the files rest on, as a drag of items does', async () => {

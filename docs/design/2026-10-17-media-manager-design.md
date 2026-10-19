@@ -378,6 +378,27 @@ After the fifth test:
   it, which read as dropping into all of them.
 - **A click on empty space clears the selection**, as in every file manager; with Ctrl, Cmd or Shift
   held it keeps it. A press that becomes a box does not clear first unless no key is held, as before.
+- **Uploads started in a window stop when it closes**, and closing it asks first: owner's call, kept as
+  built (2026-10-19). Making them survive would lose core's placeholder cards.
+- **Create of a folder makes it in the window**, after a name dialog (the Rename dialog's create mode,
+  starting at "New folder"), as a file manager's New folder does. Core's page beside the window had
+  nothing for a folder but its name, and opened a window of its own when the manager was narrow. Other
+  types still open core's create page beside the window. A folder type is what Umbraco calls one (no
+  file, allows children), read once.
+- **A save in the page beside a window reloads the window's folder through core's reload event**, so
+  the tree reloads it too: a folder created or renamed there showed in the grid but not in the tree.
+- **The drop shade covers core's view area only**, its body layout's `#main`, measured when the shade
+  shows: over the whole folder area it covered the toolbar and the selection bar as well.
+- **Permissions and start nodes, checked with a restricted user** (media start folder People, no
+  root access). What the manager shows was already right, because core's tree, collection and the
+  server filter by start node: Media listed People only. What it did was not: the server refused
+  writes outside People, but only after trying, since the allowed-types endpoint answers the root
+  for anyone, so a drag said "Move to Media" and then failed. Now the add-on reads the person's
+  start folders and root access from Umbraco's current user and refuses up front (`canReach` in
+  `operations/rules.ts`, a fourth refusal, `access`): drags and pastes into the root or a folder
+  outside the start folders, files from the computer onto the root (core's own dropzone included),
+  and Create there; a window restored on a folder out of reach opens on Media. Umbraco cannot
+  delete a user who has signed in, so the probe user is left disabled in the test database.
 - **A tree folder can be dragged by its name or icon.** Core slots both into uui's link, and Chrome
   starts no drag from slotted content in a menu item (`user-select: none`), so a press on them stayed
   a click; only the row's empty part dragged. Every check had pressed the link's middle, beside the

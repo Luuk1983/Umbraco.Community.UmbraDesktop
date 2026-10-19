@@ -109,7 +109,7 @@ function managerWindow(place: UmbraDesktopMediaPlace, keys: string[], selected: 
  * @param allowed What every folder allows.
  * @returns The controller and its record.
  */
-function controller(windows: UmbraDesktopDragWindowHandle[], allowed = ['image', 'video', 'folder']) {
+function controller(windows: UmbraDesktopDragWindowHandle[], allowed = ['image', 'video', 'folder'], access?: { root: boolean; starts: Set<string> }) {
   const ops: string[] = [];
   const result = (items: ReadonlyArray<UmbraDesktopMediaRef>) => ({
     succeeded: items.map((item) => ({ item, created: [`copy-of-${item.unique}`], affects: [] })),
@@ -128,6 +128,7 @@ function controller(windows: UmbraDesktopDragWindowHandle[], allowed = ['image',
       copyTo: async (items, target) => (ops.push(`copy ${items.map((i) => i.name).join(',')} to ${target}`), result(items)),
       trash: async (items) => (ops.push(`trash ${items.map((i) => i.name).join(',')}`), result(items)),
       restore: async (items, target) => (ops.push(`restore ${items.map((i) => i.name).join(',')} to ${target}`), result(items)),
+      access: () => access,
     },
     () => windows,
     false,
@@ -315,6 +316,22 @@ describe('dragging over a window', () => {
     expect(target.record).to.include('drop refused');
     expect(target.label()).to.deep.include({ refused: true });
     expect(target.label()?.lines[0].args[0]).to.equal('Clip');
+  });
+
+  it('refuses a folder out of the person\u2019s reach, the Media root without root access, saying why', async () => {
+    const source = managerWindow({ kind: 'folder', unique: PEOPLE }, [IMAGE]);
+    const target = managerWindow({ kind: 'root' }, []);
+    const { ops } = controller([source.handle, target.handle], undefined, { root: false, starts: new Set([PEOPLE]) });
+    const data = await startDrag(source);
+    target.handle.element.dispatchEvent(dragEvent('dragover', data));
+    await tick();
+    const over = dragEvent('dragover', data);
+    target.handle.element.dispatchEvent(over);
+    expect([over.defaultPrevented, target.label()?.refused]).to.deep.equal([false, true]);
+    expect(target.label()?.lines).to.deep.equal([{ key: 'umbraDesktopMedia_refusedAccess', args: [] }]);
+    target.handle.element.dispatchEvent(dragEvent('drop', data));
+    await tick();
+    expect(ops).to.deep.equal([]);
   });
 
   it('fades the originals while moving, and not while copying', async () => {

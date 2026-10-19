@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { split } from './rules.js';
+import { canReach, refusalTerm, split } from './rules.js';
 import { runOperation } from './engine.js';
 import type { UmbraDesktopOperationProgress, UmbraDesktopOperationStep } from './engine.js';
 import { copySteps, moveSteps, renameStep, restoreSteps, trashSteps } from './steps.js';
@@ -18,6 +18,23 @@ const ref = (unique: string, parent: string | null, folder = false, name = uniqu
 });
 
 describe('where items may go', () => {
+  it('reaches a folder in or under a start folder, and the root only with root access', () => {
+    const limited = { root: false, starts: new Set(['people']) };
+    expect([
+      canReach(limited, { unique: 'people', ancestors: [] }),
+      canReach(limited, { unique: 'archive', ancestors: ['people'] }),
+      canReach(limited, { unique: 'products', ancestors: [] }),
+      canReach(limited, { unique: null, ancestors: [] }),
+      canReach({ root: true, starts: new Set() }, { unique: null, ancestors: [] }),
+    ]).to.deep.equal([true, true, false, false, true]);
+  });
+
+  it('refuses everything for a folder out of reach, and says so', () => {
+    const banjo = { unique: 'banjo', name: 'Banjo', parent: 'people', mediaType: IMAGE_TYPE, isFolder: false };
+    const result = split([banjo], { unique: null, ancestors: [] }, undefined, 'copy', { root: false, starts: new Set(['people']) });
+    expect([result.allowed, result.refused, refusalTerm('access')]).to.deep.equal([[], [{ item: banjo, reason: 'access' }], 'umbraDesktopMedia_refusedAccess']);
+  });
+
   const banjo = ref('banjo', 'products');
   const people = ref('people', null, true);
   const design = ref('design', 'people', true);
@@ -213,6 +230,7 @@ function server() {
       log.push(`download ${url}`);
       return url.includes('broken') ? { error: '404 Not Found' } : { data: new Blob(['1234']) };
     },
+    folderTypes: async () => ({ data: [FOLDER_TYPE] }),
     allowedTypes: async () => ({ data: [IMAGE_TYPE, FOLDER_TYPE] }),
   };
   return { api, log, created, details };

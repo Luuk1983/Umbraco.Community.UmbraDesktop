@@ -133,6 +133,11 @@ export interface UmbraDesktopMediaApi {
    * @returns Their keys.
    */
   allowedTypes(parentType: string | null, parent: string | null): Promise<UmbraDesktopApiResult<string[]>>;
+  /**
+   * The media types Umbraco calls folders: no file, and allowing children.
+   * @returns Their keys.
+   */
+  folderTypes(): Promise<UmbraDesktopApiResult<string[]>>;
 }
 
 /**
@@ -319,6 +324,13 @@ export class UmbraDesktopMediaServerApi implements UmbraDesktopMediaApi {
         ? MediaTypeService.getMediaTypeByIdAllowedChildren({ path: { id: parentType }, query: { parentContentKey: parent ?? undefined, skip: 0, take: 1000 } })
         : MediaTypeService.getMediaTypeAllowedAtRoot({ query: { skip: 0, take: 1000 } }),
     );
+    if (error) return { error };
+    return { data: ((data as unknown as { items: Array<{ id: string }> }).items ?? []).map((type) => type.id) };
+  }
+
+  /** @inheritdoc */
+  async folderTypes() {
+    const { data, error } = await this.#call(MediaTypeService.getItemMediaTypeFolders({ query: { skip: 0, take: 1000 } }));
     if (error) return { error };
     return { data: ((data as unknown as { items: Array<{ id: string }> }).items ?? []).map((type) => type.id) };
   }

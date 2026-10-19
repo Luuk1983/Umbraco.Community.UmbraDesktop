@@ -2,7 +2,8 @@ import { onMac } from '../platform-keys.js';
 import { itemAt } from '../selection/item-at.js';
 import { renderedItems } from '../selection/rendered-items.js';
 import { itemSelector, writeViewStyle } from '../manager/open-item.js';
-import { split } from '../operations/rules.js';
+import { refusalTerm, split } from '../operations/rules.js';
+import type { UmbraDesktopMediaAccess } from '../operations/rules.js';
 import type { UmbraDesktopMediaApi, UmbraDesktopMediaRef } from '../operations/media-api.js';
 import type { UmbraDesktopOperationResult } from '../operations/engine.js';
 import type { UmbraDesktopHostedCollection } from '../manager/folder-host.element.js';
@@ -74,6 +75,8 @@ export interface UmbraDesktopDragOperations {
   trash(items: ReadonlyArray<UmbraDesktopMediaRef>): Promise<UmbraDesktopOperationResult>;
   /** Restore items from the recycle bin into a folder. */
   restore(items: ReadonlyArray<UmbraDesktopMediaRef>, target: string | null): Promise<UmbraDesktopOperationResult>;
+  /** What the person may reach, when known: a folder out of reach is no place to drop. */
+  access?(): UmbraDesktopMediaAccess | undefined;
 }
 
 /** The id of the style the dragged items are faded with, in core's views. */
@@ -438,7 +441,7 @@ export class UmbraDesktopMediaDragController {
     const info = this.#info(unique);
     const name = info?.name ?? (unique ? this.#refs.get(unique)?.name ?? '' : '#sections_media');
     if (!known || !info) return { kind, target: name, unique, total: session.keys.length, going: session.keys.length, items };
-    const { allowed, refused } = split(items, { unique, ancestors: info.ancestors }, info.allowed, kind === 'move' ? 'move' : 'copy');
+    const { allowed, refused } = split(items, { unique, ancestors: info.ancestors }, info.allowed, kind === 'move' ? 'move' : 'copy', this.#ops.access?.());
     const there = refused.filter((each) => each.reason === 'there').length;
     if (kind === 'move' && there === items.length) return undefined;
     const blocked = refused.find((each) => each.reason !== 'there');
@@ -449,8 +452,9 @@ export class UmbraDesktopMediaDragController {
       total: items.length - there,
       going: allowed.length,
       items: allowed,
+      outOfReach: refused.length > 0 && refused.every((each) => each.reason === 'access'),
       notGoing: blocked
-        ? { name: blocked.item.name, reason: blocked.reason === 'type' ? '#umbraDesktopMedia_refusedType' : '#umbraDesktopMedia_refusedSelf' }
+        ? { name: blocked.item.name, reason: `#${refusalTerm(blocked.reason === 'there' ? 'self' : blocked.reason)}` }
         : undefined,
     };
   }

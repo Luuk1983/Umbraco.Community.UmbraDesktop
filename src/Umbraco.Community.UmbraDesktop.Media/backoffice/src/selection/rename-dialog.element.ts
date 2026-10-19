@@ -6,6 +6,8 @@ import { cleanName } from './rename.js';
 export interface UmbraDesktopMediaRenameData {
   /** The item's name now. */
   name: string;
+  /** Name something new, such as a new folder: the name it starts with may be kept, and the dialog says create. */
+  create?: boolean;
 }
 
 /** What it answers with. */
@@ -50,6 +52,7 @@ export class UmbraDesktopMediaRenameDialogElement extends UmbModalBaseElement<
 
   /** Whether Rename would save anything. */
   get #canRename(): boolean {
+    if (this.data?.create) return !!this.value?.name?.trim();
     return cleanName(this.value?.name ?? '', this.data?.name ?? '') !== undefined;
   }
 
@@ -78,7 +81,7 @@ export class UmbraDesktopMediaRenameDialogElement extends UmbModalBaseElement<
 
   override render() {
     return html`
-      <uui-dialog-layout headline=${this.localize.term('umbraDesktopMedia_renameHeadline')}>
+      <uui-dialog-layout headline=${this.localize.term(this.data?.create ? 'umbraDesktopMedia_newFolder' : 'umbraDesktopMedia_renameHeadline')}>
         <uui-label for="name">${this.localize.term('umbraDesktopMedia_renameLabel')}</uui-label>
         <uui-input
           id="name"
@@ -94,7 +97,7 @@ export class UmbraDesktopMediaRenameDialogElement extends UmbModalBaseElement<
           slot="actions"
           look="primary"
           color="positive"
-          label=${this.localize.term('umbraDesktopMedia_renameConfirm')}
+          label=${this.localize.term(this.data?.create ? 'umbraDesktopMedia_createConfirm' : 'umbraDesktopMedia_renameConfirm')}
           ?disabled=${!this.#canRename}
           @click=${() => this.#rename()}></uui-button>
       </uui-dialog-layout>

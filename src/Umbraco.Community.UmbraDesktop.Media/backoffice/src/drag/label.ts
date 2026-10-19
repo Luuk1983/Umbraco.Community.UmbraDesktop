@@ -16,6 +16,8 @@ export interface UmbraDesktopDropPlan {
   going: number;
   /** One item that would not go, and why, when any would not. */
   notGoing?: { name: string; reason: string };
+  /** Whether the folder is out of the person's reach, which is why none would go. */
+  outOfReach?: boolean;
 }
 
 /** One line of the label: a dictionary key and its arguments. */
@@ -33,6 +35,7 @@ export interface UmbraDesktopLabelLine {
  * @returns The lines, and whether the target refuses everything.
  */
 export function dropLabel(plan: UmbraDesktopDropPlan, mac: boolean): { lines: UmbraDesktopLabelLine[]; refused: boolean } {
+  if (plan.outOfReach) return { lines: [{ key: 'umbraDesktopMedia_refusedAccess', args: [] }], refused: true };
   const cannot = plan.notGoing ? [{ key: 'umbraDesktopMedia_dragCannot', args: [plan.notGoing.name, plan.notGoing.reason] }] : [];
   if (plan.going === 0) return { lines: cannot, refused: true };
   if (plan.kind === 'trash') return { lines: [{ key: 'umbraDesktopMedia_dragTrash', args: [] }, ...cannot], refused: false };

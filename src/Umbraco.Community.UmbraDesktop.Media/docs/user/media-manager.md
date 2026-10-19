@@ -21,6 +21,11 @@ dotnet add package Umbraco.Community.UmbraDesktop.Media
 Media Manager then appears in the launcher's **Media** group, for everyone who may use the Media
 section.
 
+You see and change the same media as in the Media section. If your user group has media start
+folders, **Media** shows those folders, and you cannot put anything outside them: a drag, a paste
+or an upload there says **You have no access to this folder**. A window last open on a folder you no
+longer have opens on **Media** instead.
+
 ## Folders and windows
 
 Each window shows one folder, and is named after it on its title bar and taskbar button.
@@ -52,6 +57,8 @@ at a time. Its card has a pink border, so you can see which one it is while you 
   **Dock** in the window. Save or discard your changes first: both are greyed while you have some.
 - To create an item, select **Create** in the toolbar, or **Create** in a folder's menu, and choose a
   type. It opens beside the window, in the folder, and its card appears once you save it.
+- To create a folder, select **Create**, then **Folder**. Type its name and select **Create**. It
+  appears in the window and in the tree, selected.
 
 Closing the pane or the window asks first when the item has unsaved changes.
 

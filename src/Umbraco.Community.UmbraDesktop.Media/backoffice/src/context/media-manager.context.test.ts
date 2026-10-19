@@ -56,7 +56,7 @@ describe('the context', () => {
    * The context on a stand-in server with a folder `people` that allows images only, inside `media`.
    * @returns The context and what it did.
    */
-  function context() {
+  function context(access?: { root: boolean; starts: Set<string> }) {
     const log: string[] = [];
     const notes: string[] = [];
     const reloads: Array<string | null> = [];
@@ -81,10 +81,11 @@ describe('the context', () => {
         return {};
       },
       detail: async () => ({ data: { mediaType: 'image-type', variants: [{ name: 'x' }], values: [] } }),
-      create: async (model: { name: string; parent: string | null }) => {
+      create: async (model: { name: string; parent: string | null; mediaType?: string }) => {
         log.push(`create ${model.name} in ${model.parent}`);
         return {};
       },
+      folderTypes: async () => (log.push('read folder types'), { data: ['folder-type'] }),
       children: async () => ({ data: [] }),
       update: async () => ({}),
       upload: async () => ({ data: 'tmp' }),
@@ -96,6 +97,7 @@ describe('the context', () => {
       api,
       notify: (message) => notes.push(message),
       reload: (unique) => reloads.push(unique),
+      access: access && (() => access),
     });
     let clipboard: UmbraDesktopMediaClipboard | undefined;
     ctx.clipboard.subscribe((value) => (clipboard = value));
@@ -125,6 +127,33 @@ describe('the context', () => {
     await ctx.paste('people');
     expect(log).to.deep.equal(['create x in people']);
     expect(clipboard()?.mode).to.equal('copy');
+  });
+
+  it('pastes nothing into a folder out of the person’s reach, and says why', async () => {
+    const { ctx, log, notes } = context({ root: false, starts: new Set(['people']) });
+    ctx.hold('copy', [ref('banjo', 'people')]);
+    await ctx.paste(null);
+    expect([log, notes.length, notes[0]]).to.deep.equal([[], 1, notes[0]]);
+    expect(notes[0]).to.contain('umbraDesktopMedia_refusedAccess');
+  });
+
+  it('pastes into a start folder as before', async () => {
+    const { ctx, log } = context({ root: false, starts: new Set(['people']) });
+    ctx.hold('copy', [ref('banjo', 'people')]);
+    await ctx.paste('people');
+    expect(log).to.deep.equal(['create x in people']);
+  });
+
+  it('creates a folder by name in a folder, and reloads that folder', async () => {
+    const { ctx, log, reloads } = context();
+    const key = await ctx.createFolder('people', 'folder-type', 'Archive');
+    expect([typeof key, log, reloads]).to.deep.equal(['string', ['create Archive in people'], ['people']]);
+  });
+
+  it('knows the folder media types, reading them once', async () => {
+    const { ctx, log } = context();
+    const answers = [await ctx.isFolderType('folder-type'), await ctx.isFolderType('image-type')];
+    expect([answers, log]).to.deep.equal([[true, false], ['read folder types']]);
   });
 
   it('pastes a copy into the folder it came from, as a duplicate beside the original', async () => {

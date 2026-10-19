@@ -12,8 +12,9 @@ import { afterPaste, pasteInto, pasteKind } from '../clipboard/clipboard.js';
 import type { UmbraDesktopMediaClipboard } from '../clipboard/clipboard.js';
 import { UmbraDesktopMediaServerApi } from '../operations/media-api.js';
 import type { UmbraDesktopMediaApi, UmbraDesktopMediaRef } from '../operations/media-api.js';
-import { split } from '../operations/rules.js';
-import type { UmbraDesktopRefusal } from '../operations/rules.js';
+import { canReach, refusalTerm, split } from '../operations/rules.js';
+import type { UmbraDesktopMediaAccess, UmbraDesktopRefusal } from '../operations/rules.js';
+import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import { runOperation } from '../operations/engine.js';
 import type { UmbraDesktopOperationResult, UmbraDesktopOperationStep } from '../operations/engine.js';
 import { UmbraDesktopTransfersStore } from '../transfers/transfers-store.js';
@@ -75,6 +76,8 @@ export interface UmbraDesktopMediaContextDeps {
   osClipboard?: UmbraDesktopImageClipboard;
   /** Whether the page has the keyboard, frames inside it included; the document's own answer unless a test's. */
   pageFocused?: () => boolean;
+  /** What the person may reach of the media library; the current user's own unless a test's. */
+  access?: () => UmbraDesktopMediaAccess | undefined;
 }
 
 /** The files the OS clipboard takes as a picture, by extension; anything else is not put there. */
@@ -163,6 +166,20 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
     this.#reload = deps.reload ?? ((unique) => void this.#reloadFolder(unique));
     this.#osClipboard = deps.osClipboard ?? (typeof navigator !== 'undefined' ? navigator.clipboard : undefined);
     this.#pageFocused = deps.pageFocused ?? (() => document.hasFocus());
+    this.#readAccess = deps.access ?? (() => this.#userAccess);
+    // Umbraco's own record of what the person may reach: their media start folders, and whether they
+    // may use the Media root. Every operation is refused up front outside it (rules.ts).
+    this.consumeContext(UMB_CURRENT_USER_CONTEXT, (user) => {
+      this.observe(
+        user?.currentUser,
+        (current) => {
+          this.#userAccess = current
+            ? { root: current.hasMediaRootAccess, starts: new Set(current.mediaStartNodeUniques.map((start) => start.unique)) }
+            : undefined;
+        },
+        '_umbraDesktopMediaAccess',
+      );
+    });
     window.addEventListener('blur', this.#onBlur);
     document.addEventListener('visibilitychange', this.#onVisibility);
     // The recycle bin's row says how much is in it; this recounts it in every window after a change.
@@ -178,6 +195,7 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
         copyTo: (items, target) => this.copyTo(items, target),
         trash: (items) => this.trash(items),
         restore: (items, target) => this.restore(items, target),
+        access: () => this.access(),
       },
       () => this.#dragWindows,
     );
@@ -189,6 +207,7 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
           await uploadInto(this, items, parent, (batch) => this.followUpload(batch));
           this.#reload(parent);
         },
+        access: () => this.access(),
       },
       () => this.#dragWindows,
     );
@@ -351,6 +370,54 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
   /** Stops recounting the recycle bin. */
   #stopBinWatch?: () => void;
 
+  /** Reads what the person may reach; see {@link access}. */
+  #readAccess: () => UmbraDesktopMediaAccess | undefined;
+
+  /** What the current user may reach, once Umbraco has said. */
+  #userAccess?: UmbraDesktopMediaAccess;
+
+  /**
+   * What the person may reach of the media library: their start folders and whether they may use the
+   * Media root.
+   * @returns It, or undefined until Umbraco has said, when nothing is refused for it.
+   */
+  access(): UmbraDesktopMediaAccess | undefined {
+    return this.#readAccess();
+  }
+
+  /**
+   * Whether the person may put things in a folder, or open it: it is in their reach.
+   * @param unique The folder, null for the root.
+   * @returns True when they may, or when what they may reach is not known yet.
+   */
+  async canUse(unique: string | null): Promise<boolean> {
+    const access = this.access();
+    if (!access || access.root) return true;
+    return canReach(access, { unique, ancestors: unique ? await this.#ancestorsOf(unique) : [] });
+  }
+
+  /**
+   * Say that something was refused because the folder is out of the person's reach.
+   * @param headline What was refused, as the notification's headline.
+   */
+  refuseAccess(headline: string): void {
+    this.#notify(this.#localize.term(refusalTerm('access')), headline);
+  }
+
+  /**
+   * The folders an item is inside, nearest first.
+   * @param unique The item.
+   * @returns Their keys.
+   */
+  async #ancestorsOf(unique: string): Promise<string[]> {
+    const ancestors: string[] = [];
+    for (let parent = (await this.#api.item(unique)).data?.parent ?? null, guard = 0; parent && guard < 100; guard++) {
+      ancestors.push(parent);
+      parent = (await this.#api.item(parent)).data?.parent ?? null;
+    }
+    return ancestors;
+  }
+
   /** How many times the page has been left; see {@link heldIsNewer}. */
   #visit = 0;
 
@@ -424,6 +491,52 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
   /** Hold nothing, as Esc does to a cut. */
   empty(): void {
     this.#clipboard.setValue(undefined);
+  }
+
+  /**
+   * Create a folder by name in a folder, as a file manager's New folder does: no page to fill in, since
+   * a folder has nothing but its name (owner's test, 2026-10-19). Its folder reloads, in every window
+   * and tree; a refusal is said in a notification.
+   * @param parent The folder it goes in, null for the root.
+   * @param mediaType The folder media type to create, as Create offered it.
+   * @param name Its name.
+   * @returns The new folder's key, or undefined when it was not created.
+   */
+  async createFolder(parent: string | null, mediaType: string, name: string): Promise<string | undefined> {
+    if (!(await this.canUse(parent))) {
+      this.#notify(this.#localize.term(refusalTerm('access')), name);
+      return undefined;
+    }
+    const unique = crypto.randomUUID();
+    const { error } = await this.#api.create({ unique, parent, mediaType, name, values: [] });
+    if (error) {
+      this.#notify(String(error), name);
+      return undefined;
+    }
+    this.#reload(parent);
+    return unique;
+  }
+
+  /**
+   * Whether a media type is a folder: what Umbraco calls one, read once.
+   * @param mediaType The type's key.
+   * @returns True for a folder type.
+   */
+  async isFolderType(mediaType: string): Promise<boolean> {
+    this.#folderTypes ??= this.#api.folderTypes().then(({ data }) => new Set(data ?? []));
+    return (await this.#folderTypes).has(mediaType);
+  }
+
+  /** The folder media types, once read. */
+  #folderTypes?: Promise<Set<string>>;
+
+  /**
+   * Tell every window and tree showing a folder to load it again, as after a save in another
+   * backoffice, the page beside a window, which this one hears nothing from.
+   * @param unique The folder, null for the root.
+   */
+  reloadFolder(unique: string | null): void {
+    this.#reload(unique);
   }
 
   /**
@@ -575,7 +688,7 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
       }
     }
     const allowed = await this.#api.allowedTypes(type, target);
-    return split(items, { unique: target, ancestors }, allowed.data ? new Set(allowed.data) : undefined, mode);
+    return split(items, { unique: target, ancestors }, allowed.data ? new Set(allowed.data) : undefined, mode, this.access());
   }
 
   /**
@@ -624,7 +737,7 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
    * @returns The text.
    */
   #refusal(reason: UmbraDesktopRefusal): string {
-    return this.#localize.term(reason === 'type' ? 'umbraDesktopMedia_refusedType' : 'umbraDesktopMedia_refusedSelf');
+    return this.#localize.term(refusalTerm(reason === 'there' ? 'self' : reason));
   }
 
   /**

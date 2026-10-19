@@ -127,6 +127,23 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
   };
 
   /**
+   * Ask a new folder's name: the Rename dialog in its create mode, starting at "New folder". A property
+   * so a test can answer for the person.
+   * @returns The name typed, or undefined when cancelled.
+   */
+  @property({ attribute: false })
+  askFolderName: () => Promise<string | undefined> = async () => {
+    try {
+      const value = await umbOpenModal(this, UMBRADESKTOP_MEDIA_RENAME_MODAL, {
+        data: { name: this.localize.term('umbraDesktopMedia_newFolder'), create: true },
+      });
+      return value.name.trim() || undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
+  /**
    * Ask before moving a tree folder to the recycle bin with Delete, in core's own words, as core's
    * Trash action asks. A property so a test can answer for the person.
    * @param name The folder's name.
@@ -154,6 +171,13 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
   /** The tree host. */
   @query('umbradesktop-media-tree-host')
   private _treeHost?: HTMLElement;
+
+  /**
+   * Whether a drag over the window would land in the folder it shows, and whether anything would go:
+   * reflected, since the window's styles draw the shade from it.
+   */
+  @property({ reflect: true })
+  drop?: 'target' | 'refused';
 
   /** The label under the pointer while a drag is over this window, in the window's coordinates. */
   @state()
@@ -241,6 +265,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
     folder: () => this._folderHost,
     tree: () => this._treeHost,
     setDrop: (state) => {
+      // The attribute at once, which the drag reads back; Lit takes the property from it.
       if (state) this.setAttribute('drop', state);
       else this.removeAttribute('drop');
     },
@@ -265,6 +290,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
     if (!this.hasAttribute('tabindex')) this.tabIndex = -1;
     this.consumeContext(UMBRADESKTOP_MEDIA_MANAGER_CONTEXT, (context) => {
       this.#context = context ?? undefined;
+      void this.#guardPlace(this._place);
       this.#leaveDrag?.();
       this.#leaveDrag = undefined;
       if (!context) return;
@@ -424,7 +450,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
       return true;
     }
     if (intent.kind === 'create') {
-      this.#openCreate(intent.path, false);
+      void this.#create(intent, false);
       return true;
     }
     return false;
@@ -582,6 +608,11 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
    */
   async #upload(files: File[], place: UmbraDesktopMediaPlace = this._place): Promise<void> {
     if (place.kind === 'bin') return;
+    const context = this.#context;
+    if (context?.canUse && !(await context.canUse(place.kind === 'folder' ? place.unique : null))) {
+      context.refuseAccess?.(files[0]?.name ?? '');
+      return;
+    }
     const at = new Date();
     const prefix = this.localize.term('umbraDesktopMedia_pastedImage');
     const named = files.map((file) => nameForPaste(file, at, prefix));
@@ -652,6 +683,32 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
   }
 
   /**
+   * Create what Create offered: a folder in the window, by name alone, as a file manager's New folder
+   * does, since core's page beside the window had nothing for it but a name (owner's test, 2026-10-19);
+   * anything else on core's create page beside the window. The new folder is selected and lit in the
+   * tree once it shows.
+   * @param intent What Create offered: the folder it goes in, the media type and core's create page.
+   * @param floating Whether to open core's page as a window, as Shift-click asks.
+   */
+  async #create(intent: { parent: string | null; mediaType: string; path: string }, floating: boolean): Promise<void> {
+    const context = this.#context;
+    if (context?.canUse && !(await context.canUse(intent.parent))) {
+      context.refuseAccess?.(this.localize.term('umbraDesktopMedia_createConfirm'));
+      return;
+    }
+    if (!context?.isFolderType || !(await context.isFolderType(intent.mediaType))) {
+      this.#openCreate(intent.path, floating);
+      return;
+    }
+    const name = await this.askFolderName();
+    if (!name) return;
+    const created = await context.createFolder(intent.parent, intent.mediaType, name);
+    if (!created) return;
+    this.#selectWhenShown([created]);
+    this.#landed(intent.parent, [created]);
+  }
+
+  /**
    * Open core's create page beside the window, in the folder its address names.
    * @param path The create page.
    * @param floating Whether to open it as a window, as Shift-click asks.
@@ -677,12 +734,27 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
     // saved there was saved in another backoffice, so the window reloads to show it on its card.
     const path = this.attached[UMBRADESKTOP_OPEN_ITEM_KEY];
     const now = path ? (key ?? 'create') : undefined;
-    if (this.#besideWas !== undefined && now !== this.#besideWas) this._folderHost?.reload();
+    if (this.#besideWas !== undefined && now !== this.#besideWas) this.#reloadShown();
     this.#besideWas = now;
     this.#scheduleBorder();
     if (key === this.#namedKey) return;
     this.#namedKey = key;
     if (key) void this.#nameOpenItem(key);
+  }
+
+  /**
+   * Load the folder the window shows again, after a save in the page beside it. Through the desktop
+   * context's reload, core's own event, so the tree reloads it too and a folder created or renamed
+   * there shows in it (owner's test, 2026-10-19); outside a desktop, the collection alone.
+   */
+  #reloadShown(): void {
+    const place = this._place;
+    const context = this.#context;
+    if (place.kind === 'bin' || !context?.reloadFolder) {
+      this._folderHost?.reload();
+      return;
+    }
+    context.reloadFolder(place.kind === 'folder' ? place.unique : null);
   }
 
   /**
@@ -826,7 +898,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
         // Core's create page, in the folder this window shows: Create's own links already carry it.
         // Core's menu closes itself when the page changes, which here it does not, so it is closed.
         this.#closeMenuOf(event);
-        this.#openCreate(intent.path, event.shiftKey);
+        void this.#create(intent, event.shiftKey);
         return;
       case 'view':
         if (middle) return;
@@ -868,6 +940,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
    */
   override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('drop') && this.drop) this.#placeShade();
     if (!this.#treeCurrent && this._treeHost) {
       this.#arrival = new UmbraDesktopTreeArrival(this._treeHost);
       this.#treeCurrent = new UmbraDesktopTreeCurrent(this._treeHost);
@@ -877,6 +950,41 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
       this.#treeCurrent?.show(this._place);
       void this.#reveal(this._place);
     }
+    if (changed.has('_place')) void this.#guardPlace(this._place);
+  }
+
+  /**
+   * Keep the window out of a folder the person cannot reach: one restored from before their start
+   * folders changed, or opened from an address. It goes to Media, which shows them their start
+   * folders, as the Media section does (a restricted user's check, 2026-10-19).
+   * @param place The place the window shows.
+   */
+  async #guardPlace(place: UmbraDesktopMediaPlace): Promise<void> {
+    if (place.kind !== 'folder' || !this.#context?.canUse) return;
+    if (await this.#context.canUse(place.unique)) return;
+    if (samePlace(place, this._place)) this.#go({ kind: 'root' });
+  }
+
+  /**
+   * Lay the drop shade over core's view area alone: its body layout's `#main`, between the toolbar
+   * and the selection bar, which a shade over the whole folder area covered too (owner's test,
+   * 2026-10-19). Measured when the shade shows, since core's toolbar and bar come and go. Without a
+   * view to measure, the shade fills the folder area, its cell in the window's grid.
+   */
+  #placeShade(): void {
+    const shade = this.shadowRoot?.querySelector<HTMLElement>('.drop-shade');
+    if (!shade) return;
+    const main = this._folderHost
+      ? deepFind(this._folderHost, (element) => element.id === 'main' && (element.getRootNode() as ShadowRoot).host?.tagName === 'UMB-BODY-LAYOUT')
+      : undefined;
+    const area = main?.getBoundingClientRect();
+    if (!area || !area.width || !area.height) {
+      shade.removeAttribute('style');
+      return;
+    }
+    const frame = this.getBoundingClientRect();
+    // Out of its grid cell, which an absolutely placed grid item would otherwise measure from.
+    shade.style.cssText = `position:absolute;grid-column:auto;grid-row:auto;left:${area.left - frame.left}px;top:${area.top - frame.top}px;width:${area.width}px;height:${area.height}px;`;
   }
 
   /**

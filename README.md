@@ -46,17 +46,13 @@ UmbraDesktop grants no access of its own. A user only sees apps for the sections
 
 [Installation](docs/user/getting-started/installation.md) has the details, and [First steps](docs/user/getting-started/first-steps.md) shows you around.
 
-## Small tools, if you want them
+## Add-ons
 
-[`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories) is an optional add-on with the tools Windows kept under Accessories: Notepad and Paint that edit files in your media library, Sticky Notes of your own and shared with your team, Calculator, Character Map, Clock, a screen saver, Disk Cleanup and System Information. The desktop is unchanged without it.
+Optional packages, each adding apps to the desktop. The desktop is unchanged without them.
 
-## Games and umbraCoffee, if you want them
-
-[`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment) is an optional add-on that puts Minesweeper, Snake and Solitaire on the desktop, and umbraCoffee, the community's monthly live show, each in a window of its own and themed along with everything else. The desktop is unchanged without it.
-
-## A media manager, if you want one
-
-[`Umbraco.Community.UmbraDesktop.Media`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) is an optional add-on that opens your media library in desktop windows, one folder per window, with dragging between them, copy and paste, files from your computer and undo, on top of everything the Media section does. The desktop is unchanged without it.
+- [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories): the tools Windows kept under Accessories. Notepad and Paint that edit files in your media library, Sticky Notes of your own and shared with your team, Calculator, Character Map, Clock, a screen saver, Disk Cleanup and System Information.
+- [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment): Minesweeper, Snake and Solitaire, and umbraCoffee, the community's monthly live show.
+- [`Umbraco.Community.UmbraDesktop.Media`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media): your media library in desktop windows, one folder per window, with dragging between them, copy and paste, files from your computer and undo, on top of everything the Media section does.
 
 ## Documentation
 

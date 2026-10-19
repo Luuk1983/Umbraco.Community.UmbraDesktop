@@ -59,6 +59,13 @@ describe('the label', () => {
     ]);
   });
 
+  it('says only that the folder is out of reach, when it is: that is why for every item', () => {
+    expect(dropLabel({ kind: 'move', target: 'Media', total: 2, going: 0, outOfReach: true }, false)).to.deep.equal({
+      lines: [{ key: 'umbraDesktopMedia_refusedAccess', args: [] }],
+      refused: true,
+    });
+  });
+
   it('is refused, with the reason, when nothing can go', () => {
     expect(dropLabel({ kind: 'move', target: 'Design', total: 1, going: 0, notGoing: { name: 'Clip', reason: 'No' } }, false)).to.deep.equal({
       lines: [{ key: 'umbraDesktopMedia_dragCannot', args: ['Clip', 'No'] }],

@@ -17,6 +17,8 @@ const FOLDER = '0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0';
 const IMAGE = '11111111-2222-3333-4444-555555555555';
 const OTHER_IMAGE = '22222222-3333-4444-5555-666666666666';
 const IMAGE_TYPE = 'cc07b313-0843-4aa8-bbda-871c8da728c8';
+/** Umbraco's Folder media type. */
+const FOLDER_TYPE = 'f38bd2d7-65d0-48e6-95dc-87ce06ec2d3d';
 /** A folder in the tree, not the one the window shows. */
 const TREE_FOLDER = '44444444-5555-6666-7777-888888888888';
 
@@ -223,6 +225,48 @@ describe('a manager window', () => {
     ]);
   });
 
+  it('creates a folder in the window, asking only its name, rather than opening core\u2019s page beside it', async () => {
+    const asked: string[] = [];
+    const { manager, settle, clickLink, beside } = await mounted(`folder=${FOLDER}`, {
+      isFolderType: async (type: string) => type === FOLDER_TYPE,
+      createFolder: async (parent: string | null, type: string, name: string) => (asked.push(`create ${name} of ${type} in ${parent}`), 'new-folder'),
+    });
+    manager.askFolderName = async () => 'Archive';
+    clickLink(`/umbraco/section/media/workspace/media/create/parent/media/${FOLDER}/${FOLDER_TYPE}`);
+    await settle();
+    expect([asked, beside]).to.deep.equal([[`create Archive of ${FOLDER_TYPE} in ${FOLDER}`], []]);
+  });
+
+  it('opens at Media instead of a folder out of the person’s reach, as a window restored from before', async () => {
+    const { folderHost, settle } = await mounted(`folder=${FOLDER}`, { canUse: async (unique: string | null) => unique === null });
+    await settle();
+    expect(folderHost().place).to.deep.equal({ kind: 'root' });
+  });
+
+  it('creates nothing in a folder out of the person’s reach, and says why', async () => {
+    const said: string[] = [];
+    const { settle, clickLink, beside } = await mounted('', {
+      canUse: async (unique: string | null) => unique !== null,
+      refuseAccess: (what: string) => said.push(what),
+      isFolderType: async () => false,
+    });
+    clickLink(`/umbraco/section/media/workspace/media/create/parent/media-root/null/${IMAGE_TYPE}`);
+    await settle();
+    expect([beside, said.length]).to.deep.equal([[], 1]);
+  });
+
+  it('creates nothing when the name is not given', async () => {
+    const asked: string[] = [];
+    const { manager, settle, clickLink, beside } = await mounted(`folder=${FOLDER}`, {
+      isFolderType: async () => true,
+      createFolder: async () => (asked.push('created'), 'new-folder'),
+    });
+    manager.askFolderName = async () => undefined;
+    clickLink(`/umbraco/section/media/workspace/media/create/parent/media/${FOLDER}/${FOLDER_TYPE}`);
+    await settle();
+    expect([asked, beside]).to.deep.equal([[], []]);
+  });
+
   it('opens Create beside the window, in the open folder', async () => {
     const { clickLink, settle, beside, reachedWindow } = await mounted(`folder=${FOLDER}`);
     const create = `/umbraco/section/media/workspace/media/create/parent/media/${FOLDER}/${IMAGE_TYPE}`;
@@ -295,6 +339,28 @@ describe('the item open beside a manager window', () => {
     manager.setAttribute('drop', 'refused');
     const refused = look();
     expect([before.shown, during, refused.shown]).to.deep.equal([false, { shown: true, tinted: true, border: `${DROP_OUTLINE_PX}px` }, true]);
+  });
+
+  it('covers only core’s view area with the drop shade, not its toolbar or selection bar', async () => {
+    const { manager, folderHost } = await mounted();
+    // Core's collection: its body layout, whose #main holds the view, between toolbar and bar.
+    const layout = document.createElement('umb-body-layout');
+    folderHost().shadowRoot!.appendChild(layout);
+    await (layout as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
+    let main = layout.shadowRoot?.querySelector('#main') as HTMLElement | null | undefined;
+    if (!main) {
+      main = document.createElement('div');
+      main.id = 'main';
+      layout.attachShadow({ mode: 'open' }).appendChild(main);
+    }
+    layout.style.cssText = 'display:block;position:absolute;left:30px;top:60px;width:300px;height:200px';
+    main.style.cssText = 'display:block;height:200px';
+    manager.setAttribute('drop', 'target');
+    await manager.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const shade = manager.shadowRoot!.querySelector('.drop-shade')!.getBoundingClientRect();
+    const area = main.getBoundingClientRect();
+    expect([shade.top, shade.left, shade.width, shade.height].map(Math.round)).to.deep.equal([area.top, area.left, area.width, area.height].map(Math.round));
   });
 
   it('rings the card of the open item', async () => {
@@ -400,6 +466,17 @@ describe('keeping the window in step with the page beside it', () => {
     manager.attached = { item: `/umbraco/section/media/workspace/media/edit/${IMAGE}/invariant` };
     await settle();
     expect(reloads()).to.equal(1);
+  });
+
+  it('reloads its folder through the desktop context when the page beside it saves, so the tree shows it too', async () => {
+    const reloaded: Array<string | null> = [];
+    const { manager, folderHost, settle } = await mounted(`folder=${FOLDER}`, { reloadFolder: (unique: string | null) => reloaded.push(unique) });
+    const reloads = countReloads(folderHost());
+    manager.attached = { item: `/umbraco/section/media/workspace/media/create/parent/media/${FOLDER}/${IMAGE_TYPE}/invariant` };
+    await settle();
+    manager.attached = { item: `/umbraco/section/media/workspace/media/edit/${IMAGE}/invariant` };
+    await settle();
+    expect([reloaded, reloads()], 'core\u2019s reload event reaches the collection and the tree').to.deep.equal([[FOLDER], 0]);
   });
 
   it('reloads when the page moves on from an item or closes, so a saved name shows on its card', async () => {
