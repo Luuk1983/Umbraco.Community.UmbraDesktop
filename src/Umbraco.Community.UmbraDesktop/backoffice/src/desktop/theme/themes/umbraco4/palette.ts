@@ -250,5 +250,10 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   // theme is the reason the token exists at all: body text reads on it at 5.67:1, so the dark
   // answer is the right one here and the light answer is the right one on Win98's navy.
   '--umbradesktop-app-accent-text': U4_TEXT,
+  // Save stays Umbraco's green, darkened to v4's quieter palette, with white on it at 5.25:1.
+  '--umbradesktop-app-action': '#3b7a2a',
+  '--umbradesktop-app-action-text': '#ffffff',
+  // The tab in use is underlined in the selection's own line colour, as v4 rings a selected row.
+  '--umbradesktop-app-current': U4_SELECT_LINE,
   '--umbradesktop-app-font': U4_FONT,
 };

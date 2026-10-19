@@ -1,0 +1,98 @@
+/* The menu bar (#112) and its dropdowns, Umbraco theme */
+.mbar { flex: none; height: 32px; display: flex; align-items: center; gap: 2px; padding: 0 8px; background: #fff; border-bottom: 1px solid #ececef; font-size: 14px; color: #1b264f; }
+.mbi { display: inline-flex; align-items: center; height: 26px; width: 60px; justify-content: center; border-radius: 3px; }
+.mbi.open { background: #f3f3f5; box-shadow: inset 0 -2px 0 #f5c1bc; }
+.drop { position: absolute; z-index: 30; width: 260px; padding: 4px 0; background: #fff; border-radius: 3px; box-shadow: 0 4px 14px rgba(0, 0, 0, .22); font-size: 14px; color: #303033; }
+.di { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px 0 8px; }
+.di.hov { background: #f3f3f5; color: #1b264f; }
+.di kbd { margin-left: auto; font: inherit; font-size: 12.5px; color: #8f8f93; }
+.dck { width: 16px; display: inline-grid; place-items: center; }
+.dsep { height: 1px; margin: 4px 0; background: #ececef; }
+.ib.ghost { visibility: hidden; }
+
+/* Zoom in the status bar */
+.szoom { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.ib.sm { width: 26px; height: 26px; }
+.ztrk { position: relative; width: 110px; height: 3px; border-radius: 2px; background: #dcdde3; }
+.ztrk .knob { position: absolute; top: -5px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #fff; border: 2px solid #3544b1; }
+.szoom .zv { min-width: 40px; text-align: right; }
+.zfit { margin-left: 6px; padding: 2px 9px; border: 1px solid #d8d7d9; border-radius: 3px; color: #1b264f; }
+
+/* The Save as dialog, centred on the window */
+.wscrim { position: absolute; z-index: 35; background: rgba(0, 0, 0, .35); }
+.dlg { position: absolute; z-index: 36; top: 150px; padding: 20px; background: #fff; border-radius: 6px; box-shadow: 0 14px 40px rgba(0, 0, 0, .4); display: flex; flex-direction: column; gap: 12px; }
+.dlg h4 { margin: 0; font-size: 18px; color: #1b264f; }
+.dlg u { color: #3544b1; }
+.rad { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: #303033; }
+.rad b { display: block; font-weight: 700; }
+.rad small { color: #6b6b72; font-size: 13px; }
+.rb { flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; border: 1px solid #b4b4b8; background: #fff; }
+.rad.on .rb { border: 5px solid #3544b1; }
+
+/* The theme figures: their own small stage, 800x380 */
+.tscreen { container-type: inline-size; width: 100%; aspect-ratio: 800 / 380; border-radius: 8px; overflow: hidden; box-shadow: 0 8px 24px rgba(11, 16, 36, .22); }
+.tstage { position: relative; width: 800px; height: 380px; transform-origin: 0 0; transform: scale(calc(100cqw / 800px)); background-size: cover; background-position: center; overflow: hidden; }
+.tstage kbd { margin-left: auto; font: inherit; }
+.tstage u { text-decoration: underline; }
+
+/* Umbraco */
+.tu-win { position: absolute; left: 30px; top: 26px; width: 740px; height: 400px; background: #f3f3f5; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 32px rgba(10, 14, 40, .38); font: 14px Lato, sans-serif; }
+.tu-cap { height: 40px; display: flex; align-items: center; gap: 9px; padding: 0 14px; background: #1b264f; color: #fff; }
+.tu-ctl { margin-left: auto; }
+.tu-bar { height: 32px; display: flex; align-items: center; gap: 2px; padding: 0 8px; background: #fff; border-bottom: 1px solid #ececef; color: #1b264f; }
+.tu-bar span { width: 60px; height: 26px; display: grid; place-items: center; border-radius: 3px; }
+.tu-bar .open { background: #f3f3f5; box-shadow: inset 0 -2px 0 #f5c1bc; }
+.tu-drop { position: absolute; left: 38px; top: 98px; width: 260px; padding: 4px 0; background: #fff; border-radius: 3px; box-shadow: 0 4px 14px rgba(0, 0, 0, .22); font: 14px Lato, sans-serif; color: #303033; }
+.tu-drop .xi { display: flex; height: 34px; align-items: center; padding: 0 14px 0 32px; }
+.tu-drop .xi kbd { color: #8f8f93; font-size: 12.5px; }
+.tu-drop .xi.hov { background: #f3f3f5; color: #1b264f; }
+.tu-drop .xsep { height: 1px; margin: 4px 0; background: #ececef; }
+
+/* Windows 11 */
+.w11-win { position: absolute; left: 30px; top: 26px; width: 740px; height: 400px; background: #f3f3f3; border: 1px solid #c8c8c8; border-radius: 8px; overflow: hidden; box-shadow: 0 16px 40px rgba(0, 0, 0, .3); font: 14px "Segoe UI Variable", "Segoe UI", sans-serif; color: #1a1a1a; }
+.w11-cap { height: 32px; display: flex; align-items: center; gap: 10px; padding-left: 12px; background: #f3f3f3; font-size: 12.5px; }
+.w11-ctl { margin-left: auto; display: flex; }
+.w11-ctl i { width: 46px; height: 32px; display: grid; place-items: center; font-style: normal; font-size: 12px; }
+.w11-bar { height: 36px; display: flex; align-items: center; gap: 2px; padding: 0 6px; background: #f3f3f3; }
+.w11-bar span { padding: 5px 10px; border-radius: 5px; }
+.w11-bar .open { background: rgba(0, 0, 0, .06); }
+.w11-body { position: absolute; left: 0; right: 0; top: 68px; bottom: 0; background: #fff; border-top: 1px solid #e5e5e5; }
+.w11-drop { position: absolute; left: 36px; top: 96px; width: 250px; padding: 4px; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .18); font: 14px "Segoe UI Variable", "Segoe UI", sans-serif; color: #1a1a1a; }
+.w11-drop .xi { display: flex; height: 32px; align-items: center; padding: 0 12px 0 36px; border-radius: 4px; }
+.w11-drop .xi kbd { color: #5f5f5f; font-size: 12.5px; }
+.w11-drop .xi.hov { background: rgba(0, 0, 0, .05); }
+.w11-drop .xsep { height: 1px; margin: 4px -4px; background: #e5e5e5; }
+
+/* Windows 98 */
+.w98-win { position: absolute; left: 30px; top: 26px; width: 740px; height: 400px; background: #c0c0c0; box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #dfdfdf, inset -2px -2px #808080, inset 2px 2px #fff; padding: 3px; font: 12px Tahoma, "MS Sans Serif", sans-serif; color: #000; }
+.w98-cap { height: 20px; display: flex; align-items: center; gap: 5px; padding: 0 3px; background: linear-gradient(90deg, #000080, #1084d0); color: #fff; font-weight: 700; }
+.w98-ctl { margin-left: auto; display: flex; gap: 2px; }
+.w98-ctl i { width: 16px; height: 14px; display: grid; place-items: center; background: #c0c0c0; color: #000; font-style: normal; font-size: 11px; line-height: 1; box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080; }
+.w98-bar { height: 20px; display: flex; align-items: center; padding: 0 2px; margin-top: 1px; }
+.w98-bar span { padding: 1px 7px; }
+.w98-bar .open { box-shadow: inset 1px 1px #808080, inset -1px -1px #fff; }
+.w98-body { position: absolute; left: 5px; right: 5px; top: 49px; bottom: 5px; background: #808080; box-shadow: inset 1px 1px #404040, inset -1px -1px #fff; }
+.w98-drop { position: absolute; left: 38px; top: 72px; width: 220px; padding: 3px; background: #c0c0c0; box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #dfdfdf, inset -2px -2px #808080, inset 2px 2px #fff; font: 12px Tahoma, "MS Sans Serif", sans-serif; color: #000; }
+.w98-drop .xi { display: flex; height: 19px; align-items: center; padding: 0 16px 0 20px; }
+.w98-drop .xi.hov { background: #000080; color: #fff; }
+.w98-drop .xsep { height: 0; margin: 3px 1px; border-top: 1px solid #808080; border-bottom: 1px solid #fff; }
+
+/* macOS */
+.mac-top { position: absolute; left: 0; right: 0; top: 0; height: 26px; display: flex; align-items: center; gap: 2px; padding: 0 12px; background: rgba(246, 246, 246, .82); backdrop-filter: blur(20px); font: 13.5px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif; color: #1d1d1f; z-index: 3; }
+.mac-top b { margin-right: 10px; }
+.mac-top span { padding: 2px 9px; border-radius: 4px; }
+.mac-top .open { background: rgba(0, 0, 0, .12); }
+.mac-top .mac-clock { margin-left: auto; }
+.mac-win { position: absolute; left: 60px; top: 60px; width: 680px; height: 380px; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 .5px rgba(0, 0, 0, .3), 0 20px 50px rgba(0, 0, 0, .35); }
+.mac-cap { position: relative; height: 32px; display: flex; align-items: center; gap: 8px; padding-left: 12px; background: #ececec; border-bottom: 1px solid #d6d6d6; font: 13px -apple-system, "Helvetica Neue", sans-serif; color: #444; }
+.tl { width: 12px; height: 12px; border-radius: 50%; }
+.tl.r { background: #ff5f57; }
+.tl.y { background: #febc2e; }
+.tl.g { background: #28c840; }
+.mac-title { position: absolute; left: 0; right: 0; text-align: center; pointer-events: none; }
+.mac-drop { position: absolute; left: 112px; top: 27px; width: 230px; padding: 5px; background: rgba(242, 242, 242, .94); backdrop-filter: blur(30px); border-radius: 7px; box-shadow: 0 0 0 .5px rgba(0, 0, 0, .25), 0 10px 30px rgba(0, 0, 0, .28); font: 13.5px -apple-system, "Helvetica Neue", sans-serif; color: #1d1d1f; z-index: 4; }
+.mac-drop .xi { display: flex; height: 22px; align-items: center; padding: 0 10px 0 20px; border-radius: 4px; }
+.mac-drop .xi kbd { color: #8a8a8e; }
+.mac-drop .xi.hov { background: #0a64d6; color: #fff; }
+.mac-drop .xi.hov kbd { color: #fff; }
+.mac-drop .xsep { height: 1px; margin: 5px 10px; background: rgba(0, 0, 0, .12); }

@@ -223,6 +223,11 @@ export const W11_LIGHT: UmbraDesktopPalette = {
   // token cannot be one value for everyone: the dark variant below flips it, because its accent is
   // a light cyan rather than this blue.
   '--umbradesktop-app-accent-text': '#ffffff',
+  // An accent button, Windows 11's primary action, with white on it at 4.53:1; and the accent pill
+  // under a selected tab.
+  '--umbradesktop-app-action': W11_ACCENT,
+  '--umbradesktop-app-action-text': '#ffffff',
+  '--umbradesktop-app-current': W11_ACCENT,
   '--umbradesktop-app-font': W11_FONT,
 };
 
@@ -338,4 +343,8 @@ export const W11_DARK: UmbraDesktopPalette = {
   // 2.01:1, while this near-black is 8.59:1. The `#1b1b1b` is Win11's own dark-mode-on-accent ink
   // rather than pure black, which reads slightly hard against a saturated fill.
   '--umbradesktop-app-accent-text': '#1b1b1b',
+  // Dark mode's accent button is the light cyan with dark ink on it, as above (8.59:1).
+  '--umbradesktop-app-action': W11_ACCENT_DARK,
+  '--umbradesktop-app-action-text': '#1b1b1b',
+  '--umbradesktop-app-current': W11_ACCENT_DARK,
 };

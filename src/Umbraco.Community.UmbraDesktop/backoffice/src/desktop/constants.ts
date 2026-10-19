@@ -68,6 +68,17 @@ export const UMBRADESKTOP_DIRTY_ATTRIBUTE = 'data-umbradesktop-dirty';
 export const UMBRADESKTOP_APP_DIRTY_EVENT = 'umbradesktop-app-dirty';
 
 /**
+ * The event a registered app dispatches from its own element to close its window, as the window's
+ * own close button would: through the unsaved-work guard, so an app marked dirty is asked about
+ * first and a "no" keeps the window.
+ *
+ * For an app with a Close command of its own, such as a file menu's. Dispatched with `bubbles` and
+ * `composed`; it has no detail. The window stops it, so it never reaches the desktop. Published in
+ * `docs/developer/desktop-apps.md` §7. Issue #136.
+ */
+export const UMBRADESKTOP_CLOSE_REQUEST_EVENT = 'umbradesktop-close-request';
+
+/**
  * The event a registered app dispatches from its own element to report work it is doing: start a
  * task, update it, and end it. Published in `docs/developer/window-progress.md`.
  *

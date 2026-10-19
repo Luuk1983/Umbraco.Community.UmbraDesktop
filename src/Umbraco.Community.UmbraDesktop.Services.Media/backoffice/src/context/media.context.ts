@@ -1,20 +1,29 @@
 import { UmbContextBase, UmbControllerBase } from '@umbraco-cms/backoffice/class-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { createMediaOpener } from '../files/media-open.js';
-import type { MediaOpenResult } from '../files/media-open.js';
+import type { MediaOpenOptions, MediaOpenResult } from '../files/media-open.js';
 import { createMediaSaver, createOverwriteQuestion } from '../files/media-save.js';
 import type { MediaSaveRequest, MediaSaveResult } from '../files/media-save.js';
 import { createSaveFolderPicker } from '../files/save-location.js';
 import type { SaveFolderChoice } from '../files/save-location.js';
 import { UMBRADESKTOP_MEDIA_CONTEXT } from './media.context-token.js';
+// Side-effect imports: the file menu and the open view are defined wherever this context is, so an
+// app that finds the context can render `<umbradesktop-media-file-menu>` and
+// `<umbradesktop-media-open-view>` by their tags and find them defined. Issue #136.
+import '../file-menu/file-menu.element.js';
+import '../file-menu/open-view.element.js';
+import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
+import { extensionOf } from '../files/extension.js';
+import { RecentMediaList, browserStorage, recentKeyFor } from '../recent/recent-media.js';
+import type { RecentMediaEntry, RecentStorage } from '../recent/recent-media.js';
 
 /**
  * The four operations, each run on the host it is given. Injectable, so a test needs no picker, no
  * dialog and no server.
  */
 export interface MediaContextDeps {
-  /** Let the person pick a file from the media library, and read it. */
-  open(host: UmbControllerHost): Promise<MediaOpenResult>;
+  /** Let the person pick a file from the media library, or open the one named, and read it. */
+  open(host: UmbControllerHost, options?: MediaOpenOptions): Promise<MediaOpenResult>;
   /** Save a file as a media item, new or over an existing one. */
   save(host: UmbControllerHost, request: MediaSaveRequest): Promise<MediaSaveResult>;
   /** Ask where in the media library a new file goes. */
@@ -25,7 +34,7 @@ export interface MediaContextDeps {
 
 /** The real operations: Umbraco's own pickers, dialogs and media repositories. */
 const REAL_DEPS: MediaContextDeps = {
-  open: (host) => createMediaOpener(host)(),
+  open: (host, options) => createMediaOpener(host)(options),
   save: (host, request) => createMediaSaver(host)(request),
   pickSaveFolder: (host) => createSaveFolderPicker(host)(),
   confirmOverwrite: (host, name) => createOverwriteQuestion(host)(name),
@@ -41,7 +50,7 @@ class MediaCall extends UmbControllerBase {}
 /**
  * Opening and saving media library files, for every app on the desktop.
  *
- * **Its four methods are published API** (`docs/developer/opening-and-saving-media.md`): another
+ * **Its methods are published API** (`docs/developer/opening-and-saving-media.md`): another
  * package declares the part it uses and a token with this context's alias, and imports nothing.
  * They take and return plain data, so that declaration is a copy of a few types, and a method only
  * ever gains optional fields.
@@ -53,13 +62,31 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
   /** The operations, real unless a test says otherwise. */
   readonly #deps: MediaContextDeps;
 
+  /** Where the recent lists live: the browser's storage unless a test says otherwise. */
+  readonly #storage: RecentStorage | null;
+
+  /**
+   * The signed-in user's recent list, or undefined until the current user is known. Nothing is
+   * recorded or listed before then, so a file can never land on somebody else's list.
+   */
+  #recent?: RecentMediaList;
+
   /**
    * @param host The desktop element.
    * @param deps What a test injects.
+   * @param storage Where the recent lists live, for a test; the browser's `localStorage` otherwise.
    */
-  constructor(host: UmbControllerHost, deps: MediaContextDeps = REAL_DEPS) {
+  constructor(host: UmbControllerHost, deps: MediaContextDeps = REAL_DEPS, storage: RecentStorage | null = browserStorage()) {
     super(host, UMBRADESKTOP_MEDIA_CONTEXT);
     this.#deps = deps;
+    this.#storage = storage;
+    this.consumeContext(UMB_CURRENT_USER_CONTEXT, (user) => {
+      this.observe(
+        user?.unique,
+        (unique) => (this.#recent = unique ? new RecentMediaList(this.#storage, recentKeyFor(unique)) : undefined),
+        'umbraDesktopMediaRecentUser',
+      );
+    });
   }
 
   /**
@@ -82,12 +109,24 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
   }
 
   /**
-   * Let the person pick a file from the media library with Umbraco's media picker, and read it.
-   * Whether the file suits the app is the app's to decide once it has it.
+   * Let the person pick a file from the media library with Umbraco's media picker, and read it; or,
+   * given a key, read that item without the picker. Whether the file suits the app is the app's to
+   * decide once it has it.
+   * @param options What to open; without a key, the picker asks.
    * @returns The file, or that it was cancelled or could not be read.
    */
-  open(): Promise<MediaOpenResult> {
-    return this.#run((host) => this.#deps.open(host));
+  async open(options?: MediaOpenOptions): Promise<MediaOpenResult> {
+    const result = await this.#run((host) => this.#deps.open(host, options));
+    if (result.status === 'opened') {
+      this.#recent?.record({
+        unique: result.unique,
+        name: result.name,
+        extension: result.extension,
+        folder: result.folder ?? null,
+        folderName: result.folderName,
+      });
+    }
+    return result;
   }
 
   /**
@@ -97,8 +136,38 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
    * @param request What to save, and where.
    * @returns How it went.
    */
-  save(request: MediaSaveRequest): Promise<MediaSaveResult> {
-    return this.#run((host) => this.#deps.save(host, request));
+  async save(request: MediaSaveRequest): Promise<MediaSaveResult> {
+    const result = await this.#run((host) => this.#deps.save(host, request));
+    if (result.ok) {
+      // An overwrite stays in its folder and its request says none, so an earlier entry's folder is
+      // kept; a new item is in the folder it was saved to, whose name this request does not carry.
+      this.#recent?.record(
+        { unique: result.unique, name: request.name, extension: extensionOf(request.file.name), folder: request.folder },
+        Date.now(),
+        { keepFolder: !!request.existing },
+      );
+    }
+    return result;
+  }
+
+  /**
+   * The media files this user opened or saved lately through this service, by any app, newest
+   * first. Empty until the current user is known, and empty where the browser keeps no storage.
+   * @param accept The file extensions to list, without dots; all of them when omitted.
+   * @returns The entries. Each may since have been deleted or hidden: open it by key and the open
+   *   answers `failed`, or check it first and call {@link forgetRecent}.
+   */
+  async recent(accept?: readonly string[]): Promise<RecentMediaEntry[]> {
+    return this.#recent?.list(accept) ?? [];
+  }
+
+  /**
+   * Take an item off this user's recent list: one that was deleted, trashed, or can no longer be
+   * seen by them.
+   * @param unique The item.
+   */
+  forgetRecent(unique: string): void {
+    this.#recent?.forget(unique);
   }
 
   /**

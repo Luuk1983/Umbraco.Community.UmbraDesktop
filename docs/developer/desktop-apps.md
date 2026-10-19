@@ -274,6 +274,9 @@ as `UMBRADESKTOP_APP_TOKEN_FALLBACKS`, so this table cannot quietly go stale aga
 | `--umbradesktop-app-text-muted` | Secondary text | `var(--uui-color-text-alt)` |
 | `--umbradesktop-app-accent` | Selection and focus | `var(--uui-color-selected)` |
 | `--umbradesktop-app-accent-text` | Text and icons **on** an `accent` fill | `var(--uui-color-surface)` |
+| `--umbradesktop-app-action` | The fill of the one main action of a view, such as Save. Never the selection colour, so a Save never reads as a selected tab | `var(--uui-color-positive)` |
+| `--umbradesktop-app-action-text` | Text **on** an `action` fill | `var(--uui-color-positive-contrast)` |
+| `--umbradesktop-app-current` | The mark of the tab or item in use, such as the line under a tab | `var(--uui-color-current)` |
 | `--umbradesktop-app-font` | The theme's UI font stack | `inherit` |
 
 The **Fallback** column is that type-checked data, one value per row. The **What it is** column
@@ -741,7 +744,9 @@ this.dispatchEvent(new CustomEvent('umbradesktop-app-title', { detail: { title: 
 The title is plain text, never a dictionary key, so localize it yourself first. An empty title gives
 the window your app's label back. The desktop keeps the title with the window's location, so a
 reopened window is named before your app has loaded. The Media Manager names each window after the
-folder it shows.
+folder it shows. An app that reopens empty rather than where it was should send an empty title as it
+starts, or the reopened window keeps the last session's name: the Image Editor names its window after
+the image it has open, and sends an empty title until one is.
 
 ### 7.4 Opening and saving media files
 
@@ -807,6 +812,19 @@ this.dispatchEvent(new CustomEvent('umbradesktop-app-focus', { bubbles: true, co
 The window comes forward with its group, as a click on its taskbar button brings it, and a minimised
 window is restored first. Use it after something the person did elsewhere landed in your window, not
 to take the focus on your own: a window that jumps forward unasked is one people learn to distrust.
+
+### 7.7 Closing your own window
+
+An app with a Close command of its own, such as one in a file menu, closes its window by dispatching
+an event from its element:
+
+```ts
+this.dispatchEvent(new CustomEvent('umbradesktop-close-request', { bubbles: true, composed: true }));
+```
+
+The window closes as if its close button was pressed: if your element carries
+`data-umbradesktop-dirty`, the desktop asks before throwing the work away, and a no keeps the
+window open. You do not need to ask yourself first.
 
 ---
 

@@ -210,6 +210,9 @@ export type UmbraDesktopToken = (typeof UMBRADESKTOP_TOKENS)[number];
  * | `--umbradesktop-app-text-muted` | Secondary text |
  * | `--umbradesktop-app-accent` | Selection and focus |
  * | `--umbradesktop-app-accent-text` | Text and icons on an `accent` fill. A theme sets whichever of light or dark actually reads on its own accent |
+ * | `--umbradesktop-app-action` | The fill of the one main action of a view, such as Save: never the selection colour, so it never reads as a selected tab |
+ * | `--umbradesktop-app-action-text` | Text on an `action` fill |
+ * | `--umbradesktop-app-current` | The mark of the tab or item in use, such as the line under a tab |
  * | `--umbradesktop-app-font` | The theme's UI font stack |
  *
  * No row states a shipped value, deliberately: this file is the normative contract, so a number
@@ -272,6 +275,9 @@ export const UMBRADESKTOP_APP_TOKENS = [
   '--umbradesktop-app-text-muted',
   '--umbradesktop-app-accent',
   '--umbradesktop-app-accent-text',
+  '--umbradesktop-app-action',
+  '--umbradesktop-app-action-text',
+  '--umbradesktop-app-current',
   '--umbradesktop-app-font',
 ] as const;
 
@@ -339,6 +345,11 @@ export const UMBRADESKTOP_APP_TOKEN_FALLBACKS = {
   // colour rather than a bare `#fff`: it tracks the backoffice's own light/dark setting the way
   // every other value here does.
   '--umbradesktop-app-accent-text': 'var(--uui-color-surface)',
+  // Umbraco's own Save: the green of a positive uui-button, with the text colour Umbraco puts on it.
+  '--umbradesktop-app-action': 'var(--uui-color-positive)',
+  '--umbradesktop-app-action-text': 'var(--uui-color-positive-contrast)',
+  // The colour of the line under a uui-tab in use.
+  '--umbradesktop-app-current': 'var(--uui-color-current)',
   '--umbradesktop-app-font': 'inherit',
 } as const satisfies Record<UmbraDesktopAppToken, string>;
 

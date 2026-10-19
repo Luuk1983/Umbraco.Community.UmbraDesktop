@@ -1,4 +1,5 @@
 import { manifests as localizationManifests } from './localization/manifest.js';
+import { IMAGE_EDITOR_CONTENT_SIZE, IMAGE_EDITOR_MIN_CONTENT_SIZE } from './image-editor/constants.js';
 import { UMBRADESKTOP_MEDIA_MANAGER_APP } from './manager/manager-window.context.js';
 import { UMBRADESKTOP_MEDIA_TRANSFERS_APP } from './transfers/transfers-app.js';
 import { UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION } from './manager/in-manager.condition.js';
@@ -11,16 +12,19 @@ import {
   UMBRADESKTOP_MEDIA_FOLDER_TREE_REPOSITORY,
 } from './tree/constants.js';
 
-/** Every alias here is namespaced with the package id and final once shipped. */
+/**
+ * The prefix every alias in this package carries. An alias is what pins a favourite, so it is
+ * namespaced with the package id and final once shipped: renaming one later loses every pin made on it.
+ */
 export const UMBRADESKTOP_MEDIA_ALIAS = 'Umbraco.Community.UmbraDesktop.Media';
 
 /**
  * The Media group, defined by the package whose apps fill it, as Accessories defines its own: the
- * Media Manager now, and the media tools to come (the Image Editor first, #136).
+ * Media Manager, the Image Editor, and the media tools to come.
  *
  * 52 on the launcher's own scale, lower first: after the host's System (50) and before Accessories
- * (55). The alias, label and weight are the Image Editor branch's, so the two land as one group.
- * Owner's choice, 2026-10-17 (weight) and 2026-10-18 (the Media Manager joins it).
+ * (55), because working on media is closer to an editor's work than a tool is. Owner's choice,
+ * 2026-10-17 (weight) and 2026-10-18 (the Media Manager joins it).
  */
 const catalogue: UmbExtensionManifest = {
   type: 'umbraDesktopCatalogue',
@@ -32,24 +36,55 @@ const catalogue: UmbExtensionManifest = {
 };
 
 /**
- * The Media Manager: core's media library in desktop windows, as many as you like. In the package's
- * Media group, and only for someone who may use the Media section, since everything inside is the
- * Media section's own.
+ * The only rule the package's apps show under: someone who may use the Media section. Everything
+ * inside a Media Manager is the Media section's own, and the Image Editor saves to media items, which
+ * the management API refuses without it. Owner's choice for the Image Editor, 2026-10-19, so the two
+ * apps of one group show or hide together.
+ */
+const mediaSection = [{ alias: 'Umb.Condition.SectionUserPermission', match: 'Umb.Section.Media' }] as never;
+
+/**
+ * The Media Manager: core's media library in desktop windows, as many as you like. First in the
+ * group (owner, 2026-10-19), so its root `weight` is above the Image Editor's: higher sorts first, as
+ * everywhere in Umbraco, and an unset weight would have put it last.
  */
 const mediaManager: UmbExtensionManifest = {
   type: 'umbraDesktopApp',
   alias: UMBRADESKTOP_MEDIA_MANAGER_APP,
   name: 'UmbraDesktop Media Manager',
   element: () => import('./manager/manager.element.js'),
+  weight: 1100,
   meta: {
-    label: '#umbraDesktopMedia_appName',
-    icon: 'icon-picture',
+    label: '#umbraDesktopMedia_mediaManager',
+    icon: 'icon-folders',
     group: 'media',
     defaultSize: { w: 1100, h: 700 },
     minSize: { w: 640, h: 420 },
     allowMultiple: true,
   },
-  conditions: [{ alias: 'Umb.Condition.SectionUserPermission', match: 'Umb.Section.Media' } as never],
+  conditions: mediaSection,
+};
+
+/**
+ * The Image Editor (#136): `element` and never `js`, since the desktop reads only `element`; sizes
+ * that are the app's content box, derived in its `constants.ts`; several windows, so two images can be
+ * edited side by side. 1000 leaves room below it for the media tools to come.
+ */
+const imageEditor: UmbExtensionManifest = {
+  type: 'umbraDesktopApp',
+  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.ImageEditor`,
+  name: 'UmbraDesktop Image Editor',
+  element: (() => import('./image-editor/image-editor.element.js')) as () => Promise<{ element: CustomElementConstructor }>,
+  weight: 1000,
+  meta: {
+    label: '#umbraDesktopMedia_imageEditor',
+    icon: 'icon-picture',
+    group: 'media',
+    defaultSize: IMAGE_EDITOR_CONTENT_SIZE,
+    minSize: IMAGE_EDITOR_MIN_CONTENT_SIZE,
+    allowMultiple: true,
+  },
+  conditions: mediaSection,
 };
 
 /**
@@ -70,7 +105,7 @@ const transfers: UmbExtensionManifest = {
     allowMultiple: false,
     hideFromLauncher: true,
   },
-  conditions: [{ alias: 'Umb.Condition.SectionUserPermission', match: 'Umb.Section.Media' } as never],
+  conditions: mediaSection,
 };
 
 /**
@@ -266,6 +301,7 @@ const docs: UmbExtensionManifest = {
 export const manifests: Array<UmbExtensionManifest> = [
   catalogue,
   mediaManager,
+  imageEditor,
   ...folderTree,
   ...binTree,
   transfers,

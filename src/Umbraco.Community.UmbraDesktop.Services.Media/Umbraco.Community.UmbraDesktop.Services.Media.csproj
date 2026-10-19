@@ -10,7 +10,7 @@
 	  <Product>Umbraco.Community.UmbraDesktop.Services.Media</Product>
 	  <PackageId>Umbraco.Community.UmbraDesktop.Services.Media</PackageId>
 	  <Title>UmbraDesktop Media service</Title>
-	  <Description>Opening and saving media library files for UmbraDesktop apps. A service package: you get it with an add-on that uses it, such as the UmbraDesktop Accessories Add-on, and do not need to install it yourself.</Description>
+	  <Description>Opening and saving media library files for UmbraDesktop apps. A service package: you get it with an add-on that uses it, such as the UmbraDesktop Accessories Add-on or the UmbraDesktop Media Add-on, and do not need to install it yourself.</Description>
 	  <PackageTags>umbraco;backoffice;desktop;umbradesktop;media</PackageTags>
 	  <RootNamespace>Umbraco.Community.UmbraDesktop.Services.Media</RootNamespace>
 	  <Authors>Luuk Peters</Authors>

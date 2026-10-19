@@ -16,6 +16,12 @@ description: The apps the desktop adds, and the packages it knows by name.
 - [Help](help.md): the documentation of the desktop and its add-ons, for the version installed, in
   as many windows as you like, and how to link to a page of it.
 
-Games and umbraCoffee are not part of this package. They come with the optional
-[Entertainment add-on](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment),
-which has documentation of its own.
+Some apps are not part of this package. They come with optional add-ons, each with documentation of
+its own:
+
+- [Accessories add-on](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories):
+  Notepad, Paint, Sticky Notes, Calculator and the other small tools.
+- [Entertainment add-on](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment):
+  the games and umbraCoffee.
+- [Media add-on](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media): the Media
+  Manager, your media library in desktop windows, and the Image Editor.

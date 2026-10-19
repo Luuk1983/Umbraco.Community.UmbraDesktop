@@ -2,7 +2,7 @@
 
 # UmbraDesktop Media Add-on
 
-The media library, the way you manage files on your own computer. Open folders in as many windows as you like, drag between them, cut, copy and paste, drop files and whole folders from your computer, and undo what you did, on top of everything the Media section already does.
+The media library, the way you manage files on your own computer. Open folders in as many windows as you like, drag between them, cut, copy and paste, drop files and whole folders from your computer, and undo what you did, on top of everything the Media section already does. And an Image Editor to fix an image without leaving the backoffice.
 
 [![NuGet](https://img.shields.io/nuget/v/Umbraco.Community.UmbraDesktop.Media)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) [![NuGet Downloads](https://img.shields.io/nuget/dt/Umbraco.Community.UmbraDesktop.Media)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) [![License](https://img.shields.io/github/license/Luuk1983/Umbraco.Community.UmbraDesktop)](../../LICENSE)
 
@@ -10,16 +10,25 @@ The media library, the way you manage files on your own computer. Open folders i
 
 The Media Manager hosts Umbraco's own media library inside its windows rather than rebuilding it, so every media type, including your own, and every package that adds to the Media section keep working in it. The Media section stays exactly as Umbraco ships it.
 
+![The Image Editor in a window on the desktop, cropping a photo of a lounge to 16:9: the crop frame with its thirds and handles over the picture, the Crop panel with the ratios, rotate and flip, and the note that a crop resets the focal point, and the status bar with the file's name, folder, size and zoom.](docs/screenshots/image-editor.png)
+
+The Image Editor works on an image from the media library and saves it back or as a copy:
+
+- **Crop, rotate and flip**, free or to a ratio, with the image's focal point shown.
+- **Adjust** exposure, brightness, contrast and saturation, and compare with the original.
+- **Mark up** with text, arrows, boxes and a pen, and **redact** what should not be seen, burned into the saved file.
+- **Resize**, and **save** over the image or as a copy, in JPEG, PNG or WebP, with the size before and after.
+
 ## Get started
 
 ```bash
 dotnet add package Umbraco.Community.UmbraDesktop.Media
 ```
 
-That is all. UmbraDesktop comes with it if you do not have it yet, and Media Manager appears in the launcher for anyone who can reach the desktop and the Media section. You need Umbraco 17 and .NET 10.
+That is all. UmbraDesktop comes with it if you do not have it yet, and the Media Manager and the Image Editor appear in a Media group in the launcher for anyone who can reach the desktop and the Media section. You need Umbraco 17 and .NET 10.
 
-[Media Manager](docs/user/media-manager.md) explains how to use it.
+[Media Manager](docs/user/media-manager.md) and [Image Editor](docs/user/image-editor.md) explain how to use them.
 
 ## License
 
-[MIT](../../LICENSE)
+[MIT](../../LICENSE). The bundled library, Fabric.js, is MIT too; its notice is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

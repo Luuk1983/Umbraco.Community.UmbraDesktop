@@ -360,10 +360,10 @@ Two more things about the app group, both because its readers are in other packa
 what you get wrong. `accent-text` exists so you can name the text colour that reads on *your*
 accent: white is 16:1 on Win98's navy and 2.52:1 on Umbraco 4's selection blue, so there is no value
 an app could have guessed. And the contrast of the pairs an app is entitled to rely on —
-`text` on all three surfaces, `text-muted` on `surface`, `accent-text` on `accent` — is asserted at
-WCAG AA's 4.5:1 in `app-tokens.test.ts`, per theme and per variant. If your palette lands under it
-the test names the pair and the ratio it measured. Fix the colour rather than the threshold: the
-whole point is that an app author reads these values on trust.
+`text` on all three surfaces, `text-muted` on `surface`, `accent-text` on `accent`, `action-text`
+on `action` — is asserted at WCAG AA's 4.5:1 in `app-tokens.test.ts`, per theme and per variant. If
+your palette lands under it the test names the pair and the ratio it measured. Fix the colour rather
+than the threshold: the whole point is that an app author reads these values on trust.
 
 `--umbradesktop-app-border` is held to WCAG 1.4.11's 3:1 instead, and against **all three** of your
 surfaces rather than one, in the same test. It is the colour an app rules a grid or outlines a field
@@ -375,7 +375,7 @@ dark palette and a darker one in a light palette. That is the one value in the g
 and it is why this is not simply a stronger `edge-dark`: doing that in a dark palette would leave a
 bevel's shadowed half brighter than its lit half.
 
-If you want to see what your thirteen values are actually being asked to do, read
+If you want to see what your sixteen values are actually being asked to do, read
 [`desktop-apps.md`](desktop-apps.md) §4: it is the other side of this contract, written for the
 person in another package who consumes them, and it is also where the promise you are making about
 `edge-width` and `radius` is spelled out. An app author writes one stylesheet expecting it to be a

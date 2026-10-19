@@ -619,6 +619,20 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   };
 
   /**
+   * A registered app asked to close its window, from a Close command of its own. The same
+   * `requestClose` the close button calls, so unsaved work is asked about first. Stopped here: the
+   * request is about this window and nothing above it. The template names the event as a literal,
+   * since Lit binds no interpolated event names; `window-app-close.test.ts` dispatches it through
+   * `UMBRADESKTOP_CLOSE_REQUEST_EVENT`, so the two cannot drift apart unnoticed.
+   * @param event The app's request.
+   */
+  #onAppCloseRequest = (event: Event) => {
+    event.stopPropagation();
+    const id = this.window?.id;
+    if (id) void this.#manager?.requestClose(id);
+  };
+
+  /**
    * A registered app's work, as its host collected it from the app's `umbradesktop-task` events.
    * The app-window half of the frame's upload watch, landing on the same `setTasks` under its own
    * source, so the manager sums the two rather than one overwriting the other. Issue #108 D5.
@@ -1205,6 +1219,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         .props=${w.app.content.props}
         .load=${w.app.content.element}
         @umbradesktop-app-dirty=${this.#onAppDirty}
+        @umbradesktop-close-request=${this.#onAppCloseRequest}
         @umbradesktop-app-tasks=${this.#onAppTasks}
         @umbradesktop-app-location=${this.#onAppLocation}
         @umbradesktop-app-title=${this.#onAppTitle}

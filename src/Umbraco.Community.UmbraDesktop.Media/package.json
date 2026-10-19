@@ -10,6 +10,7 @@
 		"test:watch": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve --watch"
 	},
 	"dependencies": {
+		"fabric": "7.4.0",
 		"lit": "^3.2.1"
 	},
 	"devDependencies": {

@@ -1,9 +1,39 @@
 import { expect } from '@open-wc/testing';
 import { manifests } from './bundle.manifests.js';
 import { UMBRADESKTOP_MEDIA_BIN_TREE, UMBRADESKTOP_MEDIA_FOLDER_TREE } from './tree/constants.js';
+import { IMAGE_EDITOR_CONTENT_SIZE, IMAGE_EDITOR_MIN_CONTENT_SIZE } from './image-editor/constants.js';
+import en from './localization/en.js';
 
 /** Narrows the bundle to one extension type, so each test reads only what it is about. */
 const byType = (type: string) => manifests.filter((m) => m.type === type);
+
+/** A registered app's fields, as far as these tests read them. */
+interface App {
+  alias: string;
+  element?: unknown;
+  js?: unknown;
+  weight?: number;
+  conditions?: Array<{ alias: string; match?: string }>;
+  meta: {
+    label: string;
+    icon: string;
+    group?: string;
+    defaultSize?: unknown;
+    minSize?: unknown;
+    allowMultiple?: boolean;
+    hideFromLauncher?: boolean;
+  };
+}
+
+/** One registered app by the last part of its alias. */
+const app = (name: string) =>
+  (byType('umbraDesktopApp') as unknown as App[]).find((m) => m.alias === `Umbraco.Community.UmbraDesktop.Media.${name}`);
+
+/** The dictionary's area, for the label checks. */
+const area = (en as Record<string, Record<string, string>>).umbraDesktopMedia;
+
+/** What both launcher apps and the Transfers window show under: the Media section, and nothing else. */
+const MEDIA_SECTION = [{ alias: 'Umb.Condition.SectionUserPermission', match: 'Umb.Section.Media' }];
 
 /** Every alias is namespaced with the package id, so two packages can never collide. */
 it('namespaces every alias with the package id, and never repeats one', () => {
@@ -34,16 +64,51 @@ it('defines a Media group for the launcher, after System and before Accessories'
 
 /** The Media Manager in the launcher's Media group, for anyone who may use the Media section. */
 it('registers the Media Manager as a desktop app that opens many windows', () => {
-  const [app] = byType('umbraDesktopApp') as Array<{
-    alias: string;
-    meta: { label: string; group?: string; allowMultiple?: boolean; minSize?: { w: number; h: number } };
-    conditions?: Array<{ alias: string; match?: string }>;
-  }>;
-  expect(app.alias).to.equal('Umbraco.Community.UmbraDesktop.Media.MediaManager');
-  expect(app.meta.label).to.equal('#umbraDesktopMedia_appName');
-  expect(app.meta.group).to.equal('media');
-  expect(app.meta.allowMultiple).to.equal(true);
-  expect(app.conditions).to.deep.equal([{ alias: 'Umb.Condition.SectionUserPermission', match: 'Umb.Section.Media' }]);
+  const manager = app('MediaManager')!;
+  expect(manager.meta.label).to.equal('#umbraDesktopMedia_mediaManager');
+  expect(area.mediaManager).to.be.a('string');
+  expect(manager.meta.icon).to.equal('icon-folders');
+  expect(manager.meta.group).to.equal('media');
+  expect(manager.meta.allowMultiple).to.equal(true);
+  expect(manager.conditions).to.deep.equal(MEDIA_SECTION);
+});
+
+/**
+ * The Image Editor (#136) in the same group, under the same rule: it saves to media items, which the
+ * management API refuses without the Media section. Owner's choice, 2026-10-19.
+ */
+it('registers the Image Editor under its final alias, for anyone who may use the Media section', () => {
+  const editor = app('ImageEditor')!;
+  expect(editor.meta.label).to.equal('#umbraDesktopMedia_imageEditor');
+  expect(area.imageEditor).to.be.a('string');
+  expect(editor.meta.icon).to.equal('icon-picture');
+  expect(editor.meta.group).to.equal('media');
+  expect(editor.meta.allowMultiple).to.equal(true);
+  expect(editor.meta.defaultSize).to.deep.equal(IMAGE_EDITOR_CONTENT_SIZE);
+  expect(editor.meta.minSize).to.deep.equal(IMAGE_EDITOR_MIN_CONTENT_SIZE);
+  expect(editor.conditions).to.deep.equal(MEDIA_SECTION);
+});
+
+/** `element`, never `js`: the desktop reads only `element`, and an app declared with `js` is dropped. */
+it('declares every app through a lazy `element` loader', () => {
+  for (const each of byType('umbraDesktopApp') as unknown as App[]) {
+    expect(typeof each.element, each.alias).to.equal('function');
+    expect(each.js, each.alias).to.equal(undefined);
+  }
+});
+
+/**
+ * The Media Manager first in the group, then the Image Editor (owner, 2026-10-19). A root `weight`
+ * sorts higher first, as everywhere in Umbraco, and an unset one competes as zero, which would put the
+ * Manager behind the editor: so both are set, and the two icons differ so the tiles do too.
+ */
+it('puts the Media Manager before the Image Editor, each with its own icon', () => {
+  const manager = app('MediaManager')!;
+  const editor = app('ImageEditor')!;
+  expect(manager.weight).to.be.a('number');
+  expect(editor.weight).to.be.a('number');
+  expect(manager.weight!).to.be.greaterThan(editor.weight!);
+  expect(manager.meta.icon).to.not.equal(editor.meta.icon);
 });
 
 /** Design §1: our actions only inside a manager window, so the Media section stays as Umbraco ships it. */
@@ -97,7 +162,7 @@ it('registers the Transfers window as one desktop app the launcher leaves out', 
     | undefined;
   expect(!!transfers).to.equal(true);
   expect(transfers!.meta).to.deep.include({ allowMultiple: false, hideFromLauncher: true });
-  expect(transfers!.conditions).to.deep.equal([{ alias: 'Umb.Condition.SectionUserPermission', match: 'Umb.Section.Media' }]);
+  expect(transfers!.conditions).to.deep.equal(MEDIA_SECTION);
 });
 
 /**

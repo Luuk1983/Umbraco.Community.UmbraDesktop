@@ -3,7 +3,7 @@
   "Title": "UmbraDesktop Media Add-on",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
-  "Description": "Your media library, managed the way you manage files on your own computer: folders in as many windows as you like, dragging between them, copy and paste, and undo.",
+  "Description": "Your media library, managed the way you manage files on your own computer: folders in as many windows as you like, dragging between them, copy and paste, and undo. And an Image Editor to crop, redact and resize without leaving the backoffice.",
   "PackageType": "Package",
   "LicenseTypes": [
     "Free"
@@ -14,7 +14,7 @@
     "Url": "https://github.com/Luuk1983",
     "SyncContributorsFromRepository": true
   },
-  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Media/docs/user/media-manager.md",
+  "DocumentationUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/tree/main/src/Umbraco.Community.UmbraDesktop.Media/docs/user",
   "IssueTrackerUrl": "https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues",
   "Tags": [
     "media",
@@ -33,28 +33,51 @@
     "folder upload",
     "undo",
     "transfers",
+    "image editor",
+    "crop",
+    "resize",
+    "redact",
+    "blur",
+    "pixelate",
+    "rotate",
+    "markup",
+    "annotate",
+    "exposure",
+    "WebP",
     "umbradesktop",
     "desktop",
     "windows",
     "backoffice",
-    "add-on"
+    "apps",
+    "add-on",
+    "themes",
+    "launcher"
   ],
   "RelatedPackages": [
     {
       "PackageId": "Umbraco.Community.UmbraDesktop",
       "GroupTitle": "Requires",
-      "Description": "The desktop itself. This package is an add-on to it and installs it as a dependency; the desktop works on its own without the Media Manager."
+      "Description": "The desktop itself. This package is an add-on to it and installs it as a dependency; the desktop works on its own without the media apps."
     },
     {
       "PackageId": "Umbraco.Community.UmbraDesktop.Accessories",
       "GroupTitle": "Optional add-ons",
-      "Description": "The small tools for the desktop, Notepad and Paint among them. Independent of this package: install either, both or neither."
+      "Description": "Notepad, Paint, Sticky Notes and the rest of the small tools. Independent of this package: install either, both or neither."
+    },
+    {
+      "PackageId": "Umbraco.Community.UmbraDesktop.Entertainment",
+      "GroupTitle": "Optional add-ons",
+      "Description": "Games for the desktop. Independent of this package: install either, both or neither."
     }
   ],
   "Screenshots": [
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Media/docs/screenshots/media-manager.png",
       "Caption": "A Media Manager window on the People folder, with an image open beside it in Umbraco's own editor and its card ringed, under the Umbraco theme."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Media/docs/screenshots/image-editor.png",
+      "Caption": "The Image Editor cropping a photo to 16:9, with rotate and flip beside it and the image's name, folder, size and zoom in the status bar."
     }
   ]
 }

@@ -52,7 +52,7 @@ Optional packages, each adding apps to the desktop. The desktop is unchanged wit
 
 - [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories): the tools Windows kept under Accessories. Notepad and Paint that edit files in your media library, Sticky Notes of your own and shared with your team, Calculator, Character Map, Clock, a screen saver, Disk Cleanup and System Information.
 - [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment): Minesweeper, Snake and Solitaire, and umbraCoffee, the community's monthly live show.
-- [`Umbraco.Community.UmbraDesktop.Media`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media): your media library in desktop windows, one folder per window, with dragging between them, copy and paste, files from your computer and undo, on top of everything the Media section does.
+- [`Umbraco.Community.UmbraDesktop.Media`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media): your media library in desktop windows, one folder per window, with dragging between them, copy and paste, files from your computer and undo, on top of everything the Media section does; and an Image Editor that crops, adjusts, marks up, redacts and resizes images and saves them back or as a copy.
 
 ## Documentation
 

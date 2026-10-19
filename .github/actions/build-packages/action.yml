@@ -180,8 +180,8 @@ runs:
           echo "$pkg: host dependency '$actual', expected '$expected'"
           [ "$actual" = "$expected" ] || { echo "::error::$pkg depends on the host as '$actual', expected '$expected'"; failed=1; }
         done
-        # An add-on that depends on a service package (Entertainment on the Arcade, Accessories on
-        # the media service) gets the same bound from the same target, so the same range is checked
+        # An add-on that depends on a service package (Entertainment on the Arcade, Accessories and
+        # Media on the media service) gets the same bound from the same target, so the same range is checked
         # for it, against the service package's own version, which is the host's because all
         # packages are versioned off one tag. A package that does not depend on a service has no such
         # line, and is skipped. But if any package does depend on one, that service has to be in
