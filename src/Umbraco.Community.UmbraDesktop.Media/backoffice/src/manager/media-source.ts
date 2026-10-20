@@ -72,6 +72,22 @@ export function isFolder(item: { mediaType: { collection: unknown } } | undefine
 }
 
 /**
+ * Whether an item is a place: somewhere items go, which the tree shows and a window can open (#158,
+ * design §19). Decided by what it can do, never by its type's name: its type has a collection, its
+ * type has insert options (even while it holds nothing), or it holds items already, as an item does
+ * whose type's insert options were taken away later. Out of the box only Folder is one; a site whose
+ * Structure settings let Image hold Image makes every image one. A place that is no folder opens in
+ * a window as a virtual folder, listed by Umbraco's collection through this package's server code;
+ * its card still opens the item beside the window.
+ * @param item The item, if it was found.
+ * @param holdsItems Whether its type has insert options; undefined before they are read.
+ * @returns True for a place.
+ */
+export function isPlace(item: { hasChildren?: boolean; mediaType: { collection: unknown } } | undefined, holdsItems: boolean | undefined): boolean {
+  return !!item && (isFolder(item) || !!holdsItems || !!item.hasChildren);
+}
+
+/**
  * An item's name as core shows it.
  * @param item The item.
  * @returns Its first variant's name, or its own.

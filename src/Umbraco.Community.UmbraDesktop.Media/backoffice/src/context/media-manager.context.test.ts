@@ -39,6 +39,10 @@ describe('the clipboard', () => {
     expect(pasteInto({ mode: 'cut', items: [products] }, 'products'), 'a cut is refused there').to.equal('products');
   });
 
+  it('pastes a copied place that is no folder onto itself beside it, as a folder (#158)', () => {
+    expect(pasteInto({ mode: 'copy', items: [ref('banjo', 'products')] }, 'banjo')).to.equal('products');
+  });
+
   it('fades the items of a cut, and nothing for a copy', () => {
     expect(cutKeys(cut)).to.deep.equal(['a', 'b']);
     expect(cutKeys(copy)).to.deep.equal([]);

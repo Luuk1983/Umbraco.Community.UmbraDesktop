@@ -406,3 +406,78 @@ After the fifth test:
   pressing on the text. Making the pressed span draggable fixed the name but not the icon's SVG, so
   the tree's walk adds `pointer-events: none` to core's `#label` and `#icon-container` in each item,
   and the press reaches the link, which Chrome drags; clicks still open the folder.
+
+## 19. Places: items under an item that is not a folder (2026-10-20)
+
+[#158](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/158). A media type's Structure
+settings decide what may hold items, and out of the box only Folder may. A site that lets Image hold
+Image can put an image under an image, and §17's folders-only tree hid that image and left what it
+holds out of reach. A first fix showed such an image in the tree with everything under it and opened
+it beside the window from there; the owner tried it and found it unnatural. Everything in the tree, a
+second tree, a stack on the card and an Items tab were weighed with the owner, who chose places.
+
+- **A place is decided by capability, never by a type's name** (`isPlace` in
+  `manager/media-source.ts`): its type has a collection, its type has insert options (even while the
+  item holds nothing), or it holds items already, which covers a type whose insert options were taken
+  away later. Out of the box only folders qualify, so the usual setup looks exactly as before. Where
+  Image allows Image, every image is a place and the tree shows them all: owner's call, that is right.
+- **The tree shows places only**, §17's rule generalised, with an arrow only when a place is inside.
+  Each media type's insert options are read once for the page (`operations/media-types.ts`), shared by
+  the tree, the drag and its marks, and read before a page of tree items is judged. A reload picks up a
+  changed Structure setting. §17's search for a big folder is limited to the place types: every type
+  with insert options, found by walking them from the root, plus what Umbraco calls folders.
+- **A place that is no folder is a virtual folder.** Its tree node and its card are different things.
+  The tree node opens it in the window, where Umbraco's own collection lists what it holds (an empty
+  list when nothing), and gets core's collection badge on its icon: the tree gives it the default media
+  list view as its collection, which is what core draws the badge from. Its card stays the item: a click
+  opens it beside the window and the list stays put. In the tree it behaves as a folder everywhere:
+  highlighted as the window's place, Open in new window (the condition grants a folder's actions to
+  anything in the tree, since everything there is a place), middle-click and Ctrl+click, dropping and
+  pasting into it, resting a drag on it, and copying it carries what it holds.
+- **Listing it needs server code**, the Media add-on's first (`Places/`, tested by
+  `Umbraco.Community.UmbraDesktop.Media.Tests`). The management API refuses a collection for an item
+  whose type has none (400 `ContentNotCollection`; naming a list view gets `DataTypeNotContentProperty`).
+  So a decorator of Umbraco's public `IMediaListViewService` hands every call to Umbraco's own service
+  and answers only for an item whose type has no collection, the way Umbraco's own base answers the
+  root: the default media list view, the same ordering rules, `IMediaSearchService` for the children and
+  the media authorizer for access. The browser then uses core's collection unchanged, so grid, table,
+  columns, sort, filter, paging, selection and bulk actions are Umbraco's. Umbraco's service is internal,
+  so the composer finds its registration and wraps it. The access check is `IsDeniedAsync` per item, as
+  Umbraco 17.0 does it: `FilterAuthorizedAsync` came later in 17 and the add-on builds against 17.0.
+- **Drag and drop follows insert options.** Targets are every place in the tree, the window's own place
+  and folder cards; image cards never are, so nothing nests by accident in the grid. As a drag starts,
+  every target is marked from the same rule the label uses (`split` in `operations/rules.ts`, with the
+  shared insert options): taking at least one item, lightly tinted; taking none, dimmed; the pointer
+  gets the no-drop badge over those. The marks follow Ctrl turning a move into a copy, and places the
+  tree draws during the drag are marked within 0.4 s. The window's own place shows its mark on the
+  shade, without the border a hovered target gets.
+- **Catches.** A place that is one only because it holds items, its type no longer allowing any, is not
+  found by the search past a big folder's first 200 children. Allowed children are read per type,
+  without the parent, so a site's per-parent filter on insert options is not seen by the marks (Umbraco
+  still refuses on the server, with its reason). The refusal "A folder cannot go inside itself" also
+  shows for an image place.
+
+Checked on this worktree's copy of the test database, with Image allowed under Image, Tattoo under
+Banjo and Unicorn under Tattoo, in a real backoffice through headless Chrome:
+
+- The collection endpoint listed Banjo's children (Tattoo) and Tattoo's (Unicorn), an empty list for
+  an image that holds nothing, Products and the root as before, and refused an order that is no column
+  with Umbraco's own 400.
+- A window opened on Banjo was named Banjo, listed Tattoo through core's collection with Create Image,
+  and the tree opened down to Banjo and highlighted it; the images in Products showed with the badge.
+- Dragging Banjo's card in a Products window marked Banjo and Tattoo under it as refusing (self), every
+  other place in the tree as accepting, image cards and the recycle bin unmarked; over Design the label
+  said "Move to Design", over Tattoo "Banjo: A folder cannot go inside itself"; the drag's end took
+  every mark down. Knitted West dropped on Jumpsuit in the tree moved under it, Jumpsuit got its arrow,
+  and clicking Jumpsuit in the tree showed Knitted West in the window (moved back afterwards).
+- Banjo's tree menu offered Open in new window.
+
+After the owner's own test (2026-10-20):
+
+- **An empty place's upload box covered the tree**, so its rows could not be clicked. Core's empty
+  media state (`umb-empty-media-state`) is placed absolutely, against the nearest positioned ancestor,
+  which in a window was the whole window. An empty folder did the same; places made it common, since
+  most images hold nothing. The folder area is now positioned, as a folder's workspace is in the Media
+  section, so the box and core's file drag overlay stay inside it. File drops onto the tree still work:
+  they are found by pointer position, not by the overlay (measured: the box went from the window's
+  left edge plus 24 px to the folder area's).

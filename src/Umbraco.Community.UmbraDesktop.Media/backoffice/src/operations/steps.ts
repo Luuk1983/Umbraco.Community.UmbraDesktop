@@ -63,7 +63,8 @@ export function renameStep(api: UmbraDesktopMediaApi, item: UmbraDesktopMediaRef
 
 /**
  * Copy items into a folder: each a new item, made from the original's file with its values copied over,
- * since Umbraco has no copy for media (design §5). A folder is copied with what is in it.
+ * since Umbraco has no copy for media (design §5). A folder is copied with what is in it, and so is any
+ * other item that holds items (#158).
  * @param api The server.
  * @param items The items.
  * @param target The folder's key, null for the root.
@@ -112,7 +113,7 @@ async function copiedValues(api: UmbraDesktopMediaApi, values: ReadonlyArray<Umb
 }
 
 /**
- * Copy one item, and what is in it when it is a folder.
+ * Copy one item, and what is in it when it is a folder or holds items as one.
  * @param api The server.
  * @param item The item.
  * @param target Where the copy goes, null for the root.
@@ -127,7 +128,7 @@ export async function copyItem(api: UmbraDesktopMediaApi, item: UmbraDesktopMedi
   const name = detail.data.variants[0]?.name ?? item.name;
   const created = await api.create({ unique, parent: target, mediaType: detail.data.mediaType, name, values: values.values });
   if (created.error) return { error: created.error };
-  if (!item.isFolder) return { created: [unique] };
+  if (!item.isFolder && !item.hasChildren) return { created: [unique] };
   const children = await api.children(item.unique);
   if (!children.data) return { created: [unique], error: children.error };
   const failed: string[] = [];

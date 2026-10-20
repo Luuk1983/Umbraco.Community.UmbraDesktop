@@ -75,6 +75,31 @@ async function contextInside(host: HTMLElement, alias: string | typeof UMB_ENTIT
 }
 
 describe('hosting core’s media collection for one place', () => {
+  /**
+   * Core lays some of its collection's layers out absolutely, its empty-folder upload box and its file
+   * drag overlay, against whatever is positioned above them. In the Media section that is the folder's
+   * workspace; in a window it was the whole window, so the box covered the tree and its rows could not
+   * be clicked (owner's test, 2026-10-20). The folder area is what they lay out against.
+   */
+  it('keeps core’s absolutely placed layers inside the folder area, off the tree beside it', async () => {
+    const window = document.createElement('div');
+    window.style.cssText = 'position:relative;display:grid;grid-template-columns:200px 400px;height:300px';
+    document.body.appendChild(window);
+    try {
+      const { host } = await mounted({ kind: 'root' });
+      window.appendChild(host);
+      const layer = document.createElement('div');
+      layer.style.cssText = 'position:absolute;inset:10px 24px';
+      host.shadowRoot!.appendChild(layer);
+      const area = host.getBoundingClientRect();
+      const placed = layer.getBoundingClientRect();
+      expect(placed.left - area.left).to.equal(24);
+      expect(placed.right).to.be.at.most(area.right);
+    } finally {
+      window.remove();
+    }
+  });
+
   it('hosts core’s media collection for a folder, configured from the folder’s own list view', async () => {
     const { host, media } = await mounted({ kind: 'folder', unique: FOLDER });
     const collection = collectionOf(host);

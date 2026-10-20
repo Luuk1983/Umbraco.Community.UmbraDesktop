@@ -19,6 +19,8 @@ const OTHER_IMAGE = '22222222-3333-4444-5555-666666666666';
 const IMAGE_TYPE = 'cc07b313-0843-4aa8-bbda-871c8da728c8';
 /** Umbraco's Folder media type. */
 const FOLDER_TYPE = 'f38bd2d7-65d0-48e6-95dc-87ce06ec2d3d';
+/** An image with items under it, which a site's Structure settings can allow (#158). */
+const PARENT_IMAGE = '66666666-7777-8888-9999-aaaaaaaaaaaa';
 /** A folder in the tree, not the one the window shows. */
 const TREE_FOLDER = '44444444-5555-6666-7777-888888888888';
 
@@ -36,6 +38,13 @@ const SOURCE: UmbraDesktopMediaSource = {
       [IMAGE]: {
         unique: IMAGE,
         name: 'Banjo',
+        variants: [],
+        mediaType: { unique: 'image-type', icon: 'icon-picture', collection: null },
+        parent: null,
+      },
+      [PARENT_IMAGE]: {
+        unique: PARENT_IMAGE,
+        name: 'Banjo with notes',
         variants: [],
         mediaType: { unique: 'image-type', icon: 'icon-picture', collection: null },
         parent: null,
@@ -206,6 +215,41 @@ describe('a manager window', () => {
     ]);
   });
 
+  /**
+   * #158: a place that is no folder (an image that holds items, here) is a virtual folder in the tree:
+   * its tree node opens it in the window, where Umbraco's collection lists what it holds, and Ctrl+click
+   * or a middle-click there opens it in a new window, as a folder's does. Its card stays the item.
+   */
+  it('opens a place that is no folder in the window from the tree, and in a new window on Ctrl+click', async () => {
+    const { manager, folderHost, settle, beside, opened } = await mounted();
+    const tree = manager.shadowRoot!.querySelector('umbradesktop-media-tree-host')!;
+    const clickInTree = (init: MouseEventInit = {}) => {
+      const link = document.createElement('a');
+      link.href = `/umbraco/section/umbradesktop/workspace/media/edit/${PARENT_IMAGE}`;
+      tree.shadowRoot!.appendChild(link);
+      const click = new MouseEvent('click', { bubbles: true, composed: true, cancelable: true, ...init });
+      link.dispatchEvent(click);
+      link.remove();
+      return click;
+    };
+    const click = clickInTree();
+    await settle();
+    expect(click.defaultPrevented).to.equal(true);
+    expect(folderHost().place).to.deep.equal({ kind: 'folder', unique: PARENT_IMAGE });
+    expect(beside, 'nothing opens beside it').to.deep.equal([]);
+    clickInTree({ ctrlKey: true });
+    await settle();
+    expect(opened).to.deep.equal([{ alias: UMBRADESKTOP_MEDIA_MANAGER_APP, location: `folder=${PARENT_IMAGE}` }]);
+  });
+
+  it('opens a place that is no folder beside the window from its card, as any item', async () => {
+    const { clickLink, settle, folderHost, beside } = await mounted();
+    clickLink(`/umbraco/section/media/workspace/media/edit/${PARENT_IMAGE}`);
+    await settle();
+    expect(folderHost().place).to.deep.equal({ kind: 'root' });
+    expect(beside.map((each) => each.name)).to.deep.equal(['Banjo with notes']);
+  });
+
   it('opens an item as a window on Shift-click', async () => {
     const { clickLink, settle, beside } = await mounted();
     clickLink(`/umbraco/section/media/workspace/media/edit/${IMAGE}`, { shiftKey: true });
@@ -339,6 +383,28 @@ describe('the item open beside a manager window', () => {
     manager.setAttribute('drop', 'refused');
     const refused = look();
     expect([before.shown, during, refused.shown]).to.deep.equal([false, { shown: true, tinted: true, border: `${DROP_OUTLINE_PX}px` }, true]);
+  });
+
+  /**
+   * #158: from a drag's start, the window's own place says whether it takes the items: tinted, or
+   * washed out, with no border, which only the target under the pointer gets.
+   */
+  it('marks its place from a drag’s start, lighter than a drop there, and the drop wins', async () => {
+    const { manager } = await mounted();
+    const shade = manager.shadowRoot!.querySelector('.drop-shade') as HTMLElement;
+    const look = () => {
+      const style = getComputedStyle(shade);
+      return { shown: style.display !== 'none', background: style.backgroundColor, border: style.borderTopWidth };
+    };
+    manager.setAttribute('mark', 'accepts');
+    const accepts = look();
+    manager.setAttribute('mark', 'refuses');
+    const refuses = look();
+    manager.setAttribute('drop', 'target');
+    const dropped = look();
+    expect([accepts.shown, accepts.border, refuses.shown]).to.deep.equal([true, '0px', true]);
+    expect(refuses.background, 'washed out, not tinted').to.not.equal(accepts.background);
+    expect(dropped.border).to.equal(`${DROP_OUTLINE_PX}px`);
   });
 
   it('covers only core’s view area with the drop shade, not its toolbar or selection bar', async () => {

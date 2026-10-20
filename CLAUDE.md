@@ -21,6 +21,7 @@ src/Umbraco.Community.UmbraDesktop.Accessories/
   StickyNotes/                  its one piece of server code, tested by .Accessories.Tests
 src/Umbraco.Community.UmbraDesktop.Media/
   docs/                         the same, for the Media add-on (the Media Manager)
+  Places/                       its one piece of server code, tested by .Media.Tests
 src/Umbraco.Community.UmbraDesktop.Services.Arcade/
   docs/                         high scores: a service package games depend on, never installed alone
 src/Umbraco.Community.UmbraDesktop.Services.Media/

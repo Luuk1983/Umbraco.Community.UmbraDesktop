@@ -33,6 +33,12 @@ The tree beside it shows your folders, and only folders: what is in a folder sho
 The folder the window shows is highlighted in the tree, and the tree opens down to it. A folder has
 an arrow when there are folders inside it. **Recycle Bin** says how many items are in it.
 
+If your site lets other items hold items, such as an image under an image, the tree shows those
+items as well, and they work as folders there: click one in the tree and the window shows what it
+holds, with the folder badge on its icon. Its card in a window is still the item itself, and opens
+beside the window as any item does. Out of the box only folders can hold items, so the tree shows
+only folders.
+
 - To open a folder in the window, click it, on its card or in the tree.
 - To open a folder in a new window, select **Open in new window** in its menu, or middle-click it.
   In the tree, holding Ctrl (Cmd on a Mac) and clicking it does the same.
@@ -117,9 +123,11 @@ Files cannot go into the recycle bin.
 
 ## Dragging
 
-Drag items to move them. Where they would land is outlined and tinted, a whole window, a folder or a
-folder in the tree, and a label under the pointer says what letting go will do. A window does not
-have to be the active one to drop into it.
+Drag items to move them. As soon as you start, every place they could go is marked: tinted where
+they can go, dimmed where they cannot. Where they would land is outlined, a whole window, a folder or
+a folder in the tree, and a label under the pointer says what letting go will do. A window does not
+have to be the active one to drop into it. Dropping on an item's card that is not a folder drops into
+the window's folder, never into the item.
 
 - To move items, drag them onto another window, onto a folder, or onto a folder in the tree. Hold a
   drag on a closed folder in the tree to open it, when it has folders inside.

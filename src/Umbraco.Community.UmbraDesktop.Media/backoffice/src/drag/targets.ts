@@ -3,9 +3,10 @@ import type { UmbraDesktopMediaPlace } from '../manager/location.js';
 
 /**
  * Where a drag would land (design §4, plan task 5.4): one target only, the innermost under the pointer.
- * A folder card or table row of a folder, then a folder in the tree (or the tree's Media root), then
- * the tree's recycle bin, then the folder the window shows. A card that is not a folder is no target of
- * its own: a drop on it lands in its window's folder.
+ * A folder card or table row of a folder, then a place in the tree (or the tree's Media root), then
+ * the tree's recycle bin, then the place the window shows. A card that is not a folder is no target of
+ * its own, even an image that holds items: a drop on it lands in its window's place, so nothing nests in
+ * the grid by accident (#158). The tree shows places only, so every item in it is a target.
  */
 
 /** A manager window, as a drag sees it. */
@@ -32,16 +33,16 @@ export type UmbraDesktopDropTarget<W extends UmbraDesktopDragWindow = UmbraDeskt
 const ROOT_LINK = /\/workspace\/media-root(?:\/|$)/;
 const BIN_LINK = /\/workspace\/media-recycle-bin-root(?:\/|$)/;
 
-/** Core's grid card and table row, as opposed to a tree item. */
-const COLLECTION_TAGS = new Set(['UMB-ENTITY-COLLECTION-ITEM-CARD', 'UUI-TABLE-ROW']);
+/** Core's tree row, which only the tree draws: a path through one is in the tree. */
+const TREE_ROW = 'UUI-MENU-ITEM';
 
 /**
  * The target under the pointer.
  * @typeParam W The window, as the caller knows it.
  * @param path The drag event's composed path, innermost first.
  * @param windows The manager windows open.
- * @param isFolder Whether an item is a folder: true, false, or undefined while not yet known, which
- * counts as no target of its own until it is.
+ * @param isFolder Whether an item in a window's view is a folder: true, false, or undefined while not
+ * yet known, which counts as no target of its own until it is. Not asked in the tree.
  * @returns The target, or undefined outside every manager window.
  */
 export function targetAt<W extends UmbraDesktopDragWindow>(
@@ -51,6 +52,8 @@ export function targetAt<W extends UmbraDesktopDragWindow>(
 ): UmbraDesktopDropTarget<W> | undefined {
   const window = windows.find((each) => path.includes(each.element));
   if (!window) return undefined;
+  const end = path.indexOf(window.element);
+  const inTree = path.slice(0, end).some((node) => node instanceof Element && node.tagName === TREE_ROW);
   for (const node of path) {
     if (node === window.element) break;
     if (!(node instanceof Element)) continue;
@@ -58,8 +61,8 @@ export function targetAt<W extends UmbraDesktopDragWindow>(
     if (BIN_LINK.test(href)) return { kind: 'bin', element: node, window };
     if (ROOT_LINK.test(href)) return { kind: 'folder', unique: null, via: 'tree', element: node, window };
     const item = itemAt([node]);
-    if (item && isFolder(item.unique)) {
-      return { kind: 'folder', unique: item.unique, via: COLLECTION_TAGS.has(node.tagName) ? 'card' : 'tree', element: node, window };
+    if (item && (inTree || isFolder(item.unique))) {
+      return { kind: 'folder', unique: item.unique, via: inTree ? 'tree' : 'card', element: node, window };
     }
   }
   const place = window.place();

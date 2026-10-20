@@ -26,14 +26,15 @@ export function pasteKind(clipboard: UmbraDesktopMediaClipboard | undefined): 'm
 /**
  * Where a paste lands. A copied folder pasted onto itself lands beside it, in its parent, as a copy of
  * it: what a file manager does with a folder copied and pasted where it is (owner's test,
- * 2026-10-18). A folder cannot hold a copy of itself, and a cut of one onto itself stays refused.
+ * 2026-10-18). A folder cannot hold a copy of itself, and a cut of one onto itself stays refused. Any
+ * place pasted on counts, a folder or an image that holds items (#158): what is pasted on is a place.
  * @param clipboard What is held.
  * @param target The folder pasted on, null for the root.
  * @returns The folder the paste goes into, null for the root.
  */
 export function pasteInto(clipboard: UmbraDesktopMediaClipboard | undefined, target: string | null): string | null {
   if (clipboard?.mode !== 'copy' || target === null) return target;
-  const self = clipboard.items.find((item) => item.isFolder && item.unique === target);
+  const self = clipboard.items.find((item) => item.unique === target);
   return self ? self.parent : target;
 }
 

@@ -135,3 +135,128 @@ export function clearTarget(window: UmbraDesktopDragWindowHandle): void {
     markRow(tree, undefined);
   }
 }
+
+/**
+ * The attribute a drag marks each target with as it starts (#158, design §19): every place in the
+ * tree, every folder card, `accepts` or `refuses`, from the same rule as the label, so the two agree.
+ * An attribute rather than a rule per key, so a test and a person in DevTools can read it off the row.
+ */
+export const DROP_MARK_ATTRIBUTE = 'data-umbradesktop-drop';
+
+/** What a target says before the pointer reaches it: it takes at least one dragged item, or none. */
+export type UmbraDesktopDropMark = 'accepts' | 'refuses';
+
+/** How strong an accepting target's tint is: half a hovered target's, so the one under the pointer stands out. */
+export const MARK_TINT_PERCENT = DROP_TINT_PERCENT / 2;
+
+/** How visible a refusing target stays: dimmed, still readable. */
+export const MARK_DIM_OPACITY = 0.45;
+
+/** The id of the style the marks are drawn with, in each tree row and in a window's view. */
+const MARK_STYLE = 'umbradesktop-media-marks';
+
+/**
+ * The tint an accepting target is drawn with.
+ * @returns The colour.
+ */
+export function markTint(): string {
+  return `color-mix(in srgb, ${dropColour(false)} ${MARK_TINT_PERCENT}%, transparent)`;
+}
+
+/**
+ * The marks of a tree row, written into the row's own shadow root, on its own line (`#menu-item`), so
+ * the places open inside it keep their own marks. A row the pointer is over is drawn selected, as the
+ * target, and keeps that look.
+ */
+const TREE_MARKS = `
+  :host([${DROP_MARK_ATTRIBUTE}='accepts']:not([selected])) #menu-item { background-color: ${markTint()}; }
+  :host([${DROP_MARK_ATTRIBUTE}='refuses']:not([selected])) #menu-item { opacity: ${MARK_DIM_OPACITY}; }
+`;
+
+/** The marks of a folder card or table row, in the view that draws them. */
+const VIEW_MARKS = `
+  [${DROP_MARK_ATTRIBUTE}='accepts'] { box-shadow: 0 0 0 ${DROP_OUTLINE_PX}px ${markTint()}; border-radius: var(--uui-border-radius, 3px); }
+  [${DROP_MARK_ATTRIBUTE}='refuses'] { opacity: ${MARK_DIM_OPACITY}; }
+`;
+
+/** The elements each window has marked, so the next marks and the end of the drag find them. */
+const markedElements = new WeakMap<UmbraDesktopDragWindowHandle, Set<Element>>();
+
+/**
+ * Mark a window's targets, and unmark what no longer needs it.
+ * @param window The window.
+ * @param marks The marks: the tree's places by key (null for the Media root), the view's folder cards
+ * by key, and the window's own place.
+ * @param marks.tree The tree's places.
+ * @param marks.cards The view's folder cards.
+ * @param marks.place The window's own place, or undefined when it is no target.
+ */
+export function markTargets(
+  window: UmbraDesktopDragWindowHandle,
+  marks: { tree: ReadonlyMap<string | null, UmbraDesktopDropMark>; cards: ReadonlyMap<string, UmbraDesktopDropMark>; place?: UmbraDesktopDropMark },
+): void {
+  const marked = new Set<Element>();
+  const tree = window.tree();
+  if (tree) {
+    writeViewStyle(tree, MARK_STYLE, TREE_MARKS, '#menu-item');
+    for (const [unique, mark] of marks.tree) {
+      const selector = unique ? `uui-menu-item[href$="/edit/${unique}"]` : 'uui-menu-item[href*="/workspace/media-root/"]';
+      for (const row of deepAll(tree, selector)) marked.add(setMark(row, mark));
+    }
+  }
+  const folder = window.folder();
+  if (folder) {
+    writeViewStyle(folder, MARK_STYLE, marks.cards.size ? VIEW_MARKS : '');
+    for (const [unique, mark] of marks.cards) {
+      for (const card of deepAll(folder, itemSelector(unique))) marked.add(setMark(card, mark));
+    }
+  }
+  for (const element of markedElements.get(window) ?? []) {
+    if (!marked.has(element)) element.removeAttribute(DROP_MARK_ATTRIBUTE);
+  }
+  markedElements.set(window, marked);
+  window.setMark?.(marks.place);
+}
+
+/**
+ * Take down every mark a window has.
+ * @param window The window.
+ */
+export function clearMarks(window: UmbraDesktopDragWindowHandle): void {
+  for (const element of markedElements.get(window) ?? []) element.removeAttribute(DROP_MARK_ATTRIBUTE);
+  markedElements.delete(window);
+  const tree = window.tree();
+  if (tree) writeViewStyle(tree, MARK_STYLE, '', '#menu-item');
+  const folder = window.folder();
+  if (folder) writeViewStyle(folder, MARK_STYLE, '');
+  window.setMark?.(undefined);
+}
+
+/**
+ * Put a mark on an element.
+ * @param element The row or card.
+ * @param mark The mark.
+ * @returns The element.
+ */
+function setMark(element: Element, mark: UmbraDesktopDropMark): Element {
+  if (element.getAttribute(DROP_MARK_ATTRIBUTE) !== mark) element.setAttribute(DROP_MARK_ATTRIBUTE, mark);
+  return element;
+}
+
+/**
+ * Every element under a root, through every shadow root, that a selector matches.
+ * @param root The tree host or folder host.
+ * @param selector The selector.
+ * @returns The elements.
+ */
+function deepAll(root: Element, selector: string): Element[] {
+  const found: Element[] = [];
+  const queue: ParentNode[] = [root.shadowRoot ?? root];
+  while (queue.length) {
+    for (const element of queue.shift()!.querySelectorAll('*')) {
+      if (element.matches(selector)) found.push(element);
+      if (element.shadowRoot) queue.push(element.shadowRoot);
+    }
+  }
+  return found;
+}
