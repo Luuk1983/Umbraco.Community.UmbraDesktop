@@ -269,6 +269,16 @@ describe('the operations', () => {
     ]);
   });
 
+  it('copies a place that is no folder with what it holds, as a folder is copied (#158)', async () => {
+    const { api, log, created } = server();
+    const holding: UmbraDesktopMediaRef = { ...ref('folder', null, false, 'Folder'), hasChildren: true };
+    await runOperation(copySteps(api, [holding], 'people')).done;
+    expect(log.filter((line) => line.startsWith('create'))).to.deep.equal([
+      'create Folder in people',
+      `create Banjo in ${created[0].unique}`,
+    ]);
+  });
+
   it('creates nothing when the file cannot be read', async () => {
     const { api, created, details } = server();
     details.get('banjo')!.values[0].value = { src: '/media/broken/banjo.jpg' };

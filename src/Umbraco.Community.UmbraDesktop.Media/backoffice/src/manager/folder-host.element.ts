@@ -266,8 +266,12 @@ export class UmbraDesktopMediaFolderHostElement extends UmbLitElement {
   }
 
   static override styles = css`
+    /* Positioned, so core's absolutely placed layers (the empty folder's upload box, the file drag
+       overlay) lay out against the folder area, as against a folder's workspace in the Media section.
+       Against the whole window, the empty box covered the tree (owner's test, 2026-10-20). */
     :host {
       display: block;
+      position: relative;
       height: 100%;
       min-height: 0;
       overflow: hidden;

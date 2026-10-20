@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { UMBRADESKTOP_DEFAULT_MEDIA_LIST_VIEW, collectionConfigFrom, isFolder, itemName } from './media-source.js';
+import { UMBRADESKTOP_DEFAULT_MEDIA_LIST_VIEW, collectionConfigFrom, isFolder, isPlace, itemName } from './media-source.js';
 
 describe('a folder or an item', () => {
   /** Design decision 6: a folder is a media item whose type has a collection. */
@@ -7,6 +7,21 @@ describe('a folder or an item', () => {
     expect(isFolder({ mediaType: { collection: { unique: 'list-view' } } })).to.equal(true);
     expect(isFolder({ mediaType: { collection: null } })).to.equal(false);
     expect(isFolder(undefined)).to.equal(false);
+  });
+
+  /**
+   * #158: a place is decided by what an item can do, never by its type's name: a collection, a type
+   * with insert options (empty or not), or items under it already, as when a type's insert options
+   * were taken away later. Out of the box only Folder is one.
+   */
+  it('is a place when it is a folder, its type may hold items, or it holds some', () => {
+    const plain = { hasChildren: false, mediaType: { collection: null } };
+    expect(isPlace({ hasChildren: false, mediaType: { collection: { unique: 'list-view' } } }, false)).to.equal(true);
+    expect(isPlace(plain, true)).to.equal(true);
+    expect(isPlace({ ...plain, hasChildren: true }, false)).to.equal(true);
+    expect(isPlace(plain, false)).to.equal(false);
+    expect(isPlace(plain, undefined), 'insert options not read yet').to.equal(false);
+    expect(isPlace(undefined, true)).to.equal(false);
   });
 
   it('is named by its first variant, then its own name', () => {

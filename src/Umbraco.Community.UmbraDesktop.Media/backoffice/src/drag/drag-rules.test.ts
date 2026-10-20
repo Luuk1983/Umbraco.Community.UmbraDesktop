@@ -124,6 +124,15 @@ describe('the target under the pointer', () => {
     expect(targetAt([treeItem('section/umbradesktop/workspace/media-recycle-bin-root/edit/null'), win.element], [win], isFolder)).to.deep.include({ kind: 'bin' });
   });
 
+  it('is any item in the tree, since the tree shows places only: an image that holds items too (#158)', () => {
+    const win = windowShowing(B);
+    const row = document.createElement('uui-menu-item');
+    row.setAttribute('href', `section/umbradesktop/workspace/media/edit/${A}`);
+    const link = document.createElement('a');
+    link.setAttribute('href', `section/umbradesktop/workspace/media/edit/${A}`);
+    expect(targetAt([link, row, win.element], [win], isFolder)).to.deep.include({ kind: 'folder', unique: A, via: 'tree' });
+  });
+
   it('is the recycle bin for a window showing it', () => {
     const win = windowShowing(null, 'bin');
     expect(targetAt([document.createElement('div'), win.element], [win], isFolder)).to.deep.include({ kind: 'bin' });

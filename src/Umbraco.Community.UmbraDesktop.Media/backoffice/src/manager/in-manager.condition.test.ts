@@ -21,13 +21,21 @@ afterEach(() => {
  * @param options.inManager Whether a manager window is around it.
  * @param options.entity The entity it is for.
  * @param options.folder Whether the condition asks for a folder.
+ * @param options.inTree Whether the element is in the window's tree, inside its host's shadow root.
  * @returns Whether the action is permitted, once the answer has settled.
  */
-async function evaluate(options: { inManager: boolean; entity?: { type: string; unique: string | null }; folder?: boolean }) {
+async function evaluate(options: { inManager: boolean; entity?: { type: string; unique: string | null }; folder?: boolean; inTree?: boolean }) {
   const outer = document.createElement('div');
   const inner = document.createElement('div');
   outer.appendChild(inner);
-  document.body.appendChild(outer);
+  if (options.inTree) {
+    const tree = document.createElement('umbradesktop-media-tree-host');
+    tree.attachShadow({ mode: 'open' }).appendChild(outer);
+    document.body.appendChild(tree);
+    cleanup.push(() => tree.remove());
+  } else {
+    document.body.appendChild(outer);
+  }
   const outerHost = new UmbElementControllerHost(outer);
   const innerHost = new UmbElementControllerHost(inner);
   cleanup.push(() => {
@@ -75,5 +83,14 @@ describe('the in-manager condition', () => {
     expect(await evaluate({ inManager: true, folder: true, entity: { type: 'media', unique: FOLDER } })).to.equal(true);
     expect(await evaluate({ inManager: true, folder: true, entity: { type: 'media-root', unique: null } })).to.equal(true);
     expect(await evaluate({ inManager: true, folder: true, entity: { type: 'media', unique: IMAGE } })).to.equal(false);
+  });
+
+  /**
+   * #158: everything the tree shows is a place, so a tree item's menu offers what a folder's does,
+   * even for an image that holds items. Its card stays the item, with an item's menu.
+   */
+  it('asked for a folder, permits any item in the tree, since the tree shows places only', async () => {
+    expect(await evaluate({ inManager: true, folder: true, inTree: true, entity: { type: 'media', unique: IMAGE } })).to.equal(true);
+    expect(await evaluate({ inManager: true, folder: true, entity: { type: 'media', unique: IMAGE } }), 'on its card').to.equal(false);
   });
 });

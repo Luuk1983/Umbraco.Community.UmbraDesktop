@@ -1,7 +1,7 @@
 import { UmbRepositoryBase } from '@umbraco-cms/backoffice/repository';
 import { UmbMediaTreeRepository } from '@umbraco-cms/backoffice/media';
 import type { UmbMediaTreeItemModel, UmbMediaTreeRootModel } from '@umbraco-cms/backoffice/media';
-import { MediaService, MediaTypeService } from '@umbraco-cms/backoffice/external/backend-api';
+import { MediaService } from '@umbraco-cms/backoffice/external/backend-api';
 import type { MediaItemResponseModel } from '@umbraco-cms/backoffice/external/backend-api';
 import { tryExecute } from '@umbraco-cms/backoffice/resources';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
@@ -11,24 +11,30 @@ import type {
   UmbTreeRepository,
   UmbTreeRootItemsRequestArgs,
 } from '@umbraco-cms/backoffice/tree';
-import { foldersIn, foldersOf, hasFolder } from './folder-tree.js';
+import { isPlace } from '../manager/media-source.js';
+import { UmbraDesktopMediaServerApi } from '../operations/media-api.js';
+import { umbraDesktopMediaTypes } from '../operations/media-types.js';
+import type { UmbraDesktopReadAllowed } from '../operations/media-types.js';
+import { hasPlace, placesIn, placesOf } from './folder-tree.js';
 import type { UmbraDesktopTreePage } from './folder-tree.js';
 
 /**
  * What Umbraco's media search is asked to match: everything. The search requires some text, and
- * the folders asked for are picked by parent and type, not by name.
+ * the places asked for are picked by parent and type, not by name.
  */
 const SEARCH_EVERYTHING = '*';
 
 /**
- * The data of the folders-only tree beside a manager window (design §17): core's media tree, asked
- * through core's own repository, with only the folders passed on and an arrow only on a folder that
- * has a folder inside. Core's default tree draws it, so its look, menus, start nodes and reloads stay
- * core's. A folder bigger than one page is asked about through Umbraco's media search instead, so
- * its size costs nothing (`folder-tree.ts` has the rule and its catch).
+ * The data of the places-only tree beside a manager window (design §17, §19): core's media tree, asked
+ * through core's own repository, with only the places passed on and an arrow only on a place that has
+ * a place inside. A place is a folder or any item that can hold items (`isPlace`), so each type's
+ * insert options are read, once for the page, before a page's items are judged. Out of the box only
+ * folders are places, and the tree is as it always was. Core's default tree draws it, so its look,
+ * menus, start nodes and reloads stay core's. A folder bigger than one page is asked about through
+ * Umbraco's media search instead, so its size costs nothing (`folder-tree.ts` has the rule and its catch).
  *
- * Every parent's folders come back in one answer, whatever page core asks for: the tree pages to keep
- * a long list of items cheap, and a parent's folders are a short one. So core never shows Load more.
+ * Every parent's places come back in one answer, whatever page core asks for: the tree pages to keep
+ * a long list of items cheap, and a parent's places are a short one. So core never shows Load more.
  */
 export class UmbraDesktopMediaFolderTreeRepository
   extends UmbRepositoryBase
@@ -37,48 +43,46 @@ export class UmbraDesktopMediaFolderTreeRepository
   /** Core's media tree repository, which this one asks. */
   #media: UmbMediaTreeRepository;
 
-  /**
-   * The media types Umbraco calls folders (no file, and allowing children), which the search is
-   * limited to; read once, and undefined when the server did not say.
-   */
-  #folderTypes?: Promise<string[] | undefined>;
+  /** The add-on's server calls, for each type's insert options and the folder types. */
+  #api: UmbraDesktopMediaServerApi;
 
   /** @param host The controller host. */
   constructor(host: UmbControllerHost) {
     super(host);
     this.#media = new UmbMediaTreeRepository(this);
+    this.#api = new UmbraDesktopMediaServerApi(this);
   }
 
   /**
-   * The Media root, with an arrow only when a folder is at the top.
+   * The Media root, with an arrow only when a place is at the top.
    * @returns The root.
    */
   async requestTreeRoot() {
     const { data } = await this.#media.requestTreeRoot();
     if (!data) return { data };
-    return { data: { ...data, hasChildren: data.hasChildren && (await hasFolder(this.#page(null), this.#search(null))) } };
+    return { data: { ...data, hasChildren: data.hasChildren && (await hasPlace(this.#page(null), this.#search(null), this.#isPlace)) } };
   }
 
   /**
-   * The folders at the top.
-   * @param _args What core asks for; every folder is answered.
-   * @returns The folders.
+   * The places at the top.
+   * @param _args What core asks for; every place is answered.
+   * @returns The places.
    */
   async requestTreeRootItems(_args: UmbTreeRootItemsRequestArgs) {
-    return this.#folders(null);
+    return this.#places(null);
   }
 
   /**
-   * The folders in a folder.
-   * @param args Which folder.
-   * @returns The folders.
+   * The places in a place.
+   * @param args Which place.
+   * @returns The places.
    */
   async requestTreeItemsOf(args: UmbTreeChildrenOfRequestArgs) {
-    return this.#folders(args.parent.unique);
+    return this.#places(args.parent.unique);
   }
 
   /**
-   * An item's ancestors, as core's repository reads them: they are all folders.
+   * An item's ancestors, as core's repository reads them: each holds the next, so each is a place.
    * @param args Which item.
    * @returns The ancestors.
    */
@@ -87,20 +91,31 @@ export class UmbraDesktopMediaFolderTreeRepository
   }
 
   /**
-   * A parent's folders, in one answer.
+   * A parent's places, in one answer.
    * @param parent The parent's key, or null for the top.
-   * @returns The folders, or the error when the server did not answer.
+   * @returns The places, or the error when the server did not answer.
    */
-  async #folders(parent: string | null) {
+  async #places(parent: string | null) {
     let error: unknown;
-    const children = await foldersIn(
+    const children = await placesIn(
       this.#page(parent, (failed) => (error = failed)),
       this.#search(parent),
+      this.#isPlace,
     );
     if (!children) return { error: error as never, asObservable: () => undefined };
-    const items = await foldersOf(children, (unique) => hasFolder(this.#page(unique), this.#search(unique)));
+    const items = await placesOf(children, (unique) => hasPlace(this.#page(unique), this.#search(unique), this.#isPlace), this.#isPlace);
     return { data: { items, total: items.length, totalBefore: 0, totalAfter: 0 }, asObservable: () => undefined };
   }
+
+  /**
+   * Whether a tree item is a place, by its type's insert options as read for its page.
+   * @param item The item.
+   * @returns True for a place.
+   */
+  #isPlace = (item: UmbMediaTreeItemModel): boolean => isPlace(item, umbraDesktopMediaTypes.holdsItems(item.mediaType.unique));
+
+  /** Reads a type's insert options from the server, for the page's record of them. */
+  #readAllowed: UmbraDesktopReadAllowed = async (type) => (await this.#api.allowedTypes(type, null)).data;
 
   /**
    * Read one page of a parent's children through core's repository.
@@ -115,13 +130,17 @@ export class UmbraDesktopMediaFolderTreeRepository
         parent === null
           ? await this.#media.requestTreeRootItems({ skip, take, paging })
           : await this.#media.requestTreeItemsOf({ parent: { unique: parent, entityType: 'media' }, skip, take, paging });
-      if (!data) onError?.(error);
-      return data ? { items: data.items, total: data.total } : undefined;
+      if (!data) {
+        onError?.(error);
+        return undefined;
+      }
+      await this.#readTypes(data.items);
+      return { items: data.items, total: data.total };
     };
   }
 
   /**
-   * Read one page of the folders directly under a parent through Umbraco's media search. The search
+   * Read one page of the places directly under a parent through Umbraco's media search. The search
    * cannot be limited to the top, which it reads as "anywhere", so the top has none: it is read
    * directly to the end, as it is when the search does not answer.
    * @param parent The parent's key, or null for the top.
@@ -130,7 +149,7 @@ export class UmbraDesktopMediaFolderTreeRepository
   #search(parent: string | null): UmbraDesktopTreePage<UmbMediaTreeItemModel> {
     return async (skip, take) => {
       if (parent === null) return undefined;
-      const types = await this.#readFolderTypes();
+      const types = await umbraDesktopMediaTypes.placeTypes(this.#readAllowed, async () => (await this.#api.folderTypes()).data);
       if (!types?.length) return undefined;
       const { data } = (await tryExecute(
         this,
@@ -138,22 +157,19 @@ export class UmbraDesktopMediaFolderTreeRepository
         { disableNotifications: true },
       )) as { data?: { items: MediaItemResponseModel[]; total: number } };
       if (!data) return undefined;
-      return { items: data.items.filter((item) => item.parent?.id === parent).map(treeItem), total: data.total };
+      const items = data.items.filter((item) => item.parent?.id === parent).map(treeItem);
+      await this.#readTypes(items);
+      return { items, total: data.total };
     };
   }
 
   /**
-   * The media types Umbraco calls folders, read once.
-   * @returns Their keys, or undefined when the server did not say.
+   * Read the insert options of every type among some items, so whether each is a place can be told.
+   * @param items The items.
    */
-  #readFolderTypes(): Promise<string[] | undefined> {
-    this.#folderTypes ??= (async () => {
-      const { data } = (await tryExecute(this, MediaTypeService.getItemMediaTypeFolders({ query: { skip: 0, take: 1000 } }), {
-        disableNotifications: true,
-      })) as { data?: { items: Array<{ id: string }> } };
-      return data?.items.map((type) => type.id);
-    })();
-    return this.#folderTypes;
+  async #readTypes(items: ReadonlyArray<UmbMediaTreeItemModel>): Promise<void> {
+    const types = new Set(items.map((item) => item.mediaType.unique));
+    await Promise.all([...types].map((type) => umbraDesktopMediaTypes.allowedChildren(type, this.#readAllowed)));
   }
 }
 

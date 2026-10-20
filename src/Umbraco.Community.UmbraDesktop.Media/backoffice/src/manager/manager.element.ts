@@ -1,5 +1,7 @@
 import { css, customElement, html, nothing, property, query, state, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
-import { DROP_OUTLINE_PX, dropColour, dropTint } from '../drag/light.js';
+import { DROP_OUTLINE_PX, MARK_DIM_OPACITY, dropColour, dropTint, markTint } from '../drag/light.js';
+import type { UmbraDesktopDropMark } from '../drag/light.js';
+import { isPlaceRef } from '../operations/media-types.js';
 import type { PropertyValues } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import './folder-host.element.js';
@@ -179,6 +181,14 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
   @property({ reflect: true })
   drop?: 'target' | 'refused';
 
+  /**
+   * Whether the place the window shows takes what is being dragged, marked from the drag's start
+   * (#158, design §19): lightly tinted when it does, dimmed when it does not. Reflected, as `drop` is;
+   * a drag over the window draws `drop` over it.
+   */
+  @property({ reflect: true })
+  mark?: UmbraDesktopDropMark;
+
   /** The label under the pointer while a drag is over this window, in the window's coordinates. */
   @state()
   private _dropLabel?: { lines: UmbraDesktopLabelLine[]; refused: boolean; x: number; y: number };
@@ -268,6 +278,10 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
       // The attribute at once, which the drag reads back; Lit takes the property from it.
       if (state) this.setAttribute('drop', state);
       else this.removeAttribute('drop');
+    },
+    setMark: (state) => {
+      if (state) this.setAttribute('mark', state);
+      else this.removeAttribute('mark');
     },
     setLabel: (label) => {
       if (!label) {
@@ -648,7 +662,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
       done();
     }
     const folders = (result?.succeeded ?? [])
-      .filter((each) => each.item.isFolder)
+      .filter((each) => isPlaceRef(each.item))
       .map((each) => (clipboard?.mode === 'copy' ? each.created?.[0] : each.item.unique))
       .filter((each): each is string => !!each);
     this.#landed(into, folders);
@@ -892,7 +906,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
         else this.#go(intent.place);
         return;
       case 'item':
-        void this.#openItem(intent.unique, middle, event.shiftKey);
+        void this.#openItem(intent.unique, middle, event.shiftKey, inTree);
         return;
       case 'create':
         // Core's create page, in the folder this window shows: Create's own links already carry it.
@@ -915,15 +929,19 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
 
   /**
    * An item was clicked: a folder opens in this window, or in a new one on a middle-click; anything
-   * else opens beside the window, as a window of its own on Shift-click.
+   * else opens beside the window, as a window of its own on Shift-click. In the tree everything is a
+   * place, so every tree item opens as a folder does: one that is no folder, an image that holds items
+   * say, is a virtual folder, whose items Umbraco's collection lists through this package's server
+   * code (#158, design §19). Its card stays the item, and opens beside.
    * @param unique The item's key.
    * @param middle Whether it was a middle-click.
    * @param floating Whether Shift was held.
+   * @param inTree Whether it was clicked in the tree.
    */
-  async #openItem(unique: string, middle: boolean, floating: boolean): Promise<void> {
+  async #openItem(unique: string, middle: boolean, floating: boolean, inTree = false): Promise<void> {
     const item = await this.source.item(unique);
     if (!item) return;
-    if (!isFolder(item)) {
+    if (!inTree && !isFolder(item)) {
       this.#namedKey = unique.toLowerCase();
       this.#openBeside(editPath(unique), itemName(item), item.mediaType.icon, floating);
       if (!floating) this.#holdFocus();
@@ -940,7 +958,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
    */
   override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('drop') && this.drop) this.#placeShade();
+    if ((changed.has('drop') && this.drop) || (changed.has('mark') && this.mark)) this.#placeShade();
     if (!this.#treeCurrent && this._treeHost) {
       this.#arrival = new UmbraDesktopTreeArrival(this._treeHost);
       this.#treeCurrent = new UmbraDesktopTreeCurrent(this._treeHost);
@@ -1089,6 +1107,21 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
     :host([drop='refused']) .drop-shade {
       border-color: ${unsafeCSS(dropColour(true))};
       background: ${unsafeCSS(dropTint(dropColour(true)))};
+    }
+
+    /* Before the pointer gets there, the drag's mark: the shade without its border, a light tint where
+       the items would go, and the view washed out to the same strength a refusing tree row is dimmed to. */
+    :host([mark]:not([drop])) .drop-shade {
+      display: block;
+      border: none;
+    }
+
+    :host([mark='accepts']:not([drop])) .drop-shade {
+      background: ${unsafeCSS(markTint())};
+    }
+
+    :host([mark='refuses']:not([drop])) .drop-shade {
+      background: color-mix(in srgb, var(--uui-color-surface, #fff) ${unsafeCSS(Math.round((1 - MARK_DIM_OPACITY) * 100))}%, transparent);
     }
 
     .drop-label {

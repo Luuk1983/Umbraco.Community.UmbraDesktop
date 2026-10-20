@@ -4,6 +4,8 @@ import type { UmbraDesktopDragWindowHandle } from './drag.controller.js';
 import { UMBRADESKTOP_MEDIA_DRAG_TYPE } from './drag-session.js';
 import type { UmbraDesktopMediaApi, UmbraDesktopMediaRef } from '../operations/media-api.js';
 import type { UmbraDesktopMediaPlace } from '../manager/location.js';
+import { UmbraDesktopMediaTypes } from '../operations/media-types.js';
+import { DROP_MARK_ATTRIBUTE } from './light.js';
 
 /** Dragging media between manager windows (design §4, plan tasks 5.6 to 5.9). */
 
@@ -12,6 +14,10 @@ const OTHER = '22222222-2222-2222-2222-222222222222';
 const FOLDER = '33333333-3333-3333-3333-333333333333';
 const PEOPLE = '44444444-4444-4444-4444-444444444444';
 const DESIGN = '55555555-5555-5555-5555-555555555555';
+/** A folder of a type of its own, which allows images where Folder (in some tests) does not. */
+const GALLERY = '66666666-6666-6666-6666-666666666666';
+/** An image that holds items, a place that is no folder (#158). */
+const TATTOO = '77777777-7777-7777-7777-777777777777';
 
 const refs: Record<string, UmbraDesktopMediaRef> = {
   [IMAGE]: { unique: IMAGE, name: 'Banjo', parent: PEOPLE, mediaType: 'image', isFolder: false },
@@ -19,7 +25,18 @@ const refs: Record<string, UmbraDesktopMediaRef> = {
   [FOLDER]: { unique: FOLDER, name: 'Archive', parent: PEOPLE, mediaType: 'folder', isFolder: true },
   [PEOPLE]: { unique: PEOPLE, name: 'People', parent: null, mediaType: 'folder', isFolder: true },
   [DESIGN]: { unique: DESIGN, name: 'Design', parent: null, mediaType: 'folder', isFolder: true },
+  [GALLERY]: { unique: GALLERY, name: 'Gallery', parent: PEOPLE, mediaType: 'gallery', isFolder: true },
+  [TATTOO]: { unique: TATTOO, name: 'Tattoo', parent: DESIGN, mediaType: 'image', isFolder: false, hasChildren: true },
 };
+
+/**
+ * Structure settings where a folder takes videos only, a gallery and an image take images (#158), and
+ * the root takes anything.
+ * @param type The type, null for the root.
+ * @returns What it allows.
+ */
+const structure = (type: string | null) =>
+  type === 'folder' ? ['video'] : type === 'gallery' || type === 'image' ? ['image'] : ['image', 'video', 'folder'];
 
 let cleanup: Array<() => void> = [];
 afterEach(() => {
@@ -68,6 +85,7 @@ function managerWindow(place: UmbraDesktopMediaPlace, keys: string[], selected: 
   };
   const tree_ = {
     design: treeItem(`section/umbradesktop/workspace/media/edit/${DESIGN}`),
+    tattoo: treeItem(`section/umbradesktop/workspace/media/edit/${TATTOO}`),
     bin: treeItem('section/umbradesktop/workspace/media-recycle-bin-root/edit/null'),
   };
   const record: string[] = [];
@@ -79,6 +97,7 @@ function managerWindow(place: UmbraDesktopMediaPlace, keys: string[], selected: 
     folder: () => folder as never,
     tree: () => tree,
     setDrop: (state) => record.push(`drop ${state}`),
+    setMark: (state) => record.push(`mark ${state}`),
     setLabel: (value) => (label = value),
     raise: () => record.push('raise'),
     selectWhenShown: (selection) => record.push(`select ${selection.join(',')}`),
@@ -106,10 +125,14 @@ function managerWindow(place: UmbraDesktopMediaPlace, keys: string[], selected: 
 /**
  * The controller on a stand-in desktop context, recording the operations it asks for.
  * @param windows The manager windows.
- * @param allowed What every folder allows.
+ * @param allowed What every folder allows, or what each type allows.
  * @returns The controller and its record.
  */
-function controller(windows: UmbraDesktopDragWindowHandle[], allowed = ['image', 'video', 'folder'], access?: { root: boolean; starts: Set<string> }) {
+function controller(
+  windows: UmbraDesktopDragWindowHandle[],
+  allowed: string[] | ((type: string | null) => string[]) = ['image', 'video', 'folder'],
+  access?: { root: boolean; starts: Set<string> },
+) {
   const ops: string[] = [];
   const result = (items: ReadonlyArray<UmbraDesktopMediaRef>) => ({
     succeeded: items.map((item) => ({ item, created: [`copy-of-${item.unique}`], affects: [] })),
@@ -119,7 +142,7 @@ function controller(windows: UmbraDesktopDragWindowHandle[], allowed = ['image',
   const api = {
     item: async (unique: string) => ({ data: refs[unique] }),
     items: async (uniques: ReadonlyArray<string>) => ({ data: uniques.map((unique) => refs[unique]).filter(Boolean) }),
-    allowedTypes: async () => ({ data: allowed }),
+    allowedTypes: async (type: string | null) => ({ data: typeof allowed === 'function' ? allowed(type) : allowed }),
   } as unknown as UmbraDesktopMediaApi;
   const drag = new UmbraDesktopMediaDragController(
     {
@@ -129,6 +152,8 @@ function controller(windows: UmbraDesktopDragWindowHandle[], allowed = ['image',
       trash: async (items) => (ops.push(`trash ${items.map((i) => i.name).join(',')}`), result(items)),
       restore: async (items, target) => (ops.push(`restore ${items.map((i) => i.name).join(',')} to ${target}`), result(items)),
       access: () => access,
+      // Each test's own record of the types, as each test sets its own Structure settings.
+      types: new UmbraDesktopMediaTypes(),
     },
     () => windows,
     false,
@@ -341,6 +366,68 @@ describe('dragging over a window', () => {
     expect(source.folder.shadowRoot!.getElementById('umbradesktop-media-dragging')?.textContent).to.contain(IMAGE);
     source.handle.element.dispatchEvent(dragEvent('dragover', data, { ctrlKey: true }));
     expect(source.folder.shadowRoot!.getElementById('umbradesktop-media-dragging')?.textContent ?? '').to.equal('');
+  });
+});
+
+/**
+ * #158: where a drag can go is shown the moment it starts, from each place's insert options: every
+ * place in the tree, each window's own place, and folder cards. Places that take the items are tinted,
+ * those that refuse are dimmed, and image cards are never targets, so nothing nests by accident.
+ */
+describe('the marks a drag starts with', () => {
+  const markOf = (element: Element) => element.getAttribute(DROP_MARK_ATTRIBUTE);
+
+  it('tints every place that takes the items and dims every one that refuses, all at once', async () => {
+    const source = managerWindow({ kind: 'folder', unique: PEOPLE }, [IMAGE, GALLERY]);
+    const other = managerWindow({ kind: 'folder', unique: DESIGN }, []);
+    controller([source.handle, other.handle], structure);
+    await startDrag(source);
+    await tick();
+    expect(markOf(source.tree.design), 'a folder that takes videos only').to.equal('refuses');
+    expect(markOf(source.tree.tattoo), 'an image that takes images').to.equal('accepts');
+    expect(markOf(source.cards[1]), 'a gallery card').to.equal('accepts');
+    expect(markOf(source.cards[0]), 'an image card is no target').to.equal(null);
+    expect(markOf(source.tree.bin), 'the recycle bin takes anything, unmarked').to.equal(null);
+    expect(other.record, 'another window’s place').to.include('mark refuses');
+    expect(source.record, 'the place the items are in is no target for a move').to.not.include('mark accepts');
+  });
+
+  it('says on the label what the mark says, and drops into a place that is no folder', async () => {
+    const source = managerWindow({ kind: 'folder', unique: PEOPLE }, [IMAGE]);
+    const { ops } = controller([source.handle], structure);
+    const data = await startDrag(source);
+    await tick();
+    source.tree.design.dispatchEvent(dragEvent('dragover', data));
+    const refused = dragEvent('dragover', data);
+    source.tree.design.dispatchEvent(refused);
+    expect([refused.defaultPrevented, source.label()?.refused]).to.deep.equal([false, true]);
+    const over = dragEvent('dragover', data);
+    source.tree.tattoo.dispatchEvent(over);
+    expect(over.defaultPrevented).to.equal(true);
+    expect(source.label()?.lines[0]).to.deep.equal({ key: 'umbraDesktopMedia_dragMove', args: ['Tattoo'] });
+    source.tree.tattoo.dispatchEvent(dragEvent('drop', data));
+    await tick();
+    expect(ops).to.deep.equal([`move Banjo to ${TATTOO}`]);
+  });
+
+  it('marks again when Ctrl turns the move into a copy', async () => {
+    const source = managerWindow({ kind: 'folder', unique: PEOPLE }, [IMAGE]);
+    controller([source.handle], structure);
+    const data = await startDrag(source);
+    await tick();
+    source.handle.element.dispatchEvent(dragEvent('dragover', data, { ctrlKey: true }));
+    await tick();
+    expect(source.record, 'a copy into its own folder, which takes videos only').to.include('mark refuses');
+  });
+
+  it('takes every mark down when the drag ends', async () => {
+    const source = managerWindow({ kind: 'folder', unique: PEOPLE }, [IMAGE, GALLERY]);
+    controller([source.handle], structure);
+    const data = await startDrag(source);
+    await tick();
+    source.cards[0].dispatchEvent(dragEvent('dragend', data));
+    expect([markOf(source.tree.design), markOf(source.tree.tattoo), markOf(source.cards[1])]).to.deep.equal([null, null, null]);
+    expect(source.record[source.record.length - 1]).to.equal('mark undefined');
   });
 });
 

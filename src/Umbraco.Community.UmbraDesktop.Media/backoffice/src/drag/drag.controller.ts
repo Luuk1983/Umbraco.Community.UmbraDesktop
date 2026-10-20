@@ -11,15 +11,20 @@ import { decodeDrag, draggedKeys, encodeDrag, isCopyDrag, UMBRADESKTOP_MEDIA_DRA
 import { dropLabel } from './label.js';
 import type { UmbraDesktopDropPlan, UmbraDesktopLabelLine } from './label.js';
 import { targetAt, treeKeys } from './targets.js';
-import { clearTarget, lightTarget } from './light.js';
+import { clearMarks, clearTarget, lightTarget, markTargets } from './light.js';
+import type { UmbraDesktopDropMark } from './light.js';
+import { isPlaceRef, umbraDesktopMediaTypes } from '../operations/media-types.js';
+import type { UmbraDesktopMediaTypes, UmbraDesktopReadAllowed } from '../operations/media-types.js';
 import type { UmbraDesktopDragWindow, UmbraDesktopDropTarget } from './targets.js';
 import { buildDragImage, DRAG_IMAGE_SIZE } from './drag-image.js';
 import { UmbraDesktopHoverExpand } from './hover-expand.js';
 
 /**
  * Dragging media between manager windows (design §4, plan tasks 5.6 to 5.9): onto another window's
- * folder, a folder card, a tree folder or the recycle bin, Ctrl (Option on a Mac) to copy, out of the
- * recycle bin to restore.
+ * place, a folder card, a place in the tree or the recycle bin, Ctrl (Option on a Mac) to copy, out of
+ * the recycle bin to restore. As it starts, every target is marked as taking the items or refusing them
+ * (#158, design §19), from the same rule the label under the pointer says, read from each place's
+ * insert options.
  *
  * One controller for the desktop, started by the add-on's desktop context, listening at the document
  * in the capture phase: a drag starts in one window and ends in another, which no single window sees
@@ -37,6 +42,12 @@ export interface UmbraDesktopDragWindowHandle extends UmbraDesktopDragWindow {
    * @param state The state.
    */
   setDrop(state: 'target' | 'refused' | undefined): void;
+  /**
+   * Mark the window's own place as taking the dragged items or refusing them, from the drag's start,
+   * or neither: no drag, or a move into where the items already are.
+   * @param state The mark.
+   */
+  setMark?(state: UmbraDesktopDropMark | undefined): void;
   /**
    * Draw the label under the pointer, or hide it.
    * @param label What it says and where, in viewport coordinates.
@@ -77,7 +88,12 @@ export interface UmbraDesktopDragOperations {
   restore(items: ReadonlyArray<UmbraDesktopMediaRef>, target: string | null): Promise<UmbraDesktopOperationResult>;
   /** What the person may reach, when known: a folder out of reach is no place to drop. */
   access?(): UmbraDesktopMediaAccess | undefined;
+  /** Each media type's insert options, as the tree reads them; the page's own record unless a test gives one. */
+  types?: UmbraDesktopMediaTypes;
 }
+
+/** How often, at most, a drag looks for places the tree has drawn since it started, to mark them too. */
+export const MARK_RESCAN_MS = 400;
 
 /** The id of the style the dragged items are faded with, in core's views. */
 const DRAGGING_STYLE = 'umbradesktop-media-dragging';
@@ -130,6 +146,9 @@ export class UmbraDesktopMediaDragController {
 
   /** The row or card made draggable for the press under way; see {@link #onPointerDown}. */
   #row?: Element;
+
+  /** When the drag last looked for new places to mark; see {@link MARK_RESCAN_MS}. */
+  #scanned = 0;
 
   /**
    * @param ops What the drag asks of the desktop context.
@@ -230,8 +249,9 @@ export class UmbraDesktopMediaDragController {
     this.#targets.clear();
     this.#reading.clear();
     this.#session = { keys, fromBin, copy: false };
+    this.#scanned = Date.now();
     this.#fade(true);
-    void this.#learn(keys);
+    void this.#learn(keys).then(() => this.#mark());
   };
 
   /**
@@ -319,10 +339,16 @@ export class UmbraDesktopMediaDragController {
     if (copy !== session.copy) {
       session.copy = copy;
       this.#fade(!copy);
+      void this.#mark();
     }
     const path = event.composedPath();
     const unknown = this.#unknownIn(path);
     if (unknown.length) void this.#learnKeys(unknown);
+    // A resting drag opens tree places, and core draws them a moment later: they are marked too.
+    if (Date.now() - this.#scanned >= MARK_RESCAN_MS) {
+      this.#scanned = Date.now();
+      void this.#mark();
+    }
     const target = targetAt(path, this.#windows(), (unique) => this.#refs.get(unique)?.isFolder);
     const now = this.#plan(target);
     this.#draw(target, now, event);
@@ -393,7 +419,7 @@ export class UmbraDesktopMediaDragController {
     }
     if (intoFolder) {
       const folders = result.succeeded
-        .filter((each) => each.item.isFolder)
+        .filter((each) => isPlaceRef(each.item, this.#types))
         .map((each) => (now.kind === 'copy' ? each.created?.[0] : each.item.unique))
         .filter((each): each is string => !!each);
       target.window.landed?.(destination, folders);
@@ -414,6 +440,7 @@ export class UmbraDesktopMediaDragController {
     this.#session = undefined;
     this.#expand.cancel();
     this.#releaseRow();
+    for (const window of this.#windows()) clearMarks(window);
     this.#draw(undefined, undefined);
     this.#fade(false);
   }
@@ -430,13 +457,23 @@ export class UmbraDesktopMediaDragController {
     session = this.#session,
   ): UmbraDesktopDropNow | undefined {
     if (!session || !target) return undefined;
-    const items = session.keys.map((key) => this.#refs.get(key)).filter((each): each is UmbraDesktopMediaRef => !!each);
-    const known = items.length === session.keys.length;
     if (target.kind === 'bin') {
       if (session.fromBin) return undefined;
+      const items = session.keys.map((key) => this.#refs.get(key)).filter((each): each is UmbraDesktopMediaRef => !!each);
       return { kind: 'trash', target: '', total: session.keys.length, going: session.keys.length, items };
     }
-    const unique = target.unique;
+    return this.#planFor(target.unique, session);
+  }
+
+  /**
+   * What letting go into a place would do, the place under the pointer or one being marked.
+   * @param unique The place, null for the Media root.
+   * @param session The drag.
+   * @returns The plan, or undefined for a move into the place the items are already in.
+   */
+  #planFor(unique: string | null, session: { keys: string[]; fromBin: boolean; copy: boolean }): UmbraDesktopDropNow | undefined {
+    const items = session.keys.map((key) => this.#refs.get(key)).filter((each): each is UmbraDesktopMediaRef => !!each);
+    const known = items.length === session.keys.length;
     const kind = session.fromBin ? 'restore' : session.copy ? 'copy' : 'move';
     const info = this.#info(unique);
     const name = info?.name ?? (unique ? this.#refs.get(unique)?.name ?? '' : '#sections_media');
@@ -473,25 +510,99 @@ export class UmbraDesktopMediaDragController {
   }
 
   /**
-   * Read a target folder from the server.
-   * @param unique The folder, null for the root.
+   * Read what a target is, once, waiting for a read already under way.
+   * @param unique The place, null for the root.
+   */
+  async #readInfo(unique: string | null): Promise<void> {
+    if (!this.#info(unique)) await this.#targets.get(unique ?? '');
+  }
+
+  /**
+   * Read a target place: what it is and where from what the drag has read, else from the server, and
+   * what it takes from its type's insert options, which the tree has usually read already.
+   * @param unique The place, null for the root.
    */
   async #read(unique: string | null): Promise<void> {
-    const api = this.#ops.api;
     let name = '#sections_media';
     let type: string | null = null;
     const ancestors: string[] = [];
     if (unique) {
-      const folder = (await api.item(unique)).data;
-      name = folder?.name ?? '';
-      type = folder?.mediaType ?? null;
-      for (let parent = folder?.parent ?? null, guard = 0; parent && guard < 100; guard++) {
+      const place = await this.#ref(unique);
+      name = place?.name ?? '';
+      type = place?.mediaType ?? null;
+      for (let parent = place?.parent ?? null, guard = 0; parent && guard < 100; guard++) {
         ancestors.push(parent);
-        parent = (await api.item(parent)).data?.parent ?? null;
+        parent = (await this.#ref(parent))?.parent ?? null;
       }
     }
-    const allowed = await api.allowedTypes(type, unique);
-    this.#targets.set(unique ?? '', { name, ancestors, allowed: allowed.data ? new Set(allowed.data) : undefined });
+    const allowed = await this.#types.allowedChildren(type, this.#readAllowed);
+    this.#targets.set(unique ?? '', { name, ancestors, allowed });
+  }
+
+  /**
+   * An item, as the drag has read it, or from the server.
+   * @param unique Its key.
+   * @returns The item, or undefined when it was not found.
+   */
+  async #ref(unique: string): Promise<UmbraDesktopMediaRef | undefined> {
+    const known = this.#refs.get(unique);
+    if (known) return known;
+    const { data } = await this.#ops.api.item(unique);
+    if (data) this.#refs.set(unique, data);
+    return data;
+  }
+
+  /** Each media type's insert options. */
+  get #types(): UmbraDesktopMediaTypes {
+    return this.#ops.types ?? umbraDesktopMediaTypes;
+  }
+
+  /** Reads a type's insert options from the server, for the record of them. */
+  #readAllowed: UmbraDesktopReadAllowed = async (type) => (await this.#ops.api.allowedTypes(type, null)).data;
+
+  /**
+   * Mark every target in every window as taking the dragged items or refusing them: the places in its
+   * tree, its folder cards and its own place, each from {@link #planFor}, the label's own rule. Image
+   * cards are never targets, and the recycle bin takes anything, so neither is marked.
+   */
+  async #mark(): Promise<void> {
+    const session = this.#session;
+    if (!session) return;
+    const windows = this.#windows().map((window) => {
+      const tree = window.tree();
+      const treePlaces: Array<string | null> = tree ? [null, ...new Set(treeKeys(tree))] : [];
+      const folder = window.folder();
+      const cards = folder ? renderedItems(folder).map((each) => each.unique) : [];
+      const place = window.place();
+      const own = place.kind === 'folder' ? place.unique : place.kind === 'root' ? null : undefined;
+      return { window, treePlaces, cards, own };
+    });
+    await this.#learnKeys(windows.flatMap((each) => [...each.treePlaces, ...each.cards].filter((key): key is string => !!key)));
+    const places = new Set<string | null>();
+    for (const each of windows) {
+      for (const unique of each.treePlaces) places.add(unique);
+      for (const unique of each.cards) if (this.#refs.get(unique)?.isFolder) places.add(unique);
+      if (each.own !== undefined) places.add(each.own);
+    }
+    await Promise.all([...places].map((unique) => this.#readInfo(unique)));
+    if (session !== this.#session) return;
+    for (const each of windows) {
+      const markOf = (unique: string | null) => {
+        const plan = this.#planFor(unique, session);
+        return plan ? (plan.going === 0 ? 'refuses' : 'accepts') : undefined;
+      };
+      const tree = new Map<string | null, UmbraDesktopDropMark>();
+      for (const unique of each.treePlaces) {
+        const mark = markOf(unique);
+        if (mark) tree.set(unique, mark);
+      }
+      const cards = new Map<string, UmbraDesktopDropMark>();
+      for (const unique of each.cards) {
+        const mark = this.#refs.get(unique)?.isFolder ? markOf(unique) : undefined;
+        if (mark) cards.set(unique, mark);
+      }
+      markTargets(each.window, { tree, cards, place: each.own === undefined ? undefined : markOf(each.own) });
+    }
   }
 
   /**

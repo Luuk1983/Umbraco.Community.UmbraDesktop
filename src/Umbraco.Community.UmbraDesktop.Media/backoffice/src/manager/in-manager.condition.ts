@@ -9,7 +9,7 @@ export const UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION = 'Umbraco.Community.UmbraD
 
 /** What the condition can be told. */
 export interface UmbraDesktopInMediaManagerConditionConfig extends UmbConditionConfigBase<typeof UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION> {
-  /** Only for a folder or the Media root, as "Open in new window" is. */
+  /** Only for a place or the Media root, as "Open in new window" is. */
   folder?: boolean;
 }
 
@@ -19,7 +19,8 @@ export interface UmbraDesktopInMediaManagerConditionConfig extends UmbConditionC
  *
  * Asked for a folder, also checks the entity the action is for: the Media root, or an item whose
  * type has a collection. Core gives every card, table row and tree item its own entity context, which
- * is what this reads.
+ * is what this reads. In the window's tree every item is a place, a folder or an item that can hold
+ * items (#158, design §19), so there any item gets a folder's actions; a card keeps an item's.
  */
 export class UmbraDesktopInMediaManagerCondition
   extends UmbConditionBase<UmbraDesktopInMediaManagerConditionConfig>
@@ -67,9 +68,28 @@ export class UmbraDesktopInMediaManagerCondition
       this.permitted = false;
       return;
     }
+    if (inTree(this.getHostElement())) {
+      this.permitted = true;
+      return;
+    }
     const folder = await window.isFolder(unique);
     if (ask === this.#asks) this.permitted = folder;
   }
+}
+
+/** The tag of the window's tree, whose items are all places. */
+const TREE_HOST = 'UMBRADESKTOP-MEDIA-TREE-HOST';
+
+/**
+ * Whether an element is inside a manager window's tree, through the shadow roots core draws it in.
+ * @param element The element.
+ * @returns True inside the tree.
+ */
+function inTree(element: Element | undefined): boolean {
+  for (let node: Node | null | undefined = element; node; node = node.parentNode ?? (node as ShadowRoot).host) {
+    if (node instanceof Element && node.tagName === TREE_HOST) return true;
+  }
+  return false;
 }
 
 export { UmbraDesktopInMediaManagerCondition as api };

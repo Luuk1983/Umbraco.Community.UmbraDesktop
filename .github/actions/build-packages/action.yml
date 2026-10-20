@@ -42,7 +42,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: nuget-${{ runner.os }}-${{ hashFiles('src/Umbraco.Community.UmbraDesktop/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Media/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Entertainment/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Media/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/packages.lock.json') }}
+        key: nuget-${{ runner.os }}-${{ hashFiles('src/Umbraco.Community.UmbraDesktop/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Media/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Entertainment/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Media/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Media.Tests/packages.lock.json') }}
         restore-keys: nuget-${{ runner.os }}-
 
     # Per project rather than by solution, and deliberately. The solution also holds the test
@@ -63,6 +63,7 @@ runs:
         dotnet restore src/Umbraco.Community.UmbraDesktop.Media/Umbraco.Community.UmbraDesktop.Media.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Accessories.Tests/Umbraco.Community.UmbraDesktop.Accessories.Tests.csproj
         dotnet restore src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests.csproj
+        dotnet restore src/Umbraco.Community.UmbraDesktop.Media.Tests/Umbraco.Community.UmbraDesktop.Media.Tests.csproj
 
     - name: Install frontend dependencies
       shell: bash
@@ -121,6 +122,7 @@ runs:
         dotnet test src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj --configuration Release --no-restore
         dotnet test src/Umbraco.Community.UmbraDesktop.Accessories.Tests/Umbraco.Community.UmbraDesktop.Accessories.Tests.csproj --configuration Release --no-restore
         dotnet test src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests.csproj --configuration Release --no-restore
+        dotnet test src/Umbraco.Community.UmbraDesktop.Media.Tests/Umbraco.Community.UmbraDesktop.Media.Tests.csproj --configuration Release --no-restore
 
     # Every package, every release, changed or not: they share a version off one tag, and matching
     # versions are the compatibility answer instead of a matrix somebody has to maintain

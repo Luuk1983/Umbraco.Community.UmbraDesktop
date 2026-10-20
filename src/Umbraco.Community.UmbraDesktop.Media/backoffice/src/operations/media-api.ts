@@ -21,6 +21,11 @@ export interface UmbraDesktopMediaRef {
   mediaType: string;
   /** Whether it is a folder: its media type has a collection (plan decision 6). */
   isFolder: boolean;
+  /**
+   * Whether it holds items, when the server said: any item may, where a site's Structure settings let
+   * its type hold some (#158), and a copy of it then carries them.
+   */
+  hasChildren?: boolean;
   /** Whether it is in the recycle bin, when the server said; what an undo checks (plan task 8.1). */
   isTrashed?: boolean;
 }
@@ -160,6 +165,7 @@ interface UmbraDesktopMediaItemShape {
   mediaType: { id: string; collection?: { id: string } | null };
   variants: Array<{ name: string }>;
   isTrashed?: boolean;
+  hasChildren?: boolean;
 }
 
 /**
@@ -175,6 +181,7 @@ function refOf(item: UmbraDesktopMediaItemShape): UmbraDesktopMediaRef {
     mediaType: item.mediaType.id,
     isFolder: !!item.mediaType.collection,
     ...(item.isTrashed === undefined ? {} : { isTrashed: item.isTrashed }),
+    ...(item.hasChildren === undefined ? {} : { hasChildren: item.hasChildren }),
   };
 }
 
