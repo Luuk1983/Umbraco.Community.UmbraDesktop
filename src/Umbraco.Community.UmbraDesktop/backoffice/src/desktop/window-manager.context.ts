@@ -244,15 +244,21 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    *
    * A location opens the app there, as {@link open} does: how the Media Manager opens a folder in a
    * new window (#144). An optional parameter, so the published shape only gains.
+   *
+   * `reuse` brings forward the window of that app already at that location, and opens a new one
+   * only when there is none (#137): Edit image on an image an editor already shows. Opt-in, because
+   * the Media Manager's "Open in new window" means a new window even onto the same folder. A desktop
+   * older than the option ignores it and opens a second window, which is the harmless direction.
    * @param alias The app's manifest alias.
    * @param options Where the app should open.
    * @param options.location The app's own location string, handed to its element as `location`.
+   * @param options.reuse Whether a window already at `location` is focused instead.
    * @returns Whether a window was opened or focused.
    */
-  public openApp(alias: string, options: { location?: string } = {}): boolean {
+  public openApp(alias: string, options: { location?: string; reuse?: boolean } = {}): boolean {
     const app = this.#appSource?.().find((each) => each.alias === alias);
     if (!app) return false;
-    this.open(app, typeof options?.location === 'string' ? { location: options.location } : {});
+    this.open(app, typeof options?.location === 'string' ? { location: options.location, reuse: options.reuse === true } : {});
     return true;
   }
 
@@ -287,12 +293,17 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * An app window can be opened at a location (Help design D7): the app gets it as its `location`
    * property before it connects, and the window records it, so the layout saves it and a feature can
    * find the window showing it. The app's catalogue entry is not touched; the window gets a copy.
+   *
+   * With `reuse`, a window of the app already at that location comes to the front instead (#137,
+   * and Help's D6 before it). Matched on where the window is now, as the app last reported, so one
+   * that has moved on is left alone; attached content is its owner's and is never the match.
    * @param app The app to open.
    * @param options Where an app window should open. Ignored for a backoffice window, which opens at
    *   its own address.
    * @param options.location The app's own location string.
+   * @param options.reuse Whether a window of the app already at `location` is focused instead.
    */
-  public open(app: UmbraDesktopApp, options: { location?: string } = {}): void {
+  public open(app: UmbraDesktopApp, options: { location?: string; reuse?: boolean } = {}): void {
     // Every route to an app comes through here, so this is the one place a tile that opens settings
     // has to be caught: no window is made, so the taskbar, reopen-windows and allowMultiple never see it.
     if (app.opensSettings) {
@@ -300,6 +311,13 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
       return;
     }
     const current = this.#windows.getValue();
+    if (options.reuse && options.location !== undefined) {
+      const showing = current.find((w) => w.app.alias === app.alias && !w.owner && w.location === options.location);
+      if (showing) {
+        this.focus(showing.id);
+        return;
+      }
+    }
     if (app.allowMultiple === false) {
       const existing = findAppWindow(current, app.alias);
       if (existing) {
@@ -374,13 +392,30 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * Record the page a backoffice window's frame is showing, for the window layout to reopen it at.
    * Written without a re-render when nothing changed, because the frame reports on every route
    * change and most of those are to the page it is already on.
+   *
+   * An empty location clears it (#137): an app that could not reach where it was sent says so with
+   * an empty report, so `reuse` does not bring the broken window forward and a reload does not send
+   * it back to fail at the same place.
    * @param id The window.
-   * @param location The frame's page, as a path on this site.
+   * @param location The frame's page, as a path on this site, or an app's own location string;
+   *   empty to clear it.
    */
   public setLocation(id: string, location: string): void {
     const current = this.#windows.getValue();
     const target = current.find((w) => w.id === id);
-    if (!target || target.location === location) return;
+    if (!target) return;
+    if (!location) {
+      if (target.location === undefined) return;
+      this.#windows.setValue(
+        current.map((w) => {
+          if (w.id !== id) return w;
+          const { location: _old, ...rest } = w;
+          return rest;
+        }),
+      );
+      return;
+    }
+    if (target.location === location) return;
     // A floating attached page renames itself once it reaches the page it was routed to (#144).
     const app = target.owner ? this.#arrived(id, target.app, location) : target.app;
     this.#windows.setValue(current.map((w) => (w.id === id ? { ...w, app, location } : w)));

@@ -13,6 +13,7 @@ import { applySectionTabHide } from '../../headerapps/section-tab-hide.js';
 import { UmbraDesktopWindowManagerContext } from '../window-manager.context';
 import { UmbraDesktopAppCatalogueContext } from '../app-catalogue.context.js';
 import { UmbraDesktopServerEventController } from '../conflict/server-event.controller.js';
+import { UmbraDesktopMediaChangeController } from '../live-media/media-change.controller.js';
 import { UmbraDesktopSettingsContext } from '../settings/settings.context.js';
 import { UMBRADESKTOP_PACKAGE_SETTINGS_CONTEXT } from '../settings/package-settings.context-token.js';
 import type { UmbraDesktopPackageSettingsContext } from '../settings/package-settings.context.js';
@@ -209,6 +210,9 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     new UmbraDesktopThemeStyles(this, 'desktop');
     // Consumed once here, not per window: see the class doc on why.
     new UmbraDesktopServerEventController(this, this.#manager);
+    // The desktop page's own lists and thumbnails (Media Manager windows), kept up to date with media
+    // changes made anywhere; each window's frame starts its own (`live-media/`, #137).
+    new UmbraDesktopMediaChangeController(this);
     this.observe(this.#manager.windows, (list) => (this._windows = list));
     this.observe(this.#manager.snapPreview, (rect) => (this._snapPreview = rect));
     this.observe(this.#settings.wallpaper, (wallpaper) => (this._wallpaper = wallpaper));

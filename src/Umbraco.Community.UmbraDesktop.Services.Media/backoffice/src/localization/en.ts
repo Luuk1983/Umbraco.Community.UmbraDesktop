@@ -16,6 +16,10 @@ export default {
     overwriteHeadline: 'Overwrite %0%?',
     overwriteQuestion: '%0% was changed in the media library after you opened it. Overwrite it with your version?',
     overwriteConfirm: 'Overwrite',
+    copyFormatRefused: '%0% cannot be copied as a %1% file: its media type does not take that format. Choose another format.',
+    copyFolderRefused: '%0% cannot be copied into that folder: the folder does not allow its media type. Choose another folder.',
+    copyLeftOut: 'Saved as a copy without %0%: that file could not be copied.',
+    copyPlain: 'The original is no longer in the media library, so the copy is a new item without its properties.',
 
     // The file menu: its title when the app gives none, its commands and the line under each, and
     // the buttons its panels share. Issue #136, design §14.
@@ -48,6 +52,10 @@ export default {
     discardHeadline: 'Discard your changes?',
     discardQuestion: 'Opening another file throws away the changes you have not saved.',
     discardConfirm: 'Discard',
+    usedHeadline: 'Save over %0%?',
+    usedQuestionOne: '%0% is used in 1 place. Saving changes it there too. Use Save as to keep the original.',
+    usedQuestionMany: '%0% is used in %1% places. Saving changes it everywhere it is used. Use Save as to keep the original.',
+    usedConfirm: 'Save',
 
     // Saving, from the menu or Save as.
     saveSaving: 'Saving...',
@@ -75,8 +83,6 @@ export default {
     saveAsNow: 'Now',
     saveAsAfter: 'After',
     saveAsMeasuring: 'Measuring...',
-    saveAsAddressWarning:
-      "A new format changes the file's address. Pages that pick the image are fine; a link someone pasted to the old file will break.",
     saveAsSaveCopy: 'Save copy',
     saveAsPreview: '%0% × %1% px, as it will be saved',
 
@@ -90,5 +96,9 @@ export default {
     infoFormat: 'Format',
     infoUpdated: 'Last updated',
     infoNeverSaved: 'Not saved yet',
+    infoUsedIn: 'Used in',
+    infoUsedInNone: 'Not used anywhere',
+    infoUsedInOne: '1 place',
+    infoUsedInMany: '%0% places',
   },
 };

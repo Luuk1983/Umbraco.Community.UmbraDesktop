@@ -31,9 +31,20 @@ export interface OpenedMedia {
   focalPoint?: { left: number; top: number } | null;
   /** The file's own name, which a save over the item keeps. */
   fileName?: string;
+  /** Whether the item is in the recycle bin; issue #137's field. Undefined from an older service. */
+  isTrashed?: boolean;
 }
 
-/** What to save, and where. A copy of the service's `MediaSaveRequest`, with `resetFocalPoint`. */
+/** How opening by key went. A copy of the service's `MediaOpenResult`. */
+export type MediaOpenResult = ({ status: 'opened' } & OpenedMedia) | { status: 'cancelled' } | { status: 'failed'; name?: string };
+
+/**
+ * How the editor's open by key went: the service's answer, or `unreachable` when the service did not
+ * answer at all, which says nothing about the item.
+ */
+export type EditorOpenResult = MediaOpenResult | { status: 'unreachable' };
+
+/** What to save, and where. A copy of the service's `MediaSaveRequest`, with `copyOf` and `resetFocalPoint`. */
 export interface MediaSaveRequest {
   /** The file. */
   file: File;
@@ -47,14 +58,16 @@ export interface MediaSaveRequest {
   expectedUpdateDate?: string | null;
   /** Overwrite even if it changed since. */
   force?: boolean;
-  /** Reset the overwritten item's focal point and named crops. */
+  /** The item a new item is a full copy of, when `existing` is not set. */
+  copyOf?: string;
+  /** Reset the overwritten or copied item's focal point and named crops. */
   resetFocalPoint?: boolean;
 }
 
 /** The part of the service's context the editor reaches for. */
 interface MediaServiceContext extends UmbContextMinimal {
   /** Pick and read a file, or the one named. */
-  open(options?: { unique?: string }): Promise<unknown>;
+  open(options?: { unique?: string }): Promise<MediaOpenResult>;
 }
 
 /** The service's context, by its published alias. */
@@ -96,5 +109,21 @@ export class MediaService extends UmbControllerBase {
   async reachable(): Promise<boolean> {
     if (!this.#service) await Promise.race([this.#found, new Promise((resolve) => setTimeout(resolve, this.#waitMs))]);
     return !!this.#service;
+  }
+
+  /**
+   * Read a media item by key, without the picker: what the editor opened at a location does (#137).
+   * Opening from the file menu goes through the menu instead, which runs this same call.
+   * @param unique The media item.
+   * @returns How it went; `unreachable` when the service is not there or the call itself failed,
+   *   which says nothing about the item.
+   */
+  async open(unique: string): Promise<EditorOpenResult> {
+    if (!(await this.reachable())) return { status: 'unreachable' };
+    try {
+      return await this.#service!.open({ unique });
+    } catch {
+      return { status: 'unreachable' };
+    }
   }
 }

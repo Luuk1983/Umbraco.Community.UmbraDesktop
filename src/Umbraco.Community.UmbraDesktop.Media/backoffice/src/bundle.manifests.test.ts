@@ -81,7 +81,9 @@ it('registers the Image Editor under its final alias, for anyone who may use the
   const editor = app('ImageEditor')!;
   expect(editor.meta.label).to.equal('#umbraDesktopMedia_imageEditor');
   expect(area.imageEditor).to.be.a('string');
-  expect(editor.meta.icon).to.equal('icon-picture');
+  // Not icon-picture, which is the Media section's own (owner, 2026-10-20), nor Paint's icon-palette,
+  // the Crop mode's icon-crop or the Markup pen's icon-brush: a pencil and ruler, used nowhere else.
+  expect(editor.meta.icon).to.equal('icon-ruler-alt');
   expect(editor.meta.group).to.equal('media');
   expect(editor.meta.allowMultiple).to.equal(true);
   expect(editor.meta.defaultSize).to.deep.equal(IMAGE_EDITOR_CONTENT_SIZE);
@@ -111,15 +113,72 @@ it('puts the Media Manager before the Image Editor, each with its own icon', () 
   expect(manager.meta.icon).to.not.equal(editor.meta.icon);
 });
 
-/** Design §1: our actions only inside a manager window, so the Media section stays as Umbraco ships it. */
-it('shows every action of its own only inside a manager window', () => {
-  const [condition] = byType('condition');
-  expect(condition.alias).to.equal('Umbraco.Community.UmbraDesktop.Media.Condition.InMediaManager');
-  const actions = [...byType('entityAction'), ...byType('entityBulkAction')] as Array<{ conditions?: Array<{ alias: string }> }>;
-  expect(actions.length).to.be.greaterThan(0);
-  for (const action of actions) {
-    expect(action.conditions?.some((each) => each.alias === condition.alias)).to.equal(true);
+/** An action's fields, as far as the tests below read them. */
+interface Action {
+  alias: string;
+  forEntityTypes: string[];
+  meta: { label: string; icon: string };
+  conditions?: Array<{ alias: string; match?: string; folder?: boolean }>;
+}
+
+/** Every action this package registers, item and selection bar alike. */
+const actions = () => [...byType('entityAction'), ...byType('entityBulkAction')] as unknown as Action[];
+
+/** The in-manager condition's alias, found by alias rather than by its place in the list. */
+const IN_MANAGER = 'Umbraco.Community.UmbraDesktop.Media.Condition.InMediaManager';
+
+/**
+ * The actions that belong to a Media Manager window and to no other place: the Manager's own
+ * clipboard and windows. Named one by one, so an action added later has to be put on this list or
+ * on the everywhere list below, and cannot slip into the Media section by default.
+ */
+const MANAGER_ONLY = ['OpenInNewWindow', 'Cut', 'Copy', 'Paste', 'BulkCut', 'BulkCopy', 'CopyTo'];
+
+/** The actions that show wherever core shows a media item's actions, on the desktop (#137). */
+const EVERYWHERE = ['EditImage'];
+
+it('registers the in-manager condition', () => {
+  expect(byType('condition').map((m) => m.alias)).to.include(IN_MANAGER);
+});
+
+/** Design §1: the Manager's actions only inside a manager window, so the Media section stays as Umbraco ships it. */
+it("shows the Manager's own actions only inside a manager window", () => {
+  for (const name of MANAGER_ONLY) {
+    const action = actions().find((m) => m.alias === `Umbraco.Community.UmbraDesktop.Media.${name}`);
+    expect(action, name).to.not.equal(undefined);
+    expect(action!.conditions?.some((each) => each.alias === IN_MANAGER), name).to.equal(true);
   }
+});
+
+it('puts every action it registers on one of the two lists', () => {
+  const named = [...MANAGER_ONLY, ...EVERYWHERE].map((name) => `Umbraco.Community.UmbraDesktop.Media.${name}`);
+  expect(actions().map((m) => m.alias).sort()).to.deep.equal(named.sort());
+});
+
+/**
+ * #137: Edit image on image items wherever core shows a media item's actions (the tree, the grid,
+ * the table and the item's workspace), in the Media section and in Manager windows alike. So not
+ * the in-manager condition: the desktop instead, the Media section as the Image Editor app has it,
+ * not in the bin, and an image.
+ */
+it('offers Edit image on image items wherever the desktop is, not only in a manager window', () => {
+  const edit = actions().find((m) => m.alias === 'Umbraco.Community.UmbraDesktop.Media.EditImage')!;
+  expect(edit.forEntityTypes).to.deep.equal(['media']);
+  expect(edit.meta.label).to.equal('#umbraDesktopMedia_editImage');
+  expect(area.editImage).to.be.a('string');
+  expect(edit.meta.icon).to.equal(app('ImageEditor')!.meta.icon);
+  const conditions = edit.conditions ?? [];
+  expect(conditions.some((each) => each.alias === IN_MANAGER)).to.equal(false);
+  expect(conditions.map((each) => each.alias)).to.deep.equal([
+    'Umbraco.Community.UmbraDesktop.Media.Condition.OnDesktop',
+    'Umb.Condition.SectionUserPermission',
+    'Umb.Condition.EntityIsNotTrashed',
+    'Umbraco.Community.UmbraDesktop.Media.Condition.IsImage',
+  ]);
+  expect(conditions.find((each) => each.alias === 'Umb.Condition.SectionUserPermission')?.match).to.equal('Umb.Section.Media');
+  const registered = byType('condition').map((m) => m.alias);
+  expect(registered).to.include('Umbraco.Community.UmbraDesktop.Media.Condition.OnDesktop');
+  expect(registered).to.include('Umbraco.Community.UmbraDesktop.Media.Condition.IsImage');
 });
 
 it('offers Open in new window on folders and the Media root', () => {
@@ -128,7 +187,7 @@ it('offers Open in new window on folders and the Media root', () => {
     | undefined;
   expect(open?.forEntityTypes).to.deep.equal(['media', 'media-root']);
   expect(open?.meta.label).to.equal('#umbraDesktopMedia_openInNewWindow');
-  expect(open?.conditions[0].folder).to.equal(true);
+  expect(open?.conditions.find((each) => each.alias === IN_MANAGER)?.folder).to.equal(true);
 });
 
 /** Design §5: the clipboard is ours, in item menus, folder menus and core's selection bar. */

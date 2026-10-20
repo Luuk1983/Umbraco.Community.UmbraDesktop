@@ -1,4 +1,4 @@
-import { css, customElement, html, nothing, state } from '@umbraco-cms/backoffice/external/lit';
+import { css, customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { wordsOf } from '../shared/words.js';
 import { FILE_MENU_TAG, OPEN_VIEW_TAG, whenFileMenu } from '../shared/file-menu.js';
@@ -92,6 +92,10 @@ interface OpenDocument {
  * drawn for the view by the same `renderDocument` that draws the file, at the view's size, with the
  * adjustment as a live GPU filter on top (`stage.ts`).
  *
+ * Its location is the open item's key (#137): it opens the item it is given on connect, and reports
+ * the one it shows through `umbradesktop-app-location`, so Edit image finds its window and a reload
+ * reopens it at that image.
+ *
  * Its window's title is the open item's name, through the desktop's `umbradesktop-app-title` event, and
  * its unsaved dot is its history's, through the attribute the desktop reads (`data-umbradesktop-dirty`);
  * the menu's Close closes the window through the desktop's unsaved guard (`umbradesktop-close-request`).
@@ -150,6 +154,14 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
   /** The item's focal point as fractions, or null; drawn in Crop. */
   @state()
   focalPoint: { left: number; top: number } | null = null;
+
+  /**
+   * The media item to open, by key: the editor's location (#137, design §4.1). The desktop sets it
+   * before the editor connects, when Edit image opens the editor at an item and when a window reopens
+   * at the item it had; the editor opens it once the media library answers.
+   */
+  @property({ attribute: false })
+  location?: string;
 
   /** What a mode keeps while it is the mode, by mode: its tool, its style, its compare state. */
   readonly modeState: Record<string, unknown> = {};
@@ -355,6 +367,9 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // Before the first update, which reports the location: an editor opening an item is there
+    // already as far as the desktop is concerned, so a second Edit image on it finds this window.
+    if (this.location && !this.hasDocument) this.#opening = true;
     if (!this.hasAttribute('tabindex')) this.tabIndex = 0;
     this.addEventListener('keydown', this.#onKeyDown);
     this.addEventListener('keyup', this.#onKeyUp);
@@ -383,7 +398,55 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
   protected override updated(): void {
     this.toggleAttribute('data-umbradesktop-dirty', this.dirty);
     this.#sendTitle(this._document ? this._name : '');
+    if (!this.#opening && !this.#keepLocation) this.#sendLocation(this._document?.unique ?? '');
     this.#syncMenu();
+  }
+
+  /** Whether the item at the editor's location is still being opened, so its location is not cleared meanwhile. */
+  #opening = false;
+
+  /**
+   * Whether the item at the editor's location could not be asked for at all (the media library did
+   * not answer in time, or the call failed), so the window keeps its location: that says nothing
+   * about the item, and clearing it would lose it from the window for good. Only a definite answer
+   * clears it: gone, refused, in the bin, or not an image the editor opens. Reset once a file opens.
+   */
+  #keepLocation = false;
+
+  /** The location last reported, or undefined before the first. */
+  #sentLocation?: string;
+
+  /**
+   * Tell the desktop which media item the editor shows, through `umbradesktop-app-location`
+   * (`docs/developer/desktop-apps.md` §7.3), whenever that changes: an open, and a Save as onto a
+   * copy. Empty with nothing open, which clears the window's location, so an editor whose image failed
+   * to open is not brought forward for it and does not fail at it again after a reload.
+   * @param location The item's key, or an empty string.
+   */
+  #sendLocation(location: string): void {
+    if (location === this.#sentLocation) return;
+    this.#sentLocation = location;
+    this.dispatchEvent(new CustomEvent('umbradesktop-app-location', { detail: { location }, bubbles: true, composed: true }));
+  }
+
+  /**
+   * Open the item at the editor's location, by key, through the media service: then the same path as
+   * an open from the file menu. A failure leaves the empty canvas with Open on it and the reason in the
+   * status bar.
+   * @param unique The media item.
+   */
+  async #openAt(unique: string): Promise<void> {
+    try {
+      const result = await this.#media.open(unique);
+      if (result.status === 'opened') await this.#openFile(result);
+      else if (result.status === 'unreachable') {
+        this.#keepLocation = true;
+        this.notice = { kind: 'error', text: this.words('unreachable') };
+      } else this.notice = { kind: 'error', text: result.status === 'failed' && result.name ? this.words('openFailed', result.name) : this.words('openFailedUnnamed') };
+    } finally {
+      this.#opening = false;
+      this.requestUpdate();
+    }
   }
 
   /** The title last given to the window, or undefined before the first. */
@@ -393,8 +456,9 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
    * Name the window after the open item, or give it the app's own name back with an empty title, through
    * the desktop's `umbradesktop-app-title` (`docs/developer/desktop-apps.md` §7). Said only when it
    * changes, and said once as the editor starts even with nothing open: the desktop saves a window's
-   * title with the layout and shows it on a reopened window, while the editor reopens empty, so an
-   * empty title is what takes the last session's file name off it.
+   * title with the layout and shows it on a reopened window, and an editor that reopens with no item to
+   * open (or fails to open it) is empty, so an empty title is what takes the last session's file name
+   * off it.
    * @param title The item's name, or an empty string with nothing open.
    */
   #sendTitle(title: string): void {
@@ -411,7 +475,14 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
     const [menu, service] = await Promise.all([whenFileMenu(), this.#media.reachable()]);
     this.reachable = menu && service;
     await this.updateComplete;
-    if (!this.reachable) this.notice = { kind: 'error', text: this.words('unreachable') };
+    if (!this.reachable) {
+      this.notice = { kind: 'error', text: this.words('unreachable') };
+      if (this.#opening) this.#keepLocation = true;
+      this.#opening = false;
+      this.requestUpdate();
+      return;
+    }
+    if (this.location && !this.hasDocument) await this.#openAt(this.location);
   }
 
   /**
@@ -543,12 +614,25 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
   }
 
   /**
-   * The file menu or the open view opened a file: refuse what the editor does not edit, decode the
-   * rest, and start a history on it.
+   * The file menu or the open view opened a file.
    * @param event Their event, with the file.
    */
   #onOpen = async (event: Event) => {
-    const file = (event as CustomEvent<OpenedMedia>).detail;
+    await this.#openFile((event as CustomEvent<OpenedMedia>).detail);
+  };
+
+  /**
+   * Open a file, from the file menu, the open view or the editor's location: refuse what the editor
+   * does not edit, decode the rest, and start a history on it. An item in the recycle bin is refused
+   * too (#137): opening by key reads an item wherever it is, and an image saved in the bin is an image
+   * nobody sees. A refusal leaves whatever was open as it was.
+   * @param file The file.
+   */
+  async #openFile(file: OpenedMedia): Promise<void> {
+    if (file.isTrashed) {
+      this.notice = { kind: 'error', text: this.words('openTrashed', file.name) };
+      return;
+    }
     const refusal = refusalFor(file.extension);
     if (refusal) {
       this.notice = { kind: 'error', text: this.words(refusal === 'svg' ? 'refusedSvg' : 'refusedOther', file.name) };
@@ -563,6 +647,7 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
     }
     const animated = file.extension.toLowerCase() === 'gif' && isAnimatedGif(new Uint8Array(await file.blob.arrayBuffer()));
     this.#leaveMode();
+    this.#keepLocation = false;
     this.picture = picture;
     const initial = initialState({ w: picture.width, h: picture.height });
     if (this.history) this.history.reset(initial);
@@ -591,7 +676,7 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
     this.#redrawView();
     this.#syncOverlays();
     MODE_MODULES[this.mode].enter?.(this);
-  };
+  }
 
   /**
    * The file menu saved: the history is saved there, and the editor takes what was written as its
@@ -601,8 +686,9 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
   #onSaved = (event: Event) => {
     const saved = (event as CustomEvent<FileSavedDetail>).detail;
     if (!this._document || !this.history) return;
-    // A copy is a new item, with no focal point; an overwrite that reframed the picture reset it.
-    if (saved.copy || this.resetFocalPoint) this.focalPoint = null;
+    // A copy is a full copy and carries the focal point (design §11.6); a save, copy or overwrite,
+    // that reframed the picture reset it; a plain copy, of an image gone by then, never had one (§11.7).
+    if (this.resetFocalPoint || (saved.copy && saved.fullCopy === false)) this.focalPoint = null;
     this.history.markSaved();
     this._document = {
       unique: saved.unique,
@@ -615,7 +701,7 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
       fileName: saved.fileName,
     };
     this._name = saved.name;
-    this.notice = { kind: 'info', text: this.words('saved') };
+    this.notice = { kind: 'info', text: saved.notice || this.words('saved') };
     this._revision++;
   };
 

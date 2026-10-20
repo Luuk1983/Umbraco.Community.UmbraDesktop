@@ -1,8 +1,8 @@
 import type { SaveFormat } from './types.js';
 
 /*
- * What each save format means for the file: its MIME type, its extension, whether choosing it moves
- * the file to a new address. Design §6: Keep is the item's own format when a canvas can write it,
+ * What each save format means for the file: its MIME type, its extension, and the name a save over an
+ * item writes it under. Design §6: Keep is the item's own format when a canvas can write it,
  * GIF and BMP cannot be kept, AVIF is never offered because not every browser's canvas encodes it.
  */
 
@@ -54,14 +54,48 @@ export function extensionFor(format: SaveFormat, originalExtension: string): str
 }
 
 /**
- * Whether saving in a format changes the file's address: its extension changes, so its path does,
- * and a link someone pasted to the old file breaks. Save as warns when it does.
- * @param extension The file's extension now.
- * @param format The format chosen.
- * @returns True when the address changes.
+ * The hash a save over an item puts at the end of the file's name: `-ud` and eight hex digits. The
+ * `ud` marks it as ours, so only an earlier save's hash is replaced: a bare `-` and eight digits also
+ * ends a name with a date in it (`scan-20241020`), which lost its date before the marker (found by the
+ * reviewer of #137).
  */
-export function addressChanges(extension: string, format: SaveFormat): boolean {
-  return keepFormatFor(extension) !== format;
+const HASH_SUFFIX = /-ud[0-9a-f]{8}$/;
+
+/**
+ * A short hash of a file's contents: 32-bit FNV-1a, as eight hex digits.
+ *
+ * A cache buster, not a fingerprint (#137): it only has to differ between one image's successive
+ * versions, which 32 bits do but for a chance of one in four billion. FNV rather than the browser's
+ * SHA-256 because `crypto.subtle` exists only on https and localhost, and a backoffice served over
+ * plain http must still save. A few milliseconds for a photo of several megabytes.
+ * @param bytes The file's contents.
+ * @returns The hash.
+ */
+export function contentHash(bytes: Uint8Array): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < bytes.length; i++) {
+    hash ^= bytes[i];
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+/**
+ * The name a save over an item writes its file under: the name it had, with the hash of the new
+ * contents in place of the hash an earlier save put there (#137).
+ *
+ * Why a new name at all: Umbraco keeps a media item's file in one folder for good (the folder comes
+ * from the item and property keys), so the file's name is all that can give it a new address, and
+ * without a new address every browser cache, thumbnails included, goes on showing the old picture.
+ * Core does the same when a person uploads a replacement: the file takes the uploaded file's name.
+ * The same contents get the same name, so a save that changes nothing keeps the address.
+ * @param base The file's name now, without its extension.
+ * @param hash The new contents' {@link contentHash}.
+ * @param extension The extension to write, without the dot.
+ * @returns The file name.
+ */
+export function versionedFileName(base: string, hash: string, extension: string): string {
+  return `${base.replace(HASH_SUFFIX, '')}-ud${hash}.${extension}`;
 }
 
 /**

@@ -13,6 +13,12 @@ import { UMBRADESKTOP_MEDIA_CONTEXT } from './media.context-token.js';
 import '../file-menu/file-menu.element.js';
 import '../file-menu/open-view.element.js';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
+import { UMB_ACTION_EVENT_CONTEXT } from '@umbraco-cms/backoffice/action';
+import {
+  UmbEntityUpdatedEvent,
+  UmbRequestReloadChildrenOfEntityEvent,
+  UmbRequestReloadStructureForEntityEvent,
+} from '@umbraco-cms/backoffice/entity-action';
 import { extensionOf } from '../files/extension.js';
 import { RecentMediaList, browserStorage, recentKeyFor } from '../recent/recent-media.js';
 import type { RecentMediaEntry, RecentStorage } from '../recent/recent-media.js';
@@ -146,8 +152,39 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
         Date.now(),
         { keepFolder: !!request.existing },
       );
+      await this.#announce(request, result.unique);
     }
     return result;
+  }
+
+  /**
+   * Tell the windows on the desktop page what a save changed, through core's own action events, as
+   * core's media workspace does after its own save (#137). Without it a Media Manager window went on
+   * showing the old preview until its folder was loaded again: core clears its thumbnail cache when an
+   * item saves, but a card only asks again when it hears the item changed.
+   *
+   * An overwrite says the item changed (its thumbnails ask for the new address) and asks the
+   * collections showing it to load again (its name may have changed too). A new item asks for its
+   * folder to load again, so it shows there. A window that is a backoffice page in a frame has an event
+   * context of its own and hears none of this; the desktop's server-event router refreshes those.
+   * @param request What was saved.
+   * @param unique The item it was saved as.
+   */
+  async #announce(request: MediaSaveRequest, unique: string): Promise<void> {
+    let events: EventTarget | undefined;
+    try {
+      events = await this.getContext(UMB_ACTION_EVENT_CONTEXT);
+    } catch {
+      return;
+    }
+    if (!events) return;
+    if (request.existing && request.existing === unique) {
+      events.dispatchEvent(new UmbEntityUpdatedEvent({ entityType: 'media', unique }));
+      events.dispatchEvent(new UmbRequestReloadStructureForEntityEvent({ entityType: 'media', unique }));
+    } else {
+      const folder = request.folder;
+      events.dispatchEvent(new UmbRequestReloadChildrenOfEntityEvent({ entityType: folder ? 'media' : 'media-root', unique: folder }));
+    }
   }
 
   /**

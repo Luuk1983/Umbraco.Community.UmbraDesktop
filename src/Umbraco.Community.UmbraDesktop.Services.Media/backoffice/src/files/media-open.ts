@@ -34,10 +34,16 @@ export interface OpenedMedia {
    */
   focalPoint?: { left: number; top: number } | null;
   /**
-   * The file's own name in the media library, with its extension, as its address ends. A save over
-   * the item can keep it, so the file's address stays the same. Issue #136.
+   * The file's own name in the media library, with its extension, as its address ends. The file
+   * menu's save over the item writes it again with a hash of the new contents (#137). Issue #136.
    */
   fileName?: string;
+  /**
+   * Whether the item is in the recycle bin. Opening by key reads it wherever it is, so an app that
+   * opens an item it was handed, as the Image Editor does from Edit image and when its window reopens,
+   * can refuse one binned since. Undefined from a version of this service that did not say. Issue #137.
+   */
+  isTrashed?: boolean;
 }
 
 /** What to open. */
@@ -57,6 +63,8 @@ export interface OpenableDetail {
   variants: Array<{ name: string; updateDate: string | null }>;
   /** Its property values; `umbracoFile` holds the file's address and, for an image, the focal point. */
   values: Array<{ alias: string; value?: unknown }>;
+  /** Whether it is in the recycle bin. */
+  isTrashed?: boolean;
 }
 
 /**
@@ -114,6 +122,7 @@ export function openedFrom(
     fileName: fileNameOf(value.src),
     folder: folder.unique,
     ...(folder.name !== undefined ? { folderName: folder.name } : {}),
+    isTrashed: detail.isTrashed === true,
   };
 }
 
@@ -173,9 +182,11 @@ export function createMediaOpener(host: UmbControllerHost): MediaOpener {
  * Read a media file's contents, past the browser's cache.
  *
  * `no-cache` has the browser ask the server whether its copy is still current rather than use it
- * unasked. A save over an item keeps its file's address (`save-flow.ts`), so a copy cached before the
- * save is a copy of the old file: found in a real backoffice, where a picture saved turned reopened
- * upright. The server answers 304 when nothing changed, so an unchanged file costs no download.
+ * unasked. A save over an item under the same file name keeps its address, so a copy cached before
+ * the save is a copy of the old file: found in a real backoffice, where a picture saved turned
+ * reopened upright. The file menu now gives a changed file a new name (#137), but an app saving
+ * through the context directly, and a person uploading a file of the same name, still keep it. The
+ * server answers 304 when nothing changed, so an unchanged file costs no download.
  * @param src The file's address.
  * @returns The contents, or undefined when the server would not give them.
  */

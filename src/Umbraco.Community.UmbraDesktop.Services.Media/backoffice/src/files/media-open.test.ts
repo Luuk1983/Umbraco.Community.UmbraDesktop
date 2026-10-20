@@ -36,7 +36,18 @@ it('maps the name, the extension, the update date, the focal point and the folde
     fileName: 'beach.JPG',
     folder: 'f1',
     folderName: 'Holidays',
+    isTrashed: false,
   });
+});
+
+/**
+ * Whether the item is in the recycle bin (#137): an app opening an item by key, as the Image Editor
+ * does from Edit image or a reopened window, can refuse one somebody binned since, without asking for
+ * the item again.
+ */
+it('says whether the item is in the recycle bin', () => {
+  expect(openedFrom({ ...detail({ src: '/a.png' }), isTrashed: true }, blob, { unique: null })?.isTrashed).to.equal(true);
+  expect(openedFrom(detail({ src: '/a.png' }), blob, { unique: null })?.isTrashed).to.equal(false);
 });
 
 it('answers a null focal point for an item without one, and a null folder at the root', () => {
@@ -62,8 +73,9 @@ it("names the file as the media library stores it", () => {
 });
 
 /**
- * A save over an item keeps its file's address, so the browser's cache still holds the file as it
- * was. Found in a real backoffice: a picture saved turned reopened upright from the cache.
+ * A save over an item under the same file name keeps its address, so the browser's cache still holds
+ * the file as it was. Found in a real backoffice: a picture saved turned reopened upright from the
+ * cache. The file menu renames a changed file since #137; other ways of saving over an item do not.
  */
 it('reads the file past the browser cache, which still holds it as it was before the last save', async () => {
   const original = window.fetch;

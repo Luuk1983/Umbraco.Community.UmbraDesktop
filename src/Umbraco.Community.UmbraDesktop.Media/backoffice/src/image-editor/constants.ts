@@ -4,6 +4,12 @@
  * pulling the editor, and Fabric with it, into the bundle's main chunk.
  */
 
+/**
+ * The Image Editor app's manifest alias: what Edit image opens (#137). Here rather than beside the
+ * manifest so the action can name it without importing the bundle.
+ */
+export const UMBRADESKTOP_IMAGE_EDITOR_APP = 'Umbraco.Community.UmbraDesktop.Media.ImageEditor';
+
 /** Width of the mode panel on the right, in px: the 320px panel of the mocks (design §4). */
 export const PANEL_WIDTH = 320;
 

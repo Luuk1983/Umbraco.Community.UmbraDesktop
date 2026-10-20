@@ -2,11 +2,16 @@ import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UmbId } from '@umbraco-cms/backoffice/id';
 import { UmbLocalizationController } from '@umbraco-cms/backoffice/localization-api';
 import { UMB_MEDIA_PROPERTY_VALUE_ENTITY_TYPE, UmbMediaDetailRepository } from '@umbraco-cms/backoffice/media';
-import { UmbMediaTypeStructureRepository } from '@umbraco-cms/backoffice/media-type';
+import { UmbMediaTypeDetailRepository, UmbMediaTypeStructureRepository } from '@umbraco-cms/backoffice/media-type';
 import { TemporaryFileStatus, UmbTemporaryFileManager } from '@umbraco-cms/backoffice/temporary-file';
 import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
 import { AREA } from '../shared/area.js';
+import { FILE_PROPERTY } from './copy-values.js';
+import { copyMedia } from './copy-media.js';
+import type { CopyDeps } from './copy-media.js';
+import { extensionOf } from './extension.js';
 import { fileValueFor } from './file-value.js';
+import { wordsOf } from '../shared/words.js';
 
 /** How a save to the media library went. */
 export type MediaSaveResult =
@@ -19,6 +24,18 @@ export type MediaSaveResult =
        * save expects to find. Undefined when the backoffice did not say.
        */
       updateDate?: string | null;
+      /**
+       * For a save with `copyOf`: `full` when the new item is a copy with the original's media type and
+       * properties, `plain` when the original was gone and a plain new item was made instead. An app
+       * drops what a plain item does not have (the Image Editor its focal point). Issue #137.
+       */
+      copied?: 'full' | 'plain';
+      /**
+       * Something the person should know about a save that worked, in this package's words: a copy
+       * made without a property whose file could not be copied, or a plain copy. Show it where you
+       * would say "Saved". Issue #137.
+       */
+      notice?: string;
     }
   | {
       ok: false;
@@ -53,10 +70,21 @@ export interface MediaSaveRequest {
   /** Overwrite `existing` even if it changed since: the person was asked, and said yes. */
   force?: boolean;
   /**
+   * The media item a new item is a full copy of: it takes that item's media type and every property
+   * value (the focal point and crops, alt text, a custom type's own properties), with this file in
+   * place of the old one. Read only when `existing` is not set. If that item's media type does not
+   * take this file's format, or `folder` does not allow it, nothing is saved and the answer says why.
+   * If the item is gone or in the recycle bin, the save makes a plain new item instead, as a save over
+   * a gone item does, and says so (`copied: 'plain'`). Undefined is a plain new item, as every save
+   * was before this field. Issue #137, edit-image design §11.6 and §11.7.
+   */
+  copyOf?: string;
+  /**
    * Whether the picture was cropped, rotated or flipped since it was last saved, so the overwritten
-   * item's focal point and every named crop's coordinates are reset rather than kept pointing at
-   * other pixels. Only an overwrite reads it: a new item has neither. Undefined is false, which keeps
-   * them, as every save did before this field. Issue #136, design D8.
+   * item's (or the copied item's) focal point and every named crop's coordinates are reset rather than
+   * kept pointing at other pixels. Only an overwrite and a `copyOf` copy read it: a plain new item has
+   * neither. Undefined is false, which keeps them, as every save did before this field. Issue #136,
+   * design D8.
    */
   resetFocalPoint?: boolean;
 }
@@ -127,6 +155,40 @@ export function updateDateOf(item: { variants: Array<{ updateDate: string | null
  */
 export type MediaSaver = (request: MediaSaveRequest) => Promise<MediaSaveResult>;
 
+/** The ways a save can go, which {@link routeSave} chooses between. Injectable, so the choice is tested. */
+export interface SaveSteps {
+  /** Overwrite `existing`; null when it is gone and a new item should be made instead. */
+  replace(request: MediaSaveRequest & { existing: string }): Promise<MediaSaveResult | null>;
+  /** Copy `copyOf`; null when it is gone and a plain new item should be made instead. */
+  copy(request: MediaSaveRequest & { copyOf: string }): Promise<MediaSaveResult | null>;
+  /** Make a plain new item. */
+  createNew(request: MediaSaveRequest): Promise<MediaSaveResult>;
+  /** What the person is told when a copy had to be a plain new item. */
+  plainCopyNotice(): string;
+}
+
+/**
+ * Choose how a save goes: over `existing`, as a copy of `copyOf`, or as a plain new item, each falling
+ * back to a plain new item when the item it names is gone. A refused copy is passed on rather than
+ * made plain behind the person's back.
+ * @param steps The ways it can go.
+ * @param request What to save.
+ * @returns How it went.
+ */
+export async function routeSave(steps: SaveSteps, request: MediaSaveRequest): Promise<MediaSaveResult> {
+  const { existing, copyOf } = request;
+  if (existing) {
+    const replaced = await steps.replace({ ...request, existing });
+    if (replaced) return replaced;
+  } else if (copyOf) {
+    const copied = await steps.copy({ ...request, copyOf });
+    if (copied) return copied;
+    const plain = await steps.createNew(request);
+    return plain.ok ? { ...plain, copied: 'plain', notice: steps.plainCopyNotice() } : plain;
+  }
+  return steps.createNew(request);
+}
+
 /**
  * The real media saver, working through the backoffice's own repositories rather than calling the
  * Management API by hand, so authentication, error notifications and permissions are the
@@ -149,24 +211,26 @@ export type MediaSaver = (request: MediaSaveRequest) => Promise<MediaSaveResult>
  * the save writes nothing and answers with a conflict, unless the request says `force`. The check
  * and the write are two requests, so a change landing between them still wins last; the check is
  * for the far commoner case of a file changed while a window sat open on it.
+ *
+ * **A save with `copyOf` is a full copy** of that item: a new item of its media type with all its
+ * values and the new file (see `copy-media.ts`). A copy that cannot be full is refused with the
+ * reason; a copy of an item that is gone is a plain new item, made as above, and says so.
  * @param host The element saving, whose contexts the backoffice classes consume.
  * @returns A {@link MediaSaver}.
  */
 export function createMediaSaver(host: UmbControllerHost): MediaSaver {
-  return async ({ file, name, folder, existing, expectedUpdateDate, force, resetFocalPoint }) => {
-    if (existing) {
-      const replaced = await replaceFile(
-        host,
-        existing,
-        file,
-        name,
-        force ? undefined : expectedUpdateDate,
-        resetFocalPoint === true,
-      );
-      if (replaced) return replaced;
-    }
-    return createItem(host, file, name, folder);
-  };
+  return (request) =>
+    routeSave(
+      {
+        replace: ({ existing, file, name, expectedUpdateDate, force, resetFocalPoint }) =>
+          replaceFile(host, existing, file, name, force ? undefined : expectedUpdateDate, resetFocalPoint === true),
+        copy: ({ copyOf, file, name, folder, resetFocalPoint }) =>
+          copyMedia(copyDeps(host), { copyOf, file, name, folder, resetFocalPoint: resetFocalPoint === true }),
+        createNew: ({ file, name, folder }) => createItem(host, file, name, folder),
+        plainCopyNotice: () => wordsOf(new UmbLocalizationController(host))('copyPlain'),
+      },
+      request,
+    );
 }
 
 /**
@@ -178,6 +242,73 @@ export function createMediaSaver(host: UmbControllerHost): MediaSaver {
 async function upload(host: UmbControllerHost, file: File): Promise<string | undefined> {
   const uploaded = await new UmbTemporaryFileManager(host).uploadOne({ temporaryUnique: UmbId.new(), file });
   return uploaded.status === TemporaryFileStatus.SUCCESS ? uploaded.temporaryUnique : undefined;
+}
+
+/**
+ * Upload a copy of a file the site serves, as a temporary file named after the file. Read past the
+ * browser's cache, as an open is (`media-open.ts`, `fetchFile`): a file replaced under the same name
+ * would otherwise be copied as it was.
+ * @param host The saving element.
+ * @param src The file's address on this site.
+ * @returns The temporary file's key, or undefined if it could not be read or sent.
+ */
+async function reupload(host: UmbControllerHost, src: string): Promise<string | undefined> {
+  try {
+    const response = await fetch(src, { credentials: 'same-origin', cache: 'no-cache' });
+    if (!response.ok) return undefined;
+    const blob = await response.blob();
+    const name = decodeURIComponent(src.split('?')[0].split('/').pop() || 'file');
+    return await upload(host, new File([blob], name, { type: blob.type }));
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The backoffice operations a full copy needs (see `copy-media.ts`), through the backoffice's own
+ * repositories, as every other save here.
+ * @param host The saving element.
+ * @returns The operations.
+ */
+function copyDeps(host: UmbControllerHost): CopyDeps {
+  const media = new UmbMediaDetailRepository(host);
+  const structure = new UmbMediaTypeStructureRepository(host);
+  const words = wordsOf(new UmbLocalizationController(host));
+  return {
+    read: async (unique) => {
+      const { data } = await media.requestByUnique(unique);
+      return data ? { name: data.variants[0]?.name ?? '', isTrashed: data.isTrashed, mediaType: data.mediaType, values: data.values } : undefined;
+    },
+    typesAccepting: async (extension) =>
+      (await structure.requestMediaTypesOf({ fileExtension: extension })).flatMap((type) => (type.unique ? [type.unique] : [])),
+    allowedIn: async (folder) => {
+      const parent = folder ? (await media.requestByUnique(folder)).data : undefined;
+      const { data } = await structure.requestAllowedChildrenOf(parent?.mediaType.unique ?? null, folder);
+      return data?.items.flatMap((type) => (type.unique ? [type.unique] : [])) ?? [];
+    },
+    upload: (file) => upload(host, file),
+    reupload: (src) => reupload(host, src),
+    propertyNames: async (mediaType) => {
+      const { data } = await new UmbMediaTypeDetailRepository(host).requestByUnique(mediaType);
+      return new Map((data?.properties ?? []).map((property) => [property.alias, property.name]));
+    },
+    create: async (item, folder) => {
+      const { data: scaffold } = await media.createScaffold({
+        unique: UmbId.new(),
+        mediaType: item.mediaType,
+        variants: [{ culture: null, segment: null, createDate: null, updateDate: null, flags: [], name: item.name }],
+        values: item.values as never,
+      });
+      if (!scaffold) return { ok: false };
+      const { data, error } = await media.create(scaffold, folder);
+      return data ? { ok: true, unique: data.unique, updateDate: updateDateOf(data) } : { ok: false, message: error?.message };
+    },
+    words: {
+      formatRefused: (name, format) => words('copyFormatRefused', name, format),
+      folderRefused: (name) => words('copyFolderRefused', name),
+      leftOut: (names) => words('copyLeftOut', names),
+    },
+  };
 }
 
 /**
@@ -195,7 +326,7 @@ async function createItem(
   folder: string | null,
 ): Promise<MediaSaveResult> {
   const localize = new UmbLocalizationController(host);
-  const extension = /\.([^.]+)$/.exec(file.name)?.[1]?.toLowerCase() ?? '';
+  const extension = extensionOf(file.name);
   const structure = new UmbMediaTypeStructureRepository(host);
   const media = new UmbMediaDetailRepository(host);
 
@@ -225,7 +356,7 @@ async function createItem(
     values: [
       {
         editorAlias: '',
-        alias: 'umbracoFile',
+        alias: FILE_PROPERTY,
         value: { temporaryFileId },
         culture: null,
         segment: null,
@@ -262,7 +393,7 @@ async function replaceFile(
   const repository = new UmbMediaDetailRepository(host);
   const { data } = await repository.requestByUnique(unique);
   if (!data || data.isTrashed) return null;
-  if (!data.values.some((value) => value.alias === 'umbracoFile')) return null;
+  if (!data.values.some((value) => value.alias === FILE_PROPERTY)) return null;
   // Checked before the upload, so a save that is going to ask first leaves no temporary file behind.
   if (changedSince(expectedUpdateDate, updateDateOf(data))) return { ok: false, conflict: true };
 
@@ -271,7 +402,7 @@ async function replaceFile(
 
   // Point the value at the new file, keeping the rest of it unless the picture was reframed.
   const values = data.values.map((value) =>
-    value.alias === 'umbracoFile'
+    value.alias === FILE_PROPERTY
       ? { ...value, value: fileValueFor(value.value, temporaryFileId, resetFocalPoint) }
       : value,
   );

@@ -4,6 +4,10 @@ export default {
     overwriteHeadline: '%0% overschrijven?',
     overwriteQuestion: '%0% is in de mediabibliotheek gewijzigd nadat je het opende. Wil je het overschrijven met jouw versie?',
     overwriteConfirm: 'Overschrijven',
+    copyFormatRefused: '%0% kan niet als %1%-bestand worden gekopieerd: het mediatype accepteert dat formaat niet. Kies een ander formaat.',
+    copyFolderRefused: '%0% kan niet naar die map worden gekopieerd: de map staat het mediatype niet toe. Kies een andere map.',
+    copyLeftOut: 'Opgeslagen als kopie zonder %0%: dat bestand kon niet worden gekopieerd.',
+    copyPlain: 'Het origineel staat niet meer in de mediabibliotheek, dus de kopie is een nieuw item zonder de eigenschappen ervan.',
 
     fileMenu: 'Menu',
     menuOpen: 'Openen',
@@ -33,6 +37,10 @@ export default {
     discardHeadline: 'Je wijzigingen weggooien?',
     discardQuestion: 'Een ander bestand openen gooit de wijzigingen weg die je nog niet hebt opgeslagen.',
     discardConfirm: 'Weggooien',
+    usedHeadline: '%0% overschrijven?',
+    usedQuestionOne: '%0% wordt op 1 plek gebruikt. Opslaan wijzigt het daar ook. Gebruik Opslaan als om het origineel te bewaren.',
+    usedQuestionMany: '%0% wordt op %1% plekken gebruikt. Opslaan wijzigt het overal waar het gebruikt wordt. Gebruik Opslaan als om het origineel te bewaren.',
+    usedConfirm: 'Opslaan',
 
     saveSaving: 'Bezig met opslaan...',
     saveSaved: 'Opgeslagen.',
@@ -58,8 +66,6 @@ export default {
     saveAsNow: 'Nu',
     saveAsAfter: 'Daarna',
     saveAsMeasuring: 'Bezig met meten...',
-    saveAsAddressWarning:
-      'Een nieuw formaat verandert het adres van het bestand. Pagina’s die de afbeelding kiezen blijven werken; een link die iemand naar het oude bestand plakte, werkt niet meer.',
     saveAsSaveCopy: 'Kopie opslaan',
     saveAsPreview: '%0% × %1% px, zoals het wordt opgeslagen',
 
@@ -72,5 +78,9 @@ export default {
     infoFormat: 'Formaat',
     infoUpdated: 'Laatst gewijzigd',
     infoNeverSaved: 'Nog niet opgeslagen',
+    infoUsedIn: 'Gebruikt op',
+    infoUsedInNone: 'Nergens gebruikt',
+    infoUsedInOne: '1 plek',
+    infoUsedInMany: '%0% plekken',
   },
 };

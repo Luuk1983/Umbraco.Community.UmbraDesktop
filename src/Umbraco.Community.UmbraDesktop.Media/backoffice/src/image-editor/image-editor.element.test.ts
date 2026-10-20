@@ -37,9 +37,9 @@ const title = (editor: HTMLElement) => titlesSent.get(editor)?.slice(-1)[0];
 
 describe('with nothing open', () => {
   /**
-   * The desktop saves a window's title with the layout and shows it again on a reopened window, but
-   * the editor reopens empty: so it gives the window its own name back as it starts, rather than
-   * leave the last session's file name over an empty canvas.
+   * The desktop saves a window's title with the layout and shows it again on a reopened window, and
+   * an editor that reopens with no image to open starts empty: so it gives the window its own name
+   * back as it starts, rather than leave the last session's file name over an empty canvas.
    */
   it("gives the window the app's own name as it starts, with an empty title", async () => {
     const { editor } = await mountEditor();
@@ -240,6 +240,37 @@ describe('saving', () => {
     await settle(editor);
     expect(menu!.document).to.include({ unique: 'copy1', updateDate: 'c1', name: 'Beach (copy)', extension: 'webp', folder: 'f9' });
     expect(title(editor)).to.equal('Beach (copy)');
+  });
+
+  /** A copy is a full copy (edit-image design §11.6): it carries the focal point unless reframed. */
+  it('keeps the focal point after a copy, and drops it after a copy of a turned picture', async () => {
+    const { editor, menu } = await mountEditor();
+    await openFixture(editor, menu!);
+    menu!.fire('saved', { unique: 'copy1', updateDate: 'c1', name: 'Beach (copy)', extension: 'png', folder: 'f1', copy: true, bytes: 90 });
+    await settle(editor);
+    expect(editor.focalPoint).to.deep.equal({ left: 0.25, top: 0.5 });
+
+    editor.apply(rotate(editor.state!, 'right'));
+    await settle(editor);
+    menu!.fire('saved', { unique: 'copy2', updateDate: 'c2', name: 'Beach (copy 2)', extension: 'png', folder: 'f1', copy: true, bytes: 90 });
+    await settle(editor);
+    expect(editor.focalPoint).to.equal(null);
+  });
+
+  /**
+   * A copy of an image that was gone by then is a plain new item, with no focal point, and the service
+   * says so (#137, §11.7); the editor shows what the service says instead of "Saved".
+   */
+  it('drops the focal point after a plain copy, and shows what the save said', async () => {
+    const { editor, menu } = await mountEditor();
+    await openFixture(editor, menu!);
+    menu!.fire('saved', {
+      unique: 'copy1', updateDate: 'c1', name: 'Beach (copy)', extension: 'png', folder: 'f1', copy: true, bytes: 90,
+      fullCopy: false, notice: 'The original is gone.',
+    });
+    await settle(editor);
+    expect(editor.focalPoint).to.equal(null);
+    expect(editor.notice).to.deep.equal({ kind: 'info', text: 'The original is gone.' });
   });
 
   it('tells the file menu to reset the focal point after a turn, not after a resize', async () => {

@@ -1239,13 +1239,15 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * Records where an app says it is, for the layout to reopen it there (Help design D7): the app's
    * half of what `#onIframeLoad` does for a frame. Stopped here, because the window is the one
    * listener it is for, and a report that escaped would reach the desktop as if a window had moved.
+   * An empty string clears the location (#137): the app is nowhere, as an editor whose image failed
+   * to open is.
    * @param event The app's {@link UMBRADESKTOP_APP_LOCATION_EVENT}.
    */
   #onAppLocation = (event: Event): void => {
     event.stopPropagation();
     const location = (event as CustomEvent<{ location?: unknown }>).detail?.location;
     const w = this.window;
-    if (w && typeof location === 'string' && location) this.#manager?.setLocation(w.id, location);
+    if (w && typeof location === 'string') this.#manager?.setLocation(w.id, location);
   };
 
   /**

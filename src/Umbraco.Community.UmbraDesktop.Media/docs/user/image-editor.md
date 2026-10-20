@@ -31,6 +31,27 @@ With nothing open, the editor shows **Open an image**. Once an image is open, se
 - To add an image from your computer first, select **Upload from this computer...**, and use the
   media picker's own upload.
 
+## Open an image from the media library
+
+To edit an image you are looking at in the media library, open its actions menu (**...**) and select
+**Edit image**. The Image Editor opens in its own window with that image. It works in the Media
+section, in a Media Manager window and on the image's own page, in the tree, the grid and the list.
+If an editor window already has that image open, that window comes to the front instead.
+
+To edit an image a page uses, start from the page:
+
+1. In the page's media picker, select the image. Its crops open.
+2. Select **Open in Media Library**. The image's own page opens over the page.
+3. Open the actions menu (**...**) at the top, and select **Edit image**.
+
+**Edit image** is on images only, not on files, SVGs or folders, and not on what is in the recycle
+bin. It is on the desktop only: the backoffice without the desktop does not show it.
+
+An editor window reopens at the image it had after the browser reloads. Unsaved changes are lost on a
+reload, as they are in any window.
+
+## What the editor opens
+
 The editor opens JPEG, PNG, WebP, GIF and BMP images. It refuses an SVG, which is a drawing rather
 than pixels. An animated GIF opens on its first frame, and saving keeps only that frame. A phone photo
 is shown upright, however the phone held it.
@@ -49,8 +70,8 @@ To cut further in, crop again. To get the whole picture back, select **Reset**, 
 To turn the image, select **Rotate left** or **Rotate right**. To mirror it, select **Flip
 horizontal** or **Flip vertical**. Both happen at once.
 
-In Crop the image's focal point is drawn on the picture. Saving after a crop, rotate or flip resets
-the focal point and the image's named crops to the centre, because they would point at the wrong
+In Crop the image's focal point is drawn on the picture. Saving, or saving a copy, after a crop,
+rotate or flip resets the focal point and the image's named crops to the centre, because they would point at the wrong
 part of the new picture. Set them again in the Media section. Resizing, adjusting, marking up and
 redacting keep them.
 
@@ -114,14 +135,31 @@ On **Save as**:
    **Now** and **After** show the file's size before and after, measured on the real picture.
 3. Select **Save copy**, or **Replace** and the image's name, at the bottom of the panel.
 
-A new format changes the file's address. Pages that pick the image keep working; a link someone
-pasted to the old file breaks. After a copy is saved, the editor is on the copy, and the next save
+Saving over an image gives its file a new address, as uploading a replacement in the Media section
+does, so pages and windows show the new picture rather than an old copy. Every window on the desktop
+showing the image, in a Media Manager or the Media section, shows the new picture at once. Pages that
+pick the image keep working; a link someone pasted to the old file breaks.
+
+A copy keeps the original's media type and properties, such as its alt text, focal point and crops,
+with the new picture as its file. After a copy is saved, the editor is on the copy, and the next save
 writes to the copy.
+
+- If the folder you chose does not allow the original's media type, or that type does not take the
+  format you chose, nothing is saved and the status bar says why. Choose another folder or format.
+- If another file on the image cannot be copied, such as a second upload, the copy is made without
+  it, and the status bar says which.
+- If the original was deleted or moved to the recycle bin meanwhile, the copy is a new image without
+  its properties, and the status bar says so.
 
 A GIF or BMP cannot be written back in its own format, so **Save** opens **Save as** with PNG chosen.
 
 Saving re-encodes the picture, which removes its camera and location data. Umbraco keeps no older
 version of an image, so save a copy to keep the original.
+
+If the image is used elsewhere, on pages, members or other media, the first save over it asks
+first, saying how many places use it: saving changes it in all of them. Select **Save** to go on, or
+**Cancel** and use **Save as** to save a copy instead. **More** > **Info** shows the same count, under
+**Used in**.
 
 If somebody else changed the image in the Media section after you opened it, the editor asks before
 it overwrites their version. If the media library refuses the save, the reason is in the status bar.
@@ -134,8 +172,8 @@ past a save, and the window shows it has unsaved changes again.
 
 ## Info and Close
 
-To see the image's name, folder, dimensions, size, format and last change, select **More** >
-**Info**.
+To see the image's name, folder, dimensions, size, format, last change and how many places use it,
+select **More** > **Info**.
 
 To close the window, select **More** > **Close**. If there are unsaved changes, the desktop asks
 first.

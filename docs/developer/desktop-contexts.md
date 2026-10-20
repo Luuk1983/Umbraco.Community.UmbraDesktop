@@ -115,7 +115,7 @@ behaviour are kept stable.
 | | |
 |---|---|
 | Context alias | `'UmbraDesktopWindowManagerContext'` |
-| `openApp(alias, options?)` | Opens the app with that manifest alias, as the launcher would, and returns `true`. Returns `false` when the current user cannot launch it, or no such app exists. `options.location` opens it at a location, handed to its element as `location` (see [Remembering where your app is](desktop-apps.md#73-remembering-where-your-app-is)); the Media Manager's "Open in new window" opens a folder this way. An older desktop ignores `options` |
+| `openApp(alias, options?)` | Opens the app with that manifest alias, as the launcher would, and returns `true`. Returns `false` when the current user cannot launch it, or no such app exists. `options.location` opens it at a location, handed to its element as `location` (see [Remembering where your app is](desktop-apps.md#73-remembering-where-your-app-is)); the Media Manager's "Open in new window" opens a folder this way. With `options.reuse: true`, a window of that app already at that location comes to the front instead, and a new one opens only when there is none; the Media add-on's **Edit image** opens the Image Editor this way, so an image already being edited is not opened twice. A window is found by the location its app last reported, so one that has moved on is not found. An older desktop ignores `options` |
 
 Declare the shape you use and a token with the same alias, and consume it:
 
@@ -134,3 +134,51 @@ this.consumeContext(DESKTOP_WINDOWS, (windows) => windows?.openApp('Other.Packag
 
 An app already open is focused rather than opened a second time when its manifest forbids more than
 one. An app hidden from the user by a condition cannot be opened this way either.
+
+### From inside a backoffice window
+
+Code that runs inside a backoffice window, such as an entity action in the Media section, runs in the
+window's frame, where `consumeContext` cannot see the desktop's contexts (see [Reaching it from an
+app](#4-reaching-it-from-an-app)). It can still reach the window manager. The frame's `<iframe>`
+element sits inside the desktop, so a context request dispatched on it rises to the desktop, which
+answers it at once:
+
+```ts
+import type { UmbContextMinimal } from '@umbraco-cms/backoffice/context-api';
+
+interface DesktopWindows extends UmbContextMinimal {
+  openApp(alias: string, options?: { location?: string; reuse?: boolean }): boolean;
+}
+
+/** The desktop's window manager, from a frame on the desktop; undefined anywhere else. */
+function findDesktopWindows(): DesktopWindows | undefined {
+  let frame: Element | null = null;
+  try {
+    frame = window.frameElement;
+  } catch {
+    return undefined;
+  }
+  if (!frame) return undefined;
+  let found: DesktopWindows | undefined;
+  const event = Object.assign(new Event('umb:context-request', { bubbles: true, composed: true, cancelable: true }), {
+    contextAlias: 'UmbraDesktopWindowManagerContext',
+    apiAlias: 'default',
+    stopAtContextMatch: true,
+    callback: (instance: unknown) => {
+      found = instance as DesktopWindows;
+      return true;
+    },
+  });
+  frame.dispatchEvent(event);
+  return found;
+}
+```
+
+The answer is synchronous, so ask when you need it, at the click, rather than holding on to it.
+`undefined` means the code is not running in a window on the desktop: in the plain backoffice, or in a
+frame of some other page. Code that can run in either place, as an entity action can, asks twice,
+both times at once: first with a context request from its own element, which finds the desktop when the
+code is on the desktop page, then from the frame as above. Do not wait with `consumeContext` for the
+first: it never answers when there is no desktop, so it would wait forever in the plain backoffice.
+The Media add-on's **Edit image** action asks both ways, and hides itself with a condition built on the
+same two questions when neither finds a desktop.

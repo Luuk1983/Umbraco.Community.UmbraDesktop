@@ -1,13 +1,14 @@
 import { expect } from '@open-wc/testing';
 import {
   DEFAULT_QUALITY,
-  addressChanges,
+  contentHash,
   copyNameFor,
   extensionFor,
   formatBytes,
   formatLabel,
   keepFormatFor,
   mimeFor,
+  versionedFileName,
 } from './formats.js';
 
 /**
@@ -44,12 +45,30 @@ it("keeps the file's own spelling when the format is unchanged, and the usual on
   expect(extensionFor('webp', 'jpg')).to.equal('webp');
 });
 
-it("says when a choice changes the file's address", () => {
-  expect(addressChanges('png', 'png')).to.equal(false);
-  expect(addressChanges('jpeg', 'jpeg')).to.equal(false);
-  expect(addressChanges('JPG', 'jpeg')).to.equal(false);
-  expect(addressChanges('jpg', 'webp')).to.equal(true);
-  expect(addressChanges('gif', 'png')).to.equal(true);
+/**
+ * A save over an item writes the file under a name with a short hash of its contents (#137): a new
+ * picture gets a new address, so no browser cache can show the old one, and the same bytes keep the
+ * same address. FNV-1a, 32 bits, as eight hex digits; the vectors are FNV's published ones.
+ */
+it("hashes a file's bytes to eight hex digits, the same bytes to the same hash", () => {
+  const bytes = (text: string) => new TextEncoder().encode(text);
+  expect(contentHash(bytes(''))).to.equal('811c9dc5');
+  expect(contentHash(bytes('a'))).to.equal('e40c292c');
+  expect(contentHash(bytes('foobar'))).to.equal('bf9cf968');
+  expect(contentHash(bytes('foobar'))).to.equal(contentHash(bytes('foobar')));
+});
+
+/**
+ * The hash follows `-ud`, which no camera or person writes, so an earlier save's hash is replaced and
+ * nothing else is: a name ending in a date, `scan-20241020`, kept its date only once the marker was
+ * there (found by the reviewer of #137).
+ */
+it('puts the hash after the name, replacing the hash an earlier save put there and nothing else', () => {
+  expect(versionedFileName('beach', '3f9a1c07', 'jpg')).to.equal('beach-ud3f9a1c07.jpg');
+  expect(versionedFileName('beach-ud0badf00d', '3f9a1c07', 'webp')).to.equal('beach-ud3f9a1c07.webp');
+  expect(versionedFileName('16403439029_f500be349b_o', '3f9a1c07', 'jpg')).to.equal('16403439029_f500be349b_o-ud3f9a1c07.jpg');
+  expect(versionedFileName('scan-20241020', '3f9a1c07', 'jpg'), 'a date is not a hash').to.equal('scan-20241020-ud3f9a1c07.jpg');
+  expect(versionedFileName('build-cafebabe', '3f9a1c07', 'jpg'), 'nor is a hex word').to.equal('build-cafebabe-ud3f9a1c07.jpg');
 });
 
 it('names a copy with the pattern from the dictionary', () => {

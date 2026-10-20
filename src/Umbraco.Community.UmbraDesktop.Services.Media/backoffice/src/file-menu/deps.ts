@@ -2,7 +2,13 @@ import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UmbLocalizationController } from '@umbraco-cms/backoffice/localization-api';
 import { UmbImagingRepository } from '@umbraco-cms/backoffice/imaging';
 import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
-import { UmbMediaItemRepository } from '@umbraco-cms/backoffice/media';
+import {
+  UMB_MEDIA_ITEM_REPOSITORY_ALIAS,
+  UMB_MEDIA_REFERENCE_REPOSITORY_ALIAS,
+  UmbMediaItemRepository,
+  UmbMediaReferenceRepository,
+} from '@umbraco-cms/backoffice/media';
+import { html } from '@umbraco-cms/backoffice/external/lit';
 import type { UmbraDesktopMediaContext } from '../context/media.context.js';
 import { wordsOf } from '../shared/words.js';
 
@@ -42,6 +48,22 @@ export interface FileMenuDeps {
    * @returns Its name, or undefined when it cannot be read.
    */
   folderName?(unique: string): Promise<string | undefined>;
+  /**
+   * How many places use a media item: pages, members and other media that point at it (#137). Read
+   * when a file is opened, for the used-elsewhere question and Info's Used in. Optional; without it,
+   * or when it throws, a save asks nothing and Info leaves the row out.
+   * @param unique The item.
+   * @returns The count, or undefined when it cannot be read.
+   */
+  references?(unique: string): Promise<number | undefined>;
+  /**
+   * Ask whether to save over an item used elsewhere (#137). Optional; without it a save asks nothing.
+   * @param name The item's name.
+   * @param count How many places use it.
+   * @param unique The item, so the question can list where it is used.
+   * @returns True to save.
+   */
+  confirmUsedElsewhere?(name: string, count: number, unique: string): Promise<boolean>;
 }
 
 /** The size Open asks thumbnails at: twice the tile, so they are sharp on a high-density screen. */
@@ -111,6 +133,60 @@ export function createItemCheck(host: UmbControllerHost): NonNullable<FileMenuDe
       return undefined;
     } finally {
       repository.destroy();
+    }
+  };
+}
+
+/**
+ * How many places use an item, through Umbraco's media reference repository: the total of its
+ * "referenced by" list, asked for one entry so only the count comes back. It counts every kind of
+ * reference (pages, members, other media), which is why the words say "places" and not "pages".
+ * @param host The element asking.
+ * @returns The count; undefined for a response with an error.
+ */
+export function createReferenceCount(host: UmbControllerHost): NonNullable<FileMenuDeps['references']> {
+  return async (unique) => {
+    const repository = new UmbMediaReferenceRepository(host);
+    try {
+      const { data, error } = await repository.requestReferencedBy(unique, 0, 1);
+      return error || !data ? undefined : data.total;
+    } finally {
+      repository.destroy();
+    }
+  };
+}
+
+/**
+ * The used-elsewhere question in Umbraco's own confirm dialog, which rejects on cancel: two buttons,
+ * Save and Cancel, as the overwrite question has (#137). No Save as copy button, since Save as cannot be
+ * opened on a copy from here; the question names Save as instead.
+ *
+ * Under the sentence, the places themselves, with core's own references list
+ * (`umb-confirm-action-modal-entity-references`), the one core's trash and delete questions show, so
+ * the person sees which pages they are about to change rather than only how many (found by the
+ * reviewer of #137).
+ * @param host The element asking.
+ * @returns The question.
+ */
+export function createUsedElsewhereQuestion(host: UmbControllerHost): NonNullable<FileMenuDeps['confirmUsedElsewhere']> {
+  return async (name, count, unique) => {
+    const localize = new UmbLocalizationController(host);
+    const words = wordsOf(localize);
+    const sentence = count === 1 ? words('usedQuestionOne', name) : words('usedQuestionMany', name, count);
+    const references = { unique, itemRepositoryAlias: UMB_MEDIA_ITEM_REPOSITORY_ALIAS, referenceRepositoryAlias: UMB_MEDIA_REFERENCE_REPOSITORY_ALIAS };
+    try {
+      await umbConfirmModal(host, {
+        headline: words('usedHeadline', name),
+        content: html`<p>${sentence}</p>
+          <umb-confirm-action-modal-entity-references .config=${references}></umb-confirm-action-modal-entity-references>`,
+        color: 'danger',
+        confirmLabel: words('usedConfirm'),
+      });
+      return true;
+    } catch {
+      return false;
+    } finally {
+      localize.destroy();
     }
   };
 }

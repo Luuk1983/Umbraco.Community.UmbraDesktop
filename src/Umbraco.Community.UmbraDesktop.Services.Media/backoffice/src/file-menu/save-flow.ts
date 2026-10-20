@@ -1,6 +1,6 @@
 import type { MediaSaveRequest } from '../files/media-save.js';
 import type { FileMenuDeps } from './deps.js';
-import { DEFAULT_QUALITY, copyNameFor, extensionFor, keepFormatFor, mimeFor } from './formats.js';
+import { DEFAULT_QUALITY, contentHash, copyNameFor, extensionFor, keepFormatFor, mimeFor, versionedFileName } from './formats.js';
 import type { FileEncoder, FileMenuDocument, FileSaveOutcome, SaveFormat } from './types.js';
 
 /** Every choice a save makes: what Save as edits, and what Save takes as given. */
@@ -46,13 +46,22 @@ export function saveAsDefaults(document: FileMenuDocument, copyPattern: string, 
  * saves. **A replace** names the item and the update date the document last saw, so a file somebody
  * changed in the Media section meanwhile is asked about (and saved again with `force` on a yes), and
  * it carries the focal-point reset. **A copy** names neither, so it is always a new item in its
- * folder, and never resets anything: a new item has no focal point to reset. A document that was
- * never saved is created, as a copy would be, in its own folder.
+ * folder, but it names the item the document came from as `copyOf`, so the new item is a full copy
+ * of it (its media type and every property) holding the new file, and it carries the focal-point
+ * reset too, since the focal point it copies was set on the picture before any reframe (edit-image
+ * design §11.6). A document that was never saved is created, as a plain new item, in its own folder.
+ *
+ * **Before a replace**, `usedElsewhere` is asked whether to go on (#137, edit-image design §5): the
+ * item may be used on pages, members or other media, and a save over it changes it in every one. The
+ * file menu answers it, asking the person the first time for the open file when the item is used
+ * anywhere. Every way of saving over an item comes through here, which is why the question is here.
+ * Asked before anything is encoded, so a no costs nothing.
  * @param context The media context's save and its overwrite question.
  * @param document What is open.
  * @param choice How to save it.
  * @param encode How the app encodes its document.
  * @param resetFocalPoint Whether the picture was reframed since it was last saved (design D8).
+ * @param usedElsewhere Whether to go on with a save over the item; without it, always.
  * @returns How it went, with what was written when it was.
  */
 export async function runSave(
@@ -61,24 +70,31 @@ export async function runSave(
   choice: SaveChoice,
   encode: FileEncoder,
   resetFocalPoint: boolean,
+  usedElsewhere?: () => Promise<boolean>,
 ): Promise<FileSaveOutcome> {
   const replacing = choice.mode === 'replace' && document.unique !== null;
+  if (replacing && usedElsewhere && !(await usedElsewhere())) return { status: 'cancelled' };
   const copy = choice.mode === 'copy';
   const name = copy ? choice.name : document.name;
   const folder = copy ? choice.folder : document.folder;
   const folderName = copy ? choice.folderName : document.folderName;
   const extension = extensionFor(choice.format, document.extension);
-  // A replace keeps the file's own name, so its address stays the same unless the format changes;
-  // a copy, or a file whose name is not known, is named after the item.
-  const base = replacing && document.fileName ? document.fileName.replace(/\.[^.]*$/, '') : name;
-  const fileName = `${base}.${extension}`;
-
   const blob = await encode(choice.format, choice.quality);
+  // A replace keeps the file's own name with a hash of the new contents, so a changed picture gets a
+  // new address and no cache shows the old one (`versionedFileName`); a copy, or a first save, is a
+  // new item at a new address anyway and is named after itself.
+  const base = replacing && document.fileName ? document.fileName.replace(/\.[^.]*$/, '') : name;
+  const fileName = replacing
+    ? versionedFileName(base, contentHash(new Uint8Array(await blob.arrayBuffer())), extension)
+    : `${base}.${extension}`;
   const file = new File([blob], fileName, { type: mimeFor(choice.format) });
   const request: MediaSaveRequest = { file, name, folder };
   if (replacing) {
     request.existing = document.unique as string;
     request.expectedUpdateDate = document.updateDate;
+    request.resetFocalPoint = resetFocalPoint;
+  } else if (copy && document.unique !== null) {
+    request.copyOf = document.unique;
     request.resetFocalPoint = resetFocalPoint;
   }
 
@@ -98,6 +114,8 @@ export async function runSave(
       folder,
       ...(folderName !== undefined ? { folderName } : {}),
       copy: copy && !!document.unique,
+      ...(result.copied ? { fullCopy: result.copied === 'full' } : {}),
+      ...(result.notice ? { notice: result.notice } : {}),
       bytes: file.size,
       fileName,
     },

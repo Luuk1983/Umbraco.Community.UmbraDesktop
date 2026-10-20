@@ -61,6 +61,10 @@ export interface FileSavedDetail {
   folderName?: string;
   /** Whether it is a copy, which the editor is now on. */
   copy: boolean;
+  /** For a copy: false when it is a plain new item without the original's properties (#137). */
+  fullCopy?: boolean;
+  /** Something to tell the person instead of "Saved", in the service's words (#137). */
+  notice?: string;
   /** Its size now, in bytes. */
   bytes: number;
   /** Its file's name now. */

@@ -459,6 +459,80 @@ describe('opening an app window at a location', () => {
     expect(ctx.openApp('help', { location: 'folder=b' })).to.equal(true);
     expect(windowsOf(ctx).map((w) => w.location)).to.eql(['folder=a', 'folder=b']);
   });
+
+  /**
+   * Published API (#137): `reuse` brings forward the window already showing that location, so
+   * "Edit image" on an image an editor already has open does not stack a second editor on it.
+   */
+  describe('with reuse', () => {
+    it('focuses the window of that app already at that location instead of opening another', () => {
+      const ctx = manager();
+      ctx.useApps(() => [HELP]);
+      ctx.openApp('help', { location: 'a' });
+      ctx.openApp('help', { location: 'b' });
+      const first = windowsOf(ctx)[0].id;
+
+      expect(ctx.openApp('help', { location: 'a', reuse: true })).to.equal(true);
+      expect(windowsOf(ctx).length).to.equal(2);
+      expect(windowsOf(ctx).find((w) => w.active)?.id).to.equal(first);
+    });
+
+    it('opens a new window when none of that app is at that location', () => {
+      const ctx = manager();
+      ctx.useApps(() => [HELP]);
+      ctx.openApp('help', { location: 'a' });
+
+      expect(ctx.openApp('help', { location: 'b', reuse: true })).to.equal(true);
+      expect(windowsOf(ctx).map((w) => w.location)).to.eql(['a', 'b']);
+    });
+
+    it('finds the window by where it is now, not where it was opened', () => {
+      const ctx = manager();
+      ctx.useApps(() => [HELP]);
+      ctx.openApp('help', { location: 'a' });
+      ctx.setLocation(windowsOf(ctx)[0].id, 'moved');
+
+      ctx.openApp('help', { location: 'a', reuse: true });
+      expect(windowsOf(ctx).map((w) => w.location)).to.eql(['moved', 'a']);
+    });
+
+    it('leaves attached content alone, which belongs to its owner', () => {
+      const ctx = manager();
+      ctx.useApps(() => [HELP]);
+      ctx.open(APP);
+      const owner = windowsOf(ctx)[0].id;
+      ctx.openAttached(owner, { ...HELP, content: { kind: 'element', element: HTMLElement, props: { location: 'a' } } }, 'right', {
+        floating: true,
+      });
+      ctx.setLocation(windowsOf(ctx)[1].id, 'a');
+
+      ctx.openApp('help', { location: 'a', reuse: true });
+      expect(windowsOf(ctx).length).to.equal(3);
+    });
+
+    it('does not reuse a window of another app at the same location', () => {
+      const ctx = manager();
+      const OTHER: UmbraDesktopApp = { ...HELP, alias: 'other' };
+      ctx.useApps(() => [HELP, OTHER]);
+      ctx.openApp('other', { location: 'a' });
+
+      ctx.openApp('help', { location: 'a', reuse: true });
+      expect(windowsOf(ctx).map((w) => w.app.alias)).to.eql(['other', 'help']);
+    });
+  });
+
+  /**
+   * An app that could not reach its location clears it with an empty report (#137), so `reuse`
+   * does not bring a broken window forward and a reload does not fail at the same place again.
+   */
+  it('clears a window\'s location when it is set to an empty string', () => {
+    const ctx = manager();
+    ctx.open(HELP, { location: 'a' });
+    const id = windowsOf(ctx)[0].id;
+
+    ctx.setLocation(id, '');
+    expect('location' in windowsOf(ctx)[0]).to.equal(false);
+  });
 });
 
 /**

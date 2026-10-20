@@ -123,19 +123,6 @@ describe('Save as', () => {
     expect($(element, 'input[name="quality"]')).to.not.equal(null);
   });
 
-  it("warns that the address changes for another format than the item's", async () => {
-    const { element } = await fileMenu();
-    element.show('saveAs');
-    await element.updateComplete;
-    expect($(element, '.warning')).to.equal(null);
-    await choose(element, 'webp');
-    expect($(element, '.warning')!.textContent).to.contain(words.saveAsAddressWarning);
-    await choose(element, 'jpeg');
-    expect($(element, '.warning'), 'the same format').to.equal(null);
-    await choose(element, 'keep');
-    expect($(element, '.warning')).to.equal(null);
-  });
-
   it('measures After by encoding the picture, once the choices settle, beside Now', async () => {
     const { element, seen } = await fileMenu();
     element.show('saveAs');
@@ -159,13 +146,12 @@ describe('Save as', () => {
     expect($(element, '.after')!.textContent).to.contain(formatBytes(900_000, 'en'));
   });
 
-  it('starts on PNG with the warning when asked to, as Save does for a GIF', async () => {
+  it('starts on PNG when asked to, as Save does for a GIF', async () => {
     const { element } = await fileMenu({ ...DOC, extension: 'gif' });
     element.show('saveAs', { format: 'png' });
     await element.updateComplete;
     expect($(element, 'button[data-format="png"]')!.getAttribute('aria-pressed')).to.equal('true');
     expect($<HTMLButtonElement>(element, 'button[data-format="keep"]')!.disabled, 'a GIF cannot be kept').to.equal(true);
-    expect($(element, '.warning')).to.not.equal(null);
   });
 
   it('shows the picture as it will be saved', async () => {
@@ -217,7 +203,7 @@ describe('Save', () => {
     const outcome = await element.save();
     expect(outcome.status).to.equal('saved');
     expect(seen.saves[0].existing).to.equal('k1');
-    expect(seen.saves[0].file.name).to.equal('beach.jpg');
+    expect(seen.saves[0].file.name).to.match(/^beach-ud[0-9a-f]{8}\.jpg$/);
     expect(saved).to.include({ unique: 'k1', copy: false });
   });
 

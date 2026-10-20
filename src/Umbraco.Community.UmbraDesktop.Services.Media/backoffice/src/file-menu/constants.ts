@@ -48,8 +48,7 @@ export const PAGE_GAP = 16;
  * Height of Save as's content at its tallest, in px: a copy, with its name and folder rows, at the
  * narrowest width. The one number here that is measured rather than summed, since the form's rows
  * wrap their own text and so their sum is the browser's. Measured 2026-10-18 in Chrome at 366px for a
- * copy and 314px for a replace with the address warning, under every theme id; `fits.test.ts` fails
- * if it grows.
+ * copy, under every theme id; a replace is shorter. `fits.test.ts` fails if it grows.
  */
 export const SAVE_AS_CONTENT_HEIGHT = 366;
 

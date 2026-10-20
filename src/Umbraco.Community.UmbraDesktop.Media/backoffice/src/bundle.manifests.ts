@@ -1,5 +1,6 @@
 import { manifests as localizationManifests } from './localization/manifest.js';
-import { IMAGE_EDITOR_CONTENT_SIZE, IMAGE_EDITOR_MIN_CONTENT_SIZE } from './image-editor/constants.js';
+import { IMAGE_EDITOR_CONTENT_SIZE, IMAGE_EDITOR_MIN_CONTENT_SIZE, UMBRADESKTOP_IMAGE_EDITOR_APP } from './image-editor/constants.js';
+import { UMBRADESKTOP_IS_IMAGE_CONDITION, UMBRADESKTOP_ON_DESKTOP_CONDITION } from './edit-image/constants.js';
 import { UMBRADESKTOP_MEDIA_MANAGER_APP } from './manager/manager-window.context.js';
 import { UMBRADESKTOP_MEDIA_TRANSFERS_APP } from './transfers/transfers-app.js';
 import { UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION } from './manager/in-manager.condition.js';
@@ -72,13 +73,13 @@ const mediaManager: UmbExtensionManifest = {
  */
 const imageEditor: UmbExtensionManifest = {
   type: 'umbraDesktopApp',
-  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.ImageEditor`,
+  alias: UMBRADESKTOP_IMAGE_EDITOR_APP,
   name: 'UmbraDesktop Image Editor',
   element: (() => import('./image-editor/image-editor.element.js')) as () => Promise<{ element: CustomElementConstructor }>,
   weight: 1000,
   meta: {
     label: '#umbraDesktopMedia_imageEditor',
-    icon: 'icon-picture',
+    icon: 'icon-ruler-alt',
     group: 'media',
     defaultSize: IMAGE_EDITOR_CONTENT_SIZE,
     minSize: IMAGE_EDITOR_MIN_CONTENT_SIZE,
@@ -165,6 +166,49 @@ const openInNewWindow: UmbExtensionManifest = {
   forEntityTypes: ['media', 'media-root'],
   meta: { label: '#umbraDesktopMedia_openInNewWindow', icon: 'icon-window-popout' },
   conditions: [{ alias: UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION, folder: true } as never],
+};
+
+/** True where there is a desktop to open a window on: the desktop page or a window on it (#137). */
+const onDesktop: UmbExtensionManifest = {
+  type: 'condition',
+  alias: UMBRADESKTOP_ON_DESKTOP_CONDITION,
+  name: 'UmbraDesktop on the desktop',
+  api: () => import('./edit-image/on-desktop.condition.js'),
+};
+
+/** True for a media item of an image type: its file is stored with the Image Cropper (#137). */
+const isImage: UmbExtensionManifest = {
+  type: 'condition',
+  alias: UMBRADESKTOP_IS_IMAGE_CONDITION,
+  name: 'UmbraDesktop media item is an image',
+  api: () => import('./edit-image/is-image.condition.js'),
+};
+
+/**
+ * Edit image on image items (#137): the Image Editor with the image open. Unlike the Manager's own
+ * actions it shows wherever core shows a media item's actions, in the Media section and in Manager
+ * windows, because people decide an image needs fixing while they are looking at it. On the desktop
+ * only, since that is where the editor lives; under the Media section rule the Image Editor app has,
+ * since core has no media update permission on the client; not on what is in the bin; and for images
+ * only. The two cheap conditions come first. Its weight puts it at the top of an image's menu, above
+ * the Manager's Cut and Copy and core's own actions: Open in new window, the one weight above it, is
+ * for folders only.
+ */
+const editImage: UmbExtensionManifest = {
+  type: 'entityAction',
+  kind: 'default',
+  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.EditImage`,
+  name: 'UmbraDesktop Edit image',
+  weight: 1995,
+  api: () => import('./edit-image/edit-image.action.js'),
+  forEntityTypes: ['media'],
+  meta: { label: '#umbraDesktopMedia_editImage', icon: 'icon-ruler-alt' },
+  conditions: [
+    { alias: UMBRADESKTOP_ON_DESKTOP_CONDITION },
+    ...(mediaSection as unknown as Array<{ alias: string }>),
+    { alias: 'Umb.Condition.EntityIsNotTrashed' },
+    { alias: UMBRADESKTOP_IS_IMAGE_CONDITION },
+  ] as never,
 };
 
 /**
@@ -307,8 +351,11 @@ export const manifests: Array<UmbExtensionManifest> = [
   transfers,
   inManager,
   clipboardHolds,
+  onDesktop,
+  isImage,
   context,
   openInNewWindow,
+  editImage,
   cut,
   copy,
   paste,
