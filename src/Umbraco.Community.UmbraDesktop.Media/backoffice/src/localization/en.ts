@@ -99,6 +99,7 @@ export default {
 
     // The Image Editor.
     imageEditor: 'Image Editor',
+    editImage: 'Edit image',
 
     // The mode bar, and the heading over Open on the empty canvas.
     undo: 'Undo',
@@ -129,6 +130,9 @@ export default {
     refusedSvg: '%0% is an SVG, a vector image. The Image Editor edits photos and other pixel images.',
     refusedOther: '%0% is not an image the Image Editor can open.',
     decodeFailed: '%0% could not be read as an image.',
+    openFailed: '%0% could not be opened.',
+    openFailedUnnamed: 'The image could not be opened.',
+    openTrashed: '%0% is in the recycle bin. Restore it to edit it.',
     animatedGif: 'This GIF is animated. Saving keeps only its first frame.',
     unreachable: 'The media library cannot be reached, so nothing can be opened or saved.',
     saved: 'Saved.',

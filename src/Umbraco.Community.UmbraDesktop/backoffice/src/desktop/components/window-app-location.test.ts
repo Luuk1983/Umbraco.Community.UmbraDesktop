@@ -85,6 +85,12 @@ it('records the location the app reports', async () => {
   expect(state().location).to.equal('umbradesktop/live-preview/headless-sites');
 });
 
+it('clears the location on an empty report, which is how an app says it is nowhere', async () => {
+  const { state, app } = await mounted('a');
+  app.report('');
+  expect(state().location).to.equal(undefined);
+});
+
 it('ignores a report that is not a string, which says nothing the layout could keep', async () => {
   const { state, app } = await mounted('a');
   app.dispatchEvent(new CustomEvent('umbradesktop-app-location', { detail: { location: 42 }, bubbles: true, composed: true }));

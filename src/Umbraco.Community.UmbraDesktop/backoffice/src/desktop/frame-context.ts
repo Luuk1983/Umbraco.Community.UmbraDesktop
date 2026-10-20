@@ -19,7 +19,8 @@
  */
 
 /**
- * Umbraco's context-api event names. Not exported by the package, and stable across v14+. Exported
+ * Umbraco's context-api event names, stable across v14+ (core exports the request's as
+ * `UMB_CONTEXT_REQUEST_EVENT_TYPE`; the other two are written here beside it). Exported
  * from here for `beside/bridge.ts`, so the names are still written down in one place.
  */
 export const CONTEXT_REQUEST_EVENT = 'umb:context-request';

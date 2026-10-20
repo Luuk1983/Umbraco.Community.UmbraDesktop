@@ -17,7 +17,7 @@ import type { UmbContextMinimal, UmbContextToken } from '@umbraco-cms/backoffice
  * desktop anywhere, and `undefined` is the answer that lets them decline politely.
  */
 
-/** Umbraco's context-request event name. Not exported by the package, and stable across v14+. */
+/** Umbraco's context-request event name, which core exports as `UMB_CONTEXT_REQUEST_EVENT_TYPE`; stable across v14+. */
 const CONTEXT_REQUEST_EVENT = 'umb:context-request';
 
 /** The shape `UmbContextProvider` reads off a request event. It never checks the event's class. */

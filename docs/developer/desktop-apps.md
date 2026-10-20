@@ -731,7 +731,13 @@ an app that never reports a location behaves exactly as before.
 A location is any short string you choose, up to 1,000 characters on one line; the desktop stores it
 and hands it back without reading it. Each window has its own, so an app that allows several windows
 can have each one somewhere else. The Help app is the first to use this: its location is the page it
-shows, such as `umbradesktop/snapping`.
+shows, such as `umbradesktop/snapping`. The Image Editor's is the media item it has open.
+
+**Clearing it.** Report an empty location when your app is nowhere: when what it was opened at could
+not be loaded, say. The window then has no location, so it reopens empty after a reload rather than
+failing at the same place again, and `openApp` with `reuse` (see [Opening another
+app](desktop-contexts.md#5-opening-another-app)) does not bring it forward for a place it is not
+showing.
 
 **Naming your window.** An app that opens several windows can name each one, so they can be told
 apart on the taskbar. Dispatch a title from your element, and the window shows it instead of your
@@ -744,9 +750,9 @@ this.dispatchEvent(new CustomEvent('umbradesktop-app-title', { detail: { title: 
 The title is plain text, never a dictionary key, so localize it yourself first. An empty title gives
 the window your app's label back. The desktop keeps the title with the window's location, so a
 reopened window is named before your app has loaded. The Media Manager names each window after the
-folder it shows. An app that reopens empty rather than where it was should send an empty title as it
-starts, or the reopened window keeps the last session's name: the Image Editor names its window after
-the image it has open, and sends an empty title until one is.
+folder it shows. An app that can reopen empty rather than where it was should send an empty title as
+it starts empty, or the reopened window keeps the last session's name: the Image Editor names its
+window after the image it has open, and sends an empty title when it starts with no image to open.
 
 ### 7.4 Opening and saving media files
 

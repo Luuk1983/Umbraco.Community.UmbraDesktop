@@ -20,9 +20,10 @@ export interface UmbraDesktopHelpContextDeps {
  * Opens Help at a page: the one door the desktop's own code, the `umbradesktop-open-help` event and
  * the `?help=` deep link all go through (Help design §6.2).
  *
- * The reuse rule (D6) lives here: a Help window already showing exactly that location comes to the
- * front, anything else opens a new window there. A window's location is what the Help app last
- * reported, so a window someone has moved on from is left alone. Targets are written in canonical
+ * The reuse rule (D6) is the window manager's `reuse` option now, which started here (#137): a Help
+ * window already showing exactly that location comes to the front, anything else opens a new window
+ * there. A window's location is what the Help app last reported, so a window someone has moved on
+ * from is left alone. Targets are written in canonical
  * form before comparing, so a hand-typed `UmbraDesktop/Snapping/` finds the window reporting
  * `umbradesktop/snapping`.
  */
@@ -95,12 +96,7 @@ export class UmbraDesktopHelpContext extends UmbContextBase {
   public open(target: string): boolean {
     const parsed = parseHelpTarget(target);
     if (!parsed || !this.#app) return false;
-    const location = formatHelpTarget(parsed);
-    const showing = this.#manager
-      .getWindows()
-      .find((w) => w.app.alias === UMBRADESKTOP_HELP_APP_ALIAS && !w.owner && w.location === location);
-    if (showing) this.#manager.focus(showing.id);
-    else this.#manager.open(this.#app, { location });
+    this.#manager.open(this.#app, { location: formatHelpTarget(parsed), reuse: true });
     return true;
   }
 }

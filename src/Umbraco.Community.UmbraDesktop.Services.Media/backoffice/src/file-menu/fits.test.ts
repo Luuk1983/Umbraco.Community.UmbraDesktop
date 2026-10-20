@@ -65,7 +65,7 @@ async function measure(size: { w: number; h: number }, theme: string | undefined
   element.document = DOC;
   element.encode = async () => new Blob([new Uint8Array(486_000)]);
   box.appendChild(element);
-  // WebP, so the replace form shows the address warning, its tallest row.
+  // On WebP, so the quality slider shows: the replace form at its tallest. The copy form is taller still.
   element.show('saveAs', { format: 'webp' });
   await element.updateComplete;
   if (mode === 'copy') {

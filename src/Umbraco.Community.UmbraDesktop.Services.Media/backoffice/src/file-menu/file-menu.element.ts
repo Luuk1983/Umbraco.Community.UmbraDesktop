@@ -15,7 +15,14 @@ import {
   SHEET_BAR_HEIGHT,
   SLIDE_MS,
 } from './constants.js';
-import { createDiscardQuestion, createFolderName, createItemCheck, createThumbnails } from './deps.js';
+import {
+  createDiscardQuestion,
+  createFolderName,
+  createItemCheck,
+  createReferenceCount,
+  createThumbnails,
+  createUsedElsewhereQuestion,
+} from './deps.js';
 import type { FileMenuDeps } from './deps.js';
 import { filePageStyles } from './styles.js';
 import { OpenPage, openPageStyles } from './open-page.js';
@@ -223,6 +230,8 @@ export class UmbraDesktopMediaFileMenuElement extends UmbLitElement {
         confirmDiscard: createDiscardQuestion(this),
         folderName: createFolderName(this),
         items: createItemCheck(this),
+        references: createReferenceCount(this),
+        confirmUsedElsewhere: createUsedElsewhereQuestion(this),
       };
     }
     return this.#realDeps;
@@ -258,8 +267,7 @@ export class UmbraDesktopMediaFileMenuElement extends UmbLitElement {
   /**
    * Save the document as the app's Save button does: over the item, in its own format, at the
    * default quality, without asking (D4). An item whose format cannot be kept (a GIF, a BMP) is not
-   * converted silently: the menu shows Save as instead, on PNG with the address warning showing, and
-   * nothing is written (design §6).
+   * converted silently: the menu shows Save as instead, on PNG, and nothing is written (design §6).
    * @returns How it went.
    */
   async save(): Promise<FileSaveOutcome> {
@@ -286,7 +294,7 @@ export class UmbraDesktopMediaFileMenuElement extends UmbLitElement {
     let outcome: FileSaveOutcome;
     try {
       outcome = this.encode
-        ? await runSave(this._deps.context, document, choice, this.encode, this.resetFocalPoint)
+        ? await runSave(this._deps.context, document, choice, this.encode, this.resetFocalPoint, () => this.#goOnUsedElsewhere(document))
         : { status: 'failed' };
     } catch (error) {
       outcome = { status: 'failed', message: error instanceof Error ? error.message : undefined };
@@ -302,6 +310,56 @@ export class UmbraDesktopMediaFileMenuElement extends UmbLitElement {
       this._status = { kind: 'cancelled' };
     }
     return outcome;
+  }
+
+  /**
+   * Where the open file is used (#137): how many places, once counted, and whether the person has
+   * said yes to saving over it. Kept for one item, and started again when the app opens another or
+   * moves onto a copy, so the question is asked once per opened file.
+   */
+  @state()
+  protected _usage?: { unique: string; count?: number; agreed: boolean };
+
+  /**
+   * Count the places a newly opened file is used, as it opens, so a save never waits on it. A count
+   * that fails stays unknown: no question, no Info row.
+   * @param changed What changed.
+   */
+  protected override willUpdate(changed: Map<PropertyKey, unknown>): void {
+    super.willUpdate(changed);
+    if (!changed.has('document')) return;
+    const unique = this.document?.unique ?? null;
+    if (unique === (this._usage?.unique ?? null)) return;
+    if (!unique) {
+      this._usage = undefined;
+      return;
+    }
+    const usage = { unique, agreed: false } as { unique: string; count?: number; agreed: boolean };
+    this._usage = usage;
+    const count = this._deps.references;
+    if (!count) return;
+    count(unique).then(
+      (total) => {
+        if (this._usage !== usage || total === undefined) return;
+        this._usage = { ...usage, count: total };
+      },
+      () => undefined,
+    );
+  }
+
+  /**
+   * Whether a save over the open file goes on: asks the first time when the file is used anywhere,
+   * and remembers a yes for that file. A no is not remembered, so the next save asks again.
+   * @param document The document being saved.
+   * @returns True to save.
+   */
+  async #goOnUsedElsewhere(document: FileMenuDocument): Promise<boolean> {
+    const usage = this._usage;
+    const ask = this._deps.confirmUsedElsewhere;
+    if (!usage || usage.unique !== document.unique || !usage.count || usage.agreed || !ask) return true;
+    const yes = await ask(document.name, usage.count, usage.unique);
+    if (yes && this._usage?.unique === usage.unique) this._usage = { ...this._usage, agreed: true };
+    return yes;
   }
 
   /** Save from the menu's command: at once, then the menu goes, unless Save as had to take over. */
@@ -486,7 +544,7 @@ export class UmbraDesktopMediaFileMenuElement extends UmbLitElement {
         ? this.#openPage.render()
         : panel === 'saveAs'
           ? this.#saveAsPage.render()
-          : renderInfoPage(this.document, this._words, this.localize.lang());
+          : renderInfoPage(this.document, this._words, this.localize.lang(), this._usage?.count);
     const dismiss = html`<button type="button" class="button" data-action="dismiss" @click=${() => this.hide()}>
       ${this._words(panel === 'info' ? 'close' : 'cancel')}
     </button>`;

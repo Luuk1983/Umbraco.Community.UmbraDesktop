@@ -23,6 +23,11 @@ UmbraDesktop listens to the same signal and tells you.
   this while you were editing it**, and marks its title bar and its taskbar button with a warning
   icon. So the warning reaches you even on a window minimised an hour ago.
 
+Lists of media in desktop windows follow changes too. When an image is saved, by you in another window
+or by somebody else, its thumbnail updates in every Media Manager and Media section window showing it,
+and an item moved to the recycle bin or deleted leaves their lists. An item you have open with unsaved
+changes is left to the banner above.
+
 The icon is the one Umbraco uses elsewhere, a warning triangle or a circle-x rather than a coloured
 dot, so the severity survives a monochrome screen.
 

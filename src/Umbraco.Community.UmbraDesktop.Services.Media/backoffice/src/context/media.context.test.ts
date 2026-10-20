@@ -10,6 +10,7 @@ import type { MediaSaveRequest } from '../files/media-save.js';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import type { UmbCurrentUserContext } from '@umbraco-cms/backoffice/current-user';
 import { UmbBasicState } from '@umbraco-cms/backoffice/observable-api';
+import { UMB_ACTION_EVENT_CONTEXT } from '@umbraco-cms/backoffice/action';
 
 /** A bare element to host the context, as the desktop element does in production. */
 @customElement('umbradesktop-media-context-test-host')
@@ -198,4 +199,63 @@ it('does not record a cancelled open or a failed save', async () => {
   await context.open();
   await context.save(request('a'));
   expect(await context.recent()).to.deep.equal([]);
+});
+
+/**
+ * A save tells the windows on the desktop page what changed, through core's own action events, as
+ * core's media workspace does after its own save (#137). Found in a real backoffice: a Media Manager
+ * window kept the old preview after the Image Editor saved over the picture, until the folder was
+ * loaded again. Core clears its thumbnail cache on the save; the events are what make the cards ask.
+ */
+describe('telling the windows what a save changed', () => {
+  /**
+   * The context under a stand-in of core's action event context, recording what it is told.
+   * @param deps The operations.
+   * @returns The context and the events it dispatched, as type and entity.
+   */
+  async function withEvents(deps: MediaContextDeps) {
+    const seen: Array<[string, string, string | null]> = [];
+    const events = new EventTarget();
+    for (const type of ['entity-updated', 'request-reload-structure-for-entity', 'request-reload-children-of-entity']) {
+      events.addEventListener(type, (event) => {
+        const entity = event as Event & { getEntityType(): string; getUnique(): string | null };
+        seen.push([event.type, entity.getEntityType(), entity.getUnique()]);
+      });
+    }
+    const host = await fixture<TestHost>(html`<umbradesktop-media-context-test-host></umbradesktop-media-context-test-host>`);
+    host.provideContext(UMB_ACTION_EVENT_CONTEXT, Object.assign(events, { getHostElement: () => host }) as never);
+    const context = new UmbraDesktopMediaContext(host, deps, new MapStorage());
+    return { context, seen };
+  }
+
+  it('says the item changed after a save over it, so its thumbnails and its row load again', async () => {
+    const { deps } = fakes();
+    deps.save = async () => ({ ok: true, unique: 'k1' });
+    const { context, seen } = await withEvents(deps);
+    await context.save({ ...request('beach'), existing: 'k1', folder: 'f1' });
+    expect(seen).to.deep.equal([
+      ['entity-updated', 'media', 'k1'],
+      ['request-reload-structure-for-entity', 'media', 'k1'],
+    ]);
+  });
+
+  it('reloads the folder a new item went into, so the item shows there', async () => {
+    const { deps } = fakes();
+    deps.save = async () => ({ ok: true, unique: 'new1' });
+    const { context, seen } = await withEvents(deps);
+    await context.save({ ...request('copy'), folder: 'f1' });
+    await context.save({ ...request('copy'), folder: null });
+    expect(seen).to.deep.equal([
+      ['request-reload-children-of-entity', 'media', 'f1'],
+      ['request-reload-children-of-entity', 'media-root', null],
+    ]);
+  });
+
+  it('says nothing after a failed save', async () => {
+    const { deps } = fakes();
+    deps.save = async () => ({ ok: false, message: 'no' });
+    const { context, seen } = await withEvents(deps);
+    await context.save({ ...request('beach'), existing: 'k1' });
+    expect(seen).to.deep.equal([]);
+  });
 });

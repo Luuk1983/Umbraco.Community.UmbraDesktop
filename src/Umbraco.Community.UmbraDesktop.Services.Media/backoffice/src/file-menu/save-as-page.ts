@@ -3,7 +3,7 @@ import type { TemplateResult } from '@umbraco-cms/backoffice/external/lit';
 import type { WordKey } from '../shared/words.js';
 import { MEASURE_DEBOUNCE_MS, PAGE_GAP, SAVE_AS_FORM_WIDTH, SAVE_AS_PREVIEW_MIN_WIDTH } from './constants.js';
 import type { FileMenuDeps } from './deps.js';
-import { SAVE_FORMATS, addressChanges, formatBytes, formatLabel, keepFormatFor } from './formats.js';
+import { SAVE_FORMATS, formatBytes, formatLabel, keepFormatFor } from './formats.js';
 import { saveAsDefaults } from './save-flow.js';
 import type { SaveChoice } from './save-flow.js';
 import type { FileEncoder, FileMenuDocument, SaveFormat } from './types.js';
@@ -268,11 +268,6 @@ export class SaveAsPage {
               <b>${this.#after === undefined ? words('saveAsMeasuring') : formatBytes(this.#after, host.lang)}</b></span
             >
           </p>
-          ${addressChanges(document.extension, format) && !copy
-            ? html`<p class="warning" role="note">
-                <umb-icon name="icon-alert"></umb-icon><span>${words('saveAsAddressWarning')}</span>
-              </p>`
-            : nothing}
         </div>
         <figure class="preview-box">
           ${host.preview ? html`<img class="preview" src=${host.preview} alt="" />` : html`<span class="preview"></span>`}
@@ -414,16 +409,6 @@ export const saveAsPageStyles = css`
     display: flex;
     align-items: baseline;
     gap: 8px;
-  }
-
-  .warning {
-    display: flex;
-    gap: 8px;
-    font-size: 13px;
-  }
-
-  .warning umb-icon {
-    flex: none;
   }
 
   .preview-box {

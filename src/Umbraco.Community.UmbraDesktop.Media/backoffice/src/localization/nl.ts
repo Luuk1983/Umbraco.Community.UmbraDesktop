@@ -91,6 +91,7 @@ export default {
 
     // The Image Editor.
     imageEditor: 'Afbeeldingseditor',
+    editImage: 'Afbeelding bewerken',
 
     undo: 'Ongedaan maken',
     redo: 'Opnieuw',
@@ -118,6 +119,9 @@ export default {
     refusedSvg: '%0% is een SVG, een vectorafbeelding. De afbeeldingseditor bewerkt foto’s en andere pixelafbeeldingen.',
     refusedOther: '%0% is geen afbeelding die de afbeeldingseditor kan openen.',
     decodeFailed: '%0% kon niet als afbeelding worden gelezen.',
+    openFailed: '%0% kon niet worden geopend.',
+    openFailedUnnamed: 'De afbeelding kon niet worden geopend.',
+    openTrashed: '%0% staat in de prullenbak. Zet het terug om het te bewerken.',
     animatedGif: 'Deze GIF is geanimeerd. Bij opslaan blijft alleen het eerste beeld over.',
     unreachable: 'De mediabibliotheek is niet bereikbaar, dus er kan niets worden geopend of opgeslagen.',
     saved: 'Opgeslagen.',

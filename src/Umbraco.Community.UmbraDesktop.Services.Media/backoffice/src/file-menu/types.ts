@@ -37,8 +37,8 @@ export interface FileMenuDocument {
   /** The item's file size now, in bytes. */
   bytes: number;
   /**
-   * The file's own name in the media library, with its extension. A replace keeps it, changing only
-   * the extension for a new format, so the file's address stays the same; without it the file is
+   * The file's own name in the media library, with its extension. A replace writes it again with a
+   * hash of the new contents, so a changed file gets a new address (#137); without it the file is
    * named after the item.
    */
   fileName?: string;
@@ -68,6 +68,13 @@ export interface FileSavedDetail {
   folderName?: string;
   /** Whether it is a copy: the app is now editing the copy, and the next save writes to it. */
   copy: boolean;
+  /**
+   * For a copy: true when it kept the original's media type and properties, false when the original
+   * was gone and it is a plain new item, so an app drops what that item does not have. Issue #137.
+   */
+  fullCopy?: boolean;
+  /** Something the person should know, shown where you would say "Saved"; see `MediaSaveResult`. */
+  notice?: string;
   /** The saved file's size, in bytes: the item's size now. */
   bytes: number;
   /** The saved file's name, for the next save to keep. */

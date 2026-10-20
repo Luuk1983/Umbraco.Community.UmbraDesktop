@@ -108,23 +108,37 @@ const MEDIA = new UmbContextToken<UmbContextMinimal>('UmbraDesktopMediaContext')
 
 /**
  * An editor mounted in a box of its default size, with the media context provided or not.
- * @param options Whether to provide the context.
- * @returns The editor and its fake file menu.
+ * @param options Whether to provide the context, where the editor opens, and how the context's
+ *   `open` answers an open by key.
+ * @param options.media Whether to provide the media context.
+ * @param options.location The editor's location, set before it connects, as the desktop sets it.
+ * @param options.open What the context's `open` answers; a cancel by default.
+ * @returns The editor, its fake file menu, and every `open` the context was asked for.
  */
-export async function mountEditor(options: { media?: boolean } = {}) {
+export async function mountEditor(
+  options: { media?: boolean; location?: string; open?: (options?: { unique?: string }) => Promise<unknown> } = {},
+) {
   const host = await fixture<TestHost>(
     html`<umbradesktop-image-editor-test-host
       style="display: flex; flex-direction: column; width: ${IMAGE_EDITOR_CONTENT_SIZE.w}px; height: ${IMAGE_EDITOR_CONTENT_SIZE.h}px"
     ></umbradesktop-image-editor-test-host>`,
   );
-  if (options.media !== false) host.provideContext(MEDIA, { open: async () => ({ status: 'cancelled' }), getHostElement: () => host } as UmbContextMinimal);
+  const opens: Array<{ unique?: string } | undefined> = [];
+  const open = options.open ?? (async () => ({ status: 'cancelled' }));
+  if (options.media !== false) {
+    host.provideContext(MEDIA, {
+      open: (asked?: { unique?: string }) => (opens.push(asked), open(asked)),
+      getHostElement: () => host,
+    } as UmbContextMinimal);
+  }
   const editor = document.createElement('umbradesktop-image-editor') as UmbraDesktopImageEditorElement;
   editor.style.flex = '1';
+  if (options.location !== undefined) editor.location = options.location;
   host.appendChild(editor);
   await editor.updateComplete;
   await settle(editor);
   const menu = editor.shadowRoot!.querySelector('umbradesktop-media-file-menu') as FakeFileMenu | null;
-  return { host, editor, menu };
+  return { host, editor, menu, opens };
 }
 
 /**

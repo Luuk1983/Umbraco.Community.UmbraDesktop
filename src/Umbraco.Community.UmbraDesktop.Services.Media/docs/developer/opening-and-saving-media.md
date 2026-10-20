@@ -86,6 +86,7 @@ type MediaOpenResult =
       folderName?: string;
       focalPoint?: { left: number; top: number } | null;
       fileName?: string;
+      isTrashed?: boolean;
     }
   | { status: 'cancelled' }
   | { status: 'failed'; name?: string };
@@ -98,8 +99,9 @@ the picker, which is how a list of recent files opens one. The answer is one of 
   lower case without the dot, and the item's update date. Keep `unique` and `updateDate` for saving
   it back. `folder` is the key of the folder the item is in (`null` at the root) and `folderName` its
   name. `focalPoint` is an image's focal point as fractions of its width and height, or `null` when it
-  has none. `fileName` is the file's own name, as its address ends: name your saved file the same, with
-  a new extension only for a new format, and its address stays the same.
+  has none. `fileName` is the file's own name, as its address ends. `isTrashed` says whether
+  the item is in the recycle bin: `open({ unique })` reads an item wherever it is, so an app opening
+  one it was handed can refuse one somebody binned, as the Image Editor does.
 - `cancelled`: the picker was closed. Do nothing.
 - `failed`: the file could not be read. `name` is what was picked, for your message.
 
@@ -116,23 +118,29 @@ interface MediaSaveRequest {
   existing?: string;
   expectedUpdateDate?: string | null;
   force?: boolean;
+  copyOf?: string;
   resetFocalPoint?: boolean;
 }
 
 type MediaSaveResult =
-  | { ok: true; unique: string; updateDate?: string | null }
+  | { ok: true; unique: string; updateDate?: string | null; copied?: 'full' | 'plain'; notice?: string }
   | { ok: false; conflict?: true; message?: string };
 ```
 
 | Field | Meaning |
 | --- | --- |
-| `file` | The file. Its name's extension decides the media type, as a drag and drop into the Media section does |
+| `file` | The file. Its name's extension decides the media type, as a drag and drop into the Media section does. Overwriting `existing`, give new contents a new file name: Umbraco keeps the item's file in one folder, so the same name keeps the same address, and browsers go on showing their cached copy. The file menu adds a hash of the contents, as [Use the file menu](#7-use-the-file-menu) says |
 | `name` | The media item's name. It need not be the file's name |
 | `folder` | The folder a new item goes in, or `null` for the root. Ignored when `existing` is still there |
 | `existing` | The item your document came from or was last saved as. A save overwrites it instead of creating a copy. If it has been deleted or is in the recycle bin, a new item is created in `folder` |
 | `expectedUpdateDate` | The update date your document last saw: from `open()`, or from your last save. Leave it out to skip the check |
 | `force` | Overwrite `existing` even if somebody changed it since |
-| `resetFocalPoint` | When overwriting `existing`, clear its focal point and every named crop's coordinates. Send it after a crop, rotate or flip, which moves what those fractions point at. Leave it out for anything else, and they are kept |
+| `copyOf` | Without `existing`: the item the new item is a full copy of. It takes that item's media type and every property, such as the focal point, crops and alt text, with your file in place of the old one; label properties are left out for the server to fill from the new file. If that item's media type does not take your file's format, or `folder` does not allow it, nothing is saved and `message` says why. Another file the item holds that cannot be copied is left out, and `notice` names it. If the item is gone or in the recycle bin, a plain new item is created instead, with `copied: 'plain'` and a `notice` saying so. Leave it out for a plain new item, which holds only the file |
+| `resetFocalPoint` | When overwriting `existing` or copying `copyOf`, clear the focal point and every named crop's coordinates. Send it after a crop, rotate or flip, which moves what those fractions point at. Leave it out for anything else, and they are kept |
+
+A successful save can carry `notice`, something the person should know, in this package's words:
+show it where you would say "Saved". With `copyOf`, `copied` says whether the new item is a `full`
+copy or a `plain` new item, so drop whatever a plain item does not have, such as a focal point.
 
 A save that would overwrite a version your document has not seen writes nothing and answers
 `{ ok: false, conflict: true }`. Ask, and save again with `force` on a yes:
@@ -150,6 +158,13 @@ if (result.ok) {
 ```
 
 Keep the `unique` and `updateDate` a successful save answers, and send them with the next save.
+
+After a successful save the service tells the desktop page what changed, with core's own action
+events, as core's media workspace does after its own save: over an item, that the item changed (its
+thumbnails load again, and the collections showing it); a new item, that its folder's contents
+changed. So a Media Manager window shows the change at once, without your app doing anything.
+Backoffice windows, such as the Media section, are kept up to date by the desktop itself, from the
+server's own change notifications.
 
 When the media library refuses the file, `message` says why in the backoffice's own words, such as a
 folder that does not allow that media type. Show it to the person. Without a message, the save failed
@@ -217,11 +232,12 @@ interface FileMenuDocument {
   extension: string;              // the item's file extension now
   width: number; height: number;  // as it will be saved
   bytes: number;                  // the item's file size now
-  fileName?: string;              // the file's own name, which a replace keeps
+  fileName?: string;              // the file's own name, which a replace writes again with a new hash
 }
 type FileEncoder = (format: SaveFormat, quality: number) => Promise<Blob>;
 interface FileSavedDetail { unique: string; updateDate?: string | null; name: string; extension: string;
-  folder: string | null; folderName?: string; copy: boolean; bytes: number; fileName: string }
+  folder: string | null; folderName?: string; copy: boolean; fullCopy?: boolean; notice?: string;
+  bytes: number; fileName: string }
 type FileSaveOutcome = { status: 'saved'; saved: FileSavedDetail } | { status: 'needs-save-as' }
   | { status: 'cancelled' } | { status: 'failed'; message?: string };
 ```
@@ -256,6 +272,22 @@ type FileSaveOutcome = { status: 'saved'; saved: FileSavedDetail } | { status: '
    file whose format cannot be written back, such as a GIF, it shows the menu on Save as with PNG
    chosen and answers `needs-save-as`. The menu's own Save does the same and then puts itself away.
 
+   **A file used elsewhere is asked about first.** A media item can be used on pages, by members and
+   by other media, and a save over it changes it in all of them. So the first save over an opened
+   file that is used anywhere asks, in Umbraco's confirm dialog, saying how many places use it, with
+   **Save** and **Cancel**. A Cancel saves nothing and answers `cancelled`, as the overwrite question
+   does; the next save asks again. A yes holds until another file is opened. Every save over the item
+   asks this way, whether it came from your button, the menu's Save or Replace in Save as; a copy never
+   asks. The menu counts the places when the file opens, so a save does not wait on it, and when the
+   count cannot be read it asks nothing. Info shows the count as **Used in**.
+
+   **A save over an item gives the file a new name**: its own name with a short hash of the new
+   contents after `-ud`, such as `beach-ud3f9a1c07.jpg`, replacing the hash an earlier save added. Umbraco keeps an
+   item's file in one folder, so the name is what gives the file a new address, and a new address is
+   what makes every window show the new picture rather than the browser's cached copy. Umbraco does
+   the same when a person uploads a replacement: the file takes the uploaded file's name. The same
+   contents get the same name. A link someone pasted to the old file breaks, as it does after an upload.
+
 4. **Take what it tells you.** On `open`, the event's `detail` is the opened file, as `open()`
    answers it; check it suits your app, then call `hide()`. On `saved`, take the `detail` as your
    document's new facts: after a copy, your document is the copy, and the next save writes to it. On
@@ -275,7 +307,7 @@ type FileSaveOutcome = { status: 'saved'; saved: FileSavedDetail } | { status: '
 | `accept` | The extensions your app opens. The recent list shows only those |
 | `encode` | Writes your document in a format and quality. Save as calls it to measure the size after, and every save calls it to make the file |
 | `preview` | An image URL of the picture as it will be saved, for Save as |
-| `resetFocalPoint` | Sent with a save over the item, as `resetFocalPoint` on the request |
+| `resetFocalPoint` | Sent with a save over the item or a copy of it, as `resetFocalPoint` on the request. A copy is sent with `copyOf`, so it keeps the item's properties |
 
 The menu draws itself in the desktop's app tokens, so every theme draws it in its own idiom: Save
 copy and the other main actions in `--umbradesktop-app-action`, which is Umbraco's green Save in the

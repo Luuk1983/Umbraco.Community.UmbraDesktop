@@ -586,6 +586,16 @@ editor reopens empty, so without it a reopened editor would show the last sessio
 empty canvas. A test holds both, and §7.3 of the developer guide says it for any app that reopens
 empty.
 
+Since #137 the editor has a location, the media item it shows, and reopens at that image rather than
+empty; the empty title stays for an editor that reopens with no image, or fails to open it. See
+[the Edit image design](2026-10-19-edit-image-action-design.md) §4.1.
+
+Also since #137, owner's choice 2026-10-20: a save over an item no longer keeps the file's name. It
+writes the name with a short hash of the new contents (`beach-ud3f9a1c07.jpg`), as core gives a replaced
+file the uploaded file's name, because a kept address left every window and thumbnail showing the
+browser's cached copy. That reverses the fix for the first bug of the real run in §13 (renaming broke a
+pasted link) on purpose, and drops Save as's warning about the address. See the Edit image design §11.4.
+
 The close request (`umbradesktop-close-request`) is this branch's alone and stays: the developer
 guide's §7.7, and its test moved to `window-app-close.test.ts`, since `window-app-title.test.ts` is now
 main's.
