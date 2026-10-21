@@ -95,7 +95,17 @@ export function contentHash(bytes: Uint8Array): string {
  * @returns The file name.
  */
 export function versionedFileName(base: string, hash: string, extension: string): string {
-  return `${base.replace(HASH_SUFFIX, '')}-ud${hash}.${extension}`;
+  return `${unversionedBase(base)}-ud${hash}.${extension}`;
+}
+
+/**
+ * A file's name without the hash an earlier save over its item put there, for naming a copy after
+ * the original (Optimize images, #139): `banjo-ud0badf00d` is `banjo`.
+ * @param base The file's name now, without its extension.
+ * @returns The name before the hash; the same name when it has none.
+ */
+export function unversionedBase(base: string): string {
+  return base.replace(HASH_SUFFIX, '');
 }
 
 /**

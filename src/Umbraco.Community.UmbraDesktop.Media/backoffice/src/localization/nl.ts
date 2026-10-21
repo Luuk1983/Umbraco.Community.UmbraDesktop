@@ -92,6 +92,8 @@ export default {
     // The Image Editor.
     imageEditor: 'Afbeeldingseditor',
     editImage: 'Afbeelding bewerken',
+    // Afbeeldingen optimaliseren (#139): de bulkactie.
+    optimizeImages: 'Afbeeldingen optimaliseren',
 
     undo: 'Ongedaan maken',
     redo: 'Opnieuw',

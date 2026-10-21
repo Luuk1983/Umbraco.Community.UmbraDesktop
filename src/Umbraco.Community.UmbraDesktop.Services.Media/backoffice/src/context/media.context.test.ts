@@ -259,3 +259,110 @@ describe('telling the windows what a save changed', () => {
     expect(seen).to.deep.equal([]);
   });
 });
+
+/**
+ * Optimize images (#139, design §8): the context opens a window per run, hands the caller the run's
+ * report when it ends, and saves through the same announcement an app's save makes, without filling
+ * the person's recent list with a batch.
+ */
+describe('optimizing media', () => {
+  /** The desktop's window manager, by the alias it publishes. */
+  const WINDOWS = new UmbContextToken<UmbContextMinimal & { openApp(alias: string, options?: { location?: string }): boolean }>(
+    'UmbraDesktopWindowManagerContext',
+  );
+
+  /** The lookups a run makes, answering for one image in Products. */
+  const lookups = () => ({
+    facts: async (uniques: string[]) =>
+      new Map(uniques.map((unique) => [unique, { unique, name: 'Banjo', parent: 'products', isTrashed: false, mediaType: 'image', extension: 'jpg', hasUrl: true }])),
+    folderTypes: async () => new Set<string>(),
+    folderName: async () => 'Products',
+    references: async () => 0,
+    thumbnails: async () => new Map<string, string>(),
+  });
+
+  /**
+   * The context on a desktop stand-in with a window manager, opening and saving a JPEG.
+   * @param withDesktop Whether the window manager is there.
+   */
+  async function desktop(withDesktop = true) {
+    const { deps } = fakes();
+    const saved: MediaSaveRequest[] = [];
+    deps.open = async () => ({
+      status: 'opened',
+      unique: 'banjo',
+      name: 'Banjo',
+      blob: new Blob([await (await fetch(new URL('../optimize/fixtures/exif-orientation-6.jpg', import.meta.url))).arrayBuffer()], { type: 'image/jpeg' }),
+      extension: 'jpg',
+      fileName: 'banjo.jpg',
+      folder: 'products',
+      updateDate: 'd1',
+      isTrashed: false,
+    });
+    deps.save = async (_host, request) => {
+      saved.push(request);
+      return { ok: true, unique: request.existing ?? 'copy1' };
+    };
+    deps.lookups = () => lookups();
+    const host = await fixture<TestHost>(html`<umbradesktop-media-context-test-host></umbradesktop-media-context-test-host>`);
+    const opened: Array<[string, unknown]> = [];
+    if (withDesktop) {
+      host.provideContext(WINDOWS, {
+        openApp: (alias: string, options?: unknown) => (opened.push([alias, options]), true),
+        getHostElement: () => host,
+      } as never);
+    }
+    host.provideContext(UMB_CURRENT_USER_CONTEXT, {
+      unique: new UmbBasicState<string | undefined>('u1').asObservable(),
+      getHostElement: () => host,
+    } as unknown as UmbCurrentUserContext);
+    const events: string[] = [];
+    const target = new EventTarget();
+    target.addEventListener('entity-updated', () => events.push('entity-updated'));
+    host.provideContext(UMB_ACTION_EVENT_CONTEXT, Object.assign(target, { getHostElement: () => host }) as never);
+    const storage = new MapStorage();
+    const context = new UmbraDesktopMediaContext(host, deps, storage);
+    return { context, opened, saved, events, storage };
+  }
+
+  it("opens an Optimize images window at the new run, and resolves with its report", async () => {
+    const { context, opened } = await desktop();
+    const report = context.optimizeMedia({ items: ['banjo'], options: { format: 'png' }, start: true });
+    const done = await report;
+    expect(opened).to.have.length(1);
+    const [alias, options] = opened[0] as [string, { location: string }];
+    expect(alias).to.equal('Umbraco.Community.UmbraDesktop.Services.Media.OptimizeImages');
+    expect(options.location).to.be.a('string').and.not.equal('');
+    expect(done.status).to.equal('finished');
+    expect(done.items[0].status).to.equal('optimized');
+  });
+
+  it('answers not-started when there is no desktop to open the window on', async () => {
+    const { context } = await desktop(false);
+    const done = await context.optimizeMedia({ items: ['banjo'], start: true });
+    expect(done.status).to.equal('not-started');
+  });
+
+  it("announces a run's saves but keeps them off the recent list", async () => {
+    const { context, saved, events } = await desktop();
+    await context.optimizeMedia({ items: ['banjo'], options: { format: 'png' }, start: true });
+    expect(saved).to.have.length(1);
+    expect(saved[0].existing).to.equal('banjo');
+    expect(events).to.deep.equal(['entity-updated']);
+    expect(await context.recent()).to.deep.equal([]);
+  });
+
+  it('remembers the settings a run started with, for this person', async () => {
+    const { context, storage } = await desktop();
+    await context.optimizeMedia({ items: ['banjo'], options: { format: 'png' }, start: true });
+    expect(JSON.parse(storage.map.get('umbradesktop-media-optimize:u1')!)).to.deep.include({ resize: false, convert: true, format: 'png' });
+  });
+
+  it('optimizes a file for an app, with nothing saved', async () => {
+    const { context, saved } = await desktop();
+    const file = new File([await (await fetch(new URL('../optimize/fixtures/exif-orientation-6.jpg', import.meta.url))).arrayBuffer()], 'a.jpg', { type: 'image/jpeg' });
+    const result = await context.optimizeFile(file, { format: 'png' });
+    expect(result.status).to.equal('optimized');
+    expect(saved).to.deep.equal([]);
+  });
+});

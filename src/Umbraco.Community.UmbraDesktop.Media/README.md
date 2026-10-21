@@ -19,6 +19,8 @@ The Image Editor works on an image from the media library and saves it back or a
 - **Mark up** with text, arrows, boxes and a pen, and **redact** what should not be seen, burned into the saved file.
 - **Resize**, and **save** over the image or as a copy, in JPEG, PNG or WebP, with the size before and after.
 
+[Optimize images](docs/user/optimize-images.md) does the same chore for a whole selection at once: resize, convert to WebP and remove the metadata of fifty camera photos in one run, in a window of its own.
+
 ## Get started
 
 ```bash

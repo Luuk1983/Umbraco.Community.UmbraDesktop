@@ -134,8 +134,11 @@ const IN_MANAGER = 'Umbraco.Community.UmbraDesktop.Media.Condition.InMediaManage
  */
 const MANAGER_ONLY = ['OpenInNewWindow', 'Cut', 'Copy', 'Paste', 'BulkCut', 'BulkCopy', 'CopyTo'];
 
-/** The actions that show wherever core shows a media item's actions, on the desktop (#137). */
-const EVERYWHERE = ['EditImage'];
+/**
+ * The actions that show wherever core shows a media item's actions, on the desktop: Edit image (#137),
+ * and Optimize images in the selection bar of any media collection (#139).
+ */
+const EVERYWHERE = ['EditImage', 'OptimizeImages'];
 
 it('registers the in-manager condition', () => {
   expect(byType('condition').map((m) => m.alias)).to.include(IN_MANAGER);
@@ -179,6 +182,29 @@ it('offers Edit image on image items wherever the desktop is, not only in a mana
   const registered = byType('condition').map((m) => m.alias);
   expect(registered).to.include('Umbraco.Community.UmbraDesktop.Media.Condition.OnDesktop');
   expect(registered).to.include('Umbraco.Community.UmbraDesktop.Media.Condition.IsImage');
+});
+
+/**
+ * #139: Optimize images in core's selection bar of a media collection, in Media Manager windows and the
+ * Media section's window alike (design §4): on the desktop, where its window opens, and for someone with
+ * the Media section, as Edit image. Not the in-manager condition. After the Manager's Copy to (21) and
+ * core's Move to (20), before core's Trash (10).
+ */
+it('offers Optimize images in the selection bar of any media collection on the desktop', () => {
+  const optimize = byType('entityBulkAction').find((m) => m.alias === 'Umbraco.Community.UmbraDesktop.Media.OptimizeImages') as
+    | { forEntityTypes: string[]; weight: number; meta: { label: string; icon: string }; conditions: Array<{ alias: string; match?: string }> }
+    | undefined;
+  expect(optimize?.forEntityTypes).to.deep.equal(['media']);
+  expect(optimize?.meta.label).to.equal('#umbraDesktopMedia_optimizeImages');
+  expect(area.optimizeImages).to.be.a('string');
+  expect(optimize?.weight).to.be.below(20).and.above(10);
+  expect(optimize?.conditions.map((each) => each.alias)).to.deep.equal([
+    'Umb.Condition.CollectionAlias',
+    'Umbraco.Community.UmbraDesktop.Media.Condition.OnDesktop',
+    'Umb.Condition.SectionUserPermission',
+  ]);
+  expect(optimize?.conditions[0].match).to.equal('Umb.Collection.Media');
+  expect(optimize?.conditions[2].match).to.equal('Umb.Section.Media');
 });
 
 it('offers Open in new window on folders and the Media root', () => {

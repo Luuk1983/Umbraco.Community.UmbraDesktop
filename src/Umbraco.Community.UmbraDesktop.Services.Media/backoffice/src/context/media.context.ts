@@ -1,4 +1,8 @@
 import { UmbContextBase, UmbControllerBase } from '@umbraco-cms/backoffice/class-api';
+import { UmbContextToken } from '@umbraco-cms/backoffice/context-api';
+import type { UmbContextMinimal } from '@umbraco-cms/backoffice/context-api';
+import { UmbId } from '@umbraco-cms/backoffice/id';
+import { UmbLocalizationController } from '@umbraco-cms/backoffice/localization-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { createMediaOpener } from '../files/media-open.js';
 import type { MediaOpenOptions, MediaOpenResult } from '../files/media-open.js';
@@ -22,6 +26,16 @@ import {
 import { extensionOf } from '../files/extension.js';
 import { RecentMediaList, browserStorage, recentKeyFor } from '../recent/recent-media.js';
 import type { RecentMediaEntry, RecentStorage } from '../recent/recent-media.js';
+import { wordsOf } from '../shared/words.js';
+import type { WordKey } from '../shared/words.js';
+import { UMBRADESKTOP_OPTIMIZE_APP } from '../optimize/constants.js';
+import { backofficeLookups } from '../optimize/lookups.js';
+import type { RunLookups } from '../optimize/lookups.js';
+import { optimizeFile } from '../optimize/optimize-file.js';
+import { readRemembered, rememberedKeyFor, writeRemembered } from '../optimize/remembered.js';
+import { OptimizeRunStore } from '../optimize/run-store.js';
+import type { RunWords } from '../optimize/run-store.js';
+import type { OptimizeFileResult, OptimizeMediaRequest, OptimizeOptions, OptimizeReport } from '../optimize/types.js';
 
 /**
  * The four operations, each run on the host it is given. Injectable, so a test needs no picker, no
@@ -36,6 +50,8 @@ export interface MediaContextDeps {
   pickSaveFolder(host: UmbControllerHost): Promise<SaveFolderChoice>;
   /** Ask whether to overwrite an item somebody else changed. */
   confirmOverwrite(host: UmbControllerHost, name: string): Promise<boolean>;
+  /** What an Optimize images run reads from the media library (#139); the backoffice's own when absent. */
+  lookups?(host: UmbControllerHost): RunLookups;
 }
 
 /** The real operations: Umbraco's own pickers, dialogs and media repositories. */
@@ -44,7 +60,40 @@ const REAL_DEPS: MediaContextDeps = {
   save: (host, request) => createMediaSaver(host)(request),
   pickSaveFolder: (host) => createSaveFolderPicker(host)(),
   confirmOverwrite: (host, name) => createOverwriteQuestion(host)(name),
+  lookups: (host) => backofficeLookups(host),
 };
+
+/** As much of the desktop's window manager as a run's window needs: its published `openApp`. */
+interface UmbraDesktopWindows extends UmbContextMinimal {
+  /**
+   * Open an app at a location.
+   * @param alias The app's manifest alias.
+   * @param options Where to open it.
+   * @returns Whether a window was opened.
+   */
+  openApp(alias: string, options?: { location?: string }): boolean;
+}
+
+/** The desktop's window manager, by the alias it publishes (`desktop-contexts.md` §5). */
+const UMBRADESKTOP_WINDOW_MANAGER = new UmbContextToken<UmbraDesktopWindows>('UmbraDesktopWindowManagerContext');
+
+/** Why an item was skipped, as the dictionary words it. */
+const SKIP_WORDS = {
+  folder: 'optimizeWhyFolder',
+  'no-file': 'optimizeWhyNoFile',
+  trashed: 'optimizeWhyTrashed',
+  'not-an-image': 'optimizeWhyNotImage',
+  vector: 'optimizeWhyVector',
+  animated: 'optimizeWhyAnimated',
+  missing: 'optimizeWhyMissing',
+} as const satisfies Record<string, WordKey>;
+
+/** Why an item was left as it was, as the dictionary words it. */
+const UNCHANGED_WORDS = {
+  fits: 'optimizeWhyFits',
+  'no-metadata': 'optimizeWhyNoMetadata',
+  'nothing-asked': 'optimizeWhyNothingAsked',
+} as const satisfies Record<string, WordKey>;
 
 /**
  * The host one call runs on. A controller of the context's, so everything created on it finds the
@@ -77,6 +126,21 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
    */
   #recent?: RecentMediaList;
 
+  /** The signed-in user's key, once known: whose Optimize images settings are remembered. */
+  #user?: string;
+
+  /** The desktop's window manager, once found, for a run's window. */
+  #windows?: UmbraDesktopWindows;
+
+  /** The words this context says itself: a run's title, its copies' names and its failures. */
+  readonly #words = wordsOf(new UmbLocalizationController(this));
+
+  /**
+   * Every Optimize images run on the desktop (#139, design §8.3), for this package's window to show.
+   * Not published: another package starts a run with {@link optimizeMedia} and gets its report.
+   */
+  readonly optimizeRuns: OptimizeRunStore;
+
   /**
    * @param host The desktop element.
    * @param deps What a test injects.
@@ -89,10 +153,74 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
     this.consumeContext(UMB_CURRENT_USER_CONTEXT, (user) => {
       this.observe(
         user?.unique,
-        (unique) => (this.#recent = unique ? new RecentMediaList(this.#storage, recentKeyFor(unique)) : undefined),
+        (unique) => {
+          this.#user = unique ?? undefined;
+          this.#recent = unique ? new RecentMediaList(this.#storage, recentKeyFor(unique)) : undefined;
+        },
         'umbraDesktopMediaRecentUser',
       );
     });
+    this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER, (windows) => (this.#windows = windows ?? undefined));
+    const lookups = (host: UmbControllerHost) => (deps.lookups ?? REAL_DEPS.lookups!)(host);
+    this.optimizeRuns = new OptimizeRunStore({
+      facts: (uniques) => this.#run((host) => lookups(host).facts(uniques)),
+      folderTypes: () => this.#run((host) => lookups(host).folderTypes()),
+      folderName: (unique) => this.#run((host) => lookups(host).folderName(unique)),
+      references: (unique) => this.#run((host) => lookups(host).references(unique)),
+      open: (unique) => this.#run((host) => this.#deps.open(host, { unique })),
+      save: (request) => this.#saveAndAnnounce(request),
+      optimize: (file, options) => optimizeFile(file, options),
+      words: this.#runWords(),
+      newId: () => UmbId.new(),
+      remember: (settings) => (this.#user ? writeRemembered(this.#storage, rememberedKeyFor(this.#user), settings) : undefined),
+      remembered: () => (this.#user ? readRemembered(this.#storage, rememberedKeyFor(this.#user)) : undefined),
+    });
+  }
+
+  /**
+   * Thumbnails for a run's rows, through the backoffice's imaging endpoint.
+   * @param uniques The images.
+   * @returns Each one's thumbnail address, by key; empty when they could not be read.
+   */
+  optimizeThumbnails(uniques: string[]): Promise<Map<string, string>> {
+    return this.#run((host) => (this.#deps.lookups ?? REAL_DEPS.lookups!)(host).thumbnails(uniques)).catch(() => new Map());
+  }
+
+  /** The desktop is going: every run stops after the image in hand, and every caller gets its report. */
+  override destroy(): void {
+    this.optimizeRuns?.dispose();
+    super.destroy();
+  }
+
+  /**
+   * A run's words, each read from the dictionary when it is said, so a language switched mid-run is
+   * the one the rest of the run speaks.
+   * @returns The words.
+   */
+  #runWords(): RunWords {
+    const words = (key: WordKey, ...args: unknown[]) => this.#words(key, ...args);
+    return {
+      titled: (name, count) => words('optimizeTitle', name, count),
+      mixed: (count) => words('optimizeTitleMixed', count),
+      copyName: (name) => words('optimizeCopyName', name),
+      get rootName() {
+        return words('optimizeRoot');
+      },
+      get conflict() {
+        return words('optimizeConflict');
+      },
+      get gone() {
+        return words('optimizeGone');
+      },
+      get unreadable() {
+        return words('optimizeUnreadable');
+      },
+      get refused() {
+        return words('optimizeRefused');
+      },
+      skipped: (reason) => words(SKIP_WORDS[reason]),
+      unchanged: (reason) => words(UNCHANGED_WORDS[reason]),
+    };
   }
 
   /**
@@ -143,7 +271,7 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
    * @returns How it went.
    */
   async save(request: MediaSaveRequest): Promise<MediaSaveResult> {
-    const result = await this.#run((host) => this.#deps.save(host, request));
+    const result = await this.#saveAndAnnounce(request);
     if (result.ok) {
       // An overwrite stays in its folder and its request says none, so an earlier entry's folder is
       // kept; a new item is in the folder it was saved to, whose name this request does not carry.
@@ -152,9 +280,50 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
         Date.now(),
         { keepFolder: !!request.existing },
       );
-      await this.#announce(request, result.unique);
     }
     return result;
+  }
+
+  /**
+   * Save, and tell the windows showing the item, without putting it on the recent list: the half of
+   * {@link save} an Optimize images run shares, so fifty images do not push every real entry out of
+   * Open recent in the Image Editor, Notepad and Paint (design §6.2, §7.4).
+   * @param request What to save, and where.
+   * @returns How it went.
+   */
+  async #saveAndAnnounce(request: MediaSaveRequest): Promise<MediaSaveResult> {
+    const result = await this.#run((host) => this.#deps.save(host, request));
+    if (result.ok) await this.#announce(request, result.unique);
+    return result;
+  }
+
+  /**
+   * Optimize one image file: resize it, convert it, or strip its metadata (#139, design §8.1). Nothing
+   * is saved and nothing shows: for an app that has an image before it reaches the media library.
+   * @param file The file, whose name or type says its format.
+   * @param options What to do; every field is optional.
+   * @returns How it went, with the new file when there is one.
+   */
+  optimizeFile(file: File, options?: OptimizeOptions): Promise<OptimizeFileResult> {
+    return optimizeFile(file, options);
+  }
+
+  /**
+   * Optimize media items in an Optimize images window of their own (#139, design §8.2): the window
+   * opens on its settings, or runs at once with `start`, and this resolves when the run ends. A Retry
+   * failed or Run the rest in the same window afterwards is the person's, not reported here.
+   * @param request The items and the starting settings.
+   * @returns The report: finished, cancelled (Cancel, or the window closed while running), or not
+   *   started (Cancel on the settings, or no desktop to open the window on).
+   */
+  async optimizeMedia(request: OptimizeMediaRequest): Promise<OptimizeReport> {
+    const items = [...(request.items ?? [])];
+    // Found before the run is made, so a run that starts at once never starts without a window.
+    const windows = this.#windows ?? (await this.getContext(UMBRADESKTOP_WINDOW_MANAGER).catch(() => undefined));
+    if (!windows) return { status: 'not-started', items: items.map((unique) => ({ unique, name: '', status: 'not-started' })), saved: 0 };
+    const { id, report } = this.optimizeRuns.create({ ...request, items });
+    if (!windows.openApp(UMBRADESKTOP_OPTIMIZE_APP, { location: id })) this.optimizeRuns.release(id);
+    return report;
   }
 
   /**

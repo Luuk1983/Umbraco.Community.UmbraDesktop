@@ -79,6 +79,8 @@ anything is selected, selecting an item adds it rather than opening it, as in th
   touches is selected. Hold Ctrl (Cmd on a Mac) to add to what is already selected.
 - To select everything in the window, press Ctrl+A (Cmd+A on a Mac). To select nothing, press Esc,
   or click empty space in the window.
+- To resize, convert or remove the metadata of the selected images, select **Optimize images** in the
+  bar. [Optimize images](optimize-images.md) has the details.
 
 ## Cut, copy and paste
 
