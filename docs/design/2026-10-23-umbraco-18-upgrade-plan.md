@@ -376,7 +376,7 @@ The spike's changes are on `dev/v18`, minus what the instances' first boots wrot
 - **C4.** The Workflow section names itself (`#umbraDesktop_appWorkflow`), test first.
 - **C5.** Nothing to change: no test asserts a 17-only version string that 18 breaks.
 - **Docs.**
-  - New developer page: Building for Umbraco 17 and 18 (`docs/developer/umbraco-versions.md`), including
+  - New developer page: [Building for Umbraco 17 and 18](../developer/umbraco-versions.md), including
     the LocalDB file a fresh clone needs.
   - RELEASE.md's versioning and ceiling paragraphs are corrected.
   - CLAUDE.md names the 18 instance and asks for both majors to be checked.

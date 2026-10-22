@@ -82,14 +82,19 @@ itself `17.0.0-alpha.0` while the host said `17.0.0`. The `SetJsonVersion` task 
 `src/Directory.Build.targets` too; a package names only its own `UmbracoPackageJsonPath`.
 
 **The package major tracks the Umbraco major**, so the first release was `v17.0.0`, not `v1.0.0`.
-The property `UmbracoMajor` in `src/Directory.Build.props` (default `17`) says which Umbraco major a
-build is for, and **one tag versions every major built from it**. The tags keep Umbraco 17's
-numbers: the `UmbraDesktopVersion` target in `src/Directory.Build.targets` swaps the major after
-MinVer has run, so a tag `v17.Y.Z` would build `18.Y.Z` for Umbraco 18, and a 17 build never enters
-it. `UmbraDesktopMajorPreRelease` in `src/Directory.Build.props` gives one major a prerelease (for
-example `rc.1`) from a tag that ships the other stable. `.github/actions/build-packages` takes the
-majors to build as `umbraco-majors`, default `'17'`, and packs them one after the other, never at
-once, because each stamps the same `umbraco-package.json` files.
+One source tree builds for Umbraco 17 and 18
+([Building for Umbraco 17 and 18](docs/developer/umbraco-versions.md)), and **one tag versions both**.
+The tags keep Umbraco 17's numbers. A tag `v17.Y.Z` builds `17.Y.Z` for Umbraco 17 and `18.Y.Z` for
+Umbraco 18, the same features under the same minor and patch, so the first 18 release is
+`18.<the 17 minor of the day>.0` rather than `18.0.0`. The `UmbraDesktopVersion` target in
+`src/Directory.Build.targets` swaps the major after MinVer has run; a 17 build never enters it.
+`UmbraDesktopMajorPreRelease` in `src/Directory.Build.props` ships the 18 set as a prerelease (for
+example `rc.1`) from a tag that ships 17 stable.
+
+**Publishing is still Umbraco 17 only.** `publish.yml` runs the build action with its default,
+`umbraco-majors: '17'`, until the 18 set is ready to ship (Phase E of the
+[upgrade plan](docs/design/2026-10-23-umbraco-18-upgrade-plan.md)). CI already builds, tests and
+checks both sets on every pull request.
 
 ## Cutting a release
 
