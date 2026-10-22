@@ -52,6 +52,10 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "CREATE DATABASE [UmbraDesktopDev] ON (NAM
 
 The next boot installs Umbraco unattended into it.
 
+Both can run at once, the 17 instance on `https://localhost:44356` and the 18 one on
+`https://localhost:44368`, but not in one browser profile: cookies are kept apart by host, not by
+port, so signing in to one signs the other out. Use a browser profile for each.
+
 ## Checking a change against both majors
 
 - **C#.** Run each test project for both majors, by its project file:
