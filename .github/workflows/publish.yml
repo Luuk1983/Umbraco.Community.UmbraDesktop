@@ -21,6 +21,9 @@ jobs:
       # The same composite action CI runs, so what is released is built exactly the way it was
       # tested on the pull request, and neither workflow can learn about a new package without the
       # other learning about it too.
+      # Umbraco 17's packages only, the action's default, until the 18 set is ready to ship (Phase E
+      # of docs/design/2026-10-23-umbraco-18-upgrade-plan.md): then `umbraco-majors: '17 18'` here
+      # publishes both from every tag. CI already builds and checks both.
       - uses: ./.github/actions/build-packages
 
       # The nuget.org trusted-publishing policy trusts this repository, this workflow file and the
