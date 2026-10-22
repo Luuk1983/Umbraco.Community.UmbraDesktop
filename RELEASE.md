@@ -24,9 +24,10 @@ Lockstep is a decision, not an accident: design D13 in
 All six publish on **every** release, changed or not — a gap in an add-on's version history
 reads like a broken pipeline, where a version with no changes reads like Umbraco.
 
-**Every add-on requires this release of the host, or any later 17.** Each add-on references the
-host as a `ProjectReference`, never a `PackageReference`: it is then compiled against the host from
-the same commit, and its packed dependency is `[<this release>, 17.99999999.0]`. The floor is the
+**Every add-on requires this release of the host, or any later version for the same Umbraco
+major.** Each add-on references the host as a `ProjectReference`, never a `PackageReference`: it is
+then compiled against the host from the same commit, and its packed dependency is
+`[<this release>, 17.99999999.0]` in the Umbraco 17 set (`18.99999999.0` in the 18 set). The floor is the
 release itself because an add-on registers things only this release's host understands (package
 catalogues; for Entertainment also tray items; for Accessories also the unsaved-work attribute and the settings context's
 `formatDateTime`; for Media also app titles, the close request, pages attached to an app window and apps hidden from the launcher). The add-ons used to take the host by package range, floored at 17.0.0, which
@@ -45,27 +46,27 @@ without doing anything. The ceiling is one property, `UmbraDesktopUmbracoMajorCe
 The target hooks NuGet's private `_GetProjectReferenceVersions`, which an SDK update can change
 without a word, so `.github/actions/build-packages` reads the nuspec of every packed add-on (every
 `Umbraco.Community.UmbraDesktop.*` package other than the host) and fails the run unless its host
-dependency is exactly `[<host package version>, 17.99999999.0]`. The floor comes from the host
+dependency is exactly `[<host package version>, <that major>.99999999.0]`. The floor comes from the host
 project's own MinVer version, the same number as the add-on's because both are versioned off one
 tag. Entertainment also requires this release of the Arcade, and Accessories and Media this release of
 the media service, bounded the same way, and the same check reads those dependencies too; it fails if a
 package depends on a service package that is not in the pack output, because a release has to ship
-both. **Raise the ceiling with the major**: the release that moves to Umbraco 18 changes
-`UmbraDesktopUmbracoMajorCeiling` to `18.99999999`, which moves the Umbraco ranges' and the add-ons'
-ceilings together.
+both. **The ceiling follows the major**: `UmbraDesktopUmbracoMajorCeiling` is
+`$(UmbracoMajor).99999999`, so the 17 set is capped at `17.99999999.0` and the 18 set at
+`18.99999999.0`, and the action checks each set against its own.
 
 **The Umbraco floor is checked against the bundles.** `UmbraDesktopUmbracoFloor` in
-`src/Directory.Packages.props` is the oldest Umbraco the packages install on, 17.6.0. It was 17.0.0
-until a fresh 17.0.0 site showed the desktop never loading: the bundles import names the backoffice
-only exports from 17.4, and every test runs against the newest backoffice, so nothing had noticed.
-The same sites showed the overwrite guard silent below 17.6, where core has no `loadWithoutPersist`,
-so the floor went to 17.6 rather than 17.4.
-`.github/actions/build-packages` now reads the floor from the packed host's `Umbraco.Cms.StaticAssets`
-range, fetches that release's backoffice from NuGet, and fails the run if any packed bundle imports a
-name it does not export (`backoffice/scripts/check-umbraco-floor.mjs`). **Using a newer backoffice API
-means raising the floor**, or importing it so a missing name is survivable; the check says which. It
-only sees imported names: a method or property core added later, as `loadWithoutPersist` was, passes
-the check and has to be caught by reading core's changes.
+`src/Directory.Packages.props` is the oldest Umbraco each major's packages install on: 17.6.0 for 17,
+18.0.0 for 18. 17's was 17.0.0 until a fresh 17.0.0 site showed the desktop never loading: the
+bundles import names the backoffice only exports from 17.4, and every test runs against the newest
+backoffice, so nothing had noticed. The same sites showed the overwrite guard silent below 17.6, where
+core has no `loadWithoutPersist`, so the floor went to 17.6 rather than 17.4.
+`.github/actions/build-packages` reads each set's floor from its packed host's
+`Umbraco.Cms.StaticAssets` range, fetches that release's backoffice from NuGet, and fails the run if
+any packed bundle imports a name it does not export (`backoffice/scripts/check-umbraco-floor.mjs`).
+**Using a newer backoffice API means raising the floor**, or importing it so a missing name is
+survivable; the check says which. It only sees imported names: a method or property core added
+later, as `loadWithoutPersist` was, passes the check and has to be caught by reading core's changes.
 
 The host also depends on `Umbraco.Cms.StaticAssets`, the backoffice itself, at the same range. NuGet
 does not refuse an install below a floor: it lifts what the package declares, and only that. On a
@@ -77,14 +78,22 @@ from that dependency.
 
 ## Versioning
 
-MinVer, from `v*` tags on this repository. `MinVerAutoIncrement=minor`,
-`MinVerMinimumMajorMinor=17.0`, and all three settings are **repeated verbatim in every csproj
-file** — there is no shared props file to inherit them from, and dropping `MinVerTagPrefix` from
-an add-on makes MinVer ignore every `v`-prefixed tag and version it `17.0.0-alpha.0` while the host
-says `17.0.0`.
+MinVer, from `v*` tags on this repository. `MinVerTagPrefix=v`, `MinVerAutoIncrement=minor` and
+`MinVerMinimumMajorMinor=17.0` are set **once, in `src/Directory.Build.props`**, for all six packages.
+They used to be repeated in every csproj file, and an add-on that lost its `MinVerTagPrefix` versioned
+itself `17.0.0-alpha.0` while the host said `17.0.0`. The `SetJsonVersion` task and the
+`SyncUmbracoPackageVersion` target that stamp each `umbraco-package.json` live once in
+`src/Directory.Build.targets` too; a package names only its own `UmbracoPackageJsonPath`.
 
 **The package major tracks the Umbraco major**, so the first release was `v17.0.0`, not `v1.0.0`.
-A release supporting Umbraco 18 starts at `v18.0.0`.
+The property `UmbracoMajor` in `src/Directory.Build.props` (default `17`) says which Umbraco major a
+build is for, and **one tag versions every major built from it**. The tags keep Umbraco 17's
+numbers: the `UmbraDesktopVersion` target in `src/Directory.Build.targets` swaps the major after
+MinVer has run, so a tag `v17.Y.Z` would build `18.Y.Z` for Umbraco 18, and a 17 build never enters
+it. `UmbraDesktopMajorPreRelease` in `src/Directory.Build.props` gives one major a prerelease (for
+example `rc.1`) from a tag that ships the other stable. `.github/actions/build-packages` takes the
+majors to build as `umbraco-majors`, default `'17'`, and packs them one after the other, never at
+once, because each stamps the same `umbraco-package.json` files.
 
 ## Cutting a release
 

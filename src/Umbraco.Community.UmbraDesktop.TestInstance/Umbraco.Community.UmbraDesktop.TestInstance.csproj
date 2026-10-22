@@ -46,5 +46,10 @@
     <CopyRazorGenerateFilesToPublishDirectory>true</CopyRazorGenerateFilesToPublishDirectory>
   </PropertyGroup>
 
-
+  <!-- The Umbraco 17 test instance. Built as 18 (inside the v18 solution, or with
+       -p:UmbracoMajor=18) it would upgrade its database to 18, after which 17 can never open it
+       again. Umbraco 18 has its own instance, Umbraco.Community.UmbraDesktop.TestInstance.v18. -->
+  <Target Name="RequireUmbraco17" BeforeTargets="CollectPackageReferences;BeforeBuild" Condition="'$(UmbracoMajor)' != '17'">
+    <Error Text="$(MSBuildProjectName) is the Umbraco 17 test instance and must build with UmbracoMajor=17, not $(UmbracoMajor). Use Umbraco.Community.UmbraDesktop.TestInstance.v18 for Umbraco 18." />
+  </Target>
 </Project>
