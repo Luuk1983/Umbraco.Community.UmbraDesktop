@@ -380,11 +380,30 @@ The spike's changes are on `dev/v18`, minus what the instances' first boots wrot
     the LocalDB file a fresh clone needs.
   - RELEASE.md's versioning and ceiling paragraphs are corrected.
   - CLAUDE.md names the 18 instance and asks for both majors to be checked.
+- **Lock files in the packages.** A 17 pack carried `packages.umbraco18.lock.json` as content: the
+  SDK keeps only the current major's lock file out of the default items, and the Web SDK packs a
+  loose `.json`. The comparison of packs before and after A1 missed it because both had it.
+  `DefaultItemExcludes` now leaves out every `packages*.lock.json`.
+- **B5 (owner's decision: allow connections across majors).** Both test instances, each with an API
+  user in the Editors group and a connection to itself and to the other, driven through Remote
+  content: the tree, the Home document (15 properties, block grid included) and the media tree.
+  - Connection status reads both ways. The server only calls `v1` paths (`server/status`,
+    `server/information`, the token endpoint), which both majors have.
+  - 17→17 and 18→18 work.
+  - **18→17 did not boot:** 18's `getCurrentUser` maps `elementStartNodeIds`, which 17 has no
+    Elements to send. The frame's fetch shim now fills in fields an older server leaves out, only when
+    missing (`remote-viewer/older-server.ts`), and 18→17 works like the others.
+  - **17→18 stops on Advanced Permissions:** its 17 client calls `advanced-permissions/effective`,
+    which its 18 server refuses the API user (403; on 17 it is 200, and its 18 client never calls it).
+    With that one answer patched in flight, everything else worked, so nothing in Umbraco itself is
+    in the way. The viewer still fails on any refused call, by design, and names it; the user guide
+    says so. Not ours to fix.
+  - Running both instances on `localhost` in one browser mixes their sessions: cookies are kept apart
+    by host, not by port, so signing in to one signs the other out. Use a browser profile for each.
 
 **Left:**
 - B2: move the two obsolete calls to their new overloads before a 19 build.
 - B4 with protection off, and on 17.
-- B5: the remote viewer across majors.
 - C3: a visual pass of the five themes on 18.
 - Phase D: fresh installs at both floors, including the Media manager's fallback on 18.0 and 18.1,
   and an upgrade in place.
@@ -461,7 +480,7 @@ be red until Phase C.
       - Trash and restore, including that the file's URL works again after restore.
       - Thumbnails of trashed items.
       - The Image Editor on a trashed image.
-- [ ] **B5** Remote viewer (risk 6): implement the cross-major decision, check the C# management paths
+- [x] **B5** Remote viewer (risk 6): implement the cross-major decision, check the C# management paths
       (`DesktopConnectionStatusService:67,74`, `DesktopConnectionTokenProvider:43`), and test all four
       combinations: 17→17, 17→18, 18→17 and 18→18.
 

@@ -39,6 +39,10 @@ the other site's public address.
   package is installed on this instance too. An instance on a different Umbraco version gets a
   warning before it opens, because an editor can read another version's data differently. To open it
   regardless, select **Open anyway**.
+- **It works between Umbraco 17 and 18, both ways.** A package installed on both instances can still
+  refuse: its own API may differ between its 17 and 18 releases. Advanced Permissions does, from a 17
+  instance looking at an 18 one. The window then names the call that was refused, and the instance
+  cannot be shown until both run the same Umbraco major.
 - **It covers the window until it is ready.** While the other instance is reached and the backoffice
   loads, the window says so. If anything reaches this instance by mistake instead of the other one,
   the window says that too and offers **Try again**, rather than showing what might be this
