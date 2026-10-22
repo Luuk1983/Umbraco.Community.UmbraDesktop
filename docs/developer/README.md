@@ -36,6 +36,8 @@ using the desktop, see the [user guide](../user/README.md).
   a theme draws it.
 - [Writing documentation](writing-documentation.md): how these docs are structured, the front
   matter and Markdown every page uses, and the writing style.
+- [Building for Umbraco 17 and 18](umbraco-versions.md): how one source tree builds the packages for
+  both majors, running and testing either, and where code that only one major accepts goes.
 - [Help for your add-on](add-on-help.md): ship your package's documentation so it appears in the
   desktop's Help app, register it with a `umbraDesktopDocs` manifest, and open Help at your own pages
   from your own screens.

@@ -26,6 +26,9 @@ src/Umbraco.Community.UmbraDesktop.Services.Arcade/
   docs/                         high scores: a service package games depend on, never installed alone
 src/Umbraco.Community.UmbraDesktop.Services.Media/
   docs/                         opening and saving media files: a service package, the same model
+src/Umbraco.Community.UmbraDesktop.TestInstance/       the Umbraco 17 site the packages run in locally
+src/Umbraco.Community.UmbraDesktop.TestInstance.v18/   the same site on Umbraco 18
+src/*/Compat/Umbraco17/, Compat/Umbraco18/            code only one Umbraco major compiles
 docs/                           UmbraDesktop's docs root (product.json)
   user/<category>/              the user guide, one page per feature
   developer/                    how it works, theming, apps, catalogues, attached windows, progress
@@ -57,6 +60,13 @@ green while running nothing. `.github/actions/build-packages/action.yml` is the 
 ```bash
 dotnet test src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj
 ```
+
+**Two Umbraco majors, one source tree.** The packages ship for Umbraco 17 and 18 from the same code,
+as `17.Y.Z` and `18.Y.Z`. The property `UmbracoMajor` picks the major (default 17);
+`Umbraco.Community.UmbraDesktop.app.v18.slnx` builds everything as 18, and so does
+`-p:UmbracoMajor=18`. Run the C# tests for both majors, and check a frontend change against the 18
+backoffice as well as the locked 17 one. `docs/developer/umbraco-versions.md` has the commands, and
+the [upgrade plan](docs/design/2026-10-23-umbraco-18-upgrade-plan.md) the reasoning and the traps.
 
 Anything that talks to a server wants a real backoffice as well. The TestInstance only boots on
 Windows; `docs/design/2026-09-24-accessories-design.md` §9 is how to run one on Linux and drive it
