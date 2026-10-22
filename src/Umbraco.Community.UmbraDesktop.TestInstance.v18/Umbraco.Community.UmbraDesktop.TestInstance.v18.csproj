@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- The Umbraco 18 test instance. Same site as Umbraco.Community.UmbraDesktop.TestInstance, which is
+       the Umbraco 17 one, on its own ports and its own database: a database upgraded to 18 can never
+       boot 17 again, so the two never share one. Its name ending in ".v18" is what makes it build
+       for Umbraco 18 (src/Directory.Build.props), and every project it references is handed the same
+       major below, so the packages it runs are the Umbraco 18 build of this source. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <CompressionEnabled>false</CompressionEnabled> <!-- Disable compression. E.g. for umbraco backoffice files. These files should be precompressed by node and not let dotnet handle it -->
+    <!-- The default restore evaluates each referenced project on its own, ignoring the
+         AdditionalProperties below, so it restored the packages as 17 and failed with NU1107 against
+         Umbraco 18. Static graph restore walks MSBuild's project graph, which honours them. -->
+    <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Umbraco.Cms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Opt-in to app-local ICU to ensure consistent globalization APIs across different platforms -->
+    <PackageReference Include="Microsoft.ICU.ICU4C.Runtime" />
+    <PackageReference Include="Umbraco.Community.AdvancedPermissions" />
+    <PackageReference Include="Umbraco.TheStarterKit" />
+    <PackageReference Include="uSync" />
+    <!-- Umbraco's commercial packages. Every one is here so the catalogue's commercial entries
+         resolve against the real registered extensions rather than being taken on trust. -->
+    <PackageReference Include="Umbraco.Forms" />
+    <PackageReference Include="Umbraco.Deploy.OnPrem" />
+    <PackageReference Include="Umbraco.Workflow" />
+    <PackageReference Include="Umbraco.Commerce" />
+    <PackageReference Include="Umbraco.Engage" />
+    <PackageReference Include="Umbraco.UIBuilder" />
+    <PackageReference Include="Umbraco.Automate" />
+    <PackageReference Include="Umbraco.AI" />
+    <PackageReference Include="Umbraco.AI.Agent" />
+    <PackageReference Include="Umbraco.AI.Agent.UI" />
+    <PackageReference Include="Umbraco.AI.Agent.Copilot.Workspace" />
+    <PackageReference Include="Umbraco.AI.Anthropic" />
+    <RuntimeHostConfigurationOption Include="System.Globalization.AppLocalIcu" Value="72.1.0.3" Condition="$(RuntimeIdentifier.StartsWith('linux')) or $(RuntimeIdentifier.StartsWith('win')) or ('$(RuntimeIdentifier)' == '' and !$([MSBuild]::IsOSPlatform('osx')))" />
+  </ItemGroup>
+
+  <!-- The packages under test, built for Umbraco 18. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" AdditionalProperties="UmbracoMajor=18" />
+    <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Entertainment\Umbraco.Community.UmbraDesktop.Entertainment.csproj" AdditionalProperties="UmbracoMajor=18" />
+    <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Accessories\Umbraco.Community.UmbraDesktop.Accessories.csproj" AdditionalProperties="UmbracoMajor=18" />
+    <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Media\Umbraco.Community.UmbraDesktop.Media.csproj" AdditionalProperties="UmbracoMajor=18" />
+    <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Services.Arcade\Umbraco.Community.UmbraDesktop.Services.Arcade.csproj" AdditionalProperties="UmbracoMajor=18" />
+    <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Services.Media\Umbraco.Community.UmbraDesktop.Services.Media.csproj" AdditionalProperties="UmbracoMajor=18" />
+  </ItemGroup>
+
+  <!-- Built as anything but 18 (a -p:UmbracoMajor=17, say) it would resolve Umbraco 17 against a
+       database Umbraco 18 has already upgraded, which 17 cannot open. -->
+  <Target Name="RequireUmbraco18" BeforeTargets="CollectPackageReferences;BeforeBuild" Condition="'$(UmbracoMajor)' != '18'">
+    <Error Text="$(MSBuildProjectName) is the Umbraco 18 test instance and must build with UmbracoMajor=18, not $(UmbracoMajor). Open Umbraco.Community.UmbraDesktop.app.v18.slnx, or build this project on its own." />
+  </Target>
+
+  <PropertyGroup>
+    <!-- Razor files are needed for the backoffice to work correctly -->
+    <CopyRazorGenerateFilesToPublishDirectory>true</CopyRazorGenerateFilesToPublishDirectory>
+  </PropertyGroup>
+</Project>
