@@ -376,12 +376,15 @@ The spike's changes are on `dev/v18`, minus what the instances' first boots wrot
   - The manager's bin is core's recycle bin collection, a table of names with type icons, so it shows
     no thumbnails to break. The Image Editor refuses a trashed item before reading its file
     (`image-editor.location.test.ts`), so the setting cannot reach it.
-  - **Found in Umbraco, worth reporting upstream:** on Windows the rename is a copy and a delete. When
-    the file is still held, for example by image processing a moment earlier (`Failed to rename media
-    file`, `IOException: … being used by another process`), the delete fails and the original stays
-    public beside the protected copy. The Media manager shows thumbnails right before people trash
-    things, which makes this likelier. It did not happen in the four runs above, which trashed an
-    item nothing had just thumbnailed.
+  - **Found in Umbraco, reported as umbraco/Umbraco-CMS#24304 (fix: #24306):** the rename is a copy
+    and a delete. When the file is still held, for example by image processing a moment earlier
+    (`Failed to rename media file`, `IOException: … being used by another process`), the delete fails
+    and the original stays public beside the protected copy. The Media manager shows thumbnails
+    right before people trash things, which makes this likelier. It did not happen in the four runs
+    above, which trashed an item nothing had just thumbnailed. The cause: `ShadowWrapper.MoveFile`
+    has two parameters, so it does not implement `IFileSystem.MoveFile` and the interface's default
+    copy-and-delete runs instead of the physical file system's move. Reproduced on demand by holding
+    the file open from another process while trashing it.
 - **C2.** The failing `window-app-dirty.test.ts` case was the test, not the product. It swapped the
   host's app behind the window. On 18 the window renders again, and Lit re-commits a class bound as a
   property on every render (it only compares primitives), so the window's app came back. The test now
@@ -451,18 +454,49 @@ The spike's changes are on `dev/v18`, minus what the instances' first boots wrot
   moved to Umbraco 18.2.1 and the 18 set with `UpgradeUnattended`. Everything came across: the score
   and name (the Arcade's own EF Core tables), the note, the connection, the theme and the bin. The
   desktop boots on the theme with no page errors. That is B2's proof too.
-  - **Found in Umbraco, worth reporting upstream with the Windows rename one:** media trashed
-    before recycle bin protection was on (here on 17, where it is off by default) is not renamed
-    when 18 turns it on. 18 then reports its file at `<name>.deleted.<ext>`, which does not exist,
-    so the backoffice gets a 404, while the original stays public (200). Emptying the bin deletes
-    the item and leaves that public file behind for good. Disk Cleanup empties through the same
-    call, so it inherits this. The 18 release notes should tell people to empty the media recycle
-    bin before upgrading (Phase E).
+  - **Found in Umbraco, reported as umbraco/Umbraco-CMS#24303 (fix for the emptying: #24305):**
+    media trashed before recycle bin protection was on (here on 17, where it is off by default) is
+    not renamed when 18 turns it on. 18 then reports its file at `<name>.deleted.<ext>`, which does
+    not exist, so the backoffice gets a 404, while the original stays public (200). Emptying the bin
+    deletes the item and leaves that public file behind for good. Disk Cleanup empties through the
+    same call, so it inherits this. The 18 release notes should tell people to empty the media
+    recycle bin before upgrading (Phase E). The fix makes emptying delete both paths; protecting such
+    a file while it is still in the bin is left to Umbraco on the issue.
+- **Phase D, the sweep.** Four sites, all on packs from this branch: the two test instances (17.7.1,
+  18.2.1, with the starter kit, the commercial packages and Umbraco AI) and the bare floor sites
+  (17.4.0, 18.0.0, the oldest UI library of each major). Driven through the desktop by script, as
+  `admin@example.test`.
+  - **Every app in the launcher, under every theme**: 52, 58, 34 and 35 tiles, five themes each, a
+    fresh browser per theme. Each window opened, booted, and showed its app with no page error, no
+    failed request and no error route, and a contact sheet per theme was looked over. What the
+    script flagged and was not ours: Workflow 18 defines `workflow-table-name-column-layout` twice
+    and then misses its own context (the plain backoffice does the same, with no desktop); the Log
+    Viewer's own 400 once a site's log outgrew Umbraco's size limit (plain backoffice too); Remote
+    content's refused SignalR negotiate, which the shim blocks on purpose (remote viewer design,
+    live events); Screen Saver's tile opening the Accessories settings at its section, by design.
+  - **Help**: 78 pages in six products on every site, 265 links and 29 images. Every page renders,
+    every page link names a page and heading that exist, every anchor its heading, every image
+    loads, every external link opens a new tab, and a clicked page link moves Help without moving
+    the backoffice off the desktop. Of the 33 external URLs, the only failures are links pinned to
+    this unpushed commit and the Media package's NuGet page, which exists once it ships.
+  - **A document window**, on each site: live preview (shows the page, closes from the path), Info
+    beside the editor, the unsaved guards (close and reload ask, Exit names the window), the
+    overwrite guard (a save by the B5 API user raises the banner; **Discard mine, load theirs**
+    clears it), Background Jobs (lists the jobs, refresh control present) and, where Umbraco AI is
+    installed, the Copilot window (its own landing page, New chat).
+  - **Found and fixed (on the fix branch): the overwrite guard did nothing before 17.6 and 18.1.**
+    The router reads the server's copy through core's `loadWithoutPersist`, which only arrived in
+    17.6.0 and 18.1.0; on 17.4.0 and 18.0.0 every window went unclassified, so a save by somebody
+    else over unsaved changes raised nothing and the second save silently won. The floor check could
+    not see it: it checks imports, and this is a method on core's object. Those releases have both
+    members the method is made of, with the same bodies, so the dirty watcher builds it from them
+    (overwrite guard design, R3). With that, the guard warns on all four sites.
+  - **Trap for whoever drives this next:** Umbraco does not allow concurrent logins by default, so
+    a second sign-in as the same user signs the first out. Two scripts against one site as the admin
+    fail each other with 401s; somebody else has to be another user (here the B5 API user, by client
+    credentials).
 
 **Left:**
-- Phase D: on the fresh sites, every app in the launcher under every theme (17.4 for the oldest UI
-  library), Help and its links, the unsaved and overwrite guards, the background jobs dashboard, a
-  live preview and a view beside (these need content).
 - Phase E: README lines, `publish.yml` publishing both sets, and the first 18 release.
 
 ## Phase A: dual build infrastructure (lands on `main`, a no-op for 17)
@@ -570,7 +604,8 @@ Exit: `npm run build` **and** `npm test` green in all six packages under both ba
 
 On the Windows TestInstance, or on Linux per `docs/design/2026-09-24-accessories-design.md` §9.
 
-- [ ] **Fresh install** on 17.0, latest 17, the 18 floor and latest 18. Work through:
+- [x] **Fresh install** on the 17 floor (17.4, D4; 17.0 is what moved it), latest 17, the 18 floor and
+      latest 18. Work through:
       - booting into the desktop;
       - every app in the launcher, under every theme;
       - the welcome wizard, and Help and its links;
