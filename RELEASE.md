@@ -63,6 +63,12 @@ fetches that release's backoffice from NuGet, and fails the run if any packed bu
 does not export (`backoffice/scripts/check-umbraco-floor.mjs`). **Using a newer backoffice API means
 raising the floor**, or importing it so a missing name is survivable; the check says which.
 
+The host also depends on `Umbraco.Cms.StaticAssets`, the backoffice itself, at the same range. NuGet
+does not refuse an install below a floor: it lifts what the package declares, and only that. On a
+17.0 site it lifted Core, Infrastructure and Web.Common to 17.4 and left the backoffice at 17.0, so
+the desktop still failed to load. Declaring the backoffice lifts it too, and the check reads its floor
+from that dependency.
+
 `Umbraco.Community.UmbraDesktop.TestInstance` and `.Tests` are never published.
 
 ## Versioning

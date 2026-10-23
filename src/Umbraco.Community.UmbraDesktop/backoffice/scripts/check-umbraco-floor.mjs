@@ -2,7 +2,8 @@
  * Fails when a packed bundle imports something the oldest Umbraco the packages allow does not export.
  *
  * The floor is read from what ships, not typed here: the lower bound of the packed host's
- * `Umbraco.Cms.Core` dependency. That release's backoffice is fetched from NuGet
+ * `Umbraco.Cms.StaticAssets` dependency (or `Umbraco.Cms.Core`'s, which moves with it). That release's
+ * backoffice is fetched from NuGet
  * (`Umbraco.Cms.StaticAssets`), and every named import of every packed `.nupkg`'s scripts is looked up
  * in its import map and modules (`umbraco-floor.mjs` has the rules and why this exists).
  *
@@ -14,7 +15,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { missingImports, moduleExports, namedImports, rangeFloor } from './umbraco-floor.mjs';
+import { missingImports, moduleExports, namedImports, umbracoFloorOf } from './umbraco-floor.mjs';
 
 const folder = process.argv[2];
 if (!folder) {
@@ -46,10 +47,9 @@ if (!host) {
   process.exit(1);
 }
 const nuspec = execFileSync('unzip', ['-p', join(folder, host), '*.nuspec'], { encoding: 'utf8' });
-const range = /<dependency id="Umbraco\.Cms\.Core" version="([^"]+)"/.exec(nuspec)?.[1];
-const floor = range && rangeFloor(range);
+const floor = umbracoFloorOf(nuspec);
 if (!floor) {
-  console.error(`${host} has no lower bound on Umbraco.Cms.Core (${range ?? 'no dependency'}).`);
+  console.error(`${host} has no lower bound on Umbraco.Cms.StaticAssets or Umbraco.Cms.Core.`);
   process.exit(1);
 }
 

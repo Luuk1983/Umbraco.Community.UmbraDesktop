@@ -69,6 +69,24 @@ export function rangeFloor(range) {
   return match ? match[1] : undefined;
 }
 
+/** The dependencies a package's Umbraco floor is read from, the one checked against first. */
+const FLOOR_DEPENDENCIES = ['Umbraco.Cms.StaticAssets', 'Umbraco.Cms.Core'];
+
+/**
+ * The oldest Umbraco a packed package allows, from its nuspec: the backoffice dependency where it
+ * declares one, since that is what the bundles import from, and `Umbraco.Cms.Core`, which moves with
+ * it, where it does not.
+ * @param {string} nuspec The package's nuspec.
+ * @returns {string | undefined} The floor, or undefined when it depends on neither.
+ */
+export function umbracoFloorOf(nuspec) {
+  for (const id of FLOOR_DEPENDENCIES) {
+    const range = new RegExp(`<dependency id="${id.replaceAll('.', '\\.')}" version="([^"]+)"`).exec(nuspec)?.[1];
+    if (range) return rangeFloor(range);
+  }
+  return undefined;
+}
+
 /**
  * Which imports a release cannot satisfy.
  * @param {Array<{ module: string, name: string }>} imports What the bundles import.

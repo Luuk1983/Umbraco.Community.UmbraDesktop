@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { missingImports, moduleExports, namedImports, rangeFloor } from '../../scripts/umbraco-floor.mjs';
+import { missingImports, moduleExports, namedImports, rangeFloor, umbracoFloorOf } from '../../scripts/umbraco-floor.mjs';
 
 describe('the Umbraco floor check', () => {
   describe('namedImports', () => {
@@ -43,6 +43,23 @@ describe('the Umbraco floor check', () => {
 
     it('is nothing for a range with no lower bound', () => {
       expect(rangeFloor('(, 18.0.0)')).to.equal(undefined);
+    });
+  });
+
+  describe('umbracoFloorOf', () => {
+    const dependency = (id: string, version: string) => `<dependency id="${id}" version="${version}" exclude="Build,Analyzers" />`;
+
+    it('reads the floor from the backoffice dependency, which is what the bundles import from', () => {
+      const nuspec = dependency('Umbraco.Cms.Core', '[17.3.0, 17.99999999.0]') + dependency('Umbraco.Cms.StaticAssets', '[17.4.0, 17.99999999.0]');
+      expect(umbracoFloorOf(nuspec)).to.equal('17.4.0');
+    });
+
+    it('falls back to Umbraco.Cms.Core in a package that does not declare the backoffice', () => {
+      expect(umbracoFloorOf(dependency('Umbraco.Cms.Core', '[18.0.0, 18.99999999.0]'))).to.equal('18.0.0');
+    });
+
+    it('is nothing for a package that depends on neither', () => {
+      expect(umbracoFloorOf(dependency('Umbraco.Cms.Coreish', '[1.0.0, 2.0.0]'))).to.equal(undefined);
     });
   });
 

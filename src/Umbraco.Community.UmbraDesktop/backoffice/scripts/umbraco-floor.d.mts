@@ -15,6 +15,9 @@ export declare function moduleExports(source: string): { names: Set<string>; sta
 /** The lowest version a NuGet dependency allows. */
 export declare function rangeFloor(range: string): string | undefined;
 
+/** The oldest Umbraco a packed package allows, from its nuspec's backoffice or Core dependency. */
+export declare function umbracoFloorOf(nuspec: string): string | undefined;
+
 /** Which imports a release cannot satisfy: each missing name once, and a missing module once. */
 export declare function missingImports(
   imports: ReadonlyArray<UmbracoImport>,

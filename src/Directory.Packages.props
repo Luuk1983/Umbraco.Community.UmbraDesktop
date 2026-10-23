@@ -19,6 +19,7 @@
     <PackageVersion Include="Umbraco.Cms.Core" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
     <PackageVersion Include="Umbraco.Cms.Infrastructure" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
     <PackageVersion Include="Umbraco.Cms.Persistence.EFCore" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
+    <PackageVersion Include="Umbraco.Cms.StaticAssets" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
     <PackageVersion Include="Umbraco.Community.AdvancedPermissions" Version="17.3.0" />
     <PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
     <!-- Build-time only: versioning and source-link -->
