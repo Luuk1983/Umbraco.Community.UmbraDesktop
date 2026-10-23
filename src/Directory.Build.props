@@ -58,7 +58,9 @@
 		<MinVerMinimumMajorMinor>17.0</MinVerMinimumMajorMinor>
 		<!-- A prerelease label for this major's packages only, such as "rc.1", appended when the tag
 		     itself is stable. How 18 ships as a release candidate from the tag that ships 17 stable,
-		     until it is trusted (plan D3). Empty: the major ships whatever the tag says. -->
-		<UmbraDesktopMajorPreRelease Condition="'$(UmbraDesktopMajorPreRelease)' == '' and '$(UmbracoMajor)' == '18'"></UmbraDesktopMajorPreRelease>
+		     until it is trusted (plan D3). Empty: the major ships whatever the tag says.
+		     rc.1 for the first 18 release. Empty it once a release candidate has held up in use, and
+		     the next tag ships 18 stable; RELEASE.md has the steps. -->
+		<UmbraDesktopMajorPreRelease Condition="'$(UmbraDesktopMajorPreRelease)' == '' and '$(UmbracoMajor)' == '18'">rc.1</UmbraDesktopMajorPreRelease>
 	</PropertyGroup>
 </Project>

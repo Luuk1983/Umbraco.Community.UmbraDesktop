@@ -22,7 +22,7 @@ Install it and the launcher grows an Accessories group. Open a tool and it gets 
 dotnet add package Umbraco.Community.UmbraDesktop.Accessories
 ```
 
-That is all. UmbraDesktop comes with it if you do not have it yet, and the tools appear in the launcher for anyone who can reach the desktop. You need Umbraco 17.6 or later and .NET 10.
+That is all. UmbraDesktop comes with it if you do not have it yet, and the tools appear in the launcher for anyone who can reach the desktop. You need Umbraco 17.6 or later, or Umbraco 18, and .NET 10. Install the release that matches your Umbraco: 17.x on 17, 18.x on 18.
 
 [Accessories](docs/user/accessories.md) has a page for each tool, and explains how versions of this package and UmbraDesktop fit together.
 

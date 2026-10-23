@@ -10,7 +10,7 @@ sidebar_position: 2
 With Umbraco AI installed, the desktop gives its agent two things the plain backoffice cannot: a chat
 that stays beside the pages it is about, and a desk the agent can act on.
 
-Needs **Umbraco AI 17.4 or later**. Without the package, on an older version, or for a user without
+Needs **Umbraco AI 17.4 or later**, or on Umbraco 18 an 18.x release with its Copilot Workspace. Without the package, on an older version, or for a user without
 permission to the Copilot Workspace section, none of this appears: no launcher tile, no tools, and
 nothing added to the chat. UmbraDesktop does not depend on Umbraco AI and never requires it.
 

@@ -5,7 +5,9 @@ Repo-specific facts a generic checklist cannot know. Read this first, then work 
 
 ## What ships
 
-Six packages, from **one tag**, always at the **same version**:
+Six packages, twice: one set for Umbraco 17 (`17.Y.Z`) and one for Umbraco 18 (`18.Y.Z`), twelve
+in all, from **one tag**. Within a set they are always at the **same version** (see
+[Versioning](#versioning) for how the two sets' versions relate):
 
 | Package | What it is |
 |---|---|
@@ -95,10 +97,15 @@ Umbraco 18, the same features under the same minor and patch, so the first 18 re
 `UmbraDesktopMajorPreRelease` in `src/Directory.Build.props` ships the 18 set as a prerelease (for
 example `rc.1`) from a tag that ships 17 stable.
 
-**Publishing is still Umbraco 17 only.** `publish.yml` runs the build action with its default,
-`umbraco-majors: '17'`, until the 18 set is ready to ship (Phase E of the
-[upgrade plan](docs/design/2026-10-23-umbraco-18-upgrade-plan.md)). CI already builds, tests and
-checks both sets on every pull request.
+**Every tag publishes both sets.** `publish.yml` runs the build action with
+`umbraco-majors: '17 18'`, as CI does on every pull request. The action builds, tests and packs the
+majors one after the other, never at once, because both stamp the same built `umbraco-package.json`.
+
+**18 starts as a release candidate.** `UmbraDesktopMajorPreRelease` is `rc.1` for the 18 set, so the
+first tag after the 18 work merged ships 17 stable and 18 as `18.Y.Z-rc.1`. A tag that is itself a
+prerelease (`v17.5.0-beta.1`) keeps its own label in both sets. Once a release candidate has held up
+on real sites, empty the property in a pull request, and the next tag ships 18 stable. For a second
+release candidate instead, make it `rc.2`.
 
 ## Cutting a release
 
@@ -154,7 +161,19 @@ closes when it merges. So that it does:
   unlabelled shows up under **Other changes**, so a missed one is visible in the draft.
 
 The version label (`release/vX.Y.Z`) is for filtering issues, not for the notes, which come from the
-commits between the two tags. Put it on the pull request or the issue, whichever you have open when
+commits between the two tags.
+
+**Until 18 has been out a while, every release's notes say these two things,** above the generated
+list. The first 18 release's notes lead with them:
+
+- **Install the release for your Umbraco**: 17.x on Umbraco 17, 18.x on Umbraco 18, with the
+  commands in [Installation](docs/user/getting-started/installation.md). Once 18 is stable, a plain
+  `dotnet add package` on a 17 site picks 18.x and the restore fails.
+- **Empty the media recycle bin before upgrading a site to Umbraco 18.** Umbraco 18 protects media
+  in the recycle bin, but not media that was already there when the site upgraded: those files stay
+  public, and emptying the bin afterwards leaves them on disk
+  ([umbraco/Umbraco-CMS#24303](https://github.com/umbraco/Umbraco-CMS/issues/24303)). Drop this
+  once a fixed Umbraco release is out. Put it on the pull request or the issue, whichever you have open when
 the version is known; the same workflow copies it from the pull request to the issue on merge.
 
 ## Owner-only steps
@@ -376,7 +395,8 @@ itself has not run on GitHub yet.
   instead (`[17.0.0,17.99999999]`), which stops below every 18 version, prerelease or not, and is
   a plain stable number so it pushes cleanly (see `-0` below). The ceiling is one property,
   `UmbraDesktopUmbracoMajorCeiling` in `src/Directory.Build.props`, shared with the add-ons' host
-  dependency.
+  dependency. It is the same for every major: `[18.0.0,19.0.0)` admits 19's prereleases, so the 18
+  set is capped at `18.99999999` by the same property.
 - **`-0` as an upper bound** (`[17.0.0,18.0.0-0)`) packs fine and then fails
   `dotnet nuget push` with `400 BadRequest: invalid Version`. Use plain stable bounds.
 - **`dotnet test` against a directory or a solution** silently matches nothing and reports green.
@@ -445,6 +465,12 @@ package whose only published version is a prerelease has nothing for it to list.
 therefore proves nothing about the add-on's listing, and force-syncing it at that point is wasted.
 The same refresh on the host settles it either way: if `latestVersionNumber` moves to a `-rc`
 version, prereleases are indexed after all.
+
+**One listing covers both majors.** The 17 and 18 sets share their package IDs, and the Marketplace
+reads supported versions from each release's Umbraco dependencies, so neither the listing files nor
+anything else changes for 18. That is the convention Umbraco's own packages follow. While 18 ships as
+a release candidate, the note above means the listings show 17 only. **After the first stable 18
+release, check every listing shows both 17 and 18.**
 
 New tagged packages are picked up in the daily 04:00 UTC scan; known packages refresh every two
 hours. A single package can be forced with a `POST` to
