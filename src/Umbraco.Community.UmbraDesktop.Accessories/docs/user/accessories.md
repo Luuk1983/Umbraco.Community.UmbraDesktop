@@ -25,9 +25,9 @@ package, the group is not there at all.
 
 Prerequisites:
 
-- Umbraco 17
+- Umbraco 17.4 or later, or Umbraco 18
 - .NET 10
-- UmbraDesktop 17.x, the same release or later, installed automatically
+- UmbraDesktop, the same release or a later one for the same Umbraco major, installed automatically
 
 ## The tools
 

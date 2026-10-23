@@ -101,13 +101,21 @@ at run time. Check whether an export, element or context member exists, as
 `memoryOf` in the Media add-on's `manager/view-switch.ts` does. Compare version numbers only when
 there is nothing to detect.
 
+Releases within a major differ as much as the majors do. Development and the tests use the newest
+backoffice, and each set installs on its major's oldest release (17.4.0, 18.0.0). The build's floor
+check catches an import the oldest release lacks, but not a missing member on an object core hands
+you. The dirty watcher's `serverCopyOf` is the example: `loadWithoutPersist` only arrived in 17.6
+and 18.1, so before them the overwrite guard silently did nothing. Check a feature that reads
+core's objects on a 17.4.0 and an 18.0.0 site; the upgrade plan's Phase D has the method.
+
 ## Versions
 
 The tags carry Umbraco 17's numbers, `v17.Y.Z`. An Umbraco 18 build of the same commit is versioned
 `18.Y.Z`: same minor, patch and prerelease, major 18. The `UmbraDesktopVersion` target in
 `src/Directory.Build.targets` does this after MinVer runs. To ship the 18 packages as a release
 candidate from a stable tag, set `UmbraDesktopMajorPreRelease` (in `src/Directory.Build.props`) to a
-label such as `rc.1`.
+label such as `rc.1`. It is `rc.1` for the first 18 release, so that one tag ships 17 stable and
+18 as a release candidate.
 
 Each package's `umbraco-package.json` is stamped with its own version, which the backoffice puts on the
 bundle's URL. Both majors stamp the same built file, so pack them one after the other, never at the

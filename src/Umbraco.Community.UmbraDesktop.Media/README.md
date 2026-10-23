@@ -25,7 +25,7 @@ The Image Editor works on an image from the media library and saves it back or a
 dotnet add package Umbraco.Community.UmbraDesktop.Media
 ```
 
-That is all. UmbraDesktop comes with it if you do not have it yet, and the Media Manager and the Image Editor appear in a Media group in the launcher for anyone who can reach the desktop and the Media section. You need Umbraco 17.4 or later and .NET 10.
+That is all. UmbraDesktop comes with it if you do not have it yet, and the Media Manager and the Image Editor appear in a Media group in the launcher for anyone who can reach the desktop and the Media section. You need Umbraco 17.4 or later, or Umbraco 18, and .NET 10. Install the release that matches your Umbraco: 17.x on 17, 18.x on 18.
 
 [Media Manager](docs/user/media-manager.md) and [Image Editor](docs/user/image-editor.md) explain how to use them.
 

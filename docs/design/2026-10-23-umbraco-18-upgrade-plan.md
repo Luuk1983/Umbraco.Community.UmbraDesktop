@@ -496,8 +496,8 @@ The spike's changes are on `dev/v18`, minus what the instances' first boots wrot
     fail each other with 401s; somebody else has to be another user (here the B5 API user, by client
     credentials).
 
-**Left:**
-- Phase E: README lines, `publish.yml` publishing both sets, and the first 18 release.
+**Left:** the owner's steps in Phase E: tag the first release with both sets, then take 18 out of
+release candidate.
 
 ## Phase A: dual build infrastructure (lands on `main`, a no-op for 17)
 
@@ -623,27 +623,37 @@ On the Windows TestInstance, or on Linux per `docs/design/2026-09-24-accessories
 
 ## Phase E: docs and the first 18 release
 
-- [ ] Per the Definition of done:
-      - The four READMEs say "Umbraco 17 or 18, and .NET 10", one line each (`README.md:37`,
-        Acc `:25`, Ent `:28`, Media `:28`).
-      - `docs/user/getting-started/installation.md`.
-      - The pages that name 17 only: `umbraco-ai.md`, `overwrite-protection.md`,
-        `commercial-packages.md`, `accessories.md`, `games.md`, `window-progress.md:113`,
-        `add-on-help.md:35`, `theming.md:184`, and Arcade's `putting-your-game-on-the-arcade.md:136`.
-      - A developer page on the dual build: `UmbracoMajor`, `Compat/`, `umbraco-compat.ts`, and how to
-        check a change against the other major.
+- [x] Per the Definition of done:
+      - The four READMEs, one line each: Umbraco 17.4 or later or Umbraco 18, .NET 10, and which
+        release to install for which.
+      - `docs/user/getting-started/installation.md`: the install command per major (`--version
+        "17.*"`, and `"18.*-*"` so that it takes the release candidates), why a bare install breaks a
+        17 site once 18 is stable, and upgrading a site from 17 to 18 (empty the media recycle bin
+        first, umbraco/Umbraco-CMS#24303).
+      - The pages that named 17 only, each checked. Changed: the add-ons' prerequisites
+        (`accessories.md`, `games.md`), `umbraco-ai.md`, `add-on-help.md`, and the two service
+        pages' example ranges, which were `[17.0.0, 18.0.0)`, the trap RELEASE.md warns about, and
+        are now a range per major. `getContext` gives up on an animation frame in 18 too (checked in
+        18.0.0's `context-api`), so the Arcade page says Umbraco's rather than 17's. Already right:
+        `overwrite-protection.md`, `commercial-packages.md`, `window-progress.md`, `theming.md`.
+      - The developer page is [Building for Umbraco 17 and 18](../developer/umbraco-versions.md).
+        There is no `umbraco-compat.ts`: each runtime difference is detected where it is used
+        (`remembersViews`, `serverCopyOf`, `older-server.ts`). The page now also says that releases
+        within a major differ, and that the floor check cannot see a missing member.
       - The dated design docs stay as history.
-- [ ] `RELEASE.md`:
-      - Twelve packages from one tag, and the version rule (D3).
-      - The ceilings per major.
-      - "Every add-on requires this release of the host" now applies within each major.
-      - Pack the majors sequentially.
-      - The trap examples updated (`[18.0.0,19.0.0)` admits 19's prereleases).
-- [ ] Marketplace files: no change. Neither has a version field, and the Marketplace detects support
-      from the NuGet dependencies. After the first stable 18 release, check that the listings show
-      both 17 and 18.
-- [ ] `publish.yml` publishes both sets. The first tag after `dev/v18` merges ships 17 stable and
-      18 as `-rc.1` (D3's prerelease property). The next one drops the prerelease once Phase D holds.
+- [x] `RELEASE.md`: twelve packages from one tag; every tag publishes both sets, the majors packed
+      in turn; 18 starts as `rc.1`, and how to drop it; what every release's notes say until 18 has
+      been out a while (install the matching release; empty the media bin before upgrading); the
+      ceiling trap for every major. The version rule, the ceilings and the add-ons' host floor per
+      major were already there.
+- [x] Marketplace files: no change. RELEASE.md says one listing covers both majors, and to check
+      that every listing shows 17 and 18 after the first stable 18 release.
+- [x] `publish.yml` publishes both sets (`umbraco-majors: '17 18'`), and
+      `UmbraDesktopMajorPreRelease` is `rc.1` for 18. Packed at `v17.5.0`: `17.5.0` and
+      `18.5.0-rc.1`, each add-on's ranges in its own major; at `v17.5.0-beta.1`: `18.5.0-beta.1`.
+      17.4.0 is out, so the first 18 release is `18.5.0-rc.1`.
+- [ ] **Owner:** tag the next release once this has merged, and empty the prerelease property once
+      the release candidate has held up.
 
 ## Open questions for the owner
 
