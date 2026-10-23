@@ -65,7 +65,7 @@ port, so signing in to one signs the other out. Use a browser profile for each.
   dotnet test src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj -p:UmbracoMajor=18
   ```
 
-  The tests compile against each major's lowest supported Umbraco, 17.0.0 and 18.0.0.
+  The tests compile against each major's lowest supported Umbraco, 17.4.0 and 18.0.0.
 - **TypeScript.** The lock files hold the Umbraco 17 backoffice. To check a package against 18, swap
   the 18 backoffice in, then type-check and test, from the package's folder:
 
