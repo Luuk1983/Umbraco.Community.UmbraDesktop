@@ -410,12 +410,19 @@ The spike's changes are on `dev/v18`, minus what the instances' first boots wrot
     says so. Not ours to fix.
   - Running both instances on `localhost` in one browser mixes their sessions: cookies are kept apart
     by host, not by port, so signing in to one signs the other out. Use a browser profile for each.
+- **C3.** Under each of the five themes, on 17.7.1 and 18.2.1 side by side: four windows (Notepad,
+  Calculator, Minesweeper, the Media Manager's grid), the launcher, and Umbraco's confirm dialog over
+  a notification. The chrome, taskbar, launcher, dialog and notification are the same on both
+  majors in every theme, and no affordance is missing. The only differences are content: 18's extra
+  launcher tiles (Deploy 18's three dashboards, Advanced Permissions 18's Library and Element Type
+  entries), which wrap like the rest. The geometry constants are covered by the theme tests, which
+  CI's `frontend-umbraco18` job runs against the 18 backoffice. 17.7 already uses UUI 2, so the
+  comparison against UUI 1 needs a 17.0 site, which Phase D's fresh install provides.
 
 **Left:**
 - B2: move the two obsolete calls to their new overloads before a 19 build.
-- C3: a visual pass of the five themes on 18.
 - Phase D: fresh installs at both floors, including the Media manager's fallback on 18.0 and 18.1,
-  and an upgrade in place.
+  the five themes on 17.0 (UUI 1), and an upgrade in place.
 - Phase E: README lines, `publish.yml` publishing both sets, and the first 18 release.
 
 ## Phase A: dual build infrastructure (lands on `main`, a no-op for 17)
@@ -506,7 +513,7 @@ Exit: the four `*.Tests.csproj` green under both majors, each run by its project
       `umbraco-compat.ts` (D2). Each fix starts as a failing test where the harness can express it,
       and names the manual check that proves it in each major. Update the comments that cite a single
       version ("measured on 17.7") to list what was measured on both.
-- [ ] **C3** All five themes on 18: the launcher, taskbar, window chrome, a dialog, notifications, the
+- [x] **C3** All five themes on 18: the launcher, taskbar, window chrome, a dialog, notifications, the
       Media manager table and grid, and each Ent and Acc app. Measure the constants shared between CSS
       and JS (`theming.md` §4) again, and check that no affordance disappears. UUI 2 already reached
       17.7, so this is mostly a check that 18 adds nothing new. Compare against a 17.0 backoffice too,
