@@ -8,7 +8,7 @@ import { UMBRADESKTOP_COLLECTION_API_EVENT, UmbraDesktopMediaHostedCollectionEle
 import { UMBRADESKTOP_WORKSPACE_CONTEXT_ALIAS, UmbraDesktopMediaFolderContext } from './folder-context.js';
 import { UMBRADESKTOP_DEFAULT_MEDIA_LIST_VIEW, UmbraDesktopMediaServerSource, itemName } from './media-source.js';
 import type { UmbraDesktopMediaSource } from './media-source.js';
-import { layoutsLeading, memoryOf, viewMemory } from './view-switch.js';
+import { layoutsLeading, memoryOf, remembersViews, viewMemory } from './view-switch.js';
 import type { UmbraDesktopLayout } from './view-switch.js';
 import type { UmbraDesktopMediaPlace } from './location.js';
 
@@ -243,8 +243,22 @@ export class UmbraDesktopMediaFolderHostElement extends UmbLitElement {
     const config = place.kind === 'bin' ? ({ pageSize: 50 } as UmbCollectionConfiguration) : await this.source.collectionConfig(unique, listView);
     if (build !== this.#builds) return;
     this.#config = config;
-    this.#mount(config);
+    this.#mount(this.#openingOn(config));
     this.dispatchEvent(new CustomEvent(UMBRADESKTOP_FOLDER_LOADED_EVENT, { detail: { name } }));
+  }
+
+  /**
+   * The configuration a new collection opens on this window's view with. A core that remembers views
+   * is handed the view as a memory (see {@link #mount}) and keeps its own order; one that cannot shows
+   * the first layout, so there the view goes first. Without this a window reopened after a reload came
+   * back on the grid while it said list, on 18.0 and 17.4 (Phase D of the Umbraco 18 plan).
+   * @param config The place's configuration.
+   * @returns The configuration to mount.
+   */
+  #openingOn(config: UmbCollectionConfiguration): UmbCollectionConfiguration {
+    if (!this.view || remembersViews(UmbraDesktopMediaHostedCollectionElement.prototype)) return config;
+    const layouts = layoutsLeading(this.#views, config.layouts as ReadonlyArray<UmbraDesktopLayout> | undefined, this.view);
+    return layouts.length ? ({ ...config, layouts } as UmbCollectionConfiguration) : config;
   }
 
   /**
