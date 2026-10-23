@@ -121,10 +121,14 @@ The tag scheme and `publish.yml`'s `v*.*.*` trigger stay as they are. Separate t
 major were considered and rejected: two tags for one commit, and MinVer on either line would see the
 other's tags.
 
-**D4. Floors.** The 17 floor stays `17.0.0`, and the 18 floor is `18.0.0` (settled in Phase 0, see
-its findings). The Media add-on leans on behaviour first measured on 17.7, and the view memory only
-reaches 18 in 18.2. But the add-on already falls back without it, as it must on 17.0. So Phase D
-proves that fallback on a real 18.0.x and 18.1.x rather than raising the floor.
+**D4. Floors.** The 17 floor is `17.4.0` and the 18 floor `18.0.0`. 17's was `17.0.0` until Phase D's
+fresh 17.0.0 install never loaded the desktop: the bundles import names the backoffice only exports
+from 17.4. That fix is on its own branch off `main` (`fix/umbraco-17-floor`), since it is a bug in
+the released 17 line, and the build action now checks every packed bundle against its set's floor.
+The Media add-on leans on behaviour first measured on 17.7, and the view memory only reaches 18 in
+18.2, but it falls back without it on 17.4 to 17.6 and 18.0 to 18.1. Phase D ran that fallback on a
+real 17.4.0 and 18.0.0, found a window reopened after a reload came back on the wrong view, and
+fixed it on the same branch, so the 18 floor stays `18.0.0`.
 
 NuGet compiles against a range's floor, while npm's caret resolves to the latest, so CI tests both
 ends (Phase A).
@@ -418,11 +422,36 @@ The spike's changes are on `dev/v18`, minus what the instances' first boots wrot
   entries), which wrap like the rest. The geometry constants are covered by the theme tests, which
   CI's `frontend-umbraco18` job runs against the 18 backoffice. 17.7 already uses UUI 2, so the
   comparison against UUI 1 needs a 17.0 site, which Phase D's fresh install provides.
+- **Phase D, first runs.** Both sets packed from this branch at a local prerelease
+  (`17.99.0-local.N`, `18.99.0-local.N`, so nothing can shadow a real release in NuGet's cache) and
+  installed into bare sites (SQLite, unattended install, only the three add-ons) on 17.0.0, 17.4.0,
+  17.7.1, 18.0.0 and 18.2.1.
+  - **17.0.0 never loaded the desktop.** `clearImagingCache` is not exported, `configureClient` is
+    not a function, and a static check of every import in the bundles against each release's import
+    map found ten names missing on 17.0, falling to none on 17.4.0. 17.4.0 boots cleanly, so the 17
+    floor is now `17.4.0` (D4), with a build step that keeps it honest.
+  - NuGet does not refuse an install below the floor: on a 17.0.0 site it lifted Core,
+    Infrastructure and Web.Common to 17.4 and left the backoffice (`Umbraco.Cms.StaticAssets`) at
+    17.0, so the desktop still failed. The host now depends on `Umbraco.Cms.StaticAssets` at the
+    floor too, and a plain 17.0.0 site with the packages installed boots into the desktop.
+  - 17.4 marks `SearchChildrenAsync` and `AddUmbracoDbContext` obsolete, and their replacements
+    exist in 17.4 and 18.0 alike, so both calls moved to them on the fix branch and the suppressions
+    are gone (B2).
+  - Both sets pass the build action's checks: frontends stamped with their own versions, add-on
+    ranges `[17.99.0-local.1, 17.99999999.0]` and `[18.99.0-local.1, 18.99999999.0]`, the host's
+    Umbraco ranges `[17.4.0, 17.99999999.0]` and `[18.0.0, 18.99999999.0]`, and the new floor check.
+  - **The Media Manager's fallback (D4)** on 17.4.0 and 18.0.0: switching to the list works in
+    place, but a window reopened after a reload said list and showed the grid. Only the switch put
+    the view first; the first build did not. Fixed on the fix branch, test first.
+  - 17.7.1, 18.0.0 and 18.2.1 boot into the desktop, wizard included, with no page errors.
+  - An IDE restoring `TestInstance.v18` outside its solution rewrote its lock with 17 ranges (seen
+    after VS Code opened the folder). Open `Umbraco.Community.UmbraDesktop.app.v18.slnx` for 18 work.
 
 **Left:**
-- B2: move the two obsolete calls to their new overloads before a 19 build.
-- Phase D: fresh installs at both floors, including the Media manager's fallback on 18.0 and 18.1,
-  the five themes on 17.0 (UUI 1), and an upgrade in place.
+- Phase D: on the fresh sites, every app in the launcher under every theme (17.4 for the oldest UI
+  library), Help and its links, the unsaved and overwrite guards, the background jobs dashboard, a
+  live preview and a view beside (these need content); and an upgrade in place, which is also
+  B2's proof that Arcade scores survive.
 - Phase E: README lines, `publish.yml` publishing both sets, and the first 18 release.
 
 ## Phase A: dual build infrastructure (lands on `main`, a no-op for 17)
@@ -476,7 +505,7 @@ be red until Phase C.
 - [x] **B1** OpenAPI per D5. Write the contract test first and watch it fail on 18. Then point
       `generate-client` at the 17 document as today (the client is generated once, from either
       major, since both must match), and add a CI check that regenerating from 18 changes nothing.
-- [ ] **B2** Arcade:
+- [x] **B2** Arcade (the overloads moved with the 17.4 floor; the upgrade proof is Phase D's):
       - Handle the EF renames per D2.
       - Re-check the `AddUmbracoDbContext` overload (`ArcadeComposer.cs:14-20`) on both majors.
       - Prove an upgrade: a 17 database with Arcade scores boots on 18, and the scores survive.
@@ -543,7 +572,7 @@ On the Windows TestInstance, or on Linux per `docs/design/2026-09-24-accessories
          data, connections and a trashed media item.
       2. Upgrade Umbraco to 18 and UmbraDesktop to 18.Y.
       3. Check everything comes across, and the trashed item behaves under B4.
-- [ ] Pack both sets. Check that `build-packages` reports each add-on's ranges as
+- [x] Pack both sets. Check that `build-packages` reports each add-on's ranges as
       `[17.Y.Z, 17.99999999.0]` and `[18.Y.Z, 18.99999999.0]` respectively.
 
 ## Phase E: docs and the first 18 release
