@@ -446,12 +446,23 @@ The spike's changes are on `dev/v18`, minus what the instances' first boots wrot
   - 17.7.1, 18.0.0 and 18.2.1 boot into the desktop, wizard included, with no page errors.
   - An IDE restoring `TestInstance.v18` outside its solution rewrote its lock with 17 ranges (seen
     after VS Code opened the folder). Open `Umbraco.Community.UmbraDesktop.app.v18.slnx` for 18 work.
+- **Upgrade in place.** A bare 17.7.1 site with the 17 set, given an Arcade profile and best score,
+  a sticky note, a connection, a theme (Windows 98, on the user account) and a trashed image, then
+  moved to Umbraco 18.2.1 and the 18 set with `UpgradeUnattended`. Everything came across: the score
+  and name (the Arcade's own EF Core tables), the note, the connection, the theme and the bin. The
+  desktop boots on the theme with no page errors. That is B2's proof too.
+  - **Found in Umbraco, worth reporting upstream with the Windows rename one:** media trashed
+    before recycle bin protection was on (here on 17, where it is off by default) is not renamed
+    when 18 turns it on. 18 then reports its file at `<name>.deleted.<ext>`, which does not exist,
+    so the backoffice gets a 404, while the original stays public (200). Emptying the bin deletes
+    the item and leaves that public file behind for good. Disk Cleanup empties through the same
+    call, so it inherits this. The 18 release notes should tell people to empty the media recycle
+    bin before upgrading (Phase E).
 
 **Left:**
 - Phase D: on the fresh sites, every app in the launcher under every theme (17.4 for the oldest UI
   library), Help and its links, the unsaved and overwrite guards, the background jobs dashboard, a
-  live preview and a view beside (these need content); and an upgrade in place, which is also
-  B2's proof that Arcade scores survive.
+  live preview and a view beside (these need content).
 - Phase E: README lines, `publish.yml` publishing both sets, and the first 18 release.
 
 ## Phase A: dual build infrastructure (lands on `main`, a no-op for 17)
@@ -567,7 +578,7 @@ On the Windows TestInstance, or on Linux per `docs/design/2026-09-24-accessories
       - a live preview, and a workspace view beside;
       - the unsaved and overwrite guards;
       - the background jobs dashboard.
-- [ ] **Upgrade in place**:
+- [x] **Upgrade in place**:
       1. Start from a 17 site with UmbraDesktop 17.Y holding Arcade scores, sticky notes, desktop user
          data, connections and a trashed media item.
       2. Upgrade Umbraco to 18 and UmbraDesktop to 18.Y.
