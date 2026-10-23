@@ -85,7 +85,7 @@ public sealed class AppIconSetFactory(
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <see cref="IImageUrlGenerator"/> and never string concatenation. Umbraco 17 HMAC-signs
+    /// <see cref="IImageUrlGenerator"/> and never string concatenation. Umbraco 17 and 18 HMAC-sign
     /// processed image URLs, and ImageSharp's middleware rejects an unsigned one with an empty 400
     /// before it reaches anything — a signature is applied here for free and cannot be by hand.
     /// </para>

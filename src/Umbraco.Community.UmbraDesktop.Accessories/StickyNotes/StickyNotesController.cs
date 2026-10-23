@@ -57,7 +57,6 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
     [HttpGet]
     [MapToApiVersion("1.0")]
     [ProducesResponseType(typeof(StickyNoteBoardResponseModel), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public IActionResult GetBoard()
     {
         if (!CanUseDesktop(out _))
@@ -79,7 +78,6 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
     [MapToApiVersion("1.0")]
     [ProducesResponseType(typeof(StickyNoteResponseModel), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public IActionResult CreateNote(CreateStickyNoteRequestModel model)
     {
@@ -117,7 +115,6 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
     [ProducesResponseType(typeof(StickyNoteResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public IActionResult UpdateNote(Guid key, UpdateStickyNoteRequestModel model)
     {
@@ -151,7 +148,6 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
     [MapToApiVersion("1.0")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public IActionResult DeleteNote(Guid key)
     {
@@ -171,7 +167,6 @@ public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAcc
     [MapToApiVersion("1.0")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public IActionResult MoveNote(Guid key, MoveStickyNoteRequestModel model)
     {

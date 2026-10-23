@@ -13,7 +13,7 @@ namespace Umbraco.Community.UmbraDesktop.UserData;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Works around a gap in Umbraco 17: <c>umbracoUserData.userKey</c> has a foreign key to
+/// Works around a gap in Umbraco 17, still there in 18.0's source: <c>umbracoUserData.userKey</c> has a foreign key to
 /// <c>umbracoUser.key</c> with no cascade (<c>ForeignKeyAttribute.OnDelete</c> defaults to
 /// <c>Rule.None</c>), and <c>UserRepository.GetDeleteClauses()</c> does not clear that table. A
 /// permanent delete of a user holding rows therefore fails on the constraint, with an error naming
