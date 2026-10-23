@@ -9,7 +9,7 @@ sidebar_position: 1
 
 ## Prerequisites
 
-- Umbraco 17
+- Umbraco 17.4 or later
 - .NET 10
 
 ## Install the package

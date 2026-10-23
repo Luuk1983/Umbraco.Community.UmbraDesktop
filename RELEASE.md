@@ -54,6 +54,15 @@ both. **Raise the ceiling with the major**: the release that moves to Umbraco 18
 `UmbraDesktopUmbracoMajorCeiling` to `18.99999999`, which moves the Umbraco ranges' and the add-ons'
 ceilings together.
 
+**The Umbraco floor is checked against the bundles.** `UmbraDesktopUmbracoFloor` in
+`src/Directory.Packages.props` is the oldest Umbraco the packages install on, 17.4.0. It was 17.0.0
+until a fresh 17.0.0 site showed the desktop never loading: the bundles import names the backoffice
+only exports from 17.4, and every test runs against the newest backoffice, so nothing had noticed.
+`.github/actions/build-packages` now reads the floor from the packed host's `Umbraco.Cms.Core` range,
+fetches that release's backoffice from NuGet, and fails the run if any packed bundle imports a name it
+does not export (`backoffice/scripts/check-umbraco-floor.mjs`). **Using a newer backoffice API means
+raising the floor**, or importing it so a missing name is survivable; the check says which.
+
 `Umbraco.Community.UmbraDesktop.TestInstance` and `.Tests` are never published.
 
 ## Versioning
