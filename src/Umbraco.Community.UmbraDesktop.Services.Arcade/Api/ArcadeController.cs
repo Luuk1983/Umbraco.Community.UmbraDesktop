@@ -55,7 +55,6 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
     [HttpGet("profile")]
     [MapToApiVersion("1.0")]
     [ProducesResponseType(typeof(ArcadeProfile), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetProfile() =>
         Caller() is { } user ? Ok(await store.GetProfileAsync(user.Key, user.Name ?? string.Empty)) : Forbid();
 
@@ -65,7 +64,6 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
     [HttpPut("profile")]
     [MapToApiVersion("1.0")]
     [ProducesResponseType(typeof(ArcadeProfile), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> UpdateProfile(UpdateProfileRequestModel model) =>
         Caller() is { } user
             ? Ok(await store.UpdateProfileAsync(user.Key, user.Name ?? string.Empty, model.DisplayName, model.IsPublic, model.NotifyWhenBeaten))
@@ -76,7 +74,6 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
     [HttpDelete("profile")]
     [MapToApiVersion("1.0")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> DeleteProfile()
     {
         if (Caller() is not { } user)
@@ -96,7 +93,6 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
     [ProducesResponseType(typeof(SubmitScoreResponseModel), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> SubmitScore(SubmitScoreRequestModel model)
     {
         if (Caller() is not { } user)
@@ -120,7 +116,6 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
     [HttpGet("boards/{game}/{board}")]
     [MapToApiVersion("1.0")]
     [ProducesResponseType(typeof(BoardResponseModel), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetBoard(string game, string board)
     {
         if (Caller() is not { } user)
@@ -144,7 +139,6 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
     [HttpGet("overview")]
     [MapToApiVersion("1.0")]
     [ProducesResponseType(typeof(OverviewResponseModel), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetOverview()
     {
         if (Caller() is not { } user)
@@ -163,7 +157,6 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
     [HttpGet("best/{game}/{board}")]
     [MapToApiVersion("1.0")]
     [ProducesResponseType(typeof(BestResponseModel), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetBest(string game, string board) =>
         Caller() is { } user ? Ok(new BestResponseModel(await store.GetBestAsync(user.Key, game, board))) : Forbid();
 
@@ -172,7 +165,6 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
     [HttpPost("beaten/take")]
     [MapToApiVersion("1.0")]
     [ProducesResponseType(typeof(IReadOnlyList<BeatenEvent>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> TakeBeaten() =>
         Caller() is { } user ? Ok(await store.TakeBeatenAsync(user.Key)) : Forbid();
 
@@ -185,7 +177,6 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
     [MapToApiVersion("1.0")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> RemoveScore(string game, string board, Guid userKey) =>
         Caller() is { } user && CanModerate(user)
             ? (await store.RemoveScoreAsync(game, board, userKey) ? Ok() : NotFound())
@@ -199,7 +190,6 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
     [MapToApiVersion("1.0")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ResetBoard(string game, string board) =>
         Caller() is { } user && CanModerate(user)
             ? (await store.ResetBoardAsync(game, board) ? Ok() : NotFound())
@@ -213,7 +203,6 @@ public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor sec
     [MapToApiVersion("1.0")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ResetName(Guid userKey, [FromServices] IUserService users)
     {
         if (Caller() is not { } user || !CanModerate(user))
