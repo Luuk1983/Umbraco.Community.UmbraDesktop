@@ -13,9 +13,10 @@ namespace Umbraco.Community.UmbraDesktop.Services.Arcade.Composing;
 /// <summary>Registers the Arcade with Umbraco.</summary>
 /// <remarks>
 /// The context through <c>AddUmbracoDbContext</c>, the documented route (design D9), using the
-/// four-argument overload that is current at 17.0; 17.4 added one with a
-/// <c>shareUmbracoConnection</c> flag that behaves the same. Singletons throughout, as the host's
-/// stores are: none holds state. No <see cref="TimeProvider"/>: the site's is Umbraco's.
+/// overload with <c>shareUmbracoConnection</c>, current from 17.4, the floor, and in 18; the one
+/// without it is obsolete from 17.4 and goes in 19. Sharing is what the old one did: the scores live
+/// in Umbraco's own database, in its scopes. Singletons throughout, as the host's stores are: none
+/// holds state. No <see cref="TimeProvider"/>: the site's is Umbraco's.
 /// </remarks>
 public sealed class ArcadeComposer : IComposer
 {
@@ -26,7 +27,7 @@ public sealed class ArcadeComposer : IComposer
         {
             if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(providerName)) return;
             options.UseDatabaseProvider(providerName, connectionString);
-        });
+        }, shareUmbracoConnection: true);
         builder.Services.AddSingleton<IArcadeDatabase, ScopedArcadeDatabase>();
         builder.Services.AddSingleton<IArcadeUserDirectory, UmbracoArcadeUserDirectory>();
         builder.Services.AddSingleton<ArcadeStore>();

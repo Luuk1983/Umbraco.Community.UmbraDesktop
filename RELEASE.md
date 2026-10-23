@@ -5,7 +5,9 @@ Repo-specific facts a generic checklist cannot know. Read this first, then work 
 
 ## What ships
 
-Six packages, from **one tag**, always at the **same version**:
+Six packages, twice: one set for Umbraco 17 (`17.Y.Z`) and one for Umbraco 18 (`18.Y.Z`), twelve
+in all, from **one tag**. Within a set they are always at the **same version** (see
+[Versioning](#versioning) for how the two sets' versions relate):
 
 | Package | What it is |
 |---|---|
@@ -24,9 +26,10 @@ Lockstep is a decision, not an accident: design D13 in
 All six publish on **every** release, changed or not — a gap in an add-on's version history
 reads like a broken pipeline, where a version with no changes reads like Umbraco.
 
-**Every add-on requires this release of the host, or any later 17.** Each add-on references the
-host as a `ProjectReference`, never a `PackageReference`: it is then compiled against the host from
-the same commit, and its packed dependency is `[<this release>, 17.99999999.0]`. The floor is the
+**Every add-on requires this release of the host, or any later version for the same Umbraco
+major.** Each add-on references the host as a `ProjectReference`, never a `PackageReference`: it is
+then compiled against the host from the same commit, and its packed dependency is
+`[<this release>, 17.99999999.0]` in the Umbraco 17 set (`18.99999999.0` in the 18 set). The floor is the
 release itself because an add-on registers things only this release's host understands (package
 catalogues; for Entertainment also tray items; for Accessories also the unsaved-work attribute and the settings context's
 `formatDateTime`; for Media also app titles, the close request, pages attached to an app window and apps hidden from the launcher). The add-ons used to take the host by package range, floored at 17.0.0, which
@@ -45,27 +48,60 @@ without doing anything. The ceiling is one property, `UmbraDesktopUmbracoMajorCe
 The target hooks NuGet's private `_GetProjectReferenceVersions`, which an SDK update can change
 without a word, so `.github/actions/build-packages` reads the nuspec of every packed add-on (every
 `Umbraco.Community.UmbraDesktop.*` package other than the host) and fails the run unless its host
-dependency is exactly `[<host package version>, 17.99999999.0]`. The floor comes from the host
+dependency is exactly `[<host package version>, <that major>.99999999.0]`. The floor comes from the host
 project's own MinVer version, the same number as the add-on's because both are versioned off one
 tag. Entertainment also requires this release of the Arcade, and Accessories and Media this release of
 the media service, bounded the same way, and the same check reads those dependencies too; it fails if a
 package depends on a service package that is not in the pack output, because a release has to ship
-both. **Raise the ceiling with the major**: the release that moves to Umbraco 18 changes
-`UmbraDesktopUmbracoMajorCeiling` to `18.99999999`, which moves the Umbraco ranges' and the add-ons'
-ceilings together.
+both. **The ceiling follows the major**: `UmbraDesktopUmbracoMajorCeiling` is
+`$(UmbracoMajor).99999999`, so the 17 set is capped at `17.99999999.0` and the 18 set at
+`18.99999999.0`, and the action checks each set against its own.
+
+**The Umbraco floor is checked against the bundles.** `UmbraDesktopUmbracoFloor` in
+`src/Directory.Packages.props` is the oldest Umbraco each major's packages install on: 17.4.0 for 17,
+18.0.0 for 18. 17's was 17.0.0 until a fresh 17.0.0 site showed the desktop never loading: the
+bundles import names the backoffice only exports from 17.4, and every test runs against the newest
+backoffice, so nothing had noticed. `.github/actions/build-packages` reads each set's floor from its
+packed host, fetches that release's backoffice from NuGet, and fails the run if any packed bundle
+imports a name it does not export (`backoffice/scripts/check-umbraco-floor.mjs`). **Using a newer backoffice API means
+raising the floor**, or importing it so a missing name is survivable; the check says which.
+
+The host also depends on `Umbraco.Cms.StaticAssets`, the backoffice itself, at the same range. NuGet
+does not refuse an install below a floor: it lifts what the package declares, and only that. On a
+17.0 site it lifted Core, Infrastructure and Web.Common to 17.4 and left the backoffice at 17.0, so
+the desktop still failed to load. Declaring the backoffice lifts it too, and the check reads its floor
+from that dependency.
 
 `Umbraco.Community.UmbraDesktop.TestInstance` and `.Tests` are never published.
 
 ## Versioning
 
-MinVer, from `v*` tags on this repository. `MinVerAutoIncrement=minor`,
-`MinVerMinimumMajorMinor=17.0`, and all three settings are **repeated verbatim in every csproj
-file** — there is no shared props file to inherit them from, and dropping `MinVerTagPrefix` from
-an add-on makes MinVer ignore every `v`-prefixed tag and version it `17.0.0-alpha.0` while the host
-says `17.0.0`.
+MinVer, from `v*` tags on this repository. `MinVerTagPrefix=v`, `MinVerAutoIncrement=minor` and
+`MinVerMinimumMajorMinor=17.0` are set **once, in `src/Directory.Build.props`**, for all six packages.
+They used to be repeated in every csproj file, and an add-on that lost its `MinVerTagPrefix` versioned
+itself `17.0.0-alpha.0` while the host said `17.0.0`. The `SetJsonVersion` task and the
+`SyncUmbracoPackageVersion` target that stamp each `umbraco-package.json` live once in
+`src/Directory.Build.targets` too; a package names only its own `UmbracoPackageJsonPath`.
 
 **The package major tracks the Umbraco major**, so the first release was `v17.0.0`, not `v1.0.0`.
-A release supporting Umbraco 18 starts at `v18.0.0`.
+One source tree builds for Umbraco 17 and 18
+([Building for Umbraco 17 and 18](docs/developer/umbraco-versions.md)), and **one tag versions both**.
+The tags keep Umbraco 17's numbers. A tag `v17.Y.Z` builds `17.Y.Z` for Umbraco 17 and `18.Y.Z` for
+Umbraco 18, the same features under the same minor and patch, so the first 18 release is
+`18.<the 17 minor of the day>.0` rather than `18.0.0`. The `UmbraDesktopVersion` target in
+`src/Directory.Build.targets` swaps the major after MinVer has run; a 17 build never enters it.
+`UmbraDesktopMajorPreRelease` in `src/Directory.Build.props` ships the 18 set as a prerelease (for
+example `rc.1`) from a tag that ships 17 stable.
+
+**Every tag publishes both sets.** `publish.yml` runs the build action with
+`umbraco-majors: '17 18'`, as CI does on every pull request. The action builds, tests and packs the
+majors one after the other, never at once, because both stamp the same built `umbraco-package.json`.
+
+**18 starts as a release candidate.** `UmbraDesktopMajorPreRelease` is `rc.1` for the 18 set, so the
+first tag after the 18 work merged ships 17 stable and 18 as `18.Y.Z-rc.1`. A tag that is itself a
+prerelease (`v17.5.0-beta.1`) keeps its own label in both sets. Once a release candidate has held up
+on real sites, empty the property in a pull request, and the next tag ships 18 stable. For a second
+release candidate instead, make it `rc.2`.
 
 ## Cutting a release
 
@@ -121,7 +157,19 @@ closes when it merges. So that it does:
   unlabelled shows up under **Other changes**, so a missed one is visible in the draft.
 
 The version label (`release/vX.Y.Z`) is for filtering issues, not for the notes, which come from the
-commits between the two tags. Put it on the pull request or the issue, whichever you have open when
+commits between the two tags.
+
+**Until 18 has been out a while, every release's notes say these two things,** above the generated
+list. The first 18 release's notes lead with them:
+
+- **Install the release for your Umbraco**: 17.x on Umbraco 17, 18.x on Umbraco 18, with the
+  commands in [Installation](docs/user/getting-started/installation.md). Once 18 is stable, a plain
+  `dotnet add package` on a 17 site picks 18.x and the restore fails.
+- **Empty the media recycle bin before upgrading a site to Umbraco 18.** Umbraco 18 protects media
+  in the recycle bin, but not media that was already there when the site upgraded: those files stay
+  public, and emptying the bin afterwards leaves them on disk
+  ([umbraco/Umbraco-CMS#24303](https://github.com/umbraco/Umbraco-CMS/issues/24303)). Drop this
+  once a fixed Umbraco release is out. Put it on the pull request or the issue, whichever you have open when
 the version is known; the same workflow copies it from the pull request to the issue on merge.
 
 ## Owner-only steps
@@ -343,7 +391,8 @@ itself has not run on GitHub yet.
   instead (`[17.0.0,17.99999999]`), which stops below every 18 version, prerelease or not, and is
   a plain stable number so it pushes cleanly (see `-0` below). The ceiling is one property,
   `UmbraDesktopUmbracoMajorCeiling` in `src/Directory.Build.props`, shared with the add-ons' host
-  dependency.
+  dependency. It is the same for every major: `[18.0.0,19.0.0)` admits 19's prereleases, so the 18
+  set is capped at `18.99999999` by the same property.
 - **`-0` as an upper bound** (`[17.0.0,18.0.0-0)`) packs fine and then fails
   `dotnet nuget push` with `400 BadRequest: invalid Version`. Use plain stable bounds.
 - **`dotnet test` against a directory or a solution** silently matches nothing and reports green.
@@ -412,6 +461,12 @@ package whose only published version is a prerelease has nothing for it to list.
 therefore proves nothing about the add-on's listing, and force-syncing it at that point is wasted.
 The same refresh on the host settles it either way: if `latestVersionNumber` moves to a `-rc`
 version, prereleases are indexed after all.
+
+**One listing covers both majors.** The 17 and 18 sets share their package IDs, and the Marketplace
+reads supported versions from each release's Umbraco dependencies, so neither the listing files nor
+anything else changes for 18. That is the convention Umbraco's own packages follow. While 18 ships as
+a release candidate, the note above means the listings show 17 only. **After the first stable 18
+release, check every listing shows both 17 and 18.**
 
 New tagged packages are picked up in the daily 04:00 UTC scan; known packages refresh every two
 hours. A single package can be forced with a `POST` to

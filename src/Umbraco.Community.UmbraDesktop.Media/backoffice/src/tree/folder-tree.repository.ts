@@ -128,8 +128,8 @@ export class UmbraDesktopMediaFolderTreeRepository
       const paging = { skip, take };
       const { data, error } =
         parent === null
-          ? await this.#media.requestTreeRootItems({ skip, take, paging })
-          : await this.#media.requestTreeItemsOf({ parent: { unique: parent, entityType: 'media' }, skip, take, paging });
+          ? await this.#media.requestTreeRootItems({ paging })
+          : await this.#media.requestTreeItemsOf({ parent: { unique: parent, entityType: 'media' }, paging });
       if (!data) {
         onError?.(error);
         return undefined;

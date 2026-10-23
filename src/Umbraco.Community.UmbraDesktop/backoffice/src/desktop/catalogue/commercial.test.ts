@@ -109,7 +109,13 @@ describe('Workflow', () => {
     for (const entry of dashboards) {
       expect(entry.name, `${entry.alias} must name itself`).to.be.a('string');
     }
-    expect(workflow[0].name, 'the section inherits #workflow_workflow').to.be.undefined;
+  });
+
+  it('names the section itself too, because Workflow 18 leaves its label untranslated on the desktop', () => {
+    // On Umbraco 17 the inherited #workflow_workflow read "Workflow"; on 18 the tile showed the raw
+    // key (upgrade plan, Phase 0 findings). Our own name reads the same on both.
+    expect(workflow[0].ref).to.equal('Umb.Section.Workflow');
+    expect(workflow[0].name).to.equal('#umbraDesktop_appWorkflow');
   });
 
   it('evaluates only the two conditions the desktop can answer', () => {

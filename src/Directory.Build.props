@@ -1,5 +1,40 @@
 <Project>
 	<PropertyGroup>
+		<!-- The Umbraco major this build targets: 17 or 18 (docs/design/2026-10-23-umbraco-18-upgrade-plan.md
+		     D1). One source tree builds the packages for either. A project named "*.v18", such as the
+		     Umbraco 18 test instance, picks 18 itself, because a global property is the only thing that
+		     reaches every project in a build and nobody should have to remember to pass one; the
+		     projects it references are handed the same value through AdditionalProperties. Anything
+		     else defaults to 17, so a build that names no major is exactly what shipped before.
+		     A solution named "*.v18" makes every project in it 18: MSBuild and Visual Studio both hand
+		     SolutionName to each project as a global property, and Visual Studio evaluates and restores
+		     each project once per solution, ignoring a reference's AdditionalProperties, so the v18
+		     test instance only restores in Visual Studio inside a solution where everything is 18. -->
+		<UmbracoMajor Condition="'$(UmbracoMajor)' == '' and $(SolutionName.EndsWith('.v18'))">18</UmbracoMajor>
+		<UmbracoMajor Condition="'$(UmbracoMajor)' == '' and $(MSBuildProjectName.EndsWith('.v18'))">18</UmbracoMajor>
+		<UmbracoMajor Condition="'$(UmbracoMajor)' == ''">17</UmbracoMajor>
+		<DefineConstants>$(DefineConstants);UMBRACO_$(UmbracoMajor)</DefineConstants>
+
+		<!-- Each major restores against different Umbraco packages, so their restore and build output
+		     must never share a folder: the second build would read the first one's assets file. 17
+		     keeps the default paths and lock file name so that its build is unchanged. -->
+		<BaseIntermediateOutputPath Condition="'$(UmbracoMajor)' != '17'">obj\umbraco$(UmbracoMajor)\</BaseIntermediateOutputPath>
+		<BaseOutputPath Condition="'$(UmbracoMajor)' != '17'">bin\umbraco$(UmbracoMajor)\</BaseOutputPath>
+		<NuGetLockFilePath Condition="'$(UmbracoMajor)' != '17'">packages.umbraco$(UmbracoMajor).lock.json</NuGetLockFilePath>
+		<!-- The SDK only keeps the *current* major's output folders out of the source glob, so the 18
+		     build compiled the 17 build's generated AssemblyInfo.cs from obj\Release\ and failed with
+		     duplicate attributes (CS0579), but only once 17 had been built in the same checkout.
+		     The other majors' lock files likewise: the SDK only knows the current one is not content,
+		     and the Web SDK packed packages.umbraco18.lock.json into every 17 package as a .json file. -->
+		<DefaultItemExcludes>$(DefaultItemExcludes);obj\**;bin\**;packages*.lock.json</DefaultItemExcludes>
+		<!-- The static web assets SDK builds a referenced project a second time to collect its assets,
+		     passing only what the project declares here, not the reference's AdditionalProperties. So
+		     the 18 test instance had its packages' assets looked up in the 17 build's obj\ and failed
+		     with "Manifest file ... staticwebassets.build.json not found". Each project hands its own
+		     major back. -->
+		<StaticWebAssetsAdditionalBuildProperties Condition="'$(UmbracoMajor)' != '17'">UmbracoMajor=$(UmbracoMajor)</StaticWebAssetsAdditionalBuildProperties>
+		<StaticWebAssetsAdditionalPublishProperties Condition="'$(UmbracoMajor)' != '17'">UmbracoMajor=$(UmbracoMajor)</StaticWebAssetsAdditionalPublishProperties>
+
 		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
 		<!-- This is a package/plugin: it does not resolve the final dependency graph, so audit
 		     only our own direct dependencies. Transitive versions are the consuming app's call. -->
@@ -8,8 +43,24 @@
 		     Directory.Packages.props and every add-on's range on the host (Directory.Build.targets).
 		     17.99999999 rather than "< 18.0.0": NuGet orders 18.0.0-rc.1 before 18.0.0, so an
 		     exclusive 18.0.0 admits every 18 prerelease, while this stops below every 18 version. A
-		     plain stable number, because a "-0" bound packs and then fails the push. Raise it with the
-		     major, to 18.99999999 for the release that moves to Umbraco 18 (RELEASE.md). -->
-		<UmbraDesktopUmbracoMajorCeiling>17.99999999</UmbraDesktopUmbracoMajorCeiling>
+		     plain stable number, because a "-0" bound packs and then fails the push. Derived from the
+		     major, so each major's packages are capped at their own. -->
+		<UmbraDesktopUmbracoMajorCeiling>$(UmbracoMajor).99999999</UmbraDesktopUmbracoMajorCeiling>
+
+		<!-- Versioning, once for all six packages: MinVer, from this repository's "v*" tags, so every
+		     package carries the same version off one tag (design D13). The prefix matters: without
+		     it MinVer only recognises bare "17.0.0"-style tags, ignores every "v17.0.0" and versions
+		     the package 17.0.0-alpha.0. Only projects that reference MinVer read these.
+		     The tags are 17's numbers. UmbraDesktopVersion (Directory.Build.targets) gives an Umbraco
+		     18 build the same minor and patch under major 18, so one tag ships both (plan D3). -->
+		<MinVerTagPrefix>v</MinVerTagPrefix>
+		<MinVerAutoIncrement>minor</MinVerAutoIncrement>
+		<MinVerMinimumMajorMinor>17.0</MinVerMinimumMajorMinor>
+		<!-- A prerelease label for this major's packages only, such as "rc.1", appended when the tag
+		     itself is stable. How 18 ships as a release candidate from the tag that ships 17 stable,
+		     until it is trusted (plan D3). Empty: the major ships whatever the tag says.
+		     rc.1 for the first 18 release. Empty it once a release candidate has held up in use, and
+		     the next tag ships 18 stable; RELEASE.md has the steps. -->
+		<UmbraDesktopMajorPreRelease Condition="'$(UmbraDesktopMajorPreRelease)' == '' and '$(UmbracoMajor)' == '18'">rc.1</UmbraDesktopMajorPreRelease>
 	</PropertyGroup>
 </Project>

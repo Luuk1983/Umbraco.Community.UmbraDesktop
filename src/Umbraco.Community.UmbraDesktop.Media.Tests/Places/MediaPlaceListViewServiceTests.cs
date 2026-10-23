@@ -123,7 +123,7 @@ public class MediaPlaceListViewServiceTests
     /// <param name="total">How many children the search says there are in all.</param>
     /// <param name="children">The children on this page.</param>
     private static void ChildrenOfImage(Parts parts, long total, params IMedia[] children) =>
-        parts.Search.SearchChildrenAsync(Arg.Any<string?>(), Image, Arg.Any<Ordering?>(), Arg.Any<int>(), Arg.Any<int>())
+        parts.Search.SearchChildrenAsync(Arg.Any<string?>(), Image, Arg.Any<string[]?>(), Arg.Any<Ordering>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<int>())
             .Returns(new PagedModel<IMedia>(total, children));
 
     /// <summary>
@@ -155,7 +155,7 @@ public class MediaPlaceListViewServiceTests
         var result = await parts.Service.GetListViewItemsByKeyAsync(parts.User, key, dataType, "name", Direction.Ascending, "x", 5, 10);
 
         Assert.Equal(answer, result);
-        await parts.Search.DidNotReceiveWithAnyArgs().SearchChildrenAsync(default, default, default, default, default);
+        await parts.Search.DidNotReceiveWithAnyArgs().SearchChildrenAsync(default, default, default, default!, default, default, default);
     }
 
     /// <summary>
@@ -179,7 +179,9 @@ public class MediaPlaceListViewServiceTests
         await parts.Search.Received(1).SearchChildrenAsync(
             "uni",
             Image,
-            Arg.Is<Ordering?>(ordering => ordering!.OrderBy == "name" && ordering.Direction == Direction.Descending && !ordering.IsCustomField),
+            Arg.Is<string[]?>(aliases => aliases == null),
+            Arg.Is<Ordering>(ordering => ordering.OrderBy == "name" && ordering.Direction == Direction.Descending && !ordering.IsCustomField),
+            Arg.Any<bool>(),
             5,
             10);
         await parts.Umbraco.DidNotReceiveWithAnyArgs().GetListViewItemsByKeyAsync(default!, default, default, default!, default, default, default, default);
@@ -226,7 +228,9 @@ public class MediaPlaceListViewServiceTests
         await parts.Search.Received(1).SearchChildrenAsync(
             null,
             Image,
-            Arg.Is<Ordering?>(ordering => ordering!.OrderBy == expected && ordering.IsCustomField == custom),
+            Arg.Is<string[]?>(aliases => aliases == null),
+            Arg.Is<Ordering>(ordering => ordering.OrderBy == expected && ordering.IsCustomField == custom),
+            Arg.Any<bool>(),
             0,
             100);
     }

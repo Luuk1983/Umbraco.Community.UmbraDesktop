@@ -48,6 +48,48 @@ interface ComparableWorkspace {
 }
 
 /**
+ * The members core builds `loadWithoutPersist` from, which a core that predates the method already
+ * has. Protected in core's types, so optional here, and read only on a release that lacks the public
+ * method, whose shape is fixed: checked against 17.4.0 and 18.0.0, which match 17.6's method body.
+ */
+interface OlderCoreWorkspace {
+  /** The subject's unique id, as a getter. */
+  getUnique?: () => string | null | undefined;
+  /** The repository the workspace loads its entity through. */
+  _detailRepository?: { requestByUnique: (unique: string) => Promise<{ data?: unknown; error?: unknown }> };
+  /** What a load does to the fetched entity before the workspace holds it. */
+  _processIncomingData?: (data: unknown) => Promise<unknown>;
+}
+
+/**
+ * How to fetch the server's copy of a workspace's subject without applying it, or undefined when the
+ * workspace offers no way to.
+ *
+ * Core's own `loadWithoutPersist` where it has one, which is from 17.6.0 and 18.1.0. Before those the
+ * router had nothing to classify with, so on 17.0 to 17.5 and on 18.0 a save by somebody else over a
+ * window's unsaved changes raised no warning at all, and whoever saved last silently won: the one
+ * failure the overwrite guard exists to prevent. Those releases already have both members the method
+ * is made of, so this does what it does: request the entity by its unique from the detail
+ * repository, and put it through the `_processIncomingData` a load uses. A repository error becomes
+ * the rejection's `cause`, as in core, which is how the router tells a deleted subject (404) apart.
+ * @param workspace The workspace context.
+ * @returns The fetch, or undefined.
+ */
+function serverCopyOf(workspace: ComparableWorkspace & OlderCoreWorkspace): (() => Promise<unknown>) | undefined {
+  if (workspace.loadWithoutPersist) return () => workspace.loadWithoutPersist!();
+  const repository = workspace._detailRepository;
+  if (typeof repository?.requestByUnique !== 'function' || typeof workspace.getUnique !== 'function') return undefined;
+  return async () => {
+    const unique = workspace.getUnique!();
+    if (!unique) throw new Error('Unique is not set');
+    const { data, error } = await repository.requestByUnique(unique);
+    // Assigned rather than passed as the constructor's option, which this project's lib does not type.
+    if (error || !data) throw Object.assign(new Error('Error loading entity'), { cause: error });
+    return workspace._processIncomingData ? workspace._processIncomingData(data) : data;
+  };
+}
+
+/**
  * The parts of a workspace context the server-event router needs, lifted out of the frame's realm
  * into plain functions the shell can hold.
  *
@@ -66,8 +108,9 @@ export interface UmbraDesktopWorkspaceSubject {
   /**
    * The server's current copy, without applying it to the workspace.
    *
-   * Optional: it is declared on `UmbEntityDetailWorkspaceContextBase`, and a comparable workspace
-   * that lacks it simply cannot be classified rather than being an exception to handle. Design R3.
+   * Optional: it is declared on `UmbEntityDetailWorkspaceContextBase` (from 17.6 and 18.1, and
+   * rebuilt from its parts before those, see `serverCopyOf`), and a comparable workspace that lacks
+   * it simply cannot be classified rather than being an exception to handle. Design R3.
    */
   loadWithoutPersist?: () => Promise<unknown>;
   /** What this workspace last saved, live. */
@@ -251,9 +294,7 @@ export function watchWorkspaceDirtyState(
               entityType,
               unique,
               reload: () => workspace.reload!(),
-              loadWithoutPersist: workspace.loadWithoutPersist
-                ? () => workspace.loadWithoutPersist!()
-                : undefined,
+              loadWithoutPersist: serverCopyOf(workspace),
               getPersistedData: () => persisted,
               getData: () => current,
             }

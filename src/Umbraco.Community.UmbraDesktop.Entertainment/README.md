@@ -25,7 +25,7 @@ Scores go to the Arcade leaderboards, with a notification when somebody takes fi
 dotnet add package Umbraco.Community.UmbraDesktop.Entertainment
 ```
 
-That is all. UmbraDesktop comes with it if you do not have it yet, and the apps appear in the launcher for anyone who can reach the desktop. You need Umbraco 17 and .NET 10.
+That is all. UmbraDesktop comes with it if you do not have it yet, and the apps appear in the launcher for anyone who can reach the desktop. You need Umbraco 17.4 or later, or Umbraco 18, and .NET 10. Install the release that matches your Umbraco: 17.x on 17, 18.x on 18.
 
 [Games](docs/user/games.md) covers how to play, and how versions of this package and UmbraDesktop fit together. [umbraCoffee](docs/user/umbracoffee.md) covers the show's window, its tray cup and reminders, and where its data comes from. Its video and chat are YouTube's own embeds, so by using umbraCoffee you agree to be bound by the [YouTube Terms of Service](https://www.youtube.com/t/terms).
 

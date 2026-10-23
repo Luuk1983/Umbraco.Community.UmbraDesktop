@@ -24,8 +24,8 @@ namespace Umbraco.Community.UmbraDesktop.Manifest;
 /// </remarks>
 /// <param name="builder">Derives the manifest's paths.</param>
 /// <param name="pathGenerator">
-/// Supplies the backoffice's virtual path. This, and not <c>GlobalSettings</c>: Umbraco 17 has no
-/// <c>GlobalSettings.UmbracoPath</c> at all, and <see cref="IBackOfficePathGenerator"/> is what
+/// Supplies the backoffice's virtual path. This, and not <c>GlobalSettings</c>: neither Umbraco 17
+/// nor 18 has a <c>GlobalSettings.UmbracoPath</c>, and <see cref="IBackOfficePathGenerator"/> is what
 /// core's own manifest controllers take for the same question.
 /// </param>
 /// <param name="identity">

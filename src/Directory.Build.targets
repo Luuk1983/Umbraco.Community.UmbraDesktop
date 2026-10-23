@@ -1,4 +1,63 @@
 <Project>
+	<!-- Code that only one Umbraco major can compile lives in Compat/Umbraco<major>/ (plan D2), and is
+	     compiled only into that major's build. Folders rather than #if, so dropping a major is deleting
+	     its folders. Here so that every project gets the rule without restating it. -->
+	<ItemGroup>
+		<Compile Remove="Compat\Umbraco17\**" Condition="'$(UmbracoMajor)' != '17'" />
+		<Compile Remove="Compat\Umbraco18\**" Condition="'$(UmbracoMajor)' != '18'" />
+	</ItemGroup>
+
+	<!-- One tag, both majors (plan D3). The tags carry 17's numbers, so MinVer computes 17.Y.Z; an
+	     Umbraco 18 build keeps the minor, patch, prerelease and build metadata and swaps the major.
+	     17.5.0 and 18.5.0 are then the same features, which is the promise lockstep already makes
+	     across the six packages, carried across majors.
+	     Runs only when the major differs from the tag's or a major prerelease is set, so a 17 build
+	     never enters it and keeps exactly the version MinVer gave it. Every property MinVer sets is
+	     set again, because the assembly attributes and the nuspec each read a different one.
+	     After MinVer, which is how MinVer's own documentation says to adjust its version. -->
+	<Target Name="UmbraDesktopVersion" AfterTargets="MinVer">
+		<PropertyGroup Condition="'$(MinVerVersion)' != '' and ('$(UmbracoMajor)' != '$(MinVerMajor)' or '$(UmbraDesktopMajorPreRelease)' != '')">
+			<_UmbraDesktopPreRelease>$(MinVerPreRelease)</_UmbraDesktopPreRelease>
+			<_UmbraDesktopPreRelease Condition="'$(_UmbraDesktopPreRelease)' == ''">$(UmbraDesktopMajorPreRelease)</_UmbraDesktopPreRelease>
+			<_UmbraDesktopVersion>$(UmbracoMajor).$(MinVerMinor).$(MinVerPatch)</_UmbraDesktopVersion>
+			<_UmbraDesktopVersion Condition="'$(_UmbraDesktopPreRelease)' != ''">$(_UmbraDesktopVersion)-$(_UmbraDesktopPreRelease)</_UmbraDesktopVersion>
+			<Version>$(_UmbraDesktopVersion)</Version>
+			<PackageVersion>$(_UmbraDesktopVersion)</PackageVersion>
+			<AssemblyVersion>$(UmbracoMajor).0.0.0</AssemblyVersion>
+			<FileVersion>$(UmbracoMajor).$(MinVerMinor).$(MinVerPatch).0</FileVersion>
+			<InformationalVersion>$(_UmbraDesktopVersion)</InformationalVersion>
+			<InformationalVersion Condition="'$(MinVerBuildMetadata)' != ''">$(_UmbraDesktopVersion)+$(MinVerBuildMetadata)</InformationalVersion>
+		</PropertyGroup>
+	</Target>
+
+	<!-- Stamps the built umbraco-package.json (UmbracoPackageJsonPath, set by each package) with the
+	     package's version. The source file keeps "GetsGenerated" as its placeholder. The version is
+	     what the backoffice appends to the bundle URL as ?umb__rnd=, so a release that kept an old
+	     one would be served the previous bundle from a CDN's cache. -->
+	<UsingTask TaskName="SetJsonVersion" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<FilePath ParameterType="System.String" Required="true" />
+			<VersionValue ParameterType="System.String" Required="true" />
+		</ParameterGroup>
+		<Task>
+			<Code Type="Fragment" Language="cs"><![CDATA[
+var text = System.IO.File.ReadAllText(FilePath);
+text = System.Text.RegularExpressions.Regex.Replace(
+    text, @"""version"":\s*""[^""]*""", $@"""version"": ""{VersionValue}""");
+System.IO.File.WriteAllText(FilePath, text);
+Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionValue}");
+      ]]></Code>
+		</Task>
+	</UsingTask>
+
+	<!-- After UmbraDesktopVersion rather than MinVer, so an 18 build stamps 18.Y.Z. The two majors
+	     stamp the same wwwroot file, so they must be packed one after the other, never in parallel,
+	     in one checkout (.github/actions/build-packages does them in turn). -->
+	<Target Name="SyncUmbracoPackageVersion" AfterTargets="UmbraDesktopVersion" Condition="'$(MinVerVersion)' != '' and '$(UmbracoPackageJsonPath)' != ''">
+		<SetJsonVersion FilePath="$(UmbracoPackageJsonPath)" VersionValue="$(PackageVersion)" Condition="Exists('$(UmbracoPackageJsonPath)')" />
+		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'npm run build' before packing, or the package will ship an unstamped version." Condition="!Exists('$(UmbracoPackageJsonPath)')" />
+	</Target>
+
 	<!-- Every packed project gets its README's relative links and images pinned to the commit being
 	     packed. NuGet resolves no relative links, and the Umbraco Marketplace shows the packed
 	     README too, so the file in the repository (relative, right on GitHub) cannot be packed as

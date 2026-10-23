@@ -1,7 +1,7 @@
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UmbId } from '@umbraco-cms/backoffice/id';
 import { UmbLocalizationController } from '@umbraco-cms/backoffice/localization-api';
-import { UMB_MEDIA_PROPERTY_VALUE_ENTITY_TYPE, UmbMediaDetailRepository } from '@umbraco-cms/backoffice/media';
+import { UmbMediaDetailRepository } from '@umbraco-cms/backoffice/media';
 import { UmbMediaTypeDetailRepository, UmbMediaTypeStructureRepository } from '@umbraco-cms/backoffice/media-type';
 import { TemporaryFileStatus, UmbTemporaryFileManager } from '@umbraco-cms/backoffice/temporary-file';
 import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
@@ -360,7 +360,6 @@ async function createItem(
         value: { temporaryFileId },
         culture: null,
         segment: null,
-        entityType: UMB_MEDIA_PROPERTY_VALUE_ENTITY_TYPE,
       },
     ],
   });

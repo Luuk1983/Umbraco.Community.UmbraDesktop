@@ -1,13 +1,21 @@
 name: Build UmbraDesktop packages
 description: >
-  Restores, tests, builds and packs every shipped package, then proves each one actually contains
-  its frontend. The single definition of "what ships and how", shared by CI and by the release.
+  Restores, tests, builds and packs every shipped package, for each Umbraco major asked for, then
+  proves each one actually contains its frontend, is stamped with its own version and depends on
+  the right range.
 
 inputs:
   output:
     description: Directory the .nupkg and .snupkg files are written to.
     required: false
     default: ./artifacts
+  umbraco-majors:
+    description: >
+      The Umbraco majors to build the packages for, space-separated, such as "17 18". One source
+      tree builds both (docs/design/2026-10-23-umbraco-18-upgrade-plan.md D1). Defaults to 17 so a
+      caller that names none gets exactly what shipped before.
+    required: false
+    default: '17'
 
 runs:
   using: composite
@@ -20,10 +28,11 @@ runs:
     # cache-dependency-path has to name every lock file: with one package.json per shipped
     # package, the default single-file lookup would key the cache on the host alone and hand the
     # add-ons a cache that has nothing to do with them.
+    # Node 24: the backoffice package declares node >=24.13 from 17.7 and in every 18 release.
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '22'
+        node-version: '24'
         cache: npm
         cache-dependency-path: |
           src/Umbraco.Community.UmbraDesktop/package-lock.json
@@ -34,36 +43,16 @@ runs:
           src/Umbraco.Community.UmbraDesktop.Media/package-lock.json
 
     # Safe to key on the lock files because RestorePackagesWithLockFile is on repo-wide
-    # (src/Directory.Build.props), so every packages.lock.json is committed and exact. They
-    # are named rather than globbed: a `**` glob would pull in the test instance's lock file, and
-    # its floating "17.*" dependencies would then throw this cache away for a change to a project
-    # that contributes nothing to either package.
+    # (src/Directory.Build.props), so every lock file is committed and exact: packages.lock.json for
+    # 17, packages.umbraco18.lock.json for 18. They are named rather than globbed: a `**` glob would
+    # pull in the test instances' lock files, and their floating dependencies would then throw this
+    # cache away for a change to a project that contributes nothing to any package.
     - name: Cache NuGet packages
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: nuget-${{ runner.os }}-${{ hashFiles('src/Umbraco.Community.UmbraDesktop/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Media/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Entertainment/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Media/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/packages.lock.json', 'src/Umbraco.Community.UmbraDesktop.Media.Tests/packages.lock.json') }}
+        key: nuget-${{ runner.os }}-${{ hashFiles('src/Umbraco.Community.UmbraDesktop/packages*.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade/packages*.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Media/packages*.lock.json', 'src/Umbraco.Community.UmbraDesktop.Entertainment/packages*.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories/packages*.lock.json', 'src/Umbraco.Community.UmbraDesktop.Media/packages*.lock.json', 'src/Umbraco.Community.UmbraDesktop.Tests/packages*.lock.json', 'src/Umbraco.Community.UmbraDesktop.Accessories.Tests/packages*.lock.json', 'src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/packages*.lock.json', 'src/Umbraco.Community.UmbraDesktop.Media.Tests/packages*.lock.json') }}
         restore-keys: nuget-${{ runner.os }}-
-
-    # Per project rather than by solution, and deliberately. The solution also holds the test
-    # instance, whose ten floating "17.*" dependencies (Umbraco itself plus every commercial
-    # package the catalogue is exercised against) add ~120 packages and can float to a version
-    # that no longer compiles. In a release that would fail the run after the tag is already
-    # public, for a reason unrelated to anything being shipped. CI builds the whole solution in a
-    # separate job instead, where that breakage is news rather than a blocked release.
-    - name: Restore
-      shell: bash
-      run: |
-        dotnet restore src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj
-        dotnet restore src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj
-        dotnet restore src/Umbraco.Community.UmbraDesktop.Services.Arcade/Umbraco.Community.UmbraDesktop.Services.Arcade.csproj
-        dotnet restore src/Umbraco.Community.UmbraDesktop.Services.Media/Umbraco.Community.UmbraDesktop.Services.Media.csproj
-        dotnet restore src/Umbraco.Community.UmbraDesktop.Entertainment/Umbraco.Community.UmbraDesktop.Entertainment.csproj
-        dotnet restore src/Umbraco.Community.UmbraDesktop.Accessories/Umbraco.Community.UmbraDesktop.Accessories.csproj
-        dotnet restore src/Umbraco.Community.UmbraDesktop.Media/Umbraco.Community.UmbraDesktop.Media.csproj
-        dotnet restore src/Umbraco.Community.UmbraDesktop.Accessories.Tests/Umbraco.Community.UmbraDesktop.Accessories.Tests.csproj
-        dotnet restore src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests.csproj
-        dotnet restore src/Umbraco.Community.UmbraDesktop.Media.Tests/Umbraco.Community.UmbraDesktop.Media.Tests.csproj
 
     - name: Install frontend dependencies
       shell: bash
@@ -93,7 +82,9 @@ runs:
       run: (cd tools/umbracoffee-feed && node --test)
 
     # Must run before dotnet build/pack: wwwroot/App_Plugins is gitignored, so a clean checkout
-    # would otherwise pack a package with no frontend in it at all.
+    # would otherwise pack a package with no frontend in it at all. Built once for every major: the
+    # bundle contains no Umbraco code (every Vite config externalises @umbraco), so one bundle
+    # serves both. Each major's own type check and tests are the frontend job in ci.yml.
     - name: Build frontend
       shell: bash
       run: |
@@ -104,108 +95,140 @@ runs:
         (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm run build)
         (cd src/Umbraco.Community.UmbraDesktop.Media && npm run build)
 
-    - name: Build
+    # One major at a time, all the way from restore to pack, and never two at once: both majors
+    # stamp the same wwwroot/App_Plugins/*/umbraco-package.json with their own version, so a 17 pack
+    # that ran after the 18 build would ship 18's number in a 17 package. Each major packs into its
+    # own folder, where the checks below expect exactly one host package.
+    #
+    # Per project rather than by solution, and deliberately. The solutions also hold the test
+    # instances, whose floating dependencies (Umbraco itself plus every commercial package the
+    # catalogue is exercised against) add ~120 packages and can float to a version that no longer
+    # compiles. In a release that would fail the run after the tag is already public, for a reason
+    # unrelated to anything being shipped. CI builds both solutions in a separate job instead,
+    # where that breakage is news rather than a blocked release.
+    #
+    # Test projects are named by project file, never by directory or solution: a path that matches no
+    # project makes `dotnet test` report success while running nothing.
+    - name: Build, test and pack each Umbraco major
       shell: bash
       run: |
-        dotnet build src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-restore
-        dotnet build src/Umbraco.Community.UmbraDesktop.Services.Arcade/ --configuration Release --no-restore
-        dotnet build src/Umbraco.Community.UmbraDesktop.Services.Media/ --configuration Release --no-restore
-        dotnet build src/Umbraco.Community.UmbraDesktop.Entertainment/ --configuration Release --no-restore
-        dotnet build src/Umbraco.Community.UmbraDesktop.Accessories/ --configuration Release --no-restore
-        dotnet build src/Umbraco.Community.UmbraDesktop.Media/ --configuration Release --no-restore
-
-    # Named by project file, never by directory or solution: a path that matches no project makes
-    # `dotnet test` report success while running nothing.
-    - name: Test backend
-      shell: bash
-      run: |
-        dotnet test src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj --configuration Release --no-restore
-        dotnet test src/Umbraco.Community.UmbraDesktop.Accessories.Tests/Umbraco.Community.UmbraDesktop.Accessories.Tests.csproj --configuration Release --no-restore
-        dotnet test src/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests/Umbraco.Community.UmbraDesktop.Services.Arcade.Tests.csproj --configuration Release --no-restore
-        dotnet test src/Umbraco.Community.UmbraDesktop.Media.Tests/Umbraco.Community.UmbraDesktop.Media.Tests.csproj --configuration Release --no-restore
-
-    # Every package, every release, changed or not: they share a version off one tag, and matching
-    # versions are the compatibility answer instead of a matrix somebody has to maintain
-    # (design D13, docs/design/2026-09-06-desktop-apps-design.md §8.3).
-    - name: Pack
-      shell: bash
-      run: |
-        dotnet pack src/Umbraco.Community.UmbraDesktop/ --configuration Release --no-build --output "${{ inputs.output }}"
-        dotnet pack src/Umbraco.Community.UmbraDesktop.Services.Arcade/ --configuration Release --no-build --output "${{ inputs.output }}"
-        dotnet pack src/Umbraco.Community.UmbraDesktop.Services.Media/ --configuration Release --no-build --output "${{ inputs.output }}"
-        dotnet pack src/Umbraco.Community.UmbraDesktop.Entertainment/ --configuration Release --no-build --output "${{ inputs.output }}"
-        dotnet pack src/Umbraco.Community.UmbraDesktop.Accessories/ --configuration Release --no-build --output "${{ inputs.output }}"
-        dotnet pack src/Umbraco.Community.UmbraDesktop.Media/ --configuration Release --no-build --output "${{ inputs.output }}"
+        set -euo pipefail
+        shipped=(Umbraco.Community.UmbraDesktop Umbraco.Community.UmbraDesktop.Services.Arcade Umbraco.Community.UmbraDesktop.Services.Media Umbraco.Community.UmbraDesktop.Entertainment Umbraco.Community.UmbraDesktop.Accessories Umbraco.Community.UmbraDesktop.Media)
+        tests=(Umbraco.Community.UmbraDesktop.Tests Umbraco.Community.UmbraDesktop.Accessories.Tests Umbraco.Community.UmbraDesktop.Services.Arcade.Tests Umbraco.Community.UmbraDesktop.Media.Tests)
+        for major in ${{ inputs.umbraco-majors }}; do
+          echo "::group::Umbraco $major"
+          for p in "${shipped[@]}" "${tests[@]}"; do dotnet restore "src/$p/$p.csproj" -p:UmbracoMajor=$major; done
+          for p in "${shipped[@]}"; do dotnet build "src/$p/$p.csproj" --configuration Release --no-restore -p:UmbracoMajor=$major; done
+          for t in "${tests[@]}"; do dotnet test "src/$t/$t.csproj" --configuration Release --no-restore -p:UmbracoMajor=$major; done
+          for p in "${shipped[@]}"; do dotnet pack "src/$p/$p.csproj" --configuration Release --no-build -p:UmbracoMajor=$major --output "${{ inputs.output }}/umbraco$major"; done
+          echo "::endgroup::"
+        done
 
     # A package that installs cleanly and does nothing is this repository's worst failure mode, and
     # it looks identical to success everywhere else. In the release workflow this is also the last
     # point at which an empty package is still recoverable: after the push it is not, because a
     # published version cannot be replaced, only unlisted and superseded.
-    - name: Verify each package ships its frontend
+    # The version stamped into umbraco-package.json is checked against the package's own for the
+    # same reason it matters: the backoffice requests the bundle as ?umb__rnd=<that version>, so a
+    # package carrying the other major's number, or an old one, is served a cached bundle.
+    - name: Verify each package ships its frontend, stamped with its own version
       shell: bash
       run: |
-        for pkg in "${{ inputs.output }}"/*.nupkg; do
+        failed=0
+        for pkg in "${{ inputs.output }}"/umbraco*/*.nupkg; do
           count=$(unzip -l "$pkg" | grep -c "staticwebassets/App_Plugins/" || true)
-          echo "$pkg: $count static web assets"
-          [ "$count" -gt 0 ] || { echo "::error::$pkg ships no frontend"; exit 1; }
+          version=$(unzip -p "$pkg" '*.nuspec' | sed -n 's:.*<version>\(.*\)</version>.*:\1:p')
+          stamped=$(unzip -p "$pkg" 'staticwebassets/App_Plugins/*/umbraco-package.json' | tr -d '\r' | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | sort -u | tr '\n' ' ')
+          echo "$pkg: $count static web assets, umbraco-package.json says '$stamped', package is '$version'"
+          [ "$count" -gt 0 ] || { echo "::error::$pkg ships no frontend"; failed=1; }
+          [ "$stamped" = "$version " ] || { echo "::error::$pkg is $version but its umbraco-package.json says '$stamped'"; failed=1; }
+        done
+        exit "$failed"
+
+    # The oldest Umbraco each set allows has to export every name its bundles import, or a bundle fails
+    # to link there and the desktop never loads. The 17 packages said 17.0.0 while needing 17.4, and
+    # nothing noticed, because every test runs against the backoffice in the lock file, which is the
+    # newest. The floor is read from each set's packed host (its Umbraco.Cms.StaticAssets range), so
+    # what is checked is what ships, and that release's backoffice is fetched from NuGet to check
+    # against.
+    - name: Verify the oldest Umbraco allowed has everything the bundles import
+      shell: bash
+      run: |
+        for major in ${{ inputs.umbraco-majors }}; do
+          node src/Umbraco.Community.UmbraDesktop/backoffice/scripts/check-umbraco-floor.mjs "${{ inputs.output }}/umbraco$major"
         done
 
-    # Every add-on has to require this release of the host, up to the last 17: "[<host version>,
-    # 17.99999999.0]". NuGet packs a ProjectReference as a bare ">= version" with no ceiling, and the
-    # bound comes from src/Directory.Build.targets, which hooks NuGet's private
+    # Every add-on has to require this release of the host, up to the last version of its own
+    # Umbraco major: "[<host version>, 17.99999999.0]" in the 17 set, "[<host version>,
+    # 18.99999999.0]" in the 18 set. NuGet packs a ProjectReference as a bare ">= version" with no
+    # ceiling, and the bound comes from src/Directory.Build.targets, which hooks NuGet's private
     # `_GetProjectReferenceVersions`. An SDK update can rename or reshape that target without a word,
     # and the pack would carry on succeeding with an unbounded dependency. This is where that shows.
     # An add-on is every Umbraco.Community.UmbraDesktop.* package other than the host, so a new one is
     # checked without anyone remembering to list it here. The ceiling is read from the property the
-    # target uses rather than typed a second time, and given the ".0" NuGet normalises a two-part
-    # version to in a nuspec.
+    # target uses, for that major, rather than typed a second time, and given the ".0" NuGet
+    # normalises a two-part version to in a nuspec.
     - name: Verify each add-on's host dependency range
       shell: bash
       run: |
-        out="${{ inputs.output }}"
-        shopt -s nullglob
-        hosts=("$out"/Umbraco.Community.UmbraDesktop.[0-9]*.nupkg)
-        [ "${#hosts[@]}" -eq 1 ] || { echo "::error::expected exactly one host package in $out, found ${#hosts[@]}: ${hosts[*]}"; exit 1; }
-        addons=()
-        for pkg in "$out"/Umbraco.Community.UmbraDesktop.*.nupkg; do
-          [ "$pkg" = "${hosts[0]}" ] || addons+=("$pkg")
-        done
-        [ "${#addons[@]}" -gt 0 ] || { echo "::error::no add-on packages in $out"; exit 1; }
-        host_version=$(unzip -p "${hosts[0]}" '*.nuspec' | sed -n 's:.*<version>\(.*\)</version>.*:\1:p')
-        [ -n "$host_version" ] || { echo "::error::could not read the version from ${hosts[0]}"; exit 1; }
-        ceiling=$(dotnet msbuild src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj -getProperty:UmbraDesktopUmbracoMajorCeiling)
-        [[ "$ceiling" =~ ^[0-9]+\.[0-9]+$ ]] && ceiling="$ceiling.0"
-        expected="[$host_version, $ceiling]"
         failed=0
-        for pkg in "${addons[@]}"; do
-          actual=$(unzip -p "$pkg" '*.nuspec' | sed -n 's:.*<dependency id="Umbraco.Community.UmbraDesktop" version="\([^"]*\)".*:\1:p')
-          echo "$pkg: host dependency '$actual', expected '$expected'"
-          [ "$actual" = "$expected" ] || { echo "::error::$pkg depends on the host as '$actual', expected '$expected'"; failed=1; }
-        done
-        # An add-on that depends on a service package (Entertainment on the Arcade, Accessories and
-        # Media on the media service) gets the same bound from the same target, so the same range is checked
-        # for it, against the service package's own version, which is the host's because all
-        # packages are versioned off one tag. A package that does not depend on a service has no such
-        # line, and is skipped. But if any package does depend on one, that service has to be in
-        # this pack output too: a release that ships a dependent without the package it requires is
-        # uninstallable, so a missing service fails here rather than the check quietly passing over it.
-        for service in Umbraco.Community.UmbraDesktop.Services.Arcade Umbraco.Community.UmbraDesktop.Services.Media; do
-          service_pkgs=("$out"/$service.[0-9]*.nupkg)
-          service_expected=""
-          if [ "${#service_pkgs[@]}" -eq 1 ]; then
-            service_version=$(unzip -p "${service_pkgs[0]}" '*.nuspec' | sed -n 's:.*<version>\(.*\)</version>.*:\1:p')
-            service_expected="[$service_version, $ceiling]"
-          fi
+        shopt -s nullglob
+        for major in ${{ inputs.umbraco-majors }}; do
+          out="${{ inputs.output }}/umbraco$major"
+          hosts=("$out"/Umbraco.Community.UmbraDesktop.[0-9]*.nupkg)
+          [ "${#hosts[@]}" -eq 1 ] || { echo "::error::expected exactly one host package in $out, found ${#hosts[@]}: ${hosts[*]}"; exit 1; }
+          addons=()
+          for pkg in "$out"/Umbraco.Community.UmbraDesktop.*.nupkg; do
+            [ "$pkg" = "${hosts[0]}" ] || addons+=("$pkg")
+          done
+          [ "${#addons[@]}" -gt 0 ] || { echo "::error::no add-on packages in $out"; exit 1; }
+          host_version=$(unzip -p "${hosts[0]}" '*.nuspec' | sed -n 's:.*<version>\(.*\)</version>.*:\1:p')
+          [ -n "$host_version" ] || { echo "::error::could not read the version from ${hosts[0]}"; exit 1; }
+          [[ "$host_version" == "$major".* ]] || { echo "::error::the Umbraco $major host package is version $host_version"; failed=1; }
+          ceiling=$(dotnet msbuild src/Umbraco.Community.UmbraDesktop/Umbraco.Community.UmbraDesktop.csproj -getProperty:UmbraDesktopUmbracoMajorCeiling -p:UmbracoMajor=$major)
+          [[ "$ceiling" =~ ^[0-9]+\.[0-9]+$ ]] && ceiling="$ceiling.0"
+          expected="[$host_version, $ceiling]"
           for pkg in "${addons[@]}"; do
-            actual=$(unzip -p "$pkg" '*.nuspec' | sed -n "s:.*<dependency id=\"$service\" version=\"\([^\"]*\)\".*:\1:p")
-            [ -n "$actual" ] || continue
-            if [ -z "$service_expected" ]; then
-              echo "::error::$pkg depends on $service but that package is not in $out (found ${#service_pkgs[@]}); a release has to ship both"
-              failed=1
-              continue
+            actual=$(unzip -p "$pkg" '*.nuspec' | sed -n 's:.*<dependency id="Umbraco.Community.UmbraDesktop" version="\([^"]*\)".*:\1:p')
+            echo "$pkg: host dependency '$actual', expected '$expected'"
+            [ "$actual" = "$expected" ] || { echo "::error::$pkg depends on the host as '$actual', expected '$expected'"; failed=1; }
+          done
+          # An add-on that depends on a service package (Entertainment on the Arcade, Accessories and
+          # Media on the media service) gets the same bound from the same target, so the same range is
+          # checked for it, against the service package's own version, which is the host's because all
+          # packages are versioned off one tag. A package that does not depend on a service has no such
+          # line, and is skipped. But if any package does depend on one, that service has to be in
+          # this pack output too: a release that ships a dependent without the package it requires is
+          # uninstallable, so a missing service fails here rather than the check quietly passing over it.
+          for service in Umbraco.Community.UmbraDesktop.Services.Arcade Umbraco.Community.UmbraDesktop.Services.Media; do
+            service_pkgs=("$out"/$service.[0-9]*.nupkg)
+            service_expected=""
+            if [ "${#service_pkgs[@]}" -eq 1 ]; then
+              service_version=$(unzip -p "${service_pkgs[0]}" '*.nuspec' | sed -n 's:.*<version>\(.*\)</version>.*:\1:p')
+              service_expected="[$service_version, $ceiling]"
             fi
-            echo "$pkg: $service dependency '$actual', expected '$service_expected'"
-            [ "$actual" = "$service_expected" ] || { echo "::error::$pkg depends on $service as '$actual', expected '$service_expected'"; failed=1; }
+            for pkg in "${addons[@]}"; do
+              actual=$(unzip -p "$pkg" '*.nuspec' | sed -n "s:.*<dependency id=\"$service\" version=\"\([^\"]*\)\".*:\1:p")
+              [ -n "$actual" ] || continue
+              if [ -z "$service_expected" ]; then
+                echo "::error::$pkg depends on $service but that package is not in $out (found ${#service_pkgs[@]}); a release has to ship both"
+                failed=1
+                continue
+              fi
+              echo "$pkg: $service dependency '$actual', expected '$service_expected'"
+              [ "$actual" = "$service_expected" ] || { echo "::error::$pkg depends on $service as '$actual', expected '$service_expected'"; failed=1; }
+            done
           done
         done
         exit "$failed"
+
+    # Every major's packages side by side in the output folder, which is what the artifact upload
+    # and the push glob read. Same IDs, different versions, so nothing collides.
+    - name: Gather the packages
+      shell: bash
+      run: |
+        for major in ${{ inputs.umbraco-majors }}; do
+          mv "${{ inputs.output }}/umbraco$major"/*.nupkg "${{ inputs.output }}/umbraco$major"/*.snupkg "${{ inputs.output }}/"
+          rmdir "${{ inputs.output }}/umbraco$major"
+        done
+        ls "${{ inputs.output }}"

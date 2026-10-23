@@ -21,7 +21,12 @@ jobs:
       # The same composite action CI runs, so what is released is built exactly the way it was
       # tested on the pull request, and neither workflow can learn about a new package without the
       # other learning about it too.
+      # Both package sets from every tag: 17.Y.Z for Umbraco 17 and 18.Y.Z for Umbraco 18, the
+      # same features (docs/design/2026-10-23-umbraco-18-upgrade-plan.md D3). 18 carries the
+      # prerelease in UmbraDesktopMajorPreRelease (src/Directory.Build.props) while it has one.
       - uses: ./.github/actions/build-packages
+        with:
+          umbraco-majors: '17 18'
 
       # The nuget.org trusted-publishing policy trusts this repository, this workflow file and the
       # production environment, with a `*` package glob. Renaming this file or dropping the
@@ -32,7 +37,7 @@ jobs:
         with:
           user: ${{ secrets.NUGET_USER }}
 
-      # Globs both packages, and pushes each .snupkg alongside its .nupkg automatically.
+      # Globs all twelve packages, both sets, and pushes each .snupkg alongside its .nupkg automatically.
       # --skip-duplicate so a re-run after a partial failure pushes only what did not land.
       - name: Push to NuGet
         run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

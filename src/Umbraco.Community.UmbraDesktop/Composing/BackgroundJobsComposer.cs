@@ -1,18 +1,17 @@
 using Microsoft.Extensions.DependencyInjection;
-using Umbraco.Cms.Api.Common.OpenApi;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using Umbraco.Cms.Core.Notifications;
 using Umbraco.Cms.Infrastructure.Notifications;
-using Umbraco.Community.UmbraDesktop.Api.Handlers;
 using Umbraco.Community.UmbraDesktop.BackgroundJobs;
 using Umbraco.Community.UmbraDesktop.BackgroundJobs.Notifications;
 
 namespace Umbraco.Community.UmbraDesktop.Composing;
 
 /// <summary>
-/// Wires up the background jobs feature: the activity cache, the report service, the recurring
-/// job notification handlers, and the OpenAPI naming handlers the management API endpoint needs.
+/// Wires up the background jobs feature: the activity cache, the report service and the recurring
+/// job notification handlers. The OpenAPI naming this composer used to register is per Umbraco
+/// major, so it moved to <c>Compat/Umbraco17</c> and <c>Compat/Umbraco18</c>.
 /// </summary>
 public sealed class BackgroundJobsComposer : IComposer
 {
@@ -30,18 +29,12 @@ public sealed class BackgroundJobsComposer : IComposer
         // that matters.
         builder.AddNotificationHandler<UmbracoApplicationStartingNotification, RecurringJobActivityCacheStartupHandler>();
 
-        // Exactly four notifications, not five: Umbraco 17.0.0 raises executing/executed/failed/
-        // ignored for a recurring job, but no per-run cancellation notification exists to handle,
-        // and one would be unreadable anyway since it would fire during shutdown, after this
-        // cache has stopped mattering.
+        // Exactly four notifications, not five: executing/executed/failed/ignored. Umbraco 17.0.0 has
+        // no cancellation notification, and the one later 17s and every 18 raise fires only for a run
+        // cut short by shutdown, after this cache has stopped mattering.
         builder.AddNotificationHandler<RecurringBackgroundJobExecutingNotification, RecurringJobActivityHandler>();
         builder.AddNotificationHandler<RecurringBackgroundJobExecutedNotification, RecurringJobActivityHandler>();
         builder.AddNotificationHandler<RecurringBackgroundJobFailedNotification, RecurringJobActivityHandler>();
         builder.AddNotificationHandler<RecurringBackgroundJobIgnoredNotification, RecurringJobActivityHandler>();
-
-        // Keeps the generated TypeScript client's operation and schema names short — without
-        // these the client would carry the full controller and namespace on every method and type.
-        builder.Services.AddSingleton<IOperationIdHandler, PackageOperationIdHandler>();
-        builder.Services.AddSingleton<ISchemaIdHandler, PackageSchemaIdHandler>();
     }
 }
