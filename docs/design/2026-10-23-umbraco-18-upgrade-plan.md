@@ -359,15 +359,25 @@ The spike's changes are on `dev/v18`, minus what the instances' first boots wrot
   which majors it covers. One fact had gone stale: from late 17 and in all of 18 there *is* a
   `RecurringBackgroundJobCanceledNotification`. It is raised only for a run cut short by shutdown, so
   handling four notifications still holds; the comments say so now.
-- **B4, on 18 with protection on.**
-  - Our paths work: the signed-in session reads a trashed file at its `.deleted` path, the bin
-    counts are right, and restore returns the original URL.
+- **B4.** `Umbraco:CMS:Content:EnableMediaRecycleBinProtection` is on by default in 18 and off in
+  17, and 17 has it too. All four combinations were run through the desktop itself, on a throwaway
+  copy of a starter image: trash it, read the Media Manager's bin row and Disk Cleanup's count, open
+  the manager's bin, restore it, trash it again, empty the bin with Disk Cleanup, and look on disk.
+  - Everything of ours behaves the same in all four. The bin row says `Recycle Bin (1)`, Disk Cleanup
+    `1 item`, restore gives back the original URL, and Disk Cleanup's empty deletes the item and its
+    file (and the file's folder) whether it was renamed or not.
+  - With protection on, either major, the trashed file moves to `<name>.deleted.<ext>`: the signed-in
+    backoffice reads it (200), an anonymous request is refused (401), and the old address is gone
+    (404). With it off, the file stays where it was and public.
+  - The manager's bin is core's recycle bin collection, a table of names with type icons, so it shows
+    no thumbnails to break. The Image Editor refuses a trashed item before reading its file
+    (`image-editor.location.test.ts`), so the setting cannot reach it.
   - **Found in Umbraco, worth reporting upstream:** on Windows the rename is a copy and a delete. When
     the file is still held, for example by image processing a moment earlier (`Failed to rename media
     file`, `IOException: … being used by another process`), the delete fails and the original stays
     public beside the protected copy. The Media manager shows thumbnails right before people trash
-    things, which makes this likelier.
-  - Not yet run with protection off, or on 17 with it on.
+    things, which makes this likelier. It did not happen in the four runs above, which trashed an
+    item nothing had just thumbnailed.
 - **C2.** The failing `window-app-dirty.test.ts` case was the test, not the product. It swapped the
   host's app behind the window. On 18 the window renders again, and Lit re-commits a class bound as a
   property on every render (it only compares primitives), so the window's app came back. The test now
@@ -403,7 +413,6 @@ The spike's changes are on `dev/v18`, minus what the instances' first boots wrot
 
 **Left:**
 - B2: move the two obsolete calls to their new overloads before a 19 build.
-- B4 with protection off, and on 17.
 - C3: a visual pass of the five themes on 18.
 - Phase D: fresh installs at both floors, including the Media manager's fallback on 18.0 and 18.1,
   and an upgrade in place.
@@ -474,7 +483,7 @@ be red until Phase C.
 
       For each one, confirm it is still correct on 18 and update its comment to say which majors it
       covers. Only split one into `Compat/` if 18 needs different behaviour.
-- [ ] **B4** Media recycle bin protection, with the setting on and off, on both majors:
+- [x] **B4** Media recycle bin protection, with the setting on and off, on both majors:
       - Disk Cleanup's counts and empty.
       - The manager's bin row.
       - Trash and restore, including that the file's URL works again after restore.
