@@ -401,6 +401,81 @@ it('reports no subject for a workspace that publishes no identity', () => {
   expect(reported[reported.length - 1].subjects).to.deep.equal([]);
 });
 
+describe("the subject's server copy", () => {
+  /**
+   * A workspace from a core that predates `loadWithoutPersist` (17.0 to 17.5, 18.0): it has the two
+   * members core builds that method from, and not the method.
+   * @param over The members to add or override.
+   * @returns The workspace handles.
+   */
+  function olderCoreWorkspace(over: Record<string, unknown> = {}) {
+    return fakeWorkspace({
+      unique: fakeState<string | null | undefined>('a1').observable,
+      entityType: fakeState<string | undefined>('document').observable,
+      reload: () => Promise.resolve(),
+      getUnique: () => 'a1',
+      _detailRepository: { requestByUnique: (unique: string) => Promise.resolve({ data: { unique, from: 'server' } }) },
+      _processIncomingData: (data: Record<string, unknown>) => Promise.resolve({ ...data, processed: true }),
+      ...over,
+    });
+  }
+
+  /**
+   * The subject a workspace reports once it has loaded.
+   * @param instance The workspace context.
+   * @returns Its subject.
+   */
+  function subjectOf(instance: unknown) {
+    const reported = watchState();
+    const provider = mountProvider(instance);
+    teardown.push(provider.dispose);
+    provider.provide();
+    return () => reported[reported.length - 1]?.subjects[0];
+  }
+
+  it("is core's own loadWithoutPersist where core has one", async () => {
+    const workspace = fakeSubjectWorkspace();
+    (workspace.instance as Record<string, unknown>).loadWithoutPersist = () => Promise.resolve({ name: 'Theirs' });
+    const subject = subjectOf(workspace.instance);
+    workspace.load({ name: 'Home' });
+
+    expect(await subject()!.loadWithoutPersist!()).to.deep.equal({ name: 'Theirs' });
+  });
+
+  it('is built the way core builds it on a core without one, so the overwrite guard still works there', async () => {
+    // Without this, the router had nothing to classify with on 17.0 to 17.5 and 18.0, and a save
+    // from somebody else over unsaved changes raised no warning at all.
+    const workspace = olderCoreWorkspace();
+    const subject = subjectOf(workspace.instance);
+    workspace.load({ name: 'Home' });
+
+    expect(subject()!.loadWithoutPersist, 'a server copy is offered').to.be.a('function');
+    expect(await subject()!.loadWithoutPersist!()).to.deep.equal({ unique: 'a1', from: 'server', processed: true });
+  });
+
+  it("rejects with the repository's error as its cause, which is how the router sees a deletion", async () => {
+    const workspace = olderCoreWorkspace({
+      _detailRepository: { requestByUnique: () => Promise.resolve({ error: { status: 404 } }) },
+    });
+    const subject = subjectOf(workspace.instance);
+    workspace.load({ name: 'Home' });
+
+    const error = await subject()!.loadWithoutPersist!().then(
+      () => undefined,
+      (e: unknown) => e as { cause?: { status?: number } },
+    );
+    expect(error?.cause?.status).to.equal(404);
+  });
+
+  it('is not offered by a workspace with neither the method nor what it is made of', () => {
+    const workspace = olderCoreWorkspace({ _detailRepository: undefined });
+    const subject = subjectOf(workspace.instance);
+    workspace.load({ name: 'Home' });
+
+    expect(subject()!.loadWithoutPersist).to.equal(undefined);
+  });
+});
+
 it('still does not report again for a keystroke that changes nothing about the answer', () => {
   const reported = watchState();
   const workspace = fakeSubjectWorkspace();

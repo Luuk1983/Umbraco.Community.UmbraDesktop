@@ -544,6 +544,13 @@ cannot render reporting "changed" with a count.
 - **R3 — `loadWithoutPersist()` is on the entity detail base.** A workspace that is comparable but
   lacks it cannot be classified. The gate checks for the method and such a window is simply never
   classified, in the same spirit as #20's D6: not a list of exceptions, just not a match.
+  - *Found later (2026-10-23, the Umbraco 18 upgrade's first runs on the oldest releases):* core only
+    added the method in 17.6.0 and 18.1.0. On anything older, *every* document window fell into this
+    gate, so a save by somebody else over unsaved changes raised no warning at all, and the second
+    save silently won. No test could see it, because the tests build their workspaces with the
+    method. The method is two members core already had (`_detailRepository.requestByUnique` and
+    `_processIncomingData`, identical in 17.4.0, 18.0.0 and 17.6.0), so `dirty-watcher.ts` builds
+    it from those when it is missing. A workspace with neither is still simply not classified.
 - **R4 — Notice height on a short window.** The stack takes space from the body, so a window near
   the chrome's floor gives its content very little. The stack caps and scrolls, and the floor stays
   the chrome's, so the titlebar is never lost.
