@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { UMBRADESKTOP_VIEW_MEMORY, layoutsLeading, memoryOf, viewMemory } from './view-switch.js';
+import { UMBRADESKTOP_VIEW_MEMORY, layoutsLeading, memoryOf, remembersViews, viewMemory } from './view-switch.js';
 
 /**
  * Core switches a collection's view through the backoffice address, which every hosted collection
@@ -24,6 +24,20 @@ describe('switching one window’s view', () => {
     expect(memoryOf({})).to.equal(undefined);
     expect(memoryOf({ interactionMemory: {} })).to.equal(undefined);
     expect(memoryOf(undefined)).to.equal(undefined);
+  });
+
+  it('tells a collection element that opens on a remembered view from one that cannot', () => {
+    // 17.7 and 18.2 declare interactionMemories on core's collection element; 17.4 to 17.6 and 18.0
+    // to 18.1 do not, and a window restored on the list opened on the grid there (Phase D, 18.0).
+    class Remembers {
+      /** As core declares it: an accessor on the prototype. */
+      set interactionMemories(_value: unknown) {}
+      get interactionMemories(): unknown {
+        return undefined;
+      }
+    }
+    expect(remembersViews(new Remembers())).to.equal(true);
+    expect(remembersViews({})).to.equal(false);
   });
 
   it('puts the chosen view first and keeps the others in order', () => {

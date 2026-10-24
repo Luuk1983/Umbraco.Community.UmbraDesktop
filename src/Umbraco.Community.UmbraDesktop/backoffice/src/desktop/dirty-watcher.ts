@@ -68,6 +68,8 @@ export interface UmbraDesktopWorkspaceSubject {
    *
    * Optional: it is declared on `UmbEntityDetailWorkspaceContextBase`, and a comparable workspace
    * that lacks it simply cannot be classified rather than being an exception to handle. Design R3.
+   * Core only added it in 17.6.0, which is why that is the packages' floor: below it no document
+   * window could be classified, and the guard never warned.
    */
   loadWithoutPersist?: () => Promise<unknown>;
   /** What this workspace last saved, live. */

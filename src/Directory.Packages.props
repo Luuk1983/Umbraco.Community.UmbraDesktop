@@ -2,24 +2,34 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
+    <!-- The oldest Umbraco the packages install on. 17.6.0, not 17.0.0: the bundles import names the
+         backoffice only exports from 17.4 (clearImagingCache, the UMB_THEME_* aliases, Lit's keyed and
+         live, and more), so on 17.0 to 17.3 the desktop never loaded; and the overwrite guard needs
+         the workspace's loadWithoutPersist, which core added in 17.6. The build action's floor check
+         (backoffice/scripts/check-umbraco-floor.mjs) holds every packed bundle to this release. -->
+    <UmbraDesktopUmbracoFloor>17.6.0</UmbraDesktopUmbracoFloor>
   </PropertyGroup>
   <ItemGroup>
     <!-- Extension package dependencies. The ceiling is UmbraDesktopUmbracoMajorCeiling from
          Directory.Build.props, 17.99999999, rather than an exclusive 18.0.0: NuGet orders
-         18.0.0-rc.1 before 18.0.0, so "[17.0.0,18.0.0)" admits every Umbraco 18 prerelease, and the
+         18.0.0-rc.1 before 18.0.0, so "[17.6.0,18.0.0)" admits every Umbraco 18 prerelease, and the
          next major's betas are exactly what this package has never been tested against. The same
          property bounds every add-on's dependency on the host, so the two cannot drift apart. -->
-    <PackageVersion Include="Umbraco.Cms.Api.Common" Version="[17.0.0,$(UmbraDesktopUmbracoMajorCeiling)]" />
-    <PackageVersion Include="Umbraco.Cms.Api.Management" Version="[17.0.0,$(UmbraDesktopUmbracoMajorCeiling)]" />
-    <PackageVersion Include="Umbraco.Cms.Core" Version="[17.0.0,$(UmbraDesktopUmbracoMajorCeiling)]" />
-    <PackageVersion Include="Umbraco.Cms.Infrastructure" Version="[17.0.0,$(UmbraDesktopUmbracoMajorCeiling)]" />
-    <PackageVersion Include="Umbraco.Cms.Persistence.EFCore" Version="[17.0.0,$(UmbraDesktopUmbracoMajorCeiling)]" />
+    <PackageVersion Include="Umbraco.Cms.Api.Common" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
+    <PackageVersion Include="Umbraco.Cms.Api.Management" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
+    <PackageVersion Include="Umbraco.Cms.Core" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
+    <PackageVersion Include="Umbraco.Cms.Infrastructure" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
+    <PackageVersion Include="Umbraco.Cms.Persistence.EFCore" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
+    <PackageVersion Include="Umbraco.Cms.StaticAssets" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
     <PackageVersion Include="Umbraco.Community.AdvancedPermissions" Version="17.3.0" />
     <PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
     <!-- Build-time only: versioning and source-link -->
     <PackageVersion Include="MinVer" Version="7.0.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0" />
+    <!-- EF Core at what Umbraco.Cms.Persistence.EFCore at the floor requires (10.0.10 for 17.6.0), for
+         the Arcade's migrations here and its tests' SQLite below. Lower, and restore fails on a
+         downgrade (NU1605); raise it with the floor. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
     <!-- Test instance dependencies -->
     <PackageVersion Include="Umbraco.Cms" Version="17.*" />
     <PackageVersion Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" />
@@ -66,6 +76,6 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
   </ItemGroup>
 </Project>

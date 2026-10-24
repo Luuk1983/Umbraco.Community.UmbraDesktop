@@ -6,13 +6,17 @@ import './folder-host.element.js';
 import type { UmbraDesktopMediaFolderHostElement } from './folder-host.element.js';
 import type { UmbraDesktopMediaItem, UmbraDesktopMediaSource } from './media-source.js';
 import type { UmbraDesktopMediaPlace } from './location.js';
+import { remembersViews } from './view-switch.js';
 
 const FOLDER = '0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0';
 const FOLDER_TYPE = 'f38bd2d7-65d0-48e6-95dc-87ce06ec2d3d';
 const OWN_LIST = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 
-/** A source that answers from memory and records what it was asked. */
-function source(): UmbraDesktopMediaSource & { listViews: Array<string> } {
+/**
+ * A source that answers from memory and records what it was asked.
+ * @param layouts The layouts every list view is configured with, if any.
+ */
+function source(layouts?: Array<{ collectionView: string; name?: string }>): UmbraDesktopMediaSource & { listViews: Array<string> } {
   const item: UmbraDesktopMediaItem = {
     unique: FOLDER,
     name: 'People',
@@ -27,7 +31,7 @@ function source(): UmbraDesktopMediaSource & { listViews: Array<string> } {
     rename: async () => false,
     collectionConfig: async (unique, listView) => {
       listViews.push(listView);
-      return { unique: unique ?? '', pageSize: 50 };
+      return { unique: unique ?? '', pageSize: 50, ...(layouts ? { layouts } : {}) };
     },
   };
 }
@@ -36,10 +40,11 @@ function source(): UmbraDesktopMediaSource & { listViews: Array<string> } {
  * A folder host, mounted at a place, waited on until it has built its collection.
  * @param place Where it is.
  * @param view The view it should open on.
+ * @param layouts The layouts its list views are configured with, if any.
  * @returns The host, the source and the names it announced.
  */
-async function mounted(place: UmbraDesktopMediaPlace, view?: string) {
-  const media = source();
+async function mounted(place: UmbraDesktopMediaPlace, view?: string, layouts?: Array<{ collectionView: string; name?: string }>) {
+  const media = source(layouts);
   const names: string[] = [];
   const host = await fixture<UmbraDesktopMediaFolderHostElement>(
     html`<umbradesktop-media-folder-host
@@ -163,6 +168,32 @@ describe('hosting core’s media collection for one place', () => {
     expect(collectionOf(host).interactionMemories).to.deep.equal([
       { unique: 'UmbCollectionCurrentView', value: { alias: 'Umb.CollectionView.Media.Table' } },
     ]);
+  });
+
+  /**
+   * A window reopened after a reload is built with its view, and a core that cannot remember one shows
+   * the first of the collection's layouts. So there the restored view has to be first already: on 18.0
+   * and 17.4 the window came back on the grid while it said list (Phase D).
+   */
+  it('opens a restored window on its view where core cannot remember one, and leaves core’s order where it can', async () => {
+    const configured = [
+      { collectionView: 'Umb.CollectionView.Media.Grid', name: 'Grid' },
+      { collectionView: 'Umb.CollectionView.Media.Table', name: 'List' },
+    ];
+    const { host } = await mounted({ kind: 'folder', unique: FOLDER }, 'Umb.CollectionView.Media.Table', configured);
+    const collection = collectionOf(host);
+    // The class, not the instance: the window hands every collection its view as an own property.
+    if (remembersViews(Object.getPrototypeOf(collection))) {
+      expect(collection.config?.layouts, 'core remembers, so its order stands').to.deep.equal(configured);
+    } else {
+      expect(collection.config?.layouts).to.deep.equal([configured[1], configured[0]]);
+    }
+  });
+
+  it('opens a window with no view on core’s own order', async () => {
+    const configured = [{ collectionView: 'Umb.CollectionView.Media.Grid' }, { collectionView: 'Umb.CollectionView.Media.Table' }];
+    const { host } = await mounted({ kind: 'root' }, undefined, configured);
+    expect(collectionOf(host).config?.layouts).to.deep.equal(configured);
   });
 });
 

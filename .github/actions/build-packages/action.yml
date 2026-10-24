@@ -150,6 +150,15 @@ runs:
           [ "$count" -gt 0 ] || { echo "::error::$pkg ships no frontend"; exit 1; }
         done
 
+    # The oldest Umbraco the packages allow has to export every name their bundles import, or a bundle
+    # fails to link there and the desktop never loads. The packages said 17.0.0 while needing 17.4,
+    # and nothing noticed, because every test runs against the backoffice in the lock file, which is
+    # the newest. The floor is read from the packed host's Umbraco.Cms.Core range, so what is checked
+    # is what ships, and that release's backoffice is fetched from NuGet to check against.
+    - name: Verify the oldest Umbraco allowed has everything the bundles import
+      shell: bash
+      run: node src/Umbraco.Community.UmbraDesktop/backoffice/scripts/check-umbraco-floor.mjs "${{ inputs.output }}"
+
     # Every add-on has to require this release of the host, up to the last 17: "[<host version>,
     # 17.99999999.0]". NuGet packs a ProjectReference as a bare ">= version" with no ceiling, and the
     # bound comes from src/Directory.Build.targets, which hooks NuGet's private

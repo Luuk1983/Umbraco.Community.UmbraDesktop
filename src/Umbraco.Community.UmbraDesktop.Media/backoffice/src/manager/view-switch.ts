@@ -57,6 +57,19 @@ export function memoryOf(context: unknown): UmbraDesktopViewMemory | undefined {
 }
 
 /**
+ * Whether core's collection element opens on a view handed to it as an interaction memory.
+ *
+ * Asked of the element rather than its context, because a window being built has no context yet: it
+ * is the one the element is about to make. Core declares `interactionMemories` on the element from
+ * 17.7 and 18.2; 17.4 to 17.6 and 18.0 to 18.1 have no such property, and show the first layout.
+ * @param collection Core's collection element, or one extending it.
+ * @returns True where handing it the view is enough.
+ */
+export function remembersViews(collection: object): boolean {
+  return 'interactionMemories' in collection;
+}
+
+/**
  * The layouts that make a collection open on a view, for a core with no interaction memory.
  *
  * Configured layouts keep their names and icons and stay the only views on offer, since a list view

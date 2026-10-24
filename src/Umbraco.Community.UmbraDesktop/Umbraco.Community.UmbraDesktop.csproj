@@ -115,6 +115,11 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	       class does not. It already arrived transitively through Api.Management, so this declares a
 	       dependency the package genuinely has rather than adding a new one. -->
 	  <PackageReference Include="Umbraco.Cms.Infrastructure" />
+	  <!-- The backoffice itself, which the bundles import from. Declared so that installing on an
+	       older Umbraco lifts the backoffice to the floor along with Core: without it NuGet lifted
+	       Core, Infrastructure and Web.Common on a 17.0 site and left the backoffice at 17.0, so the
+	       desktop still failed to load. Nothing here is compiled against it. -->
+	  <PackageReference Include="Umbraco.Cms.StaticAssets" />
 	  <!-- Build-time only: generates appsettings-schema.*.json for editor IntelliSense. Nothing
 	       reads it at runtime, so PrivateAssets keeps it out of the published dependency list —
 	       which also removes the unbounded ">= 0.4.3" floor a floating "0.*" would otherwise pack. -->
