@@ -55,17 +55,21 @@ both. **Raise the ceiling with the major**: the release that moves to Umbraco 18
 ceilings together.
 
 **The Umbraco floor is checked against the bundles.** `UmbraDesktopUmbracoFloor` in
-`src/Directory.Packages.props` is the oldest Umbraco the packages install on, 17.4.0. It was 17.0.0
+`src/Directory.Packages.props` is the oldest Umbraco the packages install on, 17.6.0. It was 17.0.0
 until a fresh 17.0.0 site showed the desktop never loading: the bundles import names the backoffice
 only exports from 17.4, and every test runs against the newest backoffice, so nothing had noticed.
-`.github/actions/build-packages` now reads the floor from the packed host's `Umbraco.Cms.Core` range,
-fetches that release's backoffice from NuGet, and fails the run if any packed bundle imports a name it
-does not export (`backoffice/scripts/check-umbraco-floor.mjs`). **Using a newer backoffice API means
-raising the floor**, or importing it so a missing name is survivable; the check says which.
+The same sites showed the overwrite guard silent below 17.6, where core has no `loadWithoutPersist`,
+so the floor went to 17.6 rather than 17.4.
+`.github/actions/build-packages` now reads the floor from the packed host's `Umbraco.Cms.StaticAssets`
+range, fetches that release's backoffice from NuGet, and fails the run if any packed bundle imports a
+name it does not export (`backoffice/scripts/check-umbraco-floor.mjs`). **Using a newer backoffice API
+means raising the floor**, or importing it so a missing name is survivable; the check says which. It
+only sees imported names: a method or property core added later, as `loadWithoutPersist` was, passes
+the check and has to be caught by reading core's changes.
 
 The host also depends on `Umbraco.Cms.StaticAssets`, the backoffice itself, at the same range. NuGet
 does not refuse an install below a floor: it lifts what the package declares, and only that. On a
-17.0 site it lifted Core, Infrastructure and Web.Common to 17.4 and left the backoffice at 17.0, so
+17.0 site it lifted Core, Infrastructure and Web.Common to the floor and left the backoffice at 17.0, so
 the desktop still failed to load. Declaring the backoffice lifts it too, and the check reads its floor
 from that dependency.
 

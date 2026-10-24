@@ -227,11 +227,8 @@ public sealed class BackgroundJobReportService(
     /// That is what <c>DistributedJobService.TryTakeRunnableAsync</c> uses to decide a job may be
     /// reclaimed, and reporting stale any earlier would contradict Umbraco's own view.
     /// <para>
-    /// That reclaim guard arrived in 17.1.0. On 17.0.x — the floor this package targets —
-    /// <c>MaximumExecutionTime</c> does not exist at all and the predicate is just
-    /// <c>x.LastRun &lt; DateTime.UtcNow - x.Period</c>, with no <c>IsRunning</c> guard, so a stuck
-    /// row is reclaimed as soon as it is merely due and <see cref="BackgroundJobState.Stale"/> is
-    /// effectively unreachable there.
+    /// That reclaim guard arrived in 17.1.0, below the package's floor, so every version it installs
+    /// on reclaims this way.
     /// </para>
     /// </remarks>
     private static BackgroundJobState DistributedState(

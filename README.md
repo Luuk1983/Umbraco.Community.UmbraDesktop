@@ -34,7 +34,7 @@ Pick the chrome you like working in. A theme restyles the launcher, the taskbar 
 
 ## Get started
 
-You need Umbraco 17.4 or later and .NET 10.
+You need Umbraco 17.6 or later and .NET 10.
 
 ```bash
 dotnet add package Umbraco.Community.UmbraDesktop

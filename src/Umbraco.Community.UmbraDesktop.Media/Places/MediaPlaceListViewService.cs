@@ -75,7 +75,7 @@ public sealed class MediaPlaceListViewService(
             return Fail(ordering.Status);
         }
 
-        // The overload with every parameter, current from 17.4, the floor, and in 18; the short one is
+        // The overload with every parameter, current from 17.4 (below the floor) and in 18; the short one is
         // obsolete from 17.4 and goes in 19. Every property, as before, since the collection's columns
         // read them. Templates are a document matter, which media searches ignore.
         PagedModel<IMedia> children = await mediaSearchService.SearchChildrenAsync(
