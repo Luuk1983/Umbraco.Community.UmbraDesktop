@@ -15,7 +15,7 @@ appears only on sites that have that package.
 | --- | --- | --- |
 | Umbraco Forms | The Forms section | Editing |
 | Umbraco Workflow | The Workflow section, plus Workflow tasks, Workflow search and Release sets as their own windows | Workflow |
-| Umbraco Deploy | Deploy and Deploy environments on v17; Deploy status, schema and configuration on v18 | Synchronisation |
+| Umbraco Deploy | Deploy status, Deploy schema and Deploy configuration | Synchronisation |
 | Umbraco Commerce | The Commerce section | Marketing and sales |
 | Umbraco Engage | The Engage section, and Engage configuration | Marketing and sales, System |
 | Umbraco UI Builder | The UI Builder settings workspace | Development |

@@ -34,11 +34,10 @@ export interface UmbraDesktopVariantId {
  * already the window's root. That is core's own marker for it, not a guess: `media-menu-structure`
  * branches on exactly `if (!structureItem.unique)` to hand that item the section root as its href.
  *
- * `href` is present only for the entity types whose structure context computes one. In v17 that is
- * documents and media, whose contexts derive from `UmbMenuVariantTreeStructureWorkspaceContextBase`
- * and carry `getItemHref`; the plain `UmbMenuStructureWorkspaceContext` that document types, data
- * types and templates use publishes `structure` and nothing else. `crumbs.ts` builds the link for
- * those from core's own path pattern rather than leaving them unclickable.
+ * `href` is present only when the structure context computes one. On 18 the tree-based contexts do,
+ * except for a folder, and the language structure context never does (on 17 only documents and media
+ * did). `crumbs.ts` builds the missing links from core's own path pattern rather than leaving those
+ * crumbs unclickable.
  */
 export interface UmbraDesktopStructureItem {
   /** The entity's unique id; null or empty for core's synthetic root item. */

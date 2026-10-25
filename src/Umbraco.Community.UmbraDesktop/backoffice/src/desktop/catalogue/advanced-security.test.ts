@@ -3,11 +3,10 @@ import { entries } from './advanced-security';
 import { groups } from './groups';
 
 /**
- * The Advanced Permissions fragment carries the whole v18 surface (8 tools) while the v17
- * release of that package registers only 4 of them. Nothing detects the package version —
- * the fragment relies entirely on `ref` resolution dropping an app whose menu item is not
- * registered. These tests lock the invariants that make that work, because an entry written
- * with `url` instead of `ref` would silently ship four dead tiles to every v17 install.
+ * The Advanced Permissions fragment carries the package's whole 18 surface (8 tools), and relies on
+ * `ref` resolution to drop every app on a site without the package. These tests lock the invariants
+ * that make that work, because an entry written with `url` instead of `ref` would silently ship eight
+ * dead tiles to every such site.
  */
 
 /** Every menu-item alias the fragment references, in launcher order. */

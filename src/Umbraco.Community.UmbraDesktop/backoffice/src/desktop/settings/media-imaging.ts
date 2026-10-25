@@ -27,7 +27,7 @@ export const UMBRADESKTOP_MEDIA_THUMB_SIZE = 480;
  *    omitted, and `Max` fits the image inside `width` x `height`, so asking for width alone
  *    returned a wallpaper 200 pixels tall. Passing the same number for both bounds the longest
  *    edge whichever way round the image is.
- * 2. **No `format` is requested.** Umbraco 17 signs image URLs with an HMAC, and ImageSharp's
+ * 2. **No `format` is requested.** Umbraco 17 and 18 sign image URLs with an HMAC, and ImageSharp's
  *    middleware sits in front of the whole pipeline. `format` is one of its own processing
  *    commands, so a request carrying one without a valid `hmac` token is rejected with an empty
  *    400 before it reaches the management API at all — and an empty body gives the backoffice

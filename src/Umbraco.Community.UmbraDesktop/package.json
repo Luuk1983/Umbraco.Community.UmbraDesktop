@@ -8,20 +8,21 @@
 		"watch": "cd backoffice && node scripts/build-wallpapers.mjs && node scripts/build-appicons.mjs && tsc && vite build --watch",
 		"build": "cd backoffice && node scripts/docs/check-docs.mjs && node scripts/docs/copy-docs.mjs && node scripts/build-wallpapers.mjs && node scripts/build-appicons.mjs && tsc && vite build",
 		"docs:check": "cd backoffice && node scripts/docs/check-docs.mjs",
-		"generate-client": "node backoffice/scripts/generate-openapi.js https://localhost:44356/umbraco/swagger/management/swagger.json",
+		"generate-client": "node backoffice/scripts/generate-openapi.js https://localhost:44356/umbraco/openapi/umbradesktop.json",
 		"test": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve",
 		"test:watch": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve --watch",
 		"appicons": "cd backoffice && node scripts/build-appicons.mjs",
 		"appicons:sheet": "cd backoffice && node scripts/appicon-sheet.mjs && node scripts/appicon-sheet.mjs --masked"
 	},
 	"dependencies": {
-		"lit": "^3.2.1"
+		"lit": "^3.3.1"
 	},
 	"devDependencies": {
-		"@hey-api/openapi-ts": "0.85.2",
+		"@hey-api/openapi-ts": "0.99.0",
 		"@open-wc/testing": "^4.0.0",
 		"@types/mocha": "^10.0.9",
-		"@umbraco-cms/backoffice": "^17",
+		"@umbraco-cms/backoffice": "18.1.0",
+		"@umbraco-ui/uui": "2.0.2",
 		"@web/dev-server-esbuild": "^1.0.4",
 		"@web/test-runner": "^0.20.0",
 		"@web/test-runner-commands": "^0.9.0",
@@ -31,7 +32,7 @@
 		"node-fetch": "^3.3.2",
 		"sharp": "^0.35.4",
 		"typescript": "^5.9.3",
-		"vite": "^7.1.9"
+		"vite": "^7.3.1"
 	},
 	"-vs-binding": {
 		"ProjectOpened": [

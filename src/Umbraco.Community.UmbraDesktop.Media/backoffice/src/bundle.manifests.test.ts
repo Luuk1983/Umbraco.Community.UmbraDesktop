@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { manifests } from './bundle.manifests.js';
-import { UMBRADESKTOP_MEDIA_BIN_TREE, UMBRADESKTOP_MEDIA_FOLDER_TREE } from './tree/constants.js';
+import { UMBRADESKTOP_MEDIA_BIN_TREE, UMBRADESKTOP_MEDIA_FOLDER_TREE, UMBRADESKTOP_MEDIA_TREE_VIEW } from './tree/constants.js';
 import { IMAGE_EDITOR_CONTENT_SIZE, IMAGE_EDITOR_MIN_CONTENT_SIZE } from './image-editor/constants.js';
 import en from './localization/en.js';
 
@@ -262,4 +262,16 @@ it('registers a folders-only tree and a one-row recycle bin, each on a repositor
     expect(tree.kind, tree.alias).to.equal('default');
     expect(repositories, tree.alias).to.include(tree.meta.repositoryAlias);
   }
+});
+
+/**
+ * Both trees are drawn by core's classic tree view, declared for them alone. Left undeclared, core
+ * falls back to the same view but warns that the fallback goes in Umbraco 20; without `forTrees` the
+ * view would apply to every tree in the backoffice.
+ */
+it('declares the classic tree view for its two trees only', async () => {
+  const views = byType('treeView') as Array<{ alias: string; kind?: string; forTrees?: Array<string> }>;
+  expect(views.map((view) => view.alias)).to.deep.equal([UMBRADESKTOP_MEDIA_TREE_VIEW]);
+  expect(views[0].kind).to.equal('classic');
+  expect(views[0].forTrees).to.deep.equal([UMBRADESKTOP_MEDIA_FOLDER_TREE, UMBRADESKTOP_MEDIA_BIN_TREE]);
 });

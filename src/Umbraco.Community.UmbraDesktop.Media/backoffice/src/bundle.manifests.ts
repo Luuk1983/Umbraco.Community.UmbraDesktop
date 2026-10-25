@@ -11,6 +11,7 @@ import {
   UMBRADESKTOP_MEDIA_BIN_TREE_REPOSITORY,
   UMBRADESKTOP_MEDIA_FOLDER_TREE,
   UMBRADESKTOP_MEDIA_FOLDER_TREE_REPOSITORY,
+  UMBRADESKTOP_MEDIA_TREE_VIEW,
 } from './tree/constants.js';
 
 /**
@@ -144,6 +145,22 @@ const binTree: Array<UmbExtensionManifest> = [
     alias: UMBRADESKTOP_MEDIA_BIN_TREE,
     name: 'UmbraDesktop Media recycle bin tree',
     meta: { repositoryAlias: UMBRADESKTOP_MEDIA_BIN_TREE_REPOSITORY },
+  },
+];
+
+/**
+ * Both trees drawn by core's classic tree view, the one they have always had. Declared because Umbraco 18
+ * made tree views extensions: a tree with none falls back to classic, with a warning that the fallback
+ * goes in Umbraco 20. `forTrees` keeps the declaration to these two; without it, it would apply to every
+ * tree. The kind supplies the label and icon.
+ */
+const treeView: Array<UmbExtensionManifest> = [
+  {
+    type: 'treeView',
+    kind: 'classic',
+    alias: UMBRADESKTOP_MEDIA_TREE_VIEW,
+    name: 'UmbraDesktop Media classic tree view',
+    forTrees: [UMBRADESKTOP_MEDIA_FOLDER_TREE, UMBRADESKTOP_MEDIA_BIN_TREE],
   },
 ];
 
@@ -371,6 +388,7 @@ export const manifests: Array<UmbExtensionManifest> = [
   imageEditor,
   ...folderTree,
   ...binTree,
+  ...treeView,
   transfers,
   inManager,
   clipboardHolds,

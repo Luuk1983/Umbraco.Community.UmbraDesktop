@@ -25,8 +25,8 @@ namespace Umbraco.Community.UmbraDesktop.Media.Places;
 /// collection, a list view named as a property, an item that does not exist. Only the one it refuses is
 /// answered here, the way Umbraco's own <c>ContentListViewServiceBase</c> answers the root: the default
 /// media list view's configuration, its ordering rules, children from the media search, and each one
-/// checked with Umbraco's media authorizer. The access check is per item, as Umbraco 17.0 does it;
-/// <c>FilterAuthorizedAsync</c> came later in 17, and this package is built against 17.0.
+/// checked with Umbraco's media authorizer, in one call for the page, as Umbraco 18's own list view
+/// does.
 /// </para>
 /// </remarks>
 /// <param name="umbraco">Umbraco's own media list view service.</param>
@@ -75,19 +75,13 @@ public sealed class MediaPlaceListViewService(
             return Fail(ordering.Status);
         }
 
-        // The overload with every parameter, current from 17.4 (below the floor) and in 18; the short one is
-        // obsolete from 17.4 and goes in 19. Every property, as before, since the collection's columns
-        // read them. Templates are a document matter, which media searches ignore.
+        // The overload with every parameter; the short one is obsolete and goes in 19. Every property,
+        // since the collection's columns read them. Templates are a document matter, which media
+        // searches ignore.
         PagedModel<IMedia> children = await mediaSearchService.SearchChildrenAsync(
             filter, key, propertyAliases: null, ordering.Result!, loadTemplates: false, skip, take);
-        var allowed = new List<IMedia>();
-        foreach (IMedia child in children.Items)
-        {
-            if (!await mediaPermissionAuthorizer.IsDeniedAsync(user, [child.Key]))
-            {
-                allowed.Add(child);
-            }
-        }
+        ISet<Guid> authorized = await mediaPermissionAuthorizer.FilterAuthorizedAsync(user, children.Items.Select(child => child.Key));
+        var allowed = children.Items.Where(child => authorized.Contains(child.Key)).ToList();
 
         // The total stays the search's, as Umbraco's own list view leaves it after filtering a page.
         var result = new ListViewPagedModel<IMedia>

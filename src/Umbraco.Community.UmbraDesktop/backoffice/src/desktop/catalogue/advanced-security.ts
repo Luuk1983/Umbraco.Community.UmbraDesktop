@@ -8,15 +8,14 @@ import type { UmbraDesktopCatalogueEntry } from '../types';
  * own sidebar links to. Every entry resolves only where the package is installed, and its
  * absence elsewhere is silent.
  *
- * This fragment describes the **v18 surface (8 tools)** deliberately. The v17 release of the
- * package registers only the first four menu-item aliases; the other four resolve to nothing
- * there and drop out, so one catalogue serves both without any version detection. That only
- * holds while every entry references a `ref` — a hardcoded `url` is not existence-checked and
- * would ship four dead tiles to every v17 install (see `advanced-security.test.ts`).
+ * This fragment describes the package's 18 surface, eight tools: the 17 release registered only the
+ * first four, which the 17 branch's catalogue keeps to. Every entry references a `ref`, because a
+ * hardcoded `url` is not existence-checked and would ship dead tiles to every site without the
+ * package (see `advanced-security.test.ts`).
  *
- * Names are ours rather than inherited: v18 gives four menu items the same short label
+ * Names are ours rather than inherited: the package gives four menu items the same short label
  * ('Permissions Editor'), with the domain living on the sidebar-app label the desktop never
- * sees, and v17 uses different loc tokens again. Icons follow the package's per-domain choice
+ * sees. Icons follow the package's per-domain choice
  * for the editors, with `icon-eye` marking the viewers so the pairs stay distinguishable as
  * flat tiles. Each tool is a self-contained workspace with its own selection panel, so the
  * Users sidebar beside it is only noise — hence `workspace-only`.
@@ -75,7 +74,7 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     weight: 40,
   },
 
-  // Library — v18 and later only.
+  // Library
   {
     alias: 'advanced-library-permissions',
     ref: 'UAP.MenuItem.LibraryPermissions',
@@ -101,7 +100,7 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     weight: 60,
   },
 
-  // Library element types — v18 and later only.
+  // Library element types
   {
     alias: 'advanced-element-type-permissions',
     ref: 'UAP.MenuItem.ElementTypePermissions',

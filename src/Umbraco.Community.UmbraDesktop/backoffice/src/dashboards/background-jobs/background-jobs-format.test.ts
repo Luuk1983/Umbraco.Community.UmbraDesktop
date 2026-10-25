@@ -19,6 +19,9 @@ function job(over: Partial<BackgroundJobResponseModel> = {}): BackgroundJobRespo
     kind: 'Recurring',
     state: 'Idle',
     lastOutcome: 'Succeeded',
+    periodSeconds: null,
+    lastRun: null,
+    nextRun: null,
     serverRoles: [],
     ...over,
   };

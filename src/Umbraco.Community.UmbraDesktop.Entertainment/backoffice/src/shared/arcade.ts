@@ -81,7 +81,7 @@ const ARCADE_WAIT_MS = 500;
  * One game's line to the Arcade. Every game behaves exactly as before when the Arcade is not there:
  * in its own tests, outside the desktop, or under an Arcade that failed to load.
  *
- * Consumes rather than `getContext`: Umbraco 17's `getContext` gives up on an animation frame, and a
+ * Consumes rather than `getContext`: Umbraco's `getContext` (17 and 18) gives up on an animation frame, and a
  * hidden browser tab runs none, so a game there would hang until the tab was shown. A consumer has
  * no timer, and is also called back when the Arcade's context arrives after the game opened.
  */

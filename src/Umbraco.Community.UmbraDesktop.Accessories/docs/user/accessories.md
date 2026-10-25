@@ -25,9 +25,9 @@ package, the group is not there at all.
 
 Prerequisites:
 
-- Umbraco 17.6 or later
+- Umbraco 18.1 or later (a 17.x release of this package for Umbraco 17.6 or later)
 - .NET 10
-- UmbraDesktop 17.x, the same release or later, installed automatically
+- UmbraDesktop of the same major, the same release or later, installed automatically
 
 ## The tools
 
@@ -51,6 +51,6 @@ Notepad and Paint open and save files in the media library, never on your own co
 ## Versions
 
 The add-on is released from the same tag as UmbraDesktop and always carries the same version number.
-It needs UmbraDesktop of the same release or any later 17.x, because it uses things only that release
+It needs UmbraDesktop of the same release or any later one of the same major, because it uses things only that release
 of the desktop provides, and installing or updating it brings UmbraDesktop up to that release if
 needed. Updating UmbraDesktop on its own is always fine.

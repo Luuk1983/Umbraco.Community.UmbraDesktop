@@ -1,6 +1,7 @@
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using Umbraco.Cms.Core.Configuration.Models;
 using Umbraco.Cms.Core.Scoping;
 using Umbraco.Cms.Core.Sync;
 using Umbraco.Cms.Infrastructure.BackgroundJobs;
@@ -23,16 +24,20 @@ public class BackgroundJobReportServiceDistributedTests
     /// <summary>Arbitrary fixed "now" the fake clock is pinned to, so state and next-run math is checkable.</summary>
     private static readonly DateTimeOffset Now = new(2026, 9, 6, 12, 0, 0, TimeSpan.Zero);
 
-    /// <summary>Stand-in registered distributed job: only the name and period the service reads matter.</summary>
+    /// <summary>Stand-in registered distributed job: only the name, period and alignment the service reads matter.</summary>
     /// <param name="name">The job's name, matched against rows by <see cref="BackgroundJobReportService"/>.</param>
     /// <param name="period">The job's scheduled period.</param>
-    private sealed class FakeDistributedJob(string name, TimeSpan period) : IDistributedBackgroundJob
+    /// <param name="alignToClock">Whether its runs fall on clock boundaries rather than drifting from completion.</param>
+    private sealed class FakeDistributedJob(string name, TimeSpan period, bool alignToClock = false) : IDistributedBackgroundJob
     {
         /// <inheritdoc />
         public string Name => name;
 
         /// <inheritdoc />
         public TimeSpan Period => period;
+
+        /// <inheritdoc />
+        public bool AlignToClock => alignToClock;
 
         /// <inheritdoc />
         public Task ExecuteAsync() => Task.CompletedTask;
@@ -57,7 +62,11 @@ public class BackgroundJobReportServiceDistributedTests
         public event EventHandler? PeriodChanged { add { } remove { } }
 
         /// <inheritdoc />
+        /// <remarks>Obsolete in Umbraco 18 and gone in 19; the bare interface still requires it.</remarks>
         public Task RunJobAsync() => Task.CompletedTask;
+
+        /// <inheritdoc />
+        public Task RunJobAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     /// <summary>The service under test, together with the collaborators a test needs to assert against.</summary>
@@ -72,18 +81,20 @@ public class BackgroundJobReportServiceDistributedTests
     /// <summary>
     /// Wires a <see cref="BackgroundJobReportService"/> against fakes and substitutes: a repository
     /// returning the given rows, a scope provider handing back a substitute scope so completion can be
-    /// asserted, optional configuration overrides, and an optional set of recurring jobs for the merge
+    /// asserted, an optional execution timeout, and an optional set of recurring jobs for the merge
     /// test. The clock backing the service and the cache is the same <see cref="Now"/> instant.
     /// </summary>
     /// <param name="registered">The distributed jobs considered registered.</param>
     /// <param name="rows">The rows the repository should return.</param>
-    /// <param name="configuration">Configuration overrides, or <see langword="null"/> for none.</param>
+    /// <param name="maximumExecutionTime">
+    /// The configured distributed job execution timeout, or <see langword="null"/> for Umbraco's default.
+    /// </param>
     /// <param name="recurring">Registered recurring jobs, or <see langword="null"/> for none.</param>
     /// <returns>The wired-up harness.</returns>
     private static Harness Create(
         IEnumerable<IDistributedBackgroundJob> registered,
         IEnumerable<DistributedBackgroundJobModel> rows,
-        IDictionary<string, string?>? configuration = null,
+        TimeSpan? maximumExecutionTime = null,
         IEnumerable<IRecurringBackgroundJob>? recurring = null)
     {
         var repository = Substitute.For<IDistributedJobRepository>();
@@ -93,9 +104,14 @@ public class BackgroundJobReportServiceDistributedTests
         var scopeProvider = Substitute.For<ICoreScopeProvider>();
         scopeProvider.CreateCoreScope().Returns(scope);
 
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(configuration ?? new Dictionary<string, string?>())
-            .Build();
+        var settings = new DistributedJobSettings();
+        if (maximumExecutionTime is { } configured)
+        {
+            settings.MaximumExecutionTime = configured;
+        }
+
+        var settingsMonitor = Substitute.For<IOptionsMonitor<DistributedJobSettings>>();
+        settingsMonitor.CurrentValue.Returns(settings);
 
         var cache = new RecurringJobActivityCache(new FakeTimeProvider(Now));
 
@@ -105,7 +121,7 @@ public class BackgroundJobReportServiceDistributedTests
             scopeProvider,
             recurring ?? [],
             cache,
-            config,
+            settingsMonitor,
             new FakeTimeProvider(Now));
 
         return new Harness(service, scope, cache);
@@ -158,6 +174,43 @@ public class BackgroundJobReportServiceDistributedTests
     }
 
     /// <summary>
+    /// A job aligned to the clock runs on the first multiple of its period, counted in UTC, that falls
+    /// after its last run, which is what core's <c>DistributedJobService.IsDue</c> waits for: a ten-minute
+    /// job that last ran at 11:56:40 runs at 12:00:00, not at 12:06:40.
+    /// </summary>
+    [Fact]
+    public void NextRun_IsTheNextClockBoundary_ForAJobAlignedToTheClock()
+    {
+        var period = TimeSpan.FromMinutes(10);
+        var lastRun = Now.UtcDateTime.AddSeconds(-200);
+        var harness = Create(
+            [new FakeDistributedJob("Aligned", period, alignToClock: true)],
+            [Row("Aligned", period, lastRun, lastRun, isRunning: false)]);
+
+        var job = Assert.Single(harness.Service.GetReport().Jobs);
+
+        Assert.Equal(Now, job.NextRun);
+    }
+
+    /// <summary>
+    /// A run that ended exactly on a boundary waits for the next one: core asks for a boundary strictly
+    /// after the last run, so the one it ended on does not count again.
+    /// </summary>
+    [Fact]
+    public void NextRun_IsTheFollowingBoundary_WhenTheLastRunEndedOnOne()
+    {
+        var period = TimeSpan.FromMinutes(10);
+        var lastRun = Now.UtcDateTime.AddMinutes(-10);
+        var harness = Create(
+            [new FakeDistributedJob("Aligned", period, alignToClock: true)],
+            [Row("Aligned", period, lastRun, lastRun, isRunning: false)]);
+
+        var job = Assert.Single(harness.Service.GetReport().Jobs);
+
+        Assert.Equal(Now, job.NextRun);
+    }
+
+    /// <summary>
     /// A row marked running is still reported as running while inside core's reclaim window
     /// (<c>Period + MaximumExecutionTime</c> since it was last attempted): core has not yet decided
     /// the job is stuck, so neither should this report.
@@ -197,23 +250,20 @@ public class BackgroundJobReportServiceDistributedTests
     }
 
     /// <summary>
-    /// A configured <c>Umbraco:CMS:DistributedJobs:MaximumExecutionTime</c> widens the reclaim window
+    /// A configured <c>DistributedJobSettings.MaximumExecutionTime</c> widens the reclaim window
     /// used for staleness, in place of the five-minute default: the same 16-minutes-late row that
     /// reads stale under the default window in <see cref="State_IsStale_OnlyOncePastPeriodPlusMaximumExecutionTime"/>
     /// must read as merely running once a one-hour timeout is configured.
     /// </summary>
     [Fact]
-    public void MaximumExecutionTime_IsReadFromConfiguration_WhenPresent()
+    public void MaximumExecutionTime_IsReadFromSettings_WhenConfigured()
     {
         var period = TimeSpan.FromMinutes(10);
         var attempted = Now.UtcDateTime.AddMinutes(-16);
         var harness = Create(
             [new FakeDistributedJob("SlowJob", period)],
             [Row("SlowJob", period, Now.UtcDateTime.AddHours(-1), attempted, isRunning: true)],
-            new Dictionary<string, string?>
-            {
-                ["Umbraco:CMS:DistributedJobs:MaximumExecutionTime"] = "01:00:00",
-            });
+            TimeSpan.FromHours(1));
 
         var job = Assert.Single(harness.Service.GetReport().Jobs);
 

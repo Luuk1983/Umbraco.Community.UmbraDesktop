@@ -32,7 +32,7 @@ fetches them.
 
 On a site without UmbraDesktop, the manifest entry is an extension type nothing reads, and Umbraco
 leaves it alone, so your package does not have to depend on the desktop to ship docs for it. Help and
-the `umbraDesktopDocs` type are in UmbraDesktop from 17.3.
+the `umbraDesktopDocs` type are in UmbraDesktop from 17.3, and in every 18.x.
 
 ## 1. Structure your docs
 

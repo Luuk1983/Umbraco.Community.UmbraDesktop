@@ -27,12 +27,6 @@
 	  <PackageReadmeFile>README.md</PackageReadmeFile>
 	  <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
 
-	  <!-- Versioning: MinVer derives the version from git tags. The package major tracks the
-	       Umbraco major, so the first release is v17.0.0 (not v1.0.0). -->
-	  <MinVerTagPrefix>v</MinVerTagPrefix>
-	  <MinVerAutoIncrement>minor</MinVerAutoIncrement>
-	  <MinVerMinimumMajorMinor>17.0</MinVerMinimumMajorMinor>
-
 	  <!-- Symbols + SourceLink: consumers can debug into the source at the exact built commit -->
 	  <IncludeSymbols>true</IncludeSymbols>
 	  <SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -41,32 +35,11 @@
 	  <DeterministicSourcePaths Condition="'$(GITHUB_ACTIONS)' == 'true'">true</DeterministicSourcePaths>
   </PropertyGroup>
 
-	<!-- Sync umbraco-package.json with the MinVer-derived version at build time. The source file
-	     keeps "GetsGenerated" as its placeholder; this stamps the built copy in wwwroot. -->
-	<UsingTask TaskName="SetJsonVersion" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
-		<ParameterGroup>
-			<FilePath ParameterType="System.String" Required="true" />
-			<VersionValue ParameterType="System.String" Required="true" />
-		</ParameterGroup>
-		<Task>
-			<Code Type="Fragment" Language="cs"><![CDATA[
-var text = System.IO.File.ReadAllText(FilePath);
-text = System.Text.RegularExpressions.Regex.Replace(
-    text, @"""version"":\s*""[^""]*""", $@"""version"": ""{VersionValue}""");
-System.IO.File.WriteAllText(FilePath, text);
-Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionValue}");
-      ]]></Code>
-		</Task>
-	</UsingTask>
-
+	<!-- The built umbraco-package.json, which SyncUmbracoPackageVersion (src/Directory.Build.targets)
+	     stamps with this package's version. -->
 	<PropertyGroup>
 		<UmbracoPackageJsonPath>$(ProjectDir)wwwroot\App_Plugins\Umbraco.Community.UmbraDesktop\umbraco-package.json</UmbracoPackageJsonPath>
 	</PropertyGroup>
-
-	<Target Name="SyncUmbracoPackageVersion" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != ''">
-		<SetJsonVersion FilePath="$(UmbracoPackageJsonPath)" VersionValue="$(MinVerVersion)" Condition="Exists('$(UmbracoPackageJsonPath)')" />
-		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'npm run build' before packing, or the package will ship an unstamped version." Condition="!Exists('$(UmbracoPackageJsonPath)')" />
-	</Target>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
@@ -109,6 +82,11 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	  <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
 	  <PackageReference Include="Umbraco.Cms.Api.Common" />
 	  <PackageReference Include="Umbraco.Cms.Api.Management" />
+	  <!-- Direct, though Umbraco brings it, because Composing/OpenApiComposer.cs uses its types (and
+	       Microsoft.OpenApi's). Left to transitive resolution this project could get a different
+	       patch than the site, and mismatched Microsoft.OpenApi versions make a custom document
+	       silently fail to appear at runtime. Umbraco's own extension template does the same. -->
+	  <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
 	  <PackageReference Include="Umbraco.Cms.Core" />
 	  <!-- For UserDataFilter: the concrete IUserDataFilter the per-user cleanup handler hands to
 	       IUserDataService. The interface ships in Core despite its Infrastructure namespace; the

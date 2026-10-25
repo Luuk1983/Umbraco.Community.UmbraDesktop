@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Umbraco.Cms.Api.Common.Attributes;
 using Umbraco.Cms.Api.Management.Controllers;
 using Umbraco.Cms.Api.Management.Routing;
 using Umbraco.Cms.Core;
@@ -9,6 +10,7 @@ using Umbraco.Cms.Core.Models.Membership;
 using Umbraco.Cms.Core.Security;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Web.Common.Authorization;
+using Umbraco.Community.UmbraDesktop.Services.Arcade.Composing;
 using Umbraco.Community.UmbraDesktop.Services.Arcade.Scores;
 
 namespace Umbraco.Community.UmbraDesktop.Services.Arcade.Api;
@@ -40,6 +42,7 @@ namespace Umbraco.Community.UmbraDesktop.Services.Arcade.Api;
 /// <param name="securityAccessor">Who is calling.</param>
 [ApiVersion("1.0")]
 [VersionedApiBackOfficeRoute("umbradesktop/services/arcade")]
+[MapToApi(ArcadeComposer.OpenApiDocumentName)]
 [ApiExplorerSettings(GroupName = "UmbraDesktop")]
 [Authorize(Policy = AuthorizationPolicies.BackOfficeAccess)]
 public class ArcadeController(ArcadeStore store, IBackOfficeSecurityAccessor securityAccessor) : ManagementApiControllerBase

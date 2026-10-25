@@ -105,7 +105,7 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
    * The package settings context as last provided, kept so a desktop moved in the DOM can attach
    * itself again. Umbraco's consumer only calls back with a context it did not already have, and a
    * disconnect followed by a connect in the same task keeps the one it had, so a move re-requests
-   * without calling back (`UmbContextConsumer.hostConnected` / `_onResponse` in v17).
+   * without calling back (`UmbContextConsumer.hostConnected` / `_onResponse`, 17 and 18).
    */
   #packageSettings?: UmbraDesktopPackageSettingsContext;
 

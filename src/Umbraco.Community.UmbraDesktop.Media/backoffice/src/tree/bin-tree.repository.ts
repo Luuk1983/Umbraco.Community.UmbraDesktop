@@ -24,10 +24,11 @@ export class UmbraDesktopMediaBinTreeRepository extends UmbRepositoryBase implem
    * @returns The root.
    */
   async requestTreeRoot() {
-    // Both forms on purpose: core's recycle bin data source still reads the top-level `skip` and
-    // `take` that `paging` replaces, and without them it sends the server's default page, not none.
+    // An empty page: only the total is wanted. `paging` alone, because Umbraco 18 removed the
+    // top-level `skip` and `take` and its recycle bin data source reads `paging` (on 17 it read the
+    // top-level pair, which is why the 17 branch sends both).
     const paging = { skip: 0, take: 0 };
-    const [{ data }, { data: top }] = await Promise.all([this.#bin.requestTreeRoot(), this.#bin.requestTreeRootItems({ ...paging, paging })]);
+    const [{ data }, { data: top }] = await Promise.all([this.#bin.requestTreeRoot(), this.#bin.requestTreeRootItems({ paging })]);
     return { data: data && { ...data, name: binRootName(data.name, top?.total ?? 0), hasChildren: false } };
   }
 

@@ -2,16 +2,22 @@
 import chalk from 'chalk';
 import { createClient, defaultPlugins } from '@hey-api/openapi-ts';
 
-const desiredPathPrefix = '/umbraco/management/api/v1/umbradesktop';
+/*
+ * Generates the TypeScript client in backoffice/src/api from the package's own OpenAPI document,
+ * /umbraco/openapi/umbradesktop.json (Composing/OpenApiComposer.cs), on a running site. Umbraco's
+ * extension template does it the same way. The document holds only this package's API, so it is
+ * read whole; on Umbraco 17 the client came from the shared management document, filtered to our
+ * paths.
+ */
 
 // Start notifying user we are generating the TypeScript client
 console.log(chalk.green("Generating OpenAPI client..."));
 
-const swaggerUrl = process.argv[2];
-if (swaggerUrl === undefined) {
+const openApiUrl = process.argv[2];
+if (openApiUrl === undefined) {
     console.error(chalk.red(`ERROR: Missing URL to OpenAPI spec`));
     console.error(`Please provide the URL to the OpenAPI spec as the first argument found in ${chalk.yellow('package.json')}`);
-    console.error(`Example: node generate-openapi.js ${chalk.yellow('https://localhost:44331/umbraco/swagger/REPLACE_ME/swagger.json')}`);
+    console.error(`Example: node generate-openapi.js ${chalk.yellow('https://localhost:44356/umbraco/openapi/umbradesktop.json')}`);
     process.exit();
 }
 
@@ -20,9 +26,9 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 // Start checking to see if we can connect to the OpenAPI spec
 console.log("Ensure your Umbraco instance is running");
-console.log(`Fetching OpenAPI definition from ${chalk.yellow(swaggerUrl)}`);
+console.log(`Fetching OpenAPI definition from ${chalk.yellow(openApiUrl)}`);
 
-fetch(swaggerUrl).then(async (response) => {
+fetch(openApiUrl).then(async (response) => {
     if (!response.ok) {
         console.error(chalk.red(`ERROR: OpenAPI spec returned with a non OK (200) response: ${response.status} ${response.statusText}`));
         console.error(`The URL to your Umbraco instance may be wrong or the instance is not running`);
@@ -30,18 +36,16 @@ fetch(swaggerUrl).then(async (response) => {
         return;
     }
 
-    var openApiResponse = await response.json();
-    // Filter the OpenAPI spec to include only the desired paths and components
-    const filteredSpec = filterOpenApiSpec(openApiResponse);
-
     console.log(`OpenAPI spec fetched successfully`);
     console.log(`Calling ${chalk.yellow('hey-api')} to generate TypeScript client`);
 
     await createClient({
-        input: filteredSpec,
+        input: openApiUrl,
         output: 'backoffice/src/api',
         plugins: [
-            ...defaultPlugins,
+            // The defaults, so later @hey-api/openapi-ts additions come along, minus the SDK, which
+            // is configured below: one UmbraDesktopService class, as the app code calls it.
+            ...defaultPlugins.filter((plugin) => (typeof plugin === 'string' ? plugin : plugin.name) !== '@hey-api/sdk'),
             '@hey-api/client-fetch',
             {
                 name: '@hey-api/sdk',
@@ -57,23 +61,3 @@ fetch(swaggerUrl).then(async (response) => {
         console.error(`The URL to your Umbraco instance may be wrong or the instance is not running`);
         console.error(`Please verify or change the URL in the ${chalk.yellow('package.json')} for the script ${chalk.yellow('generate-openapi')}`);
     });
-
-/**
-* Filters the OpenAPI spec to include only the desired paths and components.
-* @param {object} openApiSpec - The original OpenAPI specification.
-* @returns {object} - The filtered OpenAPI specification.
-*/
-function filterOpenApiSpec(openApiSpec) {
-
-    const filteredPaths = Object.keys(openApiSpec.paths)
-        .filter(path => path.startsWith(desiredPathPrefix))
-        .reduce((obj, key) => {
-            obj[key] = openApiSpec.paths[key];
-            return obj;
-        }, {});
-
-    return {
-        ...openApiSpec,
-        paths: filteredPaths,
-    };
-}

@@ -14,8 +14,11 @@ interface Sent {
   headers: Headers;
 }
 
-/** A window with just enough in it for the shim, and a fetch that answers without a network. */
-function fakeWindow(): {
+/**
+ * A window with just enough in it for the shim, and a fetch that answers without a network.
+ * @param answer What the fetch answers with; an empty JSON object unless a test says otherwise.
+ */
+function fakeWindow(answer: () => Response = () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })): {
   win: ShimWindow;
   sent: Sent[];
   opened: Array<{ method: string; url: string }>;
@@ -44,7 +47,7 @@ function fakeWindow(): {
         credentials: init?.credentials ?? request?.credentials,
         headers: new Headers(init?.headers ?? request?.headers),
       });
-      return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
+      return answer();
     },
     XMLHttpRequest: FakeXhr,
   } as unknown as ShimWindow;
@@ -105,6 +108,34 @@ describe('remote viewer fetch shim', () => {
     const response = await win.fetch('/umbraco/serverEventHub/negotiate?negotiateVersion=1', { method: 'POST' });
     expect(response.ok).to.equal(false);
     expect(sent.length).to.equal(0);
+  });
+
+  it("fills in the current user's fields an older Umbraco does not send, so a newer frame can boot", async () => {
+    // An 18 frame showing a 17 site: without this, 18's getCurrentUser threw on the missing
+    // elementStartNodeIds and the frame never finished loading (measured on real 17 and 18 instances, #164).
+    const json = { 'content-type': 'application/json; charset=utf-8' };
+    const { win } = fakeWindow(() => new Response('{"id":"api-user"}', { status: 200, headers: json }));
+    installRemoteShim(win, options);
+    const response = await win.fetch('/umbraco/management/api/v1/user/current');
+    expect(response.status).to.equal(200);
+    expect(response.headers.get('content-type')).to.equal('application/json; charset=utf-8');
+    expect(await response.json()).to.deep.equal({ id: 'api-user', elementStartNodeIds: [], hasElementRootAccess: false });
+  });
+
+  it('leaves a current user that already has those fields as the server sent it', async () => {
+    const sent = '{"id":"api-user","elementStartNodeIds":[{"id":"e1"}],"hasElementRootAccess":true}';
+    const { win } = fakeWindow(() => new Response(sent, { status: 200, headers: { 'content-type': 'application/json' } }));
+    installRemoteShim(win, options);
+    const response = await win.fetch('/umbraco/management/api/v1/user/current');
+    expect(await response.json()).to.deep.equal(JSON.parse(sent));
+  });
+
+  it('passes a refused current user through untouched, so the viewer still sees the refusal', async () => {
+    const { win } = fakeWindow(() => new Response('{"title":"Unauthorized"}', { status: 401, headers: { 'content-type': 'application/json' } }));
+    installRemoteShim(win, options);
+    const response = await win.fetch('/umbraco/management/api/v1/user/current');
+    expect(response.status).to.equal(401);
+    expect(await response.json()).to.deep.equal({ title: 'Unauthorized' });
   });
 
   it('answers a write to the remote with 405 and never sends it', async () => {

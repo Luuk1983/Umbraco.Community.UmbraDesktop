@@ -3,6 +3,20 @@
 An OS-style windowed desktop for the Umbraco backoffice, shipped as an Umbraco package. The
 backoffice extension is TypeScript and Lit; the C# project exists to package and serve it.
 
+**One branch per Umbraco major.** `main` is Umbraco 18, always the newest major; Umbraco 17 lives on
+`v17/main`. Each references its own Umbraco directly, test instance included. New work goes to
+`main`; a fix that 17 needs goes to `v17/main` first and is then merged up. `RELEASE.md` ("Branches")
+has the rules, `docs/design/2026-10-25-branch-per-umbraco-major-design.md` the reasons. The test
+instance's database is upgraded on first boot and cannot go back, so a `v17/main` checkout needs a
+database of its own.
+
+**Build and test against the floor, run against the newest.** The frontends pin
+`@umbraco-cms/backoffice` to the Umbraco floor (18.1.0) and the C# projects restore it, so tests and
+`tsc` see the oldest backoffice the packages allow; CI's "Frontend on the latest Umbraco 18" job and
+the test instance cover the newest 18. When
+you read core's code to decide something, read it at the floor's tag (`release-18.1.0`), not the
+newest. `RELEASE.md` ("The Umbraco floor") says what to raise with the floor.
+
 ## Layout
 
 ```

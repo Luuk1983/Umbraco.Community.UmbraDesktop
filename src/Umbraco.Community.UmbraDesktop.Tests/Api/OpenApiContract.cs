@@ -18,10 +18,12 @@ namespace Umbraco.Community.UmbraDesktop.Tests.Api;
 /// which the package's OpenAPI naming must reproduce.
 /// </summary>
 /// <remarks>
-/// The client is generated from the management API's OpenAPI document, and calls every endpoint and
-/// model by the name the document gave it. <see cref="OpenApiNamingTests"/> holds the naming handlers
-/// to this one list, so a change to either cannot silently rename what the shipped client calls.
-/// Change a name here only together with a regenerated client.
+/// The client is generated from the package's own OpenAPI document (<c>umbradesktop</c>), and calls
+/// every endpoint and model by the name the document gave it. The names are the ones Umbraco 17's
+/// Swashbuckle handlers gave, kept when Umbraco 18 replaced Swashbuckle, so the client did not change.
+/// <see cref="OpenApiNamingTests"/> holds the document's naming to this one list, so a change to either
+/// cannot silently rename what the shipped client calls. Change a name here only together with a
+/// regenerated client.
 /// </remarks>
 public static class OpenApiContract
 {
@@ -68,8 +70,9 @@ public static class OpenApiContract
                 .Select(method => Describe(type, method)));
 
     /// <summary>
-    /// An API description for one action, carrying what the naming reads: the controller type, the
-    /// method and the route values.
+    /// An API description for one action, carrying what the naming and Umbraco's document filter
+    /// read: the controller type, the method, the route values, and the endpoint metadata, which MVC
+    /// fills with the controller's attributes and then the action's (where <c>[MapToApi]</c> is read).
     /// </summary>
     /// <param name="controller">The controller type.</param>
     /// <param name="action">The action method.</param>
@@ -88,6 +91,7 @@ public static class OpenApiContract
                     ["action"] = action.Name,
                     ["controller"] = controller.Name.Replace("Controller", string.Empty, StringComparison.Ordinal),
                 },
+                EndpointMetadata = [.. controller.GetCustomAttributes(inherit: true), .. action.GetCustomAttributes(inherit: true)],
             },
             HttpMethod = action.GetCustomAttributes<HttpMethodAttribute>().First().HttpMethods.First(),
             RelativePath = "umbraco/management/api/v1/umbradesktop/test",

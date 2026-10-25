@@ -13,3 +13,6 @@ export const UMBRADESKTOP_MEDIA_BIN_TREE = 'Umbraco.Community.UmbraDesktop.Media
 
 /** Its repository. */
 export const UMBRADESKTOP_MEDIA_BIN_TREE_REPOSITORY = 'Umbraco.Community.UmbraDesktop.Media.Repository.BinTree';
+
+/** The view both trees are drawn with: core's classic tree view, declared for them alone. */
+export const UMBRADESKTOP_MEDIA_TREE_VIEW = 'Umbraco.Community.UmbraDesktop.Media.TreeView.Classic';

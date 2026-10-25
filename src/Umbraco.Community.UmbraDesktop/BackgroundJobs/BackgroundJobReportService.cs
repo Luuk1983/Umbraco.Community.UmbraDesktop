@@ -1,4 +1,5 @@
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using Umbraco.Cms.Core.Configuration.Models;
 using Umbraco.Cms.Core.Scoping;
 using Umbraco.Cms.Infrastructure.BackgroundJobs;
 using Umbraco.Cms.Infrastructure.Persistence.Repositories;
@@ -14,7 +15,7 @@ namespace Umbraco.Community.UmbraDesktop.BackgroundJobs;
 /// <param name="scopeProvider">Provides the scope the repository read needs.</param>
 /// <param name="recurringJobs">Registered recurring jobs, the definition half.</param>
 /// <param name="activityCache">Observed recurring job activity, the state half.</param>
-/// <param name="configuration">Read for the distributed job execution timeout.</param>
+/// <param name="distributedJobSettings">Umbraco's distributed job settings, for the execution timeout.</param>
 /// <param name="timeProvider">Clock used for staleness and next-run arithmetic.</param>
 public sealed class BackgroundJobReportService(
     IEnumerable<IDistributedBackgroundJob> distributedJobs,
@@ -22,21 +23,9 @@ public sealed class BackgroundJobReportService(
     ICoreScopeProvider scopeProvider,
     IEnumerable<IRecurringBackgroundJob> recurringJobs,
     RecurringJobActivityCache activityCache,
-    IConfiguration configuration,
+    IOptionsMonitor<DistributedJobSettings> distributedJobSettings,
     TimeProvider timeProvider) : IBackgroundJobReportService
 {
-    /// <summary>
-    /// Configuration key for Umbraco's distributed job execution timeout.
-    /// </summary>
-    /// <remarks>
-    /// Read from configuration rather than <c>DistributedJobSettings</c> because the
-    /// <c>MaximumExecutionTime</c> property was added in 17.1.0 and this package compiles against
-    /// 17.0.0. Note the section is <c>DistributedJobs</c>, plural.
-    /// </remarks>
-    private const string MaximumExecutionTimeKey = "Umbraco:CMS:DistributedJobs:MaximumExecutionTime";
-
-    /// <summary>Umbraco's own default for the distributed job execution timeout.</summary>
-    private static readonly TimeSpan DefaultMaximumExecutionTime = TimeSpan.FromMinutes(5);
 
     /// <inheritdoc />
     public BackgroundJobReport GetReport()
@@ -59,8 +48,8 @@ public sealed class BackgroundJobReportService(
     private List<BackgroundJobStatus> GetDistributed()
     {
         var registered = distributedJobs.ToDictionary(job => job.Name, StringComparer.OrdinalIgnoreCase);
-        var maximumExecutionTime = configuration.GetValue<TimeSpan?>(MaximumExecutionTimeKey)
-                                   ?? DefaultMaximumExecutionTime;
+        // Umbraco's own setting, with Umbraco's own default, so this reads exactly what core reclaims by.
+        var maximumExecutionTime = distributedJobSettings.CurrentValue.MaximumExecutionTime;
         var now = timeProvider.GetUtcNow();
 
         using var scope = scopeProvider.CreateCoreScope();
@@ -91,11 +80,39 @@ public sealed class BackgroundJobReportService(
                 BackgroundJobOutcome.Unavailable,
                 row.Period,
                 lastRun,
-                lastRun + row.Period,
+                DistributedNextRun(lastRun, row.Period, definition.AlignToClock),
                 []));
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Works out when a distributed job next becomes due, the way core's
+    /// <c>DistributedJobService.IsDue</c> decides it.
+    /// </summary>
+    /// <param name="lastRun">When the job last completed.</param>
+    /// <param name="period">Its period.</param>
+    /// <param name="alignToClock">Whether its runs fall on clock boundaries.</param>
+    /// <returns>The time it becomes due.</returns>
+    /// <remarks>
+    /// A job that drifts is due a period after its last completion. A job aligned to the clock
+    /// (<c>IDistributedBackgroundJob.AlignToClock</c>, new in 18.1) is due at the first multiple of its
+    /// period, counted in UTC ticks from <see cref="DateTime.MinValue"/>, that falls strictly after its
+    /// last run, so its runs land on round clock times. A period of zero or less is never aligned, as in
+    /// core. Either way it is the earliest time: core polls for due jobs on its own interval, so the run
+    /// itself can come up to one poll later.
+    /// </remarks>
+    private static DateTimeOffset DistributedNextRun(DateTimeOffset lastRun, TimeSpan period, bool alignToClock)
+    {
+        if (alignToClock is false || period <= TimeSpan.Zero)
+        {
+            return lastRun + period;
+        }
+
+        var lastRunTicks = lastRun.UtcTicks;
+        var boundaryTicks = lastRunTicks - (lastRunTicks % period.Ticks) + period.Ticks;
+        return new DateTimeOffset(boundaryTicks, TimeSpan.Zero);
     }
 
     /// <summary>
@@ -227,8 +244,8 @@ public sealed class BackgroundJobReportService(
     /// That is what <c>DistributedJobService.TryTakeRunnableAsync</c> uses to decide a job may be
     /// reclaimed, and reporting stale any earlier would contradict Umbraco's own view.
     /// <para>
-    /// That reclaim guard arrived in 17.1.0, below the package's floor, so every version it installs
-    /// on reclaims this way.
+    /// That reclaim guard arrived in 17.1.0, well below the package's floor, so every version it
+    /// installs on reclaims this way.
     /// </para>
     /// </remarks>
     private static BackgroundJobState DistributedState(

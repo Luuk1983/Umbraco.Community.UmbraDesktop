@@ -33,13 +33,14 @@ The Arcade a player has is the one your game's package depends on. Nothing else 
 Your add-on must depend on the Arcade package, so that installing your game installs the Arcade:
 
 ```xml
-<PackageReference Include="Umbraco.Community.UmbraDesktop.Services.Arcade" Version="[17.5.0, 17.99999999.0]" />
+<PackageReference Include="Umbraco.Community.UmbraDesktop.Services.Arcade" Version="[18.0.0, 18.99999999.0]" />
 ```
 
 Use the same range as you use for UmbraDesktop itself. The Arcade is released with the desktop and
-shares its version number. Cap the range at `17.99999999.0` rather than below `18.0.0`: NuGet orders
-`18.0.0-rc.1` before `18.0.0`, so `[17.5.0, 18.0.0)` lets in Umbraco 18's prereleases, which do not
-run on Umbraco 17.
+shares its version number. Cap the range at `18.99999999.0` rather than below `19.0.0`: NuGet orders
+`19.0.0-rc.1` before `19.0.0`, so `[18.0.0, 19.0.0)` lets in Umbraco 19's prereleases, which do not
+run on Umbraco 18. For Umbraco 17, depend on the 17.x releases the same way, capped at
+`17.99999999.0`.
 
 Your game's code never imports the Arcade. It reaches it by a context token, as section 4 shows.
 
@@ -135,7 +136,7 @@ export const ARCADE_CONTEXT = new UmbContextToken<ArcadeForGames>('UmbraDesktopA
 
 Nothing is imported from the Arcade, so your game builds and runs without it.
 
-Use `consumeContext`, **not** `getContext`. Umbraco 17's `getContext` gives up on an animation frame,
+Use `consumeContext`, **not** `getContext`. Umbraco's `getContext` gives up on an animation frame,
 a hidden browser tab runs none, and the Arcade's context can finish loading after your game has
 opened. A consumer has no timer, and is called again when the context arrives. The reference
 implementation, which wraps this in a small class and never throws, is

@@ -39,7 +39,7 @@ let managerClass: UmbraDesktopMediaUploadManagerClass | undefined;
 
 /**
  * Core's media upload manager class. The media package exports its dropzone element but not the
- * manager the element uploads with (`UmbMediaDropzoneManager`, 17.5 to 17.7), so it is read off one
+ * manager the element uploads with (`UmbMediaDropzoneManager`, from 17.5 and still so in 18.2), so it is read off one
  * element made for the purpose and taken down at once: the element adds listeners at the document as
  * it is made, and its disconnect removes them and ends its manager.
  * @returns The class.

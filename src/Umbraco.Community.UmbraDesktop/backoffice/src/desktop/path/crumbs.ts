@@ -88,9 +88,9 @@ export function structureItemLabel(
 /**
  * The section a window lives in, taken from the URL it opened at.
  *
- * Needed because half the structure contexts do not hand out links. In v17 only the *variant* ones
- * — documents and media — carry `getItemHref`; the plain `UmbMenuStructureWorkspaceContext` that
- * document types, data types and templates provide publishes `structure` and nothing else. Rather
+ * Needed because not every structure item comes with a link. On 17 only the *variant* contexts —
+ * documents and media — carried `getItemHref`. On 18 the plain tree base has it too, but it hands
+ * out none for a folder, and the language structure context has no `getItemHref` at all. Rather
  * than leave those crumbs unclickable, {@link crumbHref} builds the link from core's own
  * `UMB_WORKSPACE_EDIT_PATH_PATTERN`, and the pattern needs a section name.
  *

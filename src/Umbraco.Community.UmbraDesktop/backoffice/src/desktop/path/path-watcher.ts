@@ -57,10 +57,10 @@ interface Subscribable<T> {
 /**
  * The menu-structure context, reduced to what the strip reads.
  *
- * `getItemHref` is optional because in v17 it genuinely is: only the *variant* contexts (documents,
- * media) declare it, while the plain `UmbMenuStructureWorkspaceContext` that document types, data
- * types and templates provide publishes `structure` alone. `crumbs.ts` fills that gap from core's
- * own path pattern, which is why this can simply report the absence rather than work around it.
+ * `getItemHref` is optional because it genuinely is: on 18 the tree-based structure contexts declare
+ * it (on 17 only the variant ones did), but the language structure context does not, and a folder
+ * gets no link from it. `crumbs.ts` fills that gap from core's own path pattern, which is why this
+ * can simply report the absence rather than work around it.
  */
 interface StructureContext {
   /** The ancestry, root first and current item last. */
@@ -159,7 +159,7 @@ function flattenItem(
   return {
     unique: (item.unique as string | null) ?? null,
     entityType: (item.entityType as string) ?? '',
-    // A variant item carries no top-level name in v17: it names itself per variant, and
+    // A variant item carries no top-level name (17 and 18): it names itself per variant, and
     // `structureItemLabel` is what picks between them.
     name: (item.name as string) ?? '',
     href: context.getItemHref?.(item),

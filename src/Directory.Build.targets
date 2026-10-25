@@ -1,4 +1,30 @@
 <Project>
+	<!-- Stamps a package's built umbraco-package.json (UmbracoPackageJsonPath, which each package
+	     project sets) with its MinVer version. The source file keeps "GetsGenerated" as its
+	     placeholder. The version is what the backoffice appends to the bundle's address as
+	     ?umb__rnd=, so a release that kept an old one would be served the previous bundle from a
+	     cache. Here once rather than in each package, so a new package gets it by setting the path. -->
+	<UsingTask TaskName="SetJsonVersion" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<FilePath ParameterType="System.String" Required="true" />
+			<VersionValue ParameterType="System.String" Required="true" />
+		</ParameterGroup>
+		<Task>
+			<Code Type="Fragment" Language="cs"><![CDATA[
+var text = System.IO.File.ReadAllText(FilePath);
+text = System.Text.RegularExpressions.Regex.Replace(
+    text, @"""version"":\s*""[^""]*""", $@"""version"": ""{VersionValue}""");
+System.IO.File.WriteAllText(FilePath, text);
+Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionValue}");
+      ]]></Code>
+		</Task>
+	</UsingTask>
+
+	<Target Name="SyncUmbracoPackageVersion" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != '' and '$(UmbracoPackageJsonPath)' != ''">
+		<SetJsonVersion FilePath="$(UmbracoPackageJsonPath)" VersionValue="$(MinVerVersion)" Condition="Exists('$(UmbracoPackageJsonPath)')" />
+		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'npm run build' before packing, or the package will ship an unstamped version." Condition="!Exists('$(UmbracoPackageJsonPath)')" />
+	</Target>
+
 	<!-- Every packed project gets its README's relative links and images pinned to the commit being
 	     packed. NuGet resolves no relative links, and the Umbraco Marketplace shows the packed
 	     README too, so the file in the repository (relative, right on GitHub) cannot be packed as
