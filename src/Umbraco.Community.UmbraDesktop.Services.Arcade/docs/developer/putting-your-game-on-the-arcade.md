@@ -33,14 +33,14 @@ The Arcade a player has is the one your game's package depends on. Nothing else 
 Your add-on must depend on the Arcade package, so that installing your game installs the Arcade:
 
 ```xml
-<PackageReference Include="Umbraco.Community.UmbraDesktop.Services.Arcade" Version="[17.4.0, 17.99999999.0]" />
+<PackageReference Include="Umbraco.Community.UmbraDesktop.Services.Arcade" Version="[17.5.0, 17.99999999.0]" />
 ```
 
 Use the same range as you use for UmbraDesktop itself. The Arcade is released with the desktop and
 shares its version number, and like the desktop it has a release per Umbraco major: 17.x for
 Umbraco 17, 18.x for Umbraco 18. A game for both ships a package per major, the 18 one with
 `[18.5.0, 18.99999999.0]`. Cap a range at `17.99999999.0` rather than below `18.0.0`: NuGet orders
-`18.0.0-rc.1` before `18.0.0`, so `[17.4.0, 18.0.0)` lets in the 18 release candidates, which do
+`18.0.0-rc.1` before `18.0.0`, so `[17.5.0, 18.0.0)` lets in the 18 release candidates, which do
 not run on Umbraco 17.
 
 Your game's code never imports the Arcade. It reaches it by a context token, as section 4 shows.

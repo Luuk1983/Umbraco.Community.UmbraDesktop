@@ -59,10 +59,10 @@ both. **The ceiling follows the major**: `UmbraDesktopUmbracoMajorCeiling` is
 
 **The Umbraco floor is checked against the bundles.** `UmbraDesktopUmbracoFloor` in
 `src/Directory.Packages.props` is the oldest Umbraco each major's packages install on: 17.6.0 for 17,
-18.0.0 for 18. 17's was 17.0.0 until a fresh 17.0.0 site showed the desktop never loading: the
+18.1.0 for 18. 17's was 17.0.0 until a fresh 17.0.0 site showed the desktop never loading: the
 bundles import names the backoffice only exports from 17.4, and every test runs against the newest
-backoffice, so nothing had noticed. The same sites showed the overwrite guard silent below 17.6, where
-core has no `loadWithoutPersist`, so the floor went to 17.6 rather than 17.4.
+backoffice, so nothing had noticed. The same sites showed the overwrite guard silent below 17.6 and
+18.1, where core has no `loadWithoutPersist`, so the floors went to 17.6 and 18.1.
 `.github/actions/build-packages` reads each set's floor from its packed host's
 `Umbraco.Cms.StaticAssets` range, fetches that release's backoffice from NuGet, and fails the run if
 any packed bundle imports a name it does not export (`backoffice/scripts/check-umbraco-floor.mjs`).

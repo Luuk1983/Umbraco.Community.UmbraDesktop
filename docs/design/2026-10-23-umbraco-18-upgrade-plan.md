@@ -121,7 +121,8 @@ The tag scheme and `publish.yml`'s `v*.*.*` trigger stay as they are. Separate t
 major were considered and rejected: two tags for one commit, and MinVer on either line would see the
 other's tags.
 
-**D4. Floors.** The 17 floor is `17.4.0` and the 18 floor `18.0.0`. 17's was `17.0.0` until Phase D's
+**D4. Floors.** The 17 floor is `17.6.0` and the 18 floor `18.1.0` (amended below; this paragraph is
+how they first moved, to `17.4.0` and `18.0.0`). 17's was `17.0.0` until Phase D's
 fresh 17.0.0 install never loaded the desktop: the bundles import names the backoffice only exports
 from 17.4. That fix is on its own branch off `main` (`fix/umbraco-17-floor`), since it is a bug in
 the released 17 line, and the build action now checks every packed bundle against its set's floor.
@@ -129,6 +130,14 @@ The Media add-on leans on behaviour first measured on 17.7, and the view memory 
 18.2, but it falls back without it on 17.4 to 17.6 and 18.0 to 18.1. Phase D ran that fallback on a
 real 17.4.0 and 18.0.0, found a window reopened after a reload came back on the wrong view, and
 fixed it on the same branch, so the 18 floor stays `18.0.0`.
+
+*Amended 2026-10-25: the floors are `17.6.0` and `18.1.0`.* The fix branch merged (#163) with the 17
+floor at 17.6.0 rather than 17.4.0, because the overwrite guard needs core's `loadWithoutPersist`,
+which arrived in 17.6.0 and 18.1.0. The branch had rebuilt the method from core's protected members
+on older releases; the owner preferred the floor to a copy of core's internals, since no release of
+these packages predates 17.6. 18 follows for the same reason. Persistence.EFCore 18.1.0 wants EF Core
+10.0.10, the same as 17.6.0. The Media Manager's fallback still matters on both floors, since the view
+memory arrives only in 17.7 and 18.2.
 
 NuGet compiles against a range's floor, while npm's caret resolves to the latest, so CI tests both
 ends (Phase A).
@@ -490,7 +499,8 @@ The spike's changes are on `dev/v18`, minus what the instances' first boots wrot
     else over unsaved changes raised nothing and the second save silently won. The floor check could
     not see it: it checks imports, and this is a method on core's object. Those releases have both
     members the method is made of, with the same bodies, so the dirty watcher builds it from them
-    (overwrite guard design, R3). With that, the guard warns on all four sites.
+    (overwrite guard design, R3). With that, the guard warns on all four sites. *Superseded
+    2026-10-25: the merged fix raised the floors to 17.6.0 and 18.1.0 instead (D4).*
   - **Trap for whoever drives this next:** Umbraco does not allow concurrent logins by default, so
     a second sign-in as the same user signs the first out. Two scripts against one site as the admin
     fail each other with 401s; somebody else has to be another user (here the B5 API user, by client
@@ -604,7 +614,8 @@ Exit: `npm run build` **and** `npm test` green in all six packages under both ba
 
 On the Windows TestInstance, or on Linux per `docs/design/2026-09-24-accessories-design.md` §9.
 
-- [x] **Fresh install** on the 17 floor (17.4, D4; 17.0 is what moved it), latest 17, the 18 floor and
+- [x] **Fresh install** on the 17 floor (17.4 then, D4; 17.0 is what moved it, and the overwrite guard
+      what took it on to 17.6), latest 17, the 18 floor (18.0 then, now 18.1) and
       latest 18. Work through:
       - booting into the desktop;
       - every app in the launcher, under every theme;
@@ -624,8 +635,8 @@ On the Windows TestInstance, or on Linux per `docs/design/2026-09-24-accessories
 ## Phase E: docs and the first 18 release
 
 - [x] Per the Definition of done:
-      - The four READMEs, one line each: Umbraco 17.4 or later or Umbraco 18, .NET 10, and which
-        release to install for which.
+      - The four READMEs, one line each: Umbraco 17.6 or later or Umbraco 18.1 or later (the floors
+        since D4's amendment), .NET 10, and which release to install for which.
       - `docs/user/getting-started/installation.md`: the install command per major (`--version
         "17.*"`, and `"18.*-*"` so that it takes the release candidates), why a bare install breaks a
         17 site once 18 is stable, and upgrading a site from 17 to 18 (empty the media recycle bin
@@ -638,8 +649,8 @@ On the Windows TestInstance, or on Linux per `docs/design/2026-09-24-accessories
         `overwrite-protection.md`, `commercial-packages.md`, `window-progress.md`, `theming.md`.
       - The developer page is [Building for Umbraco 17 and 18](../developer/umbraco-versions.md).
         There is no `umbraco-compat.ts`: each runtime difference is detected where it is used
-        (`remembersViews`, `serverCopyOf`, `older-server.ts`). The page now also says that releases
-        within a major differ, and that the floor check cannot see a missing member.
+        (`remembersViews`, `older-server.ts`). The page now also says that releases within a major
+        differ, and that the floor check cannot see a missing member.
       - The dated design docs stay as history.
 - [x] `RELEASE.md`: twelve packages from one tag; every tag publishes both sets, the majors packed
       in turn; 18 starts as `rc.1`, and how to drop it; what every release's notes say until 18 has

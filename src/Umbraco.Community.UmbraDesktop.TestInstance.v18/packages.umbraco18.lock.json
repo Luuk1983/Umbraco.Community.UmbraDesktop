@@ -2873,11 +2873,11 @@
       "umbraco.community.umbradesktop": {
         "type": "Project",
         "dependencies": {
-          "Umbraco.Cms.Api.Common": "[18.0.0, 18.99999999.0]",
-          "Umbraco.Cms.Api.Management": "[18.0.0, 18.99999999.0]",
-          "Umbraco.Cms.Core": "[18.0.0, 18.99999999.0]",
-          "Umbraco.Cms.Infrastructure": "[18.0.0, 18.99999999.0]",
-          "Umbraco.Cms.StaticAssets": "[18.0.0, 18.99999999.0]"
+          "Umbraco.Cms.Api.Common": "[18.1.0, 18.99999999.0]",
+          "Umbraco.Cms.Api.Management": "[18.1.0, 18.99999999.0]",
+          "Umbraco.Cms.Core": "[18.1.0, 18.99999999.0]",
+          "Umbraco.Cms.Infrastructure": "[18.1.0, 18.99999999.0]",
+          "Umbraco.Cms.StaticAssets": "[18.1.0, 18.99999999.0]"
         }
       },
       "umbraco.community.umbradesktop.accessories": {
@@ -2904,7 +2904,7 @@
       "umbraco.community.umbradesktop.services.arcade": {
         "type": "Project",
         "dependencies": {
-          "Umbraco.Cms.Persistence.EFCore": "[18.0.0, 18.99999999.0]",
+          "Umbraco.Cms.Persistence.EFCore": "[18.1.0, 18.99999999.0]",
           "Umbraco.Community.UmbraDesktop": "[1.0.0, )"
         }
       },
@@ -2916,7 +2916,7 @@
       },
       "Microsoft.EntityFrameworkCore.Sqlite": {
         "type": "CentralTransitive",
-        "requested": "[10.0.7, )",
+        "requested": "[10.0.10, )",
         "resolved": "10.0.11",
         "contentHash": "jc7iVrhQyInR3loraMESfEFaFOtQOB1mRKHjX6QYC9o7YDbfMNbAPnIwlpffnFwhXd6/27FKaaV+sWSoLd4F1g==",
         "dependencies": {
@@ -2928,7 +2928,7 @@
       },
       "Umbraco.Cms.Api.Common": {
         "type": "CentralTransitive",
-        "requested": "[18.0.0, 18.99999999.0]",
+        "requested": "[18.1.0, 18.99999999.0]",
         "resolved": "18.2.1",
         "contentHash": "uLx2jPAGTFZ8NUktiONWJdUlx13ZuhyDfQEzmn/Fa2Mne+UfpIhB5Maa6EY0b2OFD7MNIsyJsOzSlK+G4V1wXA==",
         "dependencies": {
@@ -2973,7 +2973,7 @@
       },
       "Umbraco.Cms.Api.Management": {
         "type": "CentralTransitive",
-        "requested": "[18.0.0, 18.99999999.0]",
+        "requested": "[18.1.0, 18.99999999.0]",
         "resolved": "18.2.1",
         "contentHash": "+3uNX1mY2T988lZ4VAS1iHZGEmZH6xTwLJWKXrHCWmg3Ix5ocEXMFKJAP0qz/Pj3jEGTgAl4mWmCw3y12G6YSw==",
         "dependencies": {
@@ -3020,7 +3020,7 @@
       },
       "Umbraco.Cms.Core": {
         "type": "CentralTransitive",
-        "requested": "[18.0.0, 18.99999999.0]",
+        "requested": "[18.1.0, 18.99999999.0]",
         "resolved": "18.2.1",
         "contentHash": "cgqZ3mSUbmEJ84bmSsbjcYNOVgTP/0c3N/DQEiXe/5uC1Sj/2MvSMFklFAs/p3CB7GFlEPwosoXpcbnyLihjSQ==",
         "dependencies": {
@@ -3029,7 +3029,7 @@
       },
       "Umbraco.Cms.Infrastructure": {
         "type": "CentralTransitive",
-        "requested": "[18.0.0, 18.99999999.0]",
+        "requested": "[18.1.0, 18.99999999.0]",
         "resolved": "18.2.1",
         "contentHash": "hrD0xrTcZI4GA1Vjzq7neqnZkTpOE3OUg2GUGqfOxDJL4G10WcetU13bbiM6Tg9IpbA5kh1xqz3IrnIAGfUrkg==",
         "dependencies": {
@@ -3060,7 +3060,7 @@
       },
       "Umbraco.Cms.Persistence.EFCore": {
         "type": "CentralTransitive",
-        "requested": "[18.0.0, 18.99999999.0]",
+        "requested": "[18.1.0, 18.99999999.0]",
         "resolved": "18.2.1",
         "contentHash": "kH6/nka4NitHsGZmh/SYlUpBSa/5+TMiIn3jxFN9iU5wozIXLEC2jQKMuD/MtARb7GL/kvDD8491agIkuMB/bA==",
         "dependencies": {
@@ -3096,7 +3096,7 @@
       },
       "Umbraco.Cms.StaticAssets": {
         "type": "CentralTransitive",
-        "requested": "[18.0.0, 18.99999999.0]",
+        "requested": "[18.1.0, 18.99999999.0]",
         "resolved": "18.2.1",
         "contentHash": "pgteQGww/cLU0c1ORvkJ8U7QOk0IKl9UWquYcKA0Pg9cfl2gAVVDR6OJ+yEvwRzOmoSsJ/pD8OPPOA5i41oOog==",
         "dependencies": {

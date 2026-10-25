@@ -2,19 +2,20 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
-    <!-- The oldest Umbraco each major's packages install on (plan D4). 17.6.0 for 17, not 17.0.0: the
-         bundles import names the backoffice only exports from 17.4 (clearImagingCache, the UMB_THEME_*
-         aliases, Lit's keyed and live, and more), so on 17.0 to 17.3 the desktop never loaded; and the
-         overwrite guard needs the workspace's loadWithoutPersist, which core added in 17.6. 18.0.0
-         for 18, which has them all. The build action's floor check
-         (backoffice/scripts/check-umbraco-floor.mjs) holds every packed bundle to its major's floor. -->
+    <!-- The oldest Umbraco each major's packages install on (plan D4): 17.6.0 and 18.1.0, the first
+         release of each with the workspace's loadWithoutPersist, which the overwrite guard needs; below
+         them no document window can be classified, and the guard never warns. 17's was 17.0.0 before
+         that, and the bundles import names the backoffice only exports from 17.4 (clearImagingCache, the
+         UMB_THEME_* aliases, Lit's keyed and live, and more), so on 17.0 to 17.3 the desktop never
+         loaded. The build action's floor check (backoffice/scripts/check-umbraco-floor.mjs) holds every
+         packed bundle to its major's floor; it sees imports only, not members like that method. -->
     <UmbraDesktopUmbracoFloor Condition="'$(UmbracoMajor)' == '17'">17.6.0</UmbraDesktopUmbracoFloor>
-    <UmbraDesktopUmbracoFloor Condition="'$(UmbracoMajor)' == '18'">18.0.0</UmbraDesktopUmbracoFloor>
+    <UmbraDesktopUmbracoFloor Condition="'$(UmbracoMajor)' == '18'">18.1.0</UmbraDesktopUmbracoFloor>
     <!-- EF Core for the Arcade's design-time tools and the tests' SQLite: what that major's
-         Umbraco.Cms.Persistence.EFCore at the floor requires (10.0.10 for 17.6.0, 10.0.7 for 18.0.0).
+         Umbraco.Cms.Persistence.EFCore at the floor requires (10.0.10 for both 17.6.0 and 18.1.0).
          Lower, and restore fails on a downgrade (NU1605); raise it with the floor. -->
     <UmbraDesktopEFCoreVersion Condition="'$(UmbracoMajor)' == '17'">10.0.10</UmbraDesktopEFCoreVersion>
-    <UmbraDesktopEFCoreVersion Condition="'$(UmbracoMajor)' == '18'">10.0.7</UmbraDesktopEFCoreVersion>
+    <UmbraDesktopEFCoreVersion Condition="'$(UmbracoMajor)' == '18'">10.0.10</UmbraDesktopEFCoreVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Extension package dependencies. The ceiling is UmbraDesktopUmbracoMajorCeiling from

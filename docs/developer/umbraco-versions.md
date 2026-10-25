@@ -65,7 +65,7 @@ port, so signing in to one signs the other out. Use a browser profile for each.
   dotnet test src/Umbraco.Community.UmbraDesktop.Tests/Umbraco.Community.UmbraDesktop.Tests.csproj -p:UmbracoMajor=18
   ```
 
-  The tests compile against each major's lowest supported Umbraco, 17.4.0 and 18.0.0.
+  The tests compile against each major's lowest supported Umbraco, 17.6.0 and 18.1.0.
 - **TypeScript.** The lock files hold the Umbraco 17 backoffice. To check a package against 18, swap
   the 18 backoffice in, then type-check and test, from the package's folder:
 
@@ -102,11 +102,12 @@ at run time. Check whether an export, element or context member exists, as
 there is nothing to detect.
 
 Releases within a major differ as much as the majors do. Development and the tests use the newest
-backoffice, and each set installs on its major's oldest release (17.4.0, 18.0.0). The build's floor
+backoffice, and each set installs on its major's oldest release (17.6.0, 18.1.0). The build's floor
 check catches an import the oldest release lacks, but not a missing member on an object core hands
-you. The dirty watcher's `serverCopyOf` is the example: `loadWithoutPersist` only arrived in 17.6
-and 18.1, so before them the overwrite guard silently did nothing. Check a feature that reads
-core's objects on a 17.4.0 and an 18.0.0 site; the upgrade plan's Phase D has the method.
+you. The workspace's `loadWithoutPersist` is the example: it only arrived in 17.6 and 18.1, so before
+them the overwrite guard silently did nothing, and that is why those are the floors. Check a feature
+that reads core's objects on a site at each floor; the upgrade plan's Phase D has the method. Then
+either raise the floor or detect the member, as the Media add-on's `remembersViews` does.
 
 ## Versions
 
