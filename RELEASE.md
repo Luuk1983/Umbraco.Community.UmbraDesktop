@@ -67,6 +67,19 @@ means raising the floor**, or importing it so a missing name is survivable; the 
 only sees imported names: a method or property core added later, as `loadWithoutPersist` was, passes
 the check and has to be caught by reading core's changes.
 
+**Everything is built and tested against the floor, and run against the newest.** Each package's
+`package.json` pins `@umbraco-cms/backoffice` to the floor exactly (17.6.0) and `@umbraco-ui/uui` to
+the release that floor was built with (2.0.2, from Umbraco-CMS's own lock file at `release-17.6.0`),
+so `tsc` and every frontend test see the oldest backoffice the packages allow, members included.
+Before the pins the six lock files had drifted apart, and three of them tested against 17.5.3, below
+the floor. The C# projects get the floor by themselves: NuGet resolves a range to its lowest
+version, so their lock files say 17.6.0. The other end is the newest 17: CI's **Frontend on the
+latest Umbraco 17** job swaps each package to it for one run and type-checks and tests again, the
+Solution job compiles the C# against it through the test instance's floating `17.*`, and the test
+instance runs it. Two points, not every release: a break in between that both ends miss would have
+to be introduced and fixed again within one major. **Raising the floor means raising those two pins
+with it.** Reading core's code to decide something is read at the floor's tag, not the newest.
+
 The host also depends on `Umbraco.Cms.StaticAssets`, the backoffice itself, at the same range. NuGet
 does not refuse an install below a floor: it lifts what the package declares, and only that. On a
 17.0 site it lifted Core, Infrastructure and Web.Common to the floor and left the backoffice at 17.0, so
@@ -85,6 +98,12 @@ says `17.0.0`.
 
 **The package major tracks the Umbraco major**, so the first release was `v17.0.0`, not `v1.0.0`.
 A release supporting Umbraco 18 starts at `v18.0.0`.
+
+**A version must match its branch's Umbraco major.** A tag publishes the commit it is on, whichever
+branch that is, so a `v18.x` tag on `v17/main` would publish 18.x packages built against Umbraco 17,
+which Umbraco 18 sites would then install, and a `v17.x` tag on `main` the reverse.
+`.github/actions/build-packages` fails the run when the packed host's version major differs from the
+major of its Umbraco floor, before anything is pushed.
 
 ## Cutting a release
 
