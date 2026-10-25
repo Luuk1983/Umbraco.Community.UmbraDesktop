@@ -7,9 +7,11 @@ import type { MediaSaveRequest, MediaSaveResult } from '../files/media-save.js';
 import type { NormalisedOptions } from './options.js';
 import { optionsOf, startingSettings } from './remembered.js';
 import type { OptimizeSettings } from './remembered.js';
+import { formatOfExtension } from './picture.js';
+import type { RasterFormat } from './picture.js';
 import { triage, windowTitle } from './triage.js';
 import type { ItemFacts, SkipReason, TitleWords } from './triage.js';
-import type { ImageFacts, OptimizeFileResult, OptimizeItemReport, OptimizeMediaRequest, OptimizeReport } from './types.js';
+import type { ImageFacts, OptimizeFileResult, OptimizeItemReport, OptimizeMediaRequest, OptimizeReport, UnchangedReason } from './types.js';
 
 /** The words a run says, in the person's language: its title, a copy's name, and why items did not go. */
 export interface RunWords extends TitleWords {
@@ -37,7 +39,7 @@ export interface RunWords extends TitleWords {
    * Why an item was left as it was, for the report.
    * @param reason The reason's code.
    */
-  unchanged(reason: 'fits' | 'no-metadata' | 'nothing-asked'): string;
+  unchanged(reason: UnchangedReason): string;
 }
 
 /**
@@ -58,6 +60,13 @@ export interface RunDeps {
    * @param unique The folder.
    */
   folderName(unique: string): Promise<string | undefined>;
+  /**
+   * A folder's path from the media library root, by name, itself last, for the settings' introduction
+   * (design §16).
+   * @param unique The folder.
+   * @returns The names, or undefined when they could not be read.
+   */
+  folderPath(unique: string): Promise<string[] | undefined>;
   /**
    * How many places use an item, for the warning before replacing (design §5.1).
    * @param unique The item.
@@ -104,12 +113,14 @@ export interface RunItem {
   name: string;
   /** Its folder, or null at the root. */
   parent: string | null;
+  /** Its file's format, from its extension, for the warning before a run that grows files (§16). */
+  format?: RasterFormat;
   /** Where it is. */
   status: RunItemStatus;
   /** Why it was skipped. */
   skip?: SkipReason;
   /** Why it was left as it was. */
-  unchanged?: 'fits' | 'no-metadata' | 'nothing-asked';
+  unchanged?: UnchangedReason;
   /** What it was, once read. */
   before?: ImageFacts;
   /** What it is now. */
@@ -132,8 +143,16 @@ export interface OptimizeRun {
   settings: OptimizeSettings;
   /** Every item asked for, in order. */
   items: RunItem[];
-  /** How many images are used and in how many places; undefined while counting, null when it could not. */
-  usage?: { images: number; places: number } | null;
+  /**
+   * How many images are used and in how many places, and which, for the note before replacing and its
+   * Show where (§16); undefined while counting, null when it could not.
+   */
+  usage?: { images: number; places: number; used: Array<{ unique: string; name: string; count: number }> } | null;
+  /**
+   * Where the images come from, for the settings' introduction: one folder's path from the root (empty
+   * at the root itself), or how many folders when there are several. Undefined while preparing.
+   */
+  from?: { path: string[] } | { folders: number };
   /** How the last pass ended. */
   outcome?: 'finished' | 'cancelled';
   /** Cancel was pressed, and the item in hand is finishing. */
@@ -359,6 +378,8 @@ export class OptimizeRunStore {
       const known = facts.get(item.unique);
       item.name = known?.name ?? item.unique;
       item.parent = known?.parent ?? null;
+      const format = formatOfExtension(known?.extension ?? '');
+      if (format && format !== 'svg') item.format = format;
       const skip = triage(known, folders);
       if (skip) {
         item.status = 'skipped';
@@ -370,6 +391,12 @@ export class OptimizeRunStore {
     const only = parents.size === 1 ? [...parents][0] : undefined;
     let folderName: string | undefined;
     if (!request.title && parents.size === 1) folderName = only === null ? this.#deps.words.rootName : await this.#deps.folderName(only!).catch(() => undefined);
+    if (parents.size === 1) {
+      const path = only === null ? [] : await this.#deps.folderPath(only!).catch(() => undefined);
+      entry.run.from = { path: path ?? (folderName && only !== null ? [folderName] : []) };
+    } else {
+      entry.run.from = { folders: parents.size };
+    }
     if (!this.#entries.has(id) || entry.released) return;
     entry.run.title = windowTitle(this.#deps.words, images, folderName, request.title);
     entry.run.phase = 'settings';
@@ -387,17 +414,22 @@ export class OptimizeRunStore {
   async #countUsage(entry: RunEntry, uniques: string[]): Promise<void> {
     let images = 0;
     let places = 0;
+    const used: Array<{ unique: string; name: string; count: number }> = [];
     try {
       for (let at = 0; at < uniques.length; at += REFERENCE_LOOKUPS_AT_ONCE) {
         if (entry.run.phase !== 'settings') return;
-        const counts = await Promise.all(uniques.slice(at, at + REFERENCE_LOOKUPS_AT_ONCE).map((unique) => this.#deps.references(unique)));
+        const batch = uniques.slice(at, at + REFERENCE_LOOKUPS_AT_ONCE);
+        const counts = await Promise.all(batch.map((unique) => this.#deps.references(unique)));
         if (counts.some((count) => count === undefined)) throw new Error('A count could not be read.');
-        for (const count of counts as number[]) {
-          if (count > 0) images += 1;
+        (counts as number[]).forEach((count, index) => {
+          if (count <= 0) return;
+          images += 1;
           places += count;
-        }
+          const unique = batch[index];
+          used.push({ unique, name: entry.run.items.find((item) => item.unique === unique)?.name ?? unique, count });
+        });
       }
-      entry.run.usage = { images, places };
+      entry.run.usage = { images, places, used };
     } catch {
       entry.run.usage = null;
     }

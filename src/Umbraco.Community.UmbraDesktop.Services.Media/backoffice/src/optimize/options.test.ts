@@ -13,6 +13,7 @@ describe('optimize options', () => {
       quality: 80,
       removeMetadata: true,
       animated: 'skip',
+      recompress: true,
     });
   });
 
@@ -23,7 +24,17 @@ describe('optimize options', () => {
       quality: 80,
       removeMetadata: false,
       animated: 'skip',
+      recompress: false,
     });
+  });
+
+  /** Found by the owner, 2026-10-25: Keep at quality 15 left JPEGs unchanged. A quality asked is applied. */
+  it('encodes again at a quality that was asked for, also in the file format', () => {
+    expect(normaliseOptions({ quality: 15 }).recompress).to.equal(true);
+    expect(normaliseOptions({ format: 'keep', quality: 15 }).recompress).to.equal(true);
+    expect(normaliseOptions({ format: 'keep' }).recompress).to.equal(false);
+    expect(normaliseOptions({ quality: 15, removeMetadata: false }).removeMetadata, 'an encode drops it anyway').to.equal(true);
+    expect(reencodes(normaliseOptions({ quality: 15 }))).to.equal(true);
   });
 
   it('removes metadata whenever the picture is encoded again', () => {

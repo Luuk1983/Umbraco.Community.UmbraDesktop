@@ -277,6 +277,8 @@ describe('optimizing media', () => {
       new Map(uniques.map((unique) => [unique, { unique, name: 'Banjo', parent: 'products', isTrashed: false, mediaType: 'image', extension: 'jpg', hasUrl: true }])),
     folderTypes: async () => new Set<string>(),
     folderName: async () => 'Products',
+    folderPath: async () => ['Products'],
+    places: async () => [],
     references: async () => 0,
     thumbnails: async () => new Map<string, string>(),
   });

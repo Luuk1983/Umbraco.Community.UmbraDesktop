@@ -10,7 +10,10 @@ export interface OptimizeOptions {
   resize?: { maxWidth?: number; maxHeight?: number } | null;
   /** The format to write: `keep` (the default) writes the file's own, PNG for a GIF or BMP. */
   format?: 'keep' | 'jpeg' | 'png' | 'webp';
-  /** 1 to 100, for JPEG and WebP; 80 when absent. */
+  /**
+   * 1 to 100, for JPEG and WebP; 80 when absent. Given, it is applied even when the format stays the
+   * file's own, and the file is then kept only if it came out smaller (found by the owner, 2026-10-25).
+   */
   quality?: number;
   /** Remove location, camera and date. Always done when resizing or converting, which encode anew. */
   removeMetadata?: boolean;
@@ -20,6 +23,9 @@ export interface OptimizeOptions {
    */
   animated?: 'skip' | 'first-frame';
 }
+
+/** Why an image was left as it was; see {@link OptimizeFileResult}. */
+export type UnchangedReason = 'fits' | 'no-metadata' | 'nothing-asked' | 'not-smaller';
 
 /** What an image is: its upright size, its file size and its format. */
 export interface ImageFacts {
@@ -48,10 +54,11 @@ export type OptimizeFileResult =
       status: 'unchanged';
       /**
        * Why nothing was done, as a code the caller words: `fits` (inside the box, in its own format,
-       * nothing to strip), `no-metadata` (only metadata was asked for, and it has none), or
-       * `nothing-asked` (every option was off).
+       * nothing to strip), `no-metadata` (only metadata was asked for, and it has none),
+       * `nothing-asked` (every option was off), or `not-smaller` (encoded again at the quality asked,
+       * in its own format, it came out no smaller, so the original was kept).
        */
-      reason: 'fits' | 'no-metadata' | 'nothing-asked';
+      reason: UnchangedReason;
       /** What the image is. */
       before: ImageFacts;
     }

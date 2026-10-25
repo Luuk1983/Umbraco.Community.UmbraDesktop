@@ -1,7 +1,7 @@
 import { customElement, html, nothing, property, repeat, state } from '@umbraco-cms/backoffice/external/lit';
 import type { PropertyValues, TemplateResult } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
-import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
+import { UMB_INFO_MODAL, umbConfirmModal, umbOpenModal } from '@umbraco-cms/backoffice/modal';
 import { UMBRADESKTOP_MEDIA_CONTEXT } from '../context/media.context-token.js';
 import { formatBytes, formatLabel } from '../file-menu/formats.js';
 import { filePageStyles } from '../file-menu/styles.js';
@@ -13,6 +13,12 @@ import type { OptimizeSettings } from './remembered.js';
 import { reencodes } from './options.js';
 import type { OptimizeFormat } from './options.js';
 import type { OptimizeRun, OptimizeRunStore, RunItem } from './run-store.js';
+import { sizeWarning } from './size-warning.js';
+import { sortByUse } from './where-used.js';
+import type { Place } from './where-used.js';
+// Side-effect import: Show where's list, drawn inside Umbraco's info dialog.
+import './optimize-where.element.js';
+import type { SizeWarning } from './size-warning.js';
 import type { SkipReason } from './triage.js';
 import type { ImageFacts } from './types.js';
 import { optimizeWindowStyles } from './optimize-window.styles.js';
@@ -49,10 +55,27 @@ const UNCHANGED_WHY: Record<NonNullable<RunItem['unchanged']>, WordKey> = {
   fits: 'optimizeWhyFits',
   'no-metadata': 'optimizeWhyNoMetadata',
   'nothing-asked': 'optimizeWhyNothingAsked',
+  'not-smaller': 'optimizeWhyNotSmaller',
+};
+
+/** How many of the images the introduction shows as thumbnails before "+n" (mock R5). */
+const STRIP_THUMBNAILS = 7;
+
+/** The words for each size warning: for one image, for several, and why (design §16). */
+const GROW_WORDS: Record<SizeWarning['kind'], [WordKey, WordKey, WordKey]> = {
+  png: ['optimizeGrowPngOne', 'optimizeGrowPng', 'optimizeGrowPngWhy'],
+  quality: ['optimizeGrowQualityOne', 'optimizeGrowQuality', 'optimizeGrowQualityWhy'],
+  'jpeg-from-webp': ['optimizeGrowJpegOne', 'optimizeGrowJpeg', 'optimizeGrowJpegWhy'],
 };
 
 /** The formats Convert offers, in the order the mock draws them. */
 const FORMATS: readonly OptimizeFormat[] = ['keep', 'jpeg', 'png', 'webp'];
+
+/** How an ended run went, which colours its result mark and line. */
+type ResultTone = 'saved' | 'grew' | 'failed' | 'cancelled';
+
+/** The backoffice icon each result shows. */
+const TONE_ICONS: Record<ResultTone, string> = { saved: 'icon-check', grew: 'icon-alert', failed: 'icon-alert', cancelled: 'icon-pause' };
 
 /** The statuses that count as done, for progress: everything the run has finished with. */
 const PROCESSED = new Set<RunItem['status']>(['optimized', 'unchanged', 'failed']);
@@ -106,6 +129,25 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
     }
   };
 
+  /**
+   * Where an image is used, for Show where; the media context's unless a test sets one.
+   * @param unique The image.
+   * @returns Its places, or undefined when they could not be read.
+   */
+  @property({ attribute: false })
+  places?: (unique: string) => Promise<Place[] | undefined>;
+
+  /**
+   * Show where the images are used (mock R6). Umbraco's own dialog, unless a test answers.
+   * @param usage What the run counted, image by image.
+   */
+  @property({ attribute: false })
+  showWhere: (usage: NonNullable<OptimizeRun['usage']>) => Promise<void> = (usage) => this.#showWhereDialog(usage);
+
+  /** The settings whose explanation is open, by name. */
+  @state()
+  private _open = new Set<string>();
+
   /** The run, as the store last published it. */
   @state()
   private _run?: OptimizeRun;
@@ -141,6 +183,7 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
       if (!context) return;
       this.store ??= context.optimizeRuns;
       this.thumbnails ??= (uniques) => context.optimizeThumbnails(uniques);
+      this.places ??= (unique) => context.optimizePlaces(unique);
     });
     // Looked at: a click into the window, or the desktop giving it the keyboard as it comes forward.
     const seen = () => this.#seen();
@@ -290,96 +333,45 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
   }
 
   /**
-   * The settings page (scenes 2B, 2C): what will be skipped, the three switches, where the result goes,
-   * and the button that says what it does.
+   * The settings page, reworked with the owner (2026-10-25, design §16, mock R5): an introduction that
+   * says what is optimized and from where; "What to do", a switch per change named for what it does,
+   * its settings one per line under it only while it is on, labels and fields aligned across the
+   * groups; "Where the result goes", a radio list; and the button that says what it does.
    * @param run The run.
    * @returns The page.
    */
   #renderSettings(run: OptimizeRun): TemplateResult {
     const words = this.#words;
     const settings = run.settings;
-    const count = this.#images(run).length;
+    const images = this.#images(run);
+    const count = images.length;
     const locked = reencodes(optionsOf({ ...settings, removeMetadata: false }));
     const asked = optionsOf(settings);
     const nothingAsked = !reencodes(asked) && !asked.removeMetadata;
-    const qualityOff = !settings.convert || settings.format === 'png';
-    const usage = settings.save === 'replace' && run.usage && run.usage.images ? run.usage : undefined;
+    const grow = sizeWarning(asked, images.flatMap((item) => (item.format ? [item.format] : [])));
     return html`<div class="page settings">
-      <header class="head">
-        <h2 class="heading">${count === 0 ? words('optimizeHeadingNone') : count === 1 ? words('optimizeHeadingOne') : words('optimizeHeading', count)}</h2>
-        <div class="skips muted">${this.#renderSkips(run)}</div>
-      </header>
+      ${this.#renderIntro(run, images)}
       <div class="body">
-        <section class="group resize">
-          ${this.#renderSwitch('resize', words('optimizeResize'), settings.resize, false, () => this.#change({ resize: !settings.resize }))}
-          <div class="group-body" ?inert=${!settings.resize}>
-            <div class="row-fields">
-              ${this.#renderLimit('maxWidth', words('optimizeMaxWidth'), settings.maxWidth, !settings.resize)}
-              ${this.#renderLimit('maxHeight', words('optimizeMaxHeight'), settings.maxHeight, !settings.resize)}
-            </div>
-            <p class="hint muted">${words('optimizeResizeHint')}</p>
-          </div>
-        </section>
-        <section class="group convert">
-          ${this.#renderSwitch('convert', words('optimizeConvert'), settings.convert, false, () => this.#change({ convert: !settings.convert }))}
-          <div class="group-body" ?inert=${!settings.convert}>
-            <div class="row-fields">
-              <span class="label" id="format-label">${words('optimizeFormat')}</span>
-              <span class="formats" role="group" aria-labelledby="format-label">
-                ${FORMATS.map(
-                  (format) => html`<button
-                    type="button"
-                    class="choice format"
-                    data-format=${format}
-                    aria-pressed=${settings.format === format ? 'true' : 'false'}
-                    ?disabled=${!settings.convert}
-                    @click=${() => this.#change({ format })}>
-                    ${format === 'keep' ? words('optimizeKeep') : formatLabel(format)}
-                  </button>`,
-                )}
-              </span>
-            </div>
-            <div class="row-fields quality" title=${settings.format === 'png' ? words('optimizeQualityPng') : nothing}>
-              <label class="label" for="quality">${words('optimizeQuality')}</label>
-              <input
-                id="quality"
-                type="range"
-                name="quality"
-                min="1"
-                max="100"
-                .value=${String(settings.quality)}
-                ?disabled=${qualityOff}
-                @input=${(event: Event) => this.#change({ quality: Number((event.target as HTMLInputElement).value) })} />
-              <input
-                type="number"
-                name="qualityNumber"
-                min="1"
-                max="100"
-                aria-label=${words('optimizeQuality')}
-                .value=${String(settings.quality)}
-                ?disabled=${qualityOff}
-                @change=${(event: Event) => {
-                  const value = Math.round(Number((event.target as HTMLInputElement).value));
-                  if (value >= 1 && value <= 100) this.#change({ quality: value });
-                  else this.requestUpdate();
-                }} />
-            </div>
-            <p class="hint muted">${words('optimizeConvertHint')}</p>
-          </div>
-        </section>
-        <section class="group metadata">
-          ${this.#renderSwitch('metadata', words('optimizeMetadata'), locked || settings.removeMetadata, locked, () =>
-            this.#change({ removeMetadata: !settings.removeMetadata }),
+        <section class="part do" aria-labelledby="do-heading">
+          <h3 id="do-heading">${words('optimizeDo')}</h3>
+          ${this.#renderGroup('resize', words('optimizeResize'), settings.resize, false, () => this.#change({ resize: !settings.resize }), words('optimizeResizeHint'), html`
+            ${this.#renderLimit('maxWidth', words('optimizeMaxWidth'), settings.maxWidth)}
+            ${this.#renderLimit('maxHeight', words('optimizeMaxHeight'), settings.maxHeight)}`)}
+          ${this.#renderGroup('convert', words('optimizeConvert'), settings.convert, false, () => this.#change({ convert: !settings.convert }), words('optimizeConvertHint'), this.#renderConvertFields(settings))}
+          ${this.#renderGroup(
+            'metadata',
+            words('optimizeMetadata'),
+            locked || settings.removeMetadata,
+            locked,
+            () => this.#change({ removeMetadata: !settings.removeMetadata }),
+            locked ? words('optimizeMetadataLocked') : words('optimizeMetadataLossless'),
           )}
-          <div class="group-body">
-            <p class="hint muted">${locked ? words('optimizeMetadataLocked') : words('optimizeMetadataLossless')}</p>
-          </div>
+          ${grow ? this.#renderGrow(grow) : nothing}
         </section>
-        <section class="group save">
-          <h3 class="group-title">${words('optimizeSave')}</h3>
-          <div class="group-body flush">
-            ${this.#renderSave('replace', words('optimizeReplace'))}
-            ${usage ? html`<p class="usage">${this.#usageWords(usage)}</p>` : nothing}
+        <section class="part save" aria-labelledby="save-heading">
+          <h3 id="save-heading">${words('optimizeSave')}</h3>
+          <div role="radiogroup" aria-labelledby="save-heading">
+            ${this.#renderSave('replace', words('optimizeReplace'), words('optimizeReplaceHint'), this.#renderUsage(run))}
             ${this.#renderSave('copy', words('optimizeCopies'), words('optimizeCopiesHint'))}
           </div>
         </section>
@@ -399,6 +391,149 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
   }
 
   /**
+   * The introduction (mock R5): where the images come from, how many, the pictures themselves, and
+   * what in the selection is left out, so the window says what it is about before any setting.
+   * @param run The run.
+   * @param images The images it optimizes.
+   * @returns The introduction.
+   */
+  #renderIntro(run: OptimizeRun, images: RunItem[]): TemplateResult {
+    const words = this.#words;
+    const count = images.length;
+    const from = run.from;
+    const where = !from ? '' : 'folders' in from ? words('optimizeFromFolders', from.folders) : [words('optimizeFromRoot'), ...from.path].join(' / ');
+    const shown = images.slice(0, STRIP_THUMBNAILS);
+    return html`<header class="intro">
+      ${where ? html`<p class="from"><umb-icon name="icon-folder"></umb-icon><span>${where}</span></p>` : nothing}
+      <h2 class="heading">${count === 0 ? words('optimizeHeadingNone') : count === 1 ? words('optimizeHeadingOne') : words('optimizeHeading', count)}</h2>
+      ${count
+        ? html`<div class="strip" aria-hidden="true">
+            ${shown.map((item) => {
+              const thumb = this._thumbs.get(item.unique);
+              return html`<span class="thumb">${thumb ? html`<img src=${thumb} alt="" />` : html`<umb-icon name="icon-picture"></umb-icon>`}</span>`;
+            })}
+            ${count > shown.length ? html`<span class="more">${words('optimizeMoreImages', count - shown.length)}</span>` : nothing}
+          </div>`
+        : nothing}
+      <div class="skips muted">${this.#renderSkips(run)}</div>
+    </header>`;
+  }
+
+  /**
+   * One change in What to do: its switch, named for what it does, the button that explains it, the
+   * explanation while that is open, and its settings while it is on (owner, 2026-10-25).
+   * @param name Its name, for tests and the explanation's state.
+   * @param label What it does.
+   * @param checked Whether it is on.
+   * @param locked Whether it is held on.
+   * @param toggle What a press does.
+   * @param hint Its explanation.
+   * @param fields Its settings, shown only while it is on.
+   * @returns The group.
+   */
+  #renderGroup(name: string, label: string, checked: boolean, locked: boolean, toggle: () => void, hint: string, fields?: TemplateResult): TemplateResult {
+    const open = this._open.has(name);
+    return html`<div class="group ${name}" ?on=${checked}>
+      <div class="group-head">
+        <button type="button" class="switch" role="switch" data-switch=${name} aria-checked=${checked ? 'true' : 'false'} ?disabled=${locked} @click=${toggle}>
+          <span class="track" aria-hidden="true"><span class="knob"></span></span>
+          <span class="switch-label">${label}</span>
+        </button>
+        <button
+          type="button"
+          class="info"
+          data-info=${name}
+          aria-expanded=${open ? 'true' : 'false'}
+          aria-label=${this.#words('optimizeAbout', label)}
+          title=${this.#words('optimizeAbout', label)}
+          @click=${() => this.#toggleInfo(name)}>
+          <umb-icon name="icon-info"></umb-icon>
+        </button>
+      </div>
+      ${open ? html`<p class="explain">${hint}</p>` : nothing}
+      ${checked && fields ? html`<div class="fields">${fields}</div>` : nothing}
+    </div>`;
+  }
+
+  /**
+   * Open or close a setting's explanation.
+   * @param name The setting.
+   */
+  #toggleInfo(name: string): void {
+    const open = new Set(this._open);
+    if (open.has(name)) open.delete(name);
+    else open.add(name);
+    this._open = open;
+  }
+
+  /**
+   * Convert's settings: the format on one line, the quality on the next as a slider with its number.
+   * The quality is drawn and greyed for PNG, which has none, so the line does not come and go.
+   * @param settings The settings.
+   * @returns The lines.
+   */
+  #renderConvertFields(settings: OptimizeSettings): TemplateResult {
+    const words = this.#words;
+    const qualityOff = settings.format === 'png';
+    return html`<div class="field">
+        <span class="key" id="format-label">${words('optimizeFormat')}</span>
+        <span class="value formats" role="group" aria-labelledby="format-label">
+          ${FORMATS.map(
+            (format) => html`<button
+              type="button"
+              class="choice format"
+              data-format=${format}
+              aria-pressed=${settings.format === format ? 'true' : 'false'}
+              @click=${() => this.#change({ format })}>
+              ${format === 'keep' ? words('optimizeKeep') : formatLabel(format)}
+            </button>`,
+          )}
+        </span>
+      </div>
+      <div class="field" title=${qualityOff ? words('optimizeQualityPng') : nothing}>
+        <label class="key" for="quality">${words('optimizeQuality')}</label>
+        <span class="value">
+          <input
+            id="quality"
+            type="range"
+            name="quality"
+            min="1"
+            max="100"
+            .value=${String(settings.quality)}
+            ?disabled=${qualityOff}
+            @input=${(event: Event) => this.#change({ quality: Number((event.target as HTMLInputElement).value) })} />
+          <input
+            type="number"
+            name="qualityNumber"
+            min="1"
+            max="100"
+            aria-label=${words('optimizeQuality')}
+            .value=${String(settings.quality)}
+            ?disabled=${qualityOff}
+            @change=${(event: Event) => {
+              const value = Math.round(Number((event.target as HTMLInputElement).value));
+              if (value >= 1 && value <= 100) this.#change({ quality: value });
+              else this.requestUpdate();
+            }} />
+        </span>
+      </div>`;
+  }
+
+  /**
+   * The warning before a run that will make files larger (design §16, mock R5C): at the end of What to
+   * do, where its cause is, in the warning colour with Umbraco's alert icon.
+   * @param grow What will grow, and how many.
+   * @returns The warning.
+   */
+  #renderGrow(grow: SizeWarning): TemplateResult {
+    const [one, many, why] = GROW_WORDS[grow.kind];
+    return html`<p class="grow" role="status">
+      <umb-icon name="icon-alert"></umb-icon>
+      <span><b>${grow.count === 1 ? this.#words(one) : this.#words(many, grow.count)}</b> ${this.#words(why)}</span>
+    </p>`;
+  }
+
+  /**
    * The lines under the heading that say what is skipped, one per reason.
    * @param run The run.
    * @returns The lines.
@@ -408,6 +543,20 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
       const count = run.items.filter((item) => item.skip === reason).length;
       return count ? html`<p>${count === 1 ? this.#words(one) : this.#words(many, count)}</p>` : nothing;
     });
+  }
+
+  /**
+   * The note under Replace the originals when images are used elsewhere, with Show where (mock R6).
+   * @param run The run.
+   * @returns The note, or nothing for copies, for images used nowhere, or while counting.
+   */
+  #renderUsage(run: OptimizeRun): TemplateResult | typeof nothing {
+    const usage = run.settings.save === 'replace' && run.usage && run.usage.images ? run.usage : undefined;
+    if (!usage) return nothing;
+    return html`<p class="usage">
+      <umb-icon name="icon-info"></umb-icon>
+      <span>${this.#usageWords(usage)} <button type="button" class="link" data-action="show-where" @click=${() => void this.showWhere(usage)}>${this.#words('optimizeShowWhere')}</button></span>
+    </p>`;
   }
 
   /**
@@ -423,69 +572,65 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
   }
 
   /**
-   * A switch heading a group.
-   * @param name Its name, for tests and labels.
-   * @param label What it switches.
-   * @param checked Whether it is on.
-   * @param disabled Whether it is locked.
-   * @param toggle What a press does.
-   * @returns The switch.
+   * Where the images are used (mock R6, design §16), in Umbraco's own dialog with only a Close button:
+   * the images used most first, each on one line, and under it its places with their paths
+   * (`optimize-where.element.ts`). The places load when the dialog opens; the counts were already read.
+   * @param usage What the run counted.
    */
-  #renderSwitch(name: string, label: string, checked: boolean, disabled: boolean, toggle: () => void): TemplateResult {
-    return html`<button
-      type="button"
-      class="switch"
-      role="switch"
-      data-switch=${name}
-      aria-checked=${checked ? 'true' : 'false'}
-      ?disabled=${disabled}
-      @click=${toggle}>
-      <span class="track" aria-hidden="true"><span class="knob"></span></span>
-      <span class="switch-label">${label}</span>
-    </button>`;
+  async #showWhereDialog(usage: NonNullable<OptimizeRun['usage']>): Promise<void> {
+    const run = this._run;
+    const words = this.#words;
+    const total = run ? this.#images(run).length : usage.images;
+    const content = html`<p style="margin: 0 0 12px">${words('optimizeWhereLede', usage.images, total, usage.places)}</p>
+      <umbradesktop-media-optimize-where .images=${sortByUse(usage.used)} .thumbs=${this._thumbs} .places=${this.places}></umbradesktop-media-optimize-where>`;
+    await umbOpenModal(this, UMB_INFO_MODAL, { data: { headline: words('optimizeWhereHeadline'), content } }).catch(() => undefined);
   }
 
   /**
-   * A size limit: a number of pixels, or empty for no limit on that side.
+   * A size limit: a number of pixels, or empty for no limit on that side, on a line of its own.
    * @param name Which.
    * @param label Its label.
    * @param value Its value.
-   * @param disabled Whether Resize is off.
-   * @returns The field.
+   * @returns The line.
    */
-  #renderLimit(name: 'maxWidth' | 'maxHeight', label: string, value: number | null, disabled: boolean): TemplateResult {
-    return html`<label class="limit">
-      <span class="label">${label}</span>
-      <input
-        type="number"
-        name=${name}
-        min="1"
-        step="1"
-        placeholder=${this.#words('optimizeNoLimit')}
-        .value=${value === null ? '' : String(value)}
-        ?disabled=${disabled}
-        @change=${(event: Event) => {
-          const raw = (event.target as HTMLInputElement).value.trim();
-          const number = Math.round(Number(raw));
-          this.#change({ [name]: raw === '' || !(number >= 1) ? null : number });
-        }} />
-      <span class="unit muted">${this.#words('optimizePixels')}</span>
+  #renderLimit(name: 'maxWidth' | 'maxHeight', label: string, value: number | null): TemplateResult {
+    return html`<label class="field">
+      <span class="key">${label}</span>
+      <span class="value">
+        <input
+          type="number"
+          name=${name}
+          min="1"
+          step="1"
+          placeholder=${this.#words('optimizeNoLimit')}
+          .value=${value === null ? '' : String(value)}
+          @change=${(event: Event) => {
+            const raw = (event.target as HTMLInputElement).value.trim();
+            const number = Math.round(Number(raw));
+            this.#change({ [name]: raw === '' || !(number >= 1) ? null : number });
+          }} />
+        <span class="unit muted">${this.#words('optimizePixels')}</span>
+      </span>
     </label>`;
   }
 
   /**
-   * One of the two ways to save.
+   * One of the two ways to save, as a radio button (owner, 2026-10-25), with what it means under it.
    * @param mode Which.
    * @param label Its label.
-   * @param hint What it does, when it needs saying.
+   * @param hint What it does.
+   * @param note Something about this choice, such as the used-elsewhere note under Replace.
    * @returns The choice.
    */
-  #renderSave(mode: OptimizeSettings['save'], label: string, hint?: string): TemplateResult {
+  #renderSave(mode: OptimizeSettings['save'], label: string, hint: string, note: TemplateResult | typeof nothing = nothing): TemplateResult {
     const chosen = this._run?.settings.save === mode;
-    return html`<button type="button" class="radio" data-save=${mode} aria-pressed=${chosen ? 'true' : 'false'} @click=${() => this.#change({ save: mode })}>
-      <span class="dot" aria-hidden="true"></span>
-      <span class="radio-text"><span>${label}</span>${hint ? html`<small class="muted">${hint}</small>` : nothing}</span>
-    </button>`;
+    return html`<div class="choice-row">
+      <button type="button" class="radio" role="radio" data-save=${mode} aria-checked=${chosen ? 'true' : 'false'} @click=${() => this.#change({ save: mode })}>
+        <span class="dot" aria-hidden="true"></span>
+        <span class="radio-text"><span>${label}</span><small class="muted">${hint}</small></span>
+      </button>
+      ${chosen ? note : nothing}
+    </div>`;
   }
 
   /**
@@ -498,13 +643,18 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
     const done = images.filter((item) => PROCESSED.has(item.status)).length;
     const failed = images.some((item) => item.status === 'failed');
     const fraction = images.length ? done / images.length : 1;
+    const ended = run.phase === 'ended';
+    const tone = this.#tone(run, images, failed);
     return html`<div class="page run">
       <header class="head run-head">
+        ${ended ? html`<span class="result" data-tone=${tone}><umb-icon name=${TONE_ICONS[tone]}></umb-icon></span>` : nothing}
         <h2 class="heading">${this.#heading(run, images, done)}</h2>
         <span class="actions">${this.#renderActions(run)}</span>
       </header>
-      <div class="bar" ?failed=${run.phase === 'ended' && failed}><span style="width: ${fraction * 100}%"></span></div>
-      <p class="meta">${this.#meta(run, images, done)}</p>
+      ${ended ? nothing : html`<div class="bar"><span style="width: ${fraction * 100}%"></span></div>`}
+      ${ended && !images.some((item) => item.status === 'optimized')
+        ? nothing
+        : html`<p class="meta" data-tone=${ended ? tone : nothing}>${this.#meta(run, images, done)}</p>`}
       <p class="sets muted">${this.#setsLine(run.settings)}</p>
       <div class="rows">${repeat(
         run.items,
@@ -512,6 +662,22 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
         (item) => this.#renderRow(item),
       )}</div>
     </div>`;
+  }
+
+  /**
+   * How an ended run went, for its result mark and line (owner, 2026-10-25): a failure first, then
+   * files that grew, then a cancel, and otherwise a saving.
+   * @param run The run.
+   * @param images Its images.
+   * @param failed Whether any failed.
+   * @returns The tone.
+   */
+  #tone(run: OptimizeRun, images: RunItem[], failed: boolean): ResultTone {
+    if (failed) return 'failed';
+    const change = images.reduce((sum, item) => sum + (item.status === 'optimized' && item.before && item.after ? item.after.size - item.before.size : 0), 0);
+    if (change > 0) return 'grew';
+    if (run.outcome === 'cancelled') return 'cancelled';
+    return 'saved';
   }
 
   /**
@@ -581,6 +747,8 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
     }
     if (options.format !== 'keep') {
       parts.push(options.format === 'png' ? formatLabel('png') : words('optimizeSetsFormat', formatLabel(options.format), options.quality));
+    } else if (options.recompress) {
+      parts.push(words('optimizeSetsQuality', options.quality));
     }
     if (options.removeMetadata) parts.push(words('optimizeSetsMetadata'));
     parts.push(settings.save === 'copy' ? words('optimizeSetsCopies') : words('optimizeSetsReplace'));

@@ -93,9 +93,12 @@ const last = <T>(list: T[]): T | undefined => list[list.length - 1];
 const on = (element: HTMLElement, name: string) => $(element, `[data-switch="${name}"]`).getAttribute('aria-checked') === 'true';
 
 describe('the Optimize images window: settings', () => {
-  it('says how many images it will optimize, and what it skips', async () => {
+  /** Design §16, mock R5: the window says what it optimizes and from where before any setting. */
+  it('introduces the run: where the images come from, how many, and what is left out', async () => {
     const { element } = await open();
-    expect(text(element, '.heading')).to.equal('Optimize 3 images');
+    expect(text(element, '.intro .from')).to.equal('Media / Shop / Products');
+    expect(text(element, '.intro .heading')).to.equal('Optimize 3 images');
+    expect(element.shadowRoot!.querySelectorAll('.intro .strip .thumb').length).to.equal(3);
     const skips = [...element.shadowRoot!.querySelectorAll('.skips p')].map((p) => p.textContent!.trim());
     expect(skips).to.deep.equal(['1 folder in the selection is skipped.', '2 files are not images and are skipped.']);
   });
@@ -105,35 +108,80 @@ describe('the Optimize images window: settings', () => {
     expect(last(told.titles)).to.equal('Optimize images: Products (3)');
   });
 
+  it('puts what to do and where the result goes in two sections', async () => {
+    const { element } = await open();
+    const sections = [...element.shadowRoot!.querySelectorAll('section.part')].map((section) => section.querySelector('h3')!.textContent!.trim());
+    expect(sections).to.deep.equal(['What to do', 'Where the result goes']);
+    expect(text(element, '[data-switch="resize"]')).to.equal('Resize to a maximum width or height');
+    expect(text(element, '[data-switch="convert"]')).to.equal('Convert to another format or quality');
+    expect(text(element, '[data-switch="metadata"]')).to.equal('Remove location, camera and date');
+  });
+
   it('starts on the defaults: resize to 2560 × 2560, WebP at 80, replacing the originals', async () => {
     const { element } = await open();
     expect(on(element, 'resize') && on(element, 'convert') && on(element, 'metadata')).to.equal(true);
     expect(($(element, 'input[name="maxWidth"]') as HTMLInputElement).value).to.equal('2560');
+    expect(($(element, 'input[name="maxHeight"]') as HTMLInputElement).value).to.equal('2560');
     expect($(element, '[data-format="webp"]').getAttribute('aria-pressed')).to.equal('true');
     expect(($(element, 'input[name="quality"]') as HTMLInputElement).value).to.equal('80');
-    expect($(element, '[data-save="replace"]').getAttribute('aria-pressed')).to.equal('true');
+    expect(($(element, 'input[name="qualityNumber"]') as HTMLInputElement).value).to.equal('80');
+    expect($(element, '[data-save="replace"]').getAttribute('aria-checked')).to.equal('true');
+    expect($(element, '[data-save="copy"]').getAttribute('aria-checked')).to.equal('false');
+  });
+
+  /** Mock R5B: a switch that is off shows its name only, not its options greyed. */
+  it('hides the settings of a switch that is off', async () => {
+    const { element } = await open();
+    await click(element, '[data-switch="resize"]');
+    expect(element.shadowRoot!.querySelector('input[name="maxWidth"]') === null).to.equal(true);
+    await click(element, '[data-switch="convert"]');
+    expect(element.shadowRoot!.querySelector('[data-format="webp"]') === null).to.equal(true);
+    await click(element, '[data-switch="resize"]');
+    expect(($(element, 'input[name="maxWidth"]') as HTMLInputElement).value, 'its numbers kept').to.equal('2560');
+  });
+
+  /** Owner, 2026-10-25: the explanations behind an (i), opened under their row, not always on screen. */
+  it('explains a setting behind its info button, and closes it again', async () => {
+    const { element } = await open();
+    expect(element.shadowRoot!.querySelector('.explain') === null).to.equal(true);
+    await click(element, '[data-info="resize"]');
+    expect($(element, '[data-info="resize"]').getAttribute('aria-expanded')).to.equal('true');
+    expect(text(element, '.explain')).to.include('Never made larger');
+    await click(element, '[data-info="resize"]');
+    expect(element.shadowRoot!.querySelector('.explain') === null).to.equal(true);
   });
 
   /** D8: a canvas encode drops metadata anyway, so the switch never claims it is kept. */
-  it('locks Remove metadata on while Resize or Convert is on, and says why', async () => {
+  it('locks Remove metadata on while Resize or Convert is on, and says why behind its info button', async () => {
     const { element } = await open();
     const metadata = $(element, '[data-switch="metadata"]') as HTMLButtonElement;
     expect(metadata.disabled).to.equal(true);
-    expect(text(element, '.metadata .hint')).to.include('Always removed when an image is resized or converted');
+    await click(element, '[data-info="metadata"]');
+    expect(text(element, '.explain')).to.include('Always removed when an image is resized or converted');
     await click(element, '[data-switch="resize"]');
-    expect(metadata.disabled, 'still converting').to.equal(true);
     await click(element, '[data-switch="convert"]');
     expect(metadata.disabled).to.equal(false);
     expect(on(element, 'metadata')).to.equal(true);
-    expect(text(element, '.metadata .hint')).to.include('the quality stays exactly the same');
+    expect(text(element, '.explain')).to.include('the quality stays exactly the same');
   });
 
-  it('greys Quality out for PNG, drawn rather than hidden', async () => {
+  it('greys Quality out for PNG, slider and number both, rather than hiding it', async () => {
     const { element } = await open();
     await click(element, '[data-format="png"]');
     expect(($(element, 'input[name="quality"]') as HTMLInputElement).disabled).to.equal(true);
+    expect(($(element, 'input[name="qualityNumber"]') as HTMLInputElement).disabled).to.equal(true);
     await click(element, '[data-format="jpeg"]');
     expect(($(element, 'input[name="quality"]') as HTMLInputElement).disabled).to.equal(false);
+  });
+
+  /** Design §16, mock R5C: the warning comes before the run, from what the files are. */
+  it('warns before a run that will make the files larger', async () => {
+    const { element } = await open();
+    expect(element.shadowRoot!.querySelector('.grow') === null).to.equal(true);
+    await click(element, '[data-format="png"]');
+    expect(text(element, '.grow')).to.match(/^3 images will get much larger\./);
+    await click(element, '[data-format="webp"]');
+    expect(element.shadowRoot!.querySelector('.grow') === null).to.equal(true);
   });
 
   it('says what the button does, and disables it with every switch off', async () => {
@@ -147,13 +195,31 @@ describe('the Optimize images window: settings', () => {
     expect(start.disabled).to.equal(true);
   });
 
-  it('warns before replacing images used elsewhere, and only then', async () => {
+  it('warns before replacing images used elsewhere, under Replace, and only then', async () => {
     const { element, store, id } = await open();
     await until(() => store.get(id)!.usage !== undefined);
     await element.updateComplete;
-    expect(text(element, '.usage')).to.equal('2 of these images are used in 5 places. Replacing changes them everywhere.');
+    expect(text(element, '.usage')).to.equal('2 of these images are used in 5 places. Replacing changes them everywhere. Show where');
     await click(element, '[data-save="copy"]');
-    expect(element.shadowRoot!.querySelector('.usage')).to.equal(null);
+    expect(element.shadowRoot!.querySelector('.usage') === null).to.equal(true);
+  });
+
+  /** Mock R6: the places, not only their count. */
+  it('shows where the images are used, image by image', async () => {
+    const { element, store, id } = await open();
+    await until(() => store.get(id)!.usage !== undefined);
+    await element.updateComplete;
+    let shown: unknown;
+    element.showWhere = async (usage) => void (shown = usage);
+    await click(element, '[data-action="show-where"]');
+    expect(shown).to.deep.equal({
+      images: 2,
+      places: 5,
+      used: [
+        { unique: 'banjo', name: 'Banjo', count: 3 },
+        { unique: 'bowling', name: 'Bowling', count: 2 },
+      ],
+    });
   });
 
   it('cancels as not started, and closes its window', async () => {
@@ -178,6 +244,53 @@ describe('the Optimize images window: settings', () => {
 });
 
 describe('the Optimize images window: the run', () => {
+  /**
+   * Owner, 2026-10-25: a full bar at the end looked like the run was still finishing. The bar is there
+   * only while it runs; a result line with a tick, or the warning colour when the files grew, follows.
+   */
+  it('ends without the progress bar, on a result that says how it went', async () => {
+    const lib = library(SELECTION());
+    lib.holdSaves();
+    const { element, report, store, id } = await open(undefined, undefined, false, lib);
+    await click(element, '[data-action="start"]');
+    await until(() => lib.saves.length === 1);
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('.bar') !== null, 'a bar while it runs').to.equal(true);
+    lib.releaseSaves();
+    await report;
+    await until(() => store.get(id)!.phase === 'ended');
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('.bar') === null, 'no bar once it ended').to.equal(true);
+    expect($(element, '.result').dataset.tone).to.equal('saved');
+  });
+
+  /** Found in the real check, 2026-10-25: three unchanged images ended on "0 B saved, 0% of what...". */
+  it('says nothing about savings when nothing was optimized', async () => {
+    const lib = library([image('banjo')]);
+    lib.byKey.get('banjo')!.content = 'optimized';
+    const { element, report } = await open(undefined, ['banjo'], true, lib);
+    await report;
+    await element.updateComplete;
+    expect(text(element, '.heading')).to.equal('1 unchanged');
+    expect(element.shadowRoot!.querySelector('.meta') === null, 'no savings line').to.equal(true);
+  });
+
+  it('ends in the warning colour when the files grew', async () => {
+    const lib = library([image('banjo')], {
+      optimize: async (file) => ({
+        status: 'optimized',
+        file: new File(['x'], file.name.replace(/\.jpg$/, '.png'), { type: 'image/png' }),
+        before: { width: 2560, height: 1707, size: 600_000, format: 'webp' },
+        after: { width: 2560, height: 1707, size: 8_000_000, format: 'png' },
+      }),
+    });
+    const { element, report } = await open(undefined, ['banjo'], true, lib);
+    await report;
+    await element.updateComplete;
+    expect($(element, '.result').dataset.tone).to.equal('grew');
+    expect(text(element, '.meta')).to.match(/larger than before/);
+  });
+
   it("shows each image's before and after, and what was saved", async () => {
     const { element, report } = await open();
     await click(element, '[data-action="start"]');
@@ -257,7 +370,7 @@ describe('the Optimize images window: the run', () => {
     await until(() => store.get(id)!.phase === 'ended');
     await element.updateComplete;
     expect(text(element, '.heading')).to.equal('Cancelled after 1 of 3');
-    expect(element.shadowRoot!.querySelector('[data-action="retry"]')).to.equal(null);
+    expect(element.shadowRoot!.querySelector('[data-action="retry"]') === null).to.equal(true);
     await click(element, '[data-action="rest"]');
     await until(() => store.get(id)!.phase === 'ended' && store.get(id)!.outcome === 'finished');
     expect(store.get(id)!.items.filter((item) => item.status === 'optimized').length).to.equal(3);

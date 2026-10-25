@@ -56,7 +56,7 @@ interface OptimizeOptions {
 | --- | --- |
 | `resize` | Fit the image inside this box, keeping its shape. Never makes it larger. Leave out a side for no limit on it. Absent or `null` for no resize |
 | `format` | The format to write. `keep`, the default, writes the file's own format; a GIF or BMP that has to be written again is written as PNG |
-| `quality` | 1 to 100, for JPEG and WebP. 80 when absent |
+| `quality` | 1 to 100, for JPEG and WebP. 80 when absent. Given, it applies even when the format stays the file's own: a JPEG or WebP is encoded again at it and kept only if it came out smaller, so a higher quality never makes a file larger |
 | `removeMetadata` | Remove location, camera and date. Always done with a resize or a convert, since those write the picture anew. On its own it removes the metadata from the file's bytes and leaves the picture exactly as it was, keeping the colour profile and the orientation, so a phone photo stays upright |
 | `animated` | An animated GIF, PNG or WebP is skipped unless this is `first-frame`, which keeps only its first frame and loses the animation |
 
@@ -69,7 +69,7 @@ interface ImageFacts { width: number; height: number; size: number; format: stri
 
 type OptimizeFileResult =
   | { status: 'optimized'; file: File; before: ImageFacts; after: ImageFacts }
-  | { status: 'unchanged'; reason: 'fits' | 'no-metadata' | 'nothing-asked'; before: ImageFacts }
+  | { status: 'unchanged'; reason: 'fits' | 'no-metadata' | 'nothing-asked' | 'not-smaller'; before: ImageFacts }
   | { status: 'skipped'; reason: 'not-an-image' | 'vector' | 'animated' }
   | { status: 'failed'; message: string };
 ```
@@ -83,7 +83,8 @@ if (result.status === 'optimized') upload(result.file);
   `before` and `after` are the image's upright size, its file size in bytes and its format.
 - `unchanged`: nothing would change, so nothing was done. `fits` means the image is already inside
   the box, in the format asked, with no metadata to remove; `no-metadata` means only metadata was
-  asked for and it has none; `nothing-asked` means every option was off.
+  asked for and it has none; `nothing-asked` means every option was off; `not-smaller` means it was
+  encoded again at the quality asked, in its own format, and came out no smaller, so it was kept.
 - `skipped`: the file is not a raster image this can write, is a vector image, or is animated.
 - `failed`: the browser could not decode or encode it, such as WebP in Safari, which cannot write it.
   `message` says why.

@@ -6,19 +6,22 @@ import { normaliseOptions } from './options.js';
 import type { NormalisedOptions } from './options.js';
 import { decodePicture, formatOfExtension, isAnimated, renderPicture } from './picture.js';
 import { fitInside } from './resize.js';
-import type { ImageFacts, OptimizeFileResult, OptimizeOptions } from './types.js';
+import type { ImageFacts, OptimizeFileResult, OptimizeOptions, UnchangedReason } from './types.js';
 
 /**
  * What is done to one image, decided before anything is done. The list-of-steps seam the design
  * keeps for steps other add-ons may add later (§2, §6.2): today it is one of three.
  */
 export type OptimizePlan =
-  /** Draw it at a size and encode it in a format, which drops its metadata. */
-  | { kind: 'encode'; size: { width: number; height: number }; format: SaveFormat }
+  /**
+   * Draw it at a size and encode it in a format, which drops its metadata. `onlyIfSmaller` when only
+   * the quality changes, so a file that would come out no smaller is kept as it was.
+   */
+  | { kind: 'encode'; size: { width: number; height: number }; format: SaveFormat; onlyIfSmaller?: true }
   /** Remove its metadata from the bytes, leaving the picture as it is (D8). */
   | { kind: 'strip' }
   /** Nothing would change (D9). */
-  | { kind: 'unchanged'; reason: 'fits' | 'no-metadata' | 'nothing-asked' };
+  | { kind: 'unchanged'; reason: UnchangedReason };
 
 /**
  * Decide what to do to an image (design §6.1, "Nothing to do", and §6.2).
@@ -40,8 +43,12 @@ export function planFor(facts: ImageFacts, extension: string, options: Normalise
   const size = fitInside(facts.width, facts.height, options.resize);
   const converts = options.format !== 'keep' && options.format !== own;
   if (size.scaled || converts) return { kind: 'encode', size: { width: size.width, height: size.height }, format };
+  // A quality asked for a JPEG or WebP in its own format: encode it again, and keep it only if smaller.
+  if (options.recompress && own !== null && own !== 'png' && format === own) {
+    return { kind: 'encode', size: { width: size.width, height: size.height }, format, onlyIfSmaller: true };
+  }
   if (options.removeMetadata && hasMetadata) return { kind: 'strip' };
-  if (options.resize === null && options.format === 'keep') return { kind: 'unchanged', reason: options.removeMetadata ? 'no-metadata' : 'nothing-asked' };
+  if (options.resize === null && options.format === 'keep' && !options.recompress) return { kind: 'unchanged', reason: options.removeMetadata ? 'no-metadata' : 'nothing-asked' };
   return { kind: 'unchanged', reason: 'fits' };
 }
 
@@ -99,6 +106,14 @@ export async function optimizeFile(file: File, options?: OptimizeOptions): Promi
 
     // Off the page where the browser allows, so a run does not make the desktop hitch (§15).
     const blob = await renderPicture(file, plan.size, plan.format, settings.quality);
+    if (plan.onlyIfSmaller && blob.size >= file.size) {
+      // No smaller at that quality: keep the picture as it was, without its metadata if that was asked.
+      if (stripped.removed) {
+        const out = new File([stripped.bytes], file.name, { type: file.type || mimeFor(plan.format) });
+        return { status: 'optimized', file: out, before, after: { ...before, size: out.size } };
+      }
+      return { status: 'unchanged', reason: 'not-smaller', before };
+    }
     const out = new File([blob], `${baseOf(file.name)}.${extensionFor(plan.format, extension)}`, { type: mimeFor(plan.format) });
     return { status: 'optimized', file: out, before, after: { ...plan.size, size: out.size, format: plan.format } };
   } catch (error) {

@@ -39,13 +39,36 @@ describe('OptimizeRunStore', () => {
     expect(run.settings).to.deep.equal(DEFAULT_SETTINGS);
   });
 
+  /** Design §16: the settings say where the images come from, and warn from what each file is. */
+  it('knows where the images come from, and what format each one is', async () => {
+    const lib = library([image('banjo'), { ...image('unicorn'), facts: { ...image('unicorn').facts, extension: 'WEBP' } }, image('ravi', 'people')]);
+    const store = new OptimizeRunStore(lib.deps);
+    const one = store.create({ items: ['banjo', 'unicorn'] });
+    const run = await settled(store, one.id);
+    expect(run.from).to.deep.equal({ path: ['Shop', 'Products'] });
+    expect(run.items.map((item) => item.format)).to.deep.equal(['jpeg', 'webp']);
+    const mixed = store.create({ items: ['banjo', 'ravi'] });
+    expect((await settled(store, mixed.id)).from).to.deep.equal({ folders: 2 });
+    lib.byKey.set('top', image('top', null));
+    const root = store.create({ items: ['top'] });
+    const atRoot = await settled(store, root.id);
+    expect(atRoot.from).to.deep.equal({ path: [] });
+  });
+
   it('counts the places the images are used in, and gives up quietly when it cannot', async () => {
     const lib = library(MIXED());
     const store = new OptimizeRunStore(lib.deps);
     const { id } = store.create({ items: ['banjo', 'bowling', 'jumpsuit'] });
     await settled(store, id);
     await until(() => store.get(id)?.usage !== undefined);
-    expect(store.get(id)!.usage).to.deep.equal({ images: 2, places: 5 });
+    expect(store.get(id)!.usage).to.deep.equal({
+      images: 2,
+      places: 5,
+      used: [
+        { unique: 'banjo', name: 'Banjo', count: 3 },
+        { unique: 'bowling', name: 'Bowling', count: 2 },
+      ],
+    });
 
     const failing = new OptimizeRunStore({ ...lib.deps, references: async () => Promise.reject(new Error('offline')) });
     const second = failing.create({ items: ['banjo'] });

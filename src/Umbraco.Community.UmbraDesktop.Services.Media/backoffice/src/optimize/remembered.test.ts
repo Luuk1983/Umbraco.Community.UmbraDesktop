@@ -74,11 +74,15 @@ describe('remembered settings', () => {
       removeMetadata: true,
     });
     expect(startingSettings({ options: { removeMetadata: true } }, LAST)).to.deep.include({ resize: false, convert: false, removeMetadata: true });
+    expect(startingSettings({ options: { format: 'keep', quality: 15 } }, LAST), 'a quality asked turns Convert on, with Keep').to.deep.include({ convert: true, format: 'keep', quality: 15 });
   });
 
   it('turns settings into the options a run works from', () => {
-    expect(optionsOf(DEFAULT_SETTINGS)).to.deep.equal({ resize: { maxWidth: 2560, maxHeight: 2560 }, format: 'webp', quality: 80, removeMetadata: true, animated: 'skip' });
-    expect(optionsOf(LAST)).to.deep.equal({ resize: { maxWidth: 1600 }, format: 'keep', quality: 70, removeMetadata: true, animated: 'skip' });
-    expect(optionsOf({ ...LAST, resize: false, removeMetadata: false })).to.deep.equal({ resize: null, format: 'keep', quality: 70, removeMetadata: false, animated: 'skip' });
+    expect(optionsOf(DEFAULT_SETTINGS)).to.deep.equal({ resize: { maxWidth: 2560, maxHeight: 2560 }, format: 'webp', quality: 80, removeMetadata: true, animated: 'skip', recompress: true });
+    // Convert off: no quality is asked, whatever number is behind the switch.
+    expect(optionsOf(LAST)).to.deep.equal({ resize: { maxWidth: 1600 }, format: 'keep', quality: 80, removeMetadata: true, animated: 'skip', recompress: false });
+    expect(optionsOf({ ...LAST, resize: false, removeMetadata: false })).to.deep.equal({ resize: null, format: 'keep', quality: 80, removeMetadata: false, animated: 'skip', recompress: false });
+    // Convert on with Keep: the quality is asked.
+    expect(optionsOf({ ...LAST, convert: true, format: 'keep', quality: 15 })).to.deep.include({ format: 'keep', quality: 15, recompress: true });
   });
 });

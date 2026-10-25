@@ -42,6 +42,25 @@ function bmp(width: number, height: number): File {
   return new File([out], 'scan.bmp', { type: 'image/bmp' });
 }
 
+/**
+ * A photo-like picture with fine noise, so quality changes its size the way a photo's does.
+ * @param width Its width.
+ * @param height Its height.
+ * @param mime The format.
+ * @param quality 0 to 1.
+ * @returns The file's bytes.
+ */
+async function noisy(width: number, height: number, mime: string, quality: number): Promise<Blob> {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d')!;
+  const data = context.createImageData(width, height);
+  for (let i = 0; i < data.data.length; i++) data.data[i] = i % 4 === 3 ? 255 : (i * 2654435761) >>> 24;
+  context.putImageData(data, 0, 0);
+  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob!), mime, quality));
+}
+
 describe('planFor', () => {
   it('leaves an image inside the box, in its own format, with metadata kept, alone', () => {
     expect(planFor(SMALL, 'webp', normaliseOptions({ resize: { maxWidth: 2560 } }), false)).to.deep.equal({ kind: 'unchanged', reason: 'fits' });
@@ -57,7 +76,7 @@ describe('planFor', () => {
 
   it('strips an image inside the box rather than encoding it, when it has metadata', () => {
     expect(planFor(SMALL, 'webp', normaliseOptions({ resize: { maxWidth: 2560 } }), true)).to.deep.equal({ kind: 'strip' });
-    expect(planFor(SMALL, 'webp', DEFAULTS, true), 'WebP chosen for a WebP').to.deep.equal({ kind: 'strip' });
+    expect(planFor(SMALL, 'webp', normaliseOptions({ format: 'webp' }), true), 'WebP chosen for a WebP, no quality asked').to.deep.equal({ kind: 'strip' });
   });
 
   it('encodes a large image at the fitted size, in the format asked', () => {
@@ -68,6 +87,18 @@ describe('planFor', () => {
     const keep = normaliseOptions({ resize: { maxWidth: 100 } });
     expect(planFor(LARGE, 'jpg', keep, false)).to.deep.include({ kind: 'encode', format: 'jpeg' });
     expect(planFor({ ...LARGE, format: 'gif' }, 'gif', keep, false)).to.deep.include({ kind: 'encode', format: 'png' });
+  });
+
+  /** Found by the owner, 2026-10-25: Keep at quality 15 left JPEGs unchanged. */
+  it('encodes a lossy image again at the quality asked, in its own format, keeping it only if smaller', () => {
+    expect(planFor(SMALL, 'webp', DEFAULTS, true), 'WebP at 80 for a WebP').to.deep.equal({ kind: 'encode', size: { width: 1800, height: 1200 }, format: 'webp', onlyIfSmaller: true });
+    expect(planFor({ ...SMALL, format: 'jpeg' }, 'jpg', normaliseOptions({ format: 'keep', quality: 15 }), false)).to.deep.equal({
+      kind: 'encode',
+      size: { width: 1800, height: 1200 },
+      format: 'jpeg',
+      onlyIfSmaller: true,
+    });
+    expect(planFor({ ...SMALL, format: 'png' }, 'png', normaliseOptions({ format: 'keep', quality: 15 }), false), 'PNG has no quality').to.deep.equal({ kind: 'unchanged', reason: 'fits' });
   });
 
   it('converts an image inside the box when another format is asked for', () => {
@@ -107,6 +138,21 @@ describe('optimizeFile', () => {
     expect(result.file.name).to.equal('IMG_0042.jpg');
     const out = new Uint8Array(await result.file.arrayBuffer());
     expect(Array.from(out.subarray(scanStart(out)))).to.deep.equal(Array.from(original.subarray(scanStart(original))));
+  });
+
+  it('makes a JPEG smaller at a low quality, in its own format', async () => {
+    const file = new File([await noisy(600, 400, 'image/jpeg', 0.95)], 'banjo.jpg', { type: 'image/jpeg' });
+    const result = await optimizeFile(file, { format: 'keep', quality: 15 });
+    if (result.status !== 'optimized') throw new Error(`expected optimized, got ${JSON.stringify(result)}`);
+    expect(result.after).to.deep.include({ width: 600, height: 400, format: 'jpeg' });
+    expect(result.after.size).to.be.below(result.before.size);
+    expect(result.file.name).to.equal('banjo.jpg');
+  });
+
+  it('leaves a JPEG alone that a higher quality would only make larger', async () => {
+    const file = new File([await noisy(600, 400, 'image/jpeg', 0.3)], 'banjo.jpg', { type: 'image/jpeg' });
+    const result = await optimizeFile(file, { format: 'keep', quality: 100 });
+    expect(result).to.deep.include({ status: 'unchanged', reason: 'not-smaller' });
   });
 
   it('reports an image with nothing to do as unchanged, with its facts', async () => {

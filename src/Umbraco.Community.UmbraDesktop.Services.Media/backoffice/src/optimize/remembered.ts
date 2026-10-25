@@ -135,8 +135,9 @@ export function startingSettings(request: Pick<OptimizeMediaRequest, 'options' |
     resize: options.resize !== null,
     maxWidth: options.resize ? (options.resize.maxWidth ?? null) : DEFAULT_SETTINGS.maxWidth,
     maxHeight: options.resize ? (options.resize.maxHeight ?? null) : DEFAULT_SETTINGS.maxHeight,
-    convert: options.format !== 'keep',
-    format: options.format === 'keep' ? DEFAULT_SETTINGS.format : options.format,
+    // A quality asked is a convert too, with Keep: the window shows Convert on, on Keep.
+    convert: options.format !== 'keep' || options.recompress,
+    format: options.format === 'keep' ? (options.recompress ? 'keep' : DEFAULT_SETTINGS.format) : options.format,
     quality: options.quality,
     removeMetadata: options.removeMetadata,
     save: request.save ?? 'replace',
@@ -150,10 +151,11 @@ export function startingSettings(request: Pick<OptimizeMediaRequest, 'options' |
  */
 export function optionsOf(settings: OptimizeSettings): NormalisedOptions {
   const resize = settings.resize ? { ...(settings.maxWidth ? { maxWidth: settings.maxWidth } : {}), ...(settings.maxHeight ? { maxHeight: settings.maxHeight } : {}) } : null;
+  // The quality is asked only while Convert is on, also with Keep; off, the number behind it is not.
   return normaliseOptions({
     resize,
     format: settings.convert ? settings.format : 'keep',
-    quality: settings.quality,
+    ...(settings.convert ? { quality: settings.quality } : {}),
     removeMetadata: settings.removeMetadata,
   });
 }

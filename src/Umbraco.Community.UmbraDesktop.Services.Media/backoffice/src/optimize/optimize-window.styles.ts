@@ -1,8 +1,11 @@
 import { css, unsafeCSS } from '@umbraco-cms/backoffice/external/lit';
-import { OPTIMIZE_PADDING, ROW_THUMBNAIL } from './constants.js';
+import { OPTIMIZE_PADDING, ROW_THUMBNAIL, SETTING_INDENT, SETTING_LABEL_WIDTH, STRIP_THUMBNAIL, SWITCH_GAP, SWITCH_TRACK } from './constants.js';
 
 /** The padding, as CSS. */
 const PAD = unsafeCSS(`${OPTIMIZE_PADDING}px`);
+
+/** How far a switch's settings and explanation are indented, as CSS. */
+const INDENT = unsafeCSS(`${SETTING_INDENT}px`);
 
 /**
  * The Optimize images window's own look, on top of the file menu's shared base (`file-menu/styles.ts`):
@@ -40,6 +43,61 @@ export const optimizeWindowStyles = css`
     font-size: 18px;
   }
 
+  /* The introduction: where from, how many, the pictures, what is left out (mock R5). */
+  .intro {
+    padding: 16px ${PAD} 14px;
+    display: grid;
+    gap: 8px;
+    background: var(--umbradesktop-app-surface-sunken, var(--uui-color-background));
+    border-bottom: 1px solid var(--umbradesktop-app-border, var(--uui-color-divider, var(--uui-color-border)));
+  }
+
+  .from {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt));
+  }
+
+  .from span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .strip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .strip .thumb {
+    flex: none;
+    width: ${STRIP_THUMBNAIL.w}px;
+    height: ${STRIP_THUMBNAIL.h}px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--umbradesktop-app-surface, var(--uui-color-surface));
+    box-shadow: 0 0 0 1px var(--umbradesktop-app-border, var(--uui-color-border));
+    color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt));
+  }
+
+  .strip img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .strip .more {
+    font-size: 13px;
+    color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt));
+  }
+
   .skips {
     font-size: 13px;
   }
@@ -50,55 +108,64 @@ export const optimizeWindowStyles = css`
     overflow: auto;
   }
 
-  .group {
-    padding: 12px ${PAD};
-    border-bottom: 1px solid var(--umbradesktop-app-border, var(--uui-color-divider, var(--uui-color-border)));
+  /* What to do, and Where the result goes: two parts with a line between (owner, 2026-10-25). */
+  .part {
+    padding: 8px 0 12px;
   }
 
-  .group-title {
+  .part + .part {
+    border-top: 1px solid var(--umbradesktop-app-border, var(--uui-color-divider, var(--uui-color-border)));
+  }
+
+  .part h3 {
     margin: 0;
-    font-size: 15px;
-    font-weight: 700;
-  }
-
-  .group-body {
-    margin: 8px 0 0 50px;
-    display: grid;
-    gap: 8px;
-  }
-
-  .group-body.flush {
-    margin-left: 0;
-  }
-
-  .group-body[inert] {
-    opacity: 0.55;
-  }
-
-  .hint {
+    padding: 10px ${PAD} 6px;
     font-size: 13px;
+    font-weight: 700;
+    color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt));
+  }
+
+  .group {
+    padding: 2px 0;
+  }
+
+  .group-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px 6px ${PAD};
   }
 
   /* A switch: a track and a knob, in the accent when on, drawn and greyed when locked. */
   .switch {
+    flex: 1;
+    min-width: 0;
     display: inline-flex;
     align-items: center;
-    gap: 12px;
+    gap: ${SWITCH_GAP}px;
     padding: 2px 0;
     font: inherit;
-    font-size: 15px;
+    font-size: 14.5px;
     font-weight: 700;
     color: inherit;
+    text-align: left;
     background: none;
     border: none;
     cursor: pointer;
+  }
+
+  .group:not([on]) .switch-label {
+    color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt));
   }
 
   .switch:disabled {
     cursor: default;
   }
 
-  .switch:focus-visible {
+  .switch:focus-visible,
+  .info:focus-visible,
+  .radio:focus-visible,
+  .link:focus-visible {
     outline: 2px solid var(--umbradesktop-app-accent, var(--uui-color-selected));
     outline-offset: 2px;
   }
@@ -106,9 +173,9 @@ export const optimizeWindowStyles = css`
   .track {
     position: relative;
     flex: none;
-    width: 38px;
-    height: 22px;
-    border-radius: 11px;
+    width: ${SWITCH_TRACK.w}px;
+    height: ${SWITCH_TRACK.h}px;
+    border-radius: ${SWITCH_TRACK.h / 2}px;
     background: var(--umbradesktop-app-surface-sunken, var(--uui-color-border));
     box-shadow: inset 0 0 0 1px var(--umbradesktop-app-border, var(--uui-color-border-emphasis));
   }
@@ -117,8 +184,8 @@ export const optimizeWindowStyles = css`
     position: absolute;
     left: 3px;
     top: 3px;
-    width: 16px;
-    height: 16px;
+    width: ${SWITCH_TRACK.h - 6}px;
+    height: ${SWITCH_TRACK.h - 6}px;
     border-radius: 50%;
     background: var(--umbradesktop-app-surface, var(--uui-color-surface));
     box-shadow: 0 0 0 1px var(--umbradesktop-app-border, var(--uui-color-border-emphasis));
@@ -129,33 +196,72 @@ export const optimizeWindowStyles = css`
   }
 
   .switch[aria-checked='true'] .knob {
-    left: 19px;
+    left: ${SWITCH_TRACK.w - SWITCH_TRACK.h + 3}px;
   }
 
   .switch:disabled .track {
     opacity: 0.5;
   }
 
-  .row-fields {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .label {
-    min-width: 72px;
-  }
-
-  .limit {
+  /* The info button: Umbraco's icon-info, which opens the explanation under its row (owner, 2026-10-25). */
+  .info {
+    flex: none;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 18px;
+    color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt));
+    background: none;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .info[aria-expanded='true'] {
+    color: var(--umbradesktop-app-accent, var(--uui-color-selected));
+    background: var(--umbradesktop-app-surface-sunken, var(--uui-color-background));
+  }
+
+  .explain {
+    margin: 0 16px 6px calc(${PAD} + ${INDENT});
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt));
+    background: var(--umbradesktop-app-surface-sunken, var(--uui-color-background));
+    border-radius: var(--umbradesktop-app-radius, 3px);
+  }
+
+  /* A switch's settings, one per line, labels in one column across every group. */
+  .fields {
+    display: grid;
     gap: 8px;
+    padding: 2px 16px 8px calc(${PAD} + ${INDENT});
+  }
+
+  .field {
+    display: grid;
+    grid-template-columns: ${SETTING_LABEL_WIDTH}px 1fr;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .key {
+    font-size: 13.5px;
+  }
+
+  .value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
   }
 
   input[type='number'] {
     width: 96px;
-    min-height: 34px;
+    min-height: 32px;
     padding: 0 8px;
     font: inherit;
     color: var(--umbradesktop-app-text, var(--uui-color-text));
@@ -172,6 +278,7 @@ export const optimizeWindowStyles = css`
   input[type='range'] {
     flex: 1;
     min-width: 120px;
+    max-width: 260px;
     accent-color: var(--umbradesktop-app-accent, var(--uui-color-selected));
   }
 
@@ -180,12 +287,11 @@ export const optimizeWindowStyles = css`
   }
 
   .formats {
-    display: inline-flex;
     gap: 6px;
   }
 
   .choice {
-    min-height: 34px;
+    min-height: 32px;
     padding: 4px 12px;
     font: inherit;
     font-size: 13px;
@@ -201,18 +307,65 @@ export const optimizeWindowStyles = css`
     color: var(--umbradesktop-app-accent-text, var(--uui-color-surface));
   }
 
-  .choice:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
-
-  .choice:focus-visible,
-  .radio:focus-visible {
+  .choice:focus-visible {
     outline: 2px solid var(--umbradesktop-app-accent, var(--uui-color-selected));
     outline-offset: 1px;
   }
 
-  /* A choice of two, drawn as radio buttons. */
+  /* The notes: Umbraco's info icon for a note, its alert icon and the warning colour for a warning. */
+  .grow,
+  .usage {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 6px 16px 2px ${PAD};
+    padding: 8px 10px;
+    font-size: 13px;
+    border-radius: var(--umbradesktop-app-radius, 3px);
+  }
+
+  .grow umb-icon,
+  .usage umb-icon {
+    flex: none;
+    margin-top: 1px;
+  }
+
+  /* UUI pairs its colours so: the plain one fills, the standalone one is text and icons on a surface.
+     A tint of the fill on the window's surface reads in light and dark alike (found in the real run). */
+  .grow {
+    background: color-mix(in srgb, var(--uui-color-warning, #fbd142) 22%, var(--umbradesktop-app-surface, var(--uui-color-surface, #fff)));
+    color: var(--umbradesktop-app-text, var(--uui-color-text));
+  }
+
+  .grow umb-icon {
+    color: var(--uui-color-warning-standalone, #a17700);
+  }
+
+  .usage {
+    margin: 6px 0 0;
+    background: var(--umbradesktop-app-surface-sunken, var(--uui-color-background));
+  }
+
+  .usage umb-icon {
+    color: var(--umbradesktop-app-accent, var(--uui-color-selected));
+  }
+
+  .link {
+    padding: 0;
+    font: inherit;
+    font-weight: 700;
+    color: var(--umbradesktop-app-accent, var(--uui-color-selected));
+    text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* Where the result goes: a radio list (owner, 2026-10-25). */
+  .choice-row {
+    padding: 4px 16px 4px ${PAD};
+  }
+
   .radio {
     display: flex;
     align-items: flex-start;
@@ -235,7 +388,7 @@ export const optimizeWindowStyles = css`
     box-shadow: inset 0 0 0 2px var(--umbradesktop-app-border, var(--uui-color-border-emphasis));
   }
 
-  .radio[aria-pressed='true'] .dot {
+  .radio[aria-checked='true'] .dot {
     box-shadow: inset 0 0 0 5px var(--umbradesktop-app-accent, var(--uui-color-selected));
   }
 
@@ -248,21 +401,60 @@ export const optimizeWindowStyles = css`
     font-size: 13px;
   }
 
-  .usage {
-    margin-left: 28px;
-    padding: 8px 10px;
-    font-size: 13px;
-    background: var(--uui-color-warning-standalone, #fff3e0);
-    color: var(--uui-color-warning-contrast, #6b4a00);
-    border-radius: var(--umbradesktop-app-radius, 3px);
-  }
-
   .foot {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
     padding: 14px ${PAD};
     border-top: 1px solid var(--umbradesktop-app-border, var(--uui-color-divider, var(--uui-color-border)));
+  }
+
+  /* How an ended run went: a mark and a line in its tone, in place of the bar (owner, 2026-10-25). */
+  .result {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 18px;
+  }
+
+  .result[data-tone='saved'] {
+    color: var(--uui-color-positive, #26793e);
+    background: color-mix(in srgb, var(--uui-color-positive, #26793e) 14%, var(--umbradesktop-app-surface, var(--uui-color-surface, #fff)));
+  }
+
+  .result[data-tone='grew'] {
+    color: var(--uui-color-warning-standalone, #a17700);
+    background: color-mix(in srgb, var(--uui-color-warning, #fbd142) 30%, var(--umbradesktop-app-surface, var(--uui-color-surface, #fff)));
+  }
+
+  .result[data-tone='failed'] {
+    color: var(--uui-color-danger, #8a2944);
+    background: color-mix(in srgb, var(--uui-color-danger, #8a2944) 14%, var(--umbradesktop-app-surface, var(--uui-color-surface, #fff)));
+  }
+
+  .result[data-tone='cancelled'] {
+    color: var(--umbradesktop-app-text-muted, var(--uui-color-text-alt));
+    background: var(--umbradesktop-app-surface-sunken, var(--uui-color-background));
+  }
+
+  .meta[data-tone] {
+    margin-top: 10px;
+  }
+
+  .meta[data-tone='saved'] b {
+    color: var(--uui-color-positive);
+  }
+
+  .meta[data-tone='grew'] b {
+    color: var(--uui-color-warning-standalone, #a17700);
+  }
+
+  .meta[data-tone='failed'] b {
+    color: var(--uui-color-danger);
   }
 
   /* The run. */
@@ -311,9 +503,6 @@ export const optimizeWindowStyles = css`
     background: var(--umbradesktop-app-accent, var(--uui-color-selected));
   }
 
-  .bar[failed] > span {
-    background: var(--uui-color-danger);
-  }
 
   .meta {
     font-size: 14px;
@@ -421,7 +610,7 @@ export const optimizeWindowStyles = css`
     align-items: center;
     gap: 4px;
     font-weight: 700;
-    color: var(--uui-color-warning, #c27c00);
+    color: var(--uui-color-warning-standalone, #a17700);
   }
 
   .bad {

@@ -35,6 +35,7 @@ import { optimizeFile } from '../optimize/optimize-file.js';
 import { readRemembered, rememberedKeyFor, writeRemembered } from '../optimize/remembered.js';
 import { OptimizeRunStore } from '../optimize/run-store.js';
 import type { RunWords } from '../optimize/run-store.js';
+import type { Place } from '../optimize/where-used.js';
 import type { OptimizeFileResult, OptimizeMediaRequest, OptimizeOptions, OptimizeReport } from '../optimize/types.js';
 
 /**
@@ -93,6 +94,7 @@ const UNCHANGED_WORDS = {
   fits: 'optimizeWhyFits',
   'no-metadata': 'optimizeWhyNoMetadata',
   'nothing-asked': 'optimizeWhyNothingAsked',
+  'not-smaller': 'optimizeWhyNotSmaller',
 } as const satisfies Record<string, WordKey>;
 
 /**
@@ -166,6 +168,7 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
       facts: (uniques) => this.#run((host) => lookups(host).facts(uniques)),
       folderTypes: () => this.#run((host) => lookups(host).folderTypes()),
       folderName: (unique) => this.#run((host) => lookups(host).folderName(unique)),
+      folderPath: (unique) => this.#run((host) => lookups(host).folderPath(unique)),
       references: (unique) => this.#run((host) => lookups(host).references(unique)),
       open: (unique) => this.#run((host) => this.#deps.open(host, { unique })),
       save: (request) => this.#saveAndAnnounce(request),
@@ -184,6 +187,15 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
    */
   optimizeThumbnails(uniques: string[]): Promise<Map<string, string>> {
     return this.#run((host) => (this.#deps.lookups ?? REAL_DEPS.lookups!)(host).thumbnails(uniques)).catch(() => new Map());
+  }
+
+  /**
+   * Where an image is used, place by place with its path, for Show where (design §16).
+   * @param unique The image.
+   * @returns The places, or undefined when they could not be read.
+   */
+  optimizePlaces(unique: string): Promise<Place[] | undefined> {
+    return this.#run((host) => (this.#deps.lookups ?? REAL_DEPS.lookups!)(host).places(unique)).catch(() => undefined);
   }
 
   /** The desktop is going: every run stops after the image in hand, and every caller gets its report. */

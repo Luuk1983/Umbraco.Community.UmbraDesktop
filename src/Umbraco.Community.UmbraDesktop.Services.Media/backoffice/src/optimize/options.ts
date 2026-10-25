@@ -19,6 +19,12 @@ export interface NormalisedOptions {
   removeMetadata: boolean;
   /** What to do with an animated image. */
   animated: 'skip' | 'first-frame';
+  /**
+   * Whether a quality was asked for, so a JPEG or WebP is encoded again at it even in its own format,
+   * and kept only if smaller. Without it, a Keep at quality 15 left every JPEG as it was (found by the
+   * owner, 2026-10-25).
+   */
+  recompress: boolean;
 }
 
 /** The quality a caller gets for JPEG and WebP without asking: small files that still look right. */
@@ -35,6 +41,7 @@ export const OPTIMIZE_DEFAULTS = {
   quality: DEFAULT_QUALITY,
   removeMetadata: true,
   animated: 'skip',
+  recompress: true,
 } as const satisfies NormalisedOptions;
 
 /** The formats a caller may ask for. */
@@ -70,17 +77,18 @@ export function normaliseOptions(options?: OptimizeOptions): NormalisedOptions {
     quality,
     removeMetadata: options?.removeMetadata === true,
     animated: options?.animated === 'first-frame' ? 'first-frame' : 'skip',
+    recompress: typeof asked === 'number' && Number.isFinite(asked),
   };
   if (reencodes(normalised)) normalised.removeMetadata = true;
   return normalised;
 }
 
 /**
- * Whether the options encode the picture anew: a resize, or a format other than the file's own.
- * Encoding through a canvas drops metadata anyway, which is why Remove metadata is locked on then.
+ * Whether the options encode the picture anew: a resize, a format other than the file's own, or a
+ * quality. Encoding through a canvas drops metadata anyway, which is why Remove metadata is locked on.
  * @param options The options.
- * @returns True when a resize or a convert is asked for.
+ * @returns True when a resize, a convert or a quality is asked for.
  */
-export function reencodes(options: Pick<NormalisedOptions, 'resize' | 'format'>): boolean {
-  return options.resize !== null || options.format !== 'keep';
+export function reencodes(options: Pick<NormalisedOptions, 'resize' | 'format'> & Partial<Pick<NormalisedOptions, 'recompress'>>): boolean {
+  return options.resize !== null || options.format !== 'keep' || options.recompress === true;
 }

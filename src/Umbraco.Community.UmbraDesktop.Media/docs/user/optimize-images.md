@@ -25,27 +25,41 @@ for everyone who may use the Media section.
 
 ## The settings
 
-- **Resize** fits each image inside **Max width** and **Max height**, keeping its shape. An image is
-  never made larger: one already inside the box keeps its size. Leave a field empty for no limit on
-  that side. The focal point and crops are kept.
-- **Convert** writes each image as **JPEG**, **PNG** or **WebP**, at the **Quality** you choose. **Keep**
-  writes each file's own format. PNG keeps every pixel, so it has no quality. WebP is the smallest for
-  photos; PNG can be larger than the JPEG it came from, and is still saved, since you asked for it.
-- **Remove metadata** removes the location, camera and date stored in the file. With **Resize** or
-  **Convert** on, it is always on, because the image is saved anew and that drops them anyway. On its
-  own, it removes them without saving the picture anew, so the quality stays exactly the same and a
-  phone photo stays upright.
-- **Save** either replaces the originals or saves copies next to them. A copy is named like the
-  original with "(optimized)", in the same folder, and has all of the original's properties, such as
-  its alt text and focal point.
+The window starts with where the images come from, such as Media / Products, how many there are, and
+their thumbnails. Then come two parts: what to do to the images, and where the result goes. Select
+the info button beside a setting to read what it does.
+
+**What to do.** Turn on the changes you want. A change shows its settings while it is on.
+
+- **Resize to a maximum width or height** fits each image inside **Max width** and **Max height**,
+  keeping its shape. An image is never made larger: one already inside the box keeps its size. Leave
+  a field empty for no limit on that side. The focal point and crops are kept.
+- **Convert to another format or quality** writes each image as **JPEG**, **PNG** or **WebP**, at the
+  **Quality** you choose. **Keep** writes each file's own format, and still applies the quality to JPEG
+  and WebP files; a file is only replaced when that makes it smaller. PNG keeps every pixel, so it has
+  no quality.
+- **Remove location, camera and date** removes that metadata from the file. While resizing or
+  converting, it is always on, because the image is saved anew and that drops it anyway. On its own,
+  it removes it without saving the picture anew, so the quality stays exactly the same and a phone
+  photo stays upright.
+
+When the settings will make the images larger, the window says so before you start, such as "8
+images will get much larger" when you convert JPEG photos to PNG. You can still go ahead.
+
+**Where the result goes.**
+
+- **Replace the originals** keeps the same media items, with a new file in each.
+- **Save copies next to them** makes a copy of each image in the same folder, named like the original
+  with "(optimized)". A copy has all of the original's properties, such as its alt text and focal
+  point.
 
 The first run starts on resize to 2560 × 2560, WebP at 80, metadata removed, replacing the originals.
 After that, the window starts on your own last settings.
 
-When you replace images that pages use, the window warns you first, such as "4 of these images are used
-in 11 places". Those pages keep working, because they point at the media item, not the file. Each
-replaced image gets a new file name, though, so a link to the old file's address, pasted somewhere
-outside Umbraco, no longer works.
+When you replace images that pages use, the window says so first, such as "4 of these images are used
+in 11 places". To see the places, select **Show where**. Those pages keep working, because they point
+at the media item, not the file. Each replaced image gets a new file name, though, so a link to the
+old file's address, pasted somewhere outside Umbraco, no longer works.
 
 ## While it runs
 
@@ -65,8 +79,10 @@ change is then kept.
 
 ## When it ends
 
-The window says what came of it, such as "7 optimized, 1 unchanged, 1 failed". If anything failed, the
-taskbar button stays in the failure colour until you look at the window.
+The progress bar goes, and the window says what came of it, such as "7 optimized, 1 unchanged, 1
+failed", with a tick when the images got smaller and a warning sign when they grew or something
+failed. If anything failed, the taskbar button stays in the failure colour until you look at the
+window.
 
 - To try the failed images again, select **Retry failed**.
 - To finish a run you cancelled, select **Run the rest**.

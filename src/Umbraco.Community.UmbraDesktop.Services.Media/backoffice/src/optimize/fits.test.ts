@@ -54,6 +54,11 @@ async function mount(size: { w: number; h: number }, theme: string | undefined, 
   await until(() => store.get(id)!.phase !== 'preparing' && (start || store.get(id)!.usage !== undefined));
   if (start) await report;
   await element.updateComplete;
+  if (!start) {
+    // At their tallest: PNG for photos shows the larger-files warning (design §16).
+    (element.shadowRoot!.querySelector('[data-format="png"]') as HTMLButtonElement).click();
+    await element.updateComplete;
+  }
   await new Promise((resolve) => requestAnimationFrame(resolve));
   return { box, element };
 }
@@ -62,7 +67,8 @@ for (const theme of THEMES) {
   it(`fits the settings at their tallest into OPTIMIZE_MIN_CONTENT_SIZE under ${theme ?? 'no theme'}`, async () => {
     const { box, element } = await mount(OPTIMIZE_MIN_CONTENT_SIZE, theme, false);
     const root = element.shadowRoot!;
-    expect(root.querySelector('.usage'), 'the warning shows, as at its tallest').to.not.equal(null);
+    expect(root.querySelector('.usage') !== null, 'the used-elsewhere note shows, as at its tallest').to.equal(true);
+    expect(root.querySelector('.grow') !== null, 'the larger-files warning shows, as at its tallest').to.equal(true);
     const bounds = element.getBoundingClientRect();
     const body = root.querySelector('.body') as HTMLElement;
     expect(body.scrollHeight, 'no scroll down').to.be.at.most(body.clientHeight);

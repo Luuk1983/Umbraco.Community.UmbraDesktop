@@ -6,7 +6,7 @@
 > Services.Media, so another add-on can optimize a file it holds, or media items it names, with the
 > same options and the same window.
 
-- **Status:** Designed 2026-10-20; built 2026-10-21, uncommitted, with the real run in §15
+- **Status:** Designed 2026-10-20; built 2026-10-21 (real run in §15); settings reworked with the owner 2026-10-25 (§16)
 - **Date:** 2026-10-20
 - **Issue:** [#139](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/139)
 - **Branch:** `139-optimize-images`
@@ -536,3 +536,63 @@ PNG, a 1800 × 1200 WebP, an animated GIF and a PDF. Scripts in that session's s
   reach the button inside it, a real click does; core's Media section selects through each card's
   checkbox, not Ctrl-click; and the headless profile has to be fresh per script, or the token refresh
   fails with a 400.
+
+## 16. The settings, reworked with the owner
+
+After the owner's own look at the built window (2026-10-25), the settings were reworked from a new
+mock, [`mockups/optimize-images/optimize-images-rework.html`](mockups/optimize-images/optimize-images-rework.html)
+(scenes R5 and R6 are the result; R1 to R4 were the first pass). What changed, and why:
+
+- **An introduction.** The window title named the folder, but the page did not say what it was about.
+  It now opens on the folder's path from the root (Media / Shop / Products, or "From 3 folders"), the
+  count, a strip of the pictures, and what is left out. The path is the media tree's ancestors.
+- **What to do and Where the result goes are two sections.** They serve different things: the first
+  changes the pictures, the second decides what happens to the items.
+- **Each switch says what it does**: Resize to a maximum width or height, Convert to another format or
+  quality, Remove location, camera and date.
+- **A switch's settings show only while it is on**, one per line under it, labels in one column and
+  fields in another across the groups (`SETTING_LABEL_WIDTH`, `SETTING_INDENT`), so the page reads as
+  one form. This window hides what is off where the desktop usually disables it; the owner asked for
+  it here, and a switch's numbers are kept while it is off.
+- **The explanations are behind an info button** (Umbraco's `icon-info`), opened under their row and
+  closed again, which works by touch. A desktop-wide info popup is its own issue, #167; until it exists
+  this inline one stands in.
+- **The quality slider stays**, with its number beside it, greyed for PNG.
+- **Save is a radio list**, each choice with a line under it, and the used-elsewhere note under
+  Replace the originals, the choice it is about.
+- **Show where.** The note's count now opens Umbraco's info dialog with one section per used image and
+  the references list Umbraco's own trash question shows (`umb-confirm-action-modal-entity-references`).
+  Read only: a place is not a link, since a link inside the desktop needs care not to navigate the
+  backoffice away. Each section carries core's own "The following items depend on this" line, which
+  repeats when many images are used; left as core draws it.
+- **A warning before a run that grows files** (`size-warning.ts`). The settings know each file's
+  format before the run, so the warning comes before the button: PNG for JPEG or WebP photos (measured
+  13 to 16 times larger), quality 95 or more for JPEG or WebP (can grow), JPEG for WebP files (may
+  grow). One at a time, the surest first. It sits at the end of What to do, where its cause is.
+- **No full progress bar at the end.** The bar is there while the run goes; at the end a result mark
+  and line take its place, in the tone of how it went: a saving (green tick), files that grew
+  (warning), a failure, or a cancel.
+- **The colours are UUI's own pairs.** Found in the real check: `--uui-color-warning-standalone` as a
+  fill is dark ochre that dark text cannot be read on, and `--uui-color-warning` as text is pale yellow
+  on white. A tint of the fill on the window's surface (`color-mix`) is the background, and the
+  standalone colour is text and icons, which reads in light and dark alike.
+- **Show where, second pass** (owner, after seeing it): Umbraco's references list repeated "The
+  following items depend on this" and a boxed item without a path under every image, a screen and a
+  half for eight images that could not be told apart. It is now this package's own list
+  (`optimize-where.element.ts`): one header line per image (thumbnail, name, count), the images used
+  most first, and one line per place with its path from the content or media tree, a member by its
+  name; the first five places, the rest behind "and n more". Umbraco's reference model carries no path,
+  so each place's ancestors are read from its tree when the dialog opens.
+- **A quality asked is applied** (found by the owner): Keep at quality 15 left JPEGs unchanged, because
+  only a resize or another format encoded a file. Now Convert on applies the quality, also with Keep
+  or the file's own format (`recompress`), and such a file is kept only if it came out smaller,
+  otherwise it is unchanged with `not-smaller`, so a higher quality never makes a file larger. Live:
+  Keep at 15 took the camera JPEGs from 13 MB to 700 KB at full size; Keep at 100 afterwards left
+  them alone. A caller's `{ format: 'keep', quality }` starts the window with Convert on, on Keep.
+- **Two runs on the same images stay allowed** (owner, 2026-10-25: leave it for now). It is safe, since
+  each image is opened afresh just before its save and the second run fails any image the first changed
+  with the conflict words. Bringing the open window forward for the same selection, as Edit image does,
+  was offered and left for later.
+- **The window is taller**: 640 × 824 when it opens and 560 × 824 at its smallest, measured with every
+  switch on, the larger-files warning and the used-elsewhere note showing (768 without the warning),
+  the same under every theme.

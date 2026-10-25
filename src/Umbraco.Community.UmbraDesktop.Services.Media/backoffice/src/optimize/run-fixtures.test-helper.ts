@@ -44,6 +44,7 @@ export function library(items: Stored[], overrides: Partial<RunDeps> = {}) {
     facts: async (uniques) => new Map(uniques.flatMap((unique) => (byKey.has(unique) ? [[unique, byKey.get(unique)!.facts] as const] : []))),
     folderTypes: async () => new Set(['folder']),
     folderName: async (unique) => (unique === 'products' ? 'Products' : unique === 'people' ? 'People' : undefined),
+    folderPath: async (unique) => (unique === 'products' ? ['Shop', 'Products'] : unique === 'people' ? ['People'] : undefined),
     references: async (unique) => (unique === 'banjo' ? 3 : unique === 'bowling' ? 2 : 0),
     open: async (unique) => {
       log.push(`open ${unique}`);
