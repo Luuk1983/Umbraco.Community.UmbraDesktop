@@ -27,7 +27,10 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
   {
     alias: 'workflow',
     ref: 'Umb.Section.Workflow',
-    // Label is `#workflow_workflow`; the package translates it.
+    // Named here rather than inherited. The section's label is `#workflow_workflow`, which reads
+    // "Workflow" only while Workflow's own localization translates it on the desktop; our own key
+    // reads the same whatever Workflow ships.
+    name: '#umbraDesktop_appWorkflow',
     icon: 'icon-stamp',
     chromeProfile: 'full-section',
     defaultSize: { w: 1100, h: 760 },

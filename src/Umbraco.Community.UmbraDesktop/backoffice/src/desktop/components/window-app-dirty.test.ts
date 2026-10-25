@@ -126,14 +126,16 @@ it('closes an app window without asking once its work is saved', async () => {
   expect(current()).to.have.lengthOf(0);
 });
 
-/** An app that is already unsaved when it mounts is reported, not only one that changes later. */
+/**
+ * An app that is already unsaved when it mounts is reported, not only one that changes later.
+ *
+ * Opened as an app of its own, in a window of its own, the way the desktop does it. An earlier
+ * version swapped the first window's app host to a pre-marked app behind the window's back, which
+ * holds only as long as the window never renders again: Lit re-commits a class bound as a property
+ * on every render (it compares only primitives), so any re-render brings the window's own app
+ * straight back. Harmless in the product, where the window is the only thing that sets `load`.
+ */
 it('picks up an app that was already marked before the watch began', async () => {
-  const body = element.shadowRoot!.querySelector('umbradesktop-app-host') as UmbraDesktopAppHostElement;
-  let reported: boolean | undefined;
-  body.addEventListener('umbradesktop-app-dirty', (event) => {
-    reported = (event as CustomEvent<{ dirty: boolean }>).detail.dirty;
-  });
-  // A second load of the same app kind, marked before it is handed over.
   class PreMarkedAppElement extends HTMLElement {
     constructor() {
       super();
@@ -141,8 +143,15 @@ it('picks up an app that was already marked before the watch began', async () =>
     }
   }
   customElements.define('umbradesktop-dirty-premarked-app', PreMarkedAppElement);
-  body.load = PreMarkedAppElement;
-  await body.mountComplete;
+  manager.open({ ...APP, alias: 'app-dirty-premarked', content: { kind: 'element', element: PreMarkedAppElement } });
+  const opened = () => current().find((w) => w.app.alias === 'app-dirty-premarked')!;
+
+  const second = document.createElement('umbradesktop-window') as UmbraDesktopWindowElement;
+  wrapper.appendChild(second);
+  second.window = opened();
+  await second.updateComplete;
+  await (second.shadowRoot!.querySelector('umbradesktop-app-host') as UmbraDesktopAppHostElement).mountComplete;
   await new Promise((resolve) => setTimeout(resolve));
-  expect(reported).to.equal(true);
+
+  expect(opened().dirty).to.equal(true);
 });
