@@ -22,6 +22,8 @@ few calls:
 - **Recent files** lists the files this person opened or saved lately, through any app.
 - **The file menu** is a ready-made element with Open, Save, Save as, Info and Close, for an app
   that would rather not build those itself, and **the open view** shows Open on its own.
+- **Optimizing images** resizes, converts and strips the metadata of an image file, or of media
+  library images in a window of their own. [Optimizing images](optimizing-images.md) has the calls.
 
 Everything goes through the backoffice's own pickers and media repositories, so permissions, media
 start nodes and the media types a folder allows apply exactly as they do in the Media section.

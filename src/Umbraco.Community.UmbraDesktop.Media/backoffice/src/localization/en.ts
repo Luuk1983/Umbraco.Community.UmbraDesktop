@@ -100,6 +100,8 @@ export default {
     // The Image Editor.
     imageEditor: 'Image Editor',
     editImage: 'Edit image',
+    // Optimize images (#139): the bulk action. The window it opens is the media service's, in its own words.
+    optimizeImages: 'Optimize images',
 
     // The mode bar, and the heading over Open on the empty canvas.
     undo: 'Undo',

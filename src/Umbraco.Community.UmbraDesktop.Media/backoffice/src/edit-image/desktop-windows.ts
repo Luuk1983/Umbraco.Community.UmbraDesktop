@@ -30,7 +30,19 @@ const UMBRADESKTOP_WINDOW_MANAGER = new UmbContextToken<UmbraDesktopWindows>('Um
  * @returns The window manager, or undefined in the plain backoffice.
  */
 export function findDesktopWindows(element: Element): UmbraDesktopWindows | undefined {
-  const here = contextNow(element, UMBRADESKTOP_WINDOW_MANAGER);
+  return findOnDesktop(element, UMBRADESKTOP_WINDOW_MANAGER);
+}
+
+/**
+ * Any context the desktop provides, from wherever an action is: the window manager for Edit image,
+ * and the media service for Optimize images (#139), which the desktop hosts on the same element. The
+ * same two places as {@link findDesktopWindows}, asked in turn.
+ * @param element Where the action is.
+ * @param token The context to find.
+ * @returns The context, or undefined in the plain backoffice.
+ */
+export function findOnDesktop<T extends UmbContextMinimal>(element: Element, token: UmbContextToken<T>): T | undefined {
+  const here = contextNow(element, token);
   if (here) return here;
   let frame: Element | null = null;
   try {
@@ -39,5 +51,5 @@ export function findDesktopWindows(element: Element): UmbraDesktopWindows | unde
     // A cross-origin parent: not a desktop window, and no frame element to reach.
     return undefined;
   }
-  return frame ? contextNow(frame, UMBRADESKTOP_WINDOW_MANAGER) : undefined;
+  return frame ? contextNow(frame, token) : undefined;
 }

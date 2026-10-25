@@ -322,6 +322,29 @@ const copyTo: UmbExtensionManifest = {
   conditions: inManagerSelectionBar,
 };
 
+/**
+ * Optimize images (#139, design §4): resize, convert and strip the metadata of the selection, in a
+ * window of the media service's. In core's selection bar of any media collection on the desktop, a
+ * Media Manager window's and the Media section window's alike, so not the in-manager condition; for
+ * someone with the Media section, as Edit image. Weight 15: after the Manager's Copy to (21) and core's
+ * Move to (20), before core's Trash (10), so the two that move items stay together and Trash stays last.
+ */
+const optimizeImages: UmbExtensionManifest = {
+  type: 'entityBulkAction',
+  kind: 'default',
+  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.OptimizeImages`,
+  name: 'UmbraDesktop Optimize images',
+  weight: 15,
+  api: () => import('./optimize-images/optimize-images.action.js'),
+  forEntityTypes: ['media'],
+  meta: { label: '#umbraDesktopMedia_optimizeImages', icon: 'icon-picture' },
+  conditions: [
+    { alias: 'Umb.Condition.CollectionAlias', match: 'Umb.Collection.Media' },
+    { alias: UMBRADESKTOP_ON_DESKTOP_CONDITION },
+    ...(mediaSection as unknown as Array<{ alias: string }>),
+  ] as never,
+};
+
 /** The Rename dialog F2 opens in a manager window (plan phase 3). */
 const renameDialog: UmbExtensionManifest = {
   type: 'modal',
@@ -362,6 +385,7 @@ export const manifests: Array<UmbExtensionManifest> = [
   bulkCut,
   bulkCopy,
   copyTo,
+  optimizeImages,
   renameDialog,
   docs,
   ...localizationManifests,
