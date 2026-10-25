@@ -75,8 +75,11 @@ the check and has to be caught by reading core's changes.
 the release that floor was built with (2.0.2, from Umbraco-CMS's own lock file at `release-18.1.0`),
 so `tsc` and every frontend test see the oldest backoffice the packages allow, members included. The
 C# projects get the floor by themselves: NuGet resolves a range to its lowest version, so their lock
-files say 18.1.0. The test instance floats to the newest 18 (`18.*`), so a real backoffice covers the
-other end. **Raising the floor means raising those two pins with it.** Reading core's code to decide
+files say 18.1.0. The other end is the newest 18: CI's **Frontend on the latest Umbraco 18** job swaps
+each package to it for one run and type-checks and tests again, the Solution job compiles the C#
+against it through the test instance's floating `18.*`, and the test instance runs it. Two points,
+not every release: a break in between that both ends miss would have to be introduced and fixed
+again within one major. **Raising the floor means raising those two pins with it.** Reading core's code to decide
 something is read at the floor's tag, not the newest.
 
 The host also depends on `Umbraco.Cms.StaticAssets`, the backoffice itself, at the same range. NuGet

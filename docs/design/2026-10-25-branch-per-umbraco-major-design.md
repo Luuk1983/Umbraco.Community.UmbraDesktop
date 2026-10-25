@@ -108,8 +108,9 @@ breaking changes, and a pass over every workaround in the code against 18.1.0 an
 - **Vite and Lit at the template's and the backoffice's versions** (`^7.3.1`, `^3.3.1`).
 - **Built and tested against the floor.** The frontends pin `@umbraco-cms/backoffice` 18.1.0 and the
   `@umbraco-ui/uui` 2.0.2 that release was built with, and the C# projects resolve 18.1.0 by
-  themselves; the test instance runs the newest 18. Every fact this conversion rests on was read in
-  18.1.0's code. The suites passed against 18.2.1 as well before the pin.
+  themselves. The newest 18 is the other end: a CI job swaps each frontend to it and type-checks and
+  tests again, and the C# compiles against it through the test instance. Floor and newest, not every
+  release. Every fact this conversion rests on was read in 18.1.0's code.
 - **Settings read as Umbraco's typed options.** The background jobs report read the distributed job
   timeout from raw configuration, because the property arrived in 17.1; it reads
   `DistributedJobSettings` now.

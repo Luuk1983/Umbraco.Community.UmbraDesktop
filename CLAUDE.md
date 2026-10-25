@@ -12,7 +12,8 @@ database of its own.
 
 **Build and test against the floor, run against the newest.** The frontends pin
 `@umbraco-cms/backoffice` to the Umbraco floor (18.1.0) and the C# projects restore it, so tests and
-`tsc` see the oldest backoffice the packages allow; the test instance floats to the newest 18. When
+`tsc` see the oldest backoffice the packages allow; CI's "Frontend on the latest Umbraco 18" job and
+the test instance cover the newest 18. When
 you read core's code to decide something, read it at the floor's tag (`release-18.1.0`), not the
 newest. `RELEASE.md` ("The Umbraco floor") says what to raise with the floor.
 
