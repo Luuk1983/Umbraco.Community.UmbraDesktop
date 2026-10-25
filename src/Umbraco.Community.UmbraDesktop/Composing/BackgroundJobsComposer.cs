@@ -30,10 +30,9 @@ public sealed class BackgroundJobsComposer : IComposer
         // that matters.
         builder.AddNotificationHandler<UmbracoApplicationStartingNotification, RecurringJobActivityCacheStartupHandler>();
 
-        // Exactly four notifications, not five: Umbraco 17.0.0 raises executing/executed/failed/
-        // ignored for a recurring job, but no per-run cancellation notification exists to handle,
-        // and one would be unreadable anyway since it would fire during shutdown, after this
-        // cache has stopped mattering.
+        // Exactly four notifications, not five: executing/executed/failed/ignored. The cancellation
+        // notification fires only for a run cut short by shutdown, after this cache has stopped
+        // mattering.
         builder.AddNotificationHandler<RecurringBackgroundJobExecutingNotification, RecurringJobActivityHandler>();
         builder.AddNotificationHandler<RecurringBackgroundJobExecutedNotification, RecurringJobActivityHandler>();
         builder.AddNotificationHandler<RecurringBackgroundJobFailedNotification, RecurringJobActivityHandler>();

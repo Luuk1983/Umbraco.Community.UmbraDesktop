@@ -25,6 +25,7 @@ export default {
     appAdvancedLibraryAccess: 'Library-toegang',
     appAdvancedElementTypePermissions: 'Elementtype-machtigingen',
     appAdvancedElementTypeAccess: 'Elementtype-toegang',
+    appWorkflow: 'Workflow',
     appWorkflowTasks: 'Workflow-taken',
     appWorkflowSearch: 'Workflow-zoeken',
     appWorkflowReleaseSets: 'Release sets',

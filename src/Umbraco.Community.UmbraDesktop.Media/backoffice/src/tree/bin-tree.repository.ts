@@ -24,6 +24,8 @@ export class UmbraDesktopMediaBinTreeRepository extends UmbRepositoryBase implem
    * @returns The root.
    */
   async requestTreeRoot() {
+    // Both forms on purpose: core's recycle bin data source still reads the top-level `skip` and
+    // `take` that `paging` replaces, and without them it sends the server's default page, not none.
     const paging = { skip: 0, take: 0 };
     const [{ data }, { data: top }] = await Promise.all([this.#bin.requestTreeRoot(), this.#bin.requestTreeRootItems({ ...paging, paging })]);
     return { data: data && { ...data, name: binRootName(data.name, top?.total ?? 0), hasChildren: false } };
@@ -34,7 +36,7 @@ export class UmbraDesktopMediaBinTreeRepository extends UmbRepositoryBase implem
    * @returns No items.
    */
   async requestTreeRootItems() {
-    return { data: { items: [], total: 0 }, asObservable: () => undefined };
+    return { data: { items: [], total: 0, totalBefore: 0, totalAfter: 0 }, asObservable: () => undefined };
   }
 
   /**
@@ -42,7 +44,7 @@ export class UmbraDesktopMediaBinTreeRepository extends UmbRepositoryBase implem
    * @returns No items.
    */
   async requestTreeItemsOf() {
-    return { data: { items: [], total: 0 }, asObservable: () => undefined };
+    return { data: { items: [], total: 0, totalBefore: 0, totalAfter: 0 }, asObservable: () => undefined };
   }
 
   /**

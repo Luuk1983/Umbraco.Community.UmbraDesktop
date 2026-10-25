@@ -32,7 +32,7 @@ the group is not there at all.
 
 Prerequisites:
 
-- Umbraco 17
+- Umbraco 17.6 or later
 - .NET 10
 - UmbraDesktop, the same version as this package or any later 17.x, installed automatically
 
