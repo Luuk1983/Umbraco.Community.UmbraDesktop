@@ -10,8 +10,8 @@ name: CI
 # `main` is listed literally as well as under `**/main` on purpose. `**` is documented to match
 # zero or more of any character, which leaves whether it matches an *empty* leading segment as an
 # edge case of GitHub's glob, and whether the trunk gets built is not a thing to settle on a
-# subtlety. `**/main` is for the versioned trunks that arrive when the next major ships and this
-# line continues as `v17/main`.
+# subtlety. `**/main` is for the trunks of the older Umbraco majors: `main` is always the newest,
+# and the previous one continues as `v17/main` (RELEASE.md, "Branches").
 on:
   pull_request:
     branches:
@@ -42,7 +42,7 @@ jobs:
           retention-days: 7
 
   # Everything else: the test instance and the C# test project, built as one solution. A separate
-  # job on purpose, and never merged into the one above. The test instance floats ten "17.*"
+  # job on purpose, and never merged into the one above. The test instance floats ten "18.*"
   # dependencies (Umbraco itself plus every commercial package the catalogue is exercised against),
   # so it can break without anyone touching it. Here that is news on a pull request; in the release
   # workflow it would be a blocked release for a reason unrelated to anything being shipped.
@@ -63,7 +63,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24' # @umbraco-cms/backoffice 18 requires node >=24.13
           cache: npm
           cache-dependency-path: |
             src/Umbraco.Community.UmbraDesktop/package-lock.json

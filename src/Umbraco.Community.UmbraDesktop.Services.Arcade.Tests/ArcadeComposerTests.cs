@@ -1,4 +1,6 @@
+using System.Reflection;
 using NSubstitute;
+using Umbraco.Cms.Api.Common.Attributes;
 using Umbraco.Cms.Core.Models.Membership;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Community.UmbraDesktop.Services.Arcade.Scores;
@@ -83,10 +85,45 @@ public class ArcadeComposerTests
         await store.SubmitAsync(grace, "Grace", snake, 2);
         clock.Advance(TimeSpan.FromDays(31));
 
-        await new Composing.ArcadeBeatenPruneJob(store).RunJobAsync();
+        using var job = new Composing.ArcadeBeatenPruneJob(store);
+        await job.RunJobAsync(CancellationToken.None);
 
         Assert.Empty(await store.TakeBeatenAsync(ada));
     }
+
+    /// <summary>
+    /// A run Umbraco cancels, at shutdown, stops before it deletes anything: the token reaches the
+    /// database call.
+    /// </summary>
+    [Fact]
+    public async Task The_prune_job_stops_when_cancelled()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        var clock = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero));
+        var store = new ArcadeStore(database, new FakeUserDirectory(), clock);
+        var (ada, grace) = (Guid.NewGuid(), Guid.NewGuid());
+        await store.UpdateProfileAsync(ada, "Ada", null, true, null);
+        await store.UpdateProfileAsync(grace, "Grace", null, true, null);
+        var snake = new LeaderboardDefinition("Pkg.Snake.Game", "default", "higher", "points", null, null);
+        await store.SubmitAsync(ada, "Ada", snake, 1);
+        await store.SubmitAsync(grace, "Grace", snake, 2);
+        clock.Advance(TimeSpan.FromDays(31));
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        using var job = new Composing.ArcadeBeatenPruneJob(store);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => job.RunJobAsync(cancelled.Token));
+
+        Assert.NotEmpty(await store.TakeBeatenAsync(ada));
+    }
+
+    /// <summary>
+    /// The API is in a document of the package's own, the way Umbraco 18 expects a package's API to be
+    /// described, rather than falling back into Umbraco's own management document.
+    /// </summary>
+    [Fact]
+    public void Maps_the_api_to_the_arcades_own_document()
+        => Assert.Equal(Composing.ArcadeComposer.OpenApiDocumentName, typeof(Api.ArcadeController).GetCustomAttribute<MapToApiAttribute>()?.ApiName);
 
     /// <summary>A user substitute in the given state.</summary>
     /// <param name="state">The state it reports.</param>

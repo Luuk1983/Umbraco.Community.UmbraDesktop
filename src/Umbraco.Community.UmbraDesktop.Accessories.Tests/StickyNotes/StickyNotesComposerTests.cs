@@ -1,5 +1,7 @@
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Umbraco.Cms.Api.Common.Attributes;
 using Umbraco.Cms.Core.DependencyInjection;
 using Umbraco.Community.UmbraDesktop.Accessories.StickyNotes;
 using Xunit;
@@ -28,4 +30,12 @@ public class StickyNotesComposerTests
         Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(TimeProvider));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(StickyNoteStore));
     }
+
+    /// <summary>
+    /// The API is in a document of the add-on's own, the way Umbraco 18 expects a package's API to be
+    /// described, rather than falling back into Umbraco's own management document.
+    /// </summary>
+    [Fact]
+    public void Maps_the_api_to_the_add_ons_own_document()
+        => Assert.Equal(StickyNotesComposer.OpenApiDocumentName, typeof(StickyNotesController).GetCustomAttribute<MapToApiAttribute>()?.ApiName);
 }

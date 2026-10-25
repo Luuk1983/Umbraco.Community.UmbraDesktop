@@ -109,7 +109,7 @@ function Get-UnixTimestamp {
     $utc = [TimeZoneInfo]::ConvertTimeToUtc($Timestamp)
     $utcBase = New-Object DateTime 1970, 1, 1, 0, 0, 0, ([DateTimeKind]::Utc)
 
-    return ($utc - $utcBase).TotalSeconds
+    return [long][math]::Floor(($utc - $utcBase).TotalSeconds)
 }
 
 function Get-Signature {

@@ -5,7 +5,7 @@ import { UMBRADESKTOP_VIEW_MEMORY, layoutsLeading, memoryOf, remembersViews, vie
  * Core switches a collection's view through the backoffice address, which every hosted collection
  * follows, so one window switching to table would switch them all (hosting spike, workaround 2).
  * The manager sets each window's view on its own collection instead: through the collection's own
- * interaction memory where core has one (17.7 onwards), and by putting the view first in the
+ * interaction memory where core has one (18.2 onwards), and by putting the view first in the
  * collection's layouts where it has not, since core shows the first layout when the address names
  * none.
  */
@@ -27,8 +27,8 @@ describe('switching one window’s view', () => {
   });
 
   it('tells a collection element that opens on a remembered view from one that cannot', () => {
-    // 17.7 and 18.2 declare interactionMemories on core's collection element; 17.4 to 17.6 and 18.0
-    // to 18.1 do not, and a window restored on the list opened on the grid there (Phase D, 18.0).
+    // 18.2 declares interactionMemories on core's collection element; 18.0 and 18.1 do not, and a
+    // window restored on the list opened on the grid there (found on 18.0, #164).
     class Remembers {
       /** As core declares it: an accessor on the prototype. */
       set interactionMemories(_value: unknown) {}

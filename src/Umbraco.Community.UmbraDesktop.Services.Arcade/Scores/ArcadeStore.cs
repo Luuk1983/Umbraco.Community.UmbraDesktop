@@ -322,11 +322,12 @@ public sealed class ArcadeStore(IArcadeDatabase database, IArcadeUserDirectory u
 
     /// <summary>Delete beaten events nobody read within <paramref name="age"/> (design section 6).</summary>
     /// <param name="age">How long an unread event is kept.</param>
+    /// <param name="cancellationToken">Stops the delete, as Umbraco does to a job at shutdown.</param>
     /// <returns>How many were removed.</returns>
-    public Task<int> PruneBeatenAsync(TimeSpan age)
+    public Task<int> PruneBeatenAsync(TimeSpan age, CancellationToken cancellationToken = default)
     {
         var cutoff = clock.GetUtcNow().UtcDateTime - age;
-        return database.RunAsync(db => db.Beaten.Where(b => b.AtUtc < cutoff).ExecuteDeleteAsync());
+        return database.RunAsync(db => db.Beaten.Where(b => b.AtUtc < cutoff).ExecuteDeleteAsync(cancellationToken));
     }
 
     /// <summary>Remove one player's score from one board (D11).</summary>

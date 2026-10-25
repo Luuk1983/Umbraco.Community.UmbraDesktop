@@ -21,7 +21,7 @@ public class RecurringJobActivityHandlerTests
     /// <summary>
     /// Stand-in for a recurring job, matching the real Umbraco 17.0.0 <see cref="IRecurringBackgroundJob"/>
     /// surface. Deliberately has no <c>IgnoredDelay</c> member: that was added in a later Umbraco
-    /// version, and this package's floor is 17.0.0.
+    /// version with a default, so a job written to the 17.0.0 surface still compiles today.
     /// </summary>
     private sealed class FakeRecurringJob : IRecurringBackgroundJob
     {
@@ -38,7 +38,11 @@ public class RecurringJobActivityHandlerTests
         public event EventHandler? PeriodChanged { add { } remove { } }
 
         /// <inheritdoc />
+        /// <remarks>Obsolete in Umbraco 18 and gone in 19; the bare interface still requires it.</remarks>
         public Task RunJobAsync() => Task.CompletedTask;
+
+        /// <inheritdoc />
+        public Task RunJobAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     /// <summary>

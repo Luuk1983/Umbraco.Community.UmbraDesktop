@@ -11,7 +11,7 @@ namespace Umbraco.Community.UmbraDesktop.BackgroundJobs.Notifications;
 /// <remarks>
 /// These notifications are the only observable surface for recurring jobs;
 /// <c>RecurringBackgroundJobHostedServiceRunner</c> exposes nothing about the jobs it is running.
-/// Cancellation is deliberately not handled. Umbraco from 17.6, this package's floor, raises
+/// Cancellation is deliberately not handled. Every Umbraco this package installs on raises
 /// <c>RecurringBackgroundJobCanceledNotification</c>, but only for a run cut short by shutdown (the
 /// hosted service publishes it from its "canceled during shutdown" catch), so it would be recorded
 /// into a cache that does not outlive the process.

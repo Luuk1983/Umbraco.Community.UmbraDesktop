@@ -13,20 +13,21 @@
 		"test:watch": "cd backoffice && web-test-runner \"src/**/*.test.ts\" --node-resolve --watch"
 	},
 	"dependencies": {
-		"lit": "^3.2.1"
+		"lit": "^3.3.1"
 	},
 	"devDependencies": {
 		"@fontsource/roboto-slab": "^5.3.0",
 		"@open-wc/testing": "^4.0.0",
 		"@types/mocha": "^10.0.9",
-		"@umbraco-cms/backoffice": "^17",
+		"@umbraco-cms/backoffice": "18.1.0",
+		"@umbraco-ui/uui": "2.0.2",
 		"@web/dev-server-esbuild": "^1.0.4",
 		"@web/test-runner": "^0.20.0",
 		"opentype.js": "^2.0.0",
 		"sharp": "^0.35.5",
 		"svgo": "^4.1.0",
 		"typescript": "^5.9.3",
-		"vite": "^7.1.9"
+		"vite": "^7.3.1"
 	},
 	"-vs-binding": {
 		"ProjectOpened": [

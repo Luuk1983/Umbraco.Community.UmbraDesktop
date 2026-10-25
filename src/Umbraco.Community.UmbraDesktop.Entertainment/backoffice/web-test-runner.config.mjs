@@ -24,4 +24,11 @@ export default {
     <script type="module" src="${testFramework}"></script>
   </body>
 </html>`,
+  // One test file at a time, as in the other five packages. The runner puts concurrent files in
+  // background tabs, where Chrome gives no animation frames and throttles timers. Against the
+  // Umbraco 18 backoffice the media player's layout tests (control-bar and player) then time out
+  // whenever their file is not the one in front, deterministically, while passing alone; on 17 they
+  // happened not to wait on a frame. CI runs this same command (.github/actions/build-packages). A
+  // --concurrency flag on the command line overrides this.
+  concurrency: 1,
 };

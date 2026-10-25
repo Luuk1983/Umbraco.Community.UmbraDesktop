@@ -2,10 +2,12 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Umbraco.Cms.Api.Common.Attributes;
 using Umbraco.Cms.Api.Management.Controllers;
 using Umbraco.Cms.Api.Management.Routing;
 using Umbraco.Cms.Web.Common.Authorization;
 using Umbraco.Community.UmbraDesktop.Api.ViewModels;
+using Umbraco.Community.UmbraDesktop.Composing;
 using Umbraco.Community.UmbraDesktop.Connections;
 
 namespace Umbraco.Community.UmbraDesktop.Api;
@@ -27,6 +29,7 @@ namespace Umbraco.Community.UmbraDesktop.Api;
 /// <param name="store">Reads and writes the stored connections.</param>
 [ApiVersion("1.0")]
 [VersionedApiBackOfficeRoute("umbradesktop/connections")]
+[MapToApi(OpenApiComposer.DocumentName)]
 [ApiExplorerSettings(GroupName = "UmbraDesktop")]
 [Authorize(Policy = AuthorizationPolicies.SectionAccessSettings)]
 public class ConnectionsController(DesktopConnectionStore store) : ManagementApiControllerBase

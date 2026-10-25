@@ -169,7 +169,7 @@ export class UmbraDesktopMediaFolderHostElement extends UmbLitElement {
    *
    * Not in place: core's router slot ignores new routes whose paths match the old ones, so a view
    * core remembers is only applied when the address changes, which a window must never do (measured
-   * on 17.7). From 17.7 the new collection opens on the remembered view; before, on the first of its
+   * on 17.7). From 18.2 the new collection opens on the remembered view; on 18.1, on the first of its
    * layouts. The selection is carried across, as a view switch in the Media section keeps it.
    * @param alias The view's alias.
    */
@@ -251,7 +251,7 @@ export class UmbraDesktopMediaFolderHostElement extends UmbLitElement {
    * The configuration a new collection opens on this window's view with. A core that remembers views
    * is handed the view as a memory (see {@link #mount}) and keeps its own order; one that cannot shows
    * the first layout, so there the view goes first. Without this a window reopened after a reload came
-   * back on the grid while it said list, on 18.0 and 17.4 (Phase D of the Umbraco 18 plan).
+   * back on the grid while it said list, on 18.0 and 17.4 (found running the packages there, #164).
    * @param config The place's configuration.
    * @returns The configuration to mount.
    */
@@ -269,7 +269,7 @@ export class UmbraDesktopMediaFolderHostElement extends UmbLitElement {
     const collection = new UmbraDesktopMediaHostedCollectionElement();
     collection.alias = this.place.kind === 'bin' ? UMBRADESKTOP_MEDIA_BIN_COLLECTION : UMBRADESKTOP_MEDIA_COLLECTION;
     collection.config = config;
-    // Read by core from 17.7, which then opens on the remembered view; an unknown property before.
+    // Read by core from 18.2, which then opens on the remembered view; an unknown property on 18.1.
     if (this.view) (collection as unknown as { interactionMemories: unknown }).interactionMemories = [viewMemory(this.view)];
     collection.addEventListener(UMBRADESKTOP_COLLECTION_API_EVENT, (event) => this.collectionReady((event as CustomEvent<{ api: unknown }>).detail.api));
     this._collection = collection;

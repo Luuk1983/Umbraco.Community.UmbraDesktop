@@ -29,8 +29,6 @@ export default {
     appWorkflowTasks: 'Workflow-taken',
     appWorkflowSearch: 'Workflow-zoeken',
     appWorkflowReleaseSets: 'Release sets',
-    appDeploy: 'Deploy',
-    appDeployEnvironments: 'Deploy-omgevingen',
     appDeployStatus: 'Deploy-status',
     appDeploySchema: 'Deploy-schema',
     appDeployConfiguration: 'Deploy-configuratie',

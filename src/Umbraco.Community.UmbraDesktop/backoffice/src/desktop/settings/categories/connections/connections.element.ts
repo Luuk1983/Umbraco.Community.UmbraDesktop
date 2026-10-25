@@ -76,9 +76,12 @@ export class UmbraDesktopSettingsConnectionsElement extends UmbLitElement {
 
     if (!body) return;
 
+    // The modal leaves the secret undefined when the box was not touched. The API spells that
+    // null, which the server reads as "keep the stored one", as it reads an absent one.
+    const request = { ...body, clientSecret: body.clientSecret ?? null };
     const saved = connection
-      ? await this.#repository.updateConnection(connection.id, body)
-      : await this.#repository.createConnection(body);
+      ? await this.#repository.updateConnection(connection.id, request)
+      : await this.#repository.createConnection(request);
 
     if (!saved) return;
 

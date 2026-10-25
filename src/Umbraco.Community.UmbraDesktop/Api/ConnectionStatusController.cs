@@ -1,9 +1,11 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Umbraco.Cms.Api.Common.Attributes;
 using Umbraco.Cms.Api.Management.Controllers;
 using Umbraco.Cms.Api.Management.Routing;
 using Umbraco.Community.UmbraDesktop.Api.ViewModels;
+using Umbraco.Community.UmbraDesktop.Composing;
 using Umbraco.Community.UmbraDesktop.Connections;
 
 namespace Umbraco.Community.UmbraDesktop.Api;
@@ -25,6 +27,7 @@ namespace Umbraco.Community.UmbraDesktop.Api;
 /// <param name="statusService">Asks each connected instance about itself.</param>
 [ApiVersion("1.0")]
 [VersionedApiBackOfficeRoute("umbradesktop/connection-status")]
+[MapToApi(OpenApiComposer.DocumentName)]
 [ApiExplorerSettings(GroupName = "UmbraDesktop")]
 public class ConnectionStatusController(DesktopConnectionStatusService statusService) : ManagementApiControllerBase
 {

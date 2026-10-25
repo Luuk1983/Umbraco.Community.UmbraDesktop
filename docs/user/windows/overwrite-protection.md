@@ -59,7 +59,7 @@ cannot be saved. Copy anything you need before closing the window.
 
 ## Umbraco AI
 
-From Umbraco AI 17.4 the agent writes on the server, so it can change a document you have open. This
+Umbraco AI's agent writes on the server, so it can change a document you have open. This
 protection covers the agent exactly as it covers a colleague. See [Umbraco AI](../apps/umbraco-ai.md).
 
 ## Themes

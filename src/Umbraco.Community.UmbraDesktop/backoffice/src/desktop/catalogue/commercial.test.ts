@@ -142,26 +142,19 @@ describe('Workflow', () => {
 });
 
 describe('Deploy', () => {
-  it('carries both majors, v17 dashboards then v18 menu items', () => {
+  it('carries the three menu items Deploy 18 registers, and none of Deploy 17’s dashboards', () => {
     expect(deploy.map((e) => e.ref)).to.deep.equal([
-      'Deploy.Management.Dashboard',
-      'Deploy.Environments.Dashboard',
       'Deploy.MenuItem.Status',
       'Deploy.MenuItem.Schema',
       'Deploy.MenuItem.Configuration',
     ]);
   });
 
-  it('gates the v18 menu items on Settings and leaves the v17 dashboards to derive', () => {
-    const menuItems = deploy.filter((e) => e.ref!.startsWith('Deploy.MenuItem.'));
-    const dashboards = deploy.filter((e) => e.ref!.endsWith('.Dashboard'));
-    for (const entry of menuItems) {
+  it('gates the menu items on Settings, since a menu item does not say which section it is in', () => {
+    for (const entry of deploy) {
       expect(entry.section, `${entry.alias} infers its URL from the section prefix`).to.equal(
         'Umb.Section.Settings',
       );
-    }
-    for (const entry of dashboards) {
-      expect(entry.section, `${entry.alias} derives its gate from the manifest`).to.be.undefined;
     }
   });
 
@@ -171,7 +164,7 @@ describe('Deploy', () => {
     }
   });
 
-  it('resolves everything by ref, so the wrong major drops silently', () => {
+  it('resolves everything by ref, so a site without Deploy shows none of it', () => {
     for (const entry of deploy) {
       expect(entry.ref, `${entry.alias} must resolve through the registry`).to.be.a('string');
       expect(entry.url, `${entry.alias} must not hardcode a URL`).to.be.undefined;
@@ -346,8 +339,6 @@ const REF_TYPES: Record<string, 'section' | 'dashboard' | 'menuItem'> = {
   'workflow.editor.dashboard': 'dashboard',
   'Workflow.AdvancedSearch.Dashboard': 'dashboard',
   'Workflow.ReleaseSets.Dashboard': 'dashboard',
-  'Deploy.Management.Dashboard': 'dashboard',
-  'Deploy.Environments.Dashboard': 'dashboard',
   'Deploy.MenuItem.Status': 'menuItem',
   'Deploy.MenuItem.Schema': 'menuItem',
   'Deploy.MenuItem.Configuration': 'menuItem',
@@ -361,8 +352,8 @@ const REF_TYPES: Record<string, 'section' | 'dashboard' | 'menuItem'> = {
 };
 
 describe('every commercial entry', () => {
-  it('is seventeen entries', () => {
-    expect(COMMERCIAL).to.have.lengthOf(17);
+  it('is fifteen entries', () => {
+    expect(COMMERCIAL).to.have.lengthOf(15);
   });
 
   it('resolves by ref and hardcodes no URL', () => {

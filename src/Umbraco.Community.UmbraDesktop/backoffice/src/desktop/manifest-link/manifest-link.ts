@@ -1,7 +1,7 @@
 /**
  * Putting `<link rel="manifest">` into the backoffice head.
  *
- * Umbraco 17 generates the backoffice HTML in C# and ships no `index.html` to extend, so the link
+ * Umbraco 17 and 18 generate the backoffice HTML in C# and ship no `index.html` to extend, so the link
  * has to be appended at runtime. That this works at all was not assumed: it was measured, because
  * the widely repeated advice says it does not. Chrome 153, Edge 153 and Firefox 155 all honour a
  * link appended five seconds after load — see `docs/design/spikes/2026-09-13-manifest-injection/`,

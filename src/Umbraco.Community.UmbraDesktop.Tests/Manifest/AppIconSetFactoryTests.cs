@@ -38,7 +38,7 @@ public class AppIconSetFactoryTests
                 MediaKey,
                 Arg.Any<UrlMode>(),
                 Arg.Any<string?>(),
-                Arg.Any<string?>(),
+                Arg.Any<string>(),
                 Arg.Any<Uri?>())
             .Returns(mediaUrl);
 

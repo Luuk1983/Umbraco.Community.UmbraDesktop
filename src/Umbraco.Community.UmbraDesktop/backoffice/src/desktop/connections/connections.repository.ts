@@ -56,7 +56,7 @@ export class UmbraDesktopConnectionsRepository {
   /**
    * Replaces a connection.
    * @param id The connection's id.
-   * @param body The new values. Leave the secret unset to keep the stored one.
+   * @param body The new values. A null secret keeps the stored one.
    * @returns The stored connection, or undefined when the request failed.
    */
   async updateConnection(

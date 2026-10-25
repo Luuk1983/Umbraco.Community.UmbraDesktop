@@ -1,52 +1,21 @@
 import type { UmbraDesktopCatalogueEntry } from '../types';
 
 /**
- * Umbraco Deploy — five entries covering **two incompatible majors**.
+ * Umbraco Deploy — three entries.
  *
- * Deploy registers no section of its own, so every entry is a dashboard or a menu item. v17 puts a
- * management dashboard in Settings and an environments dashboard in Content. v18 removes both and
- * restructures around a `Deploy.Menu.Settings` sidebar menu holding three menu items instead.
+ * Deploy registers no section of its own. Deploy 18 puts a `Deploy.Menu.Settings` sidebar menu in
+ * Settings, holding three menu items; Deploy 17's two dashboards are gone (the 17 branch's catalogue
+ * has those). Each entry resolves by `ref`, so a site without Deploy shows none of them: a `url` is not
+ * checked against the registry and would ship three dead tiles.
  *
- * The two sets are disjoint: an install resolves the first two or the last three, never all five.
- * Nothing detects the version, and nothing needs to — this works for the same reason
- * `advanced-security.ts` does, and breaks the same way if anyone replaces a `ref` with a `url`,
- * because a URL is not checked against the registry and would ship three dead tiles to every v17
- * install.
+ * Nothing in a menu-item manifest says which section it belongs to, so each entry states it.
  *
- * The dashboards derive their gate from their own `Umb.Condition.SectionAlias`. The menu items
- * cannot — nothing in a menu-item manifest says which section it belongs to — so they state it.
- *
- * Every name is ours. v18's labels are `#deploy_status`, `#deploy_schema` and `#deploy_configuration`,
+ * Every name is ours. Deploy's labels are `#deploy_status`, `#deploy_schema` and `#deploy_configuration`,
  * which render as "Status", "Schema" and "Configuration": fine in a Deploy sidebar, meaningless as
- * three flat tiles beside Content and Media. The v18 icons *are* inherited, because those menu items
+ * three flat tiles beside Content and Media. The icons *are* inherited, because those menu items
  * carry one each.
  */
 export const entries: UmbraDesktopCatalogueEntry[] = [
-  // v17 — removed in v18.
-  {
-    alias: 'deploy',
-    ref: 'Deploy.Management.Dashboard',
-    name: '#umbraDesktop_appDeploy',
-    icon: 'icon-umb-deploy',
-    chromeProfile: 'bare',
-    defaultSize: { w: 1200, h: 780 },
-    minSize: { w: 900, h: 540 },
-    group: 'synchronisation',
-    weight: 20,
-  },
-  {
-    alias: 'deploy-environments',
-    ref: 'Deploy.Environments.Dashboard',
-    name: '#umbraDesktop_appDeployEnvironments',
-    icon: 'icon-umb-deploy',
-    chromeProfile: 'bare',
-    defaultSize: { w: 1200, h: 780 },
-    minSize: { w: 900, h: 540 },
-    group: 'synchronisation',
-    weight: 30,
-  },
-
-  // v18 and later — absent on v17.
   {
     alias: 'deploy-status',
     ref: 'Deploy.MenuItem.Status',

@@ -88,7 +88,8 @@ public class MediaPlaceListViewServiceTests
             ],
         });
         parts.DataTypes.GetAsync(Constants.DataTypes.Guids.ListViewMediaGuid).Returns(listView);
-        parts.Authorizer.IsDeniedAsync(parts.User, Arg.Any<IEnumerable<Guid>>()).Returns(false);
+        parts.Authorizer.FilterAuthorizedAsync(parts.User, Arg.Any<IEnumerable<Guid>>())
+            .Returns(call => Task.FromResult<ISet<Guid>>(call.Arg<IEnumerable<Guid>>().ToHashSet()));
         return parts;
     }
 
@@ -188,22 +189,27 @@ public class MediaPlaceListViewServiceTests
     }
 
     /// <summary>
-    /// Only what the person may see is listed, by Umbraco's own media check; the total stays the
-    /// search's, as Umbraco's own list view leaves it.
+    /// Only what the person may see is listed, by Umbraco's own media check, asked once for the whole
+    /// page as Umbraco's own list view does; the total stays the search's, as Umbraco's leaves it.
     /// </summary>
     [Fact]
     public async Task Leaves_out_what_the_person_may_not_see()
     {
         var parts = Site();
-        var seen = MediaOf(Guid.NewGuid(), ImageType);
-        var hidden = MediaOf(Guid.NewGuid(), ImageType);
+        var (seenKey, hiddenKey) = (Guid.NewGuid(), Guid.NewGuid());
+        var seen = MediaOf(seenKey, ImageType);
+        var hidden = MediaOf(hiddenKey, ImageType);
         ChildrenOfImage(parts, 2, seen, hidden);
-        parts.Authorizer.IsDeniedAsync(parts.User, Arg.Is<IEnumerable<Guid>>(keys => keys.Contains(hidden.Key))).Returns(true);
+        parts.Authorizer.FilterAuthorizedAsync(parts.User, Arg.Any<IEnumerable<Guid>>())
+            .Returns(Task.FromResult<ISet<Guid>>(new HashSet<Guid> { seenKey }));
 
         var result = await parts.Service.GetListViewItemsByKeyAsync(parts.User, Image, null, "name", Direction.Ascending, null, 0, 100);
 
         Assert.Equal([seen], result.Result!.Items.Items);
         Assert.Equal(2, result.Result.Items.Total);
+        await parts.Authorizer.Received(1).FilterAuthorizedAsync(
+            parts.User, Arg.Is<IEnumerable<Guid>>(keys => keys.Order().SequenceEqual(new[] { seenKey, hiddenKey }.Order())));
+        await parts.Authorizer.DidNotReceiveWithAnyArgs().IsDeniedAsync(default!, default(IEnumerable<Guid>)!);
     }
 
     /// <summary>

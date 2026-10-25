@@ -10,7 +10,7 @@ sidebar_position: 2
 With Umbraco AI installed, the desktop gives its agent two things the plain backoffice cannot: a chat
 that stays beside the pages it is about, and a desk the agent can act on.
 
-Needs **Umbraco AI 17.4 or later**. Without the package, on an older version, or for a user without
+Needs **Umbraco AI 18** with its Copilot Workspace (on Umbraco 17, Umbraco AI 17.4 or later). Without the package, on an older version, or for a user without
 permission to the Copilot Workspace section, none of this appears: no launcher tile, no tools, and
 nothing added to the chat. UmbraDesktop does not depend on Umbraco AI and never requires it.
 
@@ -54,6 +54,6 @@ is the agent's own job, and it can do that whether or not the document is open.
 
 ## Changes made by the agent
 
-From 17.4 the agent writes on the server, so it can change a document you have open in front of you.
+The agent writes on the server, so it can change a document you have open in front of you.
 [Overwrite protection](../windows/overwrite-protection.md) covers the agent exactly as it covers a
 colleague.

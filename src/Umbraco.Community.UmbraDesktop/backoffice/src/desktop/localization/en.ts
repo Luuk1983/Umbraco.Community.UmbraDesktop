@@ -30,8 +30,6 @@ export default {
     appWorkflowTasks: 'Workflow tasks',
     appWorkflowSearch: 'Workflow search',
     appWorkflowReleaseSets: 'Release sets',
-    appDeploy: 'Deploy',
-    appDeployEnvironments: 'Deploy environments',
     appDeployStatus: 'Deploy status',
     appDeploySchema: 'Deploy schema',
     appDeployConfiguration: 'Deploy configuration',

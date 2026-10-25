@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Umbraco.Cms.Api.Common.Attributes;
 using Umbraco.Cms.Api.Management.Controllers;
 using Umbraco.Cms.Api.Management.Routing;
 using Umbraco.Cms.Core.Security;
@@ -28,6 +29,7 @@ namespace Umbraco.Community.UmbraDesktop.Accessories.StickyNotes;
 /// </remarks>
 [ApiVersion("1.0")]
 [VersionedApiBackOfficeRoute("umbradesktop/accessories/sticky-notes")]
+[MapToApi(StickyNotesComposer.OpenApiDocumentName)]
 [ApiExplorerSettings(GroupName = "UmbraDesktop")]
 [Authorize(Policy = AuthorizationPolicies.BackOfficeAccess)]
 public class StickyNotesController(StickyNoteStore store, IBackOfficeSecurityAccessor securityAccessor)

@@ -1,6 +1,7 @@
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using Umbraco.Cms.Core.Configuration.Models;
 using Umbraco.Cms.Core.Scoping;
 using Umbraco.Cms.Core.Sync;
 using Umbraco.Cms.Infrastructure.BackgroundJobs;
@@ -49,7 +50,11 @@ public class BackgroundJobReportServiceRecurringTests
         public event EventHandler? PeriodChanged { add { } remove { } }
 
         /// <inheritdoc />
+        /// <remarks>Obsolete in Umbraco 18 and gone in 19; the bare interface still requires it.</remarks>
         public Task RunJobAsync() => Task.CompletedTask;
+
+        /// <inheritdoc />
+        public Task RunJobAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     /// <summary>
@@ -72,13 +77,16 @@ public class BackgroundJobReportServiceRecurringTests
         var scopeProvider = Substitute.For<ICoreScopeProvider>();
         scopeProvider.CreateCoreScope().Returns(Substitute.For<ICoreScope>());
 
+        var settings = Substitute.For<IOptionsMonitor<DistributedJobSettings>>();
+        settings.CurrentValue.Returns(new DistributedJobSettings());
+
         var service = new BackgroundJobReportService(
             [],
             repository,
             scopeProvider,
             jobs,
             cache,
-            new ConfigurationBuilder().Build(),
+            settings,
             time);
 
         return (service, cache, time);

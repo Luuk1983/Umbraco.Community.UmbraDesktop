@@ -1,3 +1,4 @@
+import { olderServerDefaultsFor, withOlderServerDefaults } from './older-server';
 import { routeRequest } from './route-request';
 
 /**
@@ -129,15 +130,31 @@ function patchFetch(win: ShimWindow, options: RemoteShimOptions): void {
     const target = destination(route.path, options);
     const headers = new Headers(init?.headers ?? request?.headers);
     if (target.isMedia) headers.delete('authorization');
-    return original(target.url, {
+    const sent = original(target.url, {
       method,
       headers,
       credentials: target.isMedia ? 'omit' : (init?.credentials ?? request?.credentials ?? 'include'),
       signal: init?.signal ?? request?.signal,
     });
+    const defaults = olderServerDefaultsFor(route.path);
+    return defaults ? sent.then((response) => fillIn(response, defaults)) : sent;
   };
   (patched as unknown as Record<string, unknown>)[MARKER] = true;
   win.fetch = patched as typeof fetch;
+}
+
+/**
+ * A successful JSON answer with the fields an older Umbraco does not send filled in
+ * (`older-server.ts`). Anything else, a refusal above all, goes back exactly as it came, because the
+ * viewer reads refusals to tell the remote did not answer.
+ * @param response The remote's answer, through the proxy.
+ * @param defaults The fields to fill in.
+ * @returns The answer to hand the frame.
+ */
+async function fillIn(response: Response, defaults: Readonly<Record<string, unknown>>): Promise<Response> {
+  if (!response.ok || !response.headers.get('content-type')?.includes('json')) return response;
+  const json = withOlderServerDefaults(await response.json(), defaults);
+  return new Response(JSON.stringify(json), { status: response.status, statusText: response.statusText, headers: response.headers });
 }
 
 /**

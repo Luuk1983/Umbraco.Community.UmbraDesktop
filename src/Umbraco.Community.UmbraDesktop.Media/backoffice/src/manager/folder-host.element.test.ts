@@ -173,7 +173,7 @@ describe('hosting core’s media collection for one place', () => {
   /**
    * A window reopened after a reload is built with its view, and a core that cannot remember one shows
    * the first of the collection's layouts. So there the restored view has to be first already: on 18.0
-   * and 17.4 the window came back on the grid while it said list (Phase D).
+   * and 17.4 the window came back on the grid while it said list (found running the packages, #164).
    */
   it('opens a restored window on its view where core cannot remember one, and leaves core’s order where it can', async () => {
     const configured = [

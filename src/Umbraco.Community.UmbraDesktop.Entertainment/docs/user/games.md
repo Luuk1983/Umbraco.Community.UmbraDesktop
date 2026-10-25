@@ -32,9 +32,9 @@ the group is not there at all.
 
 Prerequisites:
 
-- Umbraco 17.6 or later
+- Umbraco 18.1 or later (a 17.x release of this package for Umbraco 17.6 or later)
 - .NET 10
-- UmbraDesktop, the same version as this package or any later 17.x, installed automatically
+- UmbraDesktop, the same version as this package or any later one of the same major, installed automatically
 
 ## Play
 
@@ -125,7 +125,7 @@ This package and UmbraDesktop are released together from the same tag and always
 number, so matching versions are the compatibility answer. It needs at least the UmbraDesktop release
 it came with, because it uses desktop features that earlier releases lack. If your site references
 an older UmbraDesktop directly, upgrade that reference along with this one, or NuGet stops with a
-package downgrade error. Any later 17.x desktop works too, so upgrading the desktop on its own is
+package downgrade error. Any later desktop of the same major works too, so upgrading the desktop on its own is
 fine.
 
 ## Writing your own

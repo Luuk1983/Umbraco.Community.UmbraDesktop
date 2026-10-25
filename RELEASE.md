@@ -24,48 +24,60 @@ Lockstep is a decision, not an accident: design D13 in
 All six publish on **every** release, changed or not — a gap in an add-on's version history
 reads like a broken pipeline, where a version with no changes reads like Umbraco.
 
-**Every add-on requires this release of the host, or any later 17.** Each add-on references the
-host as a `ProjectReference`, never a `PackageReference`: it is then compiled against the host from
-the same commit, and its packed dependency is `[<this release>, 17.99999999.0]`. The floor is the
+**Every add-on requires this release of the host, or any later release of the same major.** Each
+add-on references the host as a `ProjectReference`, never a `PackageReference`: it is then compiled
+against the host from the same commit, and its packed dependency is `[<this release>, 18.99999999.0]`
+on `main` (`17.99999999.0` on `v17/main`). The floor is the
 release itself because an add-on registers things only this release's host understands (package
 catalogues; for Entertainment also tray items; for Accessories also the unsaved-work attribute and the settings context's
 `formatDateTime`; for Media also app titles, the close request, pages attached to an app window and apps hidden from the launcher). The add-ons used to take the host by package range, floored at 17.0.0, which
 compiled against 17.0.0 and let consumers keep a host that silently lacked them: on such a host the
 Accessories Clock threw on every render and Notepad closed over unsaved work without asking.
-Upgrading the host on its own within 17 is still fine; the ceiling is why. There is deliberately no
+Upgrading the host on its own within a major is still fine; the ceiling is why. There is deliberately no
 central `PackageVersion` for the host any more, so an add-on written with a `PackageReference` fails
 restore with NU1010 instead of shipping the old range.
 
 A `ProjectReference` does not give that range by itself. NuGet packs it as a bare minimum,
-`>= <version built beside it>`, with no ceiling at all, so an add-on would claim to support host 18
-and every major after it. The `BoundHostRange` target in `src/Directory.Build.targets` rewrites it
+`>= <version built beside it>`, with no ceiling at all, so an add-on would claim to support the next
+host major and every one after it. The `BoundHostRange` target in `src/Directory.Build.targets` rewrites it
 after NuGet computes it, for every project that references the host, so a new add-on gets it
 without doing anything. The ceiling is one property, `UmbraDesktopUmbracoMajorCeiling` in
 `src/Directory.Build.props`, which the Umbraco ranges in `src/Directory.Packages.props` use too.
 The target hooks NuGet's private `_GetProjectReferenceVersions`, which an SDK update can change
 without a word, so `.github/actions/build-packages` reads the nuspec of every packed add-on (every
 `Umbraco.Community.UmbraDesktop.*` package other than the host) and fails the run unless its host
-dependency is exactly `[<host package version>, 17.99999999.0]`. The floor comes from the host
+dependency is exactly `[<host package version>, 18.99999999.0]`. The floor comes from the host
 project's own MinVer version, the same number as the add-on's because both are versioned off one
 tag. Entertainment also requires this release of the Arcade, and Accessories and Media this release of
 the media service, bounded the same way, and the same check reads those dependencies too; it fails if a
 package depends on a service package that is not in the pack output, because a release has to ship
-both. **Raise the ceiling with the major**: the release that moves to Umbraco 18 changes
-`UmbraDesktopUmbracoMajorCeiling` to `18.99999999`, which moves the Umbraco ranges' and the add-ons'
+both. **The ceiling is the branch's major**: `18.99999999` on `main`, `17.99999999` on `v17/main`.
+When `main` moves to the next major (see [Branches](#branches)), it changes
+`UmbraDesktopUmbracoMajorCeiling` to that major, which moves the Umbraco ranges' and the add-ons'
 ceilings together.
 
 **The Umbraco floor is checked against the bundles.** `UmbraDesktopUmbracoFloor` in
-`src/Directory.Packages.props` is the oldest Umbraco the packages install on, 17.6.0. It was 17.0.0
-until a fresh 17.0.0 site showed the desktop never loading: the bundles import names the backoffice
-only exports from 17.4, and every test runs against the newest backoffice, so nothing had noticed.
-The same sites showed the overwrite guard silent below 17.6, where core has no `loadWithoutPersist`,
-so the floor went to 17.6 rather than 17.4.
+`src/Directory.Packages.props` is the oldest Umbraco the packages install on: 18.1.0 on `main`,
+17.6.0 on `v17/main`. On 17 it was 17.0.0 until a fresh 17.0.0 site showed the desktop never
+loading: the bundles import names the backoffice only exports from 17.4, and every test runs against
+the newest backoffice, so nothing had noticed. The same sites showed the overwrite guard silent below
+17.6, where core has no `loadWithoutPersist`, so the floor went to 17.6 rather than 17.4. On 18 the
+method arrived in 18.1, so 18's floor is 18.1.0.
 `.github/actions/build-packages` now reads the floor from the packed host's `Umbraco.Cms.StaticAssets`
 range, fetches that release's backoffice from NuGet, and fails the run if any packed bundle imports a
 name it does not export (`backoffice/scripts/check-umbraco-floor.mjs`). **Using a newer backoffice API
 means raising the floor**, or importing it so a missing name is survivable; the check says which. It
 only sees imported names: a method or property core added later, as `loadWithoutPersist` was, passes
 the check and has to be caught by reading core's changes.
+
+**Everything is built and tested against the floor, and run against the newest.** Each package's
+`package.json` pins `@umbraco-cms/backoffice` to the floor exactly (18.1.0) and `@umbraco-ui/uui` to
+the release that floor was built with (2.0.2, from Umbraco-CMS's own lock file at `release-18.1.0`),
+so `tsc` and every frontend test see the oldest backoffice the packages allow, members included. The
+C# projects get the floor by themselves: NuGet resolves a range to its lowest version, so their lock
+files say 18.1.0. The test instance floats to the newest 18 (`18.*`), so a real backoffice covers the
+other end. **Raising the floor means raising those two pins with it.** Reading core's code to decide
+something is read at the floor's tag, not the newest.
 
 The host also depends on `Umbraco.Cms.StaticAssets`, the backoffice itself, at the same range. NuGet
 does not refuse an install below a floor: it lifts what the package declares, and only that. On a
@@ -77,21 +89,60 @@ from that dependency.
 
 ## Versioning
 
-MinVer, from `v*` tags on this repository. `MinVerAutoIncrement=minor`,
-`MinVerMinimumMajorMinor=17.0`, and all three settings are **repeated verbatim in every csproj
-file** — there is no shared props file to inherit them from, and dropping `MinVerTagPrefix` from
-an add-on makes MinVer ignore every `v`-prefixed tag and version it `17.0.0-alpha.0` while the host
-says `17.0.0`.
+MinVer, from `v*` tags on this repository. `MinVerTagPrefix=v`, `MinVerAutoIncrement=minor` and
+`MinVerMinimumMajorMinor=18.0` (`17.0` on `v17/main`), set **once** in `src/Directory.Build.props`
+for all six packages, which is what keeps them on one version. Each package names its built
+`umbraco-package.json` in `UmbracoPackageJsonPath`, and `SyncUmbracoPackageVersion` in
+`src/Directory.Build.targets` stamps the version into it. On `v17/main` these settings are still
+repeated in every csproj, where dropping `MinVerTagPrefix` from one add-on made MinVer ignore every
+`v`-prefixed tag and version it `17.0.0-alpha.0` while the host said `17.0.0`.
 
-**The package major tracks the Umbraco major**, so the first release was `v17.0.0`, not `v1.0.0`.
-A release supporting Umbraco 18 starts at `v18.0.0`.
+**The package major tracks the Umbraco major**, so the first release was `v17.0.0`, not `v1.0.0`,
+and the first for Umbraco 18 is `v18.0.0`, a beta first (`v18.0.0-beta.1`). The minimum is why an
+untagged build on `main` numbers itself `18.0.0-alpha.0.N` until then, and why a `v17` tag merged up
+from `v17/main` never wins: MinVer takes the highest version, and anything below the minimum becomes
+the minimum.
+
+**A version must match its branch's Umbraco major.** A tag publishes the commit it is on, whichever
+branch that is, so a `v17.x` tag on `main` would publish 17.x packages built against Umbraco 18,
+which every Umbraco 17 site would then install. `.github/actions/build-packages` fails the run when
+the packed host's version major differs from the major of its Umbraco floor, before anything is
+pushed.
+
+## Branches
+
+One branch per Umbraco major, as Umbraco-CMS does it
+([design](docs/design/2026-10-25-branch-per-umbraco-major-design.md)):
+
+| Branch | Umbraco | Tags | Floor and ceiling |
+|---|---|---|---|
+| `main` | 18, always the newest major | `v18.x` | 18.1.0 to 18.99999999 |
+| `v17/main` | 17 | `v17.x` | 17.6.0 to 17.99999999 |
+
+- **New work goes to `main`.** A feature reaches 17 only when someone decides it should, by porting it
+  to `v17/main` in a pull request of its own.
+- **A fix that 17 needs goes to `v17/main` first, then up.** Merge `v17/main` into `main` with a pull
+  request after it lands, so the fix is on both and nothing ever flows down. Expect the merge to
+  conflict on the places the two majors differ (lock files, `Directory.Packages.props`, the MinVer
+  minimum): keep `main`'s side of those. **Do not squash a merge-up.** This repository allows squash
+  merges only, and a squash records no ancestry, so git would offer every 17 change again, conflicts
+  included, at every later merge-up. A merge-up needs a merge commit, which means allowing merge
+  commits in the repository settings, for these pull requests only. Until that is allowed,
+  cherry-pick the fix onto a branch from `main` instead.
+- **A 17 release** is cut from `v17/main` exactly as below, with `v17/main` in place of `main`.
+- **The Marketplace reads `main` only.** Its listing files and screenshots come from the default
+  branch, whichever major a release is for, so a 17 release changes no listing.
+- **When Umbraco 19 arrives**, cut `v18/main` from `main` and move `main` to 19 the way #166 moved it
+  to 18: floor, ceiling, MinVer minimum, the `@umbraco-cms/backoffice` and `@umbraco-ui/uui` pins
+  (at the new floor), the test instance's packages.
 
 ## Cutting a release
 
-1. Everything for the release merged to `main`, including the README, `umbraco-marketplace*.json`
-   and `docs/` (see the Definition of done in [`CLAUDE.md`](CLAUDE.md)). `main` is the trunk;
-   check `origin/main`, not your local copy.
-2. Branch `release/vX.Y.Z` from `origin/main`. From here `main` is free for the next release's
+1. Everything for the release merged to its major's trunk (`main`, or `v17/main` for a 17 release;
+   see [Branches](#branches)), including the README, `umbraco-marketplace*.json`
+   and `docs/` (see the Definition of done in [`CLAUDE.md`](CLAUDE.md)). Check `origin/main` (or
+   `origin/v17/main`), not your local copy.
+2. Branch `release/vX.Y.Z` from that trunk. From here the trunk is free for the next release's
    work. Only this release's finishing touches go on the branch: fixes, and screenshots, which
    need a running backoffice and so usually come last.
 3. Tag `vX.Y.Z` on the release branch. A tag push is what publishes, and there are two ways to make
@@ -107,7 +158,8 @@ A release supporting Umbraco 18 starts at `v18.0.0`.
    every pack, a payload check and NuGet trusted publishing. It never creates a GitHub release,
    whichever way the tag was made, so a release exists only when someone made one in step 3. It
    also does not attach the packages to that release; they are on nuget.org.
-5. Merge the release branch into `main` straight away, with a pull request. The Marketplace reads
+5. Merge the release branch into its trunk straight away, with a pull request, and for a 17 release
+   merge `v17/main` up into `main` too. The Marketplace reads
    the listing files from `main`'s root and their screenshot URLs point at `main`, so until this
    merge the listing still shows the old screenshots. NuGet does not wait for it: the packed
    README's images are pinned to the tagged commit, which has them.
@@ -161,8 +213,9 @@ Nothing in CI can do these.
   check that the tagged commit is on `main`. That looks like an oversight and is not: a hotfix may
   have to ship from its own branch, and any of those restrictions would block exactly the release
   you would most want out quickly. The environment exists to satisfy the trusted-publishing policy's
-  environment claim, not as an approval gate. The `v*.*.*` tag pattern is the only guard, which is
-  specific enough that publishing by accident means pushing a genuinely release-shaped tag.
+  environment claim, not as an approval gate. The `v*.*.*` tag pattern is the guard, which is
+  specific enough that publishing by accident means pushing a genuinely release-shaped tag, and the
+  build action refuses a tag whose major is not the branch's Umbraco major (see Versioning).
 - **Screenshots.** Need a running backoffice and a login, which is why they are always the last
   thing. The host's live in `docs/screenshots/`, and each add-on's in its own
   `docs/screenshots/` since #78 split the docs, the way an external add-on's would. The READMEs and docs reference them by relative path,

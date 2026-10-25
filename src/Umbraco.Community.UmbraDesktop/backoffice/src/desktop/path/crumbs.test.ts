@@ -103,7 +103,7 @@ it('takes the section from the window’s own launch URL', () => {
   expect(sectionPathnameOf(gameApp)).to.be.undefined;
 });
 
-it("builds a link for a structure that hands out none, which is every non-variant section in v17", () => {
+it("builds a link for a structure that hands out none, as every non-variant section did on 17", () => {
   // Document types provide the plain `UmbMenuStructureWorkspaceContext`, which publishes `structure`
   // and no `getItemHref`. Without this the middle crumbs of a Document Types window would be dead
   // text, and that window has the same complaint as Media (issue #43).
