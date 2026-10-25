@@ -154,10 +154,10 @@ reads both from the package rather than naming a branch, so the same step is rig
 
 ## 7. Merging up
 
-The repository allows squash merges only. A squash records no ancestry, so after one squashed
-merge-up git would offer every 17 change again at the next, conflicts included. Merge-ups need a
-merge commit, which needs merge commits allowed in the repository settings. That setting is the
-owner's to change, and until it is, merge-ups should be cherry-picks.
+A squash records no ancestry, so after one squashed merge-up git would offer every 17 change again
+at the next, conflicts included. So merge-ups are merged with a merge commit, which records where
+the two branches were joined, and every other pull request is still squashed. The repository allows
+merge commits for that since 2026-10-25.
 
 ## 8. The next major
 

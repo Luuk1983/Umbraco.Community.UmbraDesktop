@@ -124,11 +124,11 @@ One branch per Umbraco major, as Umbraco-CMS does it
 - **A fix that 17 needs goes to `v17/main` first, then up.** Merge `v17/main` into `main` with a pull
   request after it lands, so the fix is on both and nothing ever flows down. Expect the merge to
   conflict on the places the two majors differ (lock files, `Directory.Packages.props`, the MinVer
-  minimum): keep `main`'s side of those. **Do not squash a merge-up.** This repository allows squash
-  merges only, and a squash records no ancestry, so git would offer every 17 change again, conflicts
-  included, at every later merge-up. A merge-up needs a merge commit, which means allowing merge
-  commits in the repository settings, for these pull requests only. Until that is allowed,
-  cherry-pick the fix onto a branch from `main` instead.
+  minimum): keep `main`'s side of those. **Merge a merge-up with "Create a merge commit", never
+  squash.** A squash records no ancestry, so git would offer every 17 change again, conflicts
+  included, at every later merge-up; a merge commit records where the branches were joined, so the
+  next one brings only what is new. Every other pull request is squashed as before: merge commits
+  are allowed in the repository settings (since 2026-10-25) for merge-ups only.
 - **A 17 release** is cut from `v17/main` exactly as below, with `v17/main` in place of `main`.
 - **The Marketplace reads `main` only.** Its listing files and screenshots come from the default
   branch, whichever major a release is for, so a 17 release changes no listing.
@@ -164,8 +164,8 @@ One branch per Umbraco major, as Umbraco-CMS does it
    merge the listing still shows the old screenshots. NuGet does not wait for it: the packed
    README's images are pinned to the tagged commit, which has them.
 
-   This repository allows squash merges only, so the merge brings the changes back but never the
-   tagged commit, and `main` never has the release tag in its history. MinVer versions a commit
+   A release branch is squash-merged back, so the merge brings the changes but never the tagged
+   commit, and the trunk never has the release tag in its history. MinVer versions a commit
    from the newest tag among its ancestors, so `main`'s CI packages keep numbering themselves as
    prereleases of the version just shipped (17.3.0-beta.1.N after 17.3.0) until the next release
    is tagged. Nothing ships from those packages, so this is cosmetic. Do not "fix" it by tagging
