@@ -18,7 +18,7 @@
 		"lit": "^3.3.1"
 	},
 	"devDependencies": {
-		"@hey-api/openapi-ts": "0.85.2",
+		"@hey-api/openapi-ts": "0.99.0",
 		"@open-wc/testing": "^4.0.0",
 		"@types/mocha": "^10.0.9",
 		"@umbraco-cms/backoffice": "17.6.0",
