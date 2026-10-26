@@ -22,9 +22,10 @@ afterEach(() => {
  * @param options.entity The entity it is for.
  * @param options.folder Whether the condition asks for a folder.
  * @param options.inTree Whether the element is in the window's tree, inside its host's shadow root.
+ * @param options.outside Whether the condition asks for the opposite: anywhere but a manager window.
  * @returns Whether the action is permitted, once the answer has settled.
  */
-async function evaluate(options: { inManager: boolean; entity?: { type: string; unique: string | null }; folder?: boolean; inTree?: boolean }) {
+async function evaluate(options: { inManager: boolean; entity?: { type: string; unique: string | null }; folder?: boolean; inTree?: boolean; outside?: boolean }) {
   const outer = document.createElement('div');
   const inner = document.createElement('div');
   outer.appendChild(inner);
@@ -58,7 +59,7 @@ async function evaluate(options: { inManager: boolean; entity?: { type: string; 
   let permitted = false;
   const condition = new UmbraDesktopInMediaManagerCondition(innerHost, {
     host: innerHost,
-    config: { alias: 'Umbraco.Community.UmbraDesktop.Media.Condition.InMediaManager', folder: options.folder },
+    config: { alias: 'Umbraco.Community.UmbraDesktop.Media.Condition.InMediaManager', folder: options.folder, outside: options.outside },
     onChange: (value) => (permitted = value),
   });
   innerHost.hostConnected();
@@ -92,5 +93,20 @@ describe('the in-manager condition', () => {
   it('asked for a folder, permits any item in the tree, since the tree shows places only', async () => {
     expect(await evaluate({ inManager: true, folder: true, inTree: true, entity: { type: 'media', unique: IMAGE } })).to.equal(true);
     expect(await evaluate({ inManager: true, folder: true, entity: { type: 'media', unique: IMAGE } }), 'on its card').to.equal(false);
+  });
+});
+
+/**
+ * Asked for `outside` (#176): anywhere but a manager window. What gives Edit image its normal weight in
+ * the Media section while it stays an image card's quick button in a Manager window (owner,
+ * 2026-10-26), with the two never both showing.
+ */
+describe('outside a manager window', () => {
+  it('refuses inside a manager window', async () => {
+    expect(await evaluate({ inManager: true, outside: true, entity: { type: 'media', unique: IMAGE } })).to.equal(false);
+  });
+
+  it('permits anywhere else', async () => {
+    expect(await evaluate({ inManager: false, outside: true, entity: { type: 'media', unique: IMAGE } })).to.equal(true);
   });
 });

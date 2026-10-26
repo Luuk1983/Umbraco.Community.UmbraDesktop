@@ -95,6 +95,21 @@ export default {
     // Afbeeldingen optimaliseren (#139): de bulkactie.
     optimizeImages: 'Afbeeldingen optimaliseren',
 
+    // De gereedschappen voor het bestand van een media-item (#176).
+    download: 'Downloaden',
+    fileActions: 'Bestandsacties',
+    replaceFile: 'Bestand vervangen',
+    optimize: 'Optimaliseren',
+    noFileToDownload: '%0% heeft geen bestand om te downloaden.',
+    replaceSaveFirstHeadline: 'Eerst je wijzigingen opslaan?',
+    replaceSaveFirst: '%0% heeft wijzigingen die niet zijn opgeslagen. Wil je die opslaan voordat je het bestand vervangt? Anders zet opslaan ze later het oude bestand terug.',
+    replaceSaveFirstConfirm: 'Opslaan',
+    replaceNoService: 'De mediaservice is niet geïnstalleerd, dus het bestand kan niet worden vervangen.',
+    transferReplacing: 'De bestanden van %0% items in %1% vervangen',
+    transferReplacingOne: 'Het bestand van %0% in %1% vervangen',
+    transferReplaced: 'De bestanden van %0% items in %1% vervangen',
+    transferReplacedOne: 'Het bestand van %0% in %1% vervangen',
+
     undo: 'Ongedaan maken',
     redo: 'Opnieuw',
     save: 'Opslaan',

@@ -12,6 +12,8 @@ import type { UmbContextMinimal } from '@umbraco-cms/backoffice/context-api';
 export interface OptimizeMediaRequest {
   /** Media keys, in the order to process them; folders and files that are not images are skipped. */
   items: string[];
+  /** Plain text for the window's title instead of the folder's name: an item's name for a run of one (#176). */
+  title?: string;
 }
 
 /** The part of the service's context the action reaches for. */

@@ -1,14 +1,15 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './optimize-window.element.js';
 import type { UmbraDesktopOptimizeWindowElement } from './optimize-window.element.js';
-import { OPTIMIZE_CONTENT_SIZE, OPTIMIZE_MIN_CONTENT_SIZE } from './constants.js';
+import { OPTIMIZE_CONTENT_SIZE, OPTIMIZE_MIN_CONTENT_SIZE, OPTIMIZE_SETTINGS_HEIGHT } from './constants.js';
 import { OptimizeRunStore } from './run-store.js';
 import { image, library, until } from './run-fixtures.test-helper.js';
 
 /**
  * The Optimize images window at the sizes its manifest gives it (design §5.4), under every theme id
- * and none: the settings at their tallest fit the smallest box with nothing scrolling, every control
- * inside it with a size and reachable by Tab; and at the size it opens, a row's facts fit on one line.
+ * and none: the settings at their tallest fit the box it opens at with nothing scrolling, every control
+ * inside it with a size and reachable by Tab; in the smallest box the footer stays and the settings
+ * scroll (#176, owner); and at the size it opens, a row's facts fit on one line.
  *
  * The repository's "derive numbers, then measure them" rule as a test, modelled on the file menu's own
  * `fits.test.ts`. Theme ids are stamped as attributes only, as there: what can change the layout per
@@ -64,8 +65,8 @@ async function mount(size: { w: number; h: number }, theme: string | undefined, 
 }
 
 for (const theme of THEMES) {
-  it(`fits the settings at their tallest into OPTIMIZE_MIN_CONTENT_SIZE under ${theme ?? 'no theme'}`, async () => {
-    const { box, element } = await mount(OPTIMIZE_MIN_CONTENT_SIZE, theme, false);
+  it(`fits the settings at their tallest into OPTIMIZE_CONTENT_SIZE under ${theme ?? 'no theme'}`, async () => {
+    const { box, element } = await mount(OPTIMIZE_CONTENT_SIZE, theme, false);
     const root = element.shadowRoot!;
     expect(root.querySelector('.usage') !== null, 'the used-elsewhere note shows, as at its tallest').to.equal(true);
     expect(root.querySelector('.grow') !== null, 'the larger-files warning shows, as at its tallest').to.equal(true);
@@ -84,6 +85,43 @@ for (const theme of THEMES) {
       expect(rect.top, `${name} top`).to.be.at.least(bounds.top - 0.5);
       expect(rect.bottom, `${name} bottom`).to.be.at.most(bounds.bottom + 0.5);
       if (!(control as HTMLButtonElement).disabled) expect(control.tabIndex, `${name} reachable by Tab`).to.equal(0);
+    }
+    box.remove();
+  });
+
+  /**
+   * The window can be made as low as an older screen needs (owner, 2026-10-26): the introduction and the
+   * footer stay, and the settings between them scroll, so every control is still reachable.
+   */
+  it(`keeps the footer and scrolls the settings at OPTIMIZE_MIN_CONTENT_SIZE under ${theme ?? 'no theme'}`, async () => {
+    const { box, element } = await mount(OPTIMIZE_MIN_CONTENT_SIZE, theme, false);
+    expect(OPTIMIZE_MIN_CONTENT_SIZE.h, 'well below the settings at their tallest').to.be.below(OPTIMIZE_SETTINGS_HEIGHT / 2);
+    const root = element.shadowRoot!;
+    const bounds = element.getBoundingClientRect();
+    const foot = (root.querySelector('.foot') as HTMLElement).getBoundingClientRect();
+    expect(foot.height, 'the footer is drawn').to.be.greaterThan(0);
+    expect(foot.bottom, 'the footer inside the window').to.be.at.most(bounds.bottom + 0.5);
+    const body = root.querySelector('.body') as HTMLElement;
+    expect(body.clientHeight, 'some settings show').to.be.greaterThan(100);
+    expect(body.scrollHeight, 'the rest scroll').to.be.greaterThan(body.clientHeight);
+    expect(body.scrollWidth, 'no sideways scroll').to.be.at.most(body.clientWidth);
+    for (const control of [...body.querySelectorAll<HTMLElement>('button, input')]) {
+      control.scrollIntoView({ block: 'nearest' });
+      const rect = control.getBoundingClientRect();
+      const view = body.getBoundingClientRect();
+      const name = control.dataset.switch ?? control.dataset.format ?? control.dataset.save ?? control.getAttribute('name');
+      expect(rect.top, `${name} scrolls into view`).to.be.at.least(view.top - 0.5);
+      expect(rect.bottom, `${name} scrolls into view`).to.be.at.most(view.bottom + 0.5);
+    }
+    box.remove();
+  });
+
+  it(`keeps a run's buttons in view at OPTIMIZE_MIN_CONTENT_SIZE under ${theme ?? 'no theme'}`, async () => {
+    const { box, element } = await mount(OPTIMIZE_MIN_CONTENT_SIZE, theme, true);
+    const bounds = element.getBoundingClientRect();
+    for (const button of [...element.shadowRoot!.querySelectorAll<HTMLElement>('.run-head button, .run-head uui-button, .foot button')]) {
+      const rect = button.getBoundingClientRect();
+      expect(rect.bottom, 'inside the window').to.be.at.most(bounds.bottom + 0.5);
     }
     box.remove();
   });

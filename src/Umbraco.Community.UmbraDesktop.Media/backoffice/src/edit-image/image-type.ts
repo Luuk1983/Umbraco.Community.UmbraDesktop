@@ -48,56 +48,76 @@ export interface ImageLookups {
  * @returns True for an image type; false for anything else, and when either lookup fails.
  */
 export async function isImageMediaType(lookups: ImageLookups, mediaType: string): Promise<boolean> {
-  return (await readImageMediaType(lookups, mediaType)) ?? false;
+  return (await readMediaFileKind(lookups, mediaType)) === 'image';
 }
 
 /**
- * Whether a media type is an image type, or undefined when that could not be read: the media type or
+ * What kind of file a media type holds (#176): `image` when its `umbracoFile` uses the Image Cropper,
+ * `file` when it uses anything else (the Upload field of File, Vector Graphics, a video type), `none`
+ * when it has no `umbracoFile`, as a folder has none.
+ */
+export type MediaFileKind = 'image' | 'file' | 'none';
+
+/**
+ * What kind of file a media type holds, or undefined when that could not be read: the media type or
  * its file property's data type did not answer, or a lookup failed.
  * @param lookups How to read the backoffice.
  * @param mediaType The media type's key.
- * @returns True or false, or undefined when unknown.
+ * @returns The kind, or undefined when unknown.
  */
-async function readImageMediaType(lookups: ImageLookups, mediaType: string): Promise<boolean | undefined> {
+async function readMediaFileKind(lookups: ImageLookups, mediaType: string): Promise<MediaFileKind | undefined> {
   try {
     const type = await lookups.mediaType(mediaType);
     if (!type) return undefined;
     const file = type.properties.find((each) => each.alias === FILE_PROPERTY);
-    if (!file) return false;
+    if (!file) return 'none';
     const dataType = await lookups.dataType(file.dataType.unique);
-    return dataType ? dataType.editorAlias === IMAGE_CROPPER : undefined;
+    if (!dataType) return undefined;
+    return dataType.editorAlias === IMAGE_CROPPER ? 'image' : 'file';
   } catch {
     return undefined;
   }
 }
 
 /** What each media type was found to be, for this page: the answer, or the lookup still on its way. */
-const imageTypes = new Map<string, Promise<boolean | undefined>>();
+const fileKinds = new Map<string, Promise<MediaFileKind | undefined>>();
 
 /**
- * {@link isImageMediaType}, read once per media type for the page rather than once per item (found by
- * the reviewer of #137). Core keeps what its repositories read only while the server-event connection
- * is up; without it a grid of a hundred photos read the Image type a hundred times. An answer that
- * could not be read is not kept, so the next item asks again. A media type whose file editor changes
- * while a page is open keeps its old answer until the page loads again, which is the rare case.
+ * The kind of file a media type holds, read once per media type for the page rather than once per
+ * item (found by the reviewer of #137). Core keeps what its repositories read only while the
+ * server-event connection is up; without it a grid of a hundred photos read the Image type a hundred
+ * times. An answer that could not be read is not kept, so the next item asks again. A media type whose
+ * file editor changes while a page is open keeps its old answer until the page loads again, which is
+ * the rare case.
+ * @param lookups How to read the backoffice.
+ * @param mediaType The media type's key.
+ * @returns The kind; `none` when it could not be read.
+ */
+export async function mediaFileKindCached(lookups: ImageLookups, mediaType: string): Promise<MediaFileKind> {
+  let answer = fileKinds.get(mediaType);
+  if (!answer) {
+    answer = readMediaFileKind(lookups, mediaType);
+    fileKinds.set(mediaType, answer);
+  }
+  const known = await answer;
+  if (known === undefined && fileKinds.get(mediaType) === answer) fileKinds.delete(mediaType);
+  return known ?? 'none';
+}
+
+/**
+ * {@link isImageMediaType}, read once per media type for the page: {@link mediaFileKindCached} is
+ * `image`.
  * @param lookups How to read the backoffice.
  * @param mediaType The media type's key.
  * @returns True for an image type; false for anything else, and when it could not be read.
  */
 export async function isImageMediaTypeCached(lookups: ImageLookups, mediaType: string): Promise<boolean> {
-  let answer = imageTypes.get(mediaType);
-  if (!answer) {
-    answer = readImageMediaType(lookups, mediaType);
-    imageTypes.set(mediaType, answer);
-  }
-  const known = await answer;
-  if (known === undefined && imageTypes.get(mediaType) === answer) imageTypes.delete(mediaType);
-  return known ?? false;
+  return (await mediaFileKindCached(lookups, mediaType)) === 'image';
 }
 
 /** Forget every media type's answer. For tests, which each bring their own media types. */
 export function clearImageTypeCache(): void {
-  imageTypes.clear();
+  fileKinds.clear();
 }
 
 /**
