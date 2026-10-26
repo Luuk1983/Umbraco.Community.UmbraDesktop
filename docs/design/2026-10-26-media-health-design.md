@@ -239,3 +239,150 @@ line, in step 2.
 - Whether `run` and `disk-scan` can run at the same time or must be sequenced: read MediaAudit's
   service before deciding; sequence if in doubt.
 - The virtual place's synthetic key scheme (§7), chosen with the places decorator in front of you.
+
+## 14. Step 1 as built on MediaAudit (2026-10-26, superseded by §15 the same day)
+
+What the build of step 1 settled or found, where it differs from the sections above. Each is the
+fact as observed; the sections above are left as designed.
+
+**MediaAudit, as read at 1.1.0 (`d77003b`).** Every call is in `health/media-audit.client.ts`.
+
+- `run` and `disk-scan` are two services with their own locks and no shared state, so they could run
+  at once. They are sequenced anyway (§13's "sequence if in doubt"): each pages the whole media table
+  through `GetPagedDescendants`, and a check must not load the site twice over (§2). The window names
+  the step it is on.
+- `POST run` returns the whole `AuditRun`, not the contract's `{ status }`. Harmless; noted as drift.
+- While a run is `Running`, `summary` reports `runAt: null` and every total as 0: the previous run's
+  summary is replaced, not kept beside the new one. Its items stay until the new run replaces them.
+  The contract says "fields omitted"; they are zeros. The app ignores the summary's totals and sums
+  the items itself, so this does not show.
+- MediaAudit gives no count while a run runs (§4, upstream ask 1), so the task the window reports has
+  no `total` and the title bar and taskbar show activity, not the mock's "412 of 1,284".
+- Folders: the library line's folder count is one `GET folders` after the check, which is the one
+  call §5's table did not list. It walks the library again server-side, inside a check the person
+  asked for.
+- An image is decided by its file's extension (`health-model.ts`, `isImage`), since MediaAudit does
+  not say which editor a type uses and the add-on's is-image condition reads media types one by one,
+  which §2 forbids over a whole library. SVG is never an image here.
+- `disk-delete` skips with `NotFound` or `NowOwned`; the window names both, with the path.
+
+**The app, where it differs from the mock.**
+
+- Closing the window keeps the check running on the server, as designed, but the taskbar progress
+  goes with the window: the host drops an app's tasks when its window closes
+  (`window-progress.md` §1). Minimising keeps it. The footer says "You can close this window; the
+  check keeps running on the server", not the mock's "and the taskbar shows how far it is".
+- Opening the window asks the server once, per desktop session, whether it already holds a check
+  (`summary` and `disk-summary`, two reads, no scan), and reads it if so, or follows one still
+  running. Without this a check from MediaAudit's own dashboard, or from before a reload, would show
+  as "No check yet" while the server had the answer. It is the one read §2 does not list; it measures
+  nothing.
+- **Review** is shown greyed with "Coming later" rather than left out (step 3): a verb that
+  disappears reads as a bug.
+- The estimated saving on oversized is a ratio, `OPTIMIZE_SAVING_RATIO` = 0.75 of the images' size,
+  said as "about". Services.Media's `optimizeMedia` has no estimate before a run; its report after one
+  has each image's new size, which the app takes so the row follows without another check.
+- The orphaned list has **Open** (the file's URL, in a new tab) and **Delete** per file beside the
+  row's **Delete...** for them all. The unused and oversized lists open an item beside the window
+  as the Manager does, with **Edit image** on images; the unused list has core's **Trash** per item,
+  through the Manager's operation, so it is undoable and in Transfers.
+- Trash asks with core's own `confirmTrash` text, not core's references modal: an unused item has no
+  references by MediaAudit's reckoning, and the modal is wired to core's entity action, not callable
+  from here.
+- The health context is a second `umbraDesktopContext` of the add-on
+  (`Umbraco.Community.UmbraDesktop.Media.HealthContext`), beside the Manager's. It keeps the whole
+  item list (`result.items`) for steps 4 and 5.
+
+**Measured against a real backoffice (2026-10-26, Umbraco 17.6, MediaAudit 1.1.0, the test instance
+on a copy of the main database with its media).** A check of 48 items and 130 files took four
+seconds end to end; the window, the taskbar activity, View, open beside, the orphaned list and the
+admin gate all behaved. Two things the data showed:
+
+- **Items without `umbracoBytes` count as 0 B.** Umbraco Engage installs 28 images (its persona and
+  journey pictures) with neither `umbracoBytes` nor `umbracoExtension` on the item, and core agrees
+  (its own detail has neither value), so MediaAudit reports `sizeBytes: null`, the bar shows
+  "Engage 0 B" and the unused row says "28 items, 0 B". Honest, but the bar undercounts such
+  folders. Reading the file's real size would be one request per item, which §2 forbids over a
+  library; left as is, and worth knowing when a folder's size looks too small. The same 28 are the
+  only unused items on that database, which is right: nothing places them.
+- **The orphaned list was right.** None of the 48 items' own files was listed as orphaned (checked
+  item by item against core's `umbracoFile`), so a delete there would have touched nothing an item
+  owns. The 82 orphans were leftovers of earlier sessions' copy and paste tests.
+
+And one fix from the run: an item with no extension is an image when it is of core's own Image
+type (the Engage pictures above showed as documents without Edit image), and the checked time is
+written in the backoffice's culture rather than the browser's, so it matches the taskbar clock.
+
+## 15. The add-on's own engine (decided 2026-10-26)
+
+**Decision.** MediaAudit is out; the Media add-on runs the checks itself, in server code of its own
+under `Health/`. Luuk's call, on the evening of step 1, after seeing how much of MediaAudit the
+add-on used: five of its fifteen routes, and behind those five about four hundred lines of C# over
+core services the add-on already used. Four of the five upstream asks in §4 (a progress count,
+persistence, folder keys, a route promise) were structural rather than fixes, each waiting on the
+author before the next step could use it, and the dependency brought every installer a second
+dashboard, a deletion-log table and a floating 1.x with no route promise. §4 and §14's MediaAudit
+notes are left as written; they are what was learned, and the engine keeps the two things worth
+keeping from it: the ancestor-folder rule, and the re-check before a delete.
+
+**What it is.** One pass over the library, one query for usage, one walk of the disk, and the result
+in tables of its own.
+
+- `UmbracoMediaLibraryReader`: every descendant of the media root, a page of 500 at a time, the
+  recycle bin included. Folders go in a map by id, so an item's folder **key** and names path come
+  from the map, never a lookup per item: §4's upstream ask 4 is answered by construction, and steps 4
+  and 5 match by key. Trashed items give only the files they own, since they keep them until the bin
+  is emptied. Then one `GetByRelationTypeAlias("umbMedia")` for the whole site.
+- `MediaUsageClassifier`: pure. An item's usage is the distinct pages related to it, or, when there
+  are none, the distinct pages related to any folder above it, which is how a picker that takes a
+  whole folder records itself. This is MediaAudit's rule and it is the one worth keeping.
+- `MediaFilePaths`: the files an item owns, from **every** Upload field and Image Cropper on it, not
+  only `umbracoFile`, since a site's own type can hold two files and the other would otherwise be
+  listed as orphaned and offered for deletion.
+- `MediaDiskScanner`: walks the media folder through Umbraco's `MediaFileManager.FileSystem`, so blob
+  storage is walked the same way; orphans are the files whose normalised path no item owns.
+- `MediaOrphanDeleter`: re-checks each file against the library as it is at the moment of deleting
+  (one pass for the owned paths; a delete is rare and asked for), skips with `NotFound` or
+  `NowOwned`, prunes folders left empty but never the root, and writes one entry to Umbraco's audit
+  log under the person who asked. No log of its own.
+- `MediaHealthStore` over EF Core, the Arcade's way (its design D9): tables
+  `umbraDesktopMediaHealthCheck`, `...Item`, `...Folder`, `...Orphan`, with their own migrations
+  history table and a migration set per provider. One check at a time across the site, decided by a
+  row rather than an instance; progress written per page, so any server answers the poll; a check
+  that has said nothing for an hour is given up on at the next start (`StaleAfter`), so a server
+  that died mid-check cannot block the next one for ever; a finished check replaces the one before,
+  rows and all; a failed one is reported beside the last good one.
+- `MediaHealthRunner`: on Umbraco's `IBackgroundTaskQueue`, so the request returns at once and the
+  check outlives the window, the tab and the session.
+- `MediaHealthController` at `umbradesktop/media/health`: `status`, `check`, `items` (paged, 500),
+  `folders`, `orphans`, `orphans/delete`. The Media section policy on the controller; Umbraco's admin
+  policy on the delete, which answers 403 so the window can grey the button and say why.
+
+**What changed for the window.** `health/health.client.ts` replaces the MediaAudit client, same
+shape, same single-module rule. The progress is real now: "412 of 1,284 items" and a percentage on
+the taskbar during the library pass, activity during the disk walk, whose file count is not known
+before it. The footer no longer credits anyone; it says what unused and orphaned mean. The result is
+a snapshot (§2), and the user guide says so: an item trashed from the window leaves the window's
+copy, not the server's, until the next check, and so does anything trashed from the Media section.
+
+**What was measured.** The engine's C# is tested without Umbraco (49 tests: the classifier, the file
+paths, the scanner, the deleter, the store on in-memory SQLite through the real migrations, the
+runner, the controller and the composer), and the rest is the same headless run as §14, against the
+worktree's instance.
+
+**Measured on the engine (2026-10-26, the same instance and database as §14).** The numbers came out
+identical to MediaAudit's run: 48 items, 6 folders, 28 unused, 82 orphans, 8,469,525 and 6,465,673
+bytes. The check took 1.2 seconds against 48 items and 130 files. Deleting one orphaned file from the
+window removed the file and the folder it left empty, dropped the count to 81, and wrote one row to
+`umbracoLog` (type Delete, entity type "Media file"). The window opened on the result from the
+database without pressing Check, as §15 intends. Two things worth knowing:
+
+- Stored times came back without their UTC marker and the window read them as local, an hour off;
+  the store now marks them UTC on the way out, with a test. Neither SQL Server nor SQLite keeps a
+  kind, so this is the rule for any time the add-on stores.
+- A check pressed in the first seconds after a cold start waits for Umbraco's hosted services:
+  `IBackgroundTaskQueue` is drained by a hosted service that starts after the site already answers
+  requests, and a check queued in that window ran 30 seconds later, the moment the services
+  registered. In steady state it starts at once. The window shows it as "Finding what is used" with
+  no count until then, which is honest; nothing to fix, but a reader of a slow first check should
+  know.

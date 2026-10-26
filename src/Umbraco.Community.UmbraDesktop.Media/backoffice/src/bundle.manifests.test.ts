@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import { manifests } from './bundle.manifests.js';
 import { UMBRADESKTOP_MEDIA_BIN_TREE, UMBRADESKTOP_MEDIA_FOLDER_TREE } from './tree/constants.js';
 import { IMAGE_EDITOR_CONTENT_SIZE, IMAGE_EDITOR_MIN_CONTENT_SIZE } from './image-editor/constants.js';
+import { MEDIA_HEALTH_CONTENT_SIZE, MEDIA_HEALTH_MIN_CONTENT_SIZE } from './health/health-app.js';
 import en from './localization/en.js';
 
 /** Narrows the bundle to one extension type, so each test reads only what it is about. */
@@ -348,7 +349,26 @@ it('offers Cut and Copy on items, Paste on folders while something is held, and 
 });
 
 it('runs its operations in a desktop context, so they outlive the window that started them', () => {
-  expect(byType('umbraDesktopContext').map((m) => m.alias)).to.deep.equal(['Umbraco.Community.UmbraDesktop.Media.Context']);
+  expect(byType('umbraDesktopContext').map((m) => m.alias)).to.deep.equal([
+    'Umbraco.Community.UmbraDesktop.Media.Context',
+    'Umbraco.Community.UmbraDesktop.Media.HealthContext',
+  ]);
+});
+
+/**
+ * Media Health (#141, design §3): one window in the Media group after the Image Editor, under the
+ * Media section rule, its sizes derived from its own constants, and its check in a desktop context.
+ */
+it('registers Media Health as one window in the Media group, after the Image Editor', () => {
+  const health = app('Health');
+  expect(!!health).to.equal(true);
+  expect(health!.meta).to.deep.include({ label: '#umbraDesktopMedia_mediaHealth', group: 'media', allowMultiple: false });
+  expect(area[health!.meta.label.slice('#umbraDesktopMedia_'.length)]).to.equal('Media Health');
+  expect(health!.meta.defaultSize).to.deep.equal(MEDIA_HEALTH_CONTENT_SIZE);
+  expect(health!.meta.minSize).to.deep.equal(MEDIA_HEALTH_MIN_CONTENT_SIZE);
+  expect(health!.meta.hideFromLauncher).to.equal(undefined);
+  expect(health!.weight).to.be.lessThan(app('ImageEditor')!.weight!);
+  expect(health!.conditions).to.deep.equal(MEDIA_SECTION);
 });
 
 it('registers the Transfers window as one desktop app the launcher leaves out', () => {

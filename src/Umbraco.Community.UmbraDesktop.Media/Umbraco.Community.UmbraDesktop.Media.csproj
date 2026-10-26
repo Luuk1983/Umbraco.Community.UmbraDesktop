@@ -111,6 +111,17 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 	<ItemGroup>
 	  <PackageReference Include="MinVer" PrivateAssets="all" />
 	  <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+	  <!-- EF Core the Umbraco way, as the Arcade does it (its design D9): Media Health keeps the last
+	       check in tables of its own, so a restart forgets nothing and every server of a site reads
+	       the same answer (#141, design §15). Every Umbraco site already carries the package. -->
+	  <PackageReference Include="Umbraco.Cms.Persistence.EFCore" />
+	  <!-- dotnet ef only, never shipped. -->
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <!-- The test project reaches the engine's parts, which are internal. -->
+	  <InternalsVisibleTo Include="Umbraco.Community.UmbraDesktop.Media.Tests" />
 	</ItemGroup>
 
 	<ItemGroup>
