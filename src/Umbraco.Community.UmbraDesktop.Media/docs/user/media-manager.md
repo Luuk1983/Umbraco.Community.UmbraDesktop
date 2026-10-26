@@ -68,6 +68,9 @@ at a time. Its card has a pink border, so you can see which one it is while you 
 
 Closing the pane or the window asks first when the item has unsaved changes.
 
+The item's page also has the tools for its file: edit, download, replace and optimize it. See
+[What you can do with a file](media-item.md).
+
 ## Selecting
 
 Select items to work on several at once, with Umbraco's bar at the bottom of the window. While

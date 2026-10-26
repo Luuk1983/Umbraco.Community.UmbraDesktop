@@ -3,6 +3,7 @@ import type { UmbConditionConfigBase, UmbConditionControllerArguments, UmbExtens
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { UMB_ENTITY_CONTEXT } from '@umbraco-cms/backoffice/entity';
 import { UMBRADESKTOP_MEDIA_MANAGER_WINDOW_CONTEXT } from './manager-window.context.js';
+import { contextNow } from '../edit-image/context-now.js';
 
 /** The condition's alias. */
 export const UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION = 'Umbraco.Community.UmbraDesktop.Media.Condition.InMediaManager';
@@ -11,6 +12,11 @@ export const UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION = 'Umbraco.Community.UmbraD
 export interface UmbraDesktopInMediaManagerConditionConfig extends UmbConditionConfigBase<typeof UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION> {
   /** Only for a place or the Media root, as "Open in new window" is. */
   folder?: boolean;
+  /**
+   * The opposite: true anywhere but a manager window (#176). Edit image has two manifests, a quick
+   * button inside a manager window and a normal weight everywhere else, and this keeps them apart.
+   */
+  outside?: boolean;
 }
 
 /**
@@ -35,6 +41,11 @@ export class UmbraDesktopInMediaManagerCondition
    */
   constructor(host: UmbControllerHost, args: UmbConditionControllerArguments<UmbraDesktopInMediaManagerConditionConfig>) {
     super(host, args);
+    if (this.config.outside) {
+      // Decided now rather than consumed: a consume never says "none", and "none" is this answer.
+      this.#decideOutside();
+      return;
+    }
     this.consumeContext(UMBRADESKTOP_MEDIA_MANAGER_WINDOW_CONTEXT, (window) => {
       if (!window) {
         this.permitted = false;
@@ -50,6 +61,17 @@ export class UmbraDesktopInMediaManagerCondition
         this.observe(entity.unique, () => this.#checkFolder(window, entity.getEntityType(), entity.getUnique()), 'umbradesktopUnique');
       });
     });
+  }
+
+  /** Ask again once the element showing the action is in the page, for `outside`. */
+  override hostConnected(): void {
+    super.hostConnected();
+    if (this.config.outside) this.#decideOutside();
+  }
+
+  /** For `outside`: permitted when no manager window is around the element. */
+  #decideOutside(): void {
+    this.permitted = !contextNow(this.getHostElement(), UMBRADESKTOP_MEDIA_MANAGER_WINDOW_CONTEXT);
   }
 
   /**

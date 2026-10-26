@@ -731,7 +731,8 @@ an app that never reports a location behaves exactly as before.
 A location is any short string you choose, up to 1,000 characters on one line; the desktop stores it
 and hands it back without reading it. Each window has its own, so an app that allows several windows
 can have each one somewhere else. The Help app is the first to use this: its location is the page it
-shows, such as `umbradesktop/snapping`. The Image Editor's is the media item it has open.
+shows, such as `umbradesktop/snapping`. The Image Editor's is the media item it has open. To be told when somebody else saves what your app shows, see
+[When somebody else changes what your app shows](#78-when-somebody-else-changes-what-your-app-shows).
 
 **Clearing it.** Report an empty location when your app is nowhere: when what it was opened at could
 not be loaded, say. The window then has no location, so it reopens empty after a reload rather than
@@ -831,6 +832,54 @@ this.dispatchEvent(new CustomEvent('umbradesktop-close-request', { bubbles: true
 The window closes as if its close button was pressed: if your element carries
 `data-umbradesktop-dirty`, the desktop asks before throwing the work away, and a no keeps the
 window open. You do not need to ask yourself first.
+
+### 7.8 When somebody else changes what your app shows
+
+An app that edits something Umbraco stores, such as a media item, can be told when somebody else
+saves it, the way a backoffice window is. Tell the desktop what your app shows, and it raises and
+answers the notices for you.
+
+1. **Say what you show** whenever it changes, and `null` when you show nothing:
+
+   ```ts
+   this.dispatchEvent(
+     new CustomEvent('umbradesktop-app-subject', {
+       detail: {
+         subject: {
+           entityType: 'media',
+           unique: item.key,
+           version: () => this.updateDate,
+           serverVersion: () => readUpdateDate(item.key),
+           reload: () => this.open(item.key),
+         },
+       },
+       bubbles: true,
+       composed: true,
+     }),
+   );
+   ```
+
+2. **Keep `version()` current.** It answers the version you hold: the update date of what you opened,
+   or of what you last saved. The desktop reads it each time a change arrives, so set it after your
+   own save, or your own save looks like somebody else's.
+
+3. **Mark unsaved work** with `data-umbradesktop-dirty`, as §7 describes. That is what decides which of
+   the cases below applies.
+
+When Umbraco says the entity changed, the desktop asks `serverVersion()` and compares it with
+`version()`:
+
+| What it finds | What happens |
+| --- | --- |
+| The same version | Nothing. It was your own save, or nothing new |
+| A newer version, no unsaved work | `reload()` is called, so your app shows their version |
+| A newer version, unsaved work | The window gets the **Someone else changed this while you were editing it** banner. **Keep my changes** quiets it, so your next save should ask before writing over theirs. **Discard mine, load theirs** calls `reload()` |
+| The entity is gone | The window gets the deleted banner. Reject `serverVersion()` with an error whose `cause.status` is `404` to say so |
+
+Any other failure of `serverVersion()` means "I could not ask", and the desktop does nothing. Your
+app's window is never mistaken for the entity's own page: opening that media item still opens the
+item. The Image Editor in the Media add-on is the worked example: its subject is the media item it
+has open.
 
 ---
 

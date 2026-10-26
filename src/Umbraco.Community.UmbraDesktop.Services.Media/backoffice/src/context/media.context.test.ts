@@ -287,7 +287,7 @@ describe('optimizing media', () => {
    * The context on a desktop stand-in with a window manager, opening and saving a JPEG.
    * @param withDesktop Whether the window manager is there.
    */
-  async function desktop(withDesktop = true) {
+  async function desktop(withDesktop = true, entityChanged = true) {
     const { deps } = fakes();
     const saved: MediaSaveRequest[] = [];
     deps.open = async () => ({
@@ -308,9 +308,11 @@ describe('optimizing media', () => {
     deps.lookups = () => lookups();
     const host = await fixture<TestHost>(html`<umbradesktop-media-context-test-host></umbradesktop-media-context-test-host>`);
     const opened: Array<[string, unknown]> = [];
+    const changed: Array<[string, string]> = [];
     if (withDesktop) {
       host.provideContext(WINDOWS, {
         openApp: (alias: string, options?: unknown) => (opened.push([alias, options]), true),
+        ...(entityChanged ? { entityChanged: (entityType: string, unique: string) => changed.push([entityType, unique]) } : {}),
         getHostElement: () => host,
       } as never);
     }
@@ -324,7 +326,7 @@ describe('optimizing media', () => {
     host.provideContext(UMB_ACTION_EVENT_CONTEXT, Object.assign(target, { getHostElement: () => host }) as never);
     const storage = new MapStorage();
     const context = new UmbraDesktopMediaContext(host, deps, storage);
-    return { context, opened, saved, events, storage };
+    return { context, opened, saved, events, storage, changed };
   }
 
   it("opens an Optimize images window at the new run, and resolves with its report", async () => {
@@ -352,6 +354,34 @@ describe('optimizing media', () => {
     expect(saved[0].existing).to.equal('banjo');
     expect(events).to.deep.equal(['entity-updated']);
     expect(await context.recent()).to.deep.equal([]);
+  });
+
+  /**
+   * #176: the desktop hears a save over an item at once, so a window or item pane showing it follows
+   * even when the server's event connection is down (measured: a pane kept the old picture).
+   */
+  it("tells the desktop's windows that a saved-over item changed", async () => {
+    const { context, changed } = await desktop();
+    await context.save({ file: new File(['x'], 'banjo.jpg'), name: 'Banjo', folder: null, existing: 'banjo' });
+    expect(changed).to.deep.equal([['media', 'banjo']]);
+  });
+
+  it('tells the desktop nothing for a new item, which no window shows yet', async () => {
+    const { context, changed } = await desktop();
+    await context.save({ file: new File(['x'], 'new.jpg'), name: 'New', folder: 'products' });
+    expect(changed).to.deep.equal([]);
+  });
+
+  it("tells the desktop about a run's saves too", async () => {
+    const { context, changed } = await desktop();
+    await context.optimizeMedia({ items: ['banjo'], options: { format: 'png' }, start: true });
+    expect(changed).to.deep.equal([['media', 'banjo']]);
+  });
+
+  it('saves on a desktop too old to hear it', async () => {
+    const { context } = await desktop(true, false);
+    const result = await context.save({ file: new File(['x'], 'banjo.jpg'), name: 'Banjo', folder: null, existing: 'banjo' });
+    expect(result.ok).to.equal(true);
   });
 
   it('remembers the settings a run started with, for this person', async () => {

@@ -49,6 +49,26 @@ const HANDLED_SOURCES: ReadonlyArray<string> = ['Umbraco:CMS:Document', 'Umbraco
 /** The event types this desktop acts on. */
 const HANDLED_TYPES: ReadonlyArray<string> = ['Updated', 'Trashed', 'Deleted'];
 
+/** The event source the server uses for each entity type the router acts on. */
+const SOURCE_OF: Readonly<Record<string, string>> = { document: 'Umbraco:CMS:Document', media: 'Umbraco:CMS:Media' };
+
+/**
+ * A change made on the desktop itself, as the server's own `Updated` event for that entity (#176), so
+ * the router treats it exactly as one: a clean window showing the entity reloads, a dirty one is
+ * classified, an app's subject is decided by version. The server's event for the same change may
+ * still arrive; by then a clean window is at that version, and an app's subject finds nothing new.
+ * @param change Which entity changed.
+ * @param now The time stamp, for tests.
+ * @returns The event, or undefined for an entity type the router does not act on.
+ */
+export function localChangeEvent(
+  change: { entityType: string; unique: string },
+  now: () => string = () => new Date().toISOString(),
+): UmbraDesktopServerEvent | undefined {
+  const eventSource = SOURCE_OF[change.entityType];
+  return eventSource && change.unique ? { eventSource, eventType: 'Updated', key: change.unique, clientTimestamp: now() } : undefined;
+}
+
 /**
  * Whether a rejected fetch means the entity is gone rather than that the network is.
  *
@@ -124,6 +144,30 @@ export function createServerEventRouter(host: UmbraDesktopRouterHost) {
   };
 
   /**
+   * Decide for an element app's subject (#176), by version rather than by data: the app's unsaved
+   * work is nothing the router can read. The server at the version the app holds is the app's own
+   * save, or nothing new, so it is left alone; that is what keeps the Image Editor from reopening its
+   * own save and losing its undo history. Newer, a clean app takes it and a dirty one is flagged.
+   * @param id The window.
+   * @param subject What it is showing, with its `version`.
+   * @param dirty Whether the window holds unsaved work, read when the event arrived.
+   */
+  const decideApp = async (id: string, subject: UmbraDesktopWorkspaceSubject, dirty: boolean): Promise<void> => {
+    const version = subject.version!;
+    let theirs: string | null | undefined;
+    try {
+      theirs = await version.server();
+    } catch (error) {
+      if (isMissing(error)) host.setServerState(id, { deleted: true });
+      return;
+    }
+    // Neither side known says nothing, as `classifyConflict` treats a side that has not arrived.
+    if (theirs == null || theirs === version.held()) return;
+    if (dirty) host.setServerState(id, { changedElsewhere: true });
+    else await refresh(id, subject);
+  };
+
+  /**
    * Run `classify` for a window, coalescing anything that arrives while it is in flight.
    * @param id The window.
    * @param subject What it is showing.
@@ -136,9 +180,13 @@ export function createServerEventRouter(host: UmbraDesktopRouterHost) {
     }
     const entry = { pending: false };
     inFlight.set(id, entry);
+    // An app subject is decided by version, and asks its window's dirty state afresh each time.
+    const decide = subject.version
+      ? () => decideApp(id, subject, host.windows().find((w) => w.id === id)?.dirty === true)
+      : () => classify(id, subject);
     try {
-      await classify(id, subject);
-      if (entry.pending) await classify(id, subject);
+      await decide();
+      if (entry.pending) await decide();
     } finally {
       inFlight.delete(id);
     }
@@ -174,6 +222,11 @@ export function createServerEventRouter(host: UmbraDesktopRouterHost) {
             // banner never appeared even a minute later once the editor started typing — exactly
             // the state design §3 describes.
             host.setServerState(window.id, { trashed: true });
+          }
+          if (subject.version) {
+            // An element app's subject, clean or dirty: decided by version (#176), see `decideApp`.
+            work.push(classifyCoalesced(window.id, subject));
+            continue;
           }
           if (!window.dirty) {
             // Nothing of the editor's to lose, so take the server's version in place. This is the

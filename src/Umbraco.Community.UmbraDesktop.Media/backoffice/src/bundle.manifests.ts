@@ -1,6 +1,7 @@
 import { manifests as localizationManifests } from './localization/manifest.js';
 import { IMAGE_EDITOR_CONTENT_SIZE, IMAGE_EDITOR_MIN_CONTENT_SIZE, UMBRADESKTOP_IMAGE_EDITOR_APP } from './image-editor/constants.js';
 import { UMBRADESKTOP_IS_IMAGE_CONDITION, UMBRADESKTOP_ON_DESKTOP_CONDITION } from './edit-image/constants.js';
+import { UMBRADESKTOP_FILE_PROPERTY_CONDITION } from './file-tools/constants.js';
 import { UMBRADESKTOP_MEDIA_MANAGER_APP } from './manager/manager-window.context.js';
 import { UMBRADESKTOP_MEDIA_TRANSFERS_APP } from './transfers/transfers-app.js';
 import { UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION } from './manager/in-manager.condition.js';
@@ -184,32 +185,164 @@ const isImage: UmbExtensionManifest = {
   api: () => import('./edit-image/is-image.condition.js'),
 };
 
+/** What every file tool shows under (#137, #176): on the desktop, for the Media section, not in the bin. */
+const onDesktopWithMedia = [
+  { alias: UMBRADESKTOP_ON_DESKTOP_CONDITION },
+  ...(mediaSection as unknown as Array<{ alias: string }>),
+  { alias: 'Umb.Condition.EntityIsNotTrashed' },
+];
+
 /**
- * Edit image on image items (#137): the Image Editor with the image open. Unlike the Manager's own
- * actions it shows wherever core shows a media item's actions, in the Media section and in Manager
- * windows, because people decide an image needs fixing while they are looking at it. On the desktop
- * only, since that is where the editor lives; under the Media section rule the Image Editor app has,
- * since core has no media update permission on the client; not on what is in the bin; and for images
- * only. The two cheap conditions come first. Its weight puts it at the top of an image's menu, above
- * the Manager's Cut and Copy and core's own actions: Open in new window, the one weight above it, is
- * for folders only.
+ * Edit image on image items (#137): the Image Editor with the image open, wherever core shows a media
+ * item's actions, in the Media section and in Manager windows, because people decide an image needs
+ * fixing while they are looking at it. On the desktop only, since that is where the editor lives;
+ * under the Media section rule the Image Editor app has, since core has no media update permission on
+ * the client; not on what is in the bin; and for images only. The cheap conditions come first.
+ *
+ * Two manifests over one action (#176). **Outside a Manager window** (the Media section, the Manager's
+ * item pane, Open in Media Library) weight 50: below every core media action on an item (Create 1200,
+ * Trash 1150, Delete 1100, Move to 700, Sort 100) and above Reload (0), so core's card and tree show
+ * what core shows, and the file's tools are on the item's own page (the footer button below). **In a
+ * Manager window** weight 1995, above the Manager's Cut and Copy, so it stays an image card's quick
+ * button there: owner, 2026-10-26, "it's what people expect". The in-manager condition, asked for
+ * `outside` on the first, keeps the two from both showing.
  */
 const editImage: UmbExtensionManifest = {
   type: 'entityAction',
   kind: 'default',
   alias: `${UMBRADESKTOP_MEDIA_ALIAS}.EditImage`,
   name: 'UmbraDesktop Edit image',
-  weight: 1995,
+  weight: 50,
   api: () => import('./edit-image/edit-image.action.js'),
   forEntityTypes: ['media'],
   meta: { label: '#umbraDesktopMedia_editImage', icon: 'icon-ruler-alt' },
   conditions: [
-    { alias: UMBRADESKTOP_ON_DESKTOP_CONDITION },
-    ...(mediaSection as unknown as Array<{ alias: string }>),
-    { alias: 'Umb.Condition.EntityIsNotTrashed' },
+    ...onDesktopWithMedia,
+    { alias: UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION, outside: true },
     { alias: UMBRADESKTOP_IS_IMAGE_CONDITION },
   ] as never,
 };
+
+/** Edit image inside a Media Manager window: an image card's quick button there (see {@link editImage}). */
+const editImageInManager: UmbExtensionManifest = {
+  ...editImage,
+  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.EditImageInManager`,
+  name: 'UmbraDesktop Edit image in a Media Manager window',
+  weight: 1995,
+  conditions: [...onDesktopWithMedia, { alias: UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION }, { alias: UMBRADESKTOP_IS_IMAGE_CONDITION }] as never,
+};
+
+/** In the media item's own page, core's media workspace: where every file tool lives (#176). */
+const inMediaWorkspace = { alias: 'Umb.Condition.WorkspaceAlias', match: 'Umb.Workspace.Media' };
+
+/** File actions, the footer button the file's tools are listed under (#176). */
+const FILE_ACTIONS = `${UMBRADESKTOP_MEDIA_ALIAS}.WorkspaceAction.FileActions`;
+
+/** Any item that holds a file, image or not; never a folder. */
+const holdsAFile = { alias: UMBRADESKTOP_IS_IMAGE_CONDITION, match: 'any' };
+
+/**
+ * The file's tools in the media item's footer (#176): **Download** and **File actions** beside Save, on
+ * any item that holds a file. File actions only opens a menu (`file-tools/file-actions.element.ts`), so
+ * no tool is the default behind the others; the research doc's split button with Edit image as its face
+ * was replaced after the owner's second look (2026-10-26: "Edit image is not more important than the
+ * other options"). Download keeps core's own button, in its secondary look, as core's own non-primary
+ * footer buttons have.
+ *
+ * Weights 1200 and 1100, so they sit left of Save, Download first, and Save keeps its place at the
+ * footer's right edge. Core's footer draws a higher weight further left, and the media Save sets no
+ * weight, so it takes the 1000 core's `default` workspace action kind gives
+ * (`workspace-action/default/manifests.ts`); a weight below that put a button on Save's right
+ * (measured 2026-10-26).
+ */
+const footerButtons: Array<UmbExtensionManifest> = [
+  {
+    type: 'workspaceAction',
+    kind: 'default',
+    alias: `${UMBRADESKTOP_MEDIA_ALIAS}.WorkspaceAction.Download`,
+    name: 'UmbraDesktop Download beside Save',
+    weight: 1200,
+    api: () => import('./file-tools/file-tools.actions.js').then((m) => ({ api: m.UmbraDesktopFileToolWorkspaceAction })),
+    meta: { label: '#umbraDesktopMedia_download', look: 'secondary', umbraDesktopTool: 'download' },
+    conditions: [inMediaWorkspace, ...onDesktopWithMedia, holdsAFile],
+  } as never,
+  {
+    type: 'workspaceAction',
+    alias: FILE_ACTIONS,
+    name: 'UmbraDesktop File actions beside Save',
+    weight: 1100,
+    element: () => import('./file-tools/file-actions.element.js'),
+    // Core makes an api for every workspace action; this one's button only opens its menu.
+    api: () => import('./file-tools/file-tools.actions.js').then((m) => ({ api: m.UmbraDesktopFileActionsApi })),
+    meta: { label: '#umbraDesktopMedia_fileActions' },
+    conditions: [inMediaWorkspace, ...onDesktopWithMedia, holdsAFile],
+  } as never,
+];
+
+/**
+ * What File actions lists (#176): Edit image, Replace file, Optimize on an image; Replace file on any
+ * other file. Workspace action menu items, so another package can add an entry with
+ * `forWorkspaceActions`. Their own conditions decide which show; the button's say there is a file.
+ */
+const footerMenu: Array<UmbExtensionManifest> = [
+  { tool: 'editImage', label: 'editImage', icon: 'icon-ruler-alt', weight: 30, extra: [{ alias: UMBRADESKTOP_IS_IMAGE_CONDITION }] },
+  { tool: 'replaceFile', label: 'replaceFile', icon: 'icon-repeat', weight: 20, extra: [] },
+  { tool: 'optimize', label: 'optimize', icon: 'icon-picture', weight: 10, extra: [{ alias: UMBRADESKTOP_IS_IMAGE_CONDITION }] },
+].map(
+  (each) =>
+    ({
+      type: 'workspaceActionMenuItem',
+      kind: 'default',
+      alias: `${UMBRADESKTOP_MEDIA_ALIAS}.WorkspaceActionMenuItem.${each.tool[0].toUpperCase()}${each.tool.slice(1)}`,
+      name: `UmbraDesktop ${each.label} under File actions`,
+      weight: each.weight,
+      forWorkspaceActions: FILE_ACTIONS,
+      api: () => import('./file-tools/file-tools.actions.js').then((m) => ({ api: m.UmbraDesktopFileToolMenuItem })),
+      meta: { label: `#umbraDesktopMedia_${each.label}`, icon: each.icon, umbraDesktopTool: each.tool },
+      conditions: each.extra,
+    }) as never,
+);
+
+/** True on the property a media item keeps its file in, `umbracoFile` (#176). */
+const fileProperty: UmbExtensionManifest = {
+  type: 'condition',
+  alias: UMBRADESKTOP_FILE_PROPERTY_CONDITION,
+  name: 'UmbraDesktop media file property',
+  api: () => import('./file-tools/file-property.condition.js'),
+};
+
+/**
+ * The same tools on the file itself (#176, research doc §4.4): the "..." beside the Image and File
+ * properties' labels, Umbraco's place for "do something to this value". On the Image Cropper and the
+ * Upload field, in the media item only, so a page's cropper gets nothing; on its file property only,
+ * and only with a file in it. Edit image and Optimize for images; Replace file where the property can
+ * be written.
+ */
+const propertyMenu: Array<UmbExtensionManifest> = [
+  { tool: 'editImage', label: 'editImage', icon: 'icon-ruler-alt', weight: 40, extra: [{ alias: UMBRADESKTOP_IS_IMAGE_CONDITION }] },
+  { tool: 'download', label: 'download', icon: 'icon-download-alt', weight: 30, extra: [] },
+  { tool: 'replaceFile', label: 'replaceFile', icon: 'icon-repeat', weight: 20, extra: [{ alias: 'Umb.Condition.Property.Writable' }] },
+  { tool: 'optimize', label: 'optimize', icon: 'icon-picture', weight: 10, extra: [{ alias: UMBRADESKTOP_IS_IMAGE_CONDITION }] },
+].map(
+  (each) =>
+    ({
+      type: 'propertyAction',
+      kind: 'default',
+      alias: `${UMBRADESKTOP_MEDIA_ALIAS}.PropertyAction.${each.tool[0].toUpperCase()}${each.tool.slice(1)}`,
+      name: `UmbraDesktop ${each.label} on the file property`,
+      weight: each.weight,
+      forPropertyEditorUis: ['Umb.PropertyEditorUi.ImageCropper', 'Umb.PropertyEditorUi.UploadField'],
+      api: () => import('./file-tools/file-tools.actions.js').then((m) => ({ api: m.UmbraDesktopFileToolPropertyAction })),
+      meta: { label: `#umbraDesktopMedia_${each.label}`, icon: each.icon, umbraDesktopTool: each.tool },
+      conditions: [
+        inMediaWorkspace,
+        ...onDesktopWithMedia,
+        { alias: UMBRADESKTOP_FILE_PROPERTY_CONDITION },
+        { alias: 'Umb.Condition.Property.HasValue' },
+        ...each.extra,
+      ],
+    }) as never,
+);
 
 /**
  * The add-on's desktop context: the clipboard every manager window shares, and the operations they
@@ -379,6 +512,11 @@ export const manifests: Array<UmbExtensionManifest> = [
   context,
   openInNewWindow,
   editImage,
+  editImageInManager,
+  ...footerButtons,
+  ...footerMenu,
+  fileProperty,
+  ...propertyMenu,
   cut,
   copy,
   paste,

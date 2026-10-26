@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { createServerEventRouter } from './server-event.router.js';
+import { createServerEventRouter, localChangeEvent } from './server-event.router.js';
 import type { UmbraDesktopWorkspaceSubject } from '../dirty-watcher.js';
 import type { UmbraDesktopServerStatePatch } from '../window-model.js';
 
@@ -212,4 +212,113 @@ it('says nothing when the workspace cannot be asked', async () => {
   const { instance, written } = router([t]);
   await instance.handleEvent(event());
   expect(written).to.eql([]);
+});
+
+/**
+ * An element app's subject (#176): the Image Editor holding a media item. Its unsaved work is pixels
+ * the router cannot read, so it is decided by version instead: the update date the app holds against
+ * the server's.
+ */
+function appTarget(over: { held?: string; server?: string | Error; dirty?: boolean; id?: string } = {}) {
+  const calls = { reload: 0, server: 0 };
+  const subject: UmbraDesktopWorkspaceSubject = {
+    entityType: 'media',
+    unique: 'm1',
+    reload: async () => void (calls.reload += 1),
+    getPersistedData: () => undefined,
+    getData: () => undefined,
+    version: {
+      held: () => over.held ?? 'v1',
+      server: async () => {
+        calls.server += 1;
+        if (over.server instanceof Error) throw over.server;
+        return over.server ?? 'v1';
+      },
+    },
+  };
+  return { calls, window: { id: over.id ?? 'app1', dirty: over.dirty ?? false }, subjects: [subject] };
+}
+
+/** A media event for the app's item. */
+const mediaEvent = (eventType = 'Updated') => event({ eventSource: 'Umbraco:CMS:Media', eventType, key: 'm1' });
+
+describe('an app subject', () => {
+  it("does nothing for an app subject already at the server's version", async () => {
+    const t = appTarget({ held: 'v1', server: 'v1' });
+    const { instance, written } = router([t as never]);
+    await instance.handleEvent(mediaEvent());
+    expect(t.calls.reload).to.equal(0);
+    expect(written).to.eql([]);
+  });
+
+  it('reloads a clean app window at an older version', async () => {
+    const t = appTarget({ held: 'v1', server: 'v2' });
+    const { instance, written, refreshes } = router([t as never]);
+    await instance.handleEvent(mediaEvent());
+    expect(t.calls.reload).to.equal(1);
+    expect(written).to.eql([]);
+    expect(refreshes).to.eql([
+      { id: 'app1', refreshing: true },
+      { id: 'app1', refreshing: false },
+    ]);
+  });
+
+  it('flags a dirty app window at an older version', async () => {
+    const t = appTarget({ held: 'v1', server: 'v2', dirty: true });
+    const { instance, written } = router([t as never]);
+    await instance.handleEvent(mediaEvent());
+    expect(written).to.eql([{ id: 'app1', patch: { changedElsewhere: true } }]);
+    expect(t.calls.reload).to.equal(0);
+  });
+
+  it("leaves a dirty app window alone when the server is at its version", async () => {
+    // The app saved, then the person went on editing before the event for that save arrived.
+    const t = appTarget({ held: 'v2', server: 'v2', dirty: true });
+    const { instance, written } = router([t as never]);
+    await instance.handleEvent(mediaEvent());
+    expect(written).to.eql([]);
+    expect(t.calls.reload).to.equal(0);
+  });
+
+  it('marks an app window deleted when the server says 404', async () => {
+    const t = appTarget({ server: Object.assign(new Error('gone'), { cause: { status: 404 } }), dirty: true });
+    const { instance, written } = router([t as never]);
+    await instance.handleEvent(mediaEvent());
+    expect(written).to.eql([{ id: 'app1', patch: { deleted: true } }]);
+  });
+
+  it('asks the server at most twice for a burst of events', async () => {
+    const t = appTarget({ held: 'v1', server: 'v2', dirty: true });
+    const { instance } = router([t as never]);
+    await Promise.all([instance.handleEvent(mediaEvent()), instance.handleEvent(mediaEvent()), instance.handleEvent(mediaEvent())]);
+    expect(t.calls.server).to.be.at.most(2);
+  });
+});
+
+/**
+ * A change the desktop made itself (#176), fed to the router as the server's own event would be, so
+ * windows follow a save even when the server's event connection is down.
+ */
+describe('a change made on the desktop', () => {
+  it("reads as the server's Updated event for that entity", () => {
+    expect(localChangeEvent({ entityType: 'media', unique: 'm1' }, () => '2026-10-26T12:00:00Z')).to.deep.equal({
+      eventSource: 'Umbraco:CMS:Media',
+      eventType: 'Updated',
+      key: 'm1',
+      clientTimestamp: '2026-10-26T12:00:00Z',
+    });
+    expect(localChangeEvent({ entityType: 'document', unique: 'd1' }, () => 't')?.eventSource).to.equal('Umbraco:CMS:Document');
+  });
+
+  it('is nothing for an entity type the router does not act on', () => {
+    expect(localChangeEvent({ entityType: 'member', unique: 'x' })).to.equal(undefined);
+  });
+
+  it('refreshes a clean pane showing the item, as the server event does', async () => {
+    const t = target({ dirty: false });
+    t.subjects[0].entityType = 'media';
+    const { instance } = router([t]);
+    await instance.handleEvent(localChangeEvent({ entityType: 'media', unique: 'a1' })!);
+    expect(t.calls.reload).to.equal(1);
+  });
 });

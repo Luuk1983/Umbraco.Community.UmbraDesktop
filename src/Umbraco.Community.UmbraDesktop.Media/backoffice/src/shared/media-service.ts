@@ -62,6 +62,8 @@ export interface MediaSaveRequest {
   copyOf?: string;
   /** Reset the overwritten or copied item's focal point and named crops. */
   resetFocalPoint?: boolean;
+  /** Write the file under its name with a hash of its contents, replacing an earlier one (#176). */
+  versioned?: boolean;
 }
 
 /** The part of the service's context the editor reaches for. */

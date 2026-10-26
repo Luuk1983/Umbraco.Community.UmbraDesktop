@@ -12,6 +12,7 @@ import type { CopyDeps } from './copy-media.js';
 import { extensionOf } from './extension.js';
 import { fileValueFor } from './file-value.js';
 import { wordsOf } from '../shared/words.js';
+import { contentHash, unversionedBase, versionedFileName } from '../file-menu/formats.js';
 
 /** How a save to the media library went. */
 export type MediaSaveResult =
@@ -87,6 +88,14 @@ export interface MediaSaveRequest {
    * design D8.
    */
   resetFocalPoint?: boolean;
+  /**
+   * Write the file as `<base>-ud<8 hex>.<ext>`, the hash of its contents, in place of a marker an
+   * earlier save left, the name every save over an item in the file menu writes: a picture that
+   * changed gets a new address, so no cache goes on showing the old one, and the same bytes keep the
+   * same name. Undefined is false, which saves the file under the name it has. Issue #176, for the
+   * Media add-on's Replace file; edit-image design §11.4.
+   */
+  versioned?: boolean;
 }
 
 /**
@@ -170,12 +179,13 @@ export interface SaveSteps {
 /**
  * Choose how a save goes: over `existing`, as a copy of `copyOf`, or as a plain new item, each falling
  * back to a plain new item when the item it names is gone. A refused copy is passed on rather than
- * made plain behind the person's back.
+ * made plain behind the person's back. A `versioned` request is renamed first (#176).
  * @param steps The ways it can go.
- * @param request What to save.
+ * @param original What to save.
  * @returns How it went.
  */
-export async function routeSave(steps: SaveSteps, request: MediaSaveRequest): Promise<MediaSaveResult> {
+export async function routeSave(steps: SaveSteps, original: MediaSaveRequest): Promise<MediaSaveResult> {
+  const request = original.versioned ? { ...original, file: await versionedFile(original.file) } : original;
   const { existing, copyOf } = request;
   if (existing) {
     const replaced = await steps.replace({ ...request, existing });
@@ -187,6 +197,22 @@ export async function routeSave(steps: SaveSteps, request: MediaSaveRequest): Pr
     return plain.ok ? { ...plain, copied: 'plain', notice: steps.plainCopyNotice() } : plain;
   }
   return steps.createNew(request);
+}
+
+/**
+ * A file renamed after its contents, as `versioned` asks (#176): the name it has, without an earlier
+ * save's marker, with the hash of these bytes, and its own extension. A name with no extension keeps
+ * none.
+ * @param file The file.
+ * @returns The same contents and type under the new name.
+ */
+async function versionedFile(file: File): Promise<File> {
+  const dot = file.name.lastIndexOf('.');
+  const base = dot > 0 ? file.name.slice(0, dot) : file.name;
+  const extension = dot > 0 ? file.name.slice(dot + 1) : '';
+  const hash = contentHash(new Uint8Array(await file.arrayBuffer()));
+  const name = extension ? versionedFileName(base, hash, extension) : `${unversionedBase(base)}-ud${hash}`;
+  return new File([file], name, { type: file.type, lastModified: file.lastModified });
 }
 
 /**

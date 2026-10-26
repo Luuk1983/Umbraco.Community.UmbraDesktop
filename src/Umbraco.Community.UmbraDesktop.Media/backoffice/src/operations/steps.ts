@@ -3,7 +3,7 @@ import type { UmbraDesktopMediaApi, UmbraDesktopMediaRef, UmbraDesktopMediaValue
 
 /**
  * The steps of each operation the manager runs (plan task 4.4): move, copy, trash, restore and rename,
- * one step per item, each saying which folders it changes so the windows on them reload.
+ * and Replace file's one step (#176), one step per item, each saying which folders it changes so the windows on them reload.
  */
 
 /**
@@ -137,4 +137,58 @@ export async function copyItem(api: UmbraDesktopMediaApi, item: UmbraDesktopMedi
     if (result.error) failed.push(`${child.name}: ${result.error}`);
   }
   return failed.length ? { created: [unique], error: failed.join('; ') } : { created: [unique] };
+}
+
+/** What Replace file asks of the desktop beyond the server (#176). Injectable, so a test answers. */
+export interface UmbraDesktopReplaceDeps {
+  /**
+   * The media types that take files with an extension, as Umbraco's own upload asks.
+   * @param extension The extension, lower case, without the dot.
+   * @returns Their keys.
+   */
+  accepts(extension: string): Promise<string[]>;
+  /**
+   * Save a file over an item through the media service (Services.Media's `save`).
+   * @param request The service's save request, as far as Replace file fills it.
+   * @returns Whether it went, and the reason when it did not.
+   */
+  save(request: {
+    file: File;
+    name: string;
+    folder: string | null;
+    existing: string;
+    resetFocalPoint: true;
+    versioned: true;
+  }): Promise<{ ok: boolean; message?: string }>;
+  /**
+   * Umbraco's own refusal of a file it does not take, in the person's language.
+   * @param extension The file's extension.
+   * @returns The words.
+   */
+  refusal(extension: string): string;
+}
+
+/**
+ * Put a new file into an item (#176, research doc §7). The item, its name and where it is used stay;
+ * its focal point and crops are reset, since they point at the old picture; and the file is written
+ * under its own name with a hash of its contents, so nothing cached shows the old one. A format the
+ * item's media type does not take is refused before anything is uploaded, in the words Umbraco's own
+ * upload uses for it.
+ * @param deps The media type lookup, the media service's save and Umbraco's words.
+ * @param item The item.
+ * @param file The new file.
+ * @returns The step.
+ */
+export function replaceStep(deps: UmbraDesktopReplaceDeps, item: UmbraDesktopMediaRef, file: File): UmbraDesktopOperationStep {
+  return {
+    item,
+    affects: [item.parent],
+    run: async () => {
+      const dot = file.name.lastIndexOf('.');
+      const extension = dot > 0 ? file.name.slice(dot + 1).toLowerCase() : '';
+      if (!extension || !(await deps.accepts(extension)).includes(item.mediaType)) return { error: deps.refusal(extension) };
+      const saved = await deps.save({ file, name: item.name, folder: item.parent, existing: item.unique, resetFocalPoint: true, versioned: true });
+      return saved.ok ? {} : { error: saved.message || deps.refusal(extension) };
+    },
+  };
 }

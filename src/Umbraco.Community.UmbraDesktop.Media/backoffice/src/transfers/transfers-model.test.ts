@@ -53,6 +53,12 @@ describe('the Transfers window', () => {
     expect(opensNow(transfer({ state: 'finished' }), OPEN_AFTER_MS * 5)).to.equal(false);
   });
 
+  it('names a file being replaced, and replaced (#176)', () => {
+    const replacing = transfer({ kind: 'replace', canPause: false, rows: [row('Banjo', 'running')], targetName: 'Products' });
+    expect(titleOf(replacing)).to.deep.equal({ key: 'umbraDesktopMedia_transferReplacingOne', args: ['Banjo', 'Products'] });
+    expect(titleOf({ ...replacing, state: 'finished' })).to.deep.equal({ key: 'umbraDesktopMedia_transferReplacedOne', args: ['Banjo', 'Products'] });
+  });
+
   it('names what a transfer does and where, one item and several', () => {
     expect(titleOf(transfer())).to.deep.equal({ key: 'umbraDesktopMedia_transferCopying', args: [3, 'Design'] });
     expect(titleOf(transfer({ kind: 'move', rows: [row('Banjo', 'running')] }))).to.deep.equal({ key: 'umbraDesktopMedia_transferMovingOne', args: ['Banjo', 'Design'] });

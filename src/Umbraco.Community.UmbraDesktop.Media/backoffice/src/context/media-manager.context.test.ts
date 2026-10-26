@@ -412,3 +412,78 @@ describe('undo', () => {
     expect(log).to.deep.equal(['move banjo to people', 'trash people', 'restore people to null', 'move banjo to products']);
   });
 });
+
+/**
+ * Replace file (#176) runs as an operation of the context, so it is a row in the Transfers window like a
+ * move, and says what did not go as one does. It is not undoable: Umbraco deletes the old file.
+ */
+describe('replacing a file', () => {
+  let hosts: UmbElementControllerHost[] = [];
+  afterEach(() => {
+    for (const host of hosts) host.destroy();
+    hosts = [];
+  });
+
+  /**
+   * The context with one image, Banjo, in Products.
+   * @param answer What the media service's save answers.
+   * @returns The context, what was saved, said and reloaded.
+   */
+  function context(answer: { ok: boolean; message?: string } = { ok: true }) {
+    const saved: unknown[] = [];
+    const notes: string[] = [];
+    const reloads: Array<string | null> = [];
+    const banjo = ref('banjo', 'products');
+    const api = {
+      item: async (unique: string) => (unique === 'banjo' ? { data: banjo } : { error: 'Not found' }),
+    } as unknown as UmbraDesktopMediaApi;
+    const host = new UmbElementControllerHost(document.createElement('div'));
+    hosts.push(host);
+    const ctx = new UmbraDesktopMediaManagerContext(host, {
+      api,
+      notify: (message) => notes.push(message),
+      reload: (unique) => reloads.push(unique),
+      replace: {
+        accepts: async () => ['image-type'],
+        save: async (request) => (saved.push(request), answer),
+        refusal: (extension) => `refused ${extension}`,
+      },
+    });
+    return { ctx, saved, notes, reloads };
+  }
+
+  it('saves the file into the item, reloads its folder, and follows it as a replace transfer', async () => {
+    const { ctx, saved, reloads } = context();
+    const kinds: string[] = [];
+    ctx.transfers.subscribe((list) => kinds.push(...list.map((each) => each.kind)));
+    const result = await ctx.replaceFile('banjo', new File(['x'], 'new.jpg'));
+    expect(result.succeeded.length).to.equal(1);
+    expect(saved.length).to.equal(1);
+    expect(reloads).to.include('products');
+    expect(kinds).to.include('replace');
+  });
+
+  it('says what did not go, with the reason', async () => {
+    const { ctx, notes } = context({ ok: false, message: 'Too large' });
+    const result = await ctx.replaceFile('banjo', new File(['x'], 'new.jpg'));
+    expect(result.failed.map((each) => each.reason)).to.deep.equal(['Too large']);
+    expect(notes.join()).to.contain('Too large');
+  });
+
+  it('says so when the item is gone', async () => {
+    const { ctx, saved, notes } = context();
+    const result = await ctx.replaceFile('gone', new File(['x'], 'new.jpg'));
+    expect(result.succeeded).to.deep.equal([]);
+    expect(saved).to.deep.equal([]);
+    expect(notes.length).to.equal(1);
+  });
+
+  it('is not put in the undo history', async () => {
+    const { ctx, notes, reloads } = context();
+    await ctx.replaceFile('banjo', new File(['x'], 'new.jpg'));
+    const before = { notes: notes.length, reloads: reloads.length };
+    // An empty history undoes nothing and says nothing; a recorded step would have been undone or refused.
+    await ctx.undo();
+    expect({ notes: notes.length, reloads: reloads.length }).to.deep.equal(before);
+  });
+});

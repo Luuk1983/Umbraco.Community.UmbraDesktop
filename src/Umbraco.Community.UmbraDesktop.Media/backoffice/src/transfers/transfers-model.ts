@@ -6,7 +6,7 @@
  */
 
 /** What a transfer does. */
-export type UmbraDesktopTransferKind = 'move' | 'copy' | 'trash' | 'restore' | 'rename' | 'upload';
+export type UmbraDesktopTransferKind = 'move' | 'copy' | 'trash' | 'restore' | 'rename' | 'upload' | 'replace';
 
 /** Where one item of a transfer is. */
 export type UmbraDesktopTransferRowStatus = 'waiting' | 'running' | 'done' | 'failed' | 'cancelled';
@@ -78,6 +78,7 @@ const VERBS: Readonly<Record<UmbraDesktopTransferKind, [string, string]>> = {
   restore: ['Restoring', 'Restored'],
   rename: ['Renaming', 'Renamed'],
   upload: ['Uploading', 'Uploaded'],
+  replace: ['Replacing', 'Replaced'],
 };
 
 /**

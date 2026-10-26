@@ -25,7 +25,10 @@ import type { UmbraDesktopUploadBatch } from '../upload/upload-watch.js';
 import { UmbraDesktopUndoHistory } from '../undo/history.js';
 import { stepFrom } from '../undo/inverse.js';
 import type { UmbraDesktopUndoAction, UmbraDesktopUndoStep } from '../undo/inverse.js';
-import { copySteps, moveSteps, renameStep, restoreSteps, trashSteps } from '../operations/steps.js';
+import { copySteps, moveSteps, renameStep, replaceStep, restoreSteps, trashSteps } from '../operations/steps.js';
+import type { UmbraDesktopReplaceDeps } from '../operations/steps.js';
+import type { MediaSaveRequest } from '../shared/media-service.js';
+import { UmbMediaTypeStructureRepository } from '@umbraco-cms/backoffice/media-type';
 import { UmbraDesktopMediaDragController } from '../drag/drag.controller.js';
 import { fingerprint, toPng, writeImage } from '../clipboard/os-image.js';
 import { watchBinChanges } from '../tree/bin-count.js';
@@ -35,7 +38,7 @@ import type { UmbraDesktopImageClipboard, UmbraDesktopImagePrint } from '../clip
 import type { UmbraDesktopDragWindowHandle } from '../drag/drag.controller.js';
 
 /** What an operation does, for its notice and, later, the Transfers window and undo. */
-export type UmbraDesktopMediaOperationKind = 'move' | 'copy' | 'trash' | 'restore' | 'rename';
+export type UmbraDesktopMediaOperationKind = 'move' | 'copy' | 'trash' | 'restore' | 'rename' | 'replace';
 
 
 /** How an operation is run. */
@@ -78,6 +81,8 @@ export interface UmbraDesktopMediaContextDeps {
   pageFocused?: () => boolean;
   /** What the person may reach of the media library; the current user's own unless a test's. */
   access?: () => UmbraDesktopMediaAccess | undefined;
+  /** What Replace file asks beyond the server (#176); the backoffice's and the media service's unless a test's. */
+  replace?: UmbraDesktopReplaceDeps;
 }
 
 /** The files the OS clipboard takes as a picture, by extension; anything else is not put there. */
@@ -167,6 +172,8 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
     this.#osClipboard = deps.osClipboard ?? (typeof navigator !== 'undefined' ? navigator.clipboard : undefined);
     this.#pageFocused = deps.pageFocused ?? (() => document.hasFocus());
     this.#readAccess = deps.access ?? (() => this.#userAccess);
+    this.#replace = deps.replace ?? this.#backofficeReplace();
+    this.consumeContext(UMBRADESKTOP_MEDIA_SERVICE, (service) => (this.#mediaService = service ?? undefined));
     // Umbraco's own record of what the person may reach: their media start folders, and whether they
     // may use the Media root. Every operation is refused up front outside it (rules.ts).
     this.consumeContext(UMB_CURRENT_USER_CONTEXT, (user) => {
@@ -717,7 +724,8 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
     );
     this.#transfers.followOperation(id, kind, target, handle);
     const result = await handle.done;
-    if (options.record !== false) this.#history.push(stepFrom(kind, target, result, { name: options.name }));
+    // Replace file is never recorded (#176): Umbraco deletes the old file on save, so there is nothing to go back to.
+    if (options.record !== false && kind !== 'replace') this.#history.push(stepFrom(kind, target, result, { name: options.name }));
     // Already there is no failure: a move into the folder an item is in has nothing to do.
     const leftOut = refused.filter((each) => each.reason !== 'there').map((each) => ({ item: each.item, reason: this.#refusal(each.reason) }));
     const failed = [...leftOut, ...result.failed];
@@ -729,6 +737,53 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
       );
     }
     return { ...result, failed };
+  }
+
+  /** What Replace file asks beyond the server (#176). */
+  #replace: UmbraDesktopReplaceDeps;
+
+  /** The media service (Services.Media), which Replace file saves through; undefined until found. */
+  #mediaService?: UmbraDesktopMediaService;
+
+  /**
+   * Put a new file into a media item (#176): Replace file, from the item's footer or its file
+   * property's menu. One step of its own kind, so it is a row in the Transfers window like a move or an
+   * upload, opens the window when it takes longer than two seconds, and says what did not go as they
+   * do. Not recorded for undo.
+   * @param unique The item.
+   * @param file The new file.
+   * @returns How it ended.
+   */
+  async replaceFile(unique: string, file: File): Promise<UmbraDesktopOperationResult> {
+    const { data: item, error } = await this.#api.item(unique);
+    if (!item) {
+      this.#notify(error ?? unique, this.#localize.term('umbraDesktopMedia_notDoneHeadline', 1, 1));
+      return { succeeded: [], failed: [], cancelled: false };
+    }
+    return this.#run('replace', item.parent, [replaceStep(this.#replace, item, file)], [], { record: false });
+  }
+
+  /**
+   * The real Replace file deps: core's media type structure for which types take an extension, the
+   * media service's save, and Umbraco's own words for a refused file, as its temporary file upload
+   * writes them.
+   * @returns The deps.
+   */
+  #backofficeReplace(): UmbraDesktopReplaceDeps {
+    let structure: UmbMediaTypeStructureRepository | undefined;
+    return {
+      accepts: async (extension) => {
+        const types = await (structure ??= new UmbMediaTypeStructureRepository(this)).requestMediaTypesOf({ fileExtension: extension });
+        return types.flatMap((type) => (type.unique ? [type.unique] : []));
+      },
+      save: async (request) => {
+        const service = this.#mediaService;
+        if (!service) return { ok: false, message: this.#localize.term('umbraDesktopMedia_replaceNoService') };
+        const result = await service.save(request);
+        return result.ok ? { ok: true } : { ok: false, message: result.message };
+      },
+      refusal: (extension) => `${this.#localize.term('media_disallowedFileType')}: ${extension}`,
+    };
   }
 
   /**
@@ -768,6 +823,19 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
     }
   }
 }
+
+/** The part of the media service (Services.Media) Replace file saves through, by its published alias. */
+interface UmbraDesktopMediaService extends UmbContextMinimal {
+  /**
+   * Save a file as a media item; over `existing` here.
+   * @param request What to save, with `versioned` and `resetFocalPoint` (#176).
+   * @returns How it went.
+   */
+  save(request: MediaSaveRequest): Promise<{ ok: boolean; message?: string }>;
+}
+
+/** The media service's context, by the alias Services.Media publishes. */
+const UMBRADESKTOP_MEDIA_SERVICE = new UmbraDesktopToken<UmbraDesktopMediaService>('UmbraDesktopMediaContext');
 
 /** The Media add-on's desktop context, for its windows and actions. */
 export const UMBRADESKTOP_MEDIA_MANAGER_CONTEXT = new UmbContextToken<UmbraDesktopMediaManagerContext>('UmbraDesktopMediaManagerContext');

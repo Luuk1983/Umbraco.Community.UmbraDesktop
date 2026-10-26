@@ -132,7 +132,7 @@ const IN_MANAGER = 'Umbraco.Community.UmbraDesktop.Media.Condition.InMediaManage
  * clipboard and windows. Named one by one, so an action added later has to be put on this list or
  * on the everywhere list below, and cannot slip into the Media section by default.
  */
-const MANAGER_ONLY = ['OpenInNewWindow', 'Cut', 'Copy', 'Paste', 'BulkCut', 'BulkCopy', 'CopyTo'];
+const MANAGER_ONLY = ['OpenInNewWindow', 'Cut', 'Copy', 'Paste', 'BulkCut', 'BulkCopy', 'CopyTo', 'EditImageInManager'];
 
 /**
  * The actions that show wherever core shows a media item's actions, on the desktop: Edit image (#137),
@@ -158,30 +158,140 @@ it('puts every action it registers on one of the two lists', () => {
   expect(actions().map((m) => m.alias).sort()).to.deep.equal(named.sort());
 });
 
+/** The conditions every file tool shows under (#137, #176): on the desktop, the Media section, not in the bin. */
+const ON_DESKTOP_WITH_MEDIA = ['Umbraco.Community.UmbraDesktop.Media.Condition.OnDesktop', 'Umb.Condition.SectionUserPermission', 'Umb.Condition.EntityIsNotTrashed'];
+
 /**
- * #137: Edit image on image items wherever core shows a media item's actions (the tree, the grid,
- * the table and the item's workspace), in the Media section and in Manager windows alike. So not
- * the in-manager condition: the desktop instead, the Media section as the Image Editor app has it,
- * not in the bin, and an image.
+ * The weight core's `default` workspace action kind gives an action that sets none, as the media Save
+ * does (`workspace-action/default/manifests.ts` at release-17.6.0).
  */
-it('offers Edit image on image items wherever the desktop is, not only in a manager window', () => {
-  const edit = actions().find((m) => m.alias === 'Umbraco.Community.UmbraDesktop.Media.EditImage')!;
-  expect(edit.forEntityTypes).to.deep.equal(['media']);
-  expect(edit.meta.label).to.equal('#umbraDesktopMedia_editImage');
+const CORE_DEFAULT_ACTION_WEIGHT = 1000;
+
+/** The is-image condition's alias, which with `match: 'file'` answers for other files (#176). */
+const IS_IMAGE = 'Umbraco.Community.UmbraDesktop.Media.Condition.IsImage';
+
+/**
+ * #137 and #176: Edit image on image items wherever core shows a media item's actions, in two
+ * manifests. Inside a Media Manager window it stays an image card's quick button (owner, 2026-10-26:
+ * "it's what people expect"); everywhere else it has a normal weight below every core media action on
+ * an item (Create 1200, Trash 1150, Delete 1100, Move to 700, Sort 100) and above Reload (0), so core's
+ * own card shows what core shows. The in-manager condition, asked for `outside` on the second, keeps
+ * the two from both showing.
+ */
+it('offers Edit image on image items: the quick button in a Manager window, low in the menu elsewhere', () => {
+  const find = (name: string) => byType('entityAction').find((m) => m.alias === `Umbraco.Community.UmbraDesktop.Media.${name}`) as unknown as Action & { weight: number };
+  const elsewhere = find('EditImage');
+  const inManager = find('EditImageInManager');
+  for (const edit of [elsewhere, inManager]) {
+    expect(edit.forEntityTypes).to.deep.equal(['media']);
+    expect(edit.meta.label).to.equal('#umbraDesktopMedia_editImage');
+    expect(edit.meta.icon).to.equal(app('ImageEditor')!.meta.icon);
+    const aliases = (edit.conditions ?? []).map((each) => each.alias);
+    for (const alias of [...ON_DESKTOP_WITH_MEDIA, IS_IMAGE]) expect(aliases, `${edit.alias} ${alias}`).to.include(alias);
+  }
   expect(area.editImage).to.be.a('string');
-  expect(edit.meta.icon).to.equal(app('ImageEditor')!.meta.icon);
-  const conditions = edit.conditions ?? [];
-  expect(conditions.some((each) => each.alias === IN_MANAGER)).to.equal(false);
-  expect(conditions.map((each) => each.alias)).to.deep.equal([
-    'Umbraco.Community.UmbraDesktop.Media.Condition.OnDesktop',
-    'Umb.Condition.SectionUserPermission',
-    'Umb.Condition.EntityIsNotTrashed',
-    'Umbraco.Community.UmbraDesktop.Media.Condition.IsImage',
-  ]);
-  expect(conditions.find((each) => each.alias === 'Umb.Condition.SectionUserPermission')?.match).to.equal('Umb.Section.Media');
+  expect(elsewhere.weight).to.be.below(100).and.above(0);
+  expect(inManager.weight).to.be.above(1990, 'above Cut, so it is the card quick button');
+  const managerOf = (edit: Action) => edit.conditions?.find((each) => each.alias === IN_MANAGER) as { outside?: boolean } | undefined;
+  expect(managerOf(elsewhere)?.outside).to.equal(true);
+  expect(managerOf(inManager)?.outside).to.equal(undefined);
+  expect(managerOf(inManager)).to.not.equal(undefined);
   const registered = byType('condition').map((m) => m.alias);
   expect(registered).to.include('Umbraco.Community.UmbraDesktop.Media.Condition.OnDesktop');
-  expect(registered).to.include('Umbraco.Community.UmbraDesktop.Media.Condition.IsImage');
+  expect(registered).to.include(IS_IMAGE);
+});
+
+/** A workspace action, menu item or property action, as far as the tests below read them. */
+interface FileTool {
+  alias: string;
+  type: string;
+  kind?: string;
+  weight?: number;
+  api?: unknown;
+  forWorkspaceActions?: string | string[];
+  forPropertyEditorUis?: string[];
+  meta: { label: string; icon?: string; look?: string; umbraDesktopTool: string };
+  conditions?: Array<{ alias: string; match?: string }>;
+}
+
+/** One file tool manifest by the last part of its alias. */
+const tool = (name: string) => manifests.find((m) => m.alias === `Umbraco.Community.UmbraDesktop.Media.${name}`) as unknown as FileTool;
+
+/** The media workspace, by core's workspace-alias condition. */
+const inMediaWorkspace = (each: FileTool) =>
+  each.conditions?.some((condition) => condition.alias === 'Umb.Condition.WorkspaceAlias' && condition.match === 'Umb.Workspace.Media') === true;
+
+/**
+ * #176, after the owner's second look: two buttons beside Save in the media item's footer, **Download**
+ * and **File actions**, on any item that holds a file, and none on a folder. File actions only opens a
+ * menu, so no tool is the default behind the others (owner, 2026-10-26: "Edit image is not more
+ * important than the other options").
+ */
+it("puts Download and File actions in the media item's footer, left of Save", () => {
+  const download = tool('WorkspaceAction.Download');
+  const fileActions = tool('WorkspaceAction.FileActions');
+  for (const button of [download, fileActions]) {
+    expect(button.type, button.alias).to.equal('workspaceAction');
+    // Left of Save, so Save keeps its place at the right edge: core's `default` kind gives the media
+    // Save weight 1000 (it sets none), and a higher weight sits further left (measured 2026-10-26).
+    expect(button.weight, button.alias).to.be.above(CORE_DEFAULT_ACTION_WEIGHT);
+    expect(typeof button.api, button.alias).to.equal('function');
+    expect(inMediaWorkspace(button), button.alias).to.equal(true);
+    const aliases = (button.conditions ?? []).map((each) => each.alias);
+    for (const alias of ON_DESKTOP_WITH_MEDIA) expect(aliases, `${button.alias} ${alias}`).to.include(alias);
+    const match = (button.conditions?.find((each) => each.alias === IS_IMAGE) as { match?: string } | undefined)?.match;
+    expect(match, `${button.alias} on any item with a file`).to.equal('any');
+  }
+  expect(download.weight!, 'Download first').to.be.above(fileActions.weight!);
+  expect(download.kind).to.equal('default');
+  expect(download.meta).to.include({ label: '#umbraDesktopMedia_download', look: 'secondary', umbraDesktopTool: 'download' });
+  expect(typeof (fileActions as unknown as { element?: unknown }).element, 'its own element, a menu button').to.equal('function');
+  expect(fileActions.meta.label).to.equal('#umbraDesktopMedia_fileActions');
+  expect(area.fileActions).to.be.a('string');
+  expect(manifests.some((m) => m.alias === 'Umbraco.Community.UmbraDesktop.Media.WorkspaceAction.EditImage'), 'no Edit image face any more').to.equal(false);
+});
+
+/**
+ * #176: File actions' menu: Edit image, Replace file, Optimize on an image; Replace file on any other
+ * file. Each entry is a workspace action menu item, so another package can add one.
+ */
+it('lists Edit image, Replace file and Optimize under File actions', () => {
+  const fileActionsAlias = 'Umbraco.Community.UmbraDesktop.Media.WorkspaceAction.FileActions';
+  const items = (manifests.filter((m) => m.type === 'workspaceActionMenuItem') as unknown as FileTool[]).sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
+  for (const each of items) {
+    expect(([] as string[]).concat(each.forWorkspaceActions ?? []), each.alias).to.deep.equal([fileActionsAlias]);
+    expect(each.kind, each.alias).to.equal('default');
+    expect(typeof each.api, each.alias).to.equal('function');
+    expect(area[each.meta.label.replace('#umbraDesktopMedia_', '')], each.alias).to.be.a('string');
+  }
+  expect(items.map((each) => each.meta.umbraDesktopTool)).to.deep.equal(['editImage', 'replaceFile', 'optimize']);
+  const imagesOnly = (each: FileTool) => (each.conditions ?? []).some((condition) => condition.alias === IS_IMAGE && (condition.match ?? 'image') === 'image');
+  expect(items.filter(imagesOnly).map((each) => each.meta.umbraDesktopTool)).to.deep.equal(['editImage', 'optimize']);
+});
+
+/**
+ * #176: the same tools on the file property's own "...": the Image Cropper and the Upload field, in the
+ * media item only (never on a page's cropper), on its file property only, and only with a file in it.
+ * Edit image and Optimize for images; Replace file only where the property can be written.
+ */
+it("offers the same tools on the file property's own menu, in the media item only", () => {
+  const actions = manifests.filter((m) => m.type === 'propertyAction') as unknown as FileTool[];
+  expect(actions.map((each) => each.meta.umbraDesktopTool)).to.have.members(['editImage', 'download', 'replaceFile', 'optimize']);
+  for (const each of actions) {
+    expect(each.kind, each.alias).to.equal('default');
+    expect(each.forPropertyEditorUis, each.alias).to.have.members(['Umb.PropertyEditorUi.ImageCropper', 'Umb.PropertyEditorUi.UploadField']);
+    expect(inMediaWorkspace(each), each.alias).to.equal(true);
+    const aliases = (each.conditions ?? []).map((condition) => condition.alias);
+    for (const alias of [...ON_DESKTOP_WITH_MEDIA, 'Umbraco.Community.UmbraDesktop.Media.Condition.FileProperty', 'Umb.Condition.Property.HasValue']) {
+      expect(aliases, `${each.alias} ${alias}`).to.include(alias);
+    }
+    const imagesOnly = each.meta.umbraDesktopTool === 'editImage' || each.meta.umbraDesktopTool === 'optimize';
+    expect(aliases.includes(IS_IMAGE), each.alias).to.equal(imagesOnly);
+    expect(aliases.includes('Umb.Condition.Property.Writable'), each.alias).to.equal(each.meta.umbraDesktopTool === 'replaceFile');
+  }
+  const order = [...actions].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0)).map((each) => each.meta.umbraDesktopTool);
+  expect(order).to.deep.equal(['editImage', 'download', 'replaceFile', 'optimize']);
+  expect(byType('condition').map((m) => m.alias)).to.include('Umbraco.Community.UmbraDesktop.Media.Condition.FileProperty');
 });
 
 /**

@@ -109,13 +109,14 @@ and reach its context by its alias:
 
 ## 5. Opening another app
 
-The window manager is published for one call. **This is public API**: the alias, the member and its
-behaviour are kept stable.
+The window manager is published for two calls. **This is public API**: the alias, the members and
+their behaviour are kept stable.
 
 | | |
 |---|---|
 | Context alias | `'UmbraDesktopWindowManagerContext'` |
 | `openApp(alias, options?)` | Opens the app with that manifest alias, as the launcher would, and returns `true`. Returns `false` when the current user cannot launch it, or no such app exists. `options.location` opens it at a location, handed to its element as `location` (see [Remembering where your app is](desktop-apps.md#73-remembering-where-your-app-is)); the Media Manager's "Open in new window" opens a folder this way. With `options.reuse: true`, a window of that app already at that location comes to the front instead, and a new one opens only when there is none; the Media add-on's **Edit image** opens the Image Editor this way, so an image already being edited is not opened twice. A window is found by the location its app last reported, so one that has moved on is not found. An older desktop ignores `options` |
+| `entityChanged(entityType, unique)` | Tells every window showing that entity that your package just changed it, for `media` and `document`. A clean window or item pane reloads in place, a window with unsaved changes gets the **Someone else changed this while you were editing it** banner, and an app showing it (see [When somebody else changes what your app shows](desktop-apps.md#78-when-somebody-else-changes-what-your-app-shows)) is asked by version. Call it after you save. The server's own event would do the same, but its connection can be down or late, and a window beside your save then shows the old version. The media service package calls it after every save over an item. Missing on a desktop older than 17.5, so call it as `windows.entityChanged?.(...)` |
 
 Declare the shape you use and a token with the same alias, and consume it:
 
