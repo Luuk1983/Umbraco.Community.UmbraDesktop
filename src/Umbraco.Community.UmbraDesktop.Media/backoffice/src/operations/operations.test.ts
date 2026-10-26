@@ -2,7 +2,8 @@ import { expect } from '@open-wc/testing';
 import { canReach, refusalTerm, split } from './rules.js';
 import { runOperation } from './engine.js';
 import type { UmbraDesktopOperationProgress, UmbraDesktopOperationStep } from './engine.js';
-import { copySteps, moveSteps, renameStep, restoreSteps, trashSteps } from './steps.js';
+import { copySteps, moveSteps, renameStep, replaceStep, restoreSteps, trashSteps } from './steps.js';
+import type { UmbraDesktopReplaceDeps } from './steps.js';
 import type { UmbraDesktopMediaApi, UmbraDesktopMediaDetail, UmbraDesktopMediaRef, UmbraDesktopMediaValue } from './media-api.js';
 
 /** Moving, copying, trashing, restoring and renaming media from a manager window (plan phase 4). */
@@ -293,5 +294,58 @@ describe('the operations', () => {
     await runOperation(restoreSteps(api, [ref('banjo', null)], 'products')).done;
     await runOperation([renameStep(api, ref('banjo', 'products', false, 'Banjo'), 'Banjo two')]).done;
     expect(log).to.deep.equal(['trash banjo', 'restore banjo to products', 'update banjo Banjo two']);
+  });
+});
+
+/**
+ * Replace file (#176): a new file into the same item, through the media service's save, after Umbraco's
+ * own check that the item's media type takes the file's format.
+ */
+describe('replacing a file', () => {
+  /**
+   * Stand-ins that record what was saved.
+   * @param over What differs: the types taking the extension, and the save's answer.
+   * @returns The deps and what was saved.
+   */
+  function deps(over: Partial<{ accepting: string[]; answer: { ok: boolean; message?: string } }> = {}) {
+    const saved: unknown[] = [];
+    const asked: string[] = [];
+    const fake: UmbraDesktopReplaceDeps = {
+      accepts: async (extension) => (asked.push(extension), over.accepting ?? [IMAGE_TYPE]),
+      save: async (request) => (saved.push(request), over.answer ?? { ok: true }),
+      refusal: (extension) => `Cannot upload this file, it does not have an approved file type: ${extension}`,
+    };
+    return { fake, saved, asked };
+  }
+
+  const BANJO = ref('banjo', 'products', false, 'Banjo');
+
+  it('saves the file over the item, resetting the focal point and naming the file after its contents', async () => {
+    const { fake, saved, asked } = deps();
+    const file = new File(['x'], 'new-banjo.PNG');
+    const step = replaceStep(fake, BANJO, file);
+    expect(step.affects).to.deep.equal(['products']);
+    expect(await step.run()).to.deep.equal({});
+    expect(asked).to.deep.equal(['png']);
+    expect(saved).to.deep.equal([{ file, name: 'Banjo', folder: 'products', existing: 'banjo', resetFocalPoint: true, versioned: true }]);
+  });
+
+  it("refuses a format the item's media type does not take, in Umbraco's words, before uploading", async () => {
+    const { fake, saved } = deps({ accepting: ['file-type'] });
+    const result = await replaceStep(fake, BANJO, new File(['x'], 'report.pdf')).run();
+    expect(result).to.deep.equal({ error: 'Cannot upload this file, it does not have an approved file type: pdf' });
+    expect(saved).to.deep.equal([]);
+  });
+
+  it('refuses a file without an extension', async () => {
+    const { fake, saved } = deps();
+    const result = await replaceStep(fake, BANJO, new File(['x'], 'README')).run();
+    expect(result.error).to.match(/approved file type/);
+    expect(saved).to.deep.equal([]);
+  });
+
+  it("passes the media service's reason on when the save fails", async () => {
+    const { fake } = deps({ answer: { ok: false, message: 'Too large' } });
+    expect(await replaceStep(fake, BANJO, new File(['x'], 'a.jpg')).run()).to.deep.equal({ error: 'Too large' });
   });
 });

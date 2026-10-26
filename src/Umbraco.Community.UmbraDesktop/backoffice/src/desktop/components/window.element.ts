@@ -1,4 +1,4 @@
-import type { Rect, UmbraDesktopPane, UmbraDesktopWindow } from '../types';
+import type { Rect, UmbraDesktopAppSubject, UmbraDesktopPane, UmbraDesktopWindow } from '../types';
 import type { UmbraDesktopResizeEdges } from '../window-model';
 import { clampResizeOrigin, clampWindowPosition, isResizable, resizeRect, restoreDragPosition, windowName } from '../window-model';
 import { startFrameWatches, UmbraDesktopFrameThemeController } from '../frame-watches.js';
@@ -609,8 +609,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    *
    * The app-window half of what the frame's dirty watch does for an iframe, and it lands on the
    * same `setDirty`, which is the point: the titlebar marker, the taskbar marker and the close guard
-   * need no idea which kind of window they are guarding. No subjects to report, since an app's work
-   * is not a document the server can change underneath it.
+   * need no idea which kind of window they are guarding. What the app shows, if anything the server
+   * can change, comes separately with {@link #onAppSubject} (#176).
    * @param event The host's report.
    */
   #onAppDirty = (event: CustomEvent<{ dirty: boolean }>) => {
@@ -1222,6 +1222,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         @umbradesktop-close-request=${this.#onAppCloseRequest}
         @umbradesktop-app-tasks=${this.#onAppTasks}
         @umbradesktop-app-location=${this.#onAppLocation}
+        @umbradesktop-app-subject=${this.#onAppSubject}
         @umbradesktop-app-title=${this.#onAppTitle}
         @umbradesktop-app-focus=${this.#onAppFocus}
         .attached=${w.owner ? undefined : this._attached}
@@ -1248,6 +1249,38 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     const location = (event as CustomEvent<{ location?: unknown }>).detail?.location;
     const w = this.window;
     if (w && typeof location === 'string') this.#manager?.setLocation(w.id, location);
+  };
+
+  /**
+   * Records which entity an app says it shows (#176), as a subject the server-event router matches
+   * events against: the app's half of what the frame's dirty watch reports for a backoffice page.
+   * The router decides an app's subject by version (`version` on the subject), since the app's
+   * unsaved work is nothing it can compare, and the banner's Discard mine calls the app's `reload`.
+   * Null clears it. A detail that is not a subject or null is ignored. Stopped here for the reason
+   * {@link #onAppLocation} gives.
+   * @param event The app's {@link UMBRADESKTOP_APP_SUBJECT_EVENT}.
+   */
+  #onAppSubject = (event: Event): void => {
+    event.stopPropagation();
+    const w = this.window;
+    const detail = (event as CustomEvent<{ subject?: unknown }>).detail;
+    if (!w || !detail || !('subject' in detail)) return;
+    const subject = detail.subject as UmbraDesktopAppSubject | null;
+    if (subject === null) {
+      this.#manager?.setSubjects(w.id, []);
+      return;
+    }
+    if (!isAppSubject(subject)) return;
+    this.#manager?.setSubjects(w.id, [
+      {
+        entityType: subject.entityType,
+        unique: subject.unique,
+        reload: () => subject.reload(),
+        getPersistedData: () => undefined,
+        getData: () => undefined,
+        version: { held: () => subject.version(), server: () => subject.serverVersion() },
+      },
+    ]);
   };
 
   /**
@@ -2216,4 +2249,24 @@ declare global {
   interface HTMLElementTagNameMap {
     'umbradesktop-window': UmbraDesktopWindowElement;
   }
+}
+
+/**
+ * Whether a reported subject has every member the desktop calls, so a malformed report is ignored
+ * rather than failing later inside the server-event router.
+ * @param subject What the app sent.
+ * @returns True for a usable subject.
+ */
+function isAppSubject(subject: unknown): subject is UmbraDesktopAppSubject {
+  const s = subject as Partial<UmbraDesktopAppSubject> | null;
+  return (
+    !!s &&
+    typeof s === 'object' &&
+    typeof s.entityType === 'string' &&
+    typeof s.unique === 'string' &&
+    !!s.unique &&
+    typeof s.version === 'function' &&
+    typeof s.serverVersion === 'function' &&
+    typeof s.reload === 'function'
+  );
 }

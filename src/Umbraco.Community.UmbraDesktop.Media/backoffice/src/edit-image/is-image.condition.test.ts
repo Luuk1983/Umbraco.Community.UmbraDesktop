@@ -3,7 +3,7 @@ import { UmbElementControllerHost } from '@umbraco-cms/backoffice/controller-api
 import { UmbEntityContext } from '@umbraco-cms/backoffice/entity';
 import { UmbEntityContentTypeEntityContext } from '@umbraco-cms/backoffice/content-type';
 import { UmbraDesktopIsImageCondition } from './is-image.condition.js';
-import { clearImageTypeCache, isImageMediaTypeCached } from './image-type.js';
+import { clearImageTypeCache, isImageMediaTypeCached, mediaFileKindCached } from './image-type.js';
 import type { ImageLookups } from './image-type.js';
 
 /** Media types as the server describes them: which data type each one's `umbracoFile` uses. */
@@ -256,4 +256,60 @@ it('decides again when its host connects', async () => {
   host.hostConnected();
   for (let tick = 0; tick < 10; tick++) await new Promise((resolve) => setTimeout(resolve, 5));
   expect(permitted).to.equal(true);
+});
+
+/**
+ * The same condition asked for `match: 'file'` (#176): what puts Download, rather than Edit image, as
+ * the face of the item's footer button. A file that is not an image, never a folder.
+ */
+describe('the is-image condition matching other files', () => {
+  /**
+   * Evaluate with `match: 'file'`.
+   * @param element Where the action is.
+   * @returns Whether it is permitted.
+   */
+  async function evaluateFile(element: HTMLElement): Promise<boolean> {
+    const { host } = hostUnder(element);
+    let permitted = false;
+    const condition = new UmbraDesktopIsImageCondition(host, {
+      host,
+      config: { alias: 'Umbraco.Community.UmbraDesktop.Media.Condition.IsImage', match: 'file' } as never,
+      onChange: (value) => (permitted = value),
+    });
+    host.hostConnected();
+    for (let tick = 0; tick < 10; tick++) await new Promise((resolve) => setTimeout(resolve, 5));
+    return permitted && condition.permitted;
+  }
+
+  it('permits a File item', async () => {
+    expect(await evaluateFile(card('file', 'report'))).to.equal(true);
+  });
+
+  it('permits an SVG item', async () => {
+    expect(await evaluateFile(card('svg', 'logo'))).to.equal(true);
+  });
+
+  it('refuses an image', async () => {
+    expect(await evaluateFile(card('image'))).to.equal(false);
+  });
+
+  it('refuses a folder', async () => {
+    expect(await evaluateFile(card('folder', 'holidays'))).to.equal(false);
+  });
+
+  it('refuses a media type it cannot read, and asks again next time', async () => {
+    expect(await evaluateFile(card('unknown', 'x'))).to.equal(false);
+    expect(await evaluateFile(card('unknown', 'y'))).to.equal(false);
+    expect(asked.types.filter((each) => each === 'unknown').length).to.equal(2);
+  });
+});
+
+describe('mediaFileKindCached', () => {
+  it('names each kind', async () => {
+    expect(await mediaFileKindCached(LOOKUPS, 'image')).to.equal('image');
+    expect(await mediaFileKindCached(LOOKUPS, 'photo')).to.equal('image');
+    expect(await mediaFileKindCached(LOOKUPS, 'file')).to.equal('file');
+    expect(await mediaFileKindCached(LOOKUPS, 'folder')).to.equal('none');
+    expect(await mediaFileKindCached(LOOKUPS, 'unknown')).to.equal('none');
+  });
 });

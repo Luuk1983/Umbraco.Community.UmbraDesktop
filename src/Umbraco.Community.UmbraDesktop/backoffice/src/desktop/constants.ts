@@ -426,6 +426,16 @@ export const UMBRADESKTOP_APP_LOCATION_EVENT = 'umbradesktop-app-location';
 export const UMBRADESKTOP_APP_TITLE_EVENT = 'umbradesktop-app-title';
 
 /**
+ * The event an app element dispatches to say which entity it shows, with `{ subject }` in `detail`
+ * (an `UmbraDesktopAppSubject` from `types.ts`, or null for nothing), bubbling and composed (#176). The desktop
+ * then treats the window as it treats a backoffice window showing that entity: when the server says
+ * the entity changed, a clean app is asked to reload and a dirty one gets the changed-elsewhere
+ * banner, whose Keep my changes and Discard mine, load theirs work as they do for a page; deleted, it
+ * gets the deleted banner. Public contract for any app, documented in `docs/developer/desktop-apps.md`.
+ */
+export const UMBRADESKTOP_APP_SUBJECT_EVENT = 'umbradesktop-app-subject';
+
+/**
  * The event an app element dispatches to show a backoffice page beside its own window (#144), with
  * `{ key, path, name, icon, floating? }` in `detail`, bubbling and composed. One page per key: the same
  * key again routes the open page's frame, so a workspace holding unsaved changes asks first, inside

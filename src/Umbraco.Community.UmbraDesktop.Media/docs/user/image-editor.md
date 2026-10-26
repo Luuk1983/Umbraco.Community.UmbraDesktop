@@ -33,10 +33,17 @@ With nothing open, the editor shows **Open an image**. Once an image is open, se
 
 ## Open an image from the media library
 
-To edit an image you are looking at in the media library, open its actions menu (**...**) and select
-**Edit image**. The Image Editor opens in its own window with that image. It works in the Media
-section, in a Media Manager window and on the image's own page, in the tree, the grid and the list.
-If an editor window already has that image open, that window comes to the front instead.
+To edit an image you are looking at in the media library, open it and select **Edit image**, left of
+**Save** at the bottom of its page. The Image Editor opens in its own window with that image. If an
+editor window already has that image open, that window comes to the front instead.
+
+**Edit image** is in a few more places:
+
+- In a Media Manager window, it is the button on an image's card.
+- In an image's actions menu (**...**), in the tree, the grid and the list, in the Media section too.
+- In the **...** beside the image's **Image** property.
+
+The same places have the file's other tools: see [What you can do with a file](media-item.md).
 
 To edit an image a page uses, start from the page:
 
@@ -49,6 +56,16 @@ bin. It is on the desktop only: the backoffice without the desktop does not show
 
 An editor window reopens at the image it had after the browser reloads. Unsaved changes are lost on a
 reload, as they are in any window.
+
+## When someone else saves the image
+
+When the image you have open is saved somewhere else, by another window or another person, the editor
+follows:
+
+- With no unsaved changes, it opens the new picture by itself.
+- With unsaved changes, its window says **Someone else changed this while you were editing it**.
+  Select **Discard mine, load theirs** to open their picture, or **Keep my changes** to carry on.
+  When you then save, the editor asks before it writes over their version.
 
 ## What the editor opens
 

@@ -6,19 +6,27 @@ import type { UmbEntityContext } from '@umbraco-cms/backoffice/entity';
 import { UMB_ENTITY_CONTENT_TYPE_ENTITY_CONTEXT } from '@umbraco-cms/backoffice/content-type';
 import type { UmbEntityContentTypeEntityContext } from '@umbraco-cms/backoffice/content-type';
 import { observeMultiple } from '@umbraco-cms/backoffice/observable-api';
-import { backofficeLookups, isImageMediaTypeCached } from './image-type.js';
+import { backofficeLookups, mediaFileKindCached } from './image-type.js';
 import type { ImageLookups } from './image-type.js';
 import { contextNow } from './context-now.js';
 import { UMBRADESKTOP_IS_IMAGE_CONDITION } from './constants.js';
 
 export { UMBRADESKTOP_IS_IMAGE_CONDITION };
 
-/** What the condition can be told: nothing beyond its alias. */
-export type UmbraDesktopIsImageConditionConfig = UmbConditionConfigBase<typeof UMBRADESKTOP_IS_IMAGE_CONDITION>;
+/** What the condition can be told. */
+export interface UmbraDesktopIsImageConditionConfig extends UmbConditionConfigBase<typeof UMBRADESKTOP_IS_IMAGE_CONDITION> {
+  /**
+   * Which kind of file permits: `image` (the default) for an image type, `file` for a media type that
+   * holds any other file, never a folder. `file` is what puts Download as the face of the item's
+   * footer button where Edit image does not apply (#176).
+   */
+  match?: 'image' | 'file';
+}
 
 /**
  * True for a media item whose type is an image type (design §3, condition 4): what puts Edit image on
- * a photo and not on a PDF, an SVG or a folder.
+ * a photo and not on a PDF, an SVG or a folder. With `match: 'file'`, true instead for an item that
+ * holds any other file, which is where the item's footer shows Download (#176).
  *
  * **Where the media type comes from.** Core gives a tree item, a grid card and a media workspace a
  * content-type context naming the item's media type, and that is read first: no request. Core's table
@@ -37,7 +45,7 @@ export type UmbraDesktopIsImageConditionConfig = UmbConditionConfigBase<typeof U
  * Both contexts are asked for when the condition starts and again when its host connects, because
  * the answer needed includes "none" (see `context-now.ts`) and core may create a condition before the
  * element showing the action is in the page; what they say is then observed, since a reused row or
- * card changes item. Each media type is read once for the page (`isImageMediaTypeCached`).
+ * card changes item. Each media type is read once for the page (`mediaFileKindCached`).
  */
 export class UmbraDesktopIsImageCondition
   extends UmbConditionBase<UmbraDesktopIsImageConditionConfig>
@@ -107,8 +115,8 @@ export class UmbraDesktopIsImageCondition
       return;
     }
     const mediaType = contentType && ownedBy(contentType, unique) ? contentType.getUnique() : await this.#lookups.itemMediaType(unique);
-    const image = mediaType ? await isImageMediaTypeCached(this.#lookups, mediaType) : false;
-    if (ask === this.#asks) this.permitted = image;
+    const kind = mediaType ? await mediaFileKindCached(this.#lookups, mediaType) : 'none';
+    if (ask === this.#asks) this.permitted = kind === (this.config.match ?? 'image');
   }
 }
 

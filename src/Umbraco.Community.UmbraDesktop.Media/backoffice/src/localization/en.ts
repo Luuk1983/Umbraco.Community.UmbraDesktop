@@ -103,6 +103,21 @@ export default {
     // Optimize images (#139): the bulk action. The window it opens is the media service's, in its own words.
     optimizeImages: 'Optimize images',
 
+    // The file's tools on a media item (#176): the footer button beside Save, its fold-out, and the
+    // file property's own menu.
+    download: 'Download',
+    replaceFile: 'Replace file',
+    optimize: 'Optimize',
+    noFileToDownload: '%0% has no file to download.',
+    replaceSaveFirstHeadline: 'Save your changes first?',
+    replaceSaveFirst: '%0% has changes that are not saved. Save them before replacing the file? Otherwise saving them later would put the old file back.',
+    replaceSaveFirstConfirm: 'Save',
+    replaceNoService: 'The media service is not installed, so the file cannot be replaced.',
+    transferReplacing: 'Replacing the files of %0% items in %1%',
+    transferReplacingOne: 'Replacing the file of %0% in %1%',
+    transferReplaced: 'Replaced the files of %0% items in %1%',
+    transferReplacedOne: 'Replaced the file of %0% in %1%',
+
     // The mode bar, and the heading over Open on the empty canvas.
     undo: 'Undo',
     redo: 'Redo',

@@ -385,6 +385,25 @@ export interface UmbraDesktopPane {
   location?: string;
 }
 
+/**
+ * What an element app shows that the server can change underneath it (#176), reported with
+ * `UMBRADESKTOP_APP_SUBJECT_EVENT`. The Image Editor's is the media item it has open. Versions are
+ * whatever the entity's management API stamps on a change (a media item's update date); the desktop
+ * only compares them.
+ */
+export interface UmbraDesktopAppSubject {
+  /** The entity type, e.g. `media`. */
+  entityType: string;
+  /** The entity's key: the GUID Umbraco's server events carry. */
+  unique: string;
+  /** The version the app holds: what it opened, or last saved. Read whenever a server event arrives. */
+  version(): string | null | undefined;
+  /** The version on the server now. Rejects with an error whose `cause.status` is 404 when it is gone. */
+  serverVersion(): Promise<string | null | undefined>;
+  /** Take the server's version, throwing away the app's own work on it: the app opens it again. */
+  reload(): Promise<void>;
+}
+
 /** Whether an app was maintainer-certified or auto-derived as an untested fallback. */
 export type UmbraDesktopConfidence = 'certified' | 'uncertified';
 

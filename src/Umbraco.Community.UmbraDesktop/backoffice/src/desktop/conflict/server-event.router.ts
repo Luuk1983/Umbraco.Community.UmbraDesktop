@@ -124,6 +124,30 @@ export function createServerEventRouter(host: UmbraDesktopRouterHost) {
   };
 
   /**
+   * Decide for an element app's subject (#176), by version rather than by data: the app's unsaved
+   * work is nothing the router can read. The server at the version the app holds is the app's own
+   * save, or nothing new, so it is left alone; that is what keeps the Image Editor from reopening its
+   * own save and losing its undo history. Newer, a clean app takes it and a dirty one is flagged.
+   * @param id The window.
+   * @param subject What it is showing, with its `version`.
+   * @param dirty Whether the window holds unsaved work, read when the event arrived.
+   */
+  const decideApp = async (id: string, subject: UmbraDesktopWorkspaceSubject, dirty: boolean): Promise<void> => {
+    const version = subject.version!;
+    let theirs: string | null | undefined;
+    try {
+      theirs = await version.server();
+    } catch (error) {
+      if (isMissing(error)) host.setServerState(id, { deleted: true });
+      return;
+    }
+    // Neither side known says nothing, as `classifyConflict` treats a side that has not arrived.
+    if (theirs == null || theirs === version.held()) return;
+    if (dirty) host.setServerState(id, { changedElsewhere: true });
+    else await refresh(id, subject);
+  };
+
+  /**
    * Run `classify` for a window, coalescing anything that arrives while it is in flight.
    * @param id The window.
    * @param subject What it is showing.
@@ -136,9 +160,13 @@ export function createServerEventRouter(host: UmbraDesktopRouterHost) {
     }
     const entry = { pending: false };
     inFlight.set(id, entry);
+    // An app subject is decided by version, and asks its window's dirty state afresh each time.
+    const decide = subject.version
+      ? () => decideApp(id, subject, host.windows().find((w) => w.id === id)?.dirty === true)
+      : () => classify(id, subject);
     try {
-      await classify(id, subject);
-      if (entry.pending) await classify(id, subject);
+      await decide();
+      if (entry.pending) await decide();
     } finally {
       inFlight.delete(id);
     }
@@ -174,6 +202,11 @@ export function createServerEventRouter(host: UmbraDesktopRouterHost) {
             // banner never appeared even a minute later once the editor started typing — exactly
             // the state design §3 describes.
             host.setServerState(window.id, { trashed: true });
+          }
+          if (subject.version) {
+            // An element app's subject, clean or dirty: decided by version (#176), see `decideApp`.
+            work.push(classifyCoalesced(window.id, subject));
+            continue;
           }
           if (!window.dirty) {
             // Nothing of the editor's to lose, so take the server's version in place. This is the
