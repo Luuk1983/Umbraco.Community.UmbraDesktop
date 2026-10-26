@@ -33,9 +33,9 @@ With nothing open, the editor shows **Open an image**. Once an image is open, se
 
 ## Open an image from the media library
 
-To edit an image you are looking at in the media library, open it and select **Edit image**, left of
-**Save** at the bottom of its page. The Image Editor opens in its own window with that image. If an
-editor window already has that image open, that window comes to the front instead.
+To edit an image you are looking at in the media library, open it, select **File actions** at the
+bottom of its page, then **Edit image**. The Image Editor opens in its own window with that image. If
+an editor window already has that image open, that window comes to the front instead.
 
 **Edit image** is in a few more places:
 

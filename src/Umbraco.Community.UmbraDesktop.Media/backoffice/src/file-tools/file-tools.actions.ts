@@ -15,7 +15,7 @@ interface FileToolMeta {
   umbraDesktopTool: UmbraDesktopFileTool;
 }
 
-/** The button beside Save in the media item's footer: Edit image, or Download for another file. */
+/** A plain button beside Save in the media item's footer: Download. */
 export class UmbraDesktopFileToolWorkspaceAction extends UmbWorkspaceActionBase<FileToolMeta> {
   /** Run the tool. */
   override async execute(): Promise<void> {
@@ -23,7 +23,16 @@ export class UmbraDesktopFileToolWorkspaceAction extends UmbWorkspaceActionBase<
   }
 }
 
-/** An entry in the fold-out of that button: Download, Replace file, Optimize. */
+/**
+ * File actions' api. Core makes an api for every workspace action, but File actions' button only opens
+ * its menu (`file-actions.element.ts`), whose entries run the tools.
+ */
+export class UmbraDesktopFileActionsApi extends UmbWorkspaceActionBase<never> {
+  /** Nothing: the menu's entries do the work. */
+  override async execute(): Promise<void> {}
+}
+
+/** An entry under File actions: Edit image, Replace file, Optimize. */
 export class UmbraDesktopFileToolMenuItem extends UmbWorkspaceActionMenuItemBase<FileToolMeta> {
   /** Run the tool. */
   override async execute(): Promise<void> {

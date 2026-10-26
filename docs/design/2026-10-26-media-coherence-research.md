@@ -288,9 +288,13 @@ whose "As built" section has the real run. Three things differ from this doc:
 
 - **Edit image stays the card's quick button inside a Media Manager window** (owner: "it's what
   people expect"). Elsewhere it has a normal weight below core's actions, as §4.3 and §7 say.
-- **The footer button uses core's secondary look**, not the default one, which read as a link beside
-  the green Save. It sits left of Save as §4.3 draws it, with weight 1100: the media Save takes the
-  1000 that core's `default` kind gives, so Save keeps its place at the right edge.
+- **No split button: Download and File actions.** After the first build the owner judged Edit image
+  no more important than the other tools, so §4.3's split button with Edit image as its face became
+  two buttons left of Save, on any item with a file: **Download**, and **File actions**, a button that
+  only opens a menu (Edit image, Replace file, Optimize; Replace file on other files). Less native than
+  core's split button; a custom element built from core's own parts, its entries still extensions.
+  Both sit left of Save (weights above the 1000 core's `default` kind gives the media Save), so Save
+  keeps its place at the right edge.
 - **The editor's banner comes from the app saying what it shows** (`umbradesktop-app-subject`,
   desktop-apps §7.8), not from the app raising a notice itself: the desktop's server-event router then
   decides, by version, and raises and answers the banner as it does for a page.

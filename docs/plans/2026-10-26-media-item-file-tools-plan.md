@@ -556,3 +556,15 @@ uSync exports and `TriggerDeploy.ps1` the run touched were reverted.
   item reloads because its file changed ("The picture was updated. It is already saved: you don't need
   to save the item"), covering the editor, Replace file, Optimize and other people. It would need a
   notice strip on panes (core) and would go against D7's silent refresh, so media only. Not built.
+- **Download and File actions instead of a split button (owner, 2026-10-26: "Edit image is not more
+  important than the other options").** The footer now has **Download** (core's own button, weight
+  1200) and **File actions** (weight 1100), then Save, on any item that holds a file (the is-image
+  condition's new `match: 'any'`); a folder has neither. File actions is a workspace action with an
+  element of its own (`file-tools/file-actions.element.ts`) that only opens a menu: core's chevron,
+  popover and layout, listing the workspace action menu items registered for it through core's own
+  extension initializer, so the entries stay extensions. Its entries: Edit image and Optimize (images
+  only), Replace file. A PDF's menu holds Replace file alone; the owner chose the same two buttons on
+  every item over a plain Replace file button. Label **File actions** (Dutch **Bestandsacties**):
+  Umbraco's word for menus, and it names what the entries act on. Measured in the backoffice: Banjo's
+  footer reads Download, File actions, Save; its menu Edit image, Replace file, Optimize; Edit image
+  opened the editor at Banjo and the menu closed; a folder shows only Save.

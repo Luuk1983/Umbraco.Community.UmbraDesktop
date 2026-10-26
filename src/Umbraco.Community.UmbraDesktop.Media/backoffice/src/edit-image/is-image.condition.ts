@@ -17,16 +17,17 @@ export { UMBRADESKTOP_IS_IMAGE_CONDITION };
 export interface UmbraDesktopIsImageConditionConfig extends UmbConditionConfigBase<typeof UMBRADESKTOP_IS_IMAGE_CONDITION> {
   /**
    * Which kind of file permits: `image` (the default) for an image type, `file` for a media type that
-   * holds any other file, never a folder. `file` is what puts Download as the face of the item's
-   * footer button where Edit image does not apply (#176).
+   * holds any other file, `any` for either, never a folder. `any` is what shows Download and File
+   * actions in the item's footer (#176).
    */
-  match?: 'image' | 'file';
+  match?: 'image' | 'file' | 'any';
 }
 
 /**
  * True for a media item whose type is an image type (design §3, condition 4): what puts Edit image on
  * a photo and not on a PDF, an SVG or a folder. With `match: 'file'`, true instead for an item that
- * holds any other file, which is where the item's footer shows Download (#176).
+ * holds any other file; with `match: 'any'`, for an item holding any file, which is where the item's
+ * footer shows Download and File actions (#176).
  *
  * **Where the media type comes from.** Core gives a tree item, a grid card and a media workspace a
  * content-type context naming the item's media type, and that is read first: no request. Core's table
@@ -116,7 +117,8 @@ export class UmbraDesktopIsImageCondition
     }
     const mediaType = contentType && ownedBy(contentType, unique) ? contentType.getUnique() : await this.#lookups.itemMediaType(unique);
     const kind = mediaType ? await mediaFileKindCached(this.#lookups, mediaType) : 'none';
-    if (ask === this.#asks) this.permitted = kind === (this.config.match ?? 'image');
+    const match = this.config.match ?? 'image';
+    if (ask === this.#asks) this.permitted = match === 'any' ? kind !== 'none' : kind === match;
   }
 }
 

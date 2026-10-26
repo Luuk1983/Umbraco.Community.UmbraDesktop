@@ -103,9 +103,10 @@ export default {
     // Optimize images (#139): the bulk action. The window it opens is the media service's, in its own words.
     optimizeImages: 'Optimize images',
 
-    // The file's tools on a media item (#176): the footer button beside Save, its fold-out, and the
-    // file property's own menu.
+    // The file's tools on a media item (#176): Download and File actions beside Save, File actions'
+    // menu, and the file property's own menu.
     download: 'Download',
+    fileActions: 'File actions',
     replaceFile: 'Replace file',
     optimize: 'Optimize',
     noFileToDownload: '%0% has no file to download.',

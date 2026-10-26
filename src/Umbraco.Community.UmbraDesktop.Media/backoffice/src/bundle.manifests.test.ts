@@ -222,51 +222,51 @@ const inMediaWorkspace = (each: FileTool) =>
   each.conditions?.some((condition) => condition.alias === 'Umb.Condition.WorkspaceAlias' && condition.match === 'Umb.Workspace.Media') === true;
 
 /**
- * #176: one button beside Save in the media item's footer. Its face is Edit image for an image and
- * Download for any other file, the is-image condition matching one or the other, so a folder has none.
+ * #176, after the owner's second look: two buttons beside Save in the media item's footer, **Download**
+ * and **File actions**, on any item that holds a file, and none on a folder. File actions only opens a
+ * menu, so no tool is the default behind the others (owner, 2026-10-26: "Edit image is not more
+ * important than the other options").
  */
-it("puts one button in the media item's footer: Edit image for an image, Download for another file", () => {
-  const edit = tool('WorkspaceAction.EditImage');
+it("puts Download and File actions in the media item's footer, left of Save", () => {
   const download = tool('WorkspaceAction.Download');
-  for (const face of [edit, download]) {
-    expect(face.type, face.alias).to.equal('workspaceAction');
-    expect(face.kind, face.alias).to.equal('default');
-    expect(face.meta.look, face.alias).to.equal('secondary');
+  const fileActions = tool('WorkspaceAction.FileActions');
+  for (const button of [download, fileActions]) {
+    expect(button.type, button.alias).to.equal('workspaceAction');
     // Left of Save, so Save keeps its place at the right edge: core's `default` kind gives the media
     // Save weight 1000 (it sets none), and a higher weight sits further left (measured 2026-10-26).
-    expect(face.weight, face.alias).to.be.above(CORE_DEFAULT_ACTION_WEIGHT);
-    expect(typeof face.api, face.alias).to.equal('function');
-    expect(inMediaWorkspace(face), face.alias).to.equal(true);
-    const aliases = (face.conditions ?? []).map((each) => each.alias);
-    for (const alias of ON_DESKTOP_WITH_MEDIA) expect(aliases, `${face.alias} ${alias}`).to.include(alias);
+    expect(button.weight, button.alias).to.be.above(CORE_DEFAULT_ACTION_WEIGHT);
+    expect(typeof button.api, button.alias).to.equal('function');
+    expect(inMediaWorkspace(button), button.alias).to.equal(true);
+    const aliases = (button.conditions ?? []).map((each) => each.alias);
+    for (const alias of ON_DESKTOP_WITH_MEDIA) expect(aliases, `${button.alias} ${alias}`).to.include(alias);
+    const match = (button.conditions?.find((each) => each.alias === IS_IMAGE) as { match?: string } | undefined)?.match;
+    expect(match, `${button.alias} on any item with a file`).to.equal('any');
   }
-  expect(edit.meta).to.include({ label: '#umbraDesktopMedia_editImage', umbraDesktopTool: 'editImage' });
-  expect(download.meta).to.include({ label: '#umbraDesktopMedia_download', umbraDesktopTool: 'download' });
-  const match = (face: FileTool) => (face.conditions?.find((each) => each.alias === IS_IMAGE) as { match?: string } | undefined)?.match ?? 'image';
-  expect(match(edit)).to.equal('image');
-  expect(match(download)).to.equal('file');
+  expect(download.weight!, 'Download first').to.be.above(fileActions.weight!);
+  expect(download.kind).to.equal('default');
+  expect(download.meta).to.include({ label: '#umbraDesktopMedia_download', look: 'secondary', umbraDesktopTool: 'download' });
+  expect(typeof (fileActions as unknown as { element?: unknown }).element, 'its own element, a menu button').to.equal('function');
+  expect(fileActions.meta.label).to.equal('#umbraDesktopMedia_fileActions');
+  expect(area.fileActions).to.be.a('string');
+  expect(manifests.some((m) => m.alias === 'Umbraco.Community.UmbraDesktop.Media.WorkspaceAction.EditImage'), 'no Edit image face any more').to.equal(false);
 });
 
 /**
- * #176: the rest folds out of the button, as Unpublish folds out of Save and publish. An image's
- * fold-out reads Download, Replace file, Optimize; another file's, Replace file.
+ * #176: File actions' menu: Edit image, Replace file, Optimize on an image; Replace file on any other
+ * file. Each entry is a workspace action menu item, so another package can add one.
  */
-it("folds the file's other tools out of the footer button", () => {
-  const editAlias = 'Umbraco.Community.UmbraDesktop.Media.WorkspaceAction.EditImage';
-  const downloadAlias = 'Umbraco.Community.UmbraDesktop.Media.WorkspaceAction.Download';
-  const items = manifests.filter((m) => m.type === 'workspaceActionMenuItem') as unknown as FileTool[];
-  const under = (face: string) =>
-    items
-      .filter((each) => ([] as string[]).concat(each.forWorkspaceActions ?? []).includes(face))
-      .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))
-      .map((each) => each.meta.umbraDesktopTool);
-  expect(under(editAlias)).to.deep.equal(['download', 'replaceFile', 'optimize']);
-  expect(under(downloadAlias)).to.deep.equal(['replaceFile']);
+it('lists Edit image, Replace file and Optimize under File actions', () => {
+  const fileActionsAlias = 'Umbraco.Community.UmbraDesktop.Media.WorkspaceAction.FileActions';
+  const items = (manifests.filter((m) => m.type === 'workspaceActionMenuItem') as unknown as FileTool[]).sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
   for (const each of items) {
+    expect(([] as string[]).concat(each.forWorkspaceActions ?? []), each.alias).to.deep.equal([fileActionsAlias]);
     expect(each.kind, each.alias).to.equal('default');
     expect(typeof each.api, each.alias).to.equal('function');
     expect(area[each.meta.label.replace('#umbraDesktopMedia_', '')], each.alias).to.be.a('string');
   }
+  expect(items.map((each) => each.meta.umbraDesktopTool)).to.deep.equal(['editImage', 'replaceFile', 'optimize']);
+  const imagesOnly = (each: FileTool) => (each.conditions ?? []).some((condition) => condition.alias === IS_IMAGE && (condition.match ?? 'image') === 'image');
+  expect(items.filter(imagesOnly).map((each) => each.meta.umbraDesktopTool)).to.deep.equal(['editImage', 'optimize']);
 });
 
 /**

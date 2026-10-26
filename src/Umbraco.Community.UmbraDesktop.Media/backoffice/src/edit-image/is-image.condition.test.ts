@@ -313,3 +313,33 @@ describe('mediaFileKindCached', () => {
     expect(await mediaFileKindCached(LOOKUPS, 'unknown')).to.equal('none');
   });
 });
+
+/** `match: 'any'` (#176): any item that holds a file, image or not; never a folder. What shows Download and File actions. */
+describe('the is-image condition matching any file', () => {
+  /**
+   * Evaluate with `match: 'any'`.
+   * @param element Where the action is.
+   * @returns Whether it is permitted.
+   */
+  async function evaluateAny(element: HTMLElement): Promise<boolean> {
+    const { host } = hostUnder(element);
+    let permitted = false;
+    const condition = new UmbraDesktopIsImageCondition(host, {
+      host,
+      config: { alias: 'Umbraco.Community.UmbraDesktop.Media.Condition.IsImage', match: 'any' } as never,
+      onChange: (value) => (permitted = value),
+    });
+    host.hostConnected();
+    for (let tick = 0; tick < 10; tick++) await new Promise((resolve) => setTimeout(resolve, 5));
+    return permitted && condition.permitted;
+  }
+
+  it('permits an image and a file', async () => {
+    expect(await evaluateAny(card('image'))).to.equal(true);
+    expect(await evaluateAny(card('file', 'report'))).to.equal(true);
+  });
+
+  it('refuses a folder', async () => {
+    expect(await evaluateAny(card('folder', 'holidays'))).to.equal(false);
+  });
+});

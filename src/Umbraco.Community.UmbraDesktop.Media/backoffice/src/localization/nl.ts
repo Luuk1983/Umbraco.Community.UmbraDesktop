@@ -97,6 +97,7 @@ export default {
 
     // De gereedschappen voor het bestand van een media-item (#176).
     download: 'Downloaden',
+    fileActions: 'Bestandsacties',
     replaceFile: 'Bestand vervangen',
     optimize: 'Optimaliseren',
     noFileToDownload: '%0% heeft geen bestand om te downloaden.',

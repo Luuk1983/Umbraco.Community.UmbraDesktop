@@ -235,64 +235,71 @@ const editImageInManager: UmbExtensionManifest = {
 /** In the media item's own page, core's media workspace: where every file tool lives (#176). */
 const inMediaWorkspace = { alias: 'Umb.Condition.WorkspaceAlias', match: 'Umb.Workspace.Media' };
 
-/** The two faces of the footer button (#176), which the fold-out items attach to. */
-const FOOTER_EDIT_IMAGE = `${UMBRADESKTOP_MEDIA_ALIAS}.WorkspaceAction.EditImage`;
-const FOOTER_DOWNLOAD = `${UMBRADESKTOP_MEDIA_ALIAS}.WorkspaceAction.Download`;
+/** File actions, the footer button the file's tools are listed under (#176). */
+const FILE_ACTIONS = `${UMBRADESKTOP_MEDIA_ALIAS}.WorkspaceAction.FileActions`;
+
+/** Any item that holds a file, image or not; never a folder. */
+const holdsAFile = { alias: UMBRADESKTOP_IS_IMAGE_CONDITION, match: 'any' };
 
 /**
- * The file's tools in the media item's footer (#176, research doc §4.3): one button beside Save, the
- * way core gives Save and publish its fold-out. Its face is Edit image for an image and Download for
- * any other file (the is-image condition matching one or the other, so a folder gets none); the rest
- * fold out of it. Core's secondary look, as its own non-primary footer buttons have (a document's
- * Save beside Save and publish); the default look reads as a link there.
+ * The file's tools in the media item's footer (#176): **Download** and **File actions** beside Save, on
+ * any item that holds a file. File actions only opens a menu (`file-tools/file-actions.element.ts`), so
+ * no tool is the default behind the others; the research doc's split button with Edit image as its face
+ * was replaced after the owner's second look (2026-10-26: "Edit image is not more important than the
+ * other options"). Download keeps core's own button, in its secondary look, as core's own non-primary
+ * footer buttons have.
  *
- * Weight 1100, so it sits left of Save and Save keeps its place at the footer's right edge, button or
- * no button. Core's footer draws a higher weight further left, and the media Save sets no weight, so
- * it takes the 1000 core's `default` workspace action kind gives (`workspace-action/default/manifests.ts`);
- * any weight of our own below that put the button on Save's right (measured 2026-10-26).
+ * Weights 1200 and 1100, so they sit left of Save, Download first, and Save keeps its place at the
+ * footer's right edge. Core's footer draws a higher weight further left, and the media Save sets no
+ * weight, so it takes the 1000 core's `default` workspace action kind gives
+ * (`workspace-action/default/manifests.ts`); a weight below that put a button on Save's right
+ * (measured 2026-10-26).
  */
 const footerButtons: Array<UmbExtensionManifest> = [
   {
     type: 'workspaceAction',
     kind: 'default',
-    alias: FOOTER_EDIT_IMAGE,
-    name: 'UmbraDesktop Edit image beside Save',
-    weight: 1100,
+    alias: `${UMBRADESKTOP_MEDIA_ALIAS}.WorkspaceAction.Download`,
+    name: 'UmbraDesktop Download beside Save',
+    weight: 1200,
     api: () => import('./file-tools/file-tools.actions.js').then((m) => ({ api: m.UmbraDesktopFileToolWorkspaceAction })),
-    meta: { label: '#umbraDesktopMedia_editImage', look: 'secondary', umbraDesktopTool: 'editImage' },
-    conditions: [inMediaWorkspace, ...onDesktopWithMedia, { alias: UMBRADESKTOP_IS_IMAGE_CONDITION }],
+    meta: { label: '#umbraDesktopMedia_download', look: 'secondary', umbraDesktopTool: 'download' },
+    conditions: [inMediaWorkspace, ...onDesktopWithMedia, holdsAFile],
   } as never,
   {
     type: 'workspaceAction',
-    kind: 'default',
-    alias: FOOTER_DOWNLOAD,
-    name: 'UmbraDesktop Download beside Save',
+    alias: FILE_ACTIONS,
+    name: 'UmbraDesktop File actions beside Save',
     weight: 1100,
-    api: () => import('./file-tools/file-tools.actions.js').then((m) => ({ api: m.UmbraDesktopFileToolWorkspaceAction })),
-    meta: { label: '#umbraDesktopMedia_download', look: 'secondary', umbraDesktopTool: 'download' },
-    conditions: [inMediaWorkspace, ...onDesktopWithMedia, { alias: UMBRADESKTOP_IS_IMAGE_CONDITION, match: 'file' }],
+    element: () => import('./file-tools/file-actions.element.js'),
+    // Core makes an api for every workspace action; this one's button only opens its menu.
+    api: () => import('./file-tools/file-tools.actions.js').then((m) => ({ api: m.UmbraDesktopFileActionsApi })),
+    meta: { label: '#umbraDesktopMedia_fileActions' },
+    conditions: [inMediaWorkspace, ...onDesktopWithMedia, holdsAFile],
   } as never,
 ];
 
 /**
- * What folds out of the footer button (#176): an image's reads Download, Replace file, Optimize; any
- * other file's, Replace file, since Download is its face and Optimize is for images.
+ * What File actions lists (#176): Edit image, Replace file, Optimize on an image; Replace file on any
+ * other file. Workspace action menu items, so another package can add an entry with
+ * `forWorkspaceActions`. Their own conditions decide which show; the button's say there is a file.
  */
 const footerMenu: Array<UmbExtensionManifest> = [
-  { tool: 'download', label: 'download', icon: 'icon-download-alt', weight: 30, under: [FOOTER_EDIT_IMAGE] },
-  { tool: 'replaceFile', label: 'replaceFile', icon: 'icon-repeat', weight: 20, under: [FOOTER_EDIT_IMAGE, FOOTER_DOWNLOAD] },
-  { tool: 'optimize', label: 'optimize', icon: 'icon-picture', weight: 10, under: [FOOTER_EDIT_IMAGE] },
+  { tool: 'editImage', label: 'editImage', icon: 'icon-ruler-alt', weight: 30, extra: [{ alias: UMBRADESKTOP_IS_IMAGE_CONDITION }] },
+  { tool: 'replaceFile', label: 'replaceFile', icon: 'icon-repeat', weight: 20, extra: [] },
+  { tool: 'optimize', label: 'optimize', icon: 'icon-picture', weight: 10, extra: [{ alias: UMBRADESKTOP_IS_IMAGE_CONDITION }] },
 ].map(
   (each) =>
     ({
       type: 'workspaceActionMenuItem',
       kind: 'default',
       alias: `${UMBRADESKTOP_MEDIA_ALIAS}.WorkspaceActionMenuItem.${each.tool[0].toUpperCase()}${each.tool.slice(1)}`,
-      name: `UmbraDesktop ${each.label} in the footer button's menu`,
+      name: `UmbraDesktop ${each.label} under File actions`,
       weight: each.weight,
-      forWorkspaceActions: each.under,
+      forWorkspaceActions: FILE_ACTIONS,
       api: () => import('./file-tools/file-tools.actions.js').then((m) => ({ api: m.UmbraDesktopFileToolMenuItem })),
       meta: { label: `#umbraDesktopMedia_${each.label}`, icon: each.icon, umbraDesktopTool: each.tool },
+      conditions: each.extra,
     }) as never,
 );
 

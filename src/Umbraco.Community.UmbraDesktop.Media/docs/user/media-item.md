@@ -16,10 +16,9 @@ recycle bin.
 
 ## Where the tools are
 
-- **Beside Save.** At the bottom of the item's page, the button left of **Save** is **Edit image** on
-  an image and **Download** on any other file. Select its arrow for the rest: **Download**,
-  **Replace file** and **Optimize** on an image, **Replace file** on another file. A folder has no
-  file, so it has no button.
+- **Beside Save.** At the bottom of the item's page, left of **Save**, are **Download** and **File
+  actions**. **File actions** opens a menu with **Edit image**, **Replace file** and **Optimize** on an
+  image, and **Replace file** on any other file. A folder has no file, so it has neither.
 - **On the file itself.** The **...** beside the **Image** or **File** property's name has the same
   tools.
 - **In the item's menus.** **Edit image** is also in an image's actions menu (**...**) in the tree, the
@@ -30,8 +29,9 @@ Media section.
 
 ## Edit an image
 
-Select **Edit image**. The [Image Editor](image-editor.md) opens in its own window with the image. If
-an editor already has that image open, that window comes to the front instead.
+Select **File actions**, then **Edit image**. The [Image Editor](image-editor.md) opens in its own
+window with the image. If an editor already has that image open, that window comes to the front
+instead.
 
 ## Download a file
 
@@ -40,7 +40,7 @@ Unsaved changes on the page are not in it.
 
 ## Replace a file
 
-1. Select the arrow beside **Edit image** or **Download**, then **Replace file**. If the page has
+1. Select **File actions**, then **Replace file**. If the page has
    unsaved changes, you are asked to save them first.
 2. Pick the new file on your computer.
 
@@ -54,5 +54,5 @@ cannot go into an image. A large file shows its progress in the
 
 ## Optimize an image
 
-Select the arrow beside **Edit image**, then **Optimize**. An [Optimize images](optimize-images.md)
+Select **File actions**, then **Optimize**. An [Optimize images](optimize-images.md)
 window opens for this image, named after it, with the same settings as for many images.

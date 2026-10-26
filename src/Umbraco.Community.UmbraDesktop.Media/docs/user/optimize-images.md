@@ -19,7 +19,7 @@ progress on its taskbar button.
 3. Choose the settings, and select the green button. It says what it does, such as **Optimize 9
    images**.
 
-To optimize one image, open it and select **Optimize** under the arrow beside **Edit image**: see
+To optimize one image, open it and select **File actions**, then **Optimize**: see
 [What you can do with a file](media-item.md#optimize-an-image).
 
 You can pass the selection as it is. Folders, files that are not images, SVGs and items in the
