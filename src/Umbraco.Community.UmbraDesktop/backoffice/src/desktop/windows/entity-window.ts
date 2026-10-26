@@ -81,7 +81,8 @@ export interface UmbraDesktopEntityWindowView {
  * A window already showing this entity. By subject first, because the user very often has it open
  * in their Content window already, and a second editor on one document is the conflict the
  * overwrite guard warns about. By alias as well, to cover the gap between a window opening and its
- * frame reporting what it loaded.
+ * frame reporting what it loaded. An element app's subject never counts (#176): the Image Editor
+ * reports the media item it has open, and opening that item must still open the item.
  * @param desk The desktop.
  * @param entityType The entity type wanted.
  * @param unique The key wanted.
@@ -91,7 +92,8 @@ export function findEntityWindow(desk: UmbraDesktopEntityWindowView, entityType:
   const alias = entityWindowAlias(entityType, unique);
   for (const win of desk.getWindows()) {
     if (win.app.alias === alias) return win.id;
-    if (desk.subjectsOf(win.id).some((s) => s.entityType === entityType && s.unique === unique)) return win.id;
+    // Not an element app's subject (#176): the Image Editor showing a media item is not the item's page.
+    if (desk.subjectsOf(win.id).some((s) => !s.version && s.entityType === entityType && s.unique === unique)) return win.id;
   }
   return undefined;
 }

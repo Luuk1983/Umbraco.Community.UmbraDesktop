@@ -64,7 +64,7 @@ const REAL_DEPS: MediaContextDeps = {
   lookups: (host) => backofficeLookups(host),
 };
 
-/** As much of the desktop's window manager as a run's window needs: its published `openApp`. */
+/** As much of the desktop's window manager as the service uses: `openApp` for a run's window, `entityChanged` after a save. */
 interface UmbraDesktopWindows extends UmbContextMinimal {
   /**
    * Open an app at a location.
@@ -73,6 +73,13 @@ interface UmbraDesktopWindows extends UmbContextMinimal {
    * @returns Whether a window was opened.
    */
   openApp(alias: string, options?: { location?: string }): boolean;
+  /**
+   * Tell every window showing an entity that it just changed (#176). Optional: a desktop older than
+   * this does not have it, and its windows then follow when the server's event arrives.
+   * @param entityType The entity type.
+   * @param unique The entity's key.
+   */
+  entityChanged?(entityType: string, unique: string): void;
 }
 
 /** The desktop's window manager, by the alias it publishes (`desktop-contexts.md` §5). */
@@ -347,11 +354,18 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
    * An overwrite says the item changed (its thumbnails ask for the new address) and asks the
    * collections showing it to load again (its name may have changed too). A new item asks for its
    * folder to load again, so it shows there. A window that is a backoffice page in a frame has an event
-   * context of its own and hears none of this; the desktop's server-event router refreshes those.
+   * context of its own and hears none of this; the desktop refreshes those, told here with
+   * `entityChanged` as well as by the server's event (#176).
    * @param request What was saved.
    * @param unique The item it was saved as.
    */
   async #announce(request: MediaSaveRequest, unique: string): Promise<void> {
+    // The windows and item panes showing an overwritten item, through the desktop itself (#176): the
+    // server's event connection can be down or late, and a pane beside the save then kept the old file.
+    if (request.existing && request.existing === unique) {
+      const windows = this.#windows ?? (await this.getContext(UMBRADESKTOP_WINDOW_MANAGER).catch(() => undefined));
+      windows?.entityChanged?.('media', unique);
+    }
     let events: EventTarget | undefined;
     try {
       events = await this.getContext(UMB_ACTION_EVENT_CONTEXT);

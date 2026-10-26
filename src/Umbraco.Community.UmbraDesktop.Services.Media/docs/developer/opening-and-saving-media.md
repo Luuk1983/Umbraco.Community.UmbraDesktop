@@ -125,6 +125,7 @@ interface MediaSaveRequest {
   force?: boolean;
   copyOf?: string;
   resetFocalPoint?: boolean;
+  versioned?: boolean;
 }
 
 type MediaSaveResult =
@@ -134,7 +135,7 @@ type MediaSaveResult =
 
 | Field | Meaning |
 | --- | --- |
-| `file` | The file. Its name's extension decides the media type, as a drag and drop into the Media section does. Overwriting `existing`, give new contents a new file name: Umbraco keeps the item's file in one folder, so the same name keeps the same address, and browsers go on showing their cached copy. The file menu adds a hash of the contents, as [Use the file menu](#7-use-the-file-menu) says |
+| `file` | The file. Its name's extension decides the media type, as a drag and drop into the Media section does. Overwriting `existing`, give new contents a new file name: Umbraco keeps the item's file in one folder, so the same name keeps the same address, and browsers go on showing their cached copy. The file menu adds a hash of the contents, as [Use the file menu](#7-use-the-file-menu) says, and `versioned` does the same for you |
 | `name` | The media item's name. It need not be the file's name |
 | `folder` | The folder a new item goes in, or `null` for the root. Ignored when `existing` is still there |
 | `existing` | The item your document came from or was last saved as. A save overwrites it instead of creating a copy. If it has been deleted or is in the recycle bin, a new item is created in `folder` |
@@ -142,6 +143,7 @@ type MediaSaveResult =
 | `force` | Overwrite `existing` even if somebody changed it since |
 | `copyOf` | Without `existing`: the item the new item is a full copy of. It takes that item's media type and every property, such as the focal point, crops and alt text, with your file in place of the old one; label properties are left out for the server to fill from the new file. If that item's media type does not take your file's format, or `folder` does not allow it, nothing is saved and `message` says why. Another file the item holds that cannot be copied is left out, and `notice` names it. If the item is gone or in the recycle bin, a plain new item is created instead, with `copied: 'plain'` and a `notice` saying so. Leave it out for a plain new item, which holds only the file |
 | `resetFocalPoint` | When overwriting `existing` or copying `copyOf`, clear the focal point and every named crop's coordinates. Send it after a crop, rotate or flip, which moves what those fractions point at. Leave it out for anything else, and they are kept |
+| `versioned` | Save the file as its name with a short hash of its contents, `beach-ud3f9a1c07.jpg`, replacing a hash an earlier save added. Changed contents get a new address, so no cache shows the old picture, and the same contents keep their name. Send it when overwriting `existing` with a file whose name may not have changed. Leave it out to save the file under its own name |
 
 A successful save can carry `notice`, something the person should know, in this package's words:
 show it where you would say "Saved". With `copyOf`, `copied` says whether the new item is a `full`

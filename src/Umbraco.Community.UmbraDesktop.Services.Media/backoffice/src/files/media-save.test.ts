@@ -85,3 +85,51 @@ describe('routing a save', () => {
     expect(plain.ran).to.deep.equal(['new']);
   });
 });
+
+/**
+ * `versioned` (#176): Replace file in the Media add-on writes the hashed name the editor's save over
+ * uses (edit-image design §11.4), so a replaced picture gets a new address and no cache shows the old.
+ */
+describe('a versioned save', () => {
+  /**
+   * The file a save hands to its step.
+   * @param request What to save.
+   * @returns The file the replace step received.
+   */
+  async function savedFile(request: MediaSaveRequest): Promise<File> {
+    let seen: File | undefined;
+    await routeSave(
+      {
+        replace: async (r) => ((seen = r.file), { ok: true, unique: 'k1' }),
+        copy: async () => null,
+        createNew: async (r) => ((seen = r.file), { ok: true, unique: 'n1' }),
+        plainCopyNotice: () => '',
+      },
+      request,
+    );
+    return seen!;
+  }
+
+  it('versioned names the file after its contents', async () => {
+    const file = await savedFile({ file: new File(['pixels'], 'beach.jpg', { type: 'image/jpeg' }), name: 'Beach', folder: null, existing: 'k1', versioned: true });
+    expect(file.name).to.match(/^beach-ud[0-9a-f]{8}\.jpg$/);
+    expect(file.type).to.equal('image/jpeg');
+  });
+
+  it('versioned replaces an earlier marker', async () => {
+    const file = await savedFile({ file: new File(['other'], 'beach-ud3f9a1c07.jpg'), name: 'Beach', folder: null, existing: 'k1', versioned: true });
+    expect(file.name).to.match(/^beach-ud[0-9a-f]{8}\.jpg$/);
+    expect(file.name).not.to.equal('beach-ud3f9a1c07.jpg');
+  });
+
+  it('same bytes, same name', async () => {
+    const a = await savedFile({ file: new File(['same'], 'a.png'), name: 'A', folder: null, existing: 'k1', versioned: true });
+    const b = await savedFile({ file: new File(['same'], 'a.png'), name: 'A', folder: null, existing: 'k1', versioned: true });
+    expect(a.name).to.equal(b.name);
+  });
+
+  it('without versioned the name is untouched', async () => {
+    const file = await savedFile({ file: new File(['pixels'], 'beach.jpg'), name: 'Beach', folder: null, existing: 'k1' });
+    expect(file.name).to.equal('beach.jpg');
+  });
+});

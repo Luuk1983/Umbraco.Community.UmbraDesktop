@@ -50,15 +50,28 @@ export const OPTIMIZE_MIN_WIDTH = 560;
  * every switch on and the larger-files warning, and Where the result goes with the used-elsewhere note
  * (594 together), and the footer (68). Without the warning it is 768. Measured, not summed, since the
  * notes wrap their own text: 2026-10-25 in Chrome, the same under every theme id. `fits.test.ts` fails
- * if it grows.
+ * if it grows at the size the window opens at.
  */
 export const OPTIMIZE_SETTINGS_HEIGHT = 824;
 
+/** The introduction above the settings at its tallest, in px: path, heading, thumbnails, two skip lines (measured 2026-10-25). */
+export const OPTIMIZE_INTRO_HEIGHT = 162;
+
+/** The footer under the settings, in px (measured 2026-10-25). */
+export const OPTIMIZE_FOOT_HEIGHT = 68;
+
+/** The least of the settings that shows between them, in px: a group's heading and its first setting. */
+export const OPTIMIZE_MIN_BODY_HEIGHT = 140;
+
 /**
- * The smallest content box the window works in: the settings at their tallest without a scroll bar.
- * The rows of a run scroll; the settings never need to.
+ * The smallest content box the window works in: the introduction and the footer, with a slice of the
+ * settings between them that scrolls, so it fits an older, lower screen (owner, 2026-10-26). It opens
+ * at {@link OPTIMIZE_CONTENT_SIZE}, where nothing scrolls; the rows of a run scroll at any size.
  */
-export const OPTIMIZE_MIN_CONTENT_SIZE = { w: OPTIMIZE_MIN_WIDTH, h: OPTIMIZE_SETTINGS_HEIGHT } as const;
+export const OPTIMIZE_MIN_CONTENT_SIZE = {
+  w: OPTIMIZE_MIN_WIDTH,
+  h: OPTIMIZE_INTRO_HEIGHT + OPTIMIZE_MIN_BODY_HEIGHT + OPTIMIZE_FOOT_HEIGHT,
+} as const;
 
 /**
  * The window's content box when it opens: wide enough for the mock's longest row ("5184 × 3456 PNG,

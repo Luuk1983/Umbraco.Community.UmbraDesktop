@@ -76,6 +76,18 @@ export interface UmbraDesktopWorkspaceSubject {
   getPersistedData: () => unknown;
   /** What the editor is holding, live. */
   getData: () => unknown;
+  /**
+   * Set by an element app's subject only, never by a frame's workspace (#176). Its presence is what
+   * marks the subject as an app's: an app's unsaved work (the Image Editor's pixels) is in nothing
+   * the router can compare, so the router decides by these two versions instead of by
+   * {@link getData} and {@link getPersistedData}, which an app subject leaves `undefined`.
+   */
+  version?: {
+    /** The version the app holds: the update date of what it opened or last saved. */
+    held(): string | null | undefined;
+    /** The server's version now. Rejects with a cause carrying `status: 404` when the entity is gone. */
+    server(): Promise<string | null | undefined>;
+  };
 }
 
 /** What a frame currently is, as far as the shell is concerned. */

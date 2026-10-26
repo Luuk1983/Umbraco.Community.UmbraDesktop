@@ -28,6 +28,8 @@ import { markupMode } from './modes/markup.js';
 import { redactMode } from './modes/redact.js';
 import { resizeMode } from './modes/resize.js';
 import { panelStyles } from './panel-styles.js';
+import { APP_SUBJECT_EVENT, backofficeServerVersion } from './subject.js';
+import type { EditorSubject, ServerVersionOf } from './subject.js';
 import { syncMarks } from './marks.js';
 import { syncRegions } from './regions.js';
 
@@ -94,7 +96,9 @@ interface OpenDocument {
  *
  * Its location is the open item's key (#137): it opens the item it is given on connect, and reports
  * the one it shows through `umbradesktop-app-location`, so Edit image finds its window and a reload
- * reopens it at that image.
+ * reopens it at that image. It also reports that item as its subject (#176, `subject.ts`), so when
+ * somebody else saves it the desktop reopens the new file in a clean editor and raises its
+ * changed-elsewhere banner on a dirty one.
  *
  * Its window's title is the open item's name, through the desktop's `umbradesktop-app-title` event, and
  * its unsaved dot is its history's, through the attribute the desktop reads (`data-umbradesktop-dirty`);
@@ -102,6 +106,12 @@ interface OpenDocument {
  */
 @customElement('umbradesktop-image-editor')
 export class UmbraDesktopImageEditorElement extends UmbLitElement {
+  /**
+   * How the editor reads an item's update date on the server, for its subject (#176). A static, so a
+   * test can answer without a server; set back afterwards.
+   */
+  static serverVersionOf: ServerVersionOf = backofficeServerVersion;
+
   /** This package's words. */
   readonly words = wordsOf(this.localize);
 
@@ -399,7 +409,34 @@ export class UmbraDesktopImageEditorElement extends UmbLitElement {
     this.toggleAttribute('data-umbradesktop-dirty', this.dirty);
     this.#sendTitle(this._document ? this._name : '');
     if (!this.#opening && !this.#keepLocation) this.#sendLocation(this._document?.unique ?? '');
+    this.#sendSubject(this._document?.unique ?? null);
     this.#syncMenu();
+  }
+
+  /** The item last reported as the editor's subject: undefined before the first report, null for none. */
+  #sentSubject?: string | null;
+
+  /**
+   * Tell the desktop which media item the editor shows, through `umbradesktop-app-subject` (#176,
+   * `docs/developer/desktop-apps.md` §7.8), whenever that changes: an open, a Save as onto a copy, and
+   * null once as it starts with nothing open. Its version is read live from the open document, so
+   * after the editor's own save the server's date is the one it holds, and its own save is not news.
+   * Reload is a fresh open of the item, which resets the history: Discard mine, load theirs.
+   * @param unique The item's key, or null with nothing open.
+   */
+  #sendSubject(unique: string | null): void {
+    if (unique === this.#sentSubject) return;
+    this.#sentSubject = unique;
+    const subject: EditorSubject | null = unique
+      ? {
+          entityType: 'media',
+          unique,
+          version: () => (this._document?.unique === unique ? this._document.updateDate : undefined),
+          serverVersion: () => UmbraDesktopImageEditorElement.serverVersionOf(this, unique),
+          reload: () => this.#openAt(unique),
+        }
+      : null;
+    this.dispatchEvent(new CustomEvent(APP_SUBJECT_EVENT, { detail: { subject }, bubbles: true, composed: true }));
   }
 
   /** Whether the item at the editor's location is still being opened, so its location is not cleared meanwhile. */

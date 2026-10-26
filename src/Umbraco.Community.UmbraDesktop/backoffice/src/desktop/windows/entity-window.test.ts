@@ -74,6 +74,13 @@ describe('findEntityWindow', () => {
     expect(findEntityWindow(desk([win('w2', entityWindowAlias('document', KEY))]), 'document', KEY)).to.equal('w2');
   });
 
+  it('findEntityWindow ignores app subjects', () => {
+    // The Image Editor reports the media item it has open (#176); opening that item must still open
+    // the item's own page, not bring the editor forward.
+    const editor = { entityType: 'media', unique: KEY, version: { held: () => 'v1', server: async () => 'v1' } } as unknown as UmbraDesktopWorkspaceSubject;
+    expect(findEntityWindow(desk([win('w4', 'image-editor')], { w4: [editor] }), 'media', KEY)).to.equal(undefined);
+  });
+
   it('does not mistake media for a document with the same key', () => {
     expect(findEntityWindow(desk([win('w3', entityWindowAlias('media', KEY))]), 'document', KEY)).to.equal(undefined);
   });
