@@ -184,14 +184,17 @@ happened after the beta and omit the entire feature line. Hand-curate the body o
 release that had a prerelease before it.
 
 The generated notes list pull request titles, grouped by `.github/release.yml` into new features, bug
-fixes, documentation and other changes. A pull request lands in a group by its `enhancement`, `bug`
-or `documentation` label, which `.github/workflows/sync-release-labels.yml` copies from the issue it
-closes when it merges. So that it does:
+fixes, changes for developers, documentation and other changes. A pull request lands in a group by
+its `enhancement`, `bug`, `developer` or `documentation` label, and is left out by `devops`.
+`.github/workflows/sync-release-labels.yml` copies these from the issue it closes when it merges. So
+that it does:
 
 - Link the issue, with "Closes #123" in the body or the Development sidebar. A bare mention is not a
   link.
+- `developer` is for what people building on UmbraDesktop need and users never see: a new extension
+  point, a changed API. `devops` is for what neither would read about: CI, builds, tooling.
 - A pull request with no issue needs its type label by hand, or `ignore-for-release` when a reader of
-  the notes would not care: CI, tests, screenshots, merging a release branch back. Anything left
+  the notes would not care: tests, screenshots, merging a release branch back. Anything left
   unlabelled shows up under **Other changes**, so a missed one is visible in the draft.
 
 The version label (`release/vX.Y.Z`) is for filtering issues, not for the notes, which come from the

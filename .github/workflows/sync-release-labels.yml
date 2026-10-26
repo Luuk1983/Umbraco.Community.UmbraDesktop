@@ -7,9 +7,9 @@ name: Sync release labels
 #
 # - `release/*` from the pull request to the issue, so labelling either one when the version is
 #   known keeps the issue filter complete. The issue is the place releases are filtered.
-# - `bug`, `enhancement` or `documentation` from the issue to the pull request, but only when the
-#   pull request has none of them, so `.github/release.yml` can sort the generated notes without
-#   labelling the same change twice.
+# - `bug`, `enhancement`, `developer`, `documentation` or `devops` from the issue to the pull
+#   request, but only when the pull request has none of them, so `.github/release.yml` can sort the
+#   generated notes, or leave a `devops` change out of them, without labelling the same change twice.
 #
 # Only linked issues count: "Closes #123" in the body or the Development sidebar. A mention of the
 # number in the text is not a link, which is the other half of how #115 was missed.
@@ -35,8 +35,11 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
-            /** The labels that sort a change in the release notes, in the order release.yml lists them. */
-            const typeLabels = ['enhancement', 'bug', 'documentation'];
+            /**
+             * The labels that sort a change in the release notes, in the order release.yml lists
+             * them, then `devops`, which release.yml excludes from the notes instead.
+             */
+            const typeLabels = ['enhancement', 'bug', 'developer', 'documentation', 'devops'];
             const { owner, repo } = context.repo;
             const pr = context.payload.pull_request;
             const prLabels = pr.labels.map((label) => label.name);
