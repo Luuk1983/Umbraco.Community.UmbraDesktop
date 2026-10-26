@@ -3,6 +3,13 @@
 An OS-style windowed desktop for the Umbraco backoffice, shipped as an Umbraco package. The
 backoffice extension is TypeScript and Lit; the C# project exists to package and serve it.
 
+**Build and test against the floor, run against the newest.** The frontends pin
+`@umbraco-cms/backoffice` to the Umbraco floor (17.6.0) and `@umbraco-ui/uui` to the 2.0.2 it was
+built with, and the C# projects restore the floor, so tests and `tsc` see the oldest backoffice the
+packages allow; CI's "Frontend on the latest Umbraco 17" job and the test instance cover the newest
+17. When you read core's code to decide something, read it at the floor's tag (`release-17.6.0`),
+not the newest. `RELEASE.md` ("The Umbraco floor") says what to raise with the floor.
+
 ## Layout
 
 ```

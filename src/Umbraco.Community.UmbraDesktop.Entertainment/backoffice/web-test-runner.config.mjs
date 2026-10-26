@@ -24,4 +24,11 @@ export default {
     <script type="module" src="${testFramework}"></script>
   </body>
 </html>`,
+  // One test file at a time, as in the other five packages. The runner puts concurrent files in
+  // background tabs, where Chrome gives no animation frames and throttles timers. The media
+  // player's layout tests (control-bar and player), the games' elements and umbraCoffee's then time
+  // out whenever their file is not the one in front, while passing alone: on 17.6.0 and on 17.6.2
+  // alike, so it is not the floor. CI runs this same command (.github/actions/build-packages). A
+  // --concurrency flag on the command line overrides this.
+  concurrency: 1,
 };

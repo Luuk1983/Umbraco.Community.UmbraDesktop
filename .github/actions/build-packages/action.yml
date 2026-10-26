@@ -19,11 +19,12 @@ runs:
 
     # cache-dependency-path has to name every lock file: with one package.json per shipped
     # package, the default single-file lookup would key the cache on the host alone and hand the
-    # add-ons a cache that has nothing to do with them.
+    # add-ons a cache that has nothing to do with them. Node 24 because @umbraco-cms/backoffice 17.6
+    # declares node >=24.13 and npm >=11 in its engines.
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '22'
+        node-version: '24'
         cache: npm
         cache-dependency-path: |
           src/Umbraco.Community.UmbraDesktop/package-lock.json
@@ -158,6 +159,25 @@ runs:
     - name: Verify the oldest Umbraco allowed has everything the bundles import
       shell: bash
       run: node src/Umbraco.Community.UmbraDesktop/backoffice/scripts/check-umbraco-floor.mjs "${{ inputs.output }}"
+
+    # Each Umbraco major has its own branch (`main` for the newest, `v17/main` for 17), and a tag
+    # publishes whatever commit it is on, so a tag on the wrong branch would publish the wrong
+    # build: a v17 tag on `main` makes 17.x packages that are built against Umbraco 18 and that 17
+    # sites would then install. The package major always tracks the Umbraco major, so the host's
+    # version has to start with the major of the oldest Umbraco it allows. Both read from the packed
+    # host, so it holds on every branch without naming one.
+    - name: Verify the version matches the Umbraco major
+      shell: bash
+      run: |
+        shopt -s nullglob
+        hosts=("${{ inputs.output }}"/Umbraco.Community.UmbraDesktop.[0-9]*.nupkg)
+        [ "${#hosts[@]}" -eq 1 ] || { echo "::error::expected exactly one host package, found ${#hosts[@]}"; exit 1; }
+        nuspec=$(unzip -p "${hosts[0]}" '*.nuspec')
+        version=$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' <<< "$nuspec")
+        floor=$(sed -n 's:.*<dependency id="Umbraco.Cms.Core" version="\[\([^,]*\),.*:\1:p' <<< "$nuspec")
+        [ -n "$version" ] && [ -n "$floor" ] || { echo "::error::could not read the version ('$version') or the Umbraco floor ('$floor') from ${hosts[0]}"; exit 1; }
+        echo "Package $version, Umbraco floor $floor"
+        [ "${version%%.*}" = "${floor%%.*}" ] || { echo "::error::package $version is for Umbraco ${version%%.*} but is built against Umbraco $floor. Tag v${floor%%.*}.x releases from this branch, and v${version%%.*}.x from that major's own branch (RELEASE.md)"; exit 1; }
 
     # Every add-on has to require this release of the host, up to the last 17: "[<host version>,
     # 17.99999999.0]". NuGet packs a ProjectReference as a bare ">= version" with no ceiling, and the

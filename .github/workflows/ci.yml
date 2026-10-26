@@ -10,8 +10,8 @@ name: CI
 # `main` is listed literally as well as under `**/main` on purpose. `**` is documented to match
 # zero or more of any character, which leaves whether it matches an *empty* leading segment as an
 # edge case of GitHub's glob, and whether the trunk gets built is not a thing to settle on a
-# subtlety. `**/main` is for the versioned trunks that arrive when the next major ships and this
-# line continues as `v17/main`.
+# subtlety. `**/main` is for the trunks of the older Umbraco majors: `main` is always the newest,
+# and 17 continues here, on `v17/main`.
 on:
   pull_request:
     branches:
@@ -63,7 +63,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24' # @umbraco-cms/backoffice 17.6 requires node >=24.13
           cache: npm
           cache-dependency-path: |
             src/Umbraco.Community.UmbraDesktop/package-lock.json
@@ -94,3 +94,59 @@ jobs:
 
       - name: Build solution
         run: dotnet build Umbraco.Community.UmbraDesktop.app.slnx --configuration Release
+
+  # The other end of the range. Everything above runs the frontends against the Umbraco floor, which
+  # each package.json pins (RELEASE.md, "The Umbraco floor"), and the Solution job already compiles
+  # the C# against the newest 17 through the test instance's floating "17.*". This swaps each
+  # package's backoffice, and the UI library it is built on, to the newest 17 for this run only
+  # (--no-save; never --legacy-peer-deps, which prunes the peers and fails on phantom type errors),
+  # then type-checks and tests. The floor catches using something too new; this catches core
+  # changing something we rely on but are not promised, as 17.7 and 18.2 did with the media
+  # collection's placeholders (Umbraco-CMS#24088). Two points rather than every release: a break in
+  # between that both ends miss has to be introduced and fixed again within one major.
+  frontend-latest:
+    name: Frontend on the latest Umbraco 17
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24' # @umbraco-cms/backoffice 17.6 requires node >=24.13
+          cache: npm
+          cache-dependency-path: |
+            src/Umbraco.Community.UmbraDesktop/package-lock.json
+            src/Umbraco.Community.UmbraDesktop.Services.Arcade/package-lock.json
+            src/Umbraco.Community.UmbraDesktop.Services.Media/package-lock.json
+            src/Umbraco.Community.UmbraDesktop.Entertainment/package-lock.json
+            src/Umbraco.Community.UmbraDesktop.Accessories/package-lock.json
+            src/Umbraco.Community.UmbraDesktop.Media/package-lock.json
+
+      # Every package is run even when one fails, so a run reports every package that broke at once.
+      # `npm run build` rather than a bare tsc: it is tsc plus what tsc reads that the build generates.
+      - name: Type-check and test against the latest 17
+        run: |
+          failed=()
+          for package in \
+            Umbraco.Community.UmbraDesktop \
+            Umbraco.Community.UmbraDesktop.Services.Arcade \
+            Umbraco.Community.UmbraDesktop.Services.Media \
+            Umbraco.Community.UmbraDesktop.Entertainment \
+            Umbraco.Community.UmbraDesktop.Accessories \
+            Umbraco.Community.UmbraDesktop.Media; do
+            echo "::group::$package"
+            (
+              cd "src/$package" &&
+              npm ci &&
+              npm install --no-save @umbraco-cms/backoffice@17 @umbraco-ui/uui@2 &&
+              echo "Backoffice $(node -p "require('./node_modules/@umbraco-cms/backoffice/package.json').version"), UUI $(node -p "require('./node_modules/@umbraco-ui/uui/package.json').version")" &&
+              npm run build &&
+              npm test
+            ) || failed+=("$package")
+            echo "::endgroup::"
+          done
+          if [ "${#failed[@]}" -gt 0 ]; then
+            echo "::error::failed against the latest Umbraco 17: ${failed[*]}"
+            exit 1
+          fi
