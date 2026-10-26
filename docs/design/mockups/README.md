@@ -54,3 +54,7 @@ Later mockups, one set per feature, named after the design doc they belong to:
   image in its footer, the file's own menu and a File box on the Info tab, for
   [`../2026-10-26-media-coherence-research.md`](../2026-10-26-media-coherence-research.md). Generated
   from `media-item/_build/item.cjs` on the Media Manager kit.
+- **[media-health/](./media-health/)**: the shapes media cleanup could take for #141, as an app, inside
+  the Media Manager, or both, on the Media Manager kit, for
+  [`../2026-10-26-media-health-design.md`](../2026-10-26-media-health-design.md). Generated from
+  `media-health/_build/health.cjs`.
