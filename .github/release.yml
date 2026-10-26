@@ -4,14 +4,16 @@
 # title states the change ("Make the snap outline readable on any background"), and some changes,
 # umbraCoffee among them, have no issue at all.
 #
-# A pull request gets `bug` or `enhancement` from the issue it closes, copied when it merges by
-# `.github/workflows/sync-release-labels.yml`. One without an issue needs the label by hand, or
-# `ignore-for-release` when a reader of the notes would not care: CI, test, screenshot and
-# release-branch merge-back pull requests.
+# A pull request gets `bug`, `enhancement`, `developer`, `documentation` or `devops` from the issue
+# it closes, copied when it merges by `.github/workflows/sync-release-labels.yml`. One without an
+# issue needs the label by hand, or `ignore-for-release` when a reader of the notes would not care:
+# test, screenshot and release-branch merge-back pull requests. `devops` is the issue-side
+# equivalent for CI, builds and tooling, so the pull request that closes one is left out on its own.
 changelog:
   exclude:
     labels:
       - ignore-for-release
+      - devops
       - duplicate
       - invalid
       - wontfix
@@ -22,6 +24,10 @@ changelog:
     - title: Bug fixes
       labels:
         - bug
+    # What people building on UmbraDesktop need and users never see: extension points, APIs.
+    - title: For developers
+      labels:
+        - developer
     - title: Documentation
       labels:
         - documentation
