@@ -533,3 +533,26 @@ uSync exports and `TriggerDeploy.ps1` the run touched were reverted.
   rename, already).
 - **A media type's second Image Cropper or Upload field** gets no tools, by design (`umbracoFile`
   only).
+
+### After the owner's first look (2026-10-26)
+
+- **The item pane kept the old picture after an Image Editor save**, while the Manager's card took the
+  new one. The card is told by Services.Media's save directly; a backoffice page in a pane or window
+  only followed the server's event over SignalR. Measured headless: with the hub blocked, the pane kept
+  `…-ud546a3aa5.webp` while the server had the new file; with the hub up it followed. Fixed by telling
+  the desktop directly: the window manager's new public `entityChanged(entityType, unique)` feeds the
+  server-event router as the server's own `Updated` event would (`localChangeEvent`), and
+  Services.Media calls it after every save over an item (the editor's, Replace file's, an Optimize
+  run's). Measured again with the hub blocked: the pane moved to the new file within 1.5 s. Documented
+  in `desktop-contexts.md` §5.
+- **The Optimize window could not be made lower** than the settings at their tallest (824 px of
+  content). Its minimum is now the introduction, a heading and first setting, and the footer
+  (162 + 140 + 68 = 370 px); the settings scroll between them and the footer stays. `fits.test.ts`
+  checks that under every theme id, and that it still opens with nothing scrolling. Measured in the
+  desktop: at its minimum the footer is in the window and the settings scroll (165 of 570 px shown).
+- **Left out for now (owner, 2026-10-26): a message when an open media item's picture changes.**
+  Opening the editor from the item's page can make an image edit look like a change to the item that
+  still needs saving. Considered: an info strip at the top of the window or pane when a clean media
+  item reloads because its file changed ("The picture was updated. It is already saved: you don't need
+  to save the item"), covering the editor, Replace file, Optimize and other people. It would need a
+  notice strip on panes (core) and would go against D7's silent refresh, so media only. Not built.

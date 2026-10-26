@@ -1,4 +1,4 @@
-import { createServerEventRouter, type UmbraDesktopServerEvent } from './server-event.router.js';
+import { createServerEventRouter, localChangeEvent, type UmbraDesktopServerEvent } from './server-event.router.js';
 import type { UmbraDesktopWindowManagerContext } from '../window-manager.context.js';
 import { UmbControllerBase } from '@umbraco-cms/backoffice/class-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
@@ -26,6 +26,15 @@ export class UmbraDesktopServerEventController extends UmbControllerBase {
   /** The router this feeds. */
   #router: ReturnType<typeof createServerEventRouter>;
 
+  /** Stops listening to changes made on the desktop. */
+  #stopLocal?: () => void;
+
+  /** Stop listening to the desktop's own changes, with the rest of the controller. */
+  override destroy(): void {
+    this.#stopLocal?.();
+    super.destroy();
+  }
+
   /**
    * @param host The desktop element.
    * @param manager The window manager, which is both the window source and the flag sink.
@@ -39,6 +48,13 @@ export class UmbraDesktopServerEventController extends UmbControllerBase {
       setServerState: (id, patch) => manager.setServerState(id, patch),
       setRefreshing: (id, refreshing) => manager.setRefreshing(id, refreshing),
     });
+    // Changes made on the desktop itself (#176), heard at once rather than only through the hub,
+    // which can be down or late.
+    const stop = manager.onEntityChanged((change) => {
+      const event = localChangeEvent(change);
+      if (event) void this.#router.handleEvent(event);
+    });
+    this.#stopLocal = stop;
     this.consumeContext(UMB_MANAGEMENT_API_SERVER_EVENT_CONTEXT, (context) => {
       if (!context) return;
       this.observe(

@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { createServerEventRouter } from './server-event.router.js';
+import { createServerEventRouter, localChangeEvent } from './server-event.router.js';
 import type { UmbraDesktopWorkspaceSubject } from '../dirty-watcher.js';
 import type { UmbraDesktopServerStatePatch } from '../window-model.js';
 
@@ -292,5 +292,33 @@ describe('an app subject', () => {
     const { instance } = router([t as never]);
     await Promise.all([instance.handleEvent(mediaEvent()), instance.handleEvent(mediaEvent()), instance.handleEvent(mediaEvent())]);
     expect(t.calls.server).to.be.at.most(2);
+  });
+});
+
+/**
+ * A change the desktop made itself (#176), fed to the router as the server's own event would be, so
+ * windows follow a save even when the server's event connection is down.
+ */
+describe('a change made on the desktop', () => {
+  it("reads as the server's Updated event for that entity", () => {
+    expect(localChangeEvent({ entityType: 'media', unique: 'm1' }, () => '2026-10-26T12:00:00Z')).to.deep.equal({
+      eventSource: 'Umbraco:CMS:Media',
+      eventType: 'Updated',
+      key: 'm1',
+      clientTimestamp: '2026-10-26T12:00:00Z',
+    });
+    expect(localChangeEvent({ entityType: 'document', unique: 'd1' }, () => 't')?.eventSource).to.equal('Umbraco:CMS:Document');
+  });
+
+  it('is nothing for an entity type the router does not act on', () => {
+    expect(localChangeEvent({ entityType: 'member', unique: 'x' })).to.equal(undefined);
+  });
+
+  it('refreshes a clean pane showing the item, as the server event does', async () => {
+    const t = target({ dirty: false });
+    t.subjects[0].entityType = 'media';
+    const { instance } = router([t]);
+    await instance.handleEvent(localChangeEvent({ entityType: 'media', unique: 'a1' })!);
+    expect(t.calls.reload).to.equal(1);
   });
 });

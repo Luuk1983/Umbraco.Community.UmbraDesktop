@@ -49,6 +49,26 @@ const HANDLED_SOURCES: ReadonlyArray<string> = ['Umbraco:CMS:Document', 'Umbraco
 /** The event types this desktop acts on. */
 const HANDLED_TYPES: ReadonlyArray<string> = ['Updated', 'Trashed', 'Deleted'];
 
+/** The event source the server uses for each entity type the router acts on. */
+const SOURCE_OF: Readonly<Record<string, string>> = { document: 'Umbraco:CMS:Document', media: 'Umbraco:CMS:Media' };
+
+/**
+ * A change made on the desktop itself, as the server's own `Updated` event for that entity (#176), so
+ * the router treats it exactly as one: a clean window showing the entity reloads, a dirty one is
+ * classified, an app's subject is decided by version. The server's event for the same change may
+ * still arrive; by then a clean window is at that version, and an app's subject finds nothing new.
+ * @param change Which entity changed.
+ * @param now The time stamp, for tests.
+ * @returns The event, or undefined for an entity type the router does not act on.
+ */
+export function localChangeEvent(
+  change: { entityType: string; unique: string },
+  now: () => string = () => new Date().toISOString(),
+): UmbraDesktopServerEvent | undefined {
+  const eventSource = SOURCE_OF[change.entityType];
+  return eventSource && change.unique ? { eventSource, eventType: 'Updated', key: change.unique, clientTimestamp: now() } : undefined;
+}
+
 /**
  * Whether a rejected fetch means the entity is gone rather than that the network is.
  *

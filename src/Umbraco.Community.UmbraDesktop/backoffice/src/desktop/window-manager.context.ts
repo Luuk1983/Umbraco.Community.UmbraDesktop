@@ -73,6 +73,14 @@ import { UmbLocalizationController } from '@umbraco-cms/backoffice/localization-
  */
 const DEFAULT_CONTENT_SIZE = { w: 800, h: 600 };
 
+/** An entity something on the desktop just changed (#176): see `entityChanged`. */
+export interface UmbraDesktopEntityChange {
+  /** The entity type, e.g. `media`. */
+  entityType: string;
+  /** The entity's key. */
+  unique: string;
+}
+
 /**
  * Owns the list of open desktop windows and the operations on it. Provided by
  * the desktop element so it is scoped to the desktop subtree.
@@ -1068,6 +1076,34 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
         .map((w) => (w.id === id ? (w.panes ?? []).reduce((acc, p) => removePane(acc, p.id), w) : w));
     }
     if (next !== current) this.#windows.setValue(next);
+  }
+
+  /** Who hears about changes made on the desktop: the server-event controller. */
+  #entityListeners = new Set<(change: UmbraDesktopEntityChange) => void>();
+
+  /**
+   * Say that something on the desktop just changed an entity, such as the Image Editor saving a media
+   * item (#176). Every window showing it then follows at once, as it would when the server's event for
+   * that change arrives: a clean window reloads in place, a dirty one gets the changed-elsewhere
+   * banner, an app showing it is asked by version. The server's event connection can be down or late,
+   * and without this a window beside the save kept the old version until it arrived. Public API, for
+   * any package that saves on the desktop (`desktop-contexts.md` §5). A change without a key is ignored.
+   * @param entityType The entity type, `media` or `document`; others are ignored.
+   * @param unique The entity's key.
+   */
+  public entityChanged(entityType: string, unique: string): void {
+    if (!unique) return;
+    for (const listener of [...this.#entityListeners]) listener({ entityType, unique });
+  }
+
+  /**
+   * Hear about changes made on the desktop ({@link entityChanged}).
+   * @param listener Told each change.
+   * @returns Call to stop hearing.
+   */
+  public onEntityChanged(listener: (change: UmbraDesktopEntityChange) => void): () => void {
+    this.#entityListeners.add(listener);
+    return () => this.#entityListeners.delete(listener);
   }
 
   /**
