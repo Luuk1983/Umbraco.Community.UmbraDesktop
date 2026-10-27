@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConnectionData, CreateConnectionErrors, CreateConnectionResponses, DeleteConnectionData, DeleteConnectionErrors, DeleteConnectionResponses, GetAppIdentityData, GetAppIdentityErrors, GetAppIdentityResponses, GetBackgroundJobsData, GetBackgroundJobsErrors, GetBackgroundJobsResponses, GetConnectionsData, GetConnectionsErrors, GetConnectionsResponses, GetConnectionStatusData, GetConnectionStatusErrors, GetConnectionStatusesData, GetConnectionStatusesErrors, GetConnectionStatusesResponses, GetConnectionStatusResponses, GetDesktopLabelData, GetDesktopLabelErrors, GetDesktopLabelResponses, GetDocsFilesData, GetDocsFilesErrors, GetDocsFilesResponses, SetAppIdentityData, SetAppIdentityErrors, SetAppIdentityResponses, SetDesktopLabelData, SetDesktopLabelErrors, SetDesktopLabelResponses, UpdateConnectionData, UpdateConnectionErrors, UpdateConnectionResponses } from './types.gen';
+import type { CreateConnectionData, CreateConnectionErrors, CreateConnectionResponses, DeleteConnectionData, DeleteConnectionErrors, DeleteConnectionResponses, GetAppIdentityData, GetAppIdentityErrors, GetAppIdentityResponses, GetBackgroundJobsData, GetBackgroundJobsErrors, GetBackgroundJobsResponses, GetConnectionsData, GetConnectionsErrors, GetConnectionsResponses, GetConnectionStatusData, GetConnectionStatusErrors, GetConnectionStatusesData, GetConnectionStatusesErrors, GetConnectionStatusesResponses, GetConnectionStatusResponses, GetDesktopLabelData, GetDesktopLabelErrors, GetDesktopLabelResponses, GetDocsFilesData, GetDocsFilesErrors, GetDocsFilesResponses, GetSitePackageSettingsData, GetSitePackageSettingsErrors, GetSitePackageSettingsResponses, PatchSitePackageSettingsData, PatchSitePackageSettingsErrors, PatchSitePackageSettingsResponses, SetAppIdentityData, SetAppIdentityErrors, SetAppIdentityResponses, SetDesktopLabelData, SetDesktopLabelErrors, SetDesktopLabelResponses, SetSitePackageSettingsData, SetSitePackageSettingsErrors, SetSitePackageSettingsResponses, UpdateConnectionData, UpdateConnectionErrors, UpdateConnectionResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -188,6 +188,53 @@ export class UmbraDesktopService {
             ],
             url: '/umbraco/management/api/v1/umbradesktop/docs/files',
             ...options
+        });
+    }
+    
+    public static getSitePackageSettings<ThrowOnError extends boolean = false>(options: Options<GetSitePackageSettingsData, ThrowOnError>) {
+        return (options.client ?? client).get<GetSitePackageSettingsResponses, GetSitePackageSettingsErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/package-settings/site/{key}',
+            ...options
+        });
+    }
+    
+    public static patchSitePackageSettings<ThrowOnError extends boolean = false>(options: Options<PatchSitePackageSettingsData, ThrowOnError>) {
+        return (options.client ?? client).patch<PatchSitePackageSettingsResponses, PatchSitePackageSettingsErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/package-settings/site/{key}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public static setSitePackageSettings<ThrowOnError extends boolean = false>(options: Options<SetSitePackageSettingsData, ThrowOnError>) {
+        return (options.client ?? client).put<SetSitePackageSettingsResponses, SetSitePackageSettingsErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
+            url: '/umbraco/management/api/v1/umbradesktop/package-settings/site/{key}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
         });
     }
 }
