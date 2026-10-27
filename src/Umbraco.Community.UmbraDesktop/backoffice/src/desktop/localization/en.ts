@@ -89,6 +89,7 @@ export default {
     searchShowAll: 'Show all (%0%)',
     searchShowMore: 'Show more',
     searchNoResults: 'No results',
+    searchLoading: 'Searching…',
     searchHelp: 'Help',
     arrange: 'Arrange',
     arrangeBanner: 'Arranging your launcher. Tiles do not open while you arrange.',

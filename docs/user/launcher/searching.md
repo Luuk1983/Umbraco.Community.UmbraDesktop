@@ -17,7 +17,8 @@ what you pick in a window on the desktop.
 
 ## What it finds
 
-Results appear when you pause typing, all at once, in this order:
+Matching apps appear as you type. The rest appear when you pause typing, with **Searching…** in
+their place until they arrive. The results come in this order:
 
 1. **Apps**, every one whose name matches.
 2. **Documents** and **Media**, the best few of each. A document shows where it is in the content

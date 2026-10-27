@@ -83,6 +83,7 @@ export default {
     searchShowAll: 'Alles tonen (%0%)',
     searchShowMore: 'Meer tonen',
     searchNoResults: 'Geen resultaten',
+    searchLoading: 'Zoeken…',
     searchHelp: 'Help',
     arrange: 'Indelen',
     arrangeBanner: 'Je launcher indelen. Tegels openen niet tijdens het indelen.',
