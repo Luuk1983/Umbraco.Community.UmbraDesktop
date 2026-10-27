@@ -373,3 +373,11 @@ it('registers a folders-only tree and a one-row recycle bin, each on a repositor
     expect(repositories, tree.alias).to.include(tree.meta.repositoryAlias);
   }
 });
+
+it('puts the media guidelines in Desktop settings, as one box on the Media row (#179)', () => {
+  const boxes = byType('umbraDesktopPackageSettings') as unknown as Array<{ alias: string; meta: { package: string; label: string }; element?: unknown }>;
+  expect(boxes.map((box) => [box.alias, box.meta.package, box.meta.label])).to.deep.equal([
+    ['Umbraco.Community.UmbraDesktop.Media.Settings.Guidelines', 'UmbraDesktop Media', '#umbraDesktopMedia_guidelinesSettings'],
+  ]);
+  expect(typeof boxes[0].element).to.equal('function');
+});

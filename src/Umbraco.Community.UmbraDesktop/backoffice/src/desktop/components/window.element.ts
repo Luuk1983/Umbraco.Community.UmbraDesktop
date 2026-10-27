@@ -21,6 +21,8 @@ import {
   UMBRADESKTOP_PATH_HEIGHT,
   UMBRADESKTOP_OPEN_HELP_EVENT,
   UMBRADESKTOP_CHROME_ICON_PX,
+  UMBRADESKTOP_DIALOG_FLASH_STEPS,
+  UMBRADESKTOP_DIALOG_FLASH_STEP_MS,
 } from '../constants';
 import { minWindowSizeForContent } from '../window-chrome.js';
 import { buildCrumbs, windowShowsPath } from '../path/crumbs.js';
@@ -53,7 +55,8 @@ import './app-host.element.js';
 import './loader.element.js';
 import './window-pane.element.js';
 import { UmbraDesktopWindowPaneElement, type UmbraDesktopPaneDragDetail } from './window-pane.element.js';
-import { attachedKind, paneTotal } from '../window-group.js';
+import { attachedKind, dialogOf, paneTotal } from '../window-group.js';
+import { dialogApp } from '../windows/dialog-request.js';
 import { attachedPageAlias, attachedPaths, createAttachedPageApp, readAttachedRequest } from '../windows/attached-page.js';
 import { previewTargetFromPath, withoutWorkspaceView } from '../preview/preview-target.js';
 import { createPreviewApp, UMBRADESKTOP_PREVIEW_APP_ALIAS } from '../preview/preview-model.js';
@@ -206,6 +209,32 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   private _bodyGeneration = 0;
 
   /**
+   * Whether this window has a dialog open (#179), which keeps it waiting: its content is dimmed
+   * under a scrim, out of reach of the pointer and the keyboard, while its titlebar and frame still
+   * move, resize and minimize it. Read from the window list, since the dialog is a window of its own.
+   */
+  @state()
+  private _dialogOpen = false;
+
+  /**
+   * Whether this dialog is flashing, because somebody clicked the window it keeps waiting. The flash
+   * is the theme's own active and inactive titlebar, swapped a few times as Windows does, so every
+   * theme flashes in its own colours.
+   */
+  @state()
+  private _flashing = false;
+
+  /** Whether the flash draws the dialog inactive at this moment. See {@link _flashing}. */
+  @state()
+  private _flashOff = false;
+
+  /** The dialog's `flashes` at the last update, to see it move. */
+  #flashes = 0;
+
+  /** The running flash's timer. */
+  #flashTimer?: number;
+
+  /**
    * What this app window has open beside it, for its app's `attached` property (#144): each key the
    * app opened a page under, and the page it is on. Read from the whole window list, because a
    * floating page is a window of its own and its routes do not touch this window's state. Replaced
@@ -276,7 +305,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (ctx) => {
       this.#manager = ctx ?? undefined;
       if (ctx) this.observe(ctx.dockZones, (zones) => (this._dockZones = zones ?? []), '_umbraDesktopDockZones');
-      if (ctx) this.observe(ctx.windows, (list) => this.#readAttached(list), '_umbraDesktopAttachedPages');
+      if (ctx) this.observe(ctx.windows, (list) => this.#readWindows(list), '_umbraDesktopAttachedPages');
     });
     this.consumeContext(UMBRADESKTOP_NOTIFICATION_CENTRE_CONTEXT, (ctx) => {
       this.#notifications = ctx ?? undefined;
@@ -341,6 +370,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     document.removeEventListener('dragenter', this.#onPageDragEnter, true);
     for (const type of ['drop', 'dragend', 'pointermove']) document.removeEventListener(type, this.#onPageDragEnd, true);
     this._dragOverPage = false;
+    clearInterval(this.#flashTimer);
     this.#stopFrameWatches?.();
     this.#stopFrameWatches = undefined;
     this.#stopPathWatch?.();
@@ -407,6 +437,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * @param changed The properties this update is for.
    */
   override willUpdate(changed: Map<string, unknown>) {
+    const flashes = this.window?.flashes ?? 0;
+    if (flashes > this.#flashes) this.#flash();
+    this.#flashes = flashes;
     // Chained up even though neither `UmbLitElement` nor the element-api mixin defines it today:
     // a base class gaining a `willUpdate` in an Umbraco minor would otherwise break silently.
     super.willUpdate(changed);
@@ -1227,11 +1260,13 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         @umbradesktop-app-focus=${this.#onAppFocus}
         .attached=${w.owner ? undefined : this._attached}
         @umbradesktop-open-attached=${this.#onOpenAttached}
-        @umbradesktop-close-attached=${this.#onCloseAttached}></umbradesktop-app-host>`;
+        @umbradesktop-close-attached=${this.#onCloseAttached}
+        @umbradesktop-open-dialog=${this.#onOpenDialog}
+        @umbradesktop-close-dialog=${this.#onCloseDialog}></umbradesktop-app-host>`;
       // Keyed only for attached content, whose reload is a remount: it fetches what it shows when it
       // connects. An ordinary element app keeps the plain commit this method's doc argues for, and a
       // window never changes between the two, so neither path ever remounts the other's app.
-      return w.owner ? keyed(this._bodyGeneration, host) : host;
+      return w.owner && !w.dialog ? keyed(this._bodyGeneration, host) : host;
     }
     return html`<iframe class="body" src=${w.app.content.url} @load=${this.#onIframeLoad}></iframe>`;
   }
@@ -1309,6 +1344,72 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   };
 
   /**
+   * Flash this dialog: its titlebar goes inactive and active again a few times. A flash already
+   * running starts over.
+   */
+  #flash(): void {
+    clearInterval(this.#flashTimer);
+    let step = 0;
+    this._flashing = true;
+    this._flashOff = true;
+    this.#flashTimer = window.setInterval(() => {
+      step += 1;
+      this._flashOff = step % 2 === 0;
+      if (step < UMBRADESKTOP_DIALOG_FLASH_STEPS) return;
+      clearInterval(this.#flashTimer);
+      this._flashing = false;
+      this._flashOff = false;
+    }, UMBRADESKTOP_DIALOG_FLASH_STEP_MS);
+  }
+
+  /**
+   * A press on the content of a window kept waiting by its dialog: the dialog comes forward and
+   * flashes, and the press goes no further.
+   * @param event The press.
+   */
+  #onScrimPointerDown = (event: PointerEvent): void => {
+    event.stopPropagation();
+    event.preventDefault();
+    if (this.window) this.#manager?.flashDialog(this.window.id);
+  };
+
+  /**
+   * An app asked for a dialog over its window (#179). Opened when the request reads and the window
+   * is an ordinary one with no dialog open, and then the event is cancelled, which is how the app
+   * knows; otherwise nothing opens. Stopped here, like the app's other events.
+   * @param event The app's {@link UMBRADESKTOP_APP_OPEN_DIALOG_EVENT}.
+   */
+  #onOpenDialog = (event: Event): void => {
+    event.stopPropagation();
+    const w = this.window;
+    const app = w ? dialogApp(w.id, (event as CustomEvent).detail) : undefined;
+    if (w && app && this.#manager?.openDialog(w.id, app)) event.preventDefault();
+  };
+
+  /**
+   * A dialog's content asked to close it (#179), having been answered. Stopped here, like the app's
+   * other events; ignored in a window that is not a dialog.
+   * @param event The content's {@link UMBRADESKTOP_APP_CLOSE_DIALOG_EVENT}.
+   */
+  #onCloseDialog = (event: Event): void => {
+    event.stopPropagation();
+    const w = this.window;
+    if (w?.dialog) this.#manager?.close(w.id);
+  };
+
+  /**
+   * Keep what this window shows of the others in step with the window list: its app's attached pages,
+   * and whether it has a dialog open.
+   * @param list The open windows.
+   */
+  #readWindows(list: ReadonlyArray<UmbraDesktopWindow>): void {
+    this.#readAttached(list);
+    const w = this.window;
+    const open = !!w && !w.owner && dialogOf(list, w.id) !== undefined;
+    if (open !== this._dialogOpen) this._dialogOpen = open;
+  }
+
+  /**
    * Keep `_attached` in step with the window list, for an ordinary app window.
    * @param list The open windows.
    */
@@ -1373,7 +1474,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
    * @returns The strip, or nothing on a window that is not attached to anything.
    */
   #renderAttachedStrip(w: UmbraDesktopWindow) {
-    if (!w.owner || !this.#manager) return nothing;
+    // A dialog is not content that docks: it is answered and gone.
+    if (!w.owner || w.dialog || !this.#manager) return nothing;
     const owner = this.#manager.getWindows().find((o) => o.id === w.owner);
     const ownerName = owner ? windowName(owner, (value) => this.localize.string(value)) : '';
     const canDock = this.#manager.canDock(w.id);
@@ -1445,14 +1547,16 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         class="splitter"
         @pointerdown=${(e: PointerEvent) => this.#onSplitterDown(e, pane)}
         @pointermove=${this.#onSplitterMove}
-        @pointerup=${this.#onSplitterUp}></div>`;
+        @pointerup=${this.#onSplitterUp}
+        ?inert=${this._dialogOpen}></div>`;
       const body = html`<umbradesktop-window-pane
         class="pane"
         style="width:${pane.width}px"
         .pane=${pane}
         .ownerId=${w.id}
         .themeId=${this._chromeThemeId}
-        ?inactive=${!w.active}></umbradesktop-window-pane>`;
+        ?inactive=${!w.active}
+        ?inert=${this._dialogOpen}></umbradesktop-window-pane>`;
       return side === 'left' ? html`${body}${splitter}` : html`${splitter}${body}`;
     });
   }
@@ -1581,8 +1685,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
       : `left:${w.rect.x}px; top:${w.rect.y}px; width:${w.rect.w}px; height:${w.rect.h}px; z-index:${w.z}; min-width:${min.w}px; min-height:${min.h}px;`;
     return html`
       <div
-        class="frame ${w.active ? 'active' : ''}"
+        class="frame ${w.active && !this._flashOff ? 'active' : ''}"
         style=${style}
+        ?flashing=${this._flashing}
         ?hidden=${w.state === 'minimized'}
         @pointerdown=${this.#onFocus}
         @mousedown=${this.#onFrameMouseDown}
@@ -1655,7 +1760,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
                  titlebar from apps whose windows are small enough to need every pixel: a
                  nine-by-nine game asks for a 274px window, and four controls plus its own name
                  wanted 311px of it. -->
-            ${w.app.content.kind === 'iframe' || w.owner
+            ${w.app.content.kind === 'iframe' || (w.owner && !w.dialog)
               ? html`<button
                   class="ctrl ctrl-reload ${this._loading || w.refreshing ? 'busy' : ''}"
                   title="Reload"
@@ -1664,13 +1769,17 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
                   ${this.#controlGlyph('reload')}
                 </button>`
               : nothing}
-            <button
-              class="ctrl ctrl-minimize"
-              title="Minimize"
-              aria-label="Minimize"
-              @click=${() => this.#manager?.setState(w.id, 'minimized')}>
-              ${this.#controlGlyph('minimize')}
-            </button>
+            <!-- Left out of a dialog, which goes away with its owner and has no taskbar button to come
+                 back from. One control fewer errs the safe way for the drag clamp, as below. -->
+            ${w.dialog
+              ? nothing
+              : html`<button
+                  class="ctrl ctrl-minimize"
+                  title="Minimize"
+                  aria-label="Minimize"
+                  @click=${() => this.#manager?.setState(w.id, 'minimized')}>
+                  ${this.#controlGlyph('minimize')}
+                </button>`}
             <!-- Left out entirely for a resizable: false window, as Windows does for a window that
                  cannot be maximized, rather than drawn disabled. Every theme lays these controls out
                  in flex, so the rest close up. The theme's controls-width metric then over-counts by
@@ -1707,7 +1816,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
              document the editor is working in. -->
         <div class="main">
           ${this.#renderPanes(w, 'left')}
-          <div class="column">
+          <div class="column" ?inert=${this._dialogOpen}>
             ${this.#renderAttachedStrip(w)}
         ${windowShowsPath(w.app)
           ? html`<umbradesktop-window-path
@@ -1744,6 +1853,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         </div>
           </div>
           ${this.#renderPanes(w, 'right')}
+          ${this._dialogOpen ? html`<div class="dialog-scrim" @pointerdown=${this.#onScrimPointerDown}></div>` : nothing}
         </div>
         ${this.#renderDockZones(w)}
         ${w.state === 'normal' && resizable
@@ -2111,6 +2221,14 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         flex: 1;
         display: flex;
         min-height: 0;
+        /* For the dialog scrim, which covers the content and the panes and leaves the titlebar free. */
+        position: relative;
+      }
+      /* Over a window its dialog keeps waiting (#179). A token, so a theme can give it its own wash. */
+      .dialog-scrim {
+        position: absolute;
+        inset: 0;
+        background: var(--umbradesktop-dialog-scrim, rgb(0 0 0 / 0.18));
       }
       .column {
         flex: 1;

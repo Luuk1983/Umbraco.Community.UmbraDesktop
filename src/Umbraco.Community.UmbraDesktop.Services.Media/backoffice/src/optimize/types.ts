@@ -114,3 +114,69 @@ export interface OptimizeReport {
   /** Bytes saved over the optimized items; negative when they grew. */
   saved: number;
 }
+
+/**
+ * A kind of image, as a site's media guidelines name it (#179): a PNG is two, told apart by whether
+ * any pixel is transparent, because a PNG photo is better as WebP and a logo is better left alone.
+ */
+export type OptimizeImageKind = 'jpeg' | 'png-photo' | 'png-transparent' | 'webp' | 'gif';
+
+/**
+ * Something a file was found to break, and so a fix it may get. `upload-limit` is a file larger than
+ * the site takes in one upload, which is encoded anew to bring it under.
+ */
+export type OptimizeFix = 'size' | 'format' | 'location' | 'upload-limit';
+
+/** One file to optimize and then upload. */
+export interface OptimizeFileEntry {
+  /** The file, as it was dropped. */
+  file: File;
+  /** Its row in the formats; from its format when absent, a PNG counted as a photo. */
+  kind?: OptimizeImageKind;
+  /**
+   * What it breaks, and so the only fixes it gets: `size` resizes it, `format` converts it by its row,
+   * `location` removes its metadata, `upload-limit` encodes it anew at the quality, in its row's
+   * format. Absent: every fix the settings ask for.
+   */
+  fix?: OptimizeFix[];
+}
+
+/** How one upload went: the caller's answer. */
+export interface OptimizeUploadResult {
+  /** Whether the file went in. */
+  ok: boolean;
+  /** Why not, in the person's language. */
+  message?: string;
+}
+
+/**
+ * Files to optimize and upload, in a window of their own (#179): each one optimized in the browser and
+ * then handed to the caller's `upload`, one at a time, so each appears where it goes as it lands.
+ */
+export interface OptimizeFilesRequest {
+  /** The files, in the order to process them. */
+  files: OptimizeFileEntry[];
+  /** Starting values for the settings; a field left out is off, a row left out is Keep. */
+  settings?: {
+    /** The box to fit in, or null or absent for no resize. */
+    resize?: { maxWidth?: number; maxHeight?: number } | null;
+    /** What each kind is converted to. */
+    formats?: Partial<Record<OptimizeImageKind, 'keep' | 'jpeg' | 'png' | 'webp'>>;
+    /** 1 to 100, for JPEG and WebP; 80 when absent. */
+    quality?: number;
+    /** Remove location, camera and date. */
+    removeLocation?: boolean;
+  };
+  /** Where the files go, for the window to say: the folder's name and its path from the root. */
+  destination: { name: string; path?: string[] };
+  /** Plain text under the heading, such as where the settings came from. */
+  note?: string;
+  /**
+   * Upload one file, the original or the optimized one, and say how it went. Called once per file at
+   * a time, in order.
+   * @param file The file.
+   */
+  upload(file: File): Promise<OptimizeUploadResult>;
+  /** Plain text for the window's title instead of the folder's name. */
+  title?: string;
+}

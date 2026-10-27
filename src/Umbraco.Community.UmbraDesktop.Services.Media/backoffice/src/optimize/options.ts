@@ -71,13 +71,17 @@ export function normaliseOptions(options?: OptimizeOptions): NormalisedOptions {
   const format = FORMATS.includes(options?.format as OptimizeFormat) ? (options!.format as OptimizeFormat) : 'keep';
   const asked = options?.quality;
   const quality = typeof asked === 'number' && Number.isFinite(asked) ? Math.min(100, Math.max(1, Math.round(asked))) : DEFAULT_QUALITY;
+  // Options decided already, as a run hands `optimizeFile` them, say themselves whether a quality was
+  // asked: their quality is always set, and reading it as asked turned every strip into an encode at
+  // 80 (found in #179's real run).
+  const decided = (options as Partial<NormalisedOptions> | undefined)?.recompress;
   const normalised: NormalisedOptions = {
     resize,
     format,
     quality,
     removeMetadata: options?.removeMetadata === true,
     animated: options?.animated === 'first-frame' ? 'first-frame' : 'skip',
-    recompress: typeof asked === 'number' && Number.isFinite(asked),
+    recompress: typeof decided === 'boolean' ? decided : typeof asked === 'number' && Number.isFinite(asked),
   };
   if (reencodes(normalised)) normalised.removeMetadata = true;
   return normalised;

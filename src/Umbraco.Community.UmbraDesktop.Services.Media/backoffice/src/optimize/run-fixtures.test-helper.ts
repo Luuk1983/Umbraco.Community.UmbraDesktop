@@ -88,6 +88,8 @@ export function library(items: Stored[], overrides: Partial<RunDeps> = {}) {
       copyName: (name) => `${name} (optimized)`,
       titled: (name, count) => `Optimize images: ${name} (${count})`,
       mixed: (count) => `Optimize images (${count} images)`,
+      uploadTitled: (name, count) => `Optimize and upload: ${name} (${count})`,
+      uploadFailed: 'The upload did not go through',
       rootName: 'Media',
       conflict: 'Someone else saved this image after you started.',
       gone: 'No longer in the media library',

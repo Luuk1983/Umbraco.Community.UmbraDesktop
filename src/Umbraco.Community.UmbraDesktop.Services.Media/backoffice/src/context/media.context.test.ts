@@ -390,6 +390,41 @@ describe('optimizing media', () => {
     expect(JSON.parse(storage.map.get('umbradesktop-media-optimize:u1')!)).to.deep.include({ resize: false, convert: true, format: 'png' });
   });
 
+  /** #179: files handed over before they are in the media library, each uploaded by the caller. */
+  it('opens an Optimize images window on files, and uploads each through the caller once started', async () => {
+    const { context, opened, saved, storage } = await desktop();
+    const bytes = await (await fetch(new URL('../optimize/fixtures/exif-orientation-6.jpg', import.meta.url))).arrayBuffer();
+    const uploaded: File[] = [];
+    const report = context.optimizeFiles({
+      files: [{ file: new File([bytes], 'phone.jpg', { type: 'image/jpeg' }), kind: 'jpeg', fix: ['format'] }],
+      settings: { formats: { jpeg: 'png' } },
+      destination: { name: 'Products' },
+      upload: async (file) => (uploaded.push(file), { ok: true }),
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(opened).to.have.length(1);
+    const [alias, options] = opened[0] as [string, { location: string }];
+    expect(alias).to.equal('Umbraco.Community.UmbraDesktop.Services.Media.OptimizeImages');
+    context.optimizeRuns.start(options.location);
+    const done = await report;
+    expect(done.status).to.equal('finished');
+    expect(uploaded.map((file) => file.name)).to.deep.equal(['phone.png']);
+    expect(saved).to.deep.equal([]);
+    expect(storage.map.has('umbradesktop-media-optimize:u1')).to.equal(false);
+  });
+
+  it('answers not-started for files when there is no desktop to open the window on', async () => {
+    const { context } = await desktop(false);
+    const uploaded: File[] = [];
+    const done = await context.optimizeFiles({
+      files: [{ file: new File(['x'], 'a.jpg') }],
+      destination: { name: 'Products' },
+      upload: async (file) => (uploaded.push(file), { ok: true }),
+    });
+    expect(done.status).to.equal('not-started');
+    expect(uploaded).to.deep.equal([]);
+  });
+
   it('optimizes a file for an app, with nothing saved', async () => {
     const { context, saved } = await desktop();
     const file = new File([await (await fetch(new URL('../optimize/fixtures/exif-orientation-6.jpg', import.meta.url))).arrayBuffer()], 'a.jpg', { type: 'image/jpeg' });

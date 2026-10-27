@@ -174,6 +174,39 @@ describe('files from the OS over a manager window', () => {
     expect(win.folder.shadowRoot!.getElementById('umbradesktop-media-drop')?.textContent ?? '').to.equal('');
   });
 
+  /** #179: a window that checks its uploads takes the drop on its own area too, before core's dropzone. */
+  it('hands a drop on the window\'s own area to a window that checks its uploads, putting core\'s overlay away', async () => {
+    const win = managerWindow({ kind: 'folder', unique: PEOPLE });
+    const taken: Array<{ names: string[]; parent: string | null }> = [];
+    win.handle.upload = async (items, parent) => void taken.push({ names: items.files.map((file) => file.name), parent });
+    const { uploads } = controller([win.handle]);
+    const data = osFiles();
+    const open = { x: 550, y: 350 };
+    at(win.overlay, 'dragover', data, open);
+    const drop = at(win.overlay, 'drop', data, open);
+    await tick();
+    expect(drop.defaultPrevented).to.equal(true);
+    expect(taken).to.deep.equal([{ names: ['holiday.jpg'], parent: PEOPLE }]);
+    expect(uploads).to.deep.equal([]);
+    expect(win.resets.length, "core's overlay was told the drag is over").to.equal(1);
+  });
+
+  it('hands a drop on a folder card to the window it is in, when that window checks its uploads', async () => {
+    const win = managerWindow({ kind: 'folder', unique: PEOPLE });
+    const taken: Array<{ names: string[]; parent: string | null }> = [];
+    win.handle.upload = async (items, parent) => void taken.push({ names: items.files.map((file) => file.name), parent });
+    const { uploads } = controller([win.handle]);
+    const data = osFiles();
+    const card = centre(win.cards[1]);
+    at(win.overlay, 'dragover', data, card);
+    await tick();
+    at(win.overlay, 'dragover', data, card);
+    at(win.overlay, 'drop', data, card);
+    await tick();
+    expect(taken).to.deep.equal([{ names: ['holiday.jpg'], parent: ARCHIVE }]);
+    expect(uploads).to.deep.equal([]);
+  });
+
   it('refuses the recycle bin', async () => {
     const win = managerWindow({ kind: 'folder', unique: PEOPLE });
     const { uploads } = controller([win.handle]);

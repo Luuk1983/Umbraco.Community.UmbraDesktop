@@ -11,7 +11,18 @@ import { formatOfExtension } from './picture.js';
 import type { RasterFormat } from './picture.js';
 import { triage, windowTitle } from './triage.js';
 import type { ItemFacts, SkipReason, TitleWords } from './triage.js';
-import type { ImageFacts, OptimizeFileResult, OptimizeItemReport, OptimizeMediaRequest, OptimizeReport, UnchangedReason } from './types.js';
+import { filesSettings, kindOfFormat, optionsForFile } from './file-fixes.js';
+import type {
+  ImageFacts,
+  OptimizeFileResult,
+  OptimizeFilesRequest,
+  OptimizeFix,
+  OptimizeImageKind,
+  OptimizeItemReport,
+  OptimizeMediaRequest,
+  OptimizeReport,
+  UnchangedReason,
+} from './types.js';
 
 /** The words a run says, in the person's language: its title, a copy's name, and why items did not go. */
 export interface RunWords extends TitleWords {
@@ -22,6 +33,14 @@ export interface RunWords extends TitleWords {
   copyName(name: string): string;
   /** The media library root's name, for a window whose images are all at the root. */
   rootName: string;
+  /**
+   * A run on files' title (#179): "Optimize and upload: Products (3)".
+   * @param name The folder's name, or the caller's title.
+   * @param count How many files.
+   */
+  uploadTitled(name: string, count: number): string;
+  /** The caller's upload said no without a reason. */
+  uploadFailed: string;
   /** Somebody else saved the item between its open and its save (design §7.1). */
   conflict: string;
   /** The item was in the recycle bin when it was opened (design §6.2). */
@@ -129,12 +148,31 @@ export interface RunItem {
   copy?: string;
   /** Why it failed. */
   message?: string;
+  /** A run on files: its row in the formats (#179). */
+  kind?: OptimizeImageKind;
+  /** A run on files: what the caller found it breaks, so the only fixes it gets; every fix when absent. */
+  fix?: OptimizeFix[];
+  /** A run on files: it has been uploaded, optimized or as it was. */
+  uploaded?: true;
+  /** A run on files: it was uploaded as it was dropped after failing, by Upload the original. */
+  original?: true;
+  /** A run on files: the item in hand has been optimized and is being uploaded. */
+  stage?: 'uploading';
 }
 
 /** One run, as its window shows it. Published as plain data, a fresh copy on every change. */
 export interface OptimizeRun {
   /** Its id: the window's location. */
   id: string;
+  /**
+   * What it works on: media items, saved over or copied (#139), or files, uploaded as each is done
+   * (#179). Absent is media, as every run was before files.
+   */
+  mode?: 'media' | 'files';
+  /** A run on files: where they are uploaded to. */
+  destination?: OptimizeFilesRequest['destination'];
+  /** A run on files: the caller's line under the heading. */
+  note?: string;
   /** Its window's title. */
   title: string;
   /** Reading the selection, choosing settings, running, or ended. */
@@ -173,7 +211,14 @@ interface RunEntry {
   released: boolean;
   /** Whether a pass is going. */
   looping: boolean;
+  /** A run on files: the files, by item index, kept here rather than in the run that is copied out. */
+  files?: File[];
+  /** A run on files: the caller's upload. */
+  upload?: OptimizeFilesRequest['upload'];
 }
+
+/** How a pass treats the items it runs: optimized as asked, or uploaded as they were dropped. */
+type PassKind = 'optimize' | 'original';
 
 /** How many reference counts are asked at once while the settings show (design §13). */
 const REFERENCE_LOOKUPS_AT_ONCE = 4;
@@ -276,6 +321,71 @@ export class OptimizeRunStore {
   }
 
   /**
+   * Start a run on files (#179): nothing is read from the media library, and each file is uploaded
+   * through the caller's `upload` as it is done. It starts at once, with no settings to confirm: the
+   * caller chose them, and the person already chose Optimize where the files were listed. A settings
+   * step after that asked the same question twice (owner, after the first real run).
+   * @param request What the caller asked for.
+   * @returns The run's id, and its report, which resolves when its first pass ends or it is let go.
+   */
+  createFiles(request: OptimizeFilesRequest): { id: string; report: Promise<OptimizeReport> } {
+    const id = this.#deps.newId();
+    let resolve!: (report: OptimizeReport) => void;
+    const report = new Promise<OptimizeReport>((done) => (resolve = done));
+    const entries = [...(request.files ?? [])];
+    const items: RunItem[] = entries.map((entry, index) => {
+      const format = formatOfExtension(extensionOf(entry.file.name) || entry.file.type.replace(/^image\//, ''));
+      const raster = format && format !== 'svg' ? format : undefined;
+      const kind = entry.kind ?? kindOfFormat(raster);
+      return {
+        unique: `file-${index}`,
+        name: entry.file.name,
+        parent: null,
+        status: 'waiting',
+        ...(raster ? { format: raster } : {}),
+        ...(kind ? { kind } : {}),
+        ...(entry.fix ? { fix: [...entry.fix] } : {}),
+      };
+    });
+    const destination = { name: request.destination?.name ?? '', ...(request.destination?.path ? { path: [...request.destination.path] } : {}) };
+    const run: OptimizeRun = {
+      id,
+      mode: 'files',
+      destination,
+      ...(request.note ? { note: request.note } : {}),
+      title: this.#deps.words.uploadTitled(request.title || destination.name, items.length),
+      phase: 'settings',
+      settings: filesSettings(request.settings ?? {}),
+      items,
+      from: { path: destination.path ?? (destination.name ? [destination.name] : []) },
+      cancelling: false,
+      pass: 0,
+    };
+    this.#entries.set(id, {
+      run,
+      resolve,
+      reported: false,
+      released: false,
+      looping: false,
+      files: entries.map((entry) => entry.file),
+      upload: request.upload,
+    });
+    this.#publish();
+    this.start(id);
+    return { id, report };
+  }
+
+  /**
+   * A run on files' files, for its window's thumbnails.
+   * @param id The run.
+   * @returns The files by item index, or undefined for a run on media or none.
+   */
+  files(id: string): File[] | undefined {
+    const files = this.#entries.get(id)?.files;
+    return files ? [...files] : undefined;
+  }
+
+  /**
    * Change a run's settings, while the settings show.
    * @param id The run.
    * @param settings The settings.
@@ -294,8 +404,9 @@ export class OptimizeRunStore {
   start(id: string): void {
     const entry = this.#entries.get(id);
     if (!entry || entry.run.phase !== 'settings') return;
-    this.#deps.remember(entry.run.settings);
-    void this.#pass(entry, (item) => item.status === 'waiting', optionsOf(entry.run.settings));
+    // A run on files starts on its caller's settings, which are not this person's to remember.
+    if (entry.run.mode !== 'files') this.#deps.remember(entry.run.settings);
+    void this.#pass(entry, (item) => item.status === 'waiting');
   }
 
   /**
@@ -332,6 +443,26 @@ export class OptimizeRunStore {
    */
   runAnimated(id: string): void {
     this.#again(id, (item) => item.status === 'skipped' && item.skip === 'animated', { animated: 'first-frame' });
+  }
+
+  /**
+   * Run one failed file of a run on files again: optimized afresh, then uploaded (#179).
+   * @param id The run.
+   * @param index The file's index.
+   */
+  retryOne(id: string, index: number): void {
+    const target = this.#entries.get(id)?.run.items[index];
+    if (target) this.#again(id, (item) => item === target && item.status === 'failed');
+  }
+
+  /**
+   * Upload one failed file of a run on files as it was dropped, nothing done to it (#179).
+   * @param id The run.
+   * @param index The file's index.
+   */
+  uploadOriginal(id: string, index: number): void {
+    const target = this.#entries.get(id)?.run.items[index];
+    if (target) this.#again(id, (item) => item === target && item.status === 'failed' && !item.uploaded, {}, 'original');
   }
 
   /**
@@ -441,22 +572,25 @@ export class OptimizeRunStore {
    * @param id The run.
    * @param which Which items go again.
    * @param override What this pass does differently from the run's settings.
+   * @param kind Optimize the items, or upload them as they were.
    */
-  #again(id: string, which: (item: RunItem) => boolean, override: Partial<NormalisedOptions> = {}): void {
+  #again(id: string, which: (item: RunItem) => boolean, override: Partial<NormalisedOptions> = {}, kind: PassKind = 'optimize'): void {
     const entry = this.#entries.get(id);
     if (!entry || entry.run.phase !== 'ended' || !entry.run.items.some(which)) return;
-    void this.#pass(entry, which, { ...optionsOf(entry.run.settings), ...override });
+    void this.#pass(entry, which, override, kind);
   }
 
   /**
    * One pass: every matching item in order, one at a time, until the end or a cancel.
    * @param entry The run.
    * @param which Which items this pass runs.
-   * @param options What to do to them.
+   * @param override What this pass does differently from the run's settings.
+   * @param kind Optimize the items, or, on files, upload them as they were.
    */
-  async #pass(entry: RunEntry, which: (item: RunItem) => boolean, options: NormalisedOptions): Promise<void> {
+  async #pass(entry: RunEntry, which: (item: RunItem) => boolean, override: Partial<NormalisedOptions> = {}, kind: PassKind = 'optimize'): Promise<void> {
     const run = entry.run;
     const items = run.items.filter(which);
+    const options = { ...optionsOf(run.settings), ...override };
     for (const item of items) {
       item.status = 'waiting';
       delete item.message;
@@ -471,7 +605,8 @@ export class OptimizeRunStore {
       if (run.cancelling) break;
       item.status = 'running';
       this.#publish();
-      await this.#process(item, run.settings.save, options);
+      if (run.mode === 'files') await this.#processFile(entry, item, kind, override);
+      else await this.#process(item, run.settings.save, options);
       this.#publish();
     }
     for (const item of items) if (item.status === 'waiting') item.status = 'not-started';
@@ -541,6 +676,85 @@ export class OptimizeRunStore {
     } catch (error) {
       this.#fail(item, (error as Error)?.message || words.refused);
     }
+  }
+
+  /**
+   * One file of a run on files (#179): optimized with only the fixes it needs, then uploaded through
+   * the caller's upload, the optimized file or, when there was nothing to do, the original. A file the
+   * optimizer would not touch, an animated one, is uploaded as it was too, since the person asked for
+   * it to go in. A failure, optimizing or uploading, fails this file only and uploads nothing for it.
+   * @param entry The run.
+   * @param item The file's item, updated as it goes.
+   * @param kind Optimize it, or upload it as it was dropped.
+   * @param override What this pass does differently from the run's settings.
+   */
+  async #processFile(entry: RunEntry, item: RunItem, kind: PassKind, override: Partial<NormalisedOptions>): Promise<void> {
+    const file = entry.files?.[entry.run.items.indexOf(item)];
+    if (!file || !entry.upload) return this.#fail(item, this.#deps.words.unreadable);
+    try {
+      if (kind === 'original') {
+        if (await this.#uploadFile(entry, item, file)) {
+          item.status = 'unchanged';
+          item.original = true;
+        }
+        return;
+      }
+      const asked = optionsForFile(item, entry.run.settings);
+      if (!asked) {
+        if (await this.#uploadFile(entry, item, file)) {
+          item.status = 'unchanged';
+          item.unchanged = 'nothing-asked';
+        }
+        return;
+      }
+      const result = await this.#deps.optimize(file, { ...asked, ...override });
+      if (result.status === 'failed') return this.#fail(item, result.message);
+      if (result.status === 'skipped') {
+        if (await this.#uploadFile(entry, item, file)) {
+          item.status = 'skipped';
+          item.skip = result.reason;
+        }
+        return;
+      }
+      item.before = result.before;
+      if (result.status === 'unchanged') {
+        if (await this.#uploadFile(entry, item, file)) {
+          item.status = 'unchanged';
+          item.unchanged = result.reason;
+        }
+        return;
+      }
+      if (await this.#uploadFile(entry, item, result.file)) {
+        item.status = 'optimized';
+        item.after = result.after;
+      }
+    } catch (error) {
+      this.#fail(item, (error as Error)?.message || this.#deps.words.uploadFailed);
+    }
+  }
+
+  /**
+   * Upload one file through the caller's upload, failing the item when it does not go in.
+   * @param entry The run.
+   * @param item The file's item.
+   * @param file What to upload.
+   * @returns True when it went in.
+   */
+  async #uploadFile(entry: RunEntry, item: RunItem, file: File): Promise<boolean> {
+    item.stage = 'uploading';
+    this.#publish();
+    let result: Awaited<ReturnType<NonNullable<RunEntry['upload']>>> | undefined;
+    try {
+      result = await entry.upload!(file);
+    } finally {
+      delete item.stage;
+    }
+    if (!result?.ok) {
+      this.#fail(item, result?.message || this.#deps.words.uploadFailed);
+      return false;
+    }
+    item.uploaded = true;
+    return true;
   }
 
   /**

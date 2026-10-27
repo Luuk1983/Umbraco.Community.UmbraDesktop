@@ -1,3 +1,4 @@
+import type { UmbFileDropzoneDroppedItems } from '@umbraco-cms/backoffice/dropzone';
 import { onMac } from '../platform-keys.js';
 import { itemAt } from '../selection/item-at.js';
 import { renderedItems } from '../selection/rendered-items.js';
@@ -72,6 +73,14 @@ export interface UmbraDesktopDragWindowHandle extends UmbraDesktopDragWindow {
    * @param folders The keys of the folders that arrived in it, which the tree shows.
    */
   landed?(destination: string | null, folders: string[]): void;
+  /**
+   * Upload files from the OS dropped on this window, into the folder it shows or one in it, checked
+   * against the site's media guidelines first (#179). A window that has it takes a drop on its own
+   * folder area too, which core's dropzone would otherwise take unchecked.
+   * @param items The files and folders.
+   * @param parent The folder, null for the root.
+   */
+  upload?(items: UmbFileDropzoneDroppedItems, parent: string | null): Promise<void>;
 }
 
 /** What the drag asks of the desktop context. */

@@ -1,7 +1,7 @@
 import type { RecentStorage } from '../recent/recent-media.js';
 import { OPTIMIZE_DEFAULTS, normaliseOptions } from './options.js';
 import type { NormalisedOptions, OptimizeFormat } from './options.js';
-import type { OptimizeMediaRequest } from './types.js';
+import type { OptimizeImageKind, OptimizeMediaRequest } from './types.js';
 
 /**
  * What the settings page shows: each switch, and the values behind it even while it is off, so a
@@ -25,6 +25,11 @@ export interface OptimizeSettings {
   removeMetadata: boolean;
   /** Replace the originals, or save copies next to them. */
   save: 'replace' | 'copy';
+  /**
+   * A run on files only (#179): what Convert writes for each kind of image, in place of `format`.
+   * Never remembered: those settings are the caller's, not this person's choice.
+   */
+  formats?: Record<OptimizeImageKind, OptimizeFormat>;
 }
 
 /** What a run starts on before anyone has chosen (D11): the options' defaults, replacing the originals. */
