@@ -231,7 +231,7 @@ Also worth knowing:
 
 Two changes, both about the list moving and the room it left unused.
 
-- **One update per pause in typing.** Apps were matched on every keystroke while the other sources
+- **One update per pause in typing.** Reversed for apps in §12. Apps were matched on every keystroke while the other sources
   answered after the 300 ms debounce, so the list moved twice for each pause. Now nothing changes
   until the sources answer, and then apps and sources change together. The launcher also keeps its
   own body until the first answer arrives, instead of showing an empty results body first. Apps
@@ -257,3 +257,23 @@ Two changes, both about the list moving and the room it left unused.
   would need a theme token or search code that knows about themes. The cost is a one-letter search,
   which matches most apps (a name matches when it contains the text anywhere) and pushes the other
   categories down.
+
+## 12. Apps first again (2026-10-27)
+
+§11's one update per pause is reversed for apps. In use it made the commonest search, typing part
+of an app's name to open it, wait for a server round trip it never needed: the 300 ms debounce plus
+however long the slowest source took. The owner found that more annoying than the list moving.
+
+- **Apps update on every keystroke**, from memory, and the launcher switches to the results body as
+  soon as there is text. Enter opens the best app straight away.
+- **The sources' results are emptied when the text changes**, not kept until the next answer as §11
+  did. Keeping them would put documents found for the old text beside apps for the new one.
+- **A loader stands where the sources' bands go** while they answer: `uui-loader` with
+  **Searching…**, as a `role="status"` so it is announced. It replaces the empty note until the
+  answer says there is nothing.
+- **Text that differs only by spaces at its ends is not a new search**, so the space before a
+  second word does not empty the results and ask the server for the same ones again.
+
+The cost §11 avoided comes back in a smaller form: after each pause the source bands appear below
+the apps, so the list grows once. The apps above them do not move, which is the part a person is
+reading while the rest loads.
