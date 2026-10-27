@@ -881,6 +881,56 @@ app's window is never mistaken for the entity's own page: opening that media ite
 item. The Image Editor in the Media add-on is the worked example: its subject is the media item it
 has open.
 
+### 7.9 Asking a question in a dialog over your window
+
+An app can ask a question that its window has to wait for, the way an operating system's modal
+dialog does. The Media Manager's media guidelines warning is one. The dialog is a window of the
+desktop's own, drawn by the theme like any window, and it keeps only your window waiting: the rest
+of the desktop carries on.
+
+To open one, dispatch an event from your element, cancelable, with the dialog's content in `detail`:
+
+```ts
+const event = new CustomEvent('umbradesktop-open-dialog', {
+  detail: {
+    name: 'Media guidelines',           // its title bar
+    icon: 'icon-alert',
+    element: MyQuestionElement,         // any form a manifest's `element` may take
+    props: { question, onAnswer },      // set on the element before it connects
+    size: { w: 640, h: 480 },           // the content box, in px; the desktop adds the frame
+  },
+  bubbles: true,
+  composed: true,
+  cancelable: true,
+});
+this.dispatchEvent(event);
+const opened = event.defaultPrevented;
+```
+
+The desktop cancels the event when it opens the dialog. When it does not, because your app is not on
+the desktop or your window already has a dialog open, decide what happens without one.
+
+While the dialog is open:
+
+- It sits centred over your window and stays on top of it. A click on your window brings it forward
+  and makes it flash.
+- Your window's content is dimmed and takes no clicks or keys. Its title bar still moves, resizes
+  and minimises it, and the dialog goes along.
+- It has a close button and no minimise, maximise or taskbar button. Your window's button brings
+  both forward.
+
+Your content lives in the dialog's window, not in yours, so an event it dispatches never reaches
+your element. Pass callbacks in `props` instead, as `onAnswer` above. When it has been answered, it
+closes its dialog with:
+
+```ts
+this.dispatchEvent(new CustomEvent('umbradesktop-close-dialog', { bubbles: true, composed: true }));
+```
+
+The person can also close the dialog with its close button, and closing your window closes it too.
+Either way your content is disconnected without having answered, so treat a disconnect without an
+answer as "closed". The Media add-on's `upload/guidelines-dialog.element.ts` is the worked example.
+
 ---
 
 ## 8. Traps

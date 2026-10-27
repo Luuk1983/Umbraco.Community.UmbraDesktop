@@ -2,6 +2,8 @@ import type { UmbraDesktopApp, UmbraDesktopPane, UmbraDesktopWindow, UmbraDeskto
 import {
   attachedKind,
   dockTargetAt,
+  dialogOf,
+  dialogRect,
   floatingRect,
   focusGroup,
   minimizeInGroup,
@@ -472,6 +474,50 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
     }
     this.#windows.setValue(focusGroup(this.#withFloating(current, ownerId, id, app, side), id));
     return id;
+  }
+
+  /**
+   * Open a dialog over a window (#179): a window of its own that keeps its owner waiting until it is
+   * answered, as an OS's modal child window does. It opens centred over the owner, active, at its
+   * app's size and fixed there. The rest is the group's rules (`window-group.ts`): it takes the focus
+   * whenever its owner would, goes when the owner is minimized or closed, and moves with it.
+   * @param ownerId The window it keeps waiting. A window that belongs to another cannot be one.
+   * @param app The dialog's content: an element app.
+   * @returns The dialog's id, or undefined when the owner is not an open ordinary window or already
+   *   has a dialog open. A second question waits for the first: a dialog that hid another would leave
+   *   that one unanswerable.
+   */
+  public openDialog(ownerId: string, app: UmbraDesktopApp): string | undefined {
+    const current = this.#windows.getValue();
+    const owner = current.find((w) => w.id === ownerId);
+    if (!owner || owner.owner || dialogOf(current, ownerId)) return undefined;
+    const bounds = this.#bounds ?? { w: window.innerWidth, h: window.innerHeight };
+    const size = windowSizeForContent(app.defaultSize ?? DEFAULT_CONTENT_SIZE, this.#metrics, 0);
+    const dialog: UmbraDesktopWindow = {
+      id: crypto.randomUUID(),
+      app: { ...app, resizable: false },
+      rect: dialogRect({ owner: this.#drawnRect(owner), size, bounds }),
+      z: nextZIndex(current),
+      active: true,
+      state: 'normal',
+      owner: ownerId,
+      dialog: true,
+    };
+    this.#windows.setValue(focusGroup([...current, dialog], dialog.id));
+    return dialog.id;
+  }
+
+  /**
+   * Draw attention to the dialog keeping a window waiting, because somebody clicked the window: the
+   * dialog comes forward and flashes, as an OS does. Nothing happens for a window with no dialog.
+   * @param ownerId The window that was clicked.
+   */
+  public flashDialog(ownerId: string): void {
+    const current = this.#windows.getValue();
+    const dialog = dialogOf(current, ownerId);
+    if (!dialog) return;
+    const flashed = current.map((w) => (w.id === dialog.id ? { ...w, flashes: (w.flashes ?? 0) + 1 } : w));
+    this.#windows.setValue(focusGroup(flashed, dialog.id));
   }
 
   /**
@@ -1318,7 +1364,18 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * @param y The new top, in px.
    */
   public move(id: string, x: number, y: number): void {
-    this.#windows.setValue(clearSnap(moveWindow(this.#windows.getValue(), id, x, y), id));
+    const current = this.#windows.getValue();
+    let next = clearSnap(moveWindow(current, id, x, y), id);
+    // A dialog goes where its owner goes, keeping its place over it (#179).
+    const before = current.find((w) => w.id === id);
+    const after = next.find((w) => w.id === id);
+    const dialog = before && after && !before.owner ? dialogOf(next, id) : undefined;
+    if (dialog && before && after) {
+      const dx = after.rect.x - before.rect.x;
+      const dy = after.rect.y - before.rect.y;
+      if (dx || dy) next = moveWindow(next, dialog.id, dialog.rect.x + dx, dialog.rect.y + dy);
+    }
+    this.#windows.setValue(next);
   }
 
   /**

@@ -7,6 +7,7 @@ import { UMBRADESKTOP_MEDIA_TRANSFERS_APP } from './transfers/transfers-app.js';
 import { UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION } from './manager/in-manager.condition.js';
 import { UMBRADESKTOP_MEDIA_RENAME_MODAL_ALIAS } from './selection/rename-dialog.element.js';
 import { UMBRADESKTOP_CLIPBOARD_HOLDS_CONDITION } from './manager/clipboard-holds.condition.js';
+import { MEDIA_PACKAGE_NAME } from './shared/package-settings.js';
 import {
   UMBRADESKTOP_MEDIA_BIN_TREE,
   UMBRADESKTOP_MEDIA_BIN_TREE_REPOSITORY,
@@ -498,6 +499,19 @@ const docs: UmbExtensionManifest = {
 };
 
 /** The bundle Umbraco loads for this package. */
+/**
+ * The media guidelines (#179) as a box in Desktop settings, under Add-ons: the first setting this
+ * package has, so it is what makes the Media row. Shown to everyone, since every editor's uploads are
+ * checked against them; the box itself is read only without the Settings section.
+ */
+const guidelinesSettings: UmbExtensionManifest = {
+  type: 'umbraDesktopPackageSettings',
+  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.Settings.Guidelines`,
+  name: 'UmbraDesktop Media guidelines settings',
+  element: () => import('./guidelines/guidelines-panel.element.js'),
+  meta: { package: MEDIA_PACKAGE_NAME, label: '#umbraDesktopMedia_guidelinesSettings' },
+};
+
 export const manifests: Array<UmbExtensionManifest> = [
   catalogue,
   mediaManager,
@@ -526,5 +540,6 @@ export const manifests: Array<UmbExtensionManifest> = [
   optimizeImages,
   renameDialog,
   docs,
+  guidelinesSettings,
   ...localizationManifests,
 ];

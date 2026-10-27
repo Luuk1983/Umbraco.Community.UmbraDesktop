@@ -140,6 +140,20 @@ describe('optimizeFile', () => {
     expect(Array.from(out.subarray(scanStart(out)))).to.deep.equal(Array.from(original.subarray(scanStart(original))));
   });
 
+  /**
+   * Found in #179's real run: a run hands `optimizeFile` options it already normalised, whose quality
+   * is always set, and normalising them again read that as a quality asked for. Every strip became an
+   * encode at 80, kept when smaller, so Remove metadata alone saved the picture anew after all.
+   */
+  it('strips without encoding when handed options a run already normalised', async () => {
+    const original = await jpegWith([exifSegment({ gps: true, make: 'Canon' })], { width: 120, height: 80 });
+    const file = new File([original], 'tattoo-shop.jpg', { type: 'image/jpeg' });
+    const result = await optimizeFile(file, normaliseOptions({ removeMetadata: true }));
+    if (result.status !== 'optimized') throw new Error(`expected optimized, got ${JSON.stringify(result)}`);
+    const out = new Uint8Array(await result.file.arrayBuffer());
+    expect(Array.from(out.subarray(scanStart(out)))).to.deep.equal(Array.from(original.subarray(scanStart(original))));
+  });
+
   it('makes a JPEG smaller at a low quality, in its own format', async () => {
     const file = new File([await noisy(600, 400, 'image/jpeg', 0.95)], 'banjo.jpg', { type: 'image/jpeg' });
     const result = await optimizeFile(file, { format: 'keep', quality: 15 });

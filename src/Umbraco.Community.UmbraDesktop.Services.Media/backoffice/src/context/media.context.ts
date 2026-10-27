@@ -36,7 +36,7 @@ import { readRemembered, rememberedKeyFor, writeRemembered } from '../optimize/r
 import { OptimizeRunStore } from '../optimize/run-store.js';
 import type { RunWords } from '../optimize/run-store.js';
 import type { Place } from '../optimize/where-used.js';
-import type { OptimizeFileResult, OptimizeMediaRequest, OptimizeOptions, OptimizeReport } from '../optimize/types.js';
+import type { OptimizeFileResult, OptimizeFilesRequest, OptimizeMediaRequest, OptimizeOptions, OptimizeReport } from '../optimize/types.js';
 
 /**
  * The four operations, each run on the host it is given. Injectable, so a test needs no picker, no
@@ -221,6 +221,10 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
     return {
       titled: (name, count) => words('optimizeTitle', name, count),
       mixed: (count) => words('optimizeTitleMixed', count),
+      uploadTitled: (name, count) => words('optimizeUploadTitle', name, count),
+      get uploadFailed() {
+        return words('optimizeUploadFailed');
+      },
       copyName: (name) => words('optimizeCopyName', name),
       get rootName() {
         return words('optimizeRoot');
@@ -341,6 +345,28 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
     const windows = this.#windows ?? (await this.getContext(UMBRADESKTOP_WINDOW_MANAGER).catch(() => undefined));
     if (!windows) return { status: 'not-started', items: items.map((unique) => ({ unique, name: '', status: 'not-started' })), saved: 0 };
     const { id, report } = this.optimizeRuns.create({ ...request, items });
+    if (!windows.openApp(UMBRADESKTOP_OPTIMIZE_APP, { location: id })) this.optimizeRuns.release(id);
+    return report;
+  }
+
+  /**
+   * Optimize files, then upload each one, in an Optimize images window of their own (#179): for files
+   * that are not in the media library yet, such as files dropped into a Media Manager that break the
+   * site's media guidelines. The window opens on its settings, set from the request, and each file
+   * gets only the fixes the request says it needs. Each is handed to the request's `upload` as it is
+   * done, so it appears where it goes before the next one starts. This resolves when the run ends.
+   * @param request The files, the starting settings, where they go and how to upload one.
+   * @returns The report: finished, cancelled (Cancel, or the window closed while running), or not
+   *   started (Cancel on the settings, or no desktop to open the window on), in which case nothing
+   *   was uploaded.
+   */
+  async optimizeFiles(request: OptimizeFilesRequest): Promise<OptimizeReport> {
+    const files = [...(request.files ?? [])];
+    const windows = this.#windows ?? (await this.getContext(UMBRADESKTOP_WINDOW_MANAGER).catch(() => undefined));
+    if (!windows) {
+      return { status: 'not-started', items: files.map((entry, index) => ({ unique: `file-${index}`, name: entry.file.name, status: 'not-started' })), saved: 0 };
+    }
+    const { id, report } = this.optimizeRuns.createFiles({ ...request, files });
     if (!windows.openApp(UMBRADESKTOP_OPTIMIZE_APP, { location: id })) this.optimizeRuns.release(id);
     return report;
   }

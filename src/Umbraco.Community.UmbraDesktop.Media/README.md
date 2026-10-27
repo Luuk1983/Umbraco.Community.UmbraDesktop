@@ -21,6 +21,8 @@ The Image Editor works on an image from the media library and saves it back or a
 
 [Optimize images](docs/user/optimize-images.md) does the same chore for a whole selection at once: resize, convert to WebP and remove the metadata of fifty camera photos in one run, in a window of its own.
 
+[Media guidelines](docs/user/media-guidelines.md) check files as they are dropped into a Media Manager, and offer to optimize the ones that are too large, in the wrong format or record where they were taken, before they upload.
+
 ## Get started
 
 ```bash
