@@ -177,6 +177,21 @@ public class MediaHealthControllerTests : IAsyncLifetime
         Assert.Equal(("/media/a1/hero.jpg", "/media/a1/hero.jpg?width=240&height=240&rmode=Crop&hmac=signed"), (only.Key, only.Value));
     }
 
+    /// <summary>
+    /// The preview asks for a picture that fits a box rather than a square crop (design §16.5): signed the
+    /// same way, with the resizer's Max mode, so the whole picture shows.
+    /// </summary>
+    [Fact]
+    public async Task Signs_a_fitted_picture_for_the_preview()
+    {
+        var check = await _store.StartAsync(Editor);
+        await _store.FinishAsync(check.Id, new MediaHealthResult([], [], [new MediaHealthOrphan("a1/hero.jpg", "/media/a1/hero.jpg", 5, DateTime.UnixEpoch)]));
+
+        await Controller().OrphanThumbnails(new MediaHealthThumbnailsRequestModel(["/media/a1/hero.jpg"], 1600, 1600, Fit: true));
+
+        _images.Received(1).GetImageUrl(Arg.Is<ImageUrlGenerationOptions>(options => options.Width == 1600 && options.Height == 1600 && options.ImageCropMode == ImageCropMode.Max));
+    }
+
     /// <summary>A size beyond what any window draws is clamped, so a signed URL never asks the resizer for a huge picture.</summary>
     [Fact]
     public async Task Clamps_the_thumbnail_size()

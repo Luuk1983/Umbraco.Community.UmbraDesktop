@@ -56,6 +56,20 @@ describe('the Clean up sheet', () => {
     expect(events).to.deep.equal(['cancel', 'confirm']);
   });
 
+  it('asks a Delete from the grid or the preview in the same words, under its own heading and button', async () => {
+    const cleanup = cleanupOf(result().lists, new Set<HealthKind>(['orphaned']), true);
+    const element = await fixture<UmbraDesktopHealthCleanupSheetElement>(
+      html`<umbradesktop-health-cleanup-sheet .cleanup=${cleanup} admin heading="Delete 40 B for good?" confirm-label="Delete"></umbradesktop-health-cleanup-sheet>`,
+    );
+    const confirmed: string[] = [];
+    element.addEventListener('health-cleanup-confirm', () => confirmed.push('confirm'));
+    expect(textOf(element)).to.contain('Delete 40 B for good?');
+    expect(textOf(element)).to.contain('2 orphaned files are deleted for good');
+    element.shadowRoot!.querySelector<HTMLElement>('uui-button[label="Delete"]')!.click();
+    await tick();
+    expect(confirmed).to.deep.equal(['confirm']);
+  });
+
   it('names no key', async () => {
     expect((await sheet(['unused', 'orphaned', 'oversized'])).text()).to.not.match(KEY_NAMES);
   });

@@ -140,11 +140,15 @@ public sealed record MediaHealthSkipResponseModel(string RelativePath, string Re
 /// <param name="Skipped">The files left alone.</param>
 public sealed record MediaHealthDeleteResponseModel(IReadOnlyList<string> Deleted, IReadOnlyList<MediaHealthSkipResponseModel> Skipped);
 
-/// <summary>Orphaned files' thumbnails to sign: their URLs, as the check listed them, and the size to draw them at.</summary>
+/// <summary>
+/// Orphaned files' pictures to sign: their URLs, as the check listed them, the size to draw them at, and
+/// whether to fit the whole picture in that box (the preview) rather than crop it square (a thumbnail).
+/// </summary>
 /// <param name="Urls">The URLs.</param>
 /// <param name="Width">The width in pixels, clamped to the route's largest edge.</param>
 /// <param name="Height">The height in pixels, the same.</param>
-public sealed record MediaHealthThumbnailsRequestModel(IReadOnlyList<string> Urls, int Width, int Height);
+/// <param name="Fit">True to fit the picture inside the box, keeping its shape; false, the default, to crop it.</param>
+public sealed record MediaHealthThumbnailsRequestModel(IReadOnlyList<string> Urls, int Width, int Height, bool Fit = false);
 
 /// <summary>The signed thumbnail of each orphaned file of the last check, by the URL asked for.</summary>
 /// <param name="Urls">Each known URL and its signed resizer URL; unknown URLs are left out.</param>

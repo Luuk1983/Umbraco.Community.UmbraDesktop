@@ -6,6 +6,7 @@ import type { HealthCheck, HealthItem, HealthOrphan, HealthResult, HealthStatus,
 import type { HealthKind } from './health-model.js';
 import type { OptimizeMediaRequest, OptimizeReport } from '../shared/optimize-service.js';
 import type { UmbraDesktopMediaRef } from '../operations/media-api.js';
+import { UMBRADESKTOP_MEDIA_MANAGER_APP } from '../manager/manager-window.context.js';
 
 /**
  * The Media Health context (design §2, §5, §15, §16.3): follows a check the server runs, polling only
@@ -210,6 +211,7 @@ describe('the Media Health context', () => {
       wait?: (ms: number) => Promise<void>;
     } = {},
   ) {
+    const opened: Array<{ alias: string; location?: string }> = [];
     const host = new UmbElementControllerHost(document.createElement('div'));
     hosts.push(host);
     const states: UmbraDesktopMediaHealthState[] = [];
@@ -221,13 +223,19 @@ describe('the Media Health context', () => {
       now: options.now ?? (() => new Date('2026-10-26T15:25:00Z')),
       visible: options.visible,
       manager,
+      windows: () => ({
+        openApp: (alias: string, options?: { location?: string }) => {
+          opened.push({ alias, location: options?.location });
+          return true;
+        },
+      }),
       optimize: async (request) => {
         optimized.push(request);
         return options.optimize ? options.optimize(request) : { status: 'finished', items: [] };
       },
     });
     subject.state.subscribe((state) => states.push(state));
-    return { subject, states, api, managerCalls, optimized };
+    return { subject, states, api, managerCalls, optimized, opened };
   }
 
   const all = new Set<HealthKind>(['unused', 'orphaned', 'oversized']);
@@ -594,6 +602,69 @@ describe('the Media Health context', () => {
       expect(managerCalls).to.deep.equal(['items b', 'trash b']);
       expect(api.calls[api.calls.length - 1]).to.equal('delete 1/x.jpg,2/y.png');
       expect(optimized.length).to.equal(1);
+    });
+  });
+
+  describe('the grid and the preview (design §16.4, §16.5)', () => {
+    it('opens Optimize images on the images chosen, outside a Clean up, and takes their new sizes when it ends', async () => {
+      let finish: ((report: OptimizeReport) => void) | undefined;
+      const { subject, optimized } = context(server(), { optimize: () => new Promise<OptimizeReport>((resolve) => (finish = resolve)) });
+      await subject.check();
+      expect(subject.optimize(['a'], { title: 'Oversized images' })).to.equal(true);
+      expect(optimized[0]).to.deep.include({ items: ['a'], title: 'Oversized images' });
+      expect(subject.getState().cleanup, 'no Clean up is started by it').to.equal(undefined);
+      finish!({ status: 'finished', items: [{ unique: 'a', status: 'optimized', after: { size: 400 } }] });
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(subject.getState().result?.lists.oversized).to.deep.equal([]);
+    });
+
+    it('signs a preview uncropped, through the same two routes, cached apart from the thumbnails', async () => {
+      const api = server();
+      const asked: string[] = [];
+      const fake = api.client as unknown as { itemThumbnails: unknown; orphanThumbnails: unknown };
+      fake.itemThumbnails = async (keys: string[], edge: number, mode?: string) => {
+        asked.push(`items ${keys.join(',')} ${edge} ${mode ?? 'Crop'}`);
+        return { data: Object.fromEntries(keys.map((key) => [key, `/media/${key}.jpg?${mode ?? 'Crop'}`])) };
+      };
+      fake.orphanThumbnails = async (urls: string[], edge: number, fit?: boolean) => {
+        asked.push(`orphans ${urls.join(',')} ${edge} ${fit ? 'fit' : 'crop'}`);
+        return { data: Object.fromEntries(urls.map((url) => [url, `${url}?${fit ? 'fit' : 'crop'}`])) };
+      };
+      const { subject } = context(api);
+      await subject.thumbnails([{ url: '/media/a.jpg', key: 'a' }], 1600);
+      const preview = await subject.thumbnails([{ url: '/media/a.jpg', key: 'a' }, { url: '/media/1/x.jpg' }], 1600, { fit: true });
+      expect(asked).to.deep.equal(['items a 1600 Crop', 'items a 1600 Max', 'orphans /media/1/x.jpg 1600 fit']);
+      expect(preview.get('/media/a.jpg')).to.equal('/media/a.jpg?Max');
+      expect(preview.get('/media/1/x.jpg')).to.equal('/media/1/x.jpg?fit');
+    });
+
+    it('shows an item in a Media Manager window at its folder, selected, and an item at the root at Media', async () => {
+      const { subject, opened } = context();
+      const entry = (parentKey: string | null) => ({
+        id: 'k1',
+        kind: 'unused' as const,
+        name: 'Banjo',
+        bytes: 1,
+        sized: true,
+        url: null,
+        folderKey: parentKey,
+        folderPath: '/',
+        item: item({ key: 'k1', parentKey }),
+      });
+      expect(subject.showInManager(entry('f1'))).to.equal(true);
+      expect(subject.showInManager(entry(null))).to.equal(true);
+      expect(opened).to.deep.equal([
+        { alias: UMBRADESKTOP_MEDIA_MANAGER_APP, location: 'folder=f1&select=k1' },
+        { alias: UMBRADESKTOP_MEDIA_MANAGER_APP, location: 'folder=root&select=k1' },
+      ]);
+    });
+
+    it('offers no Media Manager for an orphaned file, which is no item to select', () => {
+      const { subject, opened } = context();
+      const file = orphan('1/x.jpg');
+      const shown = subject.showInManager({ id: 'orphan:1/x.jpg', kind: 'orphaned', name: 'x.jpg', bytes: 10, sized: true, url: file.url, folderKey: null, folderPath: '1', orphan: file });
+      expect(shown).to.equal(false);
+      expect(opened).to.deep.equal([]);
     });
   });
 });

@@ -156,8 +156,8 @@ numbers; the app shows "733 unused, 12 kept".
 
 ## 7. View: a category as a virtual place in the Manager (scene 3)
 
-> Probably no longer needed, 2026-10-27: the grid in the app (§16.4) is where View goes, and Show
-> in Media Manager (§16.5) covers going to the Manager. Decided after §16.8 step 2.
+> Dropped 2026-10-28 (Luuk, after step 2 was built and run, §16.14): the list in the app (§16.4) is
+> where View went, and Show in Media Manager (§16.5) covers going to the Manager. Not built.
 
 The places branch (#158, Manager design §19) lists a non-folder as a virtual folder through a server
 decorator of `IMediaListViewService`. View reuses that shape: a virtual place per category, with a
@@ -566,9 +566,9 @@ Replaces §10's steps 3 and 6; step 1 stands as built, step 2 is built on its ow
 5. §10's step 4 (Health list view in the Manager) and step 5 (folder tags and Properties), unchanged,
    except that folders match by key (§15).
 
-§10's step 6, View as a virtual place in the Manager (§7), is probably no longer needed: the grid
-is a better place to judge clutter than core's collection, and Show in Media Manager covers going
-there. Decide after step 2 of this list.
+§10's step 6, View as a virtual place in the Manager (§7), is dropped (Luuk, 2026-10-28, after step 2
+of this list): the grid is a better place to judge clutter than core's collection, and Show in Media
+Manager covers going there.
 
 ### 16.9 As planned (2026-10-27)
 
@@ -744,3 +744,78 @@ Luuk, checking the instance: "I like correct alignment and consistency." Four ch
 - **The window opens taller**, 640 by 676 (was 613), measured: the strips' own line made the overview
   676 high under four themes and 675 under Umbraco. A notice over it scrolls, which is rare.
 
+
+### 16.14 Step 2 as built (2026-10-28)
+
+The grid and the preview of the plan's step 2 (§16.4, §16.5 without Review): a tab per kind with its
+count, a name search and a sort, the kind's entries grouped by folder with a checkbox per group, a
+selection bar with the kind's verb, a preview over the grid that steps through it, and **Show in Media
+Manager**. The model is `health-grid.ts` (entries, groups, the selection, all pure); the screens are
+`health-grid.element.ts` and `health-preview.element.ts`; the window switches to them on
+`health-open-grid`. Run in a real backoffice (newest Umbraco 17) on the worktree's copy, 48 items, 28
+unused, 81 orphaned files. Where the build differs from the plan:
+
+- **The cards are core's own media card**, `uui-card-media`, as core's media grid and so the Media
+  Manager draw them: a click on the picture opens it (here, the preview), its checkbox selects, which
+  is the plan's "ticking selects, clicking previews" for free, and themes already style it. The card
+  lays its name and size over its foot, so a cell is square at the thumbnail's edge (`CELL_HEIGHT =
+  THUMB_EDGE`), the size the resizer is asked for. Core's file symbol sat half under that caption at
+  120 px, so a file that is no picture draws an icon with its extension above it; the caption measured
+  58 px under all five themes (`CARD_CAPTION`). "+n more" is drawn as an empty card (surface, border,
+  the card's radius): the overview's strip tile vanished on the grid's background.
+- **Orphaned files are one group, Files on disk.** The plan grouped them by directory; Umbraco keeps
+  every file in a folder of its own with a random name (`/media/1pjnlrr4/…`), so the first run drew 81
+  groups of one. The preview says where an orphaned file is on disk (`/media/1pjnlrr4`) instead.
+- **The preview is signed uncropped.** Core's `imaging/resize/urls` is asked with `mode: 'Max'` and
+  the add-on's `orphans/thumbnails` gained `fit` (Umbraco's `ImageCropMode.Max`), each with the edge as
+  both sides, so the whole picture fits the box; the context caches fitted and cropped apart. The
+  width is `previewWidth` and never more than the picture's own larger side, so a small image is not
+  blown up.
+- **Delete asks with the Clean up sheet**, which takes its own heading and button now ("Delete 30 B for
+  good?", **Delete**), so a delete for good is said in the same words wherever it is asked. Move to
+  recycle bin and Optimize act at once, as Clean up's own rows do once confirmed; the bin has Undo in
+  the Manager and Optimize asks in its own window.
+- **No Kept tab and no Keep… yet**: they come with step 3 rather than drawn dead now, as step 1 left
+  the grid's openings undrawn.
+- **The openings on the overview**: each row has an arrow button (**See all**), greyed when the row is
+  empty, and its strip opens the grid too; each folder of Where the space goes is a button; **All
+  folders** sits beside "n more". A folder opens on its first tab with anything in it. That button
+  made the overview 2 to 17 px taller than the window (17 under Umbraco 4's larger type), so the window
+  opens at 640 by 693; measured again, every theme's scroll height then equals its visible height.
+- **The day-old warning shows over the grid too**, since its verbs act on the same result, but they do
+  not wait for a new check as Clean up does: each acts on something the person looked at and chose,
+  one picture or one group at a time.
+- **Show in Media Manager** adds `select=<key>` to the Manager's location; the window selects it
+  through the existing select-when-shown path and at once reports its location without it, so a reload
+  does not select it again. Not offered for an orphaned file, which is no item.
+- `optimize(keys)` moved into the context, as the plan said; Clean up's oversized row goes through it.
+
+**Measured.**
+
+- Opened from each row, a folder and All folders: the right tab and counts (Unused items 28, Orphaned
+  files 81, Oversized images 0 with its **See all** greyed), Engage's two folders as groups with "Size unknown", the first row of
+  each (four places at 640 wide) with "+9 more" and "+13 more". Every thumbnail request was signed and
+  200; none unsigned. Each row reports `content-visibility: auto` and `contain-intrinsic-size: auto
+  120px`.
+- A whole group ticked (Engage / Persona, 16 items): "16 selected · Size unknown", **Move to recycle
+  bin** emptied the group in 1.8 seconds, all 16 were in core's recycle bin, and the stored result no
+  longer listed them as unused (`items/refresh`). Restored afterwards, each to its folder.
+- The preview of the largest picture, a 1.5 MB orphaned PNG, drawn 509 px wide: one request,
+  `?rmode=max&width=800&height=800&hmac=…`, 200, 460 KB, 800 by 534. **Next** stepped to the next; a
+  click beside it closed it.
+- A PDF (created in this copy for the run, "Cleanup check PDF", still there): the card draws the icon
+  with PDF, the preview shows it in Chrome's own viewer, with **Show in Media Manager** and **Move to
+  recycle bin**.
+- **Show in Media Manager** on an item in Engage / Persona opened a Manager window at that folder with
+  the item selected and scrolled to.
+- Everything above under all five themes.
+
+**Not measured here**: an item past core's first page (no folder of this library holds more than one
+page), so Decision 8's "folder only" is covered by its reasoning, not a run; an item without a file
+(core refuses to create one, and Engage's items have files on this copy); oversized images (none over
+2 MB); and an editor who is not an administrator (the editor of §16.10 is not in this database copy).
+Each is covered by tests.
+
+**§7 decided** (Luuk, 2026-10-28, asked once this step was built and run): View as a virtual place in
+the Manager is dropped, not built. The list groups by folder, previews and acts, Show in Media Manager
+covers going to the Manager, and orphaned files could never have had a place there.

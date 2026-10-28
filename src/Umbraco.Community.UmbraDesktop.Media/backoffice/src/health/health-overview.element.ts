@@ -59,9 +59,10 @@ const ROWS: Record<HealthKind, { title: WordKey; line: WordKey; none: WordKey }>
  * On a check over a day old Clean up waits for a new one; the warning itself is the window's, in
  * the desktop's own notice, and **Check again** stays the one at the top.
  *
- * Fires `health-check` for **Check again**, and `health-cleanup` with the ticked kinds for **Clean
- * up**; the window asks before anything happens. Clicking a row or a folder opens the grid in step 2;
- * until then neither is drawn as a link, rather than drawn dead.
+ * Fires `health-check` for **Check again**, `health-cleanup` with the ticked kinds for **Clean up**
+ * (the window asks before anything happens), and `health-open-grid` for the grid (design §16.4): a
+ * row's **See all** or its strip with `{ kind }`, a folder of Where the space goes with
+ * `{ folderKey }` (null for the root), and **All folders** with neither.
  */
 @customElement('umbradesktop-health-overview')
 export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
@@ -292,9 +293,16 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
           ><b>${this.#words(words.title)}</b></uui-checkbox
         >
         <small>${line}${denied ? html` <em>${this.#words('healthAdminOnly')}</em>` : nothing}</small>
-        ${this.#renderStrip(list, this.#stripWidth)}
+        ${this.#renderStrip(kind, list, this.#stripWidth)}
       </div>
       ${this.#renderSize(list)}
+      <uui-button
+        class="see-all"
+        look="secondary"
+        compact
+        label=${this.#words('healthSeeAll')}
+        ?disabled=${!list.length}
+        @click=${() => this.#fire('health-open-grid', { kind })}><uui-icon name="icon-arrow-right"></uui-icon></uui-button>
     </div>`;
   }
 
@@ -319,13 +327,16 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
    * whose signed thumbnail has not come yet is a plain tile, never an unsigned request.
    * Under the row's title and line, so every row's strip starts at the same place whatever its size
    * column says, and as long as the row is wide.
+   * The strip opens the row's list in the grid, as **See all** does: the pictures are what people
+   * reach for.
+   * @param kind The row.
    * @param list The row's list, largest first.
    * @param width The room the strip has, measured; nothing is drawn before it is.
    */
-  #renderStrip(list: ReadonlyArray<HealthItem | HealthOrphan>, width: number) {
+  #renderStrip(kind: HealthKind, list: ReadonlyArray<HealthItem | HealthOrphan>, width: number) {
     if (!list.length || !width) return nothing;
     const { shown, more: rest } = stripCount(width, list.length);
-    return html`<span class="strip">
+    return html`<span class="strip" @click=${() => this.#fire('health-open-grid', { kind })}>
       ${list.slice(0, shown).map((each) => {
         if (isPreviewable(each.url)) {
           const src = this._thumbnails.get(each.url!);
@@ -340,7 +351,8 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
 
   /**
    * Where the space goes: the largest top-level folders, each split by the same health as the bar and
-   * in the same order, fine first and unused at the end, and how many more there are.
+   * in the same order, fine first and unused at the end, and how many more there are. A folder opens
+   * the grid on itself and everything under it, and **All folders** opens it on every folder.
    * @param result The result.
    */
   #renderSpace(result: UmbraDesktopMediaHealthResult) {
@@ -352,7 +364,7 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
       ${folders.map((folder) => {
         const fine = folder.bytes - folder.unused - folder.oversized;
         const width = (bytes: number) => `width:${(bytes / largest) * 100}%`;
-        return html`<div class="folder">
+        return html`<button type="button" class="folder" @click=${() => this.#fire('health-open-grid', { folderKey: folder.key })}>
           <span class="name">${folder.key ? folder.name : this.#words('healthRoot')}</span>
           <span class="track">
             <span data-kind="fine" style=${width(fine)}></span>
@@ -360,9 +372,12 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
             <span data-kind="unused" style=${width(folder.unused)}></span>
           </span>
           <b>${formatBytes(folder.bytes)}</b>
-        </div>`;
+        </button>`;
       })}
-      ${more ? html`<div class="muted more-folders">${this.#words('healthMoreFolders', more.toLocaleString(this.#locale))}</div>` : nothing}
+      <div class="space-foot">
+        <span class="muted">${more ? this.#words('healthMoreFolders', more.toLocaleString(this.#locale)) : nothing}</span>
+        <uui-button class="all-folders" look="secondary" compact label=${this.#words('healthAllFolders')} @click=${() => this.#fire('health-open-grid', {})}></uui-button>
+      </div>
     </div>`;
   }
 
@@ -482,6 +497,11 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
         display: flex;
         gap: ${unsafeCSS(STRIP_GAP)}px;
         margin-top: var(--uui-size-space-2, 6px);
+        cursor: pointer;
+      }
+
+      .see-all {
+        flex: none;
       }
 
       .strip img,
@@ -549,11 +569,37 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
         gap: var(--uui-size-space-4, 12px);
       }
 
+      /* A folder line is a button, drawn as the line it was: the whole line opens the grid on it. */
       .folder {
         display: grid;
         grid-template-columns: minmax(0, 9em) minmax(0, 1fr) 5em;
         align-items: center;
         gap: var(--uui-size-space-3, 9px);
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .folder:hover .name {
+        text-decoration: underline;
+      }
+
+      .folder:focus-visible {
+        outline: 2px solid var(--uui-color-focus, currentColor);
+        outline-offset: 2px;
+      }
+
+      .space-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--uui-size-space-4, 12px);
       }
 
       .folder .name {

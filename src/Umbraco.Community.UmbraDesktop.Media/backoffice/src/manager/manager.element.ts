@@ -320,9 +320,17 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
     });
     if (!this.#placed) {
       this.#placed = true;
-      const { place, view } = parseLocation(this.location);
+      const { place, view, select } = parseLocation(this.location);
       this._place = place;
       this._view = view;
+      // Show in Media Manager (Media Cleanup, design §16.5): select the item once core shows it. Past
+      // core's first page it never does, and the folder alone is what opens (plan Decision 8). The
+      // instruction is spent here, so the desktop is told the place without it and a reload of the
+      // window does not select it again.
+      if (select) {
+        this.#selectWhenShown([select]);
+        this.#reportLocation();
+      }
     }
     this.addEventListener('click', this.#onClick);
     this.addEventListener('auxclick', this.#onClick);
@@ -403,7 +411,8 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
   }
 
   /**
-   * Select what a drop brought in, once core shows it, and bring the first into view.
+   * Select what a drop brought in, or what Show in Media Manager names, once core shows it, and bring
+   * the first into view.
    * @param keys The items.
    */
   #selectWhenShown(keys: string[]): void {

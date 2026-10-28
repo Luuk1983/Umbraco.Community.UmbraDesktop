@@ -63,6 +63,23 @@ async function healthWindow(state: UmbraDesktopMediaHealthState, isAdmin = true,
       return { failed: [] };
     },
     dismissCleanup: () => void asked.push('dismiss'),
+    trash: async (keys: string[]) => {
+      asked.push(`trash ${keys.join(',')}`);
+      return { trashed: [], failed: [] };
+    },
+    deleteOrphaned: async (paths: string[]) => {
+      asked.push(`delete ${paths.join(',')}`);
+      return { deleted: paths.length, skipped: [] };
+    },
+    optimize: (keys: string[], options: { title?: string }) => {
+      asked.push(`optimize ${keys.join(',')} ${options?.title ?? ''}`.trim());
+      return true;
+    },
+    showInManager: (entry: { id: string }) => {
+      asked.push(`show ${entry.id}`);
+      return true;
+    },
+    thumbnails: async () => new Map<string, string>(),
   } as never).hostConnected();
   new UmbContextProvider(wrapper, UMB_CURRENT_USER_CONTEXT, {
     getHostElement: () => wrapper,
@@ -218,6 +235,92 @@ describe('the Media Health window', () => {
     expect(notice.getAttribute('severity')).to.equal('error');
     expect(notice.getAttribute('heading')).to.equal('The check did not finish');
     expect(notice.getAttribute('body')).to.equal('Boom');
+  });
+
+  describe('the grid and the preview (design §16.4, §16.5)', () => {
+    /**
+     * Fire an event from inside the window, as a screen would.
+     * @param element The window.
+     * @param from The screen's tag.
+     * @param name The event.
+     * @param detail What it carries.
+     */
+    const fire = (element: HTMLElement, from: string, name: string, detail?: unknown) =>
+      element.shadowRoot!.querySelector(from)!.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true }));
+
+    it('opens the grid on the row asked for, and goes back to the overview from Back', async () => {
+      const { element, screen, settle } = await healthWindow(idle({ result: result() }));
+      fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'orphaned' });
+      await settle();
+      expect(screen()).to.equal('grid');
+      const grid = element.shadowRoot!.querySelector<HTMLElement & { chip: string; folderKey?: string | null }>('umbradesktop-health-grid')!;
+      expect(grid.chip).to.equal('orphaned');
+      fire(element, 'umbradesktop-health-grid', 'health-close-grid');
+      await settle();
+      expect(screen()).to.equal('overview');
+    });
+
+    it('opens a folder on its first kind with anything in it', async () => {
+      const { element, settle } = await healthWindow(idle({ result: result() }));
+      fire(element, 'umbradesktop-health-overview', 'health-open-grid', { folderKey: 'p' });
+      await settle();
+      const grid = element.shadowRoot!.querySelector<HTMLElement & { chip: string; folderKey?: string | null }>('umbradesktop-health-grid')!;
+      expect([grid.chip, grid.folderKey]).to.deep.equal(['unused', 'p']);
+    });
+
+    it('moves items to the bin, opens images in Optimize images, and shows an item in the Media Manager', async () => {
+      const { element, asked, settle } = await healthWindow(idle({ result: result() }));
+      fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'unused' });
+      await settle();
+      fire(element, 'umbradesktop-health-grid', 'health-trash', { ids: ['old', 'persona'] });
+      fire(element, 'umbradesktop-health-grid', 'health-optimize', { ids: ['big'] });
+      fire(element, 'umbradesktop-health-grid', 'health-preview', { id: 'old', ids: ['old'] });
+      await settle();
+      fire(element, 'umbradesktop-health-preview', 'health-show-in-manager', { entry: { id: 'old' } });
+      await settle();
+      expect(asked.filter((each) => !['watch', 'sync'].includes(each))).to.deep.equal(['trash old,persona', 'optimize big Oversized images', 'show old']);
+    });
+
+    it('asks before deleting orphaned files, in the Clean up sheet’s words, and deletes only on yes', async () => {
+      const { element, asked, settle, text } = await healthWindow(idle({ result: result() }));
+      fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'orphaned' });
+      await settle();
+      fire(element, 'umbradesktop-health-grid', 'health-delete', { ids: ['orphan:1/x.jpg'] });
+      await settle();
+      expect(text()).to.contain('Delete 30 B for good?');
+      expect(text()).to.contain('1 orphaned files are deleted for good');
+      fire(element, 'umbradesktop-health-cleanup-sheet', 'health-cleanup-cancel');
+      await settle();
+      expect(element.shadowRoot!.querySelector('umbradesktop-health-cleanup-sheet')).to.equal(null);
+      fire(element, 'umbradesktop-health-grid', 'health-delete', { ids: ['orphan:1/x.jpg'] });
+      await settle();
+      fire(element, 'umbradesktop-health-cleanup-sheet', 'health-cleanup-confirm');
+      await settle();
+      expect(asked.filter((each) => each.startsWith('delete'))).to.deep.equal(['delete 1/x.jpg']);
+    });
+
+    it('previews over the grid in the grid’s order, and closes back to it', async () => {
+      const { element, settle } = await healthWindow(idle({ result: result() }));
+      fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'unused' });
+      await settle();
+      fire(element, 'umbradesktop-health-grid', 'health-preview', { id: 'persona', ids: ['old', 'persona'] });
+      await settle();
+      const preview = element.shadowRoot!.querySelector<HTMLElement & { current: string; entries: Array<{ id: string }> }>('umbradesktop-health-preview')!;
+      expect(preview.current).to.equal('persona');
+      expect(preview.entries.map((each) => each.id)).to.deep.equal(['old', 'persona']);
+      expect(element.shadowRoot!.querySelector('umbradesktop-health-grid'), 'the grid stays under it').to.not.equal(null);
+      fire(element, 'umbradesktop-health-preview', 'health-preview-close');
+      await settle();
+      expect(element.shadowRoot!.querySelector('umbradesktop-health-preview')).to.equal(null);
+    });
+
+    it('leaves the grid for Checking when a check starts', async () => {
+      const { element, screen, set, settle } = await healthWindow(idle({ result: result() }));
+      fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'unused' });
+      await settle();
+      await set(idle({ phase: { kind: 'running', step: 'usage', scanned: 0, total: 0 }, result: result() }));
+      expect(screen()).to.equal('start');
+    });
   });
 
   it('names no key on any screen', async () => {

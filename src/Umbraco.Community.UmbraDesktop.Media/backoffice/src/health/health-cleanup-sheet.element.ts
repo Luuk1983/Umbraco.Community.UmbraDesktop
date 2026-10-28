@@ -23,6 +23,10 @@ const LINES: Record<HealthKind, { line: WordKey; note: WordKey }> = {
  *
  * Drawn in the window rather than as a backoffice modal, so it sits over the overview it belongs to
  * and themes with the window. Fires `health-cleanup-confirm` or `health-cleanup-cancel`.
+ *
+ * The grid's and the preview's **Delete** ask with it too (design §16.5), one row of orphaned files
+ * under their own heading and button, so a delete for good is said in the same words wherever it is
+ * asked.
  */
 @customElement('umbradesktop-health-cleanup-sheet')
 export class UmbraDesktopHealthCleanupSheetElement extends UmbLitElement {
@@ -33,6 +37,14 @@ export class UmbraDesktopHealthCleanupSheetElement extends UmbLitElement {
   /** Whether the person is an administrator; for anyone else the sheet says orphaned files stay. */
   @property({ type: Boolean })
   admin = false;
+
+  /** The question at the top, in place of "Clean up …?", for a Delete from the grid or the preview. */
+  @property()
+  heading?: string;
+
+  /** The confirming button's words, in place of **Clean up**. */
+  @property({ attribute: 'confirm-label' })
+  confirmLabel?: string;
 
   /** This package's words. */
   #words = wordsOf(this.localize);
@@ -63,7 +75,7 @@ export class UmbraDesktopHealthCleanupSheetElement extends UmbLitElement {
     const estimate = this.cleanup.rows.some((row) => row.estimate);
     return html`<div class="backdrop" @click=${() => this.#answer('health-cleanup-cancel')}></div>
       <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="title">
-        <h2 id="title">${this.#words(estimate ? 'healthSheetTitleAbout' : 'healthSheetTitle', formatBytes(this.cleanup.bytes))}</h2>
+        <h2 id="title">${this.heading ?? this.#words(estimate ? 'healthSheetTitleAbout' : 'healthSheetTitle', formatBytes(this.cleanup.bytes))}</h2>
         ${this.cleanup.rows.map(
           (row) => html`<div class="line" data-kind=${row.kind}>
             <i class="dot"></i>
@@ -78,7 +90,7 @@ export class UmbraDesktopHealthCleanupSheetElement extends UmbLitElement {
           ${this.admin ? nothing : html`<small class="muted">${this.#words('healthSheetAdmin')}</small>`}
           <span class="space"></span>
           <uui-button look="secondary" label=${this.#words('healthCancel')} @click=${() => this.#answer('health-cleanup-cancel')}></uui-button>
-          <uui-button look="primary" label=${this.#words('healthCleanUpConfirm')} @click=${() => this.#answer('health-cleanup-confirm')}></uui-button>
+          <uui-button look="primary" label=${this.confirmLabel ?? this.#words('healthCleanUpConfirm')} @click=${() => this.#answer('health-cleanup-confirm')}></uui-button>
         </div>
       </div>`;
   }

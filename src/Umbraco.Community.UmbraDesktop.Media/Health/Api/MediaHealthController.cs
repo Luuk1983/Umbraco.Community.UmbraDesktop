@@ -143,8 +143,9 @@ public class MediaHealthController(MediaHealthStore store, MediaHealthRunner run
     /// Signed thumbnails for orphaned files of the last check (design §16.7). A site with an HMAC
     /// secret, which Umbraco writes at install, refuses an unsigned resizer URL with 400, and core's
     /// own imaging route signs only media items, which an orphaned file is not. Umbraco's own generator
-    /// signs them here, cropped square. Only the last check's orphaned files are signed, never an
-    /// item's path or any other, so this is never an open signer.
+    /// signs them here, cropped square for a thumbnail, or fitted inside the box for the preview. Only the
+    /// last check's orphaned files are signed, never an item's path or any other, so this is never an
+    /// open signer.
     /// </summary>
     /// <param name="model">The URLs and the size.</param>
     /// <returns>Each orphaned file's URL with its signed thumbnail; anything else is left out.</returns>
@@ -156,10 +157,11 @@ public class MediaHealthController(MediaHealthStore store, MediaHealthRunner run
         var known = await store.KnownOrphanUrlsAsync((model.Urls ?? []).Take(MaxThumbnails).ToList());
         var width = Math.Clamp(model.Width, 1, MaxImageEdge);
         var height = Math.Clamp(model.Height, 1, MaxImageEdge);
+        var mode = model.Fit ? ImageCropMode.Max : ImageCropMode.Crop;
         var signed = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var url in known)
         {
-            var thumbnail = images.GetImageUrl(new ImageUrlGenerationOptions(url) { Width = width, Height = height, ImageCropMode = ImageCropMode.Crop });
+            var thumbnail = images.GetImageUrl(new ImageUrlGenerationOptions(url) { Width = width, Height = height, ImageCropMode = mode });
             if (!string.IsNullOrEmpty(thumbnail))
             {
                 signed[url] = thumbnail;

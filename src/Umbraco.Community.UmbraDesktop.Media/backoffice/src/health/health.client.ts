@@ -259,18 +259,20 @@ export class UmbraDesktopMediaHealthClient {
   }
 
   /**
-   * Signed square thumbnails of media items, by key, from core's own imaging route (design §16.7):
-   * Umbraco where it can, and core checks the person may see each item. An item core gives no URL
-   * for is left out.
+   * Signed pictures of media items, by key, from core's own imaging route (design §16.7): Umbraco
+   * where it can, and core checks the person may see each item. Square crops for thumbnails; `Max`
+   * fits the whole picture inside the box, for the preview (§16.5). An item core gives no URL for is
+   * left out.
    * @param keys The items.
    * @param edge The edge in device pixels.
+   * @param mode `Crop` for a square thumbnail, `Max` to fit the picture in an edge-sized box.
    */
-  async itemThumbnails(keys: ReadonlyArray<string>, edge: number): Promise<HealthResult<Record<string, string>>> {
+  async itemThumbnails(keys: ReadonlyArray<string>, edge: number, mode: 'Crop' | 'Max' = 'Crop'): Promise<HealthResult<Record<string, string>>> {
     const signed: Record<string, string> = {};
     for (let start = 0; start < keys.length; start += IMAGING_BATCH) {
       const id = keys.slice(start, start + IMAGING_BATCH);
       const answer = await this.#attempt<Array<{ id: string; urlInfos: Array<{ url: string | null }> }>>(() =>
-        this.#http.get({ url: CORE_IMAGING_URLS, query: { id, width: edge, height: edge, mode: 'Crop' }, security: SECURITY }),
+        this.#http.get({ url: CORE_IMAGING_URLS, query: { id, width: edge, height: edge, mode }, security: SECURITY }),
       );
       if (!answer.data) return { error: answer.error };
       for (const each of answer.data) {
@@ -282,14 +284,16 @@ export class UmbraDesktopMediaHealthClient {
   }
 
   /**
-   * Signed square thumbnails of orphaned files, by URL, from the add-on's own route, since core signs
-   * only media items and an orphaned file is none. The server signs only the last check's orphaned
-   * files and leaves anything else out.
+   * Signed pictures of orphaned files, by URL, from the add-on's own route, since core signs only
+   * media items and an orphaned file is none. The server signs only the last check's orphaned files
+   * and leaves anything else out.
    * @param urls The orphaned files' URLs.
    * @param edge The edge in device pixels.
+   * @param fit True to fit the picture in an edge-sized box, for the preview; a square crop otherwise.
    */
-  async orphanThumbnails(urls: ReadonlyArray<string>, edge: number): Promise<HealthResult<Record<string, string>>> {
-    const answer = await this.#post<{ urls: Record<string, string> }>('orphans/thumbnails', { urls: [...urls], width: edge, height: edge });
+  async orphanThumbnails(urls: ReadonlyArray<string>, edge: number, fit = false): Promise<HealthResult<Record<string, string>>> {
+    const body = fit ? { urls: [...urls], width: edge, height: edge, fit } : { urls: [...urls], width: edge, height: edge };
+    const answer = await this.#post<{ urls: Record<string, string> }>('orphans/thumbnails', body);
     return answer.data ? { data: answer.data.urls } : { error: answer.error };
   }
 

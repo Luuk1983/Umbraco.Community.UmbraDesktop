@@ -157,6 +157,22 @@ describe('a manager window', () => {
     expect(titles).to.deep.equal(['People']);
   });
 
+  it('selects the item its location names once the folder shows it, as Show in Media Manager asks, and only once', async () => {
+    const { folderHost, locations, settle } = await mounted(`folder=${FOLDER}&select=${IMAGE}`);
+    const selected: string[][] = [];
+    // Core's collection, as far as selecting uses it: what it shows, and its selection.
+    (folderHost() as unknown as { collection: () => unknown }).collection = () => ({
+      items: () => [{ unique: IMAGE }, { unique: OTHER_IMAGE }],
+      selection: { setSelection: (keys: string[]) => selected.push(keys) },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    await settle();
+    expect(folderHost().place).to.deep.equal({ kind: 'folder', unique: FOLDER });
+    expect(selected).to.deep.equal([[IMAGE]]);
+    // A one-time instruction, not a place: the window reopens at the folder, with nothing selected.
+    expect(locations).to.deep.equal([`folder=${FOLDER}`]);
+  });
+
   it('opens a folder in this window when its link is clicked, and never lets the router see the click', async () => {
     const { folderHost, clickLink, settle, titles, locations, reachedWindow } = await mounted();
     const click = clickLink(`/umbraco/section/media/workspace/media/edit/${FOLDER}`);

@@ -9,8 +9,11 @@ import type { WordKey } from '../shared/words.js';
 import { healthScreenStyles } from './health-styles.js';
 import './health-ring.element.js';
 
-/** The words for each reason the server gives for leaving a file on disk, and for a refused delete. */
-const REASONS: Record<string, WordKey> = {
+/**
+ * The words for each reason the server gives for leaving a file on disk, and for a refused delete.
+ * Exported so the grid's Delete says them the same way.
+ */
+export const REASONS: Record<string, WordKey> = {
   NotFound: 'healthReasonNotFound',
   NowOwned: 'healthReasonNowOwned',
   denied: 'healthReasonDenied',

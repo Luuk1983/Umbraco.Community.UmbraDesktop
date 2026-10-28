@@ -3,13 +3,19 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import { UMBRADESKTOP_MEDIA_HEALTH_CONTEXT } from './media-health.context.js';
 import type { UmbraDesktopMediaHealthContext, UmbraDesktopMediaHealthState } from './media-health.context.js';
-import { cleanupOf, isStale } from './health-model.js';
+import { HEALTH_KINDS, cleanupOf, isStale } from './health-model.js';
 import type { HealthCleanup, HealthKind } from './health-model.js';
+import { chipCounts, entriesOf } from './health-grid.js';
+import type { HealthChip, HealthEntry } from './health-grid.js';
+import { formatBytes } from '../transfers/transfers-model.js';
 import { wordsOf } from '../shared/words.js';
+import { REASONS } from './health-done.element.js';
 import './health-start.element.js';
 import './health-overview.element.js';
 import './health-cleanup-sheet.element.js';
 import './health-done.element.js';
+import './health-grid.element.js';
+import './health-preview.element.js';
 
 /** The task id the check is reported to the desktop under. */
 const CHECK_TASK = 'check';
@@ -18,14 +24,25 @@ const CHECK_TASK = 'check';
 const CLEANUP_TASK = 'cleanup';
 
 /** Which screen the window shows. */
-type HealthScreen = 'start' | 'overview' | 'done';
+type HealthScreen = 'start' | 'overview' | 'grid' | 'done';
+
+/** What the grid opened on: a tab, and a folder or every folder (`undefined`). */
+interface HealthGridOpening {
+  chip: HealthChip;
+  folderKey?: string | null;
+}
 
 /**
  * The Media Health window (design §16): one screen at a time from the health context's state. No
  * check yet and Checking (`health-start`), the overview (`health-overview`) with the Clean up sheet
- * over it, and Done (`health-done`). Each screen only draws and asks, through events; this element
- * holds the context, answers the events, and reports the check and Clean up to the desktop as two
- * tasks, so the taskbar button and the title bar show how far each is.
+ * over it, the grid (`health-grid`, §16.4) with the preview over it (`health-preview`, §16.5), and Done
+ * (`health-done`). Each screen only draws and asks, through events; this element holds the context,
+ * answers the events, and reports the check and Clean up to the desktop as two tasks, so the taskbar
+ * button and the title bar show how far each is.
+ *
+ * The grid's and the preview's verbs act on what the person chose, one at a time or as a selection:
+ * **Move to recycle bin** through the Manager's trash, as Clean up does; **Optimize** in Optimize
+ * images; **Delete** for good only after the Clean up sheet has asked, in the same words.
  *
  * The four health colours are declared once here, on the host, from UUI's own colours, so every
  * theme restyles them and every screen reads the same four.
@@ -55,6 +72,25 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
   /** Why the last Clean up did not run, said over the overview until the next one is asked. */
   @state()
   private _refused?: 'newer' | 'stale';
+
+  /** The grid, while it is open over the overview's place: what it opened on. */
+  @state()
+  private _grid?: HealthGridOpening;
+
+  /** The preview over the grid: the entry it opened on and the grid's order then. */
+  @state()
+  private _preview?: { id: string; ids: string[] };
+
+  /** The orphaned files a Delete from the grid or the preview asks about, while it asks. */
+  @state()
+  private _deleting?: HealthEntry[];
+
+  /** What the last Delete from the grid left on disk, said over the grid. */
+  @state()
+  private _deleteNote = '';
+
+  /** The result the entries were made from, and the entries, so they are made once per result. */
+  #entries?: { from: UmbraDesktopMediaHealthState['result']; entries: HealthEntry[] };
 
   /** The health context. */
   #context?: UmbraDesktopMediaHealthContext;
@@ -109,12 +145,23 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
     this.#unwatch = this.#context.watch();
   }
 
-  /** The screen the state calls for: a running check first, then Clean up, then the result. */
+  /** The screen the state calls for: a running check first, then Clean up, then the grid or the overview. */
   get #screen(): HealthScreen {
     const { phase, result, cleanup } = this._state;
     if (phase.kind === 'running') return 'start';
     if (cleanup) return 'done';
-    return result ? 'overview' : 'start';
+    if (!result) return 'start';
+    return this._grid ? 'grid' : 'overview';
+  }
+
+  /** Every entry of the result, for the grid and the preview; made again only when the result changes. */
+  get #allEntries(): HealthEntry[] {
+    const result = this._state.result;
+    const made = this.#entries;
+    if (made && made.from === result) return made.entries;
+    const entries = result ? entriesOf(result.lists) : [];
+    this.#entries = { from: result, entries };
+    return entries;
   }
 
   /**
@@ -225,6 +272,97 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
   }
 
   /**
+   * Open the grid (design §16.4), on the row asked for, or on a folder at its first kind with anything
+   * in it, so a folder never opens on an empty tab while it has something to show.
+   * @param event The overview's request.
+   */
+  #openGrid(event: CustomEvent<{ kind?: HealthKind; folderKey?: string | null }>): void {
+    const { kind } = event.detail;
+    const folderKey = 'folderKey' in event.detail ? event.detail.folderKey : undefined;
+    const counts = chipCounts(this.#allEntries, folderKey, this._state.result?.folders ?? []);
+    const chip = kind ?? HEALTH_KINDS.find((each) => counts[each] > 0) ?? 'unused';
+    this._grid = { chip, folderKey };
+    this._deleteNote = '';
+  }
+
+  /** Back to the overview from the grid. */
+  #closeGrid(): void {
+    this._grid = undefined;
+    this._preview = undefined;
+    this._deleting = undefined;
+  }
+
+  /**
+   * The entries the grid or the preview names, as they are now.
+   * @param ids Their ids.
+   * @returns The ones still there.
+   */
+  #entriesOf(ids: ReadonlyArray<string>): HealthEntry[] {
+    const byId = new Map(this.#allEntries.map((entry) => [entry.id, entry]));
+    return ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
+  }
+
+  /**
+   * Move the items chosen to the recycle bin, through the Manager, as Clean up does.
+   * @param event The grid's or the preview's request.
+   */
+  #trash(event: CustomEvent<{ ids: string[] }>): void {
+    const keys = this.#entriesOf(event.detail.ids).flatMap((entry) => (entry.item ? [entry.item.key] : []));
+    if (keys.length) void this.#context?.trash(keys);
+  }
+
+  /**
+   * Open the images chosen in Optimize images.
+   * @param event The grid's or the preview's request.
+   */
+  #optimize(event: CustomEvent<{ ids: string[] }>): void {
+    const keys = this.#entriesOf(event.detail.ids).flatMap((entry) => (entry.item ? [entry.item.key] : []));
+    if (keys.length) this.#context?.optimize(keys, { title: this.#words('healthOversized') });
+  }
+
+  /**
+   * Ask before deleting the files chosen, for good, in the Clean up sheet's words. Only an
+   * administrator may; the grid and the preview grey the button out for anyone else, and this asks
+   * nothing for them either.
+   * @param event The grid's or the preview's request.
+   */
+  #askDelete(event: CustomEvent<{ ids: string[] }>): void {
+    const files = this.#entriesOf(event.detail.ids).filter((entry) => entry.orphan);
+    this._deleting = this._admin && files.length ? files : undefined;
+  }
+
+  /** Delete the files the sheet asked about, and say what stayed on disk and why. */
+  async #delete(): Promise<void> {
+    const files = this._deleting;
+    this._deleting = undefined;
+    if (!files || !this.#context) return;
+    const outcome = await this.#context.deleteOrphaned(files.map((entry) => entry.orphan!.relativePath));
+    const reason = (code: string) => (REASONS[code] ? this.#words(REASONS[code]) : code);
+    const skipped = 'error' in outcome ? files.map((entry) => ({ relativePath: entry.orphan!.relativePath, reason: outcome.error })) : outcome.skipped;
+    this._deleteNote = skipped.length
+      ? this.#words('healthSkipped', skipped.length.toLocaleString(this.localize.lang() || undefined), skipped.map((each) => `${each.relativePath} (${reason(each.reason)})`).join(', '))
+      : '';
+  }
+
+  /**
+   * Show an item in a Media Manager window, selected.
+   * @param event The preview's request.
+   */
+  #showInManager(event: CustomEvent<{ entry: HealthEntry }>): void {
+    this.#context?.showInManager(event.detail.entry);
+  }
+
+  /**
+   * Sign the preview's picture, uncropped, through the context. An arrow, so the preview gets one
+   * stable function to compare.
+   * @param subjects The picture's URL, with its item's key when it is an item.
+   * @param edge The edge in device pixels.
+   * @returns The signed URL, by file URL.
+   */
+  #signPreview = (subjects: Array<{ url: string; key?: string }>, edge: number): Promise<Map<string, string>> =>
+    this.#context?.thumbnails(subjects, edge, { fit: true }) ?? Promise.resolve(new Map<string, string>());
+
+  /**
    * What the overview has to say before it is read, in the desktop's own notice (design §16.12), the
    * banner a window shows when a page changed while you edit it, so it looks the same here under
    * every theme. A failed check is an error; an old check and a refused Clean up are warnings. The
@@ -244,7 +382,7 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
   override render() {
     const screen = this.#screen;
     const { phase, result, mediaCount, cleanup } = this._state;
-    return html`<div class="scroll" data-screen=${screen} @health-check=${this.#check} @health-stop=${this.#stop}>
+    return html`<div class="scroll" data-screen=${screen} @health-check=${this.#check} @health-stop=${this.#stop} @health-open-grid=${this.#openGrid}>
         ${screen === 'start' ? html`<umbradesktop-health-start .phase=${phase} .mediaCount=${mediaCount}></umbradesktop-health-start>` : nothing}
         ${screen === 'overview'
           ? html`${this.#renderNotices()}
@@ -254,6 +392,7 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
                 .signThumbnails=${this.#signThumbnails}
                 @health-cleanup=${this.#askCleanup}></umbradesktop-health-overview>`
           : nothing}
+        ${screen === 'grid' ? this.#renderGrid() : nothing}
         ${screen === 'done'
           ? html`<umbradesktop-health-done
               .cleanup=${cleanup}
@@ -269,6 +408,62 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
             ?admin=${this._admin}
             @health-cleanup-confirm=${this.#cleanUp}
             @health-cleanup-cancel=${() => (this._sheet = undefined)}></umbradesktop-health-cleanup-sheet>`
+        : nothing}
+      ${screen === 'grid' ? this.#renderOverGrid() : nothing}`;
+  }
+
+  /**
+   * The grid, under the same notices as the overview: a check over a day old is said here too, since
+   * the grid's verbs act on that same result.
+   */
+  #renderGrid() {
+    const grid = this._grid!;
+    return html`${this.#renderNotices()}
+      ${this._deleteNote
+        ? html`<umbradesktop-notice class="notice" name="delete" severity="warning" heading=${this.#words('healthDelete')} body=${this._deleteNote}></umbradesktop-notice>`
+        : nothing}
+      <umbradesktop-health-grid
+        .entries=${this.#allEntries}
+        .folders=${this._state.result?.folders ?? []}
+        .chip=${grid.chip}
+        .folderKey=${grid.folderKey}
+        ?admin=${this._admin}
+        .signThumbnails=${this.#signThumbnails}
+        @health-close-grid=${this.#closeGrid}
+        @health-preview=${(event: CustomEvent<{ id: string; ids: string[] }>) => (this._preview = { ...event.detail })}
+        @health-trash=${this.#trash}
+        @health-optimize=${this.#optimize}
+        @health-delete=${this.#askDelete}></umbradesktop-health-grid>`;
+  }
+
+  /**
+   * What sits over the grid: the preview, and the question before a Delete, which sits over the
+   * preview when the preview asked it.
+   */
+  #renderOverGrid() {
+    const deleting = this._deleting;
+    const bytes = deleting?.reduce((sum, entry) => sum + entry.bytes, 0) ?? 0;
+    return html`${this._preview
+        ? html`<umbradesktop-health-preview
+            .entries=${this.#entriesOf(this._preview.ids)}
+            .current=${this._preview.id}
+            ?admin=${this._admin}
+            .signPreview=${this.#signPreview}
+            @health-preview-close=${() => (this._preview = undefined)}
+            @health-trash=${this.#trash}
+            @health-optimize=${this.#optimize}
+            @health-delete=${this.#askDelete}
+            @health-show-in-manager=${this.#showInManager}></umbradesktop-health-preview>`
+        : nothing}
+      ${deleting
+        ? html`<umbradesktop-health-cleanup-sheet
+            class="ask"
+            .cleanup=${{ rows: [{ kind: 'orphaned', count: deleting.length, bytes, unknown: 0, estimate: false }], bytes }}
+            admin
+            heading=${this.#words('healthDeleteTitle', formatBytes(bytes))}
+            confirm-label=${this.#words('healthDelete')}
+            @health-cleanup-confirm=${this.#delete}
+            @health-cleanup-cancel=${() => (this._deleting = undefined)}></umbradesktop-health-cleanup-sheet>`
         : nothing}`;
   }
 
@@ -295,6 +490,11 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
 
     .notice {
       margin-bottom: var(--uui-size-space-4, 12px);
+    }
+
+    /* A Delete asked from the preview is asked over it. */
+    .ask {
+      z-index: 4;
     }
   `;
 }

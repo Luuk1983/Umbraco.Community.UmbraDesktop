@@ -182,6 +182,46 @@ describe('the Media Health overview', () => {
     expect(names).to.deep.equal(['Products', 'At the root', 'People']);
   });
 
+  describe('opening the grid (design §16.4)', () => {
+    /**
+     * Every grid the overview asks for.
+     * @param element The overview.
+     */
+    const opened = (element: HTMLElement) => {
+      const asked: unknown[] = [];
+      element.addEventListener('health-open-grid', (event) => asked.push((event as CustomEvent).detail));
+      return asked;
+    };
+
+    it('opens a row’s list from its See all, and greys out an empty row’s', async () => {
+      const { element, root } = await overview(true, (checked) => (checked.lists.oversized = []));
+      const asked = opened(element);
+      const seeAll = (kind: HealthKind) => root.querySelector<HTMLElement & { disabled: boolean }>(`[data-row=${kind}] uui-button.see-all`)!;
+      seeAll('orphaned').click();
+      await tick();
+      expect(asked).to.deep.equal([{ kind: 'orphaned' }]);
+      expect(seeAll('oversized').disabled).to.equal(true);
+    });
+
+    it('opens a row’s list from its strip of thumbnails too', async () => {
+      const { element, root } = await overview();
+      const asked = opened(element);
+      root.querySelector<HTMLElement>('[data-row=unused] .strip')!.click();
+      expect(asked).to.deep.equal([{ kind: 'unused' }]);
+    });
+
+    it('opens a folder from Where the space goes, the root as itself, and every folder from All folders', async () => {
+      const { element, root } = await overview();
+      const asked = opened(element);
+      const folders = [...root.querySelectorAll<HTMLElement>('.space button.folder')];
+      folders[0].click();
+      folders[1].click();
+      root.querySelector<HTMLElement>('.space uui-button.all-folders')!.click();
+      await tick();
+      expect(asked).to.deep.equal([{ folderKey: 'f' }, { folderKey: null }, {}]);
+    });
+  });
+
   it('names no key', async () => {
     expect((await overview()).text()).to.not.match(KEY_NAMES);
   });

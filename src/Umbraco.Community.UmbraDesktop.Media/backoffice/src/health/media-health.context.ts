@@ -12,6 +12,11 @@ import { UmbraDesktopMediaHealthClient } from './health.client.js';
 import type { HealthCheck, HealthFolder, HealthItem, HealthOrphan, HealthStatus } from './health.client.js';
 import { barOf, isStale, listsOf, sizeOfAll } from './health-model.js';
 import type { HealthBar, HealthKind, HealthLists } from './health-model.js';
+import type { HealthEntry } from './health-grid.js';
+import { findDesktopWindows } from '../edit-image/desktop-windows.js';
+import type { UmbraDesktopWindows } from '../edit-image/desktop-windows.js';
+import { UMBRADESKTOP_MEDIA_MANAGER_APP } from '../manager/manager-window.context.js';
+import { printLocation } from '../manager/location.js';
 
 /** How often a running check is asked where it is: every two seconds (design §5). */
 export const HEALTH_POLL_MS = 2000;
@@ -130,6 +135,8 @@ export interface UmbraDesktopMediaHealthDeps {
    * @returns The run's report, when it ends.
    */
   optimize?: (request: OptimizeMediaRequest) => Promise<OptimizeReport>;
+  /** The desktop's window manager, for Show in Media Manager; found from the desktop unless a test hands one in. */
+  windows?: () => Pick<UmbraDesktopWindows, 'openApp'> | undefined;
 }
 
 /**
@@ -181,6 +188,9 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
   /** The media service's context, once found, for Optimize images. */
   #optimizeService?: OptimizeService;
 
+  /** The desktop's window manager, as a test hands it in or as found from the desktop. */
+  #windows: () => Pick<UmbraDesktopWindows, 'openApp'> | undefined;
+
   /** Where the check is, the last result, the library's size and Clean up. */
   #state = new UmbObjectState<UmbraDesktopMediaHealthState>({ phase: { kind: 'idle' }, result: undefined, mediaCount: undefined, cleanup: undefined });
 
@@ -211,6 +221,7 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
     this.#visible = deps.visible ?? (() => document.visibilityState !== 'hidden');
     this.#givenManager = deps.manager;
     this.#givenOptimize = deps.optimize;
+    this.#windows = deps.windows ?? (() => findDesktopWindows(this.getHostElement()));
     if (!deps.manager) this.consumeContext(UMBRADESKTOP_MEDIA_MANAGER_CONTEXT, (manager) => (this.#manager = manager?.api ? (manager as UmbraDesktopMediaHealthManager) : undefined));
     if (!deps.optimize) this.consumeContext(OPTIMIZE_SERVICE_CONTEXT, (service) => (this.#optimizeService = service ?? undefined));
   }
@@ -481,28 +492,57 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
       }
     }
 
-    if (oversized.length) this.#optimizeOversized(oversized, options.title);
+    if (oversized.length) {
+      this.#cleanup({ optimizing: { completed: 0, total: oversized.length } });
+      this.optimize(
+        oversized.map((each) => each.key),
+        { title: options.title, onProgress: (progress) => this.#cleanup({ optimizing: progress ? { ...progress } : undefined }) },
+      );
+    }
     this.#cleanup({ phase: 'done', freedBytes: freed, afterBytes: beforeBytes - freed });
     return this.#state.getValue().cleanup!;
   }
 
   /**
-   * Open Optimize images on the oversized images, follow how far it is, and take their new sizes
-   * when it ends. Not awaited: the run is the person's, in its own window.
-   * @param oversized The images.
-   * @param title The window's title.
+   * Open Optimize images on some images, and take their new sizes when the run ends, so the lists and
+   * the bar follow without another check. Not awaited: the run is the person's, in its own window.
+   * Clean up's oversized row comes through here, and so do the grid's and the preview's **Optimize**
+   * (design §16.4, §16.5).
+   * @param keys The images.
+   * @param options The window's title, and who to tell how far the run is: its progress while it runs,
+   * then `undefined` once it has ended.
+   * @returns Whether Optimize images could be opened: false when there is no media service here.
    */
-  #optimizeOversized(oversized: ReadonlyArray<HealthItem>, title: string | undefined): void {
+  optimize(
+    keys: ReadonlyArray<string>,
+    options: { title?: string; onProgress?: (progress: { completed: number; total: number; location?: string } | undefined) => void } = {},
+  ): boolean {
     const optimize = this.#givenOptimize ?? (this.#optimizeService ? (request: OptimizeMediaRequest) => this.#optimizeService!.optimizeMedia(request) : undefined);
-    if (!optimize) return;
-    this.#cleanup({ optimizing: { completed: 0, total: oversized.length } });
-    void optimize({ items: oversized.map((each) => each.key), title, onProgress: (progress) => this.#cleanup({ optimizing: { ...progress } }) })
+    if (!optimize || !keys.length) return false;
+    void optimize({ items: [...keys], title: options.title, onProgress: (progress) => options.onProgress?.(progress) })
       .catch(() => undefined)
       .then((report) => {
-        this.#cleanup({ optimizing: undefined });
+        options.onProgress?.(undefined);
         const sizes = (report?.items ?? []).filter((each) => each.status === 'optimized' && each.after).map((each) => ({ unique: each.unique, sizeBytes: each.after!.size }));
         if (sizes.length) this.resized(sizes);
       });
+    return true;
+  }
+
+  /**
+   * Show an item in a Media Manager window (design §16.5), like Show in Finder: a new window at the
+   * item's folder, or at Media for an item at the root, selecting it once core shows it. Core's
+   * collection is paged, so an item past its first page opens its folder unselected (plan Decision 8).
+   * An orphaned file is no item, so there is nothing to show it in.
+   * @param entry The grid's entry.
+   * @returns Whether a window was opened.
+   */
+  showInManager(entry: HealthEntry): boolean {
+    const item = entry.item;
+    const windows = this.#windows();
+    if (!item || !windows) return false;
+    const place = item.parentKey ? ({ kind: 'folder', unique: item.parentKey } as const) : ({ kind: 'root' } as const);
+    return windows.openApp(UMBRADESKTOP_MEDIA_MANAGER_APP, { location: printLocation(place, undefined, item.key) });
   }
 
   /**
@@ -570,21 +610,25 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
    * with an HMAC secret refuses unsigned resizer URLs). Items are signed by core's own imaging route,
    * by key, which also checks the person may see them; orphaned files, which are no item, by the
    * add-on's route, by URL. Whatever comes back unsigned is left out, and the screen draws a tile.
+   * The preview asks with `fit`: the whole picture inside an edge-sized box rather than a square crop,
+   * cached apart from the thumbnails (design §16.5).
    * @param subjects Each picture's URL, with its item's key when it is an item.
    * @param edge The edge in device pixels.
+   * @param options `fit` for the preview's uncropped picture.
    * @returns Each signed URL by the file's URL.
    */
-  async thumbnails(subjects: ReadonlyArray<{ url: string; key?: string }>, edge: number): Promise<Map<string, string>> {
-    const cacheKey = (url: string) => `${edge}|${url}`;
+  async thumbnails(subjects: ReadonlyArray<{ url: string; key?: string }>, edge: number, options: { fit?: boolean } = {}): Promise<Map<string, string>> {
+    const fit = !!options.fit;
+    const cacheKey = (url: string) => `${fit ? 'fit' : 'crop'}|${edge}|${url}`;
     const missing = subjects.filter((each, index) => !this.#thumbnails.has(cacheKey(each.url)) && subjects.findIndex((other) => other.url === each.url) === index);
     const items = missing.filter((each) => each.key);
     const orphans = missing.filter((each) => !each.key);
     if (items.length) {
-      const answer = await this.#client.itemThumbnails(items.map((each) => each.key!), edge);
+      const answer = await this.#client.itemThumbnails(items.map((each) => each.key!), edge, fit ? 'Max' : 'Crop');
       for (const each of items) if (answer.data?.[each.key!]) this.#thumbnails.set(cacheKey(each.url), answer.data[each.key!]);
     }
     if (orphans.length) {
-      const answer = await this.#client.orphanThumbnails(orphans.map((each) => each.url), edge);
+      const answer = await this.#client.orphanThumbnails(orphans.map((each) => each.url), edge, fit);
       for (const [url, signed] of Object.entries(answer.data ?? {})) this.#thumbnails.set(cacheKey(url), signed);
     }
     return new Map(subjects.flatMap((each) => (this.#thumbnails.has(cacheKey(each.url)) ? [[each.url, this.#thumbnails.get(cacheKey(each.url))!] as const] : [])));

@@ -103,6 +103,18 @@ describe('the Media Health client', () => {
     expect(data).to.deep.equal({ '/media/a/x.jpg': '/media/a/x.jpg?width=240&hmac=s' });
   });
 
+  it('asks core for an uncropped picture that fits, for the preview', async () => {
+    const { client, calls } = http({ [CORE_IMAGING_URLS]: [{ id: 'k1', urlInfos: [{ url: '/media/a/x.jpg?width=1600&height=1600&rmode=max&hmac=s' }] }] });
+    await new UmbraDesktopMediaHealthClient(client).itemThumbnails(['k1'], 1600, 'Max');
+    expect(calls[0]).to.deep.include({ query: { id: ['k1'], width: 1600, height: 1600, mode: 'Max' } });
+  });
+
+  it('asks the add-on for an uncropped picture of an orphaned file, for the preview', async () => {
+    const { client, calls } = http({ [`${MEDIA_HEALTH_BASE}/orphans/thumbnails`]: { urls: {} } });
+    await new UmbraDesktopMediaHealthClient(client).orphanThumbnails(['/media/a/x.jpg'], 1600, true);
+    expect(calls[0]).to.deep.include({ body: { urls: ['/media/a/x.jpg'], width: 1600, height: 1600, fit: true } });
+  });
+
   it('pages through every item at the largest page the server gives, in one list', async () => {
     const all = Array.from({ length: 1100 }, (_, index) => item({ key: `k${index}` }));
     const { client, calls } = http({
