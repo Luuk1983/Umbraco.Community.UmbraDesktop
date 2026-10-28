@@ -1,6 +1,6 @@
 # Third-party notices
 
-The UmbraDesktop Media Add-on is licensed under the MIT License (see `LICENSE` in the repository).
+The UmbraDesktop Media Add-on is licensed under the Functional Source License, Version 1.1, MIT Future License (see `LICENSE.md` beside this file).
 It includes the third-party software below, which keeps its own licence.
 
 The build checks this file: every npm package in the built JavaScript must be named here at the

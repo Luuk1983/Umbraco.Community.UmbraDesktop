@@ -32,4 +32,4 @@ Nothing in here is privileged. Each tool is a `umbraDesktopApp` manifest, the pu
 
 ## License
 
-[MIT](../../LICENSE)
+[Mozilla Public License 2.0](../../LICENSE). Most of Accessories was written by [suedeapple](https://github.com/suedeapple), who created it.

@@ -16,7 +16,7 @@
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>
 	  <Copyright>Copyright (c) Luuk Peters</Copyright>
-	  <PackageLicenseExpression>MIT</PackageLicenseExpression>
+	  <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
 	  <RepositoryType>git</RepositoryType>
 	  <RepositoryUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</RepositoryUrl>
 	  <PackageProjectUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</PackageProjectUrl>
