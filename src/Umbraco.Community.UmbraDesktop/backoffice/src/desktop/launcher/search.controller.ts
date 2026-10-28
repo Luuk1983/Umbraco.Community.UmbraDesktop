@@ -21,7 +21,7 @@ export interface UmbraDesktopSearchActions {
   open(item: UmbraDesktopSearchItem): void;
   /**
    * Called when there come to be results to show, or stop being, which is when the launcher switches
-   * body: when the first answer for typed text arrives, and when the field is emptied.
+   * body: as soon as there is text, and when the field is emptied.
    * @param active True while there are results for some text to show.
    */
   changed(active: boolean): void;
@@ -156,8 +156,7 @@ export class UmbraDesktopSearchController {
 
   /**
    * Redraw, and tell the host when results start or stop being shown. Driven by the engine's state
-   * rather than by the field, so the launcher keeps its own body while the first answer is on its
-   * way and swaps to the results in one go when it arrives (design §11).
+   * rather than by the field, so text of only spaces leaves the launcher as it is.
    * @param showing Whether there are results for some text.
    */
   #changed(showing: boolean): void {
@@ -200,7 +199,9 @@ export class UmbraDesktopSearchController {
 
   /**
    * The body while searching: the mixed results, or one source's full list. One band per category,
-   * stacked: every matching app, then each source, full ones first. Within a band the results flow
+   * stacked: every matching app, then each source, full ones first. While the sources have yet to
+   * answer, a loader stands where their bands will go, below apps that are already current, so an
+   * app can be opened without waiting for the server (design §12). Within a band the results flow
    * across a grid at the launcher's card width, best first along the top row, so a wide panel uses
    * its width instead of one long list down its left edge, and a Start menu's narrow panel keeps a
    * single column.
@@ -229,6 +230,12 @@ export class UmbraDesktopSearchController {
                 )}
               </div>
             </section>`
+          : ''}
+        ${state.pending
+          ? html`<div class="searching" role="status">
+              <uui-loader></uui-loader>
+              <span>${localize.term('umbraDesktop_searchLoading')}</span>
+            </div>`
           : ''}
         ${[...state.sections, ...state.others].map((section) => this.#renderSection(section, isFirst))}
         ${nothing ? html`<p class="empty-note">${localize.term('umbraDesktop_searchNoResults')}</p>` : ''}
@@ -437,6 +444,17 @@ export const searchStyles = css`
     align-items: center;
     justify-content: space-between;
     gap: var(--uui-size-space-3);
+  }
+  /* Where the sources' bands will go while they answer. In the launcher's own text colour, so it
+     reads on every theme's panel. */
+  .searching {
+    display: flex;
+    align-items: center;
+    gap: var(--uui-size-space-3);
+    padding: var(--uui-size-space-2) 0;
+    color: var(--umbradesktop-launcher-text, var(--uui-color-text));
+    font-size: var(--uui-type-small-size);
+    opacity: 0.7;
   }
   .show-all,
   .more {

@@ -1,14 +1,14 @@
 ---
 id: package-settings
 title: Package settings
-description: Put your package's settings in Desktop settings, store them per user, and open them from your own screens.
+description: Put your package's settings in Desktop settings, store them per user or for the whole site, and open them from your own screens.
 sidebar_position: 5.5
 ---
 
 # Package settings
 
-> How a package puts its settings in Desktop settings, stores them per user, and opens them from its
-> own screens. For why it is shaped this way, see
+> How a package puts its settings in Desktop settings, stores them per user or for the whole site,
+> and opens them from its own screens. For why it is shaped this way, see
 > [the design](../design/2026-10-03-package-settings-design.md).
 
 ---
@@ -130,10 +130,10 @@ worked example.
 
 ## 4. Storing settings
 
-The desktop offers a per-user store, through a global context with the alias
-`'UmbraDesktop.PackageSettingsContext'`. You do not have to use it: Umbraco's user data service or an
-API of your own work just as well, and site-wide settings need one of those, because the store is per
-user.
+The desktop offers two stores through a global context with the alias
+`'UmbraDesktop.PackageSettingsContext'`: one per user, described here, and one for the whole site,
+in [§4.1](#41-site-wide-settings). You do not have to use either: Umbraco's user data service or an
+API of your own work just as well.
 
 Copy the shape you use and make a token with the same alias:
 
@@ -152,6 +152,8 @@ interface PackageSettingsStore {
 interface PackageSettingsContext extends UmbContextMinimal {
   store(key: string): PackageSettingsStore | undefined;
   openSettings(packageName: string): boolean;
+  // Only if you use site-wide settings, §4.1.
+  siteStore(key: string): SitePackageSettingsStore | undefined;
 }
 
 const PACKAGE_SETTINGS = new UmbContextToken<PackageSettingsContext>('UmbraDesktop.PackageSettingsContext');
@@ -210,6 +212,134 @@ A few rules worth knowing:
 The context is global, so code outside the desktop element, such as a backoffice entry point, reaches
 the same store. The Accessories screen saver's idle watcher reads its settings that way.
 
+### 4.1 Site-wide settings
+
+Use a site store for a setting that holds for everyone, such as an item one editor marks as reviewed
+for the whole team. Every backoffice user can read it, so never keep anything secret in one. Who may
+change it is decided on the server: users with the **Settings** section, unless your package says
+otherwise.
+
+```ts
+interface SitePackageSettingsStore {
+  readonly value: unknown;
+  readonly status?: 'unread' | 'unsaved' | 'refused';
+  readonly problems: readonly string[];
+  readonly loaded: boolean;
+  readonly canChange: boolean;
+  set(value: unknown): boolean;
+  patch(changes: Record<string, unknown>): boolean;
+  refresh(): Promise<void>;
+  subscribe(listener: (value: unknown) => void): () => void;
+}
+```
+
+Get one with `context?.siteStore('My.Package')`, as with `store`, and use `canChange` to disable your
+controls:
+
+```ts
+override render() {
+  const kept = (this.#site?.value as { kept?: Record<string, unknown> } | undefined)?.kept ?? {};
+  return html`
+    <uui-button
+      label="Keep"
+      ?disabled=${!this.#site?.canChange}
+      @click=${() => this.#site?.patch({ kept: { [this.itemKey]: true } })}></uui-button>
+  `;
+}
+```
+
+The members `value`, `loaded`, `status` and `subscribe` work as in the per-user store. The rest:
+
+| Member | What it does |
+|---|---|
+| `siteStore(key)` | The site's settings for `key`, such as `My.Package`. One store per key per page, and keys match ignoring case. Undefined for an empty key or the desktop's own group |
+| `canChange` | Whether the signed-in user may change the value. False until it has been read |
+| `set(value)` | Replaces the value, whole. If two people save at once, the later one wins. Returns false, and changes nothing, when `canChange` is false |
+| `patch(changes)` | Changes only the members you name, merged on the server into what everyone has stored, so two people changing different members at once both keep their change. A member set to `null` is removed. An array is replaced whole, so keep lists as objects keyed by id. Returns false, and changes nothing, when `canChange` is false or `changes` is not an object |
+| `refresh()` | Reads the value again. Other people's changes are not pushed to you, so call it when your screen opens. A change of yours that is still waiting is not undone |
+| `status` | As in the per-user store, plus `'refused'` when the server said no to your last change ([below](#checking-values-on-the-server)) |
+| `problems` | Why the last change was refused, one sentence each, while `status` is `'refused'`. Empty otherwise |
+
+A few rules worth knowing:
+
+- **Prefer `patch` for anything several people change.** `set` is for a value one person owns, such
+  as a choice an administrator makes.
+- **The server's answer wins.** After each change, the store shows what the server stored, with
+  everyone else's changes in it.
+- **A failed change is kept in the page** and sets `status` to `'unsaved'`. It is sent again with
+  your next change.
+- **A value is at most 1,048,576 characters** of JSON. A change that would make it longer is refused.
+- **It is stored in Umbraco's key-value table**, under `Umbraco.Community.UmbraDesktop.PackageSettings.Site.`
+  and your key in lower case. A key can be up to 204 characters.
+
+To let other users change your setting, register a policy in your package's composer. A user then
+needs that policy instead of the **Settings** section:
+
+```csharp
+using Umbraco.Cms.Web.Common.Authorization;
+using Umbraco.Community.UmbraDesktop.PackageSettings;
+
+public class MyPackageComposer : IComposer
+{
+    public void Compose(IUmbracoBuilder builder) =>
+        builder.AddUmbraDesktopSiteSettings("My.Package", AuthorizationPolicies.SectionAccessMedia);
+}
+```
+
+The policy is any authorization policy name. If a key is registered more than once, a user needs
+every policy registered for it. A package with no server code gets the **Settings** default, and the
+browser can never change who may write.
+
+#### Checking values on the server
+
+The store never looks inside your value. To refuse values your package cannot use, such as a
+quality outside 1 to 100, register a validator. It runs on the server before every change is stored,
+so a request that skips your screen is checked too.
+
+```csharp
+using System.Text.Json.Nodes;
+using Umbraco.Community.UmbraDesktop.PackageSettings;
+
+public class MyPackageSettingsValidator : ISitePackageSettingsValidator
+{
+    public IEnumerable<string> Validate(JsonNode? value)
+    {
+        if (value?["quality"] is JsonValue quality
+            && quality.TryGetValue<int>(out var number)
+            && (number < 1 || number > 100))
+        {
+            yield return "Quality must be between 1 and 100.";
+        }
+    }
+}
+
+public class MyPackageComposer : IComposer
+{
+    public void Compose(IUmbracoBuilder builder) =>
+        builder.AddUmbraDesktopSiteSettingsValidator<MyPackageSettingsValidator>("My.Package");
+}
+```
+
+- **It sees the whole value as it would be stored.** For a `patch`, that is the value after the merge,
+  with everyone else's changes in it, checked while no one else can change it.
+- **Return one sentence per problem**, written for the person who made the change. Return nothing to
+  let it through.
+- **It checks, it does not change.** To store something else, refuse and say what is expected.
+- **It is built by the container**, as a singleton, so it can take your package's own services.
+- **Every validator for the key runs**, and the person sees every reason at once. A validator that
+  throws refuses the value with "The value could not be checked." and logs the exception.
+
+In the browser, a refused change is dropped and the stored value shows again. The store sets `status`
+to `'refused'` and lists the reasons in `problems` until the next change. Show them beside your
+controls:
+
+```ts
+${this.#site?.status === 'refused' ? html`<p>${this.#site.problems.join(' ')}</p>` : ''}
+```
+
+Changes sent together in one request are refused together. Unlike a failed change, a refused one is
+never sent again. The size limit and the checks on the request itself are refused the same way.
+
 ## 5. Opening your settings
 
 To open Desktop settings at your package's row from your own screens, call `openSettings` with your
@@ -264,10 +394,15 @@ does:
   succeed creating an element" error instead. Either way the box shows **This part of the settings
   could not be loaded.**
 
-From the store:
+From the stores. A site store names itself by its key in lower case:
 
-- `Package settings store "<key>" refused: use your package's own user-data group.`
+- `Package settings store "<key>" refused: use your package's own user-data group.` Also from
+  `siteStore`.
 - `A settings subscriber threw (store <key>.Settings).`, with the error.
+- `Site settings store "<key>.SiteSettings" has not been read yet, so nothing changed.` A `set` or
+  `patch` before the first read has answered.
+- `Site settings store "<key>.SiteSettings" may not be changed by this user, so nothing changed.`
+- `Site settings store "<key>.SiteSettings" was given a patch that is not an object, so nothing changed.`
 
 From a tile with `meta.opensSettings`, printed once the registry has been quiet:
 
@@ -283,8 +418,9 @@ From a tile with `meta.opensSettings`, printed once the registry has been quiet:
 - **Nothing protects against a hostile package.** Any package's JavaScript can unregister or
   overwrite any extension. The rules here stop mistakes.
 - **No box inside the desktop's own categories**, and your row is always below them.
-- **The store is per user.** Settings for the whole site need a server and a permission check, which
-  is your package's own API.
+- **A site setting is readable by every backoffice user.** Keep nothing secret in one.
+- **Other people's changes are not pushed.** A site store sees them on `refresh()` and with the
+  answer to each change of its own.
 - **The desktop's own contexts are not promised to your box.** See [§3](#3-your-element).
 - **Your box has to fit** from about 360px wide to a full window. See [§3](#3-your-element).
 - **A link needs `data-router-slot="disabled"`.** See [§3](#3-your-element).

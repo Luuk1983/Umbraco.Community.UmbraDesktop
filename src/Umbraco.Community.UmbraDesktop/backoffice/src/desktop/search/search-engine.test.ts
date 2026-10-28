@@ -74,37 +74,50 @@ it('leaves out a source that found nothing', async () => {
   expect(e.state.others).to.deep.equal([]);
 });
 
-it('shows matching apps together with what the sources found, in one update', async () => {
+it('shows matching apps at once, without waiting for the sources', async () => {
   const docs = source('docs', 'full', ['Log entry']);
-  const { e, states } = engine(30);
+  const { e } = engine(30);
   e.setApps([{ alias: 'log', name: 'Log Viewer' } as UmbraDesktopApp]);
   e.setSources([docs.src]);
   e.setQuery('log');
-  expect(e.state.apps, 'no apps before the sources answer').to.deep.equal([]);
-  expect(e.state.query, 'nothing is shown for the text yet').to.equal('');
+  expect(e.state.query, 'the text is current at once').to.equal('log');
+  expect(e.state.apps.map((a) => a.alias), 'and so are the apps').to.deep.equal(['log']);
+  expect(e.state.pending, 'while the sources are still to answer').to.equal(true);
+  expect(docs.calls, 'which are only asked once typing pauses').to.deep.equal([]);
   await until(() => !e.state.pending);
-  const withApps = states.filter((s) => s.apps.length > 0);
-  expect(withApps.length, 'apps appear once').to.equal(1);
-  expect(withApps[0].sections.map((s) => s.source.alias), 'in the same update as the documents').to.deep.equal(['docs']);
-  expect(withApps[0].query).to.equal('log');
+  expect(e.state.apps.map((a) => a.alias), 'the apps stay').to.deep.equal(['log']);
+  expect(e.state.sections.map((s) => s.source.alias)).to.deep.equal(['docs']);
 });
 
-it('keeps showing the previous results while the next ones load', async () => {
+it('drops the previous source results while the next ones load, so none is shown beside the wrong text', async () => {
   const docs = source('docs', 'full', ['Home', 'Homework']);
+  const types = source('types', 'compact', ['Home type']);
   const { e } = engine(30);
   e.setApps([{ alias: 'home', name: 'Home app' } as UmbraDesktopApp]);
-  e.setSources([docs.src]);
+  e.setSources([docs.src, types.src]);
   e.setQuery('home');
   await until(() => !e.state.pending);
   e.setQuery('homew');
   expect(e.state.pending).to.equal(true);
-  expect(e.state.query).to.equal('home');
-  expect(e.state.apps.map((a) => a.alias)).to.deep.equal(['home']);
-  expect(e.state.sections[0].items.map((i) => i.name)).to.deep.equal(['Home', 'Homework']);
-  await until(() => !e.state.pending);
   expect(e.state.query).to.equal('homew');
-  expect(e.state.apps).to.deep.equal([]);
+  expect(e.state.apps, 'no app matches the new text').to.deep.equal([]);
+  expect(e.state.sections).to.deep.equal([]);
+  expect(e.state.others).to.deep.equal([]);
+  await until(() => !e.state.pending);
   expect(e.state.sections[0].items.map((i) => i.name)).to.deep.equal(['Homework']);
+});
+
+it('asks nothing again when the text changes only by spaces at its ends', async () => {
+  const docs = source('docs', 'full', ['Home']);
+  const { e } = engine();
+  e.setSources([docs.src]);
+  e.setQuery('home');
+  await until(() => !e.state.pending);
+  e.setQuery('home ');
+  expect(e.state.pending, 'the results stay as they are').to.equal(false);
+  expect(e.state.sections.map((s) => s.source.alias)).to.deep.equal(['docs']);
+  await new Promise((r) => setTimeout(r, 20));
+  expect(docs.calls.map((c) => c.query)).to.deep.equal(['home']);
 });
 
 it('shows every matching app, however many', async () => {

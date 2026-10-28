@@ -328,6 +328,21 @@ export interface UmbraDesktopWindow {
   owner?: string;
 
   /**
+   * Whether this window is its owner's dialog (#179): set with {@link owner}, on a window that keeps
+   * its owner waiting until it is answered, as an OS's modal child window does. It stays above its
+   * owner and takes the focus whenever the owner would, the owner's content is dimmed and takes no
+   * clicks, it moves with its owner and has no taskbar button, minimize, maximize or resize handles
+   * of its own. An owner has at most one. Opened with the manager's `openDialog`.
+   */
+  dialog?: boolean;
+
+  /**
+   * How many times this dialog has been asked to draw attention, because somebody clicked the owner
+   * it keeps waiting. The window flashes when it moves. Absent on every other window.
+   */
+  flashes?: number;
+
+  /**
    * The attached content this window draws as panes inside itself, beside its own content.
    *
    * On the owner rather than as windows of their own, because a pane is not a window: it has no

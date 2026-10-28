@@ -39,6 +39,14 @@ import { nameForPaste } from '../upload/paste-name.js';
 import { uploadInto } from '../upload/upload.js';
 import { watchUploads } from '../upload/upload-watch.js';
 import type { UmbraDesktopUploadBatch } from '../upload/upload-watch.js';
+import type { UmbFileDropzoneDroppedItems } from '@umbraco-cms/backoffice/dropzone';
+import { guidedUpload } from '../upload/guided-upload.js';
+import type { GuidedUploadDeps, SheetAnswer, SheetRequest } from '../upload/guided-upload.js';
+import { guidelinesDialogSize, UmbraDesktopMediaGuidelinesDialogElement } from '../upload/guidelines-dialog.element.js';
+import { openDesktopDialog } from '../shared/desktop-dialog.js';
+import { checkFiles } from '../guidelines/check.js';
+import { wordsOf } from '../shared/words.js';
+import { MEDIA_PACKAGE_NAME, UMBRADESKTOP_PACKAGE_SETTINGS_CONTEXT } from '../shared/package-settings.js';
 
 /**
  * When to look for core's cards again after something that may have drawn new ones (an item opened,
@@ -193,6 +201,10 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
   @state()
   private _dropLabel?: { lines: UmbraDesktopLabelLine[]; refused: boolean; x: number; y: number };
 
+  /** How many files the last warning, closed, did not upload, for the line that says so (#179). */
+  @state()
+  private _heldBack?: number;
+
   /** The selection box's layer. */
   @query('umbradesktop-media-selection-box')
   private _box?: UmbraDesktopMediaSelectionBoxElement;
@@ -268,6 +280,18 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
   /** The pending looks for what a drop brought in; see {@link SELECT_RETRIES_MS}. */
   #selectTimers: number[] = [];
 
+  /**
+   * The checked uploads into this window, one after another (#179), so a second drop while a warning
+   * is open waits for its answer rather than opening a second warning over it.
+   */
+  #checked: Promise<void> = Promise.resolve();
+
+  /** The folder the window shows, by the name it was titled with, for what the warning says. */
+  #placeName?: string;
+
+  /** This package's words, with the English dictionary as the fallback. */
+  readonly #words = wordsOf(this.localize);
+
   /** This window, as a drag between windows works with it (plan phase 5). */
   readonly #dragHandle: UmbraDesktopDragWindowHandle = {
     element: this,
@@ -295,6 +319,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
     selectWhenShown: (keys) => this.#selectWhenShown(keys),
     arriving: (destination) => this.#arriving(destination),
     landed: (destination, folders) => this.#landed(destination, folders),
+    upload: (items, parent) => this.#checkedUpload(items, parent === null ? { kind: 'root' } : { kind: 'folder', unique: parent }),
   };
 
   override connectedCallback(): void {
@@ -630,17 +655,113 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
     const at = new Date();
     const prefix = this.localize.term('umbraDesktopMedia_pastedImage');
     const named = files.map((file) => nameForPaste(file, at, prefix));
+    await this.#checkedUpload({ files: named, folders: [] }, place);
+  }
+
+  /**
+   * Upload files and folders into a folder, checked against the site's media guidelines first when
+   * the desktop context checks them (#179): what follows them goes at once, and the rest wait on the
+   * warning in this window. One checked upload at a time.
+   * @param items What was pasted or dropped.
+   * @param place Where it goes.
+   * @returns When it is done, the warning answered.
+   */
+  #checkedUpload(items: UmbFileDropzoneDroppedItems, place: UmbraDesktopMediaPlace): Promise<void> {
+    if (place.kind === 'bin') return Promise.resolve();
+    const run = () => (this.#context?.guidelines ? guidedUpload(items, this.#guidedDeps(place)) : this.#plainUpload(items, place));
+    const next = this.#checked.then(run, run);
+    this.#checked = next.catch(() => undefined);
+    return next;
+  }
+
+  /**
+   * What a checked upload into a folder asks of this window and its context.
+   * @param place The folder.
+   * @returns The deps.
+   */
+  #guidedDeps(place: Exclude<UmbraDesktopMediaPlace, { kind: 'bin' }>): GuidedUploadDeps {
+    const context = this.#context!;
+    const parent = place.kind === 'folder' ? place.unique : null;
+    return {
+      guidelines: () => context.guidelines(),
+      uploadLimit: () => context.uploadLimit?.() ?? Promise.resolve(0),
+      check: (files, guidelines, uploadLimit) => checkFiles(files, guidelines, undefined, uploadLimit),
+      upload: (items) => this.#plainUpload(items, place),
+      ask: async (request) => this.#ask(request, await this.#nameOf(place)),
+      // Let go: the optimizer's window runs on its own, and the next drop does not wait for it.
+      optimize: async (files, guidelines) => void context.optimizeFiles?.(files, guidelines, parent, await this.#nameOf(place)).catch(() => undefined),
+      heldBack: (count) => (this._heldBack = count),
+      canOptimize: () => context.canOptimizeFiles?.() ?? false,
+    };
+  }
+
+  /**
+   * Upload files and folders into a folder, unchecked: into the folder this window shows through
+   * core's own dropzone in it, so core picks the types and draws its placeholders as it does for a
+   * drop; anywhere else directly, through the desktop context so the Transfers window follows it.
+   * @param items What to upload.
+   * @param place Where.
+   */
+  async #plainUpload(items: UmbFileDropzoneDroppedItems, place: UmbraDesktopMediaPlace): Promise<void> {
+    if (place.kind === 'bin' || (!items.files.length && !items.folders.length)) return;
     // What a drop on core's dropzone sends: uui's file dropzone's `change`, which core's dropzone
     // handles as it handles a drop (its `onUpload` is deprecated from 17.7).
     const zone = this._folderHost ? deepFind(this._folderHost, (element) => element.tagName === 'UMB-DROPZONE-MEDIA') : undefined;
     const fileDropzone = zone ? deepFind(zone, (element) => element.tagName === 'UUI-FILE-DROPZONE') : undefined;
     if (fileDropzone && samePlace(place, this._place)) {
-      fileDropzone.dispatchEvent(new CustomEvent('change', { detail: { files: named, folders: [] } }));
+      fileDropzone.dispatchEvent(new CustomEvent('change', { detail: { files: [...items.files], folders: [...items.folders] } }));
       return;
     }
-    // No dropzone in the view: upload directly, and show what arrived.
-    await uploadInto(this, { files: named, folders: [] }, place.kind === 'folder' ? place.unique : null);
+    const parent = place.kind === 'folder' ? place.unique : null;
+    if (this.#context?.upload) {
+      await this.#context.upload(items, parent);
+      return;
+    }
+    // No dropzone in the view and no desktop context: upload directly, and show what arrived.
+    await uploadInto(this, items, parent);
     this._folderHost?.reload();
+  }
+
+  /**
+   * Show the media guidelines warning in a dialog over this window, which keeps this window waiting
+   * until it is answered, and wait for the answer. The window comes forward first, so the dialog is
+   * seen over it. Where the desktop opens no dialog, which off the desktop it cannot, the files go as
+   * they are, as they did before there were guidelines.
+   * @param request What it is about.
+   * @param folderName The folder the files go to.
+   * @returns The answer.
+   */
+  #ask(request: SheetRequest, folderName: string): Promise<SheetAnswer> {
+    this._heldBack = undefined;
+    this.#dragHandle.raise();
+    return new Promise<SheetAnswer>((resolve) => {
+      const opened = openDesktopDialog(this, {
+        name: this.#words('guidelinesTitle'),
+        icon: 'icon-alert',
+        element: UmbraDesktopMediaGuidelinesDialogElement,
+        props: { request, folderName, onAnswer: resolve, onSettings: () => void this.#openGuidelines() },
+        size: guidelinesDialogSize(request),
+      });
+      if (!opened) resolve({ kind: 'as-is' });
+    });
+  }
+
+  /**
+   * A folder's name, for the warning and the optimizer.
+   * @param place The folder.
+   * @returns Its name, or Media's own for the root.
+   */
+  async #nameOf(place: UmbraDesktopMediaPlace): Promise<string> {
+    if (place.kind !== 'folder') return this.localize.string('#sections_media');
+    if (samePlace(place, this._place) && this.#placeName) return this.#placeName;
+    const name = (await this.#context?.api?.item(place.unique).catch(() => undefined))?.data?.name;
+    return name ?? '';
+  }
+
+  /** Open Desktop settings at this package's row, from the warning's Media guidelines link. */
+  async #openGuidelines(): Promise<void> {
+    const settings = await this.getContext(UMBRADESKTOP_PACKAGE_SETTINGS_CONTEXT).catch(() => undefined);
+    settings?.openSettings(MEDIA_PACKAGE_NAME);
   }
 
   /**
@@ -840,6 +961,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
   #onFolderLoaded = (event: CustomEvent<{ name: string }>): void => {
     this.#scheduleBorder();
     const title = this.localize.string(event.detail.name);
+    this.#placeName = title;
     this.dispatchEvent(new CustomEvent('umbradesktop-app-title', { detail: { title }, bubbles: true, composed: true }));
   };
 
@@ -1030,8 +1152,23 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
         @umbradesktop-media-folder-loaded=${this.#onFolderLoaded}></umbradesktop-media-folder-host>
       <div class="drop-shade"></div>
       <umbradesktop-media-selection-box></umbradesktop-media-selection-box>
-      ${this.#renderDropLabel()}
+      ${this.#renderDropLabel()} ${this.#renderHeldBack()}
     `;
+  }
+
+  /**
+   * The line that says files were not uploaded, after the warning was closed (#179): in this window,
+   * where they were dropped, until dismissed or the next warning.
+   * @returns The line, or nothing.
+   */
+  #renderHeldBack() {
+    const count = this._heldBack;
+    if (!count) return nothing;
+    return html`<div class="held-back" role="status">
+      <umb-icon name="icon-info"></umb-icon>
+      <span>${count === 1 ? this.#words('guidelinesHeldBackOne') : this.#words('guidelinesHeldBack', count)}</span>
+      <button type="button" @click=${() => (this._heldBack = undefined)}>${this.#words('guidelinesHeldBackDismiss')}</button>
+    </div>`;
   }
 
   /**
@@ -1122,6 +1259,40 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
 
     :host([mark='refuses']:not([drop])) .drop-shade {
       background: color-mix(in srgb, var(--uui-color-surface, #fff) ${unsafeCSS(Math.round((1 - MARK_DIM_OPACITY) * 100))}%, transparent);
+    }
+
+    /* Files the warning did not upload (#179): a line at the foot of the window, over its contents. */
+    .held-back {
+      position: absolute;
+      z-index: 250;
+      left: 50%;
+      bottom: var(--uui-size-space-5, 18px);
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: var(--uui-size-space-3, 9px);
+      max-width: calc(100% - 32px);
+      padding: var(--uui-size-space-3, 9px) var(--uui-size-space-4, 12px);
+      border-radius: var(--uui-border-radius, 3px);
+      background: var(--uui-color-surface, #fff);
+      color: var(--uui-color-text, #000);
+      border: 1px solid var(--uui-color-border, #d8d7d9);
+      box-shadow: var(--uui-shadow-depth-3, 0 4px 12px rgba(0, 0, 0, 0.2));
+      font-size: 14px;
+    }
+
+    .held-back umb-icon {
+      color: var(--uui-color-selected);
+    }
+
+    .held-back button {
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      color: var(--uui-color-interactive, var(--uui-color-selected));
+      text-decoration: underline;
+      cursor: pointer;
     }
 
     .drop-label {

@@ -1,7 +1,7 @@
 ---
 id: optimizing-images
 title: Optimizing images
-description: Resize, convert and strip the metadata of an image file, or of media library images in an Optimize images window, from your own add-on.
+description: Resize, convert and strip the metadata of an image file, of media library images, or of files before they upload, in an Optimize images window, from your own add-on.
 sidebar_position: 2
 ---
 
@@ -15,6 +15,10 @@ your add-on can use the same work:
 - **Media items in, a report out.** `optimizeMedia` opens an Optimize images window for media items
   you name, with its settings, its progress on the taskbar and its report, and tells you how the run
   went when it ends.
+- **Files in, uploaded one by one.** `optimizeFiles` opens the same window for files that are not in
+  the media library yet, and hands each one back to your own upload as soon as it is done. The Media
+  add-on's [media guidelines](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/blob/main/src/Umbraco.Community.UmbraDesktop.Media/docs/user/media-guidelines.md)
+  use it for files dropped into a Media Manager.
 
 Everything runs in the browser, one image at a time, with the decoding and encoding in a web worker
 so the desktop stays smooth while it works. Where a site's content security policy refuses a worker,
@@ -32,8 +36,12 @@ methods to your copy of the context's shape:
 interface MediaService extends UmbContextMinimal {
   optimizeFile(file: File, options?: OptimizeOptions): Promise<OptimizeFileResult>;
   optimizeMedia(request: OptimizeMediaRequest): Promise<OptimizeReport>;
+  optimizeFiles?(request: OptimizeFilesRequest): Promise<OptimizeReport>;
 }
 ```
+
+`optimizeFiles` is new in 17.5; declare it optional and check for it, so your add-on still works
+with an older media service.
 
 The context is on the desktop page. Code inside a backoffice window, such as an entity action in the
 Media section, reaches it through the window's frame, the way
@@ -149,7 +157,54 @@ store the item's key and keep working; a link to the old file's address does not
 After the report, the person can still press **Retry failed** or **Run the rest** in the same window.
 Those runs are theirs, and are not reported to you.
 
-## 5. What is not offered
+## 5. Files in, uploaded one by one
+
+```ts
+type OptimizeImageKind = 'jpeg' | 'png-photo' | 'png-transparent' | 'webp' | 'gif';
+
+interface OptimizeFilesRequest {
+  files: Array<{ file: File; kind?: OptimizeImageKind; fix?: Array<'size' | 'format' | 'location' | 'upload-limit'> }>;
+  settings?: {
+    resize?: { maxWidth?: number; maxHeight?: number } | null;
+    formats?: Partial<Record<OptimizeImageKind, 'keep' | 'jpeg' | 'png' | 'webp'>>;
+    quality?: number;
+    removeLocation?: boolean;
+  };
+  destination: { name: string; path?: string[] };
+  note?: string;
+  upload(file: File): Promise<{ ok: boolean; message?: string }>;
+  title?: string;
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `files` | The files, in the order to process them |
+| `files[].kind` | The file's row in `formats`. A PNG is two kinds, a photo and one with transparency, because only you can tell them apart well; without it a PNG counts as a photo |
+| `files[].fix` | What the file breaks, and so the only fixes it gets: `size` resizes it, `format` converts it by its row, `location` removes its metadata, `upload-limit` saves it anew at the quality, in its row's format, to bring it under the site's upload limit. Without it, every fix the settings ask for. A file that only needs `location` has it removed without its picture being saved again |
+| `settings` | What the run does. A field left out is off, a row left out is **Keep**. The run starts on them at once, with no settings page: you chose them, and the person chose to optimize where you asked. They are never remembered as the person's own |
+| `settings.formats` | What each kind is converted to. A row not on **Keep** is also the format any file of that kind is saved in when it is saved anew |
+| `destination` | Where the files go, which the window names: "uploading to Products". `path` is the folder's names from the root, the folder last |
+| `note` | A line under what the run does, such as where the settings came from |
+| `upload` | Upload one file and say how it went. Called once per file, in order, and the next file waits for it; `message` is shown when `ok` is false |
+| `title` | Plain text for the window's title, in place of the folder's name |
+
+```ts
+const report = await media.optimizeFiles({
+  files: dropped.map((file) => ({ file, fix: ['size', 'location'] })),
+  settings: { resize: { maxWidth: 2560, maxHeight: 2560 }, removeLocation: true },
+  destination: { name: 'Products' },
+  upload: async (file) => ({ ok: await uploadInto(folder, file) }),
+});
+```
+
+Each file is optimized, then handed to `upload`: the optimized file, or the original when there was
+nothing to do or the file is animated. A file whose optimizing or upload fails is uploaded not at
+all, and its row offers **Retry** and **Upload the original**. The report's items are keyed
+`file-0`, `file-1` and so on, in the order given. `not-started` means nothing was uploaded, because
+there is no desktop.
+
+## 6. What is not offered
 
 Steps of your own, such as a watermark, cannot be added to a run. The run is built as a list of steps
 inside, so this can be opened later without changing what is published here.

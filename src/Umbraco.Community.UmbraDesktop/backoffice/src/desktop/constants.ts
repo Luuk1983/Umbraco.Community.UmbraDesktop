@@ -467,6 +467,34 @@ export const UMBRADESKTOP_APP_OPEN_ATTACHED_EVENT = 'umbradesktop-open-attached'
 export const UMBRADESKTOP_APP_CLOSE_ATTACHED_EVENT = 'umbradesktop-close-attached';
 
 /**
+ * The event an app element dispatches to ask a question in a dialog over its window (#179), with
+ * `{ name, icon?, element, props?, size }` in `detail`, bubbling and composed. `element` is the
+ * dialog's content, in any form a manifest's `element` may take, `props` are set on it before it
+ * connects, and `size` is its content box in px. The dialog keeps the window waiting until it closes:
+ * its content asks with {@link UMBRADESKTOP_APP_CLOSE_DIALOG_EVENT}, or the person closes it. The
+ * desktop cancels the event when it opens the dialog, so send it cancelable; a window with a dialog
+ * already open opens no second one. Public contract for any app, documented in
+ * `docs/developer/desktop-apps.md`.
+ */
+export const UMBRADESKTOP_APP_OPEN_DIALOG_EVENT = 'umbradesktop-open-dialog';
+
+/**
+ * The event a dialog's content dispatches to close its dialog once it is answered (#179), bubbling
+ * and composed, no detail. Public contract, documented with the open event.
+ */
+export const UMBRADESKTOP_APP_CLOSE_DIALOG_EVENT = 'umbradesktop-close-dialog';
+
+/**
+ * How many times a dialog's titlebar swaps between inactive and active when the window it keeps
+ * waiting is clicked, and how long each swap lasts, in ms. Six swaps of 80ms is three blinks in about
+ * half a second, close to what Windows does.
+ */
+export const UMBRADESKTOP_DIALOG_FLASH_STEPS = 6;
+
+/** See {@link UMBRADESKTOP_DIALOG_FLASH_STEPS}. */
+export const UMBRADESKTOP_DIALOG_FLASH_STEP_MS = 80;
+
+/**
  * The event an app element dispatches to bring its own window, and the window's group, to the front,
  * restoring it when minimised (#144): what the Media Manager does for the window items were dropped
  * into, so the next key acts there. Bubbling and composed, no detail. Public contract for any app,

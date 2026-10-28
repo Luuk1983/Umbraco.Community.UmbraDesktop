@@ -2,6 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { UmbraDesktopPackageSettingsContext } from './package-settings.context.js';
 import { UMBRADESKTOP_PACKAGE_SETTINGS_CONTEXT } from './package-settings.context-token.js';
 import type { UmbraDesktopPackageSettingsDocument } from './package-store/package-settings-store.js';
+import type { UmbraDesktopSiteSettingsDocument } from './package-store/site-settings-store.js';
 import { fakeUserDataServer } from './package-store/fake-user-data-server.test-helper.js';
 import type { UmbraDesktopFakeUserDataServer } from './package-store/fake-user-data-server.test-helper.js';
 import type { UmbraDesktopUserDataClient } from '../user-data/types.js';
@@ -28,6 +29,10 @@ class ProbeContext extends UmbraDesktopPackageSettingsContext {
   public opened: Array<[UmbControllerHost, string]> = [];
   /** Whether a read fails, as it does when the account cannot be reached. */
   public failing = false;
+  /** The keys a site document was made for, in order. */
+  public siteDocuments: string[] = [];
+  /** The keys whose site document was read, in order. */
+  public siteReads: string[] = [];
 
   /**
    * A document that holds nothing and records being read.
@@ -42,6 +47,24 @@ class ProbeContext extends UmbraDesktopPackageSettingsContext {
         return this.failing ? undefined : null;
       },
       write: async () => true,
+    };
+  }
+
+  /**
+   * A site document that holds nothing and records being read.
+   * @param key The package key.
+   * @returns The document.
+   */
+  protected override _siteDocumentFor(key: string): UmbraDesktopSiteSettingsDocument {
+    this.siteDocuments.push(key);
+    const answer = async () => (this.failing ? undefined : { value: null, canChange: true });
+    return {
+      read: async () => {
+        this.siteReads.push(key);
+        return answer();
+      },
+      replace: answer,
+      patch: answer,
     };
   }
 
@@ -221,6 +244,45 @@ it('waits for a signed-in user before loading, then loads every store', async ()
   expect(subject.reads).to.deep.equal([]);
   user.setValue('user-1');
   expect(subject.reads).to.deep.equal(['Pkg.One', 'Pkg.Two']);
+});
+
+it('hands out one site store per key, ignoring case as the server does, apart from the user’s store', () => {
+  const subject = context();
+  const site = subject.siteStore('Pkg.Group');
+  expect(site === subject.siteStore('pkg.group')).to.equal(true);
+  expect((site as unknown) === subject.store('Pkg.Group')).to.equal(false);
+  expect(subject.siteDocuments).to.deep.equal(['Pkg.Group']);
+});
+
+it('refuses the desktop’s own group, and an empty key, for a site store too', () => {
+  const subject = context();
+  const warn = console.warn;
+  console.warn = () => undefined;
+  try {
+    expect(subject.siteStore(' umbraco.community.umbradesktop ')).to.equal(undefined);
+    expect(subject.siteStore('')).to.equal(undefined);
+  } finally {
+    console.warn = warn;
+  }
+  expect(subject.siteDocuments).to.deep.equal([]);
+});
+
+it('loads a site store once somebody is signed in, and reads a failed one again when it is asked for again', async () => {
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const { subject, user } = await contextWithUser(undefined);
+  subject.failing = true;
+  const site = subject.siteStore('Pkg.Group')!;
+  expect(subject.siteReads).to.deep.equal([]);
+  user.setValue('user-1');
+  await settle();
+  expect([site.status, subject.siteReads.length]).to.deep.equal(['unread', 1]);
+  subject.failing = false;
+  subject.siteStore('Pkg.Group');
+  await settle();
+  expect([site.loaded, subject.siteReads.length]).to.deep.equal([true, 2]);
+  subject.siteStore('Pkg.Group');
+  await settle();
+  expect(subject.siteReads.length).to.equal(2);
 });
 
 it('is provided under the alias packages build their own token from', () => {

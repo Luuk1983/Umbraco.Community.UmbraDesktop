@@ -54,6 +54,10 @@ Do not use it for:
   editor that needs to edit beside a window should be one of Umbraco's own pages, not an element.
 - **A second level.** Attached content cannot own attached content. `openAttached` refuses a
   floating attached window as an owner.
+- **A question the window has to wait for.** That is a dialog: see
+  [Building a desktop app](desktop-apps.md#79-asking-a-question-in-a-dialog-over-your-window). It is a
+  window owned the same way, through `owner`, with `dialog` set, and the group's rules in
+  `window-group.ts` give it the focus whenever its owner would take it.
 
 ## 3. Opening it
 

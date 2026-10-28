@@ -36,6 +36,15 @@ import { UmbraDesktopMediaOsDropController } from '../upload/os-drop.controller.
 import { uploadInto } from '../upload/upload.js';
 import type { UmbraDesktopImageClipboard, UmbraDesktopImagePrint } from '../clipboard/os-image.js';
 import type { UmbraDesktopDragWindowHandle } from '../drag/drag.controller.js';
+import type { UmbFileDropzoneDroppedItems } from '@umbraco-cms/backoffice/dropzone';
+import { DEFAULT_GUIDELINES } from '../guidelines/guidelines.js';
+import { UmbTemporaryFileConfigRepository } from '@umbraco-cms/backoffice/temporary-file';
+import type { MediaGuidelines } from '../guidelines/guidelines.js';
+import { createMediaGuidelinesApi } from '../guidelines/guidelines-api.js';
+import type { MediaGuidelinesApi } from '../guidelines/guidelines-api.js';
+import type { CheckedFile } from '../guidelines/check.js';
+import { optimizeRequest } from '../guidelines/optimize-request.js';
+import type { OptimizeFilesRequest } from '../shared/optimize-service.js';
 
 /** What an operation does, for its notice and, later, the Transfers window and undo. */
 export type UmbraDesktopMediaOperationKind = 'move' | 'copy' | 'trash' | 'restore' | 'rename' | 'replace';
@@ -83,6 +92,27 @@ export interface UmbraDesktopMediaContextDeps {
   access?: () => UmbraDesktopMediaAccess | undefined;
   /** What Replace file asks beyond the server (#176); the backoffice's and the media service's unless a test's. */
   replace?: UmbraDesktopReplaceDeps;
+  /** The media guidelines' calls (#179); the server's unless a test's. */
+  guidelinesApi?: MediaGuidelinesApi;
+  /**
+   * Hand files to Optimize images (#179); the media service's `optimizeFiles` unless a test's.
+   * @param request The files.
+   */
+  optimizeFiles?: (request: OptimizeFilesRequest) => Promise<unknown>;
+  /**
+   * Upload into a folder through core's media upload; `upload.ts`'s unless a test's.
+   * @param items The files and folders.
+   * @param parent The folder, null for the root.
+   * @param follow Whether the Transfers window follows it.
+   * @returns How many went in.
+   */
+  uploadInto?: (items: UmbFileDropzoneDroppedItems, parent: string | null, follow: boolean) => Promise<number>;
+  /**
+   * Umbraco's upload limit in KB, as core's temporary file configuration has it (#179); core's own
+   * unless a test's.
+   * @returns The limit, or null or undefined when there is none.
+   */
+  uploadLimitKb?: () => Promise<number | null | undefined>;
 }
 
 /** The files the OS clipboard takes as a picture, by extension; anything else is not put there. */
@@ -173,6 +203,11 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
     this.#pageFocused = deps.pageFocused ?? (() => document.hasFocus());
     this.#readAccess = deps.access ?? (() => this.#userAccess);
     this.#replace = deps.replace ?? this.#backofficeReplace();
+    this.#guidelinesApi = deps.guidelinesApi ?? createMediaGuidelinesApi();
+    this.#optimizeFiles = deps.optimizeFiles ?? ((request) => this.#mediaService?.optimizeFiles?.(request) ?? Promise.resolve(undefined));
+    this.#canOptimize = deps.optimizeFiles ? () => true : () => typeof this.#mediaService?.optimizeFiles === 'function';
+    this.#uploadLimitKb = deps.uploadLimitKb ?? (() => this.#readUploadLimitKb());
+    this.#uploadInto = deps.uploadInto ?? ((items, parent, follow) => uploadInto(this, items, parent, follow ? (batch) => this.followUpload(batch) : undefined));
     this.consumeContext(UMBRADESKTOP_MEDIA_SERVICE, (service) => (this.#mediaService = service ?? undefined));
     // Umbraco's own record of what the person may reach: their media start folders, and whether they
     // may use the Media root. Every operation is refused up front outside it (rules.ts).
@@ -210,10 +245,7 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
     this.#osDrop = new UmbraDesktopMediaOsDropController(
       {
         api: this.#api,
-        upload: async (items, parent) => {
-          await uploadInto(this, items, parent, (batch) => this.followUpload(batch));
-          this.#reload(parent);
-        },
+        upload: async (items, parent) => void (await this.upload(items, parent)),
         access: () => this.access(),
       },
       () => this.#dragWindows,
@@ -745,6 +777,102 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
   /** The media service (Services.Media), which Replace file saves through; undefined until found. */
   #mediaService?: UmbraDesktopMediaService;
 
+  /** The media guidelines' calls (#179). */
+  #guidelinesApi: MediaGuidelinesApi;
+
+  /** The guidelines last read, for when they cannot be read again. */
+  #lastGuidelines?: MediaGuidelines;
+
+  /** Hands files to Optimize images. */
+  #optimizeFiles: (request: OptimizeFilesRequest) => Promise<unknown>;
+
+  /** Whether Optimize images can take files. */
+  #canOptimize: () => boolean;
+
+  /** Uploads into a folder through core's media upload, followed in the Transfers window or not. */
+  #uploadInto: (items: UmbFileDropzoneDroppedItems, parent: string | null, follow: boolean) => Promise<number>;
+
+  /**
+   * The site's media guidelines (#179), read afresh for every upload so a change in Desktop settings
+   * applies to the next drop without a reload. When they cannot be read: the last ones read, or the
+   * defaults, which are on, so a server that is slow to answer never switches the check off.
+   * @returns The guidelines.
+   */
+  async guidelines(): Promise<MediaGuidelines> {
+    const read = await this.#guidelinesApi.read();
+    if (read) this.#lastGuidelines = read;
+    return read ?? this.#lastGuidelines ?? DEFAULT_GUIDELINES;
+  }
+
+  /** Reads Umbraco's upload limit, in KB. */
+  #uploadLimitKb: () => Promise<number | null | undefined>;
+
+  /** The upload limit, read once: it is the server's configuration, which a running site keeps. */
+  #uploadLimit?: Promise<number>;
+
+  /**
+   * Umbraco's upload limit (#179), `Umbraco:CMS:Runtime:MaxRequestLength`, which core refuses a larger
+   * file over. The media guidelines list a file over it, so it can be optimized under it.
+   * @returns The limit in bytes, or 0 when the site sets none or it cannot be read.
+   */
+  uploadLimit(): Promise<number> {
+    this.#uploadLimit ??= this.#uploadLimitKb().then(
+      (kb) => (typeof kb === 'number' && kb > 0 ? kb * 1024 : 0),
+      () => 0,
+    );
+    return this.#uploadLimit;
+  }
+
+  /**
+   * Core's temporary file configuration's `maxFileSize`, which is what its own upload checks.
+   * @returns The limit in KB, or null or undefined.
+   */
+  async #readUploadLimitKb(): Promise<number | null | undefined> {
+    const repository = new UmbTemporaryFileConfigRepository(this);
+    await repository.initialized;
+    const observer = this.observe(repository.part('maxFileSize'));
+    const kb = await observer.asPromise();
+    observer.destroy();
+    return kb;
+  }
+
+  /** @returns Whether Optimize images (Services.Media, #179 or later) is there to hand files to. */
+  canOptimizeFiles(): boolean {
+    return this.#canOptimize();
+  }
+
+  /**
+   * Upload files and folders into a folder through core's media upload, follow them in the Transfers
+   * window, and show the folder: what a drop on a folder card or tree folder does, unchecked.
+   * @param items The files and folders.
+   * @param parent The folder, null for the root.
+   * @param follow Whether the Transfers window follows it; not for the optimizer's own uploads, whose
+   *   window shows each one, and over which Transfers kept opening (found in #179's real run).
+   * @returns How many went in.
+   */
+  async upload(items: UmbFileDropzoneDroppedItems, parent: string | null, follow = true): Promise<number> {
+    const count = await this.#uploadInto(items, parent, follow);
+    this.#reload(parent);
+    return count;
+  }
+
+  /**
+   * Hand files that break the media guidelines to Optimize images (#179): its window opens set from
+   * the guidelines, and uploads each file into the folder through {@link upload} as it is done, so it
+   * appears there before the next one starts. Resolves when its run ends.
+   * @param files The files, checked.
+   * @param guidelines The guidelines they were checked against.
+   * @param parent The folder, null for the root.
+   * @param name The folder's name, for the window to say where they go.
+   */
+  async optimizeFiles(files: readonly CheckedFile[], guidelines: MediaGuidelines, parent: string | null, name: string): Promise<void> {
+    const request = optimizeRequest(files, guidelines, { name }, this.#localize.term('umbraDesktopMedia_guidelinesOptimizerNote'), async (file) => {
+      const count = await this.upload({ files: [file], folders: [] }, parent, false);
+      return count ? { ok: true } : { ok: false, message: this.#localize.term('umbraDesktopMedia_guidelinesUploadFailed') };
+    });
+    await this.#optimizeFiles(request);
+  }
+
   /**
    * Put a new file into a media item (#176): Replace file, from the item's footer or its file
    * property's menu. One step of its own kind, so it is a row in the Transfers window like a move or an
@@ -832,6 +960,13 @@ interface UmbraDesktopMediaService extends UmbContextMinimal {
    * @returns How it went.
    */
   save(request: MediaSaveRequest): Promise<{ ok: boolean; message?: string }>;
+  /**
+   * Optimize files, then upload each through the request's own upload (#179). Absent from a media
+   * service older than #179.
+   * @param request The files.
+   * @returns How the run ended.
+   */
+  optimizeFiles?(request: OptimizeFilesRequest): Promise<unknown>;
 }
 
 /** The media service's context, by the alias Services.Media publishes. */

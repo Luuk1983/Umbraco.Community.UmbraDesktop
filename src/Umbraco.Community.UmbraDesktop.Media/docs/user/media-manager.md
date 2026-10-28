@@ -122,6 +122,10 @@ The Media Manager shares the clipboard with your other programs.
 - To add files or folders, drag them from your computer onto a window, a folder, or a folder in the
   tree. A label says which folder they will go into. Folders keep what is in them.
 
+Files you paste or drop are checked against the site's [media guidelines](media-guidelines.md) first.
+Those that follow them upload at once; the rest are listed in the window, and can be optimized before
+they go.
+
 Pasting a picture you copied in the Media Manager makes a copy of the item, not a second upload.
 Ctrl+V pastes what you copied or cut last: what you copied in the Media Manager, until you go to
 another program.

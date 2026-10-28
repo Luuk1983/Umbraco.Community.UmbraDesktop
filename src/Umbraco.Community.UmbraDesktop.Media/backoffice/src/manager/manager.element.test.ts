@@ -12,6 +12,7 @@ import type { UmbraDesktopDragWindowHandle } from '../drag/drag.controller.js';
 import { fingerprint } from '../clipboard/os-image.js';
 import type { UmbraDesktopImagePrint } from '../clipboard/os-image.js';
 import { DROP_OUTLINE_PX } from '../drag/light.js';
+import { DEFAULT_GUIDELINES } from '../guidelines/guidelines.js';
 
 const FOLDER = '0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0';
 const IMAGE = '11111111-2222-3333-4444-555555555555';
@@ -1184,6 +1185,110 @@ describe('the clipboard in a manager window', () => {
     expect(uploads[0][0].name).to.match(/ \d{4}\.\d\d\.\d\d \d\d\.\d\d\.\d\d\.png$/);
     expect(asked.join(' | '), 'the key does not paste as well').to.equal('');
     void manager;
+  });
+
+  /**
+   * A window whose context checks uploads against the default guidelines (#179), recording what it
+   * hands to Optimize images, with a stand-in for the desktop's dialogs: it opens each one asked for
+   * by mounting its content with its props, and takes it down when the content asks.
+   * @param desktop Whether a desktop is there to open the dialog; without one, nothing answers.
+   * @returns The window, what went to the optimizer, and the dialogs asked for.
+   */
+  async function guidedWindow(desktop = true) {
+    const optimized: string[][] = [];
+    const dialogs: Array<{ detail: UmbraDesktopOpenDialogDetail; content: HTMLElement }> = [];
+    const open = (event: Event) => {
+      if (!desktop) return;
+      event.preventDefault();
+      const detail = (event as CustomEvent<UmbraDesktopOpenDialogDetail>).detail;
+      const content = new (detail.element as CustomElementConstructor)();
+      Object.assign(content, detail.props);
+      content.addEventListener('umbradesktop-close-dialog', () => content.remove());
+      document.body.appendChild(content);
+      dialogs.push({ detail, content });
+    };
+    document.addEventListener('umbradesktop-open-dialog', open);
+    cleanup.push(() => {
+      document.removeEventListener('umbradesktop-open-dialog', open);
+      for (const each of dialogs) each.content.remove();
+    });
+    const mount = await clipboardWindow([], {
+      guidelines: async () => DEFAULT_GUIDELINES,
+      uploadLimit: async () => 0,
+      canOptimizeFiles: () => true,
+      optimizeFiles: async (files: Array<{ file: File }>) => void optimized.push(files.map((each) => each.file.name)),
+    });
+    return { ...mount, optimized, dialogs };
+  }
+
+  /**
+   * The warning's content in the dialog asked for, once it is there.
+   * @param dialogs The dialogs asked for.
+   * @returns The content's shadow root.
+   */
+  async function dialogIn(dialogs: Array<{ content: HTMLElement }>): Promise<ShadowRoot> {
+    for (let i = 0; i < 100 && !dialogs[0]?.content.shadowRoot?.querySelector('.list'); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    return dialogs[0].content.shadowRoot!;
+  }
+
+  /** #179: a pasted screenshot is a PNG with no transparent pixel, which the defaults convert to WebP. */
+  it('checks a pasted file against the guidelines and asks in a dialog over the window, uploading nothing until answered', async () => {
+    const { cards, settle, uploads, dialogs } = await guidedWindow();
+    paste(cards[0], [await screenshot()]);
+    const dialog = await dialogIn(dialogs);
+    await settle();
+    expect(uploads.length).to.equal(0);
+    expect(dialogs[0].detail.name).to.equal('Media guidelines');
+    expect(dialogs[0].detail.size.w).to.equal(640);
+    expect(dialog.querySelector('.act')!.textContent!.trim()).to.equal('Convert to WebP');
+    (dialog.querySelector('[data-action="as-is"]') as HTMLElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await settle();
+    expect(uploads.length, "uploaded through core's dropzone in the window").to.equal(1);
+    expect(dialogs[0].content.isConnected, 'the dialog is gone').to.equal(false);
+  });
+
+  it('uploads none of them when the dialog is closed, and says so in the window', async () => {
+    const { manager, cards, settle, uploads, dialogs } = await guidedWindow();
+    paste(cards[0], [await screenshot()]);
+    await dialogIn(dialogs);
+    // What the dialog's close button does: the desktop takes the window, and its content, away.
+    dialogs[0].content.remove();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await settle();
+    expect(uploads.length).to.equal(0);
+    expect(manager.shadowRoot!.querySelector('.held-back')!.textContent!.replace(/\s+/g, ' ').trim()).to.contain('1 file was not uploaded.');
+  });
+
+  it('hands the ticked files to Optimize images', async () => {
+    const { cards, settle, uploads, optimized, dialogs } = await guidedWindow();
+    paste(cards[0], [await screenshot()]);
+    const dialog = await dialogIn(dialogs);
+    (dialog.querySelector('[data-action="optimize"]') as HTMLElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await settle();
+    expect(uploads.length).to.equal(0);
+    expect(optimized).to.have.length(1);
+    expect(optimized[0][0]).to.match(/\.png$/);
+  });
+
+  it('takes files dropped on it through the same check', async () => {
+    const { dragWindows, uploads, dialogs } = await guidedWindow();
+    expect(typeof dragWindows[0].upload).to.equal('function');
+    const done = dragWindows[0].upload!({ files: [await screenshot()], folders: [] }, FOLDER);
+    const dialog = await dialogIn(dialogs);
+    (dialog.querySelector('[data-action="as-is"]') as HTMLElement).click();
+    await done;
+    expect(uploads.length).to.equal(1);
+  });
+
+  it('uploads the files as they are where no desktop opens the dialog', async () => {
+    const { dragWindows, uploads, dialogs } = await guidedWindow(false);
+    await dragWindows[0].upload!({ files: [await screenshot()], folders: [] }, FOLDER);
+    expect(dialogs).to.have.length(0);
+    expect(uploads.length).to.equal(1);
   });
 
   it('pastes what it holds when the paste carries only text', async () => {

@@ -147,6 +147,8 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-task-group-border',
   '--umbradesktop-task-group-radius',
   '--umbradesktop-task-group-background',
+  // The wash over a window its dialog keeps waiting (#179).
+  '--umbradesktop-dialog-scrim',
   '--umbradesktop-tray-gap',
   '--umbradesktop-dock-zone-border',
   '--umbradesktop-dock-zone-radius',

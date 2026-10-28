@@ -12,6 +12,7 @@ import { optionsOf } from './remembered.js';
 import type { OptimizeSettings } from './remembered.js';
 import { reencodes } from './options.js';
 import type { OptimizeFormat } from './options.js';
+import { IMAGE_KINDS } from './file-fixes.js';
 import type { OptimizeRun, OptimizeRunStore, RunItem } from './run-store.js';
 import { sizeWarning } from './size-warning.js';
 import { sortByUse } from './where-used.js';
@@ -20,7 +21,7 @@ import type { Place } from './where-used.js';
 import './optimize-where.element.js';
 import type { SizeWarning } from './size-warning.js';
 import type { SkipReason } from './triage.js';
-import type { ImageFacts } from './types.js';
+import type { ImageFacts, OptimizeImageKind } from './types.js';
 import { optimizeWindowStyles } from './optimize-window.styles.js';
 
 /** The id the window's progress is reported under: one task per window, since a window shows one run. */
@@ -70,6 +71,15 @@ const GROW_WORDS: Record<SizeWarning['kind'], [WordKey, WordKey, WordKey]> = {
 
 /** The formats Convert offers, in the order the mock draws them. */
 const FORMATS: readonly OptimizeFormat[] = ['keep', 'jpeg', 'png', 'webp'];
+
+/** Each kind's row label in a run on files (#179). */
+const KIND_WORDS: Record<OptimizeImageKind, WordKey> = {
+  jpeg: 'optimizeKindJpeg',
+  'png-photo': 'optimizeKindPngPhoto',
+  'png-transparent': 'optimizeKindPngTransparent',
+  webp: 'optimizeKindWebp',
+  gif: 'optimizeKindGif',
+};
 
 /** How an ended run went, which colours its result mark and line. */
 type ResultTone = 'saved' | 'grew' | 'failed' | 'cancelled';
@@ -177,6 +187,9 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
   /** Each item's status when thumbnails were last read, so a saved image's thumbnail is read again. */
   #thumbStatus = new Map<number, RunItem['status']>();
 
+  /** A run on files: the addresses made for the files' own pictures, let go with the window (#179). */
+  #fileUrls: string[] = [];
+
   constructor() {
     super();
     this.consumeContext(UMBRADESKTOP_MEDIA_CONTEXT, (context) => {
@@ -193,6 +206,8 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    for (const url of this.#fileUrls) URL.revokeObjectURL(url);
+    this.#fileUrls = [];
     // The window closed: before the run, it ends not started; while it runs, it stops after the image
     // in hand (D7); once ended, it is dropped.
     if (this.#bound) this.store?.release(this.#bound);
@@ -285,6 +300,7 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
    * @param run The run.
    */
   async #readThumbnails(run: OptimizeRun): Promise<void> {
+    if (run.mode === 'files') return this.#fileThumbnails(run);
     if (!this.thumbnails || run.phase === 'preparing') return;
     const wanted = new Set<string>();
     run.items.forEach((item, index) => {
@@ -300,6 +316,24 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
     } catch {
       // Rows without thumbnails still say everything.
     }
+  }
+
+  /**
+   * A run on files' thumbnails: each file's own picture, since there is no media item to ask the
+   * imaging endpoint for. Made once, and let go when the window closes.
+   * @param run The run.
+   */
+  #fileThumbnails(run: OptimizeRun): void {
+    if (this.#fileUrls.length || !this.store) return;
+    const files = this.store.files(run.id) ?? [];
+    const thumbs = new Map<string, string>();
+    files.forEach((file, index) => {
+      const url = URL.createObjectURL(file);
+      this.#fileUrls.push(url);
+      const item = run.items[index];
+      if (item) thumbs.set(item.unique, url);
+    });
+    this._thumbs = thumbs;
   }
 
   /**
@@ -329,7 +363,9 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
   override render() {
     const run = this._run;
     if (!run || run.phase === 'preparing') return html`<p class="preparing muted">${this.#words('optimizePreparing')}</p>`;
-    return run.phase === 'settings' ? this.#renderSettings(run) : this.#renderRun(run);
+    // A run on files never waits on settings: it starts as it is made (#179).
+    if (run.phase === 'settings') return this.#renderSettings(run);
+    return this.#renderRun(run);
   }
 
   /**
@@ -403,9 +439,10 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
     const from = run.from;
     const where = !from ? '' : 'folders' in from ? words('optimizeFromFolders', from.folders) : [words('optimizeFromRoot'), ...from.path].join(' / ');
     const shown = images.slice(0, STRIP_THUMBNAILS);
+    const heading = count === 0 ? words('optimizeHeadingNone') : count === 1 ? words('optimizeHeadingOne') : words('optimizeHeading', count);
     return html`<header class="intro">
       ${where ? html`<p class="from"><umb-icon name="icon-folder"></umb-icon><span>${where}</span></p>` : nothing}
-      <h2 class="heading">${count === 0 ? words('optimizeHeadingNone') : count === 1 ? words('optimizeHeadingOne') : words('optimizeHeading', count)}</h2>
+      <h2 class="heading">${heading}</h2>
       ${count
         ? html`<div class="strip" aria-hidden="true">
             ${shown.map((item) => {
@@ -490,7 +527,18 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
           )}
         </span>
       </div>
-      <div class="field" title=${qualityOff ? words('optimizeQualityPng') : nothing}>
+      ${this.#renderQuality(settings, qualityOff)}`;
+  }
+
+  /**
+   * The quality line: a slider with its number, greyed when the format has no quality.
+   * @param settings The settings.
+   * @param qualityOff Whether the format chosen has no quality, so the line is drawn greyed.
+   * @returns The line.
+   */
+  #renderQuality(settings: OptimizeSettings, qualityOff: boolean): TemplateResult {
+    const words = this.#words;
+    return html`<div class="field" title=${qualityOff ? words('optimizeQualityPng') : nothing}>
         <label class="key" for="quality">${words('optimizeQuality')}</label>
         <span class="value">
           <input
@@ -649,18 +697,19 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
       <header class="head run-head">
         ${ended ? html`<span class="result" data-tone=${tone}><umb-icon name=${TONE_ICONS[tone]}></umb-icon></span>` : nothing}
         <h2 class="heading">${this.#heading(run, images, done)}</h2>
-        <span class="actions">${this.#renderActions(run)}</span>
       </header>
       ${ended ? nothing : html`<div class="bar"><span style="width: ${fraction * 100}%"></span></div>`}
       ${ended && !images.some((item) => item.status === 'optimized')
         ? nothing
         : html`<p class="meta" data-tone=${ended ? tone : nothing}>${this.#meta(run, images, done)}</p>`}
-      <p class="sets muted">${this.#setsLine(run.settings)}</p>
+      <p class="sets muted">${run.mode === 'files' ? this.#filesSetsLine(run) : this.#setsLine(run.settings)}</p>
+      ${run.note ? html`<p class="note muted"><umb-icon name="icon-info"></umb-icon><span>${run.note}</span></p>` : nothing}
       <div class="rows">${repeat(
         run.items,
         (_item, index) => index,
         (item) => this.#renderRow(item),
       )}</div>
+      <footer class="foot">${this.#renderActions(run)}</footer>
     </div>`;
   }
 
@@ -689,11 +738,17 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
    */
   #heading(run: OptimizeRun, images: RunItem[], done: number): string {
     const words = this.#words;
+    const files = run.mode === 'files';
     if (run.phase === 'running') {
       if (run.cancelling) return words('optimizeCancelling');
+      if (files) return images.length === 1 ? words('optimizeFilesRunningOne') : words('optimizeFilesRunning', images.length);
       return images.length === 1 ? words('optimizeRunningOne') : words('optimizeRunning', images.length);
     }
     if (run.outcome === 'cancelled') return words('optimizeCancelledAfter', done, images.length);
+    if (files) {
+      const uploaded = run.items.filter((item) => item.uploaded).length;
+      return uploaded ? words('optimizeFilesEnded', uploaded, run.destination?.name ?? '') : words('optimizeFilesEndedNothing');
+    }
     const count = (status: RunItem['status']) => images.filter((item) => item.status === status).length;
     const parts = [
       count('optimized') ? words('optimizeEndedOptimized', count('optimized')) : '',
@@ -723,7 +778,8 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
     const saved = before - after;
     const size = formatBytes(Math.abs(saved), lang);
     if (run.phase === 'running') {
-      return html`<b>${words('optimizeProgress', done, images.length)}</b> · ${words('optimizeSavedSoFar', size)}`;
+      const progress = run.mode === 'files' ? words('optimizeFilesProgress', run.items.filter((item) => item.uploaded).length, images.length) : words('optimizeProgress', done, images.length);
+      return html`<b>${progress}</b> · ${words('optimizeSavedSoFar', size)}`;
     }
     if (saved < 0) return html`<b>${words('optimizeGrew', size)}</b>`;
     const percent = before ? Math.round((saved / before) * 100) : 0;
@@ -756,7 +812,37 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
   }
 
   /**
-   * The run's buttons: Cancel while it runs; afterwards whichever further pass applies, and Close.
+   * One line restating what a run on files does: the resize, each kind of file in the batch that is
+   * converted and to what, the location, and where the files go.
+   * @param run The run.
+   * @returns The line.
+   */
+  #filesSetsLine(run: OptimizeRun): string {
+    const words = this.#words;
+    const settings = run.settings;
+    const parts: string[] = [];
+    const options = optionsOf({ ...settings, convert: false });
+    if (options.resize) {
+      parts.push(words('optimizeSetsResize', options.resize.maxWidth ?? words('optimizeSetsAny'), options.resize.maxHeight ?? words('optimizeSetsAny')));
+    }
+    if (settings.convert && settings.formats) {
+      const present = new Set(run.items.flatMap((item) => (item.kind ? [item.kind] : [])));
+      for (const kind of IMAGE_KINDS) {
+        const format = settings.formats[kind];
+        if (!present.has(kind) || format === 'keep') continue;
+        const to = format === 'png' ? formatLabel('png') : words('optimizeSetsFormat', formatLabel(format), settings.quality);
+        parts.push(words('optimizeSetsRow', words(KIND_WORDS[kind]), to));
+      }
+    }
+    if (settings.removeMetadata) parts.push(words('optimizeSetsLocation'));
+    parts.push(words('optimizeSetsUpload', run.destination?.name ?? ''));
+    return parts.join(' · ');
+  }
+
+  /**
+   * The run's buttons, in the bar at the bottom with Close last on the right, as Umbraco's own dialogs
+   * have theirs (owner, after #179's first test; they were beside the heading): Cancel while it runs;
+   * afterwards whichever further pass applies, and Close.
    * @param run The run.
    * @returns The buttons.
    */
@@ -767,9 +853,11 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
         ${words('optimizeCancel')}
       </button>`;
     }
-    const failed = run.items.some((item) => item.status === 'failed');
+    // A run on files retries on each failed row instead, and its animated files were uploaded as they were.
+    const files = run.mode === 'files';
+    const failed = !files && run.items.some((item) => item.status === 'failed');
     const rest = run.items.some((item) => item.status === 'not-started');
-    const animated = run.items.some((item) => item.status === 'skipped' && item.skip === 'animated');
+    const animated = !files && run.items.some((item) => item.status === 'skipped' && item.skip === 'animated');
     return html`${animated
         ? html`<button type="button" class="button" data-action="animated" @click=${() => void this.#runAnimated()}>${words('optimizeAnimated')}</button>`
         : nothing}
@@ -810,10 +898,37 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
       <span class="name">
         <b>${item.name}</b>
         ${detail ? html`<small class="muted">${detail}</small>` : nothing}
-        ${item.status === 'failed' && item.message ? html`<em>${item.message}</em>` : nothing}
+        ${item.status === 'failed' && item.message ? html`<em>${this.#failure(item)}</em>` : nothing}
+        ${this.#renderRowActions(item)}
       </span>
       <span class="status">${this.#renderStatus(item)}</span>
     </div>`;
+  }
+
+  /**
+   * Why an item failed, and on a run on files that nothing of it was uploaded, so no file is dropped
+   * without saying so.
+   * @param item The item.
+   * @returns The words.
+   */
+  #failure(item: RunItem): string {
+    return this._run?.mode === 'files' && !item.uploaded ? `${item.message} ${this.#words('optimizeFilesNothingUploaded')}` : (item.message ?? '');
+  }
+
+  /**
+   * A failed file's own way out, on a run on files that has ended (mock U5): Retry, or Upload the
+   * original as it was dropped.
+   * @param item The item.
+   * @returns The buttons, or nothing.
+   */
+  #renderRowActions(item: RunItem): TemplateResult | typeof nothing {
+    const run = this._run;
+    if (!run || run.mode !== 'files' || run.phase !== 'ended' || item.status !== 'failed' || item.uploaded) return nothing;
+    const index = run.items.indexOf(run.items.find((each) => each.unique === item.unique)!);
+    return html`<span class="row-actions">
+      <button type="button" class="button small" data-action="retry-one" @click=${() => this.store?.retryOne(run.id, index)}>${this.#words('optimizeRetry')}</button>
+      <button type="button" class="button small" data-action="original" @click=${() => this.store?.uploadOriginal(run.id, index)}>${this.#words('optimizeUploadOriginal')}</button>
+    </span>`;
   }
 
   /**
@@ -832,14 +947,17 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
           ? html`<span class="saved"><uui-icon name="icon-check"></uui-icon>−${Math.abs(change)}%</span>`
           : html`<span class="grew"><uui-icon name="icon-alert"></uui-icon>+${change}%</span>`;
       }
-      case 'running':
-        return html`<span class="mini" aria-hidden="true"><span></span></span>${words('optimizeSaving')}`;
+      case 'running': {
+        const files = this._run?.mode === 'files';
+        const doing = !files ? words('optimizeSaving') : item.stage === 'uploading' ? words('optimizeUploading') : words('optimizeOptimizing');
+        return html`<span class="mini" aria-hidden="true"><span></span></span>${doing}`;
+      }
       case 'waiting':
         return html`${words('optimizeWaiting')}`;
       case 'skipped':
-        return html`${words('optimizeSkipped')}`;
+        return html`${item.uploaded ? words('optimizeAsItWas') : words('optimizeSkipped')}`;
       case 'unchanged':
-        return html`${words('optimizeUnchanged')}`;
+        return html`${item.uploaded ? words('optimizeAsItWas') : words('optimizeUnchanged')}`;
       case 'failed':
         return html`<span class="bad"><uui-icon name="icon-alert"></uui-icon>${words('optimizeFailed')}</span>`;
       default:
