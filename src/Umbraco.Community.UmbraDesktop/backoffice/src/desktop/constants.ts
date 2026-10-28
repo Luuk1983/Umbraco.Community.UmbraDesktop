@@ -92,6 +92,14 @@ export const UMBRADESKTOP_CLOSE_REQUEST_EVENT = 'umbradesktop-close-request';
 export const UMBRADESKTOP_TASK_EVENT = 'umbradesktop-task';
 
 /**
+ * The event `<umbradesktop-notice>` fires when one of its buttons is pressed, with `{ action }`, the
+ * button's id. A string, so an app that draws a notice by its tag name listens without importing
+ * anything from this package. Bubbles and is composed, so the app hears it from inside its own
+ * shadow root; the window's notice stack hears it the same way.
+ */
+export const UMBRADESKTOP_NOTICE_ACTION_EVENT = 'umbradesktop-notice-action';
+
+/**
  * The event `<umbradesktop-app-host>` fires with its app's current task list whenever a
  * {@link UMBRADESKTOP_TASK_EVENT} changes it, and with an empty one when the app goes. Internal, the
  * counterpart of {@link UMBRADESKTOP_APP_DIRTY_EVENT}: it is how the host tells its window.

@@ -8,6 +8,7 @@ import { filePageStyles } from '../file-menu/styles.js';
 import { wordsOf } from '../shared/words.js';
 import type { WordKey } from '../shared/words.js';
 import { OPTIMIZE_TAG } from './constants.js';
+import { imagesOf, progressOf } from './progress.js';
 import { optionsOf } from './remembered.js';
 import type { OptimizeSettings } from './remembered.js';
 import { reencodes } from './options.js';
@@ -76,9 +77,6 @@ type ResultTone = 'saved' | 'grew' | 'failed' | 'cancelled';
 
 /** The backoffice icon each result shows. */
 const TONE_ICONS: Record<ResultTone, string> = { saved: 'icon-check', grew: 'icon-alert', failed: 'icon-alert', cancelled: 'icon-pause' };
-
-/** The statuses that count as done, for progress: everything the run has finished with. */
-const PROCESSED = new Set<RunItem['status']>(['optimized', 'unchanged', 'failed']);
 
 /**
  * The Optimize images window (#139, design §5): a view of one run in Services.Media's run store, whose
@@ -232,30 +230,20 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
   }
 
   /**
-   * The images the run optimizes: everything not skipped.
-   * @param run The run.
-   * @returns Those items.
-   */
-  #images(run: OptimizeRun): RunItem[] {
-    return run.items.filter((item) => item.status !== 'skipped');
-  }
-
-  /**
    * Tell the desktop where the run is (`window-progress.md` §1): running while it runs, failed after a
    * pass with failures until the window is looked at, and done otherwise.
    */
   #report(): void {
     const run = this._run;
     if (!run) return;
-    const images = this.#images(run);
+    const images = imagesOf(run);
     const failed = images.filter((item) => item.status === 'failed').length;
     const detail =
       run.phase === 'running'
         ? {
             id: TASK_ID,
             state: 'running',
-            completed: images.filter((item) => PROCESSED.has(item.status)).length,
-            total: images.length,
+            ...progressOf(run),
             failed,
             label: this.#words('optimizeTaskLabel'),
           }
@@ -343,7 +331,7 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
   #renderSettings(run: OptimizeRun): TemplateResult {
     const words = this.#words;
     const settings = run.settings;
-    const images = this.#images(run);
+    const images = imagesOf(run);
     const count = images.length;
     const locked = reencodes(optionsOf({ ...settings, removeMetadata: false }));
     const asked = optionsOf(settings);
@@ -580,7 +568,7 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
   async #showWhereDialog(usage: NonNullable<OptimizeRun['usage']>): Promise<void> {
     const run = this._run;
     const words = this.#words;
-    const total = run ? this.#images(run).length : usage.images;
+    const total = run ? imagesOf(run).length : usage.images;
     const content = html`<p style="margin: 0 0 12px">${words('optimizeWhereLede', usage.images, total, usage.places)}</p>
       <umbradesktop-media-optimize-where .images=${sortByUse(usage.used)} .thumbs=${this._thumbs} .places=${this.places}></umbradesktop-media-optimize-where>`;
     await umbOpenModal(this, UMB_INFO_MODAL, { data: { headline: words('optimizeWhereHeadline'), content } }).catch(() => undefined);
@@ -639,8 +627,8 @@ export class UmbraDesktopOptimizeWindowElement extends UmbLitElement {
    * @returns The page.
    */
   #renderRun(run: OptimizeRun): TemplateResult {
-    const images = this.#images(run);
-    const done = images.filter((item) => PROCESSED.has(item.status)).length;
+    const images = imagesOf(run);
+    const done = progressOf(run).completed;
     const failed = images.some((item) => item.status === 'failed');
     const fraction = images.length ? done / images.length : 1;
     const ended = run.phase === 'ended';

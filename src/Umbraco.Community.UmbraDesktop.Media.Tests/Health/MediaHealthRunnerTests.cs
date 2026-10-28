@@ -32,6 +32,9 @@ public class MediaHealthRunnerTests : IAsyncLifetime
     /// <summary>Umbraco's background queue, whose work this test runs by hand.</summary>
     private readonly IBackgroundTaskQueue _queue = Substitute.For<IBackgroundTaskQueue>();
 
+    /// <summary>The clock, shared by the store and the runner's heartbeat.</summary>
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 10, 28, 9, 0, 0, TimeSpan.Zero));
+
     /// <summary>The work the runner queued.</summary>
     private readonly List<Func<CancellationToken, Task>> _queued = [];
 
@@ -39,7 +42,7 @@ public class MediaHealthRunnerTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _database = await SqliteTestDatabase.CreateAsync();
-        _store = new MediaHealthStore(_database, new FakeTimeProvider());
+        _store = new MediaHealthStore(_database, _time);
         _queue.When(queue => queue.QueueBackgroundWorkItem(Arg.Any<Func<CancellationToken, Task>>()))
             .Do(call => _queued.Add(call.Arg<Func<CancellationToken, Task>>()));
         var folder = new MediaHealthFolder(Guid.NewGuid(), "Products", null, "/Products");
@@ -63,7 +66,7 @@ public class MediaHealthRunnerTests : IAsyncLifetime
     public async Task DisposeAsync() => await _database.DisposeAsync();
 
     /// <summary>The runner under test.</summary>
-    private MediaHealthRunner Runner() => new(_store, _library, _disk, _queue, NullLogger<MediaHealthRunner>.Instance);
+    private MediaHealthRunner Runner() => new(_store, _library, _disk, _queue, _time, NullLogger<MediaHealthRunner>.Instance);
 
     /// <summary>Starting queues the work and answers with the running check; the work reads, walks and saves.</summary>
     [Fact]
@@ -130,5 +133,78 @@ public class MediaHealthRunnerTests : IAsyncLifetime
         var status = await _store.GetStatusAsync();
         Assert.Null(status.Running);
         Assert.Equal("The database went away", status.Failed?.Error);
+    }
+
+    /// <summary>
+    /// A library read that runs until it is cancelled, as a large library's read does for minutes.
+    /// </summary>
+    /// <returns>When the read has begun.</returns>
+    private TaskCompletionSource BlockTheRead()
+    {
+        var begun = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _library.ReadAsync(Arg.Any<IProgress<MediaHealthProgress>>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            begun.TrySetResult();
+            await Task.Delay(Timeout.Infinite, call.Arg<CancellationToken>());
+            return new MediaLibrarySnapshot([], [], new HashSet<string>());
+        });
+        return begun;
+    }
+
+    /// <summary>Move the clock on by one heartbeat at a time, giving the runner a moment to beat each time.</summary>
+    /// <param name="beats">How many beats.</param>
+    /// <returns>A task.</returns>
+    private async Task BeatAsync(int beats)
+    {
+        for (var beat = 0; beat < beats; beat++)
+        {
+            _time.Advance(MediaHealthRunner.HeartbeatEvery);
+            await Task.Delay(50);
+        }
+    }
+
+    /// <summary>
+    /// A check that runs longer than the silence a dead check is given up after stays alive, since the
+    /// runner beats while it works, whatever the phase says.
+    /// </summary>
+    [Fact]
+    public async Task Beats_while_it_works_so_a_long_check_stays_alive()
+    {
+        var begun = BlockTheRead();
+        var runner = Runner();
+        var started = await runner.StartAsync(Editor);
+        var work = _queued[0](CancellationToken.None);
+        await begun.Task;
+
+        await BeatAsync((int)(MediaHealthStore.StaleAfter / MediaHealthRunner.HeartbeatEvery) + 2);
+
+        Assert.Equal(started.Id, (await _store.GetStatusAsync()).Running?.Id);
+        await _store.StopAsync();
+        await BeatAsync(1);
+        await work.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    /// <summary>
+    /// Stop reaches the work at its next beat: the read is cancelled, nothing is saved, and the check
+    /// is stopped, not failed, so the window shows the last result again rather than an error.
+    /// </summary>
+    [Fact]
+    public async Task Stops_the_work_when_the_check_is_stopped()
+    {
+        var begun = BlockTheRead();
+        var runner = Runner();
+        await runner.StartAsync(Editor);
+        var work = _queued[0](CancellationToken.None);
+        await begun.Task;
+
+        await _store.StopAsync();
+        await BeatAsync(1);
+        await work.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var status = await _store.GetStatusAsync();
+        Assert.Null(status.Running);
+        Assert.Null(status.Failed);
+        Assert.Null(status.Last);
+        _disk.DidNotReceive().Walk(Arg.Any<CancellationToken>());
     }
 }

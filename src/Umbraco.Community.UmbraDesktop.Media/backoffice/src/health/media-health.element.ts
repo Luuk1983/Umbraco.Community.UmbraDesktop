@@ -1,119 +1,69 @@
-import { css, customElement, html, nothing, property, repeat, state } from '@umbraco-cms/backoffice/external/lit';
+import { css, customElement, html, nothing, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
-import { umbConfirmModal } from '@umbraco-cms/backoffice/modal';
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import { UMBRADESKTOP_MEDIA_HEALTH_CONTEXT } from './media-health.context.js';
-import type { UmbraDesktopMediaHealthContext, UmbraDesktopMediaHealthResult, UmbraDesktopMediaHealthState } from './media-health.context.js';
-import type { HealthItem, HealthOrphan } from './health.client.js';
-import { OVERSIZED_BYTES, checkedOn, estimateSaving, isImage, sizeOfAll } from './health-model.js';
-import type { HealthSegment } from './health-model.js';
-import { formatBytes } from '../transfers/transfers-model.js';
-import { UMBRADESKTOP_OPEN_ITEM_KEY, editPath } from '../manager/open-item.js';
-import { findDesktopWindows, findOnDesktop } from '../edit-image/desktop-windows.js';
-import { UMBRADESKTOP_IMAGE_EDITOR_APP } from '../image-editor/constants.js';
-import { OPTIMIZE_SERVICE_CONTEXT } from '../shared/optimize-service.js';
+import type { UmbraDesktopMediaHealthContext, UmbraDesktopMediaHealthState } from './media-health.context.js';
+import { cleanupOf, isStale } from './health-model.js';
+import type { HealthCleanup, HealthKind } from './health-model.js';
 import { wordsOf } from '../shared/words.js';
-import type { WordKey } from '../shared/words.js';
-
-/** What the window shows: the overview, or one category as a list. */
-type HealthView = 'overview' | 'unused' | 'orphaned' | 'oversized';
+import './health-start.element.js';
+import './health-overview.element.js';
+import './health-cleanup-sheet.element.js';
+import './health-done.element.js';
 
 /** The task id the check is reported to the desktop under. */
 const CHECK_TASK = 'check';
 
-/**
- * The shades of the bar, darkest for the largest folder and lightest for Other: the mock's five, as
- * tints of the app's accent so a theme colours them. The fifth is Other.
- */
-const SEGMENT_SHADES = [1, 0.75, 0.55, 0.35, 0.18] as const;
+/** The task id Clean up is reported under, beside the check (`docs/developer/window-progress.md`). */
+const CLEANUP_TASK = 'cleanup';
 
-/** The words of each row: its heading, its count line, its empty line, and its icon. */
-const ROWS: Record<Exclude<HealthView, 'overview'>, { title: WordKey; count: WordKey; none: WordKey; icon: string }> = {
-  unused: { title: 'healthUnused', count: 'healthItemsSize', none: 'healthNoneUnused', icon: 'icon-unlink' },
-  orphaned: { title: 'healthOrphaned', count: 'healthFilesSize', none: 'healthNoneOrphaned', icon: 'icon-folder-open' },
-  oversized: { title: 'healthOversized', count: 'healthImagesSize', none: 'healthNoneOversized', icon: 'icon-fullscreen' },
-};
+/** Which screen the window shows. */
+type HealthScreen = 'start' | 'overview' | 'done';
 
 /**
- * The Media Health window (design §3, mock scenes 1 and 2): the library in one line, a bar of the
- * top-level folders by size, and three rows, unused media, orphaned files and oversized images, each
- * with its count, its size and its verbs. **Check** asks the add-on's server to run one (design §15),
- * through the health context, which follows it and keeps the result on the desktop, so this window
- * only shows and asks.
+ * The Media Health window (design §16): one screen at a time from the health context's state. No
+ * check yet and Checking (`health-start`), the overview (`health-overview`) with the Clean up sheet
+ * over it, and Done (`health-done`). Each screen only draws and asks, through events; this element
+ * holds the context, answers the events, and reports the check and Clean up to the desktop as two
+ * tasks, so the taskbar button and the title bar show how far each is.
  *
- * **View** lists a category inside the window, largest first, until step 6 opens it as a place in the
- * Manager. An item opens beside the window as the Manager opens one; an image also has Edit image.
- * Trash is core's, through the Manager's own operation (design §5); Delete on orphaned files is
- * the server's, for an administrator. **Review** is step 3 and is shown greyed with "Coming later",
- * since a verb that disappears is a bug and one that is coming is a promise.
+ * The four health colours are declared once here, on the host, from UUI's own colours, so every
+ * theme restyles them and every screen reads the same four.
  */
 @customElement('umbradesktop-media-health')
 export class UmbraDesktopMediaHealthElement extends UmbLitElement {
-  /**
-   * Ask before deleting orphaned files. A property so a test can answer for the person.
-   * @param files The files about to go.
-   * @returns True to delete.
-   */
-  @property({ attribute: false })
-  confirmDelete: (files: ReadonlyArray<HealthOrphan>) => Promise<boolean> = async (files) => {
-    try {
-      await umbConfirmModal(this, {
-        headline: this.#words('healthDeleteHeadline', files.length),
-        content: this.#words('healthDeleteText', files.length, formatBytes(sizeOfAll(files))),
-        confirmLabel: this.#words('healthDeleteConfirm'),
-        color: 'danger',
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  /**
-   * Ask before moving an item to the recycle bin, in core's own words. A property so a test can answer.
-   * @param name The item's name.
-   * @returns True to trash.
-   */
-  @property({ attribute: false })
-  confirmTrash: (name: string) => Promise<boolean> = async (name) => {
-    try {
-      await umbConfirmModal(this, {
-        headline: '#actions_trash',
-        content: this.localize.string('#defaultdialogs_confirmTrash', name),
-        confirmLabel: '#actions_trash',
-        color: 'danger',
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  /** Where the check is, and the last result. */
+  /** Where the check is, the last result, the library's size and Clean up. */
   @state()
-  private _state: UmbraDesktopMediaHealthState = { phase: { kind: 'idle' }, result: undefined };
-
-  /** What the window shows. */
-  @state()
-  private _view: HealthView = 'overview';
+  private _state: UmbraDesktopMediaHealthState = { phase: { kind: 'idle' }, result: undefined, mediaCount: undefined, cleanup: undefined };
 
   /** Whether the person is an administrator, who alone may delete files from disk. */
   @state()
   private _admin = false;
 
-  /** What just happened, under the rows. */
+  /** What Clean up would do, while its sheet asks; undefined when no sheet is open. */
   @state()
-  private _notice = '';
+  private _sheet?: HealthCleanup;
 
-  /** Whether a delete or a trash is under way, which holds the buttons. */
+  /** Whether an Undo is under way. */
   @state()
-  private _busy = false;
+  private _undoing = false;
+
+  /** How the last Undo went, for Done. */
+  @state()
+  private _undoNote = '';
+
+  /** Why the last Clean up did not run, said over the overview until the next one is asked. */
+  @state()
+  private _refused?: 'newer' | 'stale';
 
   /** The health context. */
   #context?: UmbraDesktopMediaHealthContext;
 
-  /** The last task reported, so the desktop is told only when it changes. */
-  #reported = '';
+  /** Stops this window's watch of the server, while it watches. */
+  #unwatch?: () => void;
+
+  /** The last report of each task, so the desktop is told only when it changes. */
+  #reported = new Map<string, string>();
 
   /** This package's words. */
   #words = wordsOf(this.localize);
@@ -132,579 +82,219 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
         'umbradesktopHealthState',
       );
       void context.sync();
+      this.#startWatching();
     });
     this.consumeContext(UMB_CURRENT_USER_CONTEXT, (user) => {
       this.observe(user?.currentUser, (current) => (this._admin = !!current?.isAdmin), 'umbradesktopHealthUser');
     });
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.#startWatching();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.#unwatch?.();
+    this.#unwatch = undefined;
+  }
+
   /**
-   * Tell the desktop where the check is, so the title bar and the taskbar button show it: a real
-   * percentage while the library is read, since the server counts as it goes, and activity while the
-   * disk is walked, whose file count is not known before the walk. A failure stays until the next
-   * check replaces it.
+   * Watch the server while the window is open (design §16.12), once the context is there; a colleague's
+   * check or result then shows up here within thirty seconds.
+   */
+  #startWatching(): void {
+    if (this.#unwatch || !this.#context || !this.isConnected) return;
+    this.#unwatch = this.#context.watch();
+  }
+
+  /** The screen the state calls for: a running check first, then Clean up, then the result. */
+  get #screen(): HealthScreen {
+    const { phase, result, cleanup } = this._state;
+    if (phase.kind === 'running') return 'start';
+    if (cleanup) return 'done';
+    return result ? 'overview' : 'start';
+  }
+
+  /**
+   * Tell the desktop where the check and Clean up are (`window-progress.md` §1). The check: a real
+   * count while the library is read, activity while the disk is walked, whose file count is not
+   * known before the walk, and a failure until the next check. Clean up: its count while it runs,
+   * failed when anything did not go, until the person goes back to the overview.
    */
   #report(): void {
-    const { phase } = this._state;
-    const detail =
+    const { phase, cleanup } = this._state;
+    const label = (key: 'healthChecking' | 'healthCleaningUp') => `#umbraDesktopMedia_${key}`;
+    this.#send(
+      CHECK_TASK,
       phase.kind === 'running'
         ? phase.total > 0
-          ? { id: CHECK_TASK, state: 'running', completed: phase.scanned, total: phase.total, label: `#umbraDesktopMedia_healthChecking` }
-          : { id: CHECK_TASK, state: 'running', label: `#umbraDesktopMedia_healthChecking` }
+          ? { id: CHECK_TASK, state: 'running', completed: phase.scanned, total: phase.total, label: label('healthChecking') }
+          : { id: CHECK_TASK, state: 'running', label: label('healthChecking') }
         : phase.kind === 'failed'
           ? { id: CHECK_TASK, state: 'failed', failed: 1, total: 1 }
-          : { id: CHECK_TASK, state: 'done' };
-    const signature = JSON.stringify(detail);
-    if (signature === this.#reported) return;
-    this.#reported = signature;
-    this.dispatchEvent(new CustomEvent('umbradesktop-task', { detail, bubbles: true, composed: true }));
-  }
-
-  /** Start a check. */
-  #check(): void {
-    this._notice = '';
-    void this.#context?.check();
-  }
-
-  /**
-   * Open an item beside the window, as the Manager opens one (`open-item.ts`).
-   * @param item The item.
-   */
-  #open(item: HealthItem): void {
-    this.dispatchEvent(
-      new CustomEvent<UmbraDesktopOpenAttachedDetail>('umbradesktop-open-attached', {
-        detail: { key: UMBRADESKTOP_OPEN_ITEM_KEY, path: editPath(item.key), name: item.name, icon: isImage(item) ? 'icon-picture' : 'icon-document' },
-        bubbles: true,
-        composed: true,
-      }),
+          : { id: CHECK_TASK, state: 'done' },
+    );
+    const missed = cleanup ? cleanup.failed.length + cleanup.skipped.length : 0;
+    this.#send(
+      CLEANUP_TASK,
+      cleanup?.phase === 'running'
+        ? { id: CLEANUP_TASK, state: 'running', completed: cleanup.done, total: cleanup.total, label: label('healthCleaningUp') }
+        : cleanup && missed
+          ? { id: CLEANUP_TASK, state: 'failed', failed: missed, total: cleanup.total }
+          : { id: CLEANUP_TASK, state: 'done' },
     );
   }
 
   /**
-   * Open the Image Editor on an image, as Edit image does.
-   * @param item The image.
+   * Send one task's report when it changed. A task never reported is not told it is done, so a
+   * window that never cleaned up says nothing about Clean up.
+   * @param id The task.
+   * @param detail Its report.
    */
-  #edit(item: HealthItem): void {
-    findDesktopWindows(this)?.openApp(UMBRADESKTOP_IMAGE_EDITOR_APP, { location: item.key, reuse: true });
+  #send(id: string, detail: Record<string, unknown>): void {
+    const signature = JSON.stringify(detail);
+    const before = this.#reported.get(id);
+    if (signature === before) return;
+    if (before === undefined && detail.state === 'done' && id === CLEANUP_TASK) return;
+    this.#reported.set(id, signature);
+    this.dispatchEvent(new CustomEvent('umbradesktop-task', { detail, bubbles: true, composed: true }));
   }
 
   /**
-   * Move an item to the recycle bin, after asking: core's trash, through the Manager.
-   * @param item The item.
+   * Sign thumbnails through the context, which caches them for the desktop. An arrow, so the overview
+   * gets one stable function to compare.
+   * @param subjects Each picture's URL, with its item's key when it is an item.
+   * @param edge The edge in device pixels.
+   * @returns The signed URLs, by file URL.
    */
-  async #trash(item: HealthItem): Promise<void> {
-    if (this._busy || !(await this.confirmTrash(item.name))) return;
-    this._busy = true;
+  #signThumbnails = (subjects: Array<{ url: string; key?: string }>, edge: number): Promise<Map<string, string>> =>
+    this.#context?.thumbnails(subjects, edge) ?? Promise.resolve(new Map<string, string>());
+
+  /** Start a check. */
+  #check(): void {
+    this._refused = undefined;
+    void this.#context?.check();
+  }
+
+  /** Stop the check. */
+  #stop(): void {
+    void this.#context?.stop();
+  }
+
+  /**
+   * Open the sheet for the rows the overview has ticked. What someone may not do is left out here
+   * again, not only in the overview, so a non-administrator's Clean up never sends orphaned files.
+   * @param event The overview's request.
+   */
+  #askCleanup(event: CustomEvent<{ kinds: HealthKind[] }>): void {
+    const result = this._state.result;
+    if (!result) return;
+    const sheet = cleanupOf(result.lists, new Set(event.detail.kinds), this._admin);
+    this._sheet = sheet.rows.length ? sheet : undefined;
+  }
+
+  /** Run the Clean up the sheet asked about. */
+  async #cleanUp(): Promise<void> {
+    const sheet = this._sheet;
+    this._sheet = undefined;
+    this._undoNote = '';
+    this._refused = undefined;
+    if (!sheet || !this.#context) return;
+    const outcome = await this.#context.cleanUp(new Set(sheet.rows.map((row) => row.kind)), { title: this.#words('healthOversized') });
+    if ('refused' in outcome) this._refused = outcome.refused;
+  }
+
+  /** Put the trashed items back, and say how that went. */
+  async #undo(): Promise<void> {
+    if (this._undoing || !this.#context) return;
+    this._undoing = true;
     try {
-      const { failed } = (await this.#context?.trash([item.key])) ?? { failed: [item.key] };
-      this._notice = failed.length ? this.#words('healthTrashFailed', item.name) : '';
+      const { failed } = await this.#context.undoCleanup();
+      this._undoNote = failed.length ? this.#words('healthUndoFailed', failed.length) : this.#words('healthPutBack');
     } finally {
-      this._busy = false;
+      this._undoing = false;
     }
   }
 
-  /**
-   * Delete orphaned files from disk, after asking.
-   * @param files The files; every orphaned file from the row's Delete, one from a list row.
-   */
-  async #delete(files: ReadonlyArray<HealthOrphan>): Promise<void> {
-    if (this._busy || !files.length || !(await this.confirmDelete(files))) return;
-    this._busy = true;
-    try {
-      const outcome = await this.#context?.deleteOrphaned(files.map((file) => file.relativePath));
-      if (!outcome) return;
-      if ('error' in outcome) this._notice = this.#words(outcome.error === 'denied' ? 'healthDeleteDenied' : 'healthDeleteFailed');
-      else {
-        const skipped = outcome.skipped.length ? ' ' + this.#words('healthDeleteSkipped', outcome.skipped.length, outcome.skipped.map((each) => `${each.relativePath} (${each.reason})`).join(', ')) : '';
-        this._notice = this.#words('healthDeleted', outcome.deleted) + skipped;
-      }
-    } finally {
-      this._busy = false;
-    }
+  /** Back to the overview from Done. */
+  #dismiss(): void {
+    this._undoNote = '';
+    this.#context?.dismissCleanup();
   }
 
   /**
-   * Hand the oversized images to Optimize images (#139), in a window of the media service's, and
-   * take their new sizes from its report when the run ends.
+   * What the overview has to say before it is read, in the desktop's own notice (design §16.12), the
+   * banner a window shows when a page changed while you edit it, so it looks the same here under
+   * every theme. A failed check is an error; an old check and a refused Clean up are warnings. The
+   * old check's notice has no button: **Check again** at the top is the one way, not a second copy.
+   * `<umbradesktop-notice>` is the desktop's, used by its tag alone, as an app may.
    */
-  async #optimize(): Promise<void> {
-    const oversized = this._state.result?.oversized ?? [];
-    const service = findOnDesktop(this, OPTIMIZE_SERVICE_CONTEXT);
-    if (!oversized.length || !service) return;
-    const report = await service.optimizeMedia({ items: oversized.map((each) => each.key), title: this.#words('healthOversized') }).catch(() => undefined);
-    const sizes = (report?.items ?? []).filter((each) => each.status === 'optimized' && each.after).map((each) => ({ unique: each.unique, sizeBytes: each.after!.size }));
-    if (sizes.length) this.#context?.resized(sizes);
+  #renderNotices() {
+    const { phase, result } = this._state;
+    const notice = (name: string, severity: 'warning' | 'error', heading: string, body: string) =>
+      html`<umbradesktop-notice class="notice" name=${name} severity=${severity} heading=${heading} body=${body}></umbradesktop-notice>`;
+    const stale = result && isStale(result.checkedAt, new Date());
+    return html`${phase.kind === 'failed' ? notice('failed', 'error', this.#words('healthFailedTitle'), phase.message) : nothing}
+    ${this._refused === 'newer' ? notice('refused', 'warning', this.#words('healthRefusedTitle'), this.#words('healthRefusedBody')) : nothing}
+    ${stale ? notice('stale', 'warning', this.#words('healthStaleTitle'), this.#words('healthStaleBody')) : nothing}`;
   }
 
   override render() {
-    if (this._view !== 'overview') return this.#renderList(this._view);
-    const { phase, result } = this._state;
-    return html`
-      ${phase.kind === 'running' ? this.#renderProgress(phase.step, phase.scanned, phase.total) : result ? this.#renderSummary(result) : this.#renderNoCheck()}
-      ${phase.kind === 'failed' ? html`<p class="failed">${this.#words('healthFailed', phase.message)}</p>` : nothing}
-      ${result ? this.#renderBar(result.segments) : nothing}
-      ${result ? html`<div class="rows" ?dim=${phase.kind === 'running'}>${this.#renderRow('unused', result)}${this.#renderRow('orphaned', result)}${this.#renderRow('oversized', result)}</div>` : nothing}
-      ${this._notice ? html`<p class="notice">${this._notice}</p>` : nothing}
-      <footer>
-        <uui-icon name="icon-info"></uui-icon>
-        <span>${phase.kind === 'running' ? this.#words('healthRunningNote') : this.#words('healthCredit')}</span>
-      </footer>
-    `;
-  }
-
-  /** Before the first check: what the app does, and Check. */
-  #renderNoCheck() {
-    return html`<div class="summary">
-      <div class="big">
-        ${this.#words('healthNoCheck')}
-        <small>${this.#words('healthNoCheckText')}</small>
+    const screen = this.#screen;
+    const { phase, result, mediaCount, cleanup } = this._state;
+    return html`<div class="scroll" data-screen=${screen} @health-check=${this.#check} @health-stop=${this.#stop}>
+        ${screen === 'start' ? html`<umbradesktop-health-start .phase=${phase} .mediaCount=${mediaCount}></umbradesktop-health-start>` : nothing}
+        ${screen === 'overview'
+          ? html`${this.#renderNotices()}
+              <umbradesktop-health-overview
+                .result=${result}
+                ?admin=${this._admin}
+                .signThumbnails=${this.#signThumbnails}
+                @health-cleanup=${this.#askCleanup}></umbradesktop-health-overview>`
+          : nothing}
+        ${screen === 'done'
+          ? html`<umbradesktop-health-done
+              .cleanup=${cleanup}
+              ?undoing=${this._undoing}
+              .note=${this._undoNote}
+              @health-undo=${this.#undo}
+              @health-dismiss=${this.#dismiss}></umbradesktop-health-done>`
+          : nothing}
       </div>
-      <div class="when">
-        <uui-button look="primary" label=${this.#words('healthCheck')} @click=${this.#check}><uui-icon name="icon-refresh"></uui-icon>${this.#words('healthCheck')}</uui-button>
-      </div>
-    </div>`;
-  }
-
-  /**
-   * The library in one line, and when it was checked, with Check again.
-   * @param result The last check.
-   */
-  #renderSummary(result: UmbraDesktopMediaHealthResult) {
-    // In the backoffice's own culture, as the taskbar clock is by default: the headless check came
-    // out as "18:41" beside a clock saying "6:41 PM" when this read the browser's locale instead.
-    const on = checkedOn(result.checkedAt, new Date(), this.localize.lang() || undefined);
-    const day = on.day === 'today' ? this.#words('healthToday') : on.day === 'yesterday' ? this.#words('healthYesterday') : on.day;
-    return html`<div class="summary">
-      <div class="big">
-        ${formatBytes(result.library.sizeBytes)}
-        <small>${this.#words('healthLibraryLine', result.library.items.toLocaleString(), result.library.folders.toLocaleString())}</small>
-      </div>
-      <div class="when">
-        <span>${this.#words('healthChecked', day, on.time)}</span>
-        <uui-button compact look="secondary" label=${this.#words('healthCheckAgain')} @click=${this.#check}><uui-icon name="icon-refresh"></uui-icon>${this.#words('healthCheckAgain')}</uui-button>
-      </div>
-    </div>`;
-  }
-
-  /**
-   * The check running: what it is doing now, how far it is when that is known, and a bar that fills
-   * when it is and moves when it is not.
-   * @param step Which part runs.
-   * @param scanned What the step has done.
-   * @param total What it has to do; 0 when not known.
-   */
-  #renderProgress(step: 'usage' | 'disk' | 'loading', scanned: number, total: number) {
-    const stepKey: WordKey = step === 'usage' ? 'healthStepUsage' : step === 'disk' ? 'healthStepDisk' : 'healthStepLoading';
-    const counted = total > 0;
-    // Counts in the backoffice's culture, as the checked time is, so the window agrees with the taskbar clock.
-    const locale = this.localize.lang() || undefined;
-    return html`<div class="progress">
-      <div class="pt">
-        <span>${this.#words('healthChecking')}</span>
-        <span>${this.#words(stepKey)}${counted ? html` · ${this.#words('healthProgressItems', scanned.toLocaleString(locale), total.toLocaleString(locale))}` : nothing}</span>
-      </div>
-      <uui-loader-bar progress=${counted ? Math.round((scanned / total) * 100) : nothing}></uui-loader-bar>
-    </div>`;
-  }
-
-  /**
-   * The bar: the top-level folders by size, and a legend.
-   * @param segments The segments.
-   */
-  #renderBar(segments: ReadonlyArray<HealthSegment>) {
-    const total = segments.reduce((sum, segment) => sum + segment.sizeBytes, 0) || 1;
-    const shade = (index: number, segment: HealthSegment) => SEGMENT_SHADES[segment.other ? SEGMENT_SHADES.length - 1 : Math.min(index, SEGMENT_SHADES.length - 2)];
-    const name = (segment: HealthSegment) => (segment.other ? this.#words('healthOther') : segment.name);
-    return html`<div class="bar">
-      <div class="segs">
-        ${segments.map((segment, index) => html`<span style="width:${(segment.sizeBytes / total) * 100}%;opacity:${shade(index, segment)}" title="${name(segment)} ${formatBytes(segment.sizeBytes)}"></span>`)}
-      </div>
-      <div class="legend">
-        ${segments.map((segment, index) => html`<span><i style="opacity:${shade(index, segment)}"></i>${name(segment)} ${formatBytes(segment.sizeBytes)}</span>`)}
-      </div>
-    </div>`;
-  }
-
-  /**
-   * One row: its heading, its count line and its verbs.
-   * @param kind Which row.
-   * @param result The last check.
-   */
-  #renderRow(kind: Exclude<HealthView, 'overview'>, result: UmbraDesktopMediaHealthResult) {
-    const words = ROWS[kind];
-    const list = result[kind];
-    const size = formatBytes(sizeOfAll(list));
-    const count = this.#words(words.count, list.length.toLocaleString(), size);
-    const text =
-      kind === 'oversized'
-        ? list.length
-          ? this.#words('healthOversizedText', '', formatBytes(OVERSIZED_BYTES), formatBytes(estimateSaving(sizeOfAll(list))))
-          : this.#words('healthNoneOversized', formatBytes(OVERSIZED_BYTES))
-        : list.length
-          ? this.#words(kind === 'unused' ? 'healthUnusedText' : 'healthOrphanedText', '')
-          : this.#words(words.none);
-    return html`<div class="row" data-row=${kind}>
-      <uui-icon class="row-icon" name=${words.icon}></uui-icon>
-      <span class="row-text">
-        <b>${this.#words(words.title)}</b>
-        <small>${list.length ? html`<em>${count}</em>` : nothing}${text}</small>
-      </span>
-      <span class="row-actions">
-        <uui-button compact look="secondary" label=${this.#words('healthView')} ?disabled=${!list.length} @click=${() => (this._view = kind)}>
-          ${this.#words('healthView')}
-        </uui-button>
-        ${this.#renderVerb(kind, list.length)}
-      </span>
-    </div>`;
-  }
-
-  /**
-   * A row's own verb: Review on unused media, Delete on orphaned files, Optimize on oversized images.
-   * @param kind Which row.
-   * @param count How many the row holds.
-   */
-  #renderVerb(kind: Exclude<HealthView, 'overview'>, count: number) {
-    switch (kind) {
-      case 'unused':
-        return html`<uui-button compact look="primary" label=${this.#words('healthReview')} title=${this.#words('healthComingLater')} disabled>${this.#words('healthReview')}</uui-button>`;
-      case 'orphaned':
-        return html`<uui-button
-          compact
-          look="secondary"
-          color="danger"
-          label=${this.#words('healthDelete')}
-          title=${this._admin ? this.#words('healthDelete') : this.#words('healthAdminOnly')}
-          ?disabled=${!this._admin || !count || this._busy}
-          @click=${() => void this.#delete(this._state.result?.orphaned ?? [])}>
-          ${this.#words('healthDelete')}
-        </uui-button>`;
-      default:
-        return html`<uui-button compact look="primary" label=${this.#words('healthOptimize')} ?disabled=${!count} @click=${() => void this.#optimize()}>${this.#words('healthOptimize')}</uui-button>`;
-    }
-  }
-
-  /**
-   * One category as a list, largest first.
-   * @param kind Which category.
-   */
-  #renderList(kind: Exclude<HealthView, 'overview'>) {
-    const result = this._state.result;
-    const list = result?.[kind] ?? [];
-    const words = ROWS[kind];
-    return html`<header class="list-head">
-      <uui-button compact look="secondary" label=${this.#words('healthBack')} @click=${() => (this._view = 'overview')}><uui-icon name="icon-arrow-left"></uui-icon>${this.#words('healthBack')}</uui-button>
-      <b>${this.#words(words.title)}</b>
-      <span class="muted">${this.#words(words.count, list.length.toLocaleString(), formatBytes(sizeOfAll(list)))}</span>
-    </header>
-      <div class="list">
-        ${list.length
-          ? kind === 'orphaned'
-            ? repeat(list as HealthOrphan[], (file) => file.relativePath, (file) => this.#renderFile(file))
-            : repeat(list as HealthItem[], (item) => item.key, (item) => this.#renderItem(item, kind))
-          : html`<p class="muted">${this.#words('healthEmptyList')}</p>`}
-      </div>
-      ${this._notice ? html`<p class="notice">${this._notice}</p>` : nothing}`;
-  }
-
-  /**
-   * One media item's row: name and folder, size, Edit image for an image, and Trash on an unused item.
-   * @param item The item.
-   * @param kind Which list it is in.
-   */
-  #renderItem(item: HealthItem, kind: 'unused' | 'oversized') {
-    const image = isImage(item);
-    const folder = item.path === '/' ? this.localize.term('sections_media') : item.path.replace(/^\//, '');
-    return html`<div class="item">
-      <uui-icon class="kind" name=${image ? 'icon-picture' : 'icon-document'}></uui-icon>
-      <span class="name" role="button" tabindex="0" @click=${() => this.#open(item)} @keydown=${(event: KeyboardEvent) => event.key === 'Enter' && this.#open(item)}>
-        <b>${item.name}</b><small>${folder}</small>
-      </span>
-      <span class="size">${formatBytes(item.sizeBytes ?? 0)}</span>
-      ${image ? html`<uui-button compact look="secondary" label=${this.#words('editImage')} @click=${() => this.#edit(item)}><uui-icon name="icon-ruler-alt"></uui-icon></uui-button>` : nothing}
-      ${kind === 'unused'
-        ? html`<uui-button compact look="secondary" color="danger" label="actions_trash" title=${this.localize.term('actions_trash')} ?disabled=${this._busy} @click=${() => void this.#trash(item)}>
-            <uui-icon name="icon-trash"></uui-icon>
-          </uui-button>`
-        : nothing}
-    </div>`;
-  }
-
-  /**
-   * One orphaned file's row: its path, when it was written, its size, Open, and Delete for an
-   * administrator.
-   * @param file The file.
-   */
-  #renderFile(file: HealthOrphan) {
-    return html`<div class="item">
-      <uui-icon class="kind" name="icon-document"></uui-icon>
-      <span class="name"><b>${file.relativePath}</b><small>${new Date(file.lastModifiedUtc).toLocaleDateString()}</small></span>
-      <span class="size">${formatBytes(file.sizeBytes)}</span>
-      <a href=${file.url} target="_blank" rel="noopener" data-router-slot="disabled">
-        <uui-button compact look="secondary" label=${this.#words('healthOpenFile')}><uui-icon name="icon-out"></uui-icon></uui-button>
-      </a>
-      <uui-button
-        compact
-        look="secondary"
-        color="danger"
-        label=${this.#words('healthDeleteOne')}
-        title=${this._admin ? this.#words('healthDeleteOne') : this.#words('healthAdminOnly')}
-        ?disabled=${!this._admin || this._busy}
-        @click=${() => void this.#delete([file])}>
-        <uui-icon name="icon-delete"></uui-icon>
-      </uui-button>
-    </div>`;
+      ${this._sheet && screen === 'overview'
+        ? html`<umbradesktop-health-cleanup-sheet
+            .cleanup=${this._sheet}
+            ?admin=${this._admin}
+            @health-cleanup-confirm=${this.#cleanUp}
+            @health-cleanup-cancel=${() => (this._sheet = undefined)}></umbradesktop-health-cleanup-sheet>`
+        : nothing}`;
   }
 
   static override styles = css`
     :host {
-      display: flex;
-      flex-direction: column;
+      --umbradesktop-health-unused: var(--uui-color-danger);
+      --umbradesktop-health-orphaned: var(--uui-color-warning);
+      --umbradesktop-health-oversized: var(--uui-color-positive);
+      --umbradesktop-health-fine: var(--umbradesktop-app-accent, var(--uui-color-interactive));
+      position: relative;
+      display: block;
       height: 100%;
-      box-sizing: border-box;
-      padding: var(--uui-size-space-5, 18px);
-      gap: var(--uui-size-space-4, 12px);
-      overflow: auto;
       background: var(--uui-color-background);
       color: var(--uui-color-text);
       font-family: var(--umbradesktop-app-font, inherit);
     }
 
-    .summary,
-    .progress,
-    .bar,
-    .rows,
-    .list-head {
-      flex: none;
-    }
-
-    .summary {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: var(--uui-size-space-4, 12px);
-    }
-
-    .big {
-      font-size: 28px;
-      font-weight: bold;
-      line-height: 1.1;
-    }
-
-    .big small {
-      display: block;
-      font-size: var(--uui-type-small-size, 12px);
-      font-weight: normal;
-      color: var(--uui-color-text-alt);
-      margin-top: var(--uui-size-space-1, 3px);
-      max-width: 36em;
-    }
-
-    .when {
-      display: flex;
-      align-items: center;
-      gap: var(--uui-size-space-3, 9px);
-      font-size: var(--uui-type-small-size, 12px);
-      color: var(--uui-color-text-alt);
-      white-space: nowrap;
-    }
-
-    .progress .pt {
-      display: flex;
-      justify-content: space-between;
-      font-size: var(--uui-type-small-size, 12px);
-      color: var(--uui-color-text-alt);
-      margin-bottom: var(--uui-size-space-2, 6px);
-    }
-
-    .failed,
-    .notice {
-      margin: 0;
-      font-size: var(--uui-type-small-size, 12px);
-    }
-
-    .failed {
-      color: var(--uui-color-danger);
-    }
-
-    .segs {
-      display: flex;
-      height: 14px;
-      border-radius: 7px;
-      overflow: hidden;
-      background: var(--uui-color-border);
-    }
-
-    .segs span {
-      display: block;
+    .scroll {
       height: 100%;
-      background: var(--umbradesktop-app-accent, var(--uui-color-selected));
-    }
-
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--uui-size-space-1, 3px) var(--uui-size-space-4, 12px);
-      margin-top: var(--uui-size-space-2, 6px);
-      font-size: var(--uui-type-small-size, 12px);
-      color: var(--uui-color-text-alt);
-    }
-
-    .legend i {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 2px;
-      margin-right: 5px;
-      vertical-align: -1px;
-      background: var(--umbradesktop-app-accent, var(--uui-color-selected));
-    }
-
-    .rows {
-      display: flex;
-      flex-direction: column;
-      background: var(--uui-color-surface);
-      border: 1px solid var(--uui-color-border);
-      border-radius: var(--uui-border-radius, 3px);
-    }
-
-    .rows[dim] {
-      opacity: 0.55;
-      pointer-events: none;
-    }
-
-    .row {
-      display: flex;
-      align-items: center;
-      gap: var(--uui-size-space-4, 12px);
-      padding: var(--uui-size-space-4, 12px);
-      border-top: 1px solid var(--uui-color-divider, var(--uui-color-border));
-    }
-
-    .row:first-child {
-      border-top: 0;
-    }
-
-    .row-icon {
-      font-size: 22px;
-      color: var(--uui-color-text-alt);
-    }
-
-    .row-text {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .row-text small {
-      color: var(--uui-color-text-alt);
-    }
-
-    .row-text em {
-      font-style: normal;
-      color: var(--uui-color-text);
-    }
-
-    .row-text em::after {
-      content: ' ';
-    }
-
-    .row-actions {
-      display: flex;
-      gap: var(--uui-size-space-2, 6px);
-      flex: none;
-    }
-
-    footer {
-      margin-top: auto;
-      display: flex;
-      align-items: center;
-      gap: var(--uui-size-space-2, 6px);
-      font-size: var(--uui-type-small-size, 12px);
-      color: var(--uui-color-text-alt);
-    }
-
-    .list-head {
-      display: flex;
-      align-items: center;
-      gap: var(--uui-size-space-3, 9px);
-    }
-
-    .list-head b {
-      flex: 1;
-    }
-
-    .muted {
-      color: var(--uui-color-text-alt);
-      font-size: var(--uui-type-small-size, 12px);
-    }
-
-    .list {
-      flex: 1;
-      min-height: 0;
+      box-sizing: border-box;
+      padding: var(--uui-size-space-5, 18px);
       overflow: auto;
-      background: var(--uui-color-surface);
-      border: 1px solid var(--uui-color-border);
-      border-radius: var(--uui-border-radius, 3px);
     }
 
-    .list > p {
-      margin: var(--uui-size-space-4, 12px);
-    }
-
-    .item {
-      display: flex;
-      align-items: center;
-      gap: var(--uui-size-space-3, 9px);
-      padding: var(--uui-size-space-2, 6px) var(--uui-size-space-4, 12px);
-      border-top: 1px solid var(--uui-color-divider, var(--uui-color-border));
-    }
-
-    .item:first-child {
-      border-top: 0;
-    }
-
-    .item .kind {
-      color: var(--uui-color-text-alt);
-    }
-
-    .item .name {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      cursor: pointer;
-    }
-
-    .item .name b,
-    .item .name small {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .item .name b {
-      font-weight: normal;
-    }
-
-    .item .name:hover b {
-      text-decoration: underline;
-    }
-
-    .item .name small {
-      color: var(--uui-color-text-alt);
-    }
-
-    .item .size {
-      font-size: var(--uui-type-small-size, 12px);
-      color: var(--uui-color-text-alt);
-      white-space: nowrap;
-      min-width: 5em;
-      text-align: right;
-    }
-
-    .item a {
-      display: contents;
+    .notice {
+      margin-bottom: var(--uui-size-space-4, 12px);
     }
   `;
 }

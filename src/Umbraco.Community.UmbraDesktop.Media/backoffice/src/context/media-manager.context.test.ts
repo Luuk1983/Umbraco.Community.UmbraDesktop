@@ -384,6 +384,18 @@ describe('undo', () => {
     expect(shown).to.deep.equal(['raise', 'select banjo']);
   });
 
+  /**
+   * Media Health's Clean up reports "n of m" on the taskbar while hundreds of items go to the bin
+   * (plan Task 1.3), so whoever starts an operation can follow it, not only the Transfers window.
+   */
+  it('tells the caller how far an operation is, as it goes', async () => {
+    const { ctx } = context();
+    const seen: string[] = [];
+    await ctx.trash([ref('banjo', 'products'), ref('people', null, 'folder-type', true)], { onProgress: ({ done, total }) => seen.push(`${done}/${total}`) });
+    expect(seen[0]).to.equal('0/2');
+    expect(seen[seen.length - 1]).to.equal('2/2');
+  });
+
   it('restores what was trashed, and renames back', async () => {
     const { ctx, log } = context();
     await ctx.trash([ref('banjo', 'products')]);

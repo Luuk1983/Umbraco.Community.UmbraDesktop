@@ -359,11 +359,11 @@ it('runs its operations in a desktop context, so they outlive the window that st
  * Media Health (#141, design §3): one window in the Media group after the Image Editor, under the
  * Media section rule, its sizes derived from its own constants, and its check in a desktop context.
  */
-it('registers Media Health as one window in the Media group, after the Image Editor', () => {
+it('registers Media Cleanup (Media Health in code) as one window in the Media group, after the Image Editor', () => {
   const health = app('Health');
   expect(!!health).to.equal(true);
   expect(health!.meta).to.deep.include({ label: '#umbraDesktopMedia_mediaHealth', group: 'media', allowMultiple: false });
-  expect(area[health!.meta.label.slice('#umbraDesktopMedia_'.length)]).to.equal('Media Health');
+  expect(area[health!.meta.label.slice('#umbraDesktopMedia_'.length)]).to.equal('Media Cleanup');
   expect(health!.meta.defaultSize).to.deep.equal(MEDIA_HEALTH_CONTENT_SIZE);
   expect(health!.meta.minSize).to.deep.equal(MEDIA_HEALTH_MIN_CONTENT_SIZE);
   expect(health!.meta.hideFromLauncher).to.equal(undefined);

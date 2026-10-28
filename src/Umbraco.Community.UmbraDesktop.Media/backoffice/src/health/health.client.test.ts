@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { UmbraDesktopMediaHealthClient, MEDIA_HEALTH_BASE, MEDIA_HEALTH_PAGE_SIZE } from './health.client.js';
+import { CORE_IMAGING_URLS, UmbraDesktopMediaHealthClient, MEDIA_HEALTH_BASE, MEDIA_HEALTH_PAGE_SIZE } from './health.client.js';
 import type { HealthHttp, HealthItem } from './health.client.js';
 
 /**
@@ -47,10 +47,14 @@ const item = (over: Partial<HealthItem> = {}): HealthItem => ({
   path: '/Products',
   usageCount: 0,
   used: false,
+  url: '/media/a/banjo.jpg',
+  width: null,
+  height: null,
+  updatedUtc: '2026-01-01T00:00:00Z',
   ...over,
 });
 
-const noCheck = { running: null, last: null, failed: null };
+const noCheck = { running: null, last: null, failed: null, mediaCount: 0 };
 
 describe('the Media Health client', () => {
   it('talks to the add-on under the management API', () => {
@@ -66,6 +70,37 @@ describe('the Media Health client', () => {
     expect((await health.status()).data?.running).to.equal(null);
     expect((await health.check()).data?.running?.phase).to.equal('Usage');
     expect(calls.map((call) => `${call.method} ${call.url}`)).to.deep.equal([`get ${MEDIA_HEALTH_BASE}/status`, `post ${MEDIA_HEALTH_BASE}/check`]);
+  });
+
+  it('passes the media count through with the status, and the facts the preview needs with the items', async () => {
+    const facts = { url: '/media/a/x.jpg', width: 5472, height: 3648, updatedUtc: '2023-03-14T09:30:00Z' };
+    const { client } = http({
+      [`${MEDIA_HEALTH_BASE}/status`]: { ...noCheck, mediaCount: 18240 },
+      [`${MEDIA_HEALTH_BASE}/items`]: () => ({ total: 1, items: [item(facts)] }),
+    });
+    const health = new UmbraDesktopMediaHealthClient(client);
+    expect((await health.status()).data?.mediaCount).to.equal(18240);
+    const [first] = (await health.allItems()).data ?? [];
+    expect({ url: first.url, width: first.width, height: first.height, updatedUtc: first.updatedUtc }).to.deep.equal(facts);
+  });
+
+  it("gets items' signed thumbnails from core's own imaging route, which checks the person may see them", async () => {
+    const { client, calls } = http({
+      [CORE_IMAGING_URLS]: [
+        { id: 'k1', urlInfos: [{ culture: null, url: '/media/a/x.jpg?width=240&height=240&rmode=crop&hmac=s' }] },
+        { id: 'k2', urlInfos: [] },
+      ],
+    });
+    const { data } = await new UmbraDesktopMediaHealthClient(client).itemThumbnails(['k1', 'k2'], 240);
+    expect(calls[0]).to.deep.include({ method: 'get', url: CORE_IMAGING_URLS, query: { id: ['k1', 'k2'], width: 240, height: 240, mode: 'Crop' } });
+    expect(data).to.deep.equal({ k1: '/media/a/x.jpg?width=240&height=240&rmode=crop&hmac=s' });
+  });
+
+  it("asks the add-on to sign orphaned files' thumbnails, which core cannot, since they are no item", async () => {
+    const { client, calls } = http({ [`${MEDIA_HEALTH_BASE}/orphans/thumbnails`]: { urls: { '/media/a/x.jpg': '/media/a/x.jpg?width=240&hmac=s' } } });
+    const { data } = await new UmbraDesktopMediaHealthClient(client).orphanThumbnails(['/media/a/x.jpg'], 240);
+    expect(calls[0]).to.deep.include({ method: 'post', body: { urls: ['/media/a/x.jpg'], width: 240, height: 240 } });
+    expect(data).to.deep.equal({ '/media/a/x.jpg': '/media/a/x.jpg?width=240&hmac=s' });
   });
 
   it('pages through every item at the largest page the server gives, in one list', async () => {

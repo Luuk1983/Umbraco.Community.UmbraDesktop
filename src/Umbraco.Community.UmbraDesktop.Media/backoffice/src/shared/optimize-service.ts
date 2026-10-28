@@ -15,6 +15,12 @@ export interface OptimizeMediaRequest {
   items: string[];
   /** Plain text for the window's title instead of the folder's name: an item's name for a run of one (#176). */
   title?: string;
+  /**
+   * Told how far the run is whenever that changes: images finished with, of the images in it, the
+   * figures the Optimize window gives the taskbar, and the run window's location, which its Show brings
+   * forward. Media Health's Done screen reads it (plan Task 1.3a).
+   */
+  onProgress?: (progress: { completed: number; total: number; location: string }) => void;
 }
 
 /** One image of a run's report, as far as Media Health reads it. A copy of the service's `OptimizeItemReport`. */
@@ -43,6 +49,9 @@ export interface OptimizeService extends UmbContextMinimal {
    */
   optimizeMedia(request: OptimizeMediaRequest): Promise<OptimizeReport>;
 }
+
+/** The Optimize images app, by its published alias: what Media Health's Show brings forward. */
+export const OPTIMIZE_APP = 'Umbraco.Community.UmbraDesktop.Services.Media.OptimizeImages';
 
 /** The service's context, by its published alias. */
 export const OPTIMIZE_SERVICE_CONTEXT = new UmbContextToken<OptimizeService>('UmbraDesktopMediaContext');

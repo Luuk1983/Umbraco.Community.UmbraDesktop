@@ -1,96 +1,112 @@
 ---
 id: media-health
-title: Media Health
-description: Check the whole media library for where the space goes, unused media, orphaned files on disk and oversized images, and act on each.
+title: Media Cleanup
+description: Check the whole media library for unused items, orphaned files on disk and oversized images, and clean them up in one go, with Undo.
 sidebar_position: 5
 ---
 
-# Media Health
+# Media Cleanup
 
-**Media Health** answers four questions about the whole media library: where the space goes, what
-is unused, what is on disk with no media item, and which images are oversized. Each has its own verb,
-so the answer is something you can act on, not a report. It is in the launcher's **Media** group,
-after **Image Editor**, for everyone who may use the Media section.
+**Media Cleanup** checks the whole media library and shows what can go: items no page uses, files on
+disk that no item owns, and images far bigger than any page needs. One **Clean up** deals with all
+three, and asks first. It is in the launcher's **Media** group, after **Image Editor**, for everyone
+who may use the Media section.
 
 ## Check the library
 
-Nothing is measured until you ask. Opening the window measures nothing, and nothing runs on a timer,
-so the backoffice and the site are never slowed for someone who did not ask.
+Nothing is measured until you ask. Opening the window starts nothing heavy: it shows the last check,
+whoever ran it, or, before the first, asks **How healthy is your media library?** and says how many
+items the library has.
 
-1. In the launcher, select **Media Health**. The window says **No check yet**.
-2. Select **Check**. The window shows what the check is doing, finding what is used, then scanning
-   the media folder, then reading the result, with how far it is, and its taskbar button shows the
-   same.
+1. In the launcher, select **Media Cleanup**.
+2. Select **Check my media library**, or **Check again** on a result. The ring fills as the items are read, and three steps tick
+   off: reading the items, finding which pages use them, and scanning the files on disk. The
+   window's taskbar button and title bar show the same progress.
 
-The check runs on the server. To carry on elsewhere, minimise the window, or close it: the check keeps
-running, and the result is in the window when you open it again. Another person opening Media Health
-sees the same check, and the same result when it is done.
+The check runs on the server. To carry on elsewhere, minimise or close the window: the check keeps
+running, and the result is there when you open it again. Only one check runs at a time. Another
+person opening Media Cleanup sees the same check, and the same result. An open window looks every
+30 seconds, so a check someone else starts shows up there too.
 
-When it ends, the window shows:
+To stop a check, select **Stop** under the progress. The last result stays as it was.
 
-- **The library in one line**: its size, and how many items and folders it holds.
-- **A bar** of the largest top-level folders by size, with the rest and the items at the top of the
-  library as **Other**.
-- **Three rows**, each with its count and size: **Unused media**, **Orphaned files** and **Oversized
-  images**.
-- **Checked today, 3:12 PM**, or the day it was checked, with **Check again**.
+## Read the overview
+
+When the check ends, the window shows:
+
+- **Media library** with its item count and its size, and when it was checked, with **Check again**.
+- **A bar** of the whole library cut by health: what is in use on the left, and what Clean up can free
+  on the right (oversized, orphaned, unused). Under it, how much is **in use** and how much **can be
+  freed**.
+- **Three rows**, each in the bar's colour, with a count and a size, and under the words as many
+  thumbnails as fit:
+  - **Unused items**: items no page uses. Nothing in a page's content picks them, and nothing picks a
+    folder they are in. An item used in a way Umbraco does not track, such as a file address typed
+    into a text field, counts as unused.
+  - **Orphaned files**: files in the media folder that no item owns, often left behind when a site
+    was moved. Items in the recycle bin still own their files, so those are never listed.
+  - **Oversized images**: images over 2 MB that a page uses. An unused one is under **Unused items**
+    only, since it goes to the recycle bin anyway.
+- Some items have no stored size, such as the pictures Umbraco Engage installs. A row of only those
+  says **Size unknown**, and a row with some of them says **at least** the size it knows, with how
+  many it could not count under it. The bar leaves them out, since it cannot draw a size nobody
+  knows.
+- **Where the space goes**: the largest top-level folders, each bar coloured the same way, so a folder
+  that is mostly unused stands out.
 
 The result is kept in the site's database until the next check, so it survives a restart and is the
-same on every server of the site. It is a snapshot: media added, trashed or re-used since the check
-show in the Media section at once, but in Media Health only after **Check again**.
+same on every server. A Clean up updates it, so the next person sees what is left. Other changes in
+the Media section show only after **Check again**.
 
-## Unused media
+A check more than a day old gets a warning at the top of the window, and **Clean up** stays greyed
+until you select **Check again**: pages may have changed since. **Clean up** also stops if a newer
+check came in while the window was open, and says so, so you look it over first.
 
-Items that no page is placed on: nothing in a page's content picks them, and nothing picks a folder
-they are in. The check reads the references Umbraco keeps when a page is saved, which is what the
-item's own **Info** tab shows under **Referenced by**. An item used in a way Umbraco does not track,
-such as a file address typed into a text field, counts as unused, so look before you trash.
+## Clean up
 
-- To see them, select **View**. The list is largest first, with each item's name, its folder and its
-  size.
-- To open an item beside the window, in Umbraco's own editor, select its name. Its **Info** tab shows
-  **Referenced by**.
-- To edit an image, select **Edit image**. The [Image Editor](image-editor.md) opens with it.
-- To move an item to the recycle bin, select its **Trash** button. Umbraco asks first. This is the
-  same recycle bin as in the Media section, so the item can be restored there, and
-  [Undo](media-manager.md#undo) in a Media Manager window puts it back as well.
+Every row is ticked to begin with. Clean up deals with the ticked rows only, and each row says what
+happens to it:
 
-**Review**, which steps through the unused items one at a time, is coming later; its button is there
-but greyed until then.
+- **Unused items** go to the recycle bin, so they can come back.
+- **Orphaned files** are deleted for good. Each file is checked again at the moment of deleting, and a
+  file an item has claimed since the check is left alone. A folder left empty is removed too. The
+  deletion is written to Umbraco's audit log under your name.
+- **Oversized images** open in [Optimize images](optimize-images.md), where you choose the size and
+  format before anything changes.
 
-## Orphaned files
+To clean up:
 
-Files in the media folder on the server that no media item owns, for example what was left behind
-when a site was moved or an item was deleted by hand. Items in the recycle bin still own their files,
-so those are never listed.
+1. Optional: to leave a row out, clear its checkbox. The **Clean up** button shows what the ticked
+   rows free.
+2. Select **Clean up**. A sheet lists each ticked row with its count and size.
+3. Select **Clean up** in the sheet. The ring counts the items and files as they go, and the taskbar
+   button shows the same.
 
-- To see them, select **View**. Each file shows its path under the media folder, when it was last
-  written and its size, with **Open** to see it in a new tab.
-- To delete them all, select **Delete...** on the row. To delete one, select **Delete** on its line
-  in the list. The window says how many files and how much space, and asks first.
+Only an administrator can delete files. For anyone else the **Orphaned files** row is unticked and
+greyed, and says why, and the sheet says the files stay on disk.
 
-Deleting is for good: there is no recycle bin for a file without an item. Only an administrator can
-delete; for anyone else the buttons are greyed and say why. Each file is checked again at the moment
-of deleting, against the library as it is then: a file an item has claimed since the check, by an
-upload or a restore from the recycle bin, is left alone and the window says so. A folder the delete
-leaves empty is removed too. The deletion is written to Umbraco's audit log under your name.
+The figure on **Clean up** is the unused items and orphaned files in full, and about three quarters
+of the oversized images' size, which is what resizing to 2560 pixels and saving as WebP usually saves.
+It says "about" when the oversized row is ticked.
 
-## Oversized images
+## Undo a Clean up
 
-Images over 2 MB. Most of them are photos straight from a camera, far larger than any page shows
-them, and shrinking them is what [Optimize images](optimize-images.md) does.
+When Clean up is done, the window shows how much was freed and the library's size before and after.
+Anything that did not go is listed with the reason, for example a file an item owns now.
 
-- To see them, select **View**. The list is largest first, with **Edit image** on each.
-- To shrink them, select **Optimize...**. An **Optimize images** window opens with every oversized
-  image, and its settings. When the run ends, the row follows the new sizes.
+- To put the items back, select **Undo** on **in the recycle bin**. Each item goes back to the folder
+  it came from. Deleted files cannot come back.
+- To see the oversized images being optimized, select **Show** on **Optimizing**. The card counts how
+  many are done.
+- To return to the overview, select **Back to the overview**.
 
-The saving the row names is an estimate, about three quarters of the images' size, which is what
-resizing to 2560 pixels and converting to WebP usually saves. The **Optimize images** window reports
-the real figure as it runs.
+The items are in the same recycle bin as in the Media section, so they can also be restored from
+there later.
 
 ## What the check reads
 
 The check reads the media library once, a page at a time, and Umbraco's tracked references once, so
-a library of ten thousand items is a handful of queries. Then it walks the media folder, wherever
-the site keeps it, through Umbraco's own media file system, so a site on blob storage is checked the
-same way. It never changes anything: only **Trash** and **Delete** do, and each asks first.
+a library of ten thousand items is a handful of queries. Then it walks the media folder, wherever the
+site keeps it, through Umbraco's own media file system, so a site on blob storage is checked the same
+way. The thumbnails are Umbraco's image resizer on each item's own file; nothing is generated or
+stored. The check never changes anything: only Clean up does, and it asks first.

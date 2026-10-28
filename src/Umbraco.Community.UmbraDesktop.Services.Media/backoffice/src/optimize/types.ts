@@ -85,6 +85,13 @@ export interface OptimizeMediaRequest {
   start?: boolean;
   /** Plain text for the window's title instead of the folder's name. */
   title?: string;
+  /**
+   * Told how far the run is whenever that changes, while it runs: images finished with, of the images
+   * in it (files that are not images count in neither). The same figures the window gives the
+   * taskbar, so a caller's own "38 of 214" agrees with it. `location` is the run's window, so a
+   * caller's Show can bring it forward: the desktop's `openApp(alias, { location, reuse: true })`.
+   */
+  onProgress?: (progress: { completed: number; total: number; location: string }) => void;
 }
 
 /** What became of one item. */

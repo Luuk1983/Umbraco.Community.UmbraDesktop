@@ -7,6 +7,8 @@ using NSubstitute;
 using Umbraco.Cms.Core.Models.Membership;
 using Umbraco.Cms.Core.Security;
 using Umbraco.Cms.Core.HostedServices;
+using Umbraco.Cms.Core.Media;
+using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Web.Common.Authorization;
 using Umbraco.Community.UmbraDesktop.Media.Health;
 using Umbraco.Community.UmbraDesktop.Media.Health.Api;
@@ -32,6 +34,15 @@ public class MediaHealthControllerTests : IAsyncLifetime
     /// <summary>The queue, which runs nothing here.</summary>
     private readonly IBackgroundTaskQueue _queue = Substitute.For<IBackgroundTaskQueue>();
 
+    /// <summary>Umbraco's image URL generator, which signs resizer URLs on a site with an HMAC secret.</summary>
+    private readonly IImageUrlGenerator _images = Substitute.For<IImageUrlGenerator>();
+
+    /// <summary>The library, for the items a Clean up changed.</summary>
+    private readonly IMediaLibraryReader _library = Substitute.For<IMediaLibraryReader>();
+
+    /// <summary>The library's item count, as Umbraco's media service would give it.</summary>
+    private readonly IMediaCounter _counter = Substitute.For<IMediaCounter>();
+
     /// <inheritdoc />
     public async Task InitializeAsync()
     {
@@ -51,8 +62,8 @@ public class MediaHealthControllerTests : IAsyncLifetime
         security.CurrentUser.Returns(user);
         var accessor = Substitute.For<IBackOfficeSecurityAccessor>();
         accessor.BackOfficeSecurity.Returns(security);
-        var runner = new MediaHealthRunner(_store, Substitute.For<IMediaLibraryReader>(), Substitute.For<IMediaDiskScanner>(), _queue, NullLogger<MediaHealthRunner>.Instance);
-        return new MediaHealthController(_store, runner, _deleter, accessor);
+        var runner = new MediaHealthRunner(_store, _library, Substitute.For<IMediaDiskScanner>(), _queue, new FakeTimeProvider(), NullLogger<MediaHealthRunner>.Instance);
+        return new MediaHealthController(_store, runner, _library, _deleter, _counter, _images, accessor);
     }
 
     /// <summary>Everything is behind the Media section; deleting from disk is for administrators only.</summary>
@@ -64,10 +75,53 @@ public class MediaHealthControllerTests : IAsyncLifetime
         Assert.Equal(AuthorizationPolicies.SectionAccessMedia, Assert.Single(controller).Policy);
         var delete = typeof(MediaHealthController).GetMethod(nameof(MediaHealthController.DeleteOrphans))!.GetCustomAttributes<AuthorizeAttribute>(inherit: false);
         Assert.Equal(AuthorizationPolicies.RequireAdminAccess, Assert.Single(delete).Policy);
-        foreach (var name in new[] { nameof(MediaHealthController.GetStatus), nameof(MediaHealthController.Check), nameof(MediaHealthController.GetItems), nameof(MediaHealthController.GetFolders), nameof(MediaHealthController.GetOrphans) })
+        foreach (var name in new[] { nameof(MediaHealthController.GetStatus), nameof(MediaHealthController.Check), nameof(MediaHealthController.GetItems), nameof(MediaHealthController.GetFolders), nameof(MediaHealthController.GetOrphans), nameof(MediaHealthController.OrphanThumbnails), nameof(MediaHealthController.Stop), nameof(MediaHealthController.RefreshItems) })
         {
             Assert.Empty(typeof(MediaHealthController).GetMethod(name)!.GetCustomAttributes<AuthorizeAttribute>(inherit: false));
         }
+    }
+
+    /// <summary>Stop ends the running check, and the status then has none running.</summary>
+    [Fact]
+    public async Task Stops_the_running_check()
+    {
+        var controller = Controller();
+        await controller.Check();
+
+        var answer = Assert.IsType<OkObjectResult>(await controller.Stop());
+
+        var status = Assert.IsType<MediaHealthStatusResponseModel>(answer.Value);
+        Assert.Null(status.Running);
+        Assert.Null(status.Failed);
+    }
+
+    /// <summary>
+    /// After a Clean up the window names the items it changed, and the stored result is brought in line
+    /// with what Umbraco says about them now, never with what the window says (design §16.12).
+    /// </summary>
+    [Fact]
+    public async Task Refreshes_the_items_a_clean_up_changed_from_umbraco()
+    {
+        var check = await _store.StartAsync(Editor);
+        var key = Guid.NewGuid();
+        await _store.FinishAsync(check.Id, new MediaHealthResult([], [new MediaHealthItem(key, "Old", "Image", "jpg", 500, null, "/", 0)], []));
+        _library.ReadStatesAsync(Arg.Any<IReadOnlyList<Guid>>()).Returns([new MediaHealthItemState(key, Exists: true, Trashed: true, 500, null, null, null, DateTime.UnixEpoch)]);
+
+        Assert.IsType<NoContentResult>(await Controller().RefreshItems(new RefreshMediaHealthItemsRequestModel([key])));
+
+        Assert.Empty(await _store.GetItemsAsync(0, 10));
+        await _library.Received(1).ReadStatesAsync(Arg.Is<IReadOnlyList<Guid>>(keys => keys.SequenceEqual(new[] { key })));
+    }
+
+    /// <summary>One refresh reads at most a page's worth of items, so a request cannot ask for the whole library.</summary>
+    [Fact]
+    public async Task Refreshes_at_most_a_page_of_items()
+    {
+        _library.ReadStatesAsync(Arg.Any<IReadOnlyList<Guid>>()).Returns([]);
+
+        await Controller().RefreshItems(new RefreshMediaHealthItemsRequestModel(Enumerable.Range(0, MediaHealthController.MaxPage + 10).Select(_ => Guid.NewGuid()).ToList()));
+
+        await _library.Received(1).ReadStatesAsync(Arg.Is<IReadOnlyList<Guid>>(keys => keys.Count == MediaHealthController.MaxPage));
     }
 
     /// <summary>No check yet: an empty status, which the window shows as No check yet.</summary>
@@ -79,6 +133,60 @@ public class MediaHealthControllerTests : IAsyncLifetime
         var status = Assert.IsType<MediaHealthStatusResponseModel>(ok.Value);
         Assert.Null(status.Running);
         Assert.Null(status.Last);
+    }
+
+    /// <summary>
+    /// The library's item count comes with every status, so No check yet can say how big the job is
+    /// (design §16.3), and with the answer to Check, which the window reads the same way.
+    /// </summary>
+    [Fact]
+    public async Task Status_carries_the_media_count()
+    {
+        _counter.Count().Returns(18240);
+
+        var status = Assert.IsType<MediaHealthStatusResponseModel>(Assert.IsType<OkObjectResult>(await Controller().GetStatus()).Value);
+        var started = Assert.IsType<MediaHealthStatusResponseModel>(Assert.IsType<AcceptedResult>(await Controller().Check()).Value);
+
+        Assert.Equal((18240, 18240), (status.MediaCount, started.MediaCount));
+    }
+
+    /// <summary>
+    /// An orphaned file's thumbnail is signed by Umbraco's own generator, since a site with an HMAC
+    /// secret refuses an unsigned resizer URL with 400, as the first real run of step 1 found, and core
+    /// signs only media items. Only orphaned files of the last check are signed, cropped square: an
+    /// item's path, or any other, is refused, so this is never an open signer.
+    /// </summary>
+    [Fact]
+    public async Task Signs_thumbnails_only_for_the_last_checks_orphans()
+    {
+        var check = await _store.StartAsync(Editor);
+        await _store.FinishAsync(check.Id, new MediaHealthResult(
+            [],
+            [new MediaHealthItem(Guid.NewGuid(), "Hero", "Image", "jpg", 900, null, "/", 0, "/media/i1/item.jpg")],
+            [new MediaHealthOrphan("a1/hero.jpg", "/media/a1/hero.jpg", 5, DateTime.UnixEpoch)]));
+        _images.GetImageUrl(Arg.Any<ImageUrlGenerationOptions>()).Returns(call =>
+        {
+            var options = call.Arg<ImageUrlGenerationOptions>();
+            return $"{options.ImageUrl}?width={options.Width}&height={options.Height}&rmode={options.ImageCropMode}&hmac=signed";
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(await Controller().OrphanThumbnails(new MediaHealthThumbnailsRequestModel(["/media/a1/hero.jpg", "/media/i1/item.jpg", "/media/c3/other.jpg"], 240, 240)));
+
+        var signed = Assert.IsType<MediaHealthThumbnailsResponseModel>(ok.Value).Urls;
+        var only = Assert.Single(signed);
+        Assert.Equal(("/media/a1/hero.jpg", "/media/a1/hero.jpg?width=240&height=240&rmode=Crop&hmac=signed"), (only.Key, only.Value));
+    }
+
+    /// <summary>A size beyond what any window draws is clamped, so a signed URL never asks the resizer for a huge picture.</summary>
+    [Fact]
+    public async Task Clamps_the_thumbnail_size()
+    {
+        var check = await _store.StartAsync(Editor);
+        await _store.FinishAsync(check.Id, new MediaHealthResult([], [], [new MediaHealthOrphan("a1/hero.jpg", "/media/a1/hero.jpg", 5, DateTime.UnixEpoch)]));
+
+        await Controller().OrphanThumbnails(new MediaHealthThumbnailsRequestModel(["/media/a1/hero.jpg"], 99999, 0));
+
+        _images.Received(1).GetImageUrl(Arg.Is<ImageUrlGenerationOptions>(options => options.Width == MediaHealthController.MaxImageEdge && options.Height == 1));
     }
 
     /// <summary>Starting a check answers 202 with the running check, and queues the work under the person's key.</summary>

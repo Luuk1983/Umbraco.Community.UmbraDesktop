@@ -7,11 +7,14 @@
 export const UMBRADESKTOP_MEDIA_HEALTH_APP = 'Umbraco.Community.UmbraDesktop.Media.Health';
 
 /**
- * The window's opening content box, in px: the mock's 660 × 580 window less a caption's worth, since
- * the desktop adds the chrome (`desktop-apps.md` §2.1). Room for the line, the bar, three rows and
- * the footer without a scrollbar under any theme.
+ * The window's opening content box, in px, measured rather than taken from the mock (desktop-apps.md
+ * §2.1: the desktop adds the chrome). The overview with three rows and three folders, read in a real
+ * backoffice on 2026-10-28 (design §16.10), measured again once the thumbnails moved under each row's
+ * words (design §16.13): its scroll height was 675 under the Umbraco theme and 676 under the tallest,
+ * Umbraco 4, macOS, Windows 11 and Windows 98 alike, at 640 wide. So the overview opens whole, with no
+ * scrollbar, under every theme; a notice over it (a check over a day old) scrolls, which is rare.
  */
-export const MEDIA_HEALTH_CONTENT_SIZE = { w: 640, h: 540 } as const;
+export const MEDIA_HEALTH_CONTENT_SIZE = { w: 640, h: 676 } as const;
 
 /** The smallest box the three rows still fit in with their buttons beside their text. */
 export const MEDIA_HEALTH_MIN_CONTENT_SIZE = { w: 480, h: 400 } as const;

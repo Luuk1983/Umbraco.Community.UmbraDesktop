@@ -126,6 +126,9 @@ namespace Umbraco.Community.UmbraDesktop.Media.Health.Data.Migrations.SqlServer
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("Height")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("Key")
                         .HasColumnType("uniqueidentifier");
 
@@ -150,7 +153,20 @@ namespace Umbraco.Community.UmbraDesktop.Media.Health.Data.Migrations.SqlServer
                     b.Property<long?>("SizeBytes")
                         .HasColumnType("bigint");
 
+                    b.Property<bool>("Trashed")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<int>("UsageCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Width")
                         .HasColumnType("int");
 
                     b.HasKey("Id");

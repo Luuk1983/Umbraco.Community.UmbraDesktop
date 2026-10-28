@@ -156,7 +156,109 @@ public class MediaHealthStoreTests : IAsyncLifetime
         Assert.Equal(3, (await _store.GetItemsAsync(0, 100)).Count);
     }
 
-    /// <summary>A check nobody has touched for an hour was lost with its server; the next start replaces it.</summary>
+    /// <summary>
+    /// Two presses at the same moment start one check, not two: the look for a running check and the
+    /// insert of a new one happen as one step.
+    /// </summary>
+    [Fact]
+    public async Task Starts_one_check_when_pressed_at_once()
+    {
+        var starts = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(() => _store.TryStartAsync(Editor))));
+
+        Assert.Single(starts, start => start.Started);
+        Assert.Single(starts.Select(start => start.Check.Id).Distinct());
+    }
+
+    /// <summary>
+    /// A check that has said nothing for a few minutes is dead: the runner beats every
+    /// <see cref="MediaHealthRunner.HeartbeatEvery"/> while it works, so silence for several beats
+    /// means its server went away, and the next press must not join it for an hour.
+    /// </summary>
+    [Fact]
+    public async Task Gives_up_on_a_silent_check_within_minutes()
+    {
+        Assert.True(MediaHealthStore.StaleAfter <= TimeSpan.FromMinutes(5));
+        Assert.True(MediaHealthStore.StaleAfter >= MediaHealthRunner.HeartbeatEvery * 4, "several beats may be missed before a check is given up");
+        var lost = await _store.StartAsync(Editor);
+        _time.Advance(MediaHealthStore.StaleAfter + TimeSpan.FromSeconds(1));
+
+        Assert.Null((await _store.GetStatusAsync()).Running);
+        Assert.NotEqual(lost.Id, (await _store.StartAsync(Editor)).Id);
+    }
+
+    /// <summary>A beat keeps a running check alive, and says whether it should go on.</summary>
+    [Fact]
+    public async Task A_beat_keeps_a_check_alive()
+    {
+        var running = await _store.StartAsync(Editor);
+        _time.Advance(MediaHealthStore.StaleAfter - TimeSpan.FromSeconds(10));
+        Assert.True(await _store.TouchAsync(running.Id));
+        _time.Advance(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(running.Id, (await _store.GetStatusAsync()).Running?.Id);
+    }
+
+    /// <summary>
+    /// Stop ends the running check without a failure: the window goes back to the last result, and a
+    /// beat, progress or a finish that comes after it changes nothing.
+    /// </summary>
+    [Fact]
+    public async Task Stops_the_running_check_and_keeps_the_last_result()
+    {
+        var first = await _store.StartAsync(Editor);
+        await _store.FinishAsync(first.Id, Result());
+        var running = await _store.StartAsync(Editor);
+
+        Assert.True(await _store.StopAsync());
+
+        var status = await _store.GetStatusAsync();
+        Assert.Null(status.Running);
+        Assert.Null(status.Failed);
+        Assert.Equal(first.Id, status.Last?.Id);
+        Assert.False(await _store.TouchAsync(running.Id));
+        Assert.False(await _store.ProgressAsync(running.Id, MediaHealthPhase.Disk, 1, 1));
+        Assert.False(await _store.FinishAsync(running.Id, Result(9)));
+        Assert.Equal(first.Id, (await _store.GetStatusAsync()).Last?.Id);
+        Assert.False(await _store.StopAsync());
+    }
+
+    /// <summary>
+    /// The stored result follows a Clean up (design §16.12): an item trashed leaves it, one restored
+    /// comes back with its facts, a new size is taken, one deleted for good is dropped, and the totals
+    /// follow. A key the result never had is not added.
+    /// </summary>
+    [Fact]
+    public async Task Follows_items_trashed_restored_resized_and_deleted()
+    {
+        var check = await _store.StartAsync(Editor);
+        await _store.FinishAsync(check.Id, Result());
+        var items = await _store.GetItemsAsync(0, 10);
+        var hero = items.Single(item => item.Name == "Hero");
+        var old = items.Single(item => item.Name == "Old");
+        var notes = items.Single(item => item.Name == "Notes");
+        var when = new DateTime(2026, 10, 28, 9, 0, 0, DateTimeKind.Utc);
+
+        await _store.RefreshItemsAsync([
+            new MediaHealthItemState(old.Key, Exists: true, Trashed: true, 500, old.Url, null, null, when),
+            new MediaHealthItemState(hero.Key, Exists: true, Trashed: false, 800_000, "/media/x/hero.webp", 10, 20, when),
+            new MediaHealthItemState(notes.Key, Exists: false, Trashed: false, null, null, null, null, when),
+            new MediaHealthItemState(Guid.NewGuid(), Exists: true, Trashed: false, 1, null, null, null, when),
+        ]);
+
+        var after = await _store.GetItemsAsync(0, 10);
+        Assert.Equal(["Hero"], after.Select(item => item.Name));
+        Assert.Equal((800_000L, "/media/x/hero.webp", (int?)10, (int?)20, when), (after[0].SizeBytes!.Value, after[0].Url, after[0].Width, after[0].Height, after[0].UpdatedUtc));
+        Assert.Equal((1, 800_000L), ((await _store.GetStatusAsync()).Last!.Items, (await _store.GetStatusAsync()).Last!.SizeBytes));
+
+        await _store.RefreshItemsAsync([new MediaHealthItemState(old.Key, Exists: true, Trashed: false, 500, old.Url, null, null, when)]);
+
+        var back = await _store.GetItemsAsync(0, 10);
+        Assert.Equal(["Hero", "Old"], back.Select(item => item.Name));
+        Assert.Equal(("/Products", 0), (back[1].Path, back[1].UsageCount));
+        Assert.Equal(2, (await _store.GetStatusAsync()).Last!.Items);
+    }
+
+    /// <summary>A check nobody has touched for too long was lost with its server; the next start replaces it.</summary>
     [Fact]
     public async Task Gives_up_on_a_check_left_running_too_long()
     {
@@ -171,18 +273,63 @@ public class MediaHealthStoreTests : IAsyncLifetime
         Assert.Equal(MediaHealthPhase.Failed, status.Failed?.Phase);
     }
 
-    /// <summary>Progress keeps a long check alive: the hour counts from its last word, not its start.</summary>
+    /// <summary>Progress keeps a long check alive: the silence counts from its last word, not its start.</summary>
     [Fact]
     public async Task Counts_staleness_from_the_last_progress()
     {
         var running = await _store.StartAsync(Editor);
-        _time.Advance(TimeSpan.FromMinutes(50));
+        _time.Advance(MediaHealthStore.StaleAfter * 0.8);
         await _store.ProgressAsync(running.Id, MediaHealthPhase.Disk, 10, 0);
-        _time.Advance(TimeSpan.FromMinutes(50));
+        _time.Advance(MediaHealthStore.StaleAfter * 0.8);
 
         var again = await _store.StartAsync(Editor);
 
         Assert.Equal(running.Id, again.Id);
+    }
+
+    /// <summary>
+    /// The facts the preview and thumbnails need (design §16.7) survive the database: URL, size in
+    /// pixels and last change, the time marked UTC, and a URL longer than its column cut rather than
+    /// failing the whole save.
+    /// </summary>
+    [Fact]
+    public async Task Round_trips_the_item_facts()
+    {
+        var updated = new DateTime(2023, 3, 14, 9, 30, 0, DateTimeKind.Utc);
+        var longUrl = "/media/" + new string('x', 2001 - "/media/".Length);
+        var check = await _store.StartAsync(Editor);
+        await _store.FinishAsync(check.Id, new MediaHealthResult(
+            [],
+            [
+                new MediaHealthItem(Guid.NewGuid(), "Hero", "Image", "jpg", 900, null, "/", 0, "/media/a1/hero.jpg", 5472, 3648, updated),
+                new MediaHealthItem(Guid.NewGuid(), "Long", "Image", "jpg", 100, null, "/", 0, longUrl, null, null, updated),
+            ],
+            []));
+
+        var items = await _store.GetItemsAsync(0, 10);
+
+        Assert.Equal(("/media/a1/hero.jpg", (int?)5472, (int?)3648, updated), (items[0].Url, items[0].Width, items[0].Height, items[0].UpdatedUtc));
+        Assert.Equal(DateTimeKind.Utc, items[0].UpdatedUtc.Kind);
+        Assert.Equal(2000, items[1].Url!.Length);
+        Assert.Null(items[1].Width);
+    }
+
+    /// <summary>
+    /// Only the last check's orphaned files are Media Health's to sign thumbnails for: an item's picture
+    /// is signed by core's own imaging route, which also checks the person may see the item (§16.7).
+    /// </summary>
+    [Fact]
+    public async Task Knows_only_the_last_checks_orphan_urls()
+    {
+        var check = await _store.StartAsync(Editor);
+        await _store.FinishAsync(check.Id, new MediaHealthResult(
+            [],
+            [new MediaHealthItem(Guid.NewGuid(), "Hero", "Image", "jpg", 900, null, "/", 0, "/media/a1/hero.jpg")],
+            [new MediaHealthOrphan("b2/old.png", "/media/b2/old.png", 5, DateTime.UnixEpoch)]));
+
+        var known = await _store.KnownOrphanUrlsAsync(["/media/a1/hero.jpg", "/media/b2/old.png", "/media/c3/other.jpg"]);
+
+        Assert.Equal(["/media/b2/old.png"], known.Order());
     }
 
     /// <summary>Deleted orphans leave the result, so the window follows without another check.</summary>

@@ -1,5 +1,7 @@
 import { UMBRADESKTOP_NOTICE_STACK_MAX_SHARE } from '../constants.js';
-import { noticeIconName, windowNotices } from '../notices/notices.js';
+import { windowNotices } from '../notices/notices.js';
+// Side-effect import: registers '<umbradesktop-notice>', which draws each banner below.
+import './notice.element.js';
 import type { UmbraDesktopNotice, UmbraDesktopNoticeAction } from '../notices/types.js';
 import type { UmbraDesktopWindow } from '../types.js';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
@@ -98,45 +100,23 @@ export class UmbraDesktopWindowNoticesElement extends UmbLitElement {
   }
 
   /**
-   * One notice.
+   * One notice, as the desktop's notice component, which owns how a banner looks so a banner here
+   * and one an app draws in its own content cannot drift apart. The words are localized here; the
+   * component takes them as they are.
    * @param notice The notice to draw.
    * @returns Its template.
    */
   #renderNotice(notice: UmbraDesktopNotice) {
-    // `error` gets the assertive role and `warning` the polite one, because the two differ in what
-    // they cost to ignore for one more second: a deleted document cannot be saved to at all, so
-    // `alert` is right for it, while a conflict is serious but has no clock on it — the editor loses
-    // nothing by finishing the sentence they are reading before hearing about it. `role="status"` is
-    // this file's only warning severity, but the mapping is from severity, not from a fixed set of
-    // ids, so a future warning-severity notice inherits the same non-interrupting treatment.
-    const role = notice.severity === 'error' ? 'alert' : 'status';
-    const icon = noticeIconName(notice.severity);
-    // No `alt`/`aria-label` on the icon, and that is deliberate rather than an oversight: the
-    // title beside it already says in words what the glyph says in shape, so naming the icon too
-    // would have a screen reader read the severity twice. `aria-hidden` states that explicitly.
-    return html`<div class="notice" data-severity=${notice.severity} data-notice=${notice.id} role=${role}>
-      ${icon ? html`<umb-icon class="notice-icon" name=${icon} aria-hidden="true"></umb-icon>` : nothing}
-      <div class="notice-text">
-        <strong class="notice-title">${this.localize.term(notice.title)}</strong>
-        <span class="notice-body">${this.localize.term(notice.body)}</span>
-      </div>
-      ${notice.actions.length
-        ? html`<span class="notice-actions">
-            ${notice.actions.map(
-              (action) =>
-                // Real `uui-button`s, as the settings modal and the wallpaper picker use, rather
-                // than the bordered spans this started as: those had to reinvent focus, hover and
-                // disabled states from nothing, and got them subtly different from every other
-                // button in the backoffice. `look="secondary"` is the same look the settings
-                // modal's own non-primary buttons take.
-                html`<uui-button
-                  look="secondary"
-                  label=${this.#label(action)}
-                  @click=${() => void this.#run(action)}></uui-button>`,
-            )}
-          </span>`
-        : nothing}
-    </div>`;
+    return html`<umbradesktop-notice
+      name=${notice.id}
+      severity=${notice.severity === 'error' ? 'error' : 'warning'}
+      heading=${this.localize.term(notice.title)}
+      body=${this.localize.term(notice.body)}
+      .actions=${notice.actions.map((action) => ({ id: action, label: this.#label(action) }))}
+      @umbradesktop-notice-action=${(event: CustomEvent<{ action: UmbraDesktopNoticeAction }>) => {
+        event.stopPropagation();
+        void this.#run(event.detail.action);
+      }}></umbradesktop-notice>`;
   }
 
   /**
@@ -196,115 +176,6 @@ export class UmbraDesktopWindowNoticesElement extends UmbLitElement {
            host supplies the one percentage that means anything, and this is what actually scrolls. */
         max-height: 100%;
         overflow-y: auto;
-      }
-      /* The severity colour, named once and read by the ground, the leading edge and the icon
-         below. A local custom property rather than three near-identical selectors each repeating
-         the same token chain: the severity rule then swaps one value and everything that carries
-         severity follows it, which is also what stops a fourth carrier being added later and
-         quietly missing its 'error' twin.
-
-         The ground is that colour mixed into the window's own surface, not a wash of
-         '--uui-color-warning'. UUI's warning token is the *saturated* fill meant for solid
-         controls, and a strip the width of a window filled with it read as neither Umbraco nor a
-         warning. A white band with an edge accent, which is what this was, read as no warning at
-         all: reported as "doesn't grab the attention it needs". So: a tint, small enough that the
-         text on it is still ordinary body text and large enough that the band is obviously not the
-         window's own surface. Mixed rather than written as a hex value so it follows both the
-         severity colour a theme sets and the light/dark surface underneath it — one declaration
-         covers four combinations, and none of them can drift from the accent beside it.
-
-         Severity is still carried by the icon and the edge as well as the ground, so a monochrome
-         display or a reader who does not read yellow as danger still gets it: the design's rule
-         that colour is never the only carrier.
-
-         'border-inline-start' rather than 'border-left' so the bar follows the writing direction,
-         which for the notice stack of a right-to-left backoffice is the right edge. */
-      .notice {
-        --notice-accent: var(--umbradesktop-notice-warning-color, var(--uui-color-warning-standalone));
-        display: flex;
-        flex-wrap: wrap;
-        align-items: flex-start;
-        gap: var(--uui-size-space-2) var(--uui-size-space-4);
-        padding: var(--uui-size-space-3) var(--uui-size-space-4);
-        background: var(
-          --umbradesktop-notice-background,
-          color-mix(
-            in srgb,
-            var(--notice-accent) 16%,
-            var(--umbradesktop-window-background, var(--uui-color-surface))
-          )
-        );
-        color: var(--umbradesktop-notice-text, var(--uui-color-text));
-        border-inline-start: var(--umbradesktop-notice-border-width, 4px) solid var(--notice-accent);
-        border-bottom: 1px solid var(--uui-color-divider-standalone, var(--uui-color-border));
-        font-size: var(--uui-type-small-size);
-      }
-      /* Severity swaps the accent, and the ground follows it because the ground is mixed from it:
-         one banner and two banners of different severities still have to sit in the same stack
-         without reading as two different kinds of chrome, which a shared surface and a shared
-         layout give them. Single quotes and not backticks around a name in these comments, here
-         and in every comment inside a 'css' tagged template: a backtick closes the template
-         literal, and the failure is a parse error several lines further down that says nothing
-         about quoting. */
-      .notice[data-severity='error'] {
-        --notice-accent: var(--umbradesktop-notice-error-color, var(--uui-color-danger));
-      }
-      /* Stroked in 'currentColor' by Umbraco itself, so the severity colour reaches it as an
-         ordinary 'color' and no icon token has to exist. Its own line height, so a two-line body
-         does not stretch it. */
-      .notice-icon {
-        flex: none;
-        font-size: 18px;
-        line-height: 1;
-        color: var(--notice-accent);
-      }
-      /* Grows, and is the only thing that does: 'flex: 1 1 12rem' is what lets the actions drop
-         onto their own line on a narrow window instead of squeezing the sentence to one word per
-         line. */
-      .notice-text {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        flex: 1 1 12rem;
-        min-width: 0;
-      }
-      /* Medium, not the 700 a 'strong' defaults to: the heading is the sentence's subject, not a
-         second alarm after the icon. */
-      .notice-title {
-        font-weight: 500;
-      }
-      /* Dimmed from whatever the notice's own text colour resolved to, rather than set to
-         '--uui-color-text-alt'. The token is the backoffice's secondary ink for the backoffice's
-         own surfaces, and it knows nothing about a themed notice ground: on Umbraco 4's cream
-         panel and under the dark backoffice theme it came out close enough to the ground to
-         disappear, which is what "the second text line goes missing" was. Deriving from
-         'currentColor' cannot go wrong that way — a theme sets '--umbradesktop-notice-text' or
-         does not, and this follows either. */
-      .notice-body {
-        color: inherit;
-        opacity: 0.85;
-      }
-      .notice-actions {
-        display: inline-flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: var(--uui-size-space-2);
-        /* Aligns with the title rather than with the middle of a wrapped body. */
-        margin-top: 1px;
-      }
-      /* The actions have to read as controls sitting *on* the band. UUI's 'secondary' look is
-         '--uui-color-surface-alt' with a transparent border, which against a notice ground is a
-         step of roughly 1.05:1 — a label floating in the strip rather than a button, reported on
-         three themes in a row. Its own surface plus a hairline is what every other secondary
-         button in the backoffice has against the panel behind it.
-         Restated through UUI's own custom properties rather than by switching to 'look=outline':
-         the properties are what a theme already overrides (Win98's grey face, macOS's radius) and
-         a theme's sheet is appended after this one, so its values keep winning. */
-      .notice-actions uui-button {
-        --uui-button-background-color: var(--uui-color-surface);
-        --uui-button-background-color-hover: var(--uui-color-surface-alt);
-        --uui-button-border-color: var(--uui-color-border);
-        --uui-button-border-color-hover: var(--uui-color-interactive);
       }
     `,
   ];

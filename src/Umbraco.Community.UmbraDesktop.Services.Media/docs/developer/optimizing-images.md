@@ -98,6 +98,7 @@ interface OptimizeMediaRequest {
   save?: 'replace' | 'copy';
   start?: boolean;
   title?: string;
+  onProgress?: (progress: { completed: number; total: number; location: string }) => void;
 }
 ```
 
@@ -108,6 +109,7 @@ interface OptimizeMediaRequest {
 | `save` | `replace`, the default, writes over each item, keeping its key, media type, focal point and crops. `copy` saves a full copy next to each, named "*name* (optimized)", with every property of the original |
 | `start` | `true` skips the settings and runs at once |
 | `title` | Plain text for the window's title, in place of the folder's name |
+| `onProgress` | Called whenever the run gets further, with how many images it has finished with of how many, the same figures the window shows on the taskbar. Files that are not images count in neither. `location` is the run's window, for `openApp(alias, { location, reuse: true })` to bring it forward |
 
 ```ts
 const report = await media.optimizeMedia({ items: selection, options: { format: 'webp' } });

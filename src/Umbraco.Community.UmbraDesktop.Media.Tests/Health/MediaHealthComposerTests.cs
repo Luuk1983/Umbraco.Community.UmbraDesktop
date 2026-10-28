@@ -21,7 +21,7 @@ public class MediaHealthComposerTests
 
         new MediaHealthComposer().Compose(builder);
 
-        foreach (var type in new[] { typeof(MediaHealthStore), typeof(MediaHealthRunner), typeof(IMediaLibraryReader), typeof(IMediaDiskScanner), typeof(IMediaOrphanDeleter), typeof(MediaHealthMigrator) })
+        foreach (var type in new[] { typeof(MediaHealthStore), typeof(MediaHealthRunner), typeof(IMediaLibraryReader), typeof(IMediaDiskScanner), typeof(IMediaOrphanDeleter), typeof(IMediaCounter), typeof(MediaHealthMigrator) })
         {
             var registered = Assert.Single(services, descriptor => descriptor.ServiceType == type);
             Assert.Equal(ServiceLifetime.Singleton, registered.Lifetime);

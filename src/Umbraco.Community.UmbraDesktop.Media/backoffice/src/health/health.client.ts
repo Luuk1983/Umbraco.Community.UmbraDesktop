@@ -9,11 +9,21 @@ import { umbHttpClient } from '@umbraco-cms/backoffice/http-client';
 /** Where the API lives: under the management API, on the host's `umbradesktop` prefix. */
 export const MEDIA_HEALTH_BASE = '/umbraco/management/api/v1/umbradesktop/media/health';
 
+/**
+ * Core's own route for signed resizer URLs of media items (`release-17.6.0`'s
+ * `ResizeImagingController`): what an item's thumbnail is asked from, since a site with an HMAC
+ * secret refuses an unsigned one, and since core checks there that the person may see the item.
+ */
+export const CORE_IMAGING_URLS = '/umbraco/management/api/v1/imaging/resize/urls';
+
+/** How many items one ask to core's imaging route names, so its address stays short. */
+const IMAGING_BATCH = 40;
+
 /** The most items the server gives per page; it clamps anything larger to this. */
 export const MEDIA_HEALTH_PAGE_SIZE = 500;
 
 /** Where a check is, as the server names it. */
-export type HealthServerPhase = 'Usage' | 'Disk' | 'Saving' | 'Done' | 'Failed';
+export type HealthServerPhase = 'Usage' | 'Disk' | 'Saving' | 'Done' | 'Failed' | 'Stopped';
 
 /** One check: when, who, where it is, and once done, its counts. */
 export interface HealthCheck {
@@ -47,6 +57,11 @@ export interface HealthStatus {
   running: HealthCheck | null;
   last: HealthCheck | null;
   failed: HealthCheck | null;
+  /**
+   * The library's items now, folders and the recycle bin left out: what No check yet says the job is
+   * before any check has counted it (design §16.3).
+   */
+  mediaCount: number;
 }
 
 /** One media item as the last check classified it. */
@@ -69,6 +84,16 @@ export interface HealthItem {
   usageCount: number;
   /** Whether any page is. */
   used: boolean;
+  /**
+   * Its first owned file as stored, such as `/media/abc/photo.jpg`: what thumbnails and the preview
+   * ask the resizer for (design §16.7). Null for an item without a file, as Engage's images are.
+   */
+  url: string | null;
+  /** Its size in pixels, or null when it has none. */
+  width: number | null;
+  height: number | null;
+  /** When it was last changed, for the preview's "last changed". */
+  updatedUtc: string;
 }
 
 /** A folder of the library, by key. */
@@ -190,6 +215,20 @@ export class UmbraDesktopMediaHealthClient {
     return this.#post('check');
   }
 
+  /** Stop the running check; answers with the status, none running. The last result stands. */
+  stop(): Promise<HealthResult<HealthStatus>> {
+    return this.#post('check/stop');
+  }
+
+  /**
+   * Have the stored result follow some items a Clean up changed (design §16.12). The server reads
+   * them from Umbraco itself; the window only names them.
+   * @param keys The items trashed, restored or optimized.
+   */
+  refreshItems(keys: ReadonlyArray<string>): Promise<HealthResult<unknown>> {
+    return this.#post('items/refresh', { keys: [...keys] });
+  }
+
   /**
    * Every item of the last check, largest first, read a page at a time at the largest page the server
    * gives.
@@ -217,6 +256,41 @@ export class UmbraDesktopMediaHealthClient {
   async orphans(): Promise<HealthResult<HealthOrphan[]>> {
     const answer = await this.#get<{ orphans: HealthOrphan[] }>('orphans');
     return answer.data ? { data: answer.data.orphans } : { error: answer.error };
+  }
+
+  /**
+   * Signed square thumbnails of media items, by key, from core's own imaging route (design §16.7):
+   * Umbraco where it can, and core checks the person may see each item. An item core gives no URL
+   * for is left out.
+   * @param keys The items.
+   * @param edge The edge in device pixels.
+   */
+  async itemThumbnails(keys: ReadonlyArray<string>, edge: number): Promise<HealthResult<Record<string, string>>> {
+    const signed: Record<string, string> = {};
+    for (let start = 0; start < keys.length; start += IMAGING_BATCH) {
+      const id = keys.slice(start, start + IMAGING_BATCH);
+      const answer = await this.#attempt<Array<{ id: string; urlInfos: Array<{ url: string | null }> }>>(() =>
+        this.#http.get({ url: CORE_IMAGING_URLS, query: { id, width: edge, height: edge, mode: 'Crop' }, security: SECURITY }),
+      );
+      if (!answer.data) return { error: answer.error };
+      for (const each of answer.data) {
+        const url = each.urlInfos.find((info) => info.url)?.url;
+        if (url) signed[each.id] = url;
+      }
+    }
+    return { data: signed };
+  }
+
+  /**
+   * Signed square thumbnails of orphaned files, by URL, from the add-on's own route, since core signs
+   * only media items and an orphaned file is none. The server signs only the last check's orphaned
+   * files and leaves anything else out.
+   * @param urls The orphaned files' URLs.
+   * @param edge The edge in device pixels.
+   */
+  async orphanThumbnails(urls: ReadonlyArray<string>, edge: number): Promise<HealthResult<Record<string, string>>> {
+    const answer = await this.#post<{ urls: Record<string, string> }>('orphans/thumbnails', { urls: [...urls], width: edge, height: edge });
+    return answer.data ? { data: answer.data.urls } : { error: answer.error };
   }
 
   /**

@@ -3,7 +3,7 @@ import type { UmbraDesktopAdoptedSheets, UmbraDesktopThemeSheets, UmbraDesktopSu
 import type { UmbraDesktopBackofficeTheme } from './backoffice-themes';
 import { backofficeThemes } from './backoffice-themes.js';
 import { backofficeVariant, resolveTheme } from './resolve-variant.js';
-import { paletteCss } from './palette-css.js';
+import { desktopStyleOf } from './palette-css.js';
 import { UMBRADESKTOP_DEFAULT_THEME_ID, UMBRADESKTOP_THEMES } from './themes/index.js';
 import { UMBRADESKTOP_THEME_CONTEXT } from './theme.context-token.js';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
@@ -85,8 +85,11 @@ export class UmbraDesktopThemeContext extends UmbContextBase {
   /** The theme, variant and palette in force. */
   public readonly resolved = this.#resolved.asObservable();
 
-  /** The active theme's palette, rendered as declarations for a `style` attribute. */
-  public readonly paletteStyle = this.#resolved.asObservablePart((resolved) => paletteCss(resolved.palette));
+  /**
+   * The active theme's palette, rendered as declarations for a `style` attribute, after the
+   * desktop's own disabled-button fix (`palette-css.ts`), which every theme inherits.
+   */
+  public readonly paletteStyle = this.#resolved.asObservablePart((resolved) => desktopStyleOf(resolved.palette));
 
   /** The geometry the window manager and desktop surface need. */
   public readonly metrics = this.#resolved.asObservablePart((resolved) => resolved.theme.metrics);

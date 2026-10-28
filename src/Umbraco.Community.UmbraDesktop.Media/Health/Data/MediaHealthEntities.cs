@@ -83,6 +83,25 @@ public class MediaHealthItemEntity
 
     /// <summary>How many pages are placed on it.</summary>
     public int UsageCount { get; set; }
+
+    /// <summary>Its first owned file, as stored, for thumbnails and the preview.</summary>
+    public string? Url { get; set; }
+
+    /// <summary>Its width in pixels, when it has one.</summary>
+    public int? Width { get; set; }
+
+    /// <summary>Its height in pixels, when it has one.</summary>
+    public int? Height { get; set; }
+
+    /// <summary>When it was last changed.</summary>
+    public DateTime UpdatedUtc { get; set; }
+
+    /// <summary>
+    /// Whether a Clean up has put the item in the recycle bin since the check (design §16.12). The row
+    /// stays, so Undo can bring it back with its usage and folder as the check saw them; reads leave it
+    /// out until then.
+    /// </summary>
+    public bool Trashed { get; set; }
 }
 
 /// <summary>One folder of a check; see <see cref="MediaHealthFolder"/>.</summary>

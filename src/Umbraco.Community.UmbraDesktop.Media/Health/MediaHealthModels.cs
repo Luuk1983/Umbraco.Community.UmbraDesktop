@@ -16,6 +16,14 @@ public sealed record MediaHealthFolder(Guid Key, string Name, Guid? ParentKey, s
 /// <param name="ParentKey">The folder it is in, or null at the root.</param>
 /// <param name="Path">The names path of the folder it is in, <c>/</c> at the root.</param>
 /// <param name="UsageCount">How many pages are placed on it, by Umbraco's tracked relations.</param>
+/// <param name="Url">
+/// The first file it owns, as stored (<c>/media/abc123/photo.jpg</c>): the string core serves and the
+/// image resizer answers, so thumbnails and the preview are the resizer on it (design §16.7). Null
+/// for an item without a file.
+/// </param>
+/// <param name="Width">Its width in pixels, from Umbraco's <c>umbracoWidth</c>, or null when it has none.</param>
+/// <param name="Height">Its height in pixels, from <c>umbracoHeight</c>, or null.</param>
+/// <param name="UpdatedUtc">When it was last changed, for the preview's "last changed" (design §16.5).</param>
 public sealed record MediaHealthItem(
     Guid Key,
     string Name,
@@ -24,7 +32,11 @@ public sealed record MediaHealthItem(
     long? SizeBytes,
     Guid? ParentKey,
     string Path,
-    int UsageCount)
+    int UsageCount,
+    string? Url = null,
+    int? Width = null,
+    int? Height = null,
+    DateTime UpdatedUtc = default)
 {
     /// <summary>Whether any page is placed on it.</summary>
     public bool Used => UsageCount > 0;
@@ -36,6 +48,20 @@ public sealed record MediaHealthItem(
 /// <param name="SizeBytes">Its size.</param>
 /// <param name="LastModifiedUtc">When it was last written.</param>
 public sealed record MediaHealthOrphan(string RelativePath, string Url, long SizeBytes, DateTime LastModifiedUtc);
+
+/// <summary>
+/// An item as Umbraco has it now, for bringing the stored result in line after a Clean up (design
+/// §16.12): read from Umbraco, never taken from the window, so the stored result stays Umbraco's word.
+/// </summary>
+/// <param name="Key">The item's key.</param>
+/// <param name="Exists">Whether Umbraco still has it at all; false once it is deleted for good.</param>
+/// <param name="Trashed">Whether it is in the recycle bin.</param>
+/// <param name="SizeBytes">Its file's size now, or null when it carries none.</param>
+/// <param name="Url">Its first owned file now, or null.</param>
+/// <param name="Width">Its width now, or null.</param>
+/// <param name="Height">Its height now, or null.</param>
+/// <param name="UpdatedUtc">When it was last changed.</param>
+public sealed record MediaHealthItemState(Guid Key, bool Exists, bool Trashed, long? SizeBytes, string? Url, int? Width, int? Height, DateTime UpdatedUtc);
 
 /// <summary>What a finished check found.</summary>
 /// <param name="Folders">Every folder.</param>
@@ -68,6 +94,12 @@ public enum MediaHealthPhase
 
     /// <summary>Ended badly; <see cref="MediaHealthCheck.Error"/> says why.</summary>
     Failed,
+
+    /// <summary>
+    /// Stopped by someone before it finished. Not a failure: the last good result stands and the
+    /// window shows it again, with nothing to explain.
+    /// </summary>
+    Stopped,
 }
 
 /// <summary>One check: when, who, where it is, and once done, what it counted.</summary>

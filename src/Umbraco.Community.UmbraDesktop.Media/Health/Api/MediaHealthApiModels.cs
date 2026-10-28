@@ -41,15 +41,25 @@ public sealed record MediaHealthCheckResponseModel(
 /// <param name="Running">The check under way.</param>
 /// <param name="Last">The last check that finished.</param>
 /// <param name="Failed">A check that failed after the last one.</param>
-public sealed record MediaHealthStatusResponseModel(MediaHealthCheckResponseModel? Running, MediaHealthCheckResponseModel? Last, MediaHealthCheckResponseModel? Failed)
+/// <param name="MediaCount">
+/// The library's items now, folders and the recycle bin left out, so No check yet can say how big
+/// the job is before there is any check to count from (design §16.3).
+/// </param>
+public sealed record MediaHealthStatusResponseModel(
+    MediaHealthCheckResponseModel? Running,
+    MediaHealthCheckResponseModel? Last,
+    MediaHealthCheckResponseModel? Failed,
+    int MediaCount)
 {
     /// <summary>A status as the API says it.</summary>
     /// <param name="status">The status.</param>
+    /// <param name="mediaCount">The library's items now.</param>
     /// <returns>The model.</returns>
-    public static MediaHealthStatusResponseModel From(MediaHealthStatus status) => new(
+    public static MediaHealthStatusResponseModel From(MediaHealthStatus status, int mediaCount) => new(
         status.Running is null ? null : MediaHealthCheckResponseModel.From(status.Running),
         status.Last is null ? null : MediaHealthCheckResponseModel.From(status.Last),
-        status.Failed is null ? null : MediaHealthCheckResponseModel.From(status.Failed));
+        status.Failed is null ? null : MediaHealthCheckResponseModel.From(status.Failed),
+        mediaCount);
 }
 
 /// <summary>One item, as the window lists it.</summary>
@@ -62,13 +72,31 @@ public sealed record MediaHealthStatusResponseModel(MediaHealthCheckResponseMode
 /// <param name="Path">The names path of the folder it is in.</param>
 /// <param name="UsageCount">How many pages are placed on it.</param>
 /// <param name="Used">Whether any page is.</param>
-public sealed record MediaHealthItemResponseModel(Guid Key, string Name, string MediaTypeAlias, string? Extension, long? SizeBytes, Guid? ParentKey, string Path, int UsageCount, bool Used)
+/// <param name="Url">Its first owned file, as stored, for thumbnails and the preview; null without a file.</param>
+/// <param name="Width">Its width in pixels, or null.</param>
+/// <param name="Height">Its height in pixels, or null.</param>
+/// <param name="UpdatedUtc">When it was last changed.</param>
+public sealed record MediaHealthItemResponseModel(
+    Guid Key,
+    string Name,
+    string MediaTypeAlias,
+    string? Extension,
+    long? SizeBytes,
+    Guid? ParentKey,
+    string Path,
+    int UsageCount,
+    bool Used,
+    string? Url,
+    int? Width,
+    int? Height,
+    DateTime UpdatedUtc)
 {
     /// <summary>An item as the API says it.</summary>
     /// <param name="item">The item.</param>
     /// <returns>The model.</returns>
-    public static MediaHealthItemResponseModel From(MediaHealthItem item) =>
-        new(item.Key, item.Name, item.MediaTypeAlias, item.Extension, item.SizeBytes, item.ParentKey, item.Path, item.UsageCount, item.Used);
+    public static MediaHealthItemResponseModel From(MediaHealthItem item) => new(
+        item.Key, item.Name, item.MediaTypeAlias, item.Extension, item.SizeBytes, item.ParentKey, item.Path, item.UsageCount, item.Used,
+        item.Url, item.Width, item.Height, item.UpdatedUtc);
 }
 
 /// <summary>A page of items, largest first.</summary>
@@ -111,3 +139,17 @@ public sealed record MediaHealthSkipResponseModel(string RelativePath, string Re
 /// <param name="Deleted">The files deleted.</param>
 /// <param name="Skipped">The files left alone.</param>
 public sealed record MediaHealthDeleteResponseModel(IReadOnlyList<string> Deleted, IReadOnlyList<MediaHealthSkipResponseModel> Skipped);
+
+/// <summary>Orphaned files' thumbnails to sign: their URLs, as the check listed them, and the size to draw them at.</summary>
+/// <param name="Urls">The URLs.</param>
+/// <param name="Width">The width in pixels, clamped to the route's largest edge.</param>
+/// <param name="Height">The height in pixels, the same.</param>
+public sealed record MediaHealthThumbnailsRequestModel(IReadOnlyList<string> Urls, int Width, int Height);
+
+/// <summary>The signed thumbnail of each orphaned file of the last check, by the URL asked for.</summary>
+/// <param name="Urls">Each known URL and its signed resizer URL; unknown URLs are left out.</param>
+public sealed record MediaHealthThumbnailsResponseModel(IReadOnlyDictionary<string, string> Urls);
+
+/// <summary>The items a Clean up changed, for the stored result to follow (design §16.12).</summary>
+/// <param name="Keys">The items trashed, restored or optimized.</param>
+public sealed record RefreshMediaHealthItemsRequestModel(IReadOnlyList<Guid> Keys);

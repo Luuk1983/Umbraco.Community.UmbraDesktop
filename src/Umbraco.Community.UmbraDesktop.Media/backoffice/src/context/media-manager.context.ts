@@ -45,6 +45,11 @@ export type UmbraDesktopMediaOperationKind = 'move' | 'copy' | 'trash' | 'restor
 export interface UmbraDesktopRunOptions {
   /** Whether it goes into the undo history; an undo itself does not. Default: recorded. */
   record?: boolean;
+  /**
+   * Told after every change, as the Transfers window is: how many steps went, failed, and there are.
+   * For a caller that shows its own progress, as Media Health's Clean up does on the taskbar.
+   */
+  onProgress?: (progress: { done: number; failed: number; total: number }) => void;
 }
 
 /** As much of the desktop's window manager as the context uses. */
@@ -717,7 +722,10 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
     const id = this.#transfers.newId();
     const handle = runOperation(
       steps,
-      () => this.#transfers.refresh(id),
+      ({ done, failed, total }) => {
+        this.#transfers.refresh(id);
+        options.onProgress?.({ done, failed, total });
+      },
       (step) => {
         for (const unique of new Set(step.affects)) this.#reload(unique);
       },

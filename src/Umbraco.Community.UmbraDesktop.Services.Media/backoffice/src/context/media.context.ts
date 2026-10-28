@@ -33,6 +33,7 @@ import { backofficeLookups } from '../optimize/lookups.js';
 import type { RunLookups } from '../optimize/lookups.js';
 import { optimizeFile } from '../optimize/optimize-file.js';
 import { readRemembered, rememberedKeyFor, writeRemembered } from '../optimize/remembered.js';
+import { progressOf } from '../optimize/progress.js';
 import { OptimizeRunStore } from '../optimize/run-store.js';
 import type { RunWords } from '../optimize/run-store.js';
 import type { Place } from '../optimize/where-used.js';
@@ -331,6 +332,10 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
    * Optimize media items in an Optimize images window of their own (#139, design §8.2): the window
    * opens on its settings, or runs at once with `start`, and this resolves when the run ends. A Retry
    * failed or Run the rest in the same window afterwards is the person's, not reported here.
+   *
+   * With `onProgress`, the caller is told how far the run is whenever that changes, counted by the
+   * same {@link progressOf} the window reports to the taskbar, until the report resolves. Nothing is
+   * told while the selection is still being read, since which files are images is not known yet.
    * @param request The items and the starting settings.
    * @returns The report: finished, cancelled (Cancel, or the window closed while running), or not
    *   started (Cancel on the settings, or no desktop to open the window on).
@@ -341,6 +346,19 @@ export class UmbraDesktopMediaContext extends UmbContextBase {
     const windows = this.#windows ?? (await this.getContext(UMBRADESKTOP_WINDOW_MANAGER).catch(() => undefined));
     if (!windows) return { status: 'not-started', items: items.map((unique) => ({ unique, name: '', status: 'not-started' })), saved: 0 };
     const { id, report } = this.optimizeRuns.create({ ...request, items });
+    const onProgress = request.onProgress;
+    if (onProgress) {
+      let told = '';
+      const subscription = this.optimizeRuns.observe(id).subscribe((run) => {
+        if (!run || run.phase === 'preparing') return;
+        const progress = progressOf(run);
+        const signature = `${progress.completed}/${progress.total}`;
+        if (signature === told) return;
+        told = signature;
+        onProgress({ ...progress, location: id });
+      });
+      void report.finally(() => subscription.unsubscribe());
+    }
     if (!windows.openApp(UMBRADESKTOP_OPTIMIZE_APP, { location: id })) this.optimizeRuns.release(id);
     return report;
   }

@@ -115,6 +115,9 @@ namespace Umbraco.Community.UmbraDesktop.Media.Health.Data.Migrations.Sqlite
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("Height")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("Key")
                         .HasColumnType("TEXT");
 
@@ -139,7 +142,20 @@ namespace Umbraco.Community.UmbraDesktop.Media.Health.Data.Migrations.Sqlite
                     b.Property<long?>("SizeBytes")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("Trashed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("UsageCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("Width")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

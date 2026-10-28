@@ -18,6 +18,14 @@ public interface IMediaLibraryReader
     /// <param name="cancellationToken">Stops the read.</param>
     /// <returns>The relative paths, compared without case.</returns>
     Task<ISet<string>> ReadOwnedPathsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Some items as Umbraco has them now, for the stored result after a Clean up (design §16.12): one
+    /// read for all of them, never one per item.
+    /// </summary>
+    /// <param name="keys">The items.</param>
+    /// <returns>One state per key; a key Umbraco no longer has comes back as not existing.</returns>
+    Task<IReadOnlyList<MediaHealthItemState>> ReadStatesAsync(IReadOnlyList<Guid> keys);
 }
 
 /// <summary>
@@ -57,7 +65,23 @@ internal sealed class UmbracoMediaLibraryReader(
     /// <param name="Extension">Its extension, when the item carries one.</param>
     /// <param name="SizeBytes">Its size, when the item carries one.</param>
     /// <param name="AncestorIds">The ids above it, root excluded.</param>
-    private sealed record Entry(int Id, Guid Key, string Name, int ParentId, string MediaTypeAlias, string? Extension, long? SizeBytes, IReadOnlyList<int> AncestorIds);
+    /// <param name="Url">Its first owned file, as stored, or null.</param>
+    /// <param name="Width">Its width in pixels, when it carries one.</param>
+    /// <param name="Height">Its height in pixels, when it carries one.</param>
+    /// <param name="UpdatedUtc">When it was last changed.</param>
+    private sealed record Entry(
+        int Id,
+        Guid Key,
+        string Name,
+        int ParentId,
+        string MediaTypeAlias,
+        string? Extension,
+        long? SizeBytes,
+        IReadOnlyList<int> AncestorIds,
+        string? Url,
+        int? Width,
+        int? Height,
+        DateTime UpdatedUtc);
 
     /// <inheritdoc />
     public Task<MediaLibrarySnapshot> ReadAsync(IProgress<MediaHealthProgress> progress, CancellationToken cancellationToken)
@@ -68,7 +92,8 @@ internal sealed class UmbracoMediaLibraryReader(
         var owned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         ReadPages(cancellationToken, progress, media =>
         {
-            foreach (var path in MediaFilePaths.Of(media))
+            var paths = MediaFilePaths.Of(media);
+            foreach (var path in paths)
             {
                 owned.Add(MediaDiskScanner.Normalize(mediaFileSystem.GetRelativePath(path)));
             }
@@ -86,7 +111,11 @@ internal sealed class UmbracoMediaLibraryReader(
                 media.ContentType.Alias,
                 TextOf(media, Constants.Conventions.Media.Extension),
                 long.TryParse(TextOf(media, Constants.Conventions.Media.Bytes), out var bytes) ? bytes : null,
-                AncestorIdsOf(media));
+                AncestorIdsOf(media),
+                paths.Count > 0 ? paths[0] : null,
+                int.TryParse(TextOf(media, Constants.Conventions.Media.Width), out var width) ? width : null,
+                int.TryParse(TextOf(media, Constants.Conventions.Media.Height), out var height) ? height : null,
+                AsUtc(media.UpdateDate));
             entries[media.Id] = entry;
             (IsFolder(media) ? folders : items).Add(media.Id);
         });
@@ -98,7 +127,8 @@ internal sealed class UmbracoMediaLibraryReader(
         return Task.FromResult(new MediaLibrarySnapshot(
             folders.Select(id => entries[id]).Select(entry => new MediaHealthFolder(entry.Key, entry.Name, ParentKeyOf(entry, entries), PathOf(entry, entries, includeSelf: true))).ToList(),
             items.Select(id => entries[id]).Select(entry => new MediaHealthItem(
-                entry.Key, entry.Name, entry.MediaTypeAlias, entry.Extension, entry.SizeBytes, ParentKeyOf(entry, entries), PathOf(entry, entries, includeSelf: false), usage[entry.Id])).ToList(),
+                entry.Key, entry.Name, entry.MediaTypeAlias, entry.Extension, entry.SizeBytes, ParentKeyOf(entry, entries), PathOf(entry, entries, includeSelf: false), usage[entry.Id],
+                entry.Url, entry.Width, entry.Height, entry.UpdatedUtc)).ToList(),
             owned));
     }
 
@@ -114,6 +144,30 @@ internal sealed class UmbracoMediaLibraryReader(
             }
         });
         return Task.FromResult<ISet<string>>(owned);
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<MediaHealthItemState>> ReadStatesAsync(IReadOnlyList<Guid> keys)
+    {
+        var found = keys.Count == 0 ? [] : mediaService.GetByIds(keys).ToDictionary(media => media.Key);
+        return Task.FromResult<IReadOnlyList<MediaHealthItemState>>(keys.Distinct().Select(key =>
+        {
+            if (!found.TryGetValue(key, out var media))
+            {
+                return new MediaHealthItemState(key, false, false, null, null, null, null, default);
+            }
+
+            var paths = MediaFilePaths.Of(media);
+            return new MediaHealthItemState(
+                key,
+                true,
+                media.Trashed,
+                long.TryParse(TextOf(media, Constants.Conventions.Media.Bytes), out var bytes) ? bytes : null,
+                paths.Count > 0 ? paths[0] : null,
+                int.TryParse(TextOf(media, Constants.Conventions.Media.Width), out var width) ? width : null,
+                int.TryParse(TextOf(media, Constants.Conventions.Media.Height), out var height) ? height : null,
+                AsUtc(media.UpdateDate));
+        }).ToList());
     }
 
     /// <summary>Every descendant of the root, a page at a time, trashed or not.</summary>
@@ -158,6 +212,18 @@ internal sealed class UmbracoMediaLibraryReader(
         var text = media.Properties.TryGetValue(alias, out var property) ? property?.GetValue()?.ToString() : null;
         return string.IsNullOrWhiteSpace(text) ? null : text;
     }
+
+    /// <summary>
+    /// A time marked UTC, as every time the add-on stores is (§15). Umbraco 17 keeps its dates in
+    /// UTC but hands them out without a kind; a local one, from older code, is converted.
+    /// </summary>
+    /// <param name="time">The time as Umbraco gave it.</param>
+    /// <returns>The same moment, marked UTC.</returns>
+    private static DateTime AsUtc(DateTime time) => time.Kind switch
+    {
+        DateTimeKind.Local => time.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(time, DateTimeKind.Utc),
+    };
 
     /// <summary>Whether an item is a folder: Umbraco's own Folder type, which is what the tree calls one.</summary>
     /// <param name="media">The item.</param>

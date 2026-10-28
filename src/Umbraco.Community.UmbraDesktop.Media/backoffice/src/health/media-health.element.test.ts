@@ -5,208 +5,227 @@ import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import './media-health.element.js';
 import type { UmbraDesktopMediaHealthElement } from './media-health.element.js';
 import { UMBRADESKTOP_MEDIA_HEALTH_CONTEXT } from './media-health.context.js';
-import type { UmbraDesktopMediaHealthResult, UmbraDesktopMediaHealthState } from './media-health.context.js';
-import type { HealthItem, HealthOrphan } from './health.client.js';
-import { editPath } from '../manager/open-item.js';
+import type { UmbraDesktopMediaHealthState } from './media-health.context.js';
+import type { HealthKind } from './health-model.js';
+import { KEY_NAMES, cleanupState, result, textOf } from './health.test-helper.js';
 
-/** The Media Health window (design §3, mock scenes 1 and 2). */
+/**
+ * The Media Health window (design §16): one screen at a time, from the context's state, and the
+ * check and Clean up reported to the desktop as tasks.
+ */
 
-const MB = 1024 * 1024;
-
-const item = (over: Partial<HealthItem> = {}): HealthItem => ({
-  key: 'a',
-  name: 'Banjo',
-  mediaTypeAlias: 'Image',
-  extension: 'jpg',
-  sizeBytes: 100,
-  parentKey: 'f',
-  path: '/Products',
-  usageCount: 1,
-  used: true,
-  ...over,
+let removals: Array<() => void> = [];
+afterEach(() => {
+  for (const remove of removals) remove();
+  removals = [];
 });
 
-const orphan = (relativePath: string, sizeBytes = 10): HealthOrphan => ({ relativePath, url: `/media/${relativePath}`, sizeBytes, lastModifiedUtc: '2026-01-01T00:00:00Z' });
-
-/** A checked library: two unused items, two orphans, one oversized image. */
-const result = (): UmbraDesktopMediaHealthResult => {
-  const items = [
-    item({ key: 'big', name: 'Hero', sizeBytes: 3 * MB }),
-    item({ key: 'old', name: 'Old banner', used: false, usageCount: 0, sizeBytes: 500, path: '/Products/2023' }),
-    item({ key: 'older', name: 'Older banner', used: false, usageCount: 0, sizeBytes: 900, path: '/', extension: 'pdf' }),
-    item({ key: 'face', name: 'Face', sizeBytes: 50, path: '/People' }),
-  ];
-  return {
-    checkedAt: new Date(),
-    library: { sizeBytes: 3 * MB + 1450, items: 4, folders: 3 },
-    segments: [
-      { name: 'Products', sizeBytes: 3 * MB + 500, other: false },
-      { name: 'People', sizeBytes: 50, other: false },
-      { name: '', sizeBytes: 900, other: true },
-    ],
-    items,
-    unused: [items[2], items[1]],
-    orphaned: [orphan('1/x.jpg', 30), orphan('2/y.png', 10)],
-    oversized: [items[0]],
-  };
-};
-
-let cleanup: Array<() => void> = [];
-afterEach(() => {
-  for (const dispose of cleanup) dispose();
-  cleanup = [];
+/** The state before anything is known. */
+const idle = (over: Partial<UmbraDesktopMediaHealthState> = {}): UmbraDesktopMediaHealthState => ({
+  phase: { kind: 'idle' },
+  result: undefined,
+  mediaCount: 3,
+  cleanup: undefined,
+  ...over,
 });
 
 /**
  * The window on a stand-in context and user, recording what it asks.
  * @param state What the context holds.
  * @param isAdmin Whether the person is an administrator.
+ * @param refuse Why the context refuses Clean up, when it does.
  */
-async function healthWindow(state: UmbraDesktopMediaHealthState, isAdmin = true) {
+async function healthWindow(state: UmbraDesktopMediaHealthState, isAdmin = true, refuse?: 'newer' | 'stale') {
   const asked: string[] = [];
-  const tasks: Array<{ id: string; state: string }> = [];
-  const opened: Array<{ key: string; path: string; name: string }> = [];
+  const tasks: Array<Record<string, unknown>> = [];
   const held = new UmbObjectState<UmbraDesktopMediaHealthState>(state);
   const wrapper = document.createElement('div');
   document.body.appendChild(wrapper);
+  removals.push(() => wrapper.remove());
   wrapper.addEventListener('umbradesktop-task', (event) => tasks.push((event as CustomEvent).detail));
-  wrapper.addEventListener('umbradesktop-open-attached', (event) => opened.push((event as CustomEvent).detail));
   new UmbContextProvider(wrapper, UMBRADESKTOP_MEDIA_HEALTH_CONTEXT, {
     getHostElement: () => wrapper,
     state: held.asObservable(),
     getState: () => held.getValue(),
     sync: async () => void asked.push('sync'),
-    check: async () => void asked.push('check'),
-    deleteOrphaned: async (paths: string[]) => {
-      asked.push(`delete ${paths.join(',')}`);
-      return { deleted: paths.length, skipped: [] };
+    watch: () => {
+      asked.push('watch');
+      return () => void asked.push('unwatch');
     },
-    trash: async (keys: string[]) => {
-      asked.push(`trash ${keys.join(',')}`);
+    stop: async () => void asked.push('stop'),
+    check: async () => void asked.push('check'),
+    cleanUp: async (kinds: ReadonlySet<HealthKind>, options: { title?: string }) => {
+      asked.push(`cleanUp ${[...kinds].join(',')} ${options?.title ?? ''}`.trim());
+      return refuse ? { refused: refuse } : cleanupState();
+    },
+    undoCleanup: async () => {
+      asked.push('undo');
       return { failed: [] };
     },
-    resized: () => undefined,
+    dismissCleanup: () => void asked.push('dismiss'),
   } as never).hostConnected();
   new UmbContextProvider(wrapper, UMB_CURRENT_USER_CONTEXT, {
     getHostElement: () => wrapper,
     currentUser: new UmbObjectState({ isAdmin }).asObservable(),
   } as never).hostConnected();
-  cleanup.push(() => wrapper.remove());
   const element = await fixture<UmbraDesktopMediaHealthElement>(html`<umbradesktop-media-health></umbradesktop-media-health>`, { parentNode: wrapper });
   await element.updateComplete;
-  const text = () => element.shadowRoot!.textContent!.replace(/\s+/g, ' ');
-  const button = (label: string, within = '') =>
-    [...element.shadowRoot!.querySelectorAll<HTMLElement & { disabled?: boolean }>(`${within} uui-button`)].find((each) => each.getAttribute('label') === label);
-  const press = async (label: string, within = '') => {
-    button(label, within)!.click();
+  const screen = () => element.shadowRoot!.querySelector('[data-screen]')?.getAttribute('data-screen');
+  const settle = async () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
     await element.updateComplete;
   };
-  return { element, held, asked, tasks, opened, text, button, press };
+  const set = async (next: UmbraDesktopMediaHealthState) => {
+    held.setValue(next);
+    await settle();
+  };
+  return { element, held, asked, tasks, screen, settle, set, text: () => textOf(element) };
 }
 
 describe('the Media Health window', () => {
-  it('asks the server once whether a check exists, and shows No check yet with Check until one does', async () => {
-    const { asked, text, button, press } = await healthWindow({ phase: { kind: 'idle' }, result: undefined });
-    expect(asked).to.deep.equal(['sync']);
-    expect(text()).to.contain('No check yet');
-    expect(button('Check')).to.not.equal(undefined);
-    await press('Check');
-    expect(asked).to.deep.equal(['sync', 'check']);
+  it('asks the server once whether a check exists, and invites one until it does', async () => {
+    const { asked, screen, element, settle } = await healthWindow(idle());
+    expect(asked.filter((each) => each !== 'watch')).to.deep.equal(['sync']);
+    expect(screen()).to.equal('start');
+    element.shadowRoot!.querySelector('umbradesktop-health-start')!.dispatchEvent(new CustomEvent('health-check', { bubbles: true, composed: true }));
+    await settle();
+    expect(asked.filter((each) => each !== 'watch')).to.deep.equal(['sync', 'check']);
   });
 
-  it('shows the library line, the bar, the three rows and when it was checked, after a check', async () => {
-    const { element, text } = await healthWindow({ phase: { kind: 'idle' }, result: result() });
-    expect(text()).to.contain('3 MB');
-    expect(text()).to.contain('4 items in 3 folders');
-    const legend = [...element.shadowRoot!.querySelectorAll('.legend span')].map((each) => each.textContent!.trim());
-    expect(legend[0]).to.contain('Products');
-    expect(legend[2]).to.contain('Other');
-    expect(element.shadowRoot!.querySelectorAll('.segs span').length).to.equal(3);
-    const rows = [...element.shadowRoot!.querySelectorAll('.row')].map((each) => each.textContent!.replace(/\s+/g, ' '));
-    expect(rows.length).to.equal(3);
-    expect(rows[0]).to.contain('Unused media');
-    expect(rows[1]).to.contain('Orphaned files');
-    expect(rows[2]).to.contain('Oversized images');
-    expect(text()).to.contain('Checked today');
-    expect(text()).to.contain('no page is placed');
+  it('shows the overview once there is a result, and Checking while a check runs', async () => {
+    const { screen, set } = await healthWindow(idle({ result: result() }));
+    expect(screen()).to.equal('overview');
+    await set(idle({ phase: { kind: 'running', step: 'usage', scanned: 1, total: 2 }, result: result() }));
+    expect(screen()).to.equal('start');
   });
 
-  it('shows the check running, and reports it to the desktop as a task until it ends', async () => {
-    const { element, held, tasks, text, button } = await healthWindow({ phase: { kind: 'running', step: 'usage', scanned: 412, total: 1284 }, result: undefined });
-    expect(text()).to.contain('Checking the library');
-    expect(text()).to.contain('Finding what is used');
-    expect(text()).to.match(/412 of 1[,.]284 items/);
-    expect(button('Check')).to.equal(undefined);
+  it('declares the four health colours once, for every screen and every theme to read', async () => {
+    const { element } = await healthWindow(idle({ result: result() }));
+    // The test page has no backoffice theme, so stand in UUI's colours the way a theme sets them.
+    for (const name of ['danger', 'warning', 'positive', 'interactive']) element.parentElement!.style.setProperty(`--uui-color-${name}`, 'rgb(1, 2, 3)');
+    const style = getComputedStyle(element);
+    for (const kind of ['unused', 'orphaned', 'oversized', 'fine']) expect(style.getPropertyValue(`--umbradesktop-health-${kind}`).trim(), kind).to.not.equal('');
+  });
+
+  it('asks once before Clean up, over the overview, and runs it with the ticked rows', async () => {
+    const { element, asked, settle } = await healthWindow(idle({ result: result() }));
+    const overview = element.shadowRoot!.querySelector('umbradesktop-health-overview')!;
+    overview.dispatchEvent(new CustomEvent('health-cleanup', { detail: { kinds: ['unused', 'orphaned'] }, bubbles: true, composed: true }));
+    await settle();
+    const sheet = element.shadowRoot!.querySelector('umbradesktop-health-cleanup-sheet')!;
+    expect(sheet).to.not.equal(null);
+    expect(element.shadowRoot!.querySelector('umbradesktop-health-overview')).to.not.equal(null);
+    sheet.dispatchEvent(new CustomEvent('health-cleanup-cancel', { bubbles: true, composed: true }));
+    await settle();
+    expect(element.shadowRoot!.querySelector('umbradesktop-health-cleanup-sheet')).to.equal(null);
+    expect(asked.filter((each) => each !== 'watch')).to.deep.equal(['sync']);
+    overview.dispatchEvent(new CustomEvent('health-cleanup', { detail: { kinds: ['unused', 'orphaned'] }, bubbles: true, composed: true }));
+    await settle();
+    element.shadowRoot!.querySelector('umbradesktop-health-cleanup-sheet')!.dispatchEvent(new CustomEvent('health-cleanup-confirm', { bubbles: true, composed: true }));
+    await settle();
+    expect(asked.filter((each) => each !== 'watch')).to.deep.equal(['sync', 'cleanUp unused,orphaned Oversized images']);
+  });
+
+  it('never sends orphaned files from someone who is not an administrator', async () => {
+    const { element, asked, settle } = await healthWindow(idle({ result: result() }), false);
+    element.shadowRoot!.querySelector('umbradesktop-health-overview')!.dispatchEvent(new CustomEvent('health-cleanup', { detail: { kinds: ['unused', 'orphaned'] }, bubbles: true, composed: true }));
+    await settle();
+    element.shadowRoot!.querySelector('umbradesktop-health-cleanup-sheet')!.dispatchEvent(new CustomEvent('health-cleanup-confirm', { bubbles: true, composed: true }));
+    await settle();
+    expect(asked.filter((each) => each !== 'watch')).to.deep.equal(['sync', 'cleanUp unused Oversized images']);
+  });
+
+  it('shows Done after Clean up, with Undo and the way back', async () => {
+    const { element, asked, screen, settle } = await healthWindow(idle({ result: result(), cleanup: cleanupState() }));
+    expect(screen()).to.equal('done');
+    const done = element.shadowRoot!.querySelector('umbradesktop-health-done')!;
+    done.dispatchEvent(new CustomEvent('health-undo', { bubbles: true, composed: true }));
+    await settle();
+    done.dispatchEvent(new CustomEvent('health-dismiss', { bubbles: true, composed: true }));
+    await settle();
+    expect(asked.filter((each) => each !== 'watch')).to.deep.equal(['sync', 'undo', 'dismiss']);
+  });
+
+  it('reports the check to the desktop with the server’s count, activity when it has none, and done after', async () => {
+    const { tasks, set } = await healthWindow(idle({ phase: { kind: 'running', step: 'usage', scanned: 412, total: 1284 } }));
     expect(tasks[tasks.length - 1]).to.deep.include({ id: 'check', state: 'running', completed: 412, total: 1284 });
-    held.setValue({ phase: { kind: 'running', step: 'disk', scanned: 0, total: 0 }, result: undefined });
-    await element.updateComplete;
-    expect(text()).to.contain('Scanning the media folder');
+    await set(idle({ phase: { kind: 'running', step: 'disk', scanned: 0, total: 0 } }));
+    expect(tasks[tasks.length - 1]).to.deep.include({ id: 'check', state: 'running' });
     expect(tasks[tasks.length - 1]).to.not.have.property('total');
-    held.setValue({ phase: { kind: 'idle' }, result: result() });
-    await element.updateComplete;
+    await set(idle({ result: result() }));
     expect(tasks[tasks.length - 1]).to.deep.include({ id: 'check', state: 'done' });
-    held.setValue({ phase: { kind: 'failed', message: 'Boom' }, result: result() });
-    await element.updateComplete;
+    await set(idle({ phase: { kind: 'failed', message: 'Boom' }, result: result() }));
     expect(tasks[tasks.length - 1]).to.deep.include({ id: 'check', state: 'failed' });
-    expect(text()).to.contain('Boom');
   });
 
-  it('lists a category largest first, with name, folder and size, and opens an item beside the window', async () => {
-    const { element, opened, press, text } = await healthWindow({ phase: { kind: 'idle' }, result: result() });
-    await press('View', '[data-row=unused]');
-    const rows = [...element.shadowRoot!.querySelectorAll('.item')].map((each) => each.textContent!.replace(/\s+/g, ' '));
-    expect(rows.length).to.equal(2);
-    expect(rows[0]).to.contain('Older banner');
-    expect(rows[0]).to.contain('900 B');
-    expect(rows[1]).to.contain('Old banner');
-    expect(rows[1]).to.contain('Products/2023');
-    (element.shadowRoot!.querySelector('.item .name') as HTMLElement).click();
-    expect(opened[0]).to.deep.include({ key: 'item', path: editPath('older'), name: 'Older banner' });
-    await press('Back');
-    expect(text()).to.contain('no page is placed');
+  it('reports Clean up as a second task: its count while it runs, failed when anything did not go', async () => {
+    const { tasks, set } = await healthWindow(idle({ result: result(), cleanup: cleanupState({ phase: 'running', done: 1, total: 3 }) }));
+    expect(tasks.find((task) => task.id === 'cleanup')).to.deep.include({ state: 'running', completed: 1, total: 3 });
+    await set(idle({ result: result(), cleanup: cleanupState({ failed: ['b'] }) }));
+    expect(tasks.filter((task) => task.id === 'cleanup').pop()).to.deep.include({ state: 'failed', failed: 1 });
+    await set(idle({ result: result() }));
+    expect(tasks.filter((task) => task.id === 'cleanup').pop()).to.deep.include({ state: 'done' });
   });
 
-  it('offers Edit image on an image only, and trashes an unused item through the Manager after asking', async () => {
-    const { element, asked, press } = await healthWindow({ phase: { kind: 'idle' }, result: result() });
-    element.confirmTrash = async () => true;
-    await press('View', '[data-row=unused]');
-    const rows = [...element.shadowRoot!.querySelectorAll('.item')];
-    expect(rows[0].querySelector('uui-button[label="Edit image"]')).to.equal(null);
-    expect(rows[1].querySelector('uui-button[label="Edit image"]')).to.not.equal(null);
-    (rows[1].querySelector('uui-button[label="actions_trash"]') as HTMLElement).click();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(asked).to.deep.equal(['sync', 'trash old']);
+  it('watches the server while it is open, and stops when it closes', async () => {
+    const { element, asked } = await healthWindow(idle({ result: result() }));
+    expect(asked).to.include('watch');
+    element.remove();
+    expect(asked).to.include('unwatch');
   });
 
-  it('greys Delete and Review: Delete for everyone but an administrator, with the reason, and Review until it is built', async () => {
-    const admin = await healthWindow({ phase: { kind: 'idle' }, result: result() });
-    expect(admin.button('Delete...')?.disabled).to.equal(false);
-    expect(admin.button('Review...')?.disabled).to.equal(true);
-    expect(admin.button('Review...')?.getAttribute('title')).to.equal('Coming later');
-    const editor = await healthWindow({ phase: { kind: 'idle' }, result: result() }, false);
-    expect(editor.button('Delete...')?.disabled).to.equal(true);
-    expect(editor.button('Delete...')?.getAttribute('title')).to.equal('Only an administrator can delete files from disk.');
+  it('asks the context to stop the check from the Checking screen', async () => {
+    const { element, asked } = await healthWindow(idle({ phase: { kind: 'running', step: 'usage', scanned: 1, total: 3 } }));
+    element.shadowRoot!.querySelector('umbradesktop-health-start')!.dispatchEvent(new CustomEvent('health-stop', { bubbles: true, composed: true }));
+    expect(asked).to.include('stop');
   });
 
-  it('deletes every orphaned file through the server after asking', async () => {
-    const { element, asked, press } = await healthWindow({ phase: { kind: 'idle' }, result: result() });
-    element.confirmDelete = async () => false;
-    await press('Delete...');
-    element.confirmDelete = async () => true;
-    await press('Delete...');
-    expect(asked).to.deep.equal(['sync', 'delete 1/x.jpg,2/y.png']);
+  it('says why when Clean up is refused because a newer check came in', async () => {
+    const { element, asked, settle } = await healthWindow(idle({ result: result() }), true, 'newer');
+    const overview = element.shadowRoot!.querySelector('umbradesktop-health-overview')!;
+    overview.dispatchEvent(new CustomEvent('health-cleanup', { detail: { kinds: ['unused'] }, bubbles: true, composed: true }));
+    await settle();
+    element.shadowRoot!.querySelector('umbradesktop-health-cleanup-sheet')!.dispatchEvent(new CustomEvent('health-cleanup-confirm', { bubbles: true, composed: true }));
+    await settle();
+    expect(asked.some((each) => each.startsWith('cleanUp'))).to.equal(true);
+    const notice = element.shadowRoot!.querySelector('umbradesktop-notice[name=refused]')!;
+    expect(notice.getAttribute('heading')).to.equal('A newer check came in');
+    expect(notice.getAttribute('body')).to.equal('Look it over before you clean up.');
   });
 
-  it('lists the orphaned files with a Delete each, for an administrator', async () => {
-    const { element, asked, press } = await healthWindow({ phase: { kind: 'idle' }, result: result() });
-    element.confirmDelete = async () => true;
-    await press('View', '[data-row=orphaned]');
-    const rows = [...element.shadowRoot!.querySelectorAll('.item')];
-    expect(rows.length).to.equal(2);
-    expect(rows[0].textContent).to.contain('1/x.jpg');
-    (rows[1].querySelector('uui-button[label="Delete"]') as HTMLElement).click();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(asked).to.deep.equal(['sync', 'delete 2/y.png']);
+  it('warns on a check older than a day with the desktop\'s notice, and adds no second Check again', async () => {
+    const day = 24 * 60 * 60 * 1000;
+    const old = result();
+    old.checkedAt = new Date(Date.now() - 2 * day);
+    const { element } = await healthWindow(idle({ result: old }));
+    // Attributes, as an app sets them on the desktop's element by its tag name alone.
+    const notice = element.shadowRoot!.querySelector('umbradesktop-notice[name=stale]')!;
+    expect(notice, 'the desktop notice, as the window banners use').to.not.equal(null);
+    expect(notice.getAttribute('severity')).to.equal('warning');
+    expect(notice.getAttribute('heading')).to.equal('This check is more than a day old');
+    expect(notice.getAttribute('body')).to.contain('Check again');
+    expect(element.shadowRoot!.querySelectorAll('uui-button[label="Check again"]').length, 'no second Check again in the window').to.equal(0);
+  });
+
+  it('shows no notice on a check from today', async () => {
+    const { element } = await healthWindow(idle({ result: result() }));
+    expect(element.shadowRoot!.querySelector('umbradesktop-notice')).to.equal(null);
+  });
+
+  it('says a check failed in an error notice', async () => {
+    const { element } = await healthWindow(idle({ phase: { kind: 'failed', message: 'Boom' }, result: result() }));
+    const notice = element.shadowRoot!.querySelector('umbradesktop-notice[name=failed]')!;
+    expect(notice.getAttribute('severity')).to.equal('error');
+    expect(notice.getAttribute('heading')).to.equal('The check did not finish');
+    expect(notice.getAttribute('body')).to.equal('Boom');
+  });
+
+  it('names no key on any screen', async () => {
+    const { text, set } = await healthWindow(idle());
+    expect(text()).to.not.match(KEY_NAMES);
+    await set(idle({ result: result() }));
+    expect(text()).to.not.match(KEY_NAMES);
+    await set(idle({ result: result(), cleanup: cleanupState() }));
+    expect(text()).to.not.match(KEY_NAMES);
   });
 });

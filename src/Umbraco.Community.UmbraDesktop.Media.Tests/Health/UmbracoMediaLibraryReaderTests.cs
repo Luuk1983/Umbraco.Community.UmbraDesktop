@@ -164,11 +164,108 @@ public class UmbracoMediaLibraryReaderTests
         relations.DidNotReceive().GetByRelationTypeAlias(Arg.Any<string>());
     }
 
+    /// <summary>
+    /// An item with exactly the given properties and last change, for the facts the preview shows
+    /// (design §16.7).
+    /// </summary>
+    /// <param name="id">Its integer id.</param>
+    /// <param name="updated">When it was last changed, as Umbraco hands it out.</param>
+    /// <param name="properties">Its properties, in order.</param>
+    /// <returns>The item.</returns>
+    private static IMedia MediaWith(int id, DateTime updated, params IProperty[] properties)
+    {
+        var media = Media(id, Guid.NewGuid(), $"Item {id}", Constants.System.Root, "Image", null);
+        media.Properties.Returns(new PropertyCollection(properties));
+        media.UpdateDate.Returns(updated);
+        return media;
+    }
+
+    /// <summary>A reader over the given items, with no relations.</summary>
+    /// <param name="library">The items.</param>
+    /// <returns>What it read.</returns>
+    private static Task<MediaLibrarySnapshot> Read(IReadOnlyList<IMedia> library)
+    {
+        var relations = Substitute.For<IRelationService>();
+        relations.GetByRelationTypeAlias(Arg.Any<string>()).Returns([]);
+        return new UmbracoMediaLibraryReader(MediaService(library), relations, MediaDiskScannerTests.FileSystem())
+            .ReadAsync(new SyncProgress(_ => { }), CancellationToken.None);
+    }
+
+    /// <summary>
+    /// An item's URL is the first file it owns, in property order and as stored, the string core
+    /// serves and the resizer answers (plan Decision 2); an item without a file has none.
+    /// </summary>
+    [Fact]
+    public async Task Gives_each_item_its_first_owned_path_as_url()
+    {
+        var snapshot = await Read(
+        [
+            MediaWith(
+                1,
+                DateTime.UnixEpoch,
+                Property("download", Constants.PropertyEditors.Aliases.UploadField, "/media/a1/photo.jpg"),
+                Property(Constants.Conventions.Media.File, Constants.PropertyEditors.Aliases.ImageCropper, """{"src":"/media/b2/x.png"}""")),
+            MediaWith(2, DateTime.UnixEpoch),
+        ]);
+
+        Assert.Equal(["/media/a1/photo.jpg", null], snapshot.Items.Select(item => item.Url));
+    }
+
+    /// <summary>
+    /// Width and height come from Umbraco's own properties, null when missing or not a number; the
+    /// last change is the item's update date, marked UTC as every time the add-on stores (§15).
+    /// </summary>
+    [Fact]
+    public async Task Reads_width_height_and_last_change()
+    {
+        var updated = new DateTime(2023, 3, 14, 9, 30, 0, DateTimeKind.Unspecified);
+        var snapshot = await Read(
+        [
+            MediaWith(
+                1,
+                updated,
+                Property(Constants.Conventions.Media.Width, "Umbraco.Label", "5472"),
+                Property(Constants.Conventions.Media.Height, "Umbraco.Label", "3648")),
+            MediaWith(2, updated, Property(Constants.Conventions.Media.Width, "Umbraco.Label", "wide")),
+        ]);
+
+        Assert.Equal((5472, 3648), (snapshot.Items[0].Width, snapshot.Items[0].Height));
+        Assert.Equal(((int?)null, (int?)null), (snapshot.Items[1].Width, snapshot.Items[1].Height));
+        Assert.Equal(updated, snapshot.Items[0].UpdatedUtc);
+        Assert.Equal(DateTimeKind.Utc, snapshot.Items[0].UpdatedUtc.Kind);
+    }
+
     /// <summary>A progress that reports on the calling thread, so a test can read it at once.</summary>
     /// <param name="report">What to do with each report.</param>
     private sealed class SyncProgress(Action<MediaHealthProgress> report) : IProgress<MediaHealthProgress>
     {
         /// <inheritdoc />
         public void Report(MediaHealthProgress value) => report(value);
+    }
+
+    /// <summary>
+    /// The state of some items now, for the stored result after a Clean up: in the bin or not, a new
+    /// size and file, and gone for good when Umbraco no longer has the key.
+    /// </summary>
+    [Fact]
+    public async Task Reads_the_state_of_some_items_now()
+    {
+        var binned = Guid.NewGuid();
+        var resized = Guid.NewGuid();
+        var gone = Guid.NewGuid();
+        var service = Substitute.For<IMediaService>();
+        IMedia[] found =
+        [
+            Media(13, binned, "Binned", 10, "Image", """{"src":"/media/ghi/binned.jpg"}""", trashed: true, ancestors: 10),
+            Media(11, resized, "Hero", 10, "Image", """{"src":"/media/abc/hero.webp"}""", ancestors: 10),
+        ];
+        service.GetByIds(Arg.Any<IEnumerable<Guid>>()).Returns(found);
+        var reader = new UmbracoMediaLibraryReader(service, Substitute.For<IRelationService>(), MediaDiskScannerTests.FileSystem());
+
+        var states = (await reader.ReadStatesAsync([binned, resized, gone])).ToDictionary(state => state.Key);
+
+        Assert.Equal((true, true), (states[binned].Exists, states[binned].Trashed));
+        Assert.Equal((true, false, (long?)12345, "/media/abc/hero.webp"), (states[resized].Exists, states[resized].Trashed, states[resized].SizeBytes, states[resized].Url));
+        Assert.False(states[gone].Exists);
     }
 }

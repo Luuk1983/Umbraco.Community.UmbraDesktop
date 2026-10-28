@@ -58,6 +58,7 @@ public class MediaHealthDbContext : DbContext
             entity.Property(x => x.MediaTypeAlias).HasMaxLength(255).IsRequired();
             entity.Property(x => x.Extension).HasMaxLength(50);
             entity.Property(x => x.Path).HasMaxLength(4000).IsRequired();
+            entity.Property(x => x.Url).HasMaxLength(MediaHealthStore.UrlLength);
             entity.HasIndex(x => new { x.CheckId, x.Key });
             entity.HasIndex(x => new { x.CheckId, x.ParentKey });
         });
@@ -73,8 +74,8 @@ public class MediaHealthDbContext : DbContext
         {
             entity.ToTable("umbraDesktopMediaHealthOrphan");
             entity.HasKey(x => x.Id);
-            entity.Property(x => x.RelativePath).HasMaxLength(2000).IsRequired();
-            entity.Property(x => x.Url).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.RelativePath).HasMaxLength(MediaHealthStore.UrlLength).IsRequired();
+            entity.Property(x => x.Url).HasMaxLength(MediaHealthStore.UrlLength).IsRequired();
             entity.HasIndex(x => x.CheckId);
         });
     }

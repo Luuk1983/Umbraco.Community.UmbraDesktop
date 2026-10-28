@@ -45,6 +45,7 @@ public sealed class MediaHealthComposer : IComposer
             provider.GetRequiredService<MediaFileManager>().FileSystem,
             provider.GetRequiredService<IMediaLibraryReader>(),
             provider.GetRequiredService<IAuditService>()));
+        builder.Services.AddSingleton<IMediaCounter, UmbracoMediaCounter>();
         builder.Services.AddSingleton<MediaHealthRunner>();
         builder.Services.AddSingleton<MediaHealthMigrator>();
         builder.AddNotificationAsyncHandler<UmbracoApplicationStartedNotification, MediaHealthMigrationHandlers>();

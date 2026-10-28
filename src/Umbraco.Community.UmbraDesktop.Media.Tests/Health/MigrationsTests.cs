@@ -28,4 +28,17 @@ public class MigrationsTests
         Assert.False(context.Database.HasPendingModelChanges());
         Assert.Equal(0, await context.Checks.CountAsync());
     }
+
+    /// <summary>
+    /// The SQL Server set is in step with the model too: a migration added for one provider only
+    /// would leave SQL Server sites without the column (plan Review Focus 4). Reading the model needs
+    /// no connection, so the design-time factory's context is enough.
+    /// </summary>
+    [Fact]
+    public void SqlServer_model_has_nothing_pending()
+    {
+        using var context = new SqlServerMediaHealthDbContextFactory().CreateDbContext([]);
+
+        Assert.False(context.Database.HasPendingModelChanges());
+    }
 }

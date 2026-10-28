@@ -1,29 +1,74 @@
-import type { HealthItem } from './health.client.js';
+import type { HealthFolder, HealthItem, HealthOrphan } from './health.client.js';
+import { formatBytes } from '../transfers/transfers-model.js';
 
 /**
- * The sums Media Health does in the browser over the last check's items (design §5): the library
- * line, the bar of top-level folders, the unused and oversized lists, and what optimizing might save.
- * Pure functions over the result, so nothing here touches a server.
+ * The sums Media Health does in the browser over the last check's result (design §5, §16.2): the
+ * health of each item, the three lists, the bar, what Clean up would do, and where the space goes.
+ * Pure functions over the result, so every figure the window shows is tested without rendering and
+ * nothing here touches a server.
  */
 
-/** The library in one line: how big, how many items, how many folders. */
-export interface HealthLibrary {
-  sizeBytes: number;
-  items: number;
-  folders: number;
+/** The three things a check finds, each a row on the overview and a list Clean up acts on. */
+export type HealthKind = 'unused' | 'orphaned' | 'oversized';
+
+/** The order the rows, the bar and Clean up take: what goes to the bin, what is deleted, what shrinks. */
+export const HEALTH_KINDS: ReadonlyArray<HealthKind> = ['unused', 'orphaned', 'oversized'];
+
+/** The three lists of the last check, each largest first. */
+export interface HealthLists {
+  /** Items no page uses. */
+  unused: HealthItem[];
+  /** Files on disk no item owns. */
+  orphaned: HealthOrphan[];
+  /** Used images over {@link OVERSIZED_BYTES}; an unused one is in `unused` only. */
+  oversized: HealthItem[];
 }
 
-/** One segment of the bar: a top-level folder's name and size, or the rest as Other. */
-export interface HealthSegment {
-  /** The folder's name; empty for Other. */
+/**
+ * The bar, in bytes: the library cut by health (design §16.2). `freeable` is what Clean up of every
+ * row would free, with the oversized images at their estimated saving, since optimizing does not
+ * free a whole image (plan Decision 4).
+ */
+export interface HealthBar {
+  unused: number;
+  orphaned: number;
+  oversized: number;
+  fine: number;
+  freeable: number;
+}
+
+/** One row of Clean up: which kind, how many, and how much it frees, `estimate` when that is a guess. */
+export interface HealthCleanupRow {
+  kind: HealthKind;
+  count: number;
+  bytes: number;
+  /** How many in it have no size, so the sheet says "at least" or "unknown" rather than 0 B. */
+  unknown: number;
+  estimate: boolean;
+}
+
+/** What Clean up would do with the rows ticked: the rows in it, and what they free together. */
+export interface HealthCleanup {
+  rows: HealthCleanupRow[];
+  bytes: number;
+}
+
+/**
+ * A top-level folder's share of the library, for Where the space goes, split by the same health as
+ * the bar. The rest of its bytes are in use and fine.
+ */
+export interface HealthFolderShare {
+  /** The folder's name; empty for the items at the root. */
   name: string;
-  sizeBytes: number;
-  /** Whether this is the rest: smaller folders and items at the root. */
-  other: boolean;
+  /** The folder's key, or null for the items at the root. */
+  key: string | null;
+  bytes: number;
+  unused: number;
+  oversized: number;
 }
 
-/** How many top-level folders the bar names before the rest fold into Other. */
-export const TOP_FOLDERS = 4;
+/** How many top-level folders Where the space goes names before "n more" (design §16.2). */
+export const SPACE_FOLDERS = 3;
 
 /** Over this, an image is oversized (design §5): 2 MB, the add-on's call. */
 export const OVERSIZED_BYTES = 2 * 1024 * 1024;
@@ -36,8 +81,11 @@ export const OVERSIZED_BYTES = 2 * 1024 * 1024;
  */
 export const OPTIMIZE_SAVING_RATIO = 0.75;
 
-/** The extensions an image can have that the Image Editor and Optimize images work on; never SVG. */
-const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tif', 'tiff', 'avif', 'heic', 'heif']);
+/**
+ * The extensions an image can have that the Image Editor and Optimize images work on, and the
+ * resizer draws; never SVG. Exported so the thumbnails decide by the same list (`health-media.ts`).
+ */
+export const IMAGE_EXTENSIONS: ReadonlySet<string> = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tif', 'tiff', 'avif', 'heic', 'heif']);
 
 /** Core's own Image media type, by its alias, for an item whose file carries no extension. */
 const CORE_IMAGE_TYPE = 'image';
@@ -47,54 +95,14 @@ const CORE_IMAGE_TYPE = 'image';
  * @param item The item.
  * @returns Its bytes.
  */
-const sizeOf = (item: HealthItem): number => item.sizeBytes ?? 0;
+const sizeOf = (item: { sizeBytes: number | null }): number => item.sizeBytes ?? 0;
 
 /**
- * Largest first.
+ * Largest first, for items and orphaned files alike.
  * @param items The items.
  * @returns A sorted copy.
  */
-const largestFirst = (items: ReadonlyArray<HealthItem>): HealthItem[] => [...items].sort((a, b) => sizeOf(b) - sizeOf(a));
-
-/**
- * The library in one line.
- * @param items Every item of the last check.
- * @param folders How many folders the check found.
- * @returns The line.
- */
-export function libraryOf(items: ReadonlyArray<HealthItem>, folders: number): HealthLibrary {
-  return { sizeBytes: items.reduce((sum, item) => sum + sizeOf(item), 0), items: items.length, folders };
-}
-
-/**
- * The bar: the top-level folders by size, largest first, and the rest, with items at the root, as
- * Other. A top-level folder is the first segment of an item's names path.
- * @param items Every item of the last check.
- * @returns The segments, Other last when there is anything in it.
- */
-export function topFoldersOf(items: ReadonlyArray<HealthItem>): HealthSegment[] {
-  const byFolder = new Map<string, number>();
-  let root = 0;
-  for (const item of items) {
-    const top = item.path.split('/').find((part) => part.length) ?? '';
-    if (!top) root += sizeOf(item);
-    else byFolder.set(top, (byFolder.get(top) ?? 0) + sizeOf(item));
-  }
-  const sorted = [...byFolder.entries()].sort((a, b) => b[1] - a[1]);
-  const segments: HealthSegment[] = sorted.slice(0, TOP_FOLDERS).map(([name, sizeBytes]) => ({ name, sizeBytes, other: false }));
-  const rest = sorted.slice(TOP_FOLDERS).reduce((sum, [, size]) => sum + size, root);
-  if (rest > 0) segments.push({ name: '', sizeBytes: rest, other: true });
-  return segments;
-}
-
-/**
- * The unused items, largest first.
- * @param items Every item of the last check.
- * @returns The unused ones.
- */
-export function unusedOf(items: ReadonlyArray<HealthItem>): HealthItem[] {
-  return largestFirst(items.filter((item) => !item.used));
-}
+const largestFirst = <T extends { sizeBytes: number | null }>(items: ReadonlyArray<T>): T[] => [...items].sort((a, b) => sizeOf(b) - sizeOf(a));
 
 /**
  * Whether an item is a raster image, by its file's extension: what Edit image and Optimize can work
@@ -111,12 +119,103 @@ export function isImage(item: HealthItem): boolean {
 }
 
 /**
- * The oversized images, largest first: raster images over {@link OVERSIZED_BYTES}.
- * @param items Every item of the last check.
- * @returns The oversized ones.
+ * An item's health, one each (plan Decision 3): unused before oversized, since an unused image goes to
+ * the bin and optimizing it would be wasted; otherwise in use and fine.
+ * @param item The item.
+ * @returns Its health.
  */
-export function oversizedOf(items: ReadonlyArray<HealthItem>): HealthItem[] {
-  return largestFirst(items.filter((item) => isImage(item) && sizeOf(item) > OVERSIZED_BYTES));
+export function healthOf(item: HealthItem): Exclude<HealthKind, 'orphaned'> | 'fine' {
+  if (!item.used) return 'unused';
+  if (isImage(item) && sizeOf(item) > OVERSIZED_BYTES) return 'oversized';
+  return 'fine';
+}
+
+/**
+ * The three lists of a result, each largest first.
+ * @param items Every item of the last check.
+ * @param orphans Every orphaned file.
+ * @returns The lists.
+ */
+export function listsOf(items: ReadonlyArray<HealthItem>, orphans: ReadonlyArray<HealthOrphan>): HealthLists {
+  const sorted = largestFirst(items);
+  return {
+    unused: sorted.filter((item) => healthOf(item) === 'unused'),
+    orphaned: largestFirst(orphans),
+    oversized: sorted.filter((item) => healthOf(item) === 'oversized'),
+  };
+}
+
+/**
+ * The bar: the library's bytes cut by health, and what can be freed.
+ * @param lists The three lists.
+ * @param libraryBytes Every item's bytes together; orphaned files are not items and come on top.
+ * @returns The bar.
+ */
+export function barOf(lists: HealthLists, libraryBytes: number): HealthBar {
+  const unused = sizeOfAll(lists.unused);
+  const orphaned = sizeOfAll(lists.orphaned);
+  const oversized = sizeOfAll(lists.oversized);
+  return { unused, orphaned, oversized, fine: libraryBytes - unused - oversized, freeable: unused + orphaned + estimateSaving(oversized) };
+}
+
+/**
+ * What Clean up would do: one row per ticked kind with anything in it, the oversized one at its
+ * estimated saving. Orphaned files are deleted for good, which only an administrator may do, so for
+ * anyone else that row is never in it, ticked or not (design §16.3).
+ * @param lists The three lists.
+ * @param ticked The rows ticked on the overview.
+ * @param admin Whether the person is an administrator.
+ * @returns The rows, in {@link HEALTH_KINDS} order, and their bytes together.
+ */
+export function cleanupOf(lists: HealthLists, ticked: ReadonlySet<HealthKind>, admin: boolean): HealthCleanup {
+  const rows = HEALTH_KINDS.filter((kind) => ticked.has(kind) && (admin || kind !== 'orphaned'))
+    .map((kind): HealthCleanupRow => {
+      const list: ReadonlyArray<{ sizeBytes: number | null }> = lists[kind];
+      const { bytes, unknown } = sizeOfList(list);
+      return kind === 'oversized'
+        ? { kind, count: list.length, bytes: estimateSaving(bytes), unknown, estimate: true }
+        : { kind, count: list.length, bytes, unknown, estimate: false };
+    })
+    .filter((row) => row.count > 0);
+  return { rows, bytes: rows.reduce((sum, row) => sum + row.bytes, 0) };
+}
+
+/**
+ * Where the space goes: the library by top-level folder, largest first, each split by health (design
+ * §16.2). An item's top-level folder is found by walking its folder's parents by key, so two folders
+ * of the same name stay apart and the share carries the key the grid will filter on; items at the
+ * root are one share without a key. Orphaned files belong to no folder and are left out (plan
+ * Decision 3).
+ * @param items Every item of the last check.
+ * @param folders Every folder of the last check.
+ * @param top How many shares to name.
+ * @returns The largest shares, and how many more there are.
+ */
+export function foldersOf(
+  items: ReadonlyArray<HealthItem>,
+  folders: ReadonlyArray<HealthFolder>,
+  top = SPACE_FOLDERS,
+): { folders: HealthFolderShare[]; more: number } {
+  const byKey = new Map(folders.map((folder) => [folder.key, folder]));
+  const topOf = (key: string | null): HealthFolder | undefined => {
+    let folder = key ? byKey.get(key) : undefined;
+    // Bounded by the folder count, so a parent loop in bad data cannot hang the window.
+    for (let hops = 0; folder?.parentKey && byKey.has(folder.parentKey) && hops < byKey.size; hops++) folder = byKey.get(folder.parentKey);
+    return folder;
+  };
+  const shares = new Map<string, HealthFolderShare>();
+  for (const item of items) {
+    const folder = topOf(item.parentKey);
+    const id = folder?.key ?? '';
+    const share = shares.get(id) ?? { name: folder?.name ?? '', key: folder?.key ?? null, bytes: 0, unused: 0, oversized: 0 };
+    const health = healthOf(item);
+    share.bytes += sizeOf(item);
+    if (health === 'unused') share.unused += sizeOf(item);
+    if (health === 'oversized') share.oversized += sizeOf(item);
+    shares.set(id, share);
+  }
+  const sorted = [...shares.values()].sort((a, b) => b.bytes - a.bytes);
+  return { folders: sorted.slice(0, top), more: Math.max(0, sorted.length - top) };
 }
 
 /**
@@ -137,7 +236,74 @@ export function sizeOfAll(items: ReadonlyArray<{ sizeBytes: number | null }>): n
   return items.reduce((sum, item) => sum + (item.sizeBytes ?? 0), 0);
 }
 
-/** When the last check ran, as the footer says it: "today", "yesterday" or a short date, and the time. */
+/** A list's size as a row says it: the bytes known, and how many have no size to add. */
+export interface HealthListSize {
+  /** The bytes of everything with a size. */
+  bytes: number;
+  /** How many have none. */
+  unknown: number;
+}
+
+/**
+ * A list's size, with what has no size counted apart. Some items carry no `umbracoBytes` (Umbraco
+ * Engage's own pictures, design §16.10), and adding them as 0 made a row of them read "0 B", which
+ * says the wrong thing: their size is not nothing, it is not known.
+ * @param items The items or files.
+ * @returns The known bytes, and how many are unknown.
+ */
+export function sizeOfList(items: ReadonlyArray<{ sizeBytes: number | null }>): HealthListSize {
+  return {
+    bytes: sizeOfAll(items),
+    unknown: items.filter((item) => item.sizeBytes === null).length,
+  };
+}
+
+/**
+ * A size as the overview's rows and the Clean up sheet say it, one rule for both: the size when all
+ * of it is known, "at least" the size when some is not, and "Size unknown" when none is.
+ * @param size The known bytes, and how many have none.
+ * @param count How many there are in all.
+ * @param word The screen's words, given a key and the size where the words take one.
+ * @returns What to show.
+ */
+export function sizeText(
+  size: HealthListSize,
+  count: number,
+  word: (key: 'healthSizeUnknown' | 'healthSizeAtLeast', bytes?: string) => string,
+): string {
+  if (!size.unknown) return formatBytes(size.bytes);
+  return size.unknown >= count ? word('healthSizeUnknown') : word('healthSizeAtLeast', formatBytes(size.bytes));
+}
+
+/**
+ * The note under an "at least" size: how many it could not count, so the caveat has a number. None
+ * under a full size, and none under "Size unknown", where the row's own line already counts them.
+ * @param size The known bytes, and how many have none.
+ * @param count How many there are in all.
+ * @param word The screen's words for "%0% of unknown size", given the count.
+ * @returns The note, or null for none.
+ */
+export function sizeNote(size: HealthListSize, count: number, word: (count: number) => string): string | null {
+  return size.unknown > 0 && size.unknown < count ? word(size.unknown) : null;
+}
+
+/**
+ * How old a check may be before Clean up refuses it (Luuk, 2026-10-28): a day. Content changes during
+ * the working day, so yesterday's check is a fair line; the result is still shown, only not acted on.
+ */
+export const HEALTH_STALE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Whether a check is too old to clean up from.
+ * @param checkedAt When it finished.
+ * @param now The time now.
+ * @returns True when it is older than {@link HEALTH_STALE_MS}.
+ */
+export function isStale(checkedAt: Date, now: Date): boolean {
+  return now.getTime() - checkedAt.getTime() > HEALTH_STALE_MS;
+}
+
+/** When the last check ran, as the overview says it: "today", "yesterday" or a short date, and the time. */
 export interface HealthCheckedOn {
   /** `today`, `yesterday`, or a short date in the person's language. */
   day: 'today' | 'yesterday' | string;
