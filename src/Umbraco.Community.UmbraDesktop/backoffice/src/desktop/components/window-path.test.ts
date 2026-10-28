@@ -148,6 +148,32 @@ it('does not offer an empty path as a navigation landmark', async () => {
   dispose();
 });
 
+/**
+ * The space a strip button leaves around what it shows, on each side: to its first icon on the left,
+ * top and bottom, and to its last child on the right, which is the label on a labelled button.
+ * @param button The button.
+ * @returns The four paddings, in px.
+ */
+function paddings(button: Element): { left: number; right: number; top: number; bottom: number } {
+  const box = button.getBoundingClientRect();
+  const icon = button.querySelector('umb-icon')!.getBoundingClientRect();
+  const last = button.lastElementChild!.getBoundingClientRect();
+  return { left: icon.left - box.left, right: box.right - last.right, top: icon.top - box.top, bottom: box.bottom - icon.bottom };
+}
+
+/**
+ * Expect a strip button to pad what it shows by the same amount on all four sides, to within half a
+ * pixel, since an odd space split in two lands on a half.
+ * @param button The button.
+ * @param name What to call it in a failure.
+ */
+function expectEvenPadding(button: Element, name: string): void {
+  const pad = paddings(button);
+  for (const side of ['left', 'right', 'bottom'] as const) {
+    expect(pad[side], `${name}: ${side} against top`).to.be.closeTo(pad.top, 0.5);
+  }
+}
+
 describe('the preview action', () => {
   const crumbs: UmbraDesktopPathCrumb[] = [
     { label: 'Content', href: '/umbraco/section/content', current: false, home: true },
@@ -319,16 +345,145 @@ describe('the glyph for opening beside the window', () => {
     { label: 'Home', href: undefined, current: true },
   ];
 
-  it('is the same side-panel glyph on the view button and on Preview, never the pop-out one', async () => {
+  it("is Umbraco's panel icon turned to the right, saying which way the panel will move", async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.view = { label: 'Info', icon: 'icon-info', beside: true };
+    await element.updateComplete;
+    const icon = root.querySelector('button.path-beside umb-icon.path-toggle-icon') as HTMLElement | null;
+    expect(icon, 'the view button has the toggle icon').to.exist;
+    // Closed: the panel will come out, so the chevron points right, the way the edge moves.
+    expect(icon!.getAttribute('name'), 'closed').to.equal('icon-pannel-close');
+    expect(getComputedStyle(icon!).rotate, 'turned a quarter to the left').to.equal('-90deg');
+    dispose();
+  });
+
+  it('leaves the panel icon off Preview, whose eye and label already say what it opens', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.previewable = true;
+    await element.updateComplete;
+    // Two icons on one button read as clutter beside the view button's one. The panel icon is for a
+    // button that does nothing but move a pane; Preview names its feature, and its pane's header
+    // starts with the same eye.
+    const button = root.querySelector('button.path-preview')!;
+    expect(!!button.querySelector('.path-toggle-icon'), 'no panel icon').to.equal(false);
+    expect(button.querySelectorAll('umb-icon').length, 'the eye alone').to.equal(1);
+    dispose();
+  });
+
+  it('turns its chevron round once the panel is open, to say it will put it away', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.view = { label: 'Info', icon: 'icon-info', beside: true, open: true };
+    await element.updateComplete;
+    expect(root.querySelector('button.path-beside umb-icon.path-toggle-icon')?.getAttribute('name')).to.equal('icon-panel-show');
+    dispose();
+  });
+
+  it("leaves Preview out while the preview is docked: the pane's own Hide has taken its place", async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.previewable = true;
+    element.previewActive = true;
+    element.previewDocked = true;
+    element.view = { label: 'Info', icon: 'icon-info', beside: true, open: true, docked: true };
+    await element.updateComplete;
+    // Booleans, never `to.equal(null)` on an element: a failing one hangs this runner.
+    expect(!!root.querySelector('button.path-preview'), 'Preview while docked').to.equal(false);
+    expect(!!root.querySelector('button.path-beside'), 'the view button while docked').to.equal(false);
+    element.previewDocked = false;
+    element.view = { label: 'Info', icon: 'icon-info', beside: true };
+    await element.updateComplete;
+    expect(!!root.querySelector('button.path-preview'), 'Preview once it has slid back in').to.equal(true);
+    expect(!!root.querySelector('button.path-beside'), 'the view button once it has slid back in').to.equal(true);
+    dispose();
+  });
+
+  it('keeps Preview, pressed, while the preview is a window of its own, so it can still be closed from here', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.previewable = true;
+    element.previewActive = true;
+    await element.updateComplete;
+    const button = root.querySelector('button.path-preview');
+    expect(button?.getAttribute('aria-pressed')).to.equal('true');
+    dispose();
+  });
+
+  it("draws every icon on the strip at the pane header's icon size, and its text at 13px", async () => {
     const { element, root, dispose } = await mountPath(crumbs);
     element.previewable = true;
     element.view = { label: 'Info', icon: 'icon-info', beside: true };
     await element.updateComplete;
-    const beside = root.querySelector('button.path-beside svg.path-beside-glyph');
-    const preview = root.querySelector('button.path-preview svg.path-beside-glyph');
-    expect(beside).to.exist;
-    expect(preview, 'Preview says how it opens with the same glyph').to.exist;
-    expect(beside!.innerHTML).to.equal(preview!.innerHTML);
+    // One size for every icon in a strip, the window's and the pane's alike: the first build drew
+    // Preview's icons at 15.5px beside the pane's 18px, and the two strips did not read as one.
+    for (const icon of ['.path-home', '.path-preview-icon', '.path-toggle-icon', '.path-view-icon']) {
+      expect(getComputedStyle(root.querySelector(icon)!).fontSize, icon).to.equal('16px');
+    }
+    expect(getComputedStyle(root.querySelector('.path-bar')!).fontSize).to.equal('13px');
+    dispose();
+  });
+
+  it('centres its words on their capitals, as its icons are centred, rather than on their line box', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.previewable = true;
+    element.view = { label: 'Info', icon: 'icon-info', beside: true };
+    await element.updateComplete;
+    // A line box carries the font's room above the letters as well as below, so a word centred by
+    // its box sat 1.7px above the icons beside it (measured on the drawn pixels in a live strip).
+    // Trimmed to cap height and baseline, the box is the word, and flex centres it like an icon.
+    for (const text of ['.path-crumb', '.path-separator', '.path-current', '.path-view-label', '.path-preview-label']) {
+      const style = getComputedStyle(root.querySelector(text)!) as CSSStyleDeclaration & { textBoxTrim?: string; textBoxEdge?: string };
+      expect(style.textBoxTrim, text).to.equal('trim-both');
+      expect(style.textBoxEdge, text).to.equal('cap alphabetic');
+    }
+    dispose();
+  });
+
+  it("draws its bottom line in the backoffice's border colour, the line between the tree and the workspace", async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.style.setProperty('--uui-color-border', 'rgb(1, 2, 3)');
+    element.style.setProperty('--uui-color-divider', 'rgb(250, 250, 250)');
+    await element.updateComplete;
+    // The divider colour it used before is barely darker than the strip itself, so the strip ran
+    // into the content below it with no visible edge.
+    const bar = getComputedStyle(root.querySelector('.path-bar')!);
+    expect(bar.borderBottomWidth).to.equal('1px');
+    expect(bar.borderBottomColor).to.equal('rgb(1, 2, 3)');
+    dispose();
+  });
+
+  it('pads the strip the same at both ends, so the first crumb starts as far in as Preview ends', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.previewable = true;
+    await element.updateComplete;
+    // The strip owns the space at its ends, and whatever sits there, a crumb or a button, starts at
+    // it. Each then pads its own content as it does everywhere.
+    const bar = root.querySelector('.path-bar')!.getBoundingClientRect();
+    const first = root.querySelector('.path-bar > :first-child')!.getBoundingClientRect();
+    const last = root.querySelector('button.path-preview')!.getBoundingClientRect();
+    expect(bar.right - last.right).to.equal(first.left - bar.left);
+    dispose();
+  });
+
+  it('pads Preview and the view button evenly on every side, so the icon-only one is square', async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.style.setProperty('--umbradesktop-path-height', '37px');
+    element.previewable = true;
+    element.view = { label: 'Info', icon: 'icon-info', beside: true };
+    await element.updateComplete;
+    const beside = root.querySelector('button.path-beside')!;
+    expectEvenPadding(beside, 'the view button');
+    const box = beside.getBoundingClientRect();
+    expect(box.width, 'the view button is square').to.be.closeTo(box.height, 0.5);
+    expectEvenPadding(root.querySelector('button.path-preview')!, 'Preview');
+    dispose();
+  });
+
+  it("fills the strip's height with Preview, as the pane header's buttons fill theirs", async () => {
+    const { element, root, dispose } = await mountPath(crumbs);
+    element.style.setProperty('--umbradesktop-path-height', '37px');
+    element.previewable = true;
+    await element.updateComplete;
+    expect(root.querySelector('button.path-preview')!.getBoundingClientRect().height).to.equal(
+      root.querySelector('.path-bar')!.clientHeight,
+    );
     dispose();
   });
 

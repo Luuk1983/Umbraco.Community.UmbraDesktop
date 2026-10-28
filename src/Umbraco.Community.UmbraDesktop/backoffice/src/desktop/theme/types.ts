@@ -131,6 +131,8 @@ export const UMBRADESKTOP_TOKENS = [
   '--umbradesktop-pane-header-text',
   '--umbradesktop-pane-header-font-size',
   '--umbradesktop-strip-button-radius',
+  '--umbradesktop-strip-icon-size',
+  '--umbradesktop-pane-divider',
   '--umbradesktop-strip-button-hover-background',
   '--umbradesktop-strip-button-hover-text',
   '--umbradesktop-strip-button-hover-shadow',

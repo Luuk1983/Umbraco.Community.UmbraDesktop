@@ -1,4 +1,5 @@
 import type { Rect, UmbraDesktopAppSubject, UmbraDesktopPane, UmbraDesktopWindow } from '../types';
+import { UMBRADESKTOP_STRIP_BUTTON_PADDING, UMBRADESKTOP_STRIP_ICON_BOX } from './strip-button.js';
 import type { UmbraDesktopResizeEdges } from '../window-model';
 import { clampResizeOrigin, clampWindowPosition, isResizable, resizeRect, restoreDragPosition, windowName } from '../window-model';
 import { startFrameWatches, UmbraDesktopFrameThemeController } from '../frame-watches.js';
@@ -19,6 +20,7 @@ import {
   UMBRADESKTOP_WINDOW_KEEP_VISIBLE,
   UMBRADESKTOP_WINDOW_MIN_SIZE,
   UMBRADESKTOP_PATH_HEIGHT,
+  UMBRADESKTOP_PATH_LINE,
   UMBRADESKTOP_OPEN_HELP_EVENT,
   UMBRADESKTOP_CHROME_ICON_PX,
   UMBRADESKTOP_DIALOG_FLASH_STEPS,
@@ -54,7 +56,24 @@ import './app-host.element.js';
 // loaded instantly, right up until a slow one showed a blank cover instead.
 import './loader.element.js';
 import './window-pane.element.js';
-import { UmbraDesktopWindowPaneElement, type UmbraDesktopPaneDragDetail } from './window-pane.element.js';
+import {
+  UMBRADESKTOP_PANE_HIDE_EVENT,
+  UMBRADESKTOP_PANE_POPOUT_EVENT,
+  UmbraDesktopWindowPaneElement,
+  type UmbraDesktopPaneActionDetail,
+  type UmbraDesktopPaneDragDetail,
+} from './window-pane.element.js';
+import {
+  liftMotion,
+  paneMotion,
+  prefersReducedMotion,
+  rememberLift,
+  takeLift,
+  UMBRADESKTOP_PANE_CLOSE_MS,
+  UMBRADESKTOP_PANE_EASING,
+  UMBRADESKTOP_PANE_LIFT_MS,
+  UMBRADESKTOP_PANE_OPEN_MS,
+} from '../windows/pane-motion.js';
 import { attachedKind, dialogOf, paneTotal } from '../window-group.js';
 import { dialogApp } from '../windows/dialog-request.js';
 import { attachedPageAlias, attachedPaths, createAttachedPageApp, readAttachedRequest } from '../windows/attached-page.js';
@@ -523,7 +542,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (!w || !this.#manager) return;
     const open = attachedKind(this.#manager.getWindows(), w.id, UMBRADESKTOP_PREVIEW_APP_ALIAS);
     if (open) {
-      this.#manager.closeAttached(w.id, open.kind === 'pane' ? open.pane.id : open.window.id);
+      if (open.kind === 'pane') void this.#hidePane(open.pane.id);
+      else this.#manager.closeAttached(w.id, open.window.id);
       return;
     }
     const iframe = this.renderRoot.querySelector('iframe.body') as HTMLIFrameElement | null;
@@ -619,8 +639,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         ? attachedKind(this.#manager.getWindows(), w.id, besideAppAlias(this.#viewAlias))
         : undefined;
     if (w && this.#manager && open) {
-      if (!event.detail?.floating) this.#manager.closeAttached(w.id, open.kind === 'pane' ? open.pane.id : open.window.id);
-      else this.#manager.focus(open.kind === 'pane' ? w.id : open.window.id);
+      if (event.detail?.floating) this.#manager.focus(open.kind === 'pane' ? w.id : open.window.id);
+      else if (open.kind === 'pane') void this.#hidePane(open.pane.id);
+      else this.#manager.closeAttached(w.id, open.window.id);
       return;
     }
     const view = this.#checkBeside();
@@ -1163,6 +1184,7 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     if (minimized && !this.#wasMinimized) this.#releaseFocus();
     this.#wasActive = active;
     this.#wasMinimized = minimized;
+    if (changed.has('window')) this.#movePanes();
   }
 
   /**
@@ -1493,14 +1515,10 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
             ? this.localize.term('umbraDesktop_attachedUnsaved')
             : this.localize.term('umbraDesktop_dockNoRoom', ownerName)}
         @click=${() => this.#manager?.dock(w.id)}>
-        <!-- A frame with its side panel filled in, on the side it will dock to: the pane this window
-             becomes. The pane header's pop-out glyph is the same frame with a small window in its
-             corner, so the two buttons read as each other's opposite. -->
-        <svg class="attached-dock-glyph" data-side=${w.dockSide ?? 'right'} viewBox="0 0 16 16" aria-hidden="true">
-          <rect x="1.5" y="2.5" width="13" height="11" rx="1"></rect>
-          <rect class="attached-dock-glyph-fill" x=${w.dockSide === 'left' ? 3 : 9} y="4" width="4" height="8"></rect>
-        </svg>
-        <span>${this.localize.term('umbraDesktop_dock')}</span>
+        <!-- Umbraco's pop-in, the pair of the pop-out on the pane header, so the two buttons read as
+             each other's opposite. -->
+        <umb-icon name="icon-window-popin"></umb-icon>
+        <span class="attached-dock-label">${this.localize.term('umbraDesktop_dock')}</span>
       </button>
     </div>`;
   }
@@ -1578,6 +1596,203 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     origin?: { x: number; y: number };
     startPointer?: { x: number; y: number };
   };
+
+  /**
+   * The panes drawn at the last update, so the next one can tell a pane that just opened from one
+   * that was already there. Undefined until the first update: a window that mounts with a pane, as
+   * one restored after a reload does, shows it in place rather than sliding it out.
+   */
+  #shownPanes?: Set<string>;
+
+  /**
+   * What undoes a slide back in, by pane: the motion holds its last frame until the manager's update
+   * has actually taken the pane out, so the pane cannot flash back into view in between.
+   */
+  #leaving = new Map<string, () => void>();
+
+  /**
+   * Where the frame was before a pane popped out of it, so the next update can close the gap it
+   * left gradually rather than at once.
+   */
+  #shrinkFrom?: { x: number; w: number };
+
+  /**
+   * After each update: slide out a pane that has just opened, finish a pane that has slid back in,
+   * close the gap a popped-out pane left, and, for a window that was a pane a moment ago, lift it off
+   * from where that pane was. See `windows/pane-motion.ts`.
+   */
+  #movePanes(): void {
+    const w = this.window;
+    if (!w) return;
+    const current = new Set((w.panes ?? []).map((p) => p.id));
+    if (!this.#shownPanes) {
+      const from = takeLift(w.id);
+      const frame = this.#frameElement();
+      if (from && frame && w.state === 'normal' && !prefersReducedMotion()) {
+        frame.animate(liftMotion(from, w.rect), { duration: UMBRADESKTOP_PANE_LIFT_MS, easing: UMBRADESKTOP_PANE_EASING });
+      }
+    } else {
+      for (const id of current) if (!this.#shownPanes.has(id)) void this.#slidePane(id, false);
+    }
+    for (const [id, undo] of this.#leaving) {
+      if (current.has(id)) continue;
+      undo();
+      this.#leaving.delete(id);
+    }
+    if (this.#shrinkFrom) this.#closeGap(this.#shrinkFrom);
+    this.#shrinkFrom = undefined;
+    this.#shownPanes = current;
+  }
+
+  /**
+   * The window's frame, the element its rectangle is drawn on.
+   * @returns The frame, once rendered.
+   */
+  #frameElement(): HTMLElement | null {
+    return this.renderRoot.querySelector('.frame') as HTMLElement | null;
+  }
+
+  /**
+   * Slide a pane out of its window, or back in. Plays the keyframes `paneMotion` works out, holding
+   * the editor at its width meanwhile so its page does not reflow, and resolves once it is done.
+   *
+   * Only the outermost pane on its side moves: one further in would slide under its neighbour. And
+   * nothing moves when the system asks for reduced motion.
+   * @param paneId The pane.
+   * @param closing True to slide it back in, which leaves it at its last frame until it is gone.
+   */
+  async #slidePane(paneId: string, closing: boolean): Promise<void> {
+    const w = this.window;
+    const pane = w?.panes?.find((p) => p.id === paneId);
+    if (!w || !pane || prefersReducedMotion()) return;
+    const sameSide = (w.panes ?? []).filter((p) => p.side === pane.side);
+    if (sameSide[sameSide.length - 1]?.id !== paneId) return;
+    const frame = this.#frameElement();
+    const column = this.renderRoot.querySelector('.column') as HTMLElement | null;
+    const body = [...this.renderRoot.querySelectorAll('umbradesktop-window-pane')].find(
+      (el) => (el as UmbraDesktopWindowPaneElement).pane?.id === paneId,
+    ) as HTMLElement | undefined;
+    if (!frame || !column || !body) return;
+    const splitter = (pane.side === 'right' ? body.previousElementSibling : body.nextElementSibling) as HTMLElement | null;
+    const maximized = w.state === 'maximized';
+    const motion = paneMotion({
+      side: pane.side,
+      grew: maximized ? 0 : (pane.grew ?? 0),
+      span: body.offsetWidth + (splitter?.offsetWidth ?? 0),
+      rect: { x: w.rect.x, w: w.rect.w },
+    });
+    // The editor holds the width it ends at plus whatever it reaches into the pane's place, through
+    // a negative margin on the pane's side, so the frame's width can move round it.
+    // Read before letting go of flex: an editor taken out of flex falls back to its content's own
+    // width, which for the content section is its tree, and the first live run slid the pane out
+    // beside an editor 300px wide.
+    const held = column.offsetWidth;
+    const columnStyle = column.style.cssText;
+    column.style.flex = 'none';
+    column.style.width = `${held + motion.overlap}px`;
+    column.style.setProperty(pane.side === 'right' ? 'margin-right' : 'margin-left', `${-motion.overlap}px`);
+    frame.classList.add('pane-moving', motion.under ? 'pane-under' : 'pane-over');
+    // Hide keeps the opening icon while it rides out, then turns round (window-pane.element).
+    const paneElement = body as UmbraDesktopWindowPaneElement;
+    if (!closing) paneElement.opening = true;
+    const options: KeyframeAnimationOptions = {
+      duration: closing ? UMBRADESKTOP_PANE_CLOSE_MS : UMBRADESKTOP_PANE_OPEN_MS,
+      easing: UMBRADESKTOP_PANE_EASING,
+      direction: closing ? 'reverse' : 'normal',
+      fill: 'both',
+    };
+    const animations = [body.animate(motion.pane, options)];
+    if (splitter) animations.push(splitter.animate(motion.pane, options));
+    if (motion.frame && !maximized) animations.push(frame.animate(motion.frame, options));
+    const undo = () => {
+      paneElement.opening = false;
+      for (const animation of animations) animation.cancel();
+      column.style.cssText = columnStyle;
+      frame.classList.remove('pane-moving', 'pane-under', 'pane-over');
+    };
+    await Promise.all(animations.map((a) => a.finished)).catch(() => undefined);
+    if (closing) this.#leaving.set(paneId, undo);
+    else undo();
+  }
+
+  /**
+   * Put a pane away: slide it back in, then close it. Its own hide button and the toggle that opened
+   * it both come here, so it goes the same way whichever was pressed.
+   * @param paneId The pane.
+   */
+  async #hidePane(paneId: string): Promise<void> {
+    const w = this.window;
+    if (!w || !this.#manager) return;
+    // Straight away with nothing to play, as a close always was: no tick for anything to see the
+    // pane half gone.
+    if (!prefersReducedMotion()) await this.#slidePane(paneId, true);
+    this.#manager.closeAttached(w.id, paneId);
+  }
+
+  /**
+   * A pane's hide button was pressed, after it asked about unsaved changes where it had to: claimed,
+   * so the pane leaves the closing to this window, which slides it in first.
+   * @param event The pane's {@link UMBRADESKTOP_PANE_HIDE_EVENT}.
+   */
+  #onPaneHide = (event: CustomEvent<UmbraDesktopPaneActionDetail>): void => {
+    event.preventDefault();
+    void this.#hidePane(event.detail.paneId);
+  };
+
+  /**
+   * A pane's pop-out button was pressed: note where the pane is, for the window it becomes to lift
+   * off from, and where the frame is, to close the gap it leaves gradually, then pop it out.
+   * @param event The pane's {@link UMBRADESKTOP_PANE_POPOUT_EVENT}.
+   */
+  #onPanePopout = (event: CustomEvent<UmbraDesktopPaneActionDetail>): void => {
+    event.preventDefault();
+    const w = this.window;
+    const frame = this.#frameElement();
+    const body = event.target as HTMLElement;
+    if (!w || !this.#manager || !frame) return;
+    const box = body.getBoundingClientRect();
+    const frameBox = frame.getBoundingClientRect();
+    // On the desktop, as the window's rectangle is: the frame's offset in its container, plus the
+    // pane's offset in the frame. Read from the frame rather than the window's rectangle, which a
+    // maximized window does not draw at.
+    rememberLift(event.detail.paneId, {
+      x: frame.offsetLeft + box.left - frameBox.left,
+      y: frame.offsetTop + box.top - frameBox.top,
+    });
+    if (w.state === 'normal') this.#shrinkFrom = { x: frame.offsetLeft, w: frame.offsetWidth };
+    this.#manager.undock(w.id, event.detail.paneId);
+  };
+
+  /**
+   * Close the gap a popped-out pane left, by moving the frame's edge back from where it was. The
+   * editor is held at the width it ends at, so its page does not reflow on the way.
+   * @param from Where the frame was.
+   */
+  #closeGap(from: { x: number; w: number }): void {
+    const w = this.window;
+    const frame = this.#frameElement();
+    const column = this.renderRoot.querySelector('.column') as HTMLElement | null;
+    if (!w || !frame || !column || prefersReducedMotion() || (from.x === w.rect.x && from.w === w.rect.w)) return;
+    // Read before letting go of flex, for the reason #slidePane gives.
+    const held = column.offsetWidth;
+    const columnStyle = column.style.cssText;
+    column.style.flex = 'none';
+    column.style.width = `${held}px`;
+    frame.classList.add('pane-moving');
+    const animation = frame.animate(
+      [
+        { left: `${from.x}px`, width: `${from.w}px`, minWidth: '0px' },
+        { left: `${w.rect.x}px`, width: `${w.rect.w}px`, minWidth: '0px' },
+      ],
+      { duration: UMBRADESKTOP_PANE_LIFT_MS, easing: UMBRADESKTOP_PANE_EASING },
+    );
+    void animation.finished
+      .catch(() => undefined)
+      .then(() => {
+        column.style.cssText = columnStyle;
+        frame.classList.remove('pane-moving');
+      });
+  }
 
   #onPaneDragStart = (e: CustomEvent<UmbraDesktopPaneDragDetail>) => {
     const frame = this.renderRoot.querySelector('.frame') as HTMLElement | null;
@@ -1693,7 +1908,9 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         @mousedown=${this.#onFrameMouseDown}
         @pointermove=${this.#onPaneDragMove}
         @pointerup=${this.#onPaneDragUp}
-        @umbradesktop-pane-drag=${this.#onPaneDragStart}>
+        @umbradesktop-pane-drag=${this.#onPaneDragStart}
+        @umbradesktop-pane-hide=${this.#onPaneHide}
+        @umbradesktop-pane-popout=${this.#onPanePopout}>
         <div
           class="titlebar"
           @pointerdown=${this.#onTitlePointerDown}
@@ -1824,10 +2041,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
               .crumbs=${this._crumbs}
               .previewable=${this._document && !w.owner}
               .previewActive=${attachedKind(this.#manager?.getWindows() ?? [], w.id, UMBRADESKTOP_PREVIEW_APP_ALIAS) !== undefined}
+              .previewDocked=${attachedKind(this.#manager?.getWindows() ?? [], w.id, UMBRADESKTOP_PREVIEW_APP_ALIAS)?.kind === 'pane'}
               .view=${this._view && this.#viewAlias
                 ? {
                     ...this._view,
                     open: attachedKind(this.#manager?.getWindows() ?? [], w.id, besideAppAlias(this.#viewAlias)) !== undefined,
+                    docked: attachedKind(this.#manager?.getWindows() ?? [], w.id, besideAppAlias(this.#viewAlias))?.kind === 'pane',
                   }
                 : this._view}
               @umbradesktop-path-beside=${this.#onBeside}
@@ -2250,6 +2469,29 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
       .splitter:hover {
         background: var(--umbradesktop-pane-splitter-hover-background, var(--uui-color-divider-emphasis));
       }
+      /* While a pane slides (windows/pane-motion.ts). The row clips what slides past the window's
+         edge, and the editor is lifted onto its own layer with a face of its own, so a pane can pass
+         under it, coming out of it like a drawer, or over it where the window could not grow. The
+         row's own face is what shows in the gap a popped-out pane leaves while the edge closes. */
+      .frame.pane-moving .main {
+        overflow: hidden;
+        background: var(--umbradesktop-pane-header-background, var(--umbradesktop-path-background, var(--uui-color-surface-alt)));
+      }
+      .frame.pane-moving .column {
+        position: relative;
+        z-index: 1;
+        background: var(--umbradesktop-window-background, var(--uui-color-surface));
+      }
+      .frame.pane-under .pane,
+      .frame.pane-under .splitter {
+        position: relative;
+        z-index: 0;
+      }
+      .frame.pane-over .pane,
+      .frame.pane-over .splitter {
+        position: relative;
+        z-index: 2;
+      }
       /* A place a floating attached window can dock, drawn inside this window for as long as one
          of its attached windows is dragged. Dashed while it is only on offer, solid and filled once
          the pointer is in it. Above this window's own
@@ -2301,19 +2543,29 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         gap: 8px;
         box-sizing: border-box;
         height: var(--umbradesktop-path-height, ${UMBRADESKTOP_PATH_HEIGHT}px);
-        padding: 0 4px 0 var(--umbradesktop-path-padding, 8px);
+        /* The same at both ends, as the path strip is, so the words start as far in as Dock ends. A
+           size container, for Dock's padding: see strip-button.ts. */
+        padding: 0 var(--umbradesktop-path-padding, 8px);
+        container-type: size;
         background: var(--umbradesktop-pane-header-background, var(--umbradesktop-path-background, var(--uui-color-surface-alt)));
         border-bottom: var(
           --umbradesktop-pane-header-border,
-          var(--umbradesktop-path-border-bottom, 1px solid var(--uui-color-divider))
+          var(--umbradesktop-path-border-bottom, ${UMBRADESKTOP_PATH_LINE}px solid var(--uui-color-border))
         );
         color: var(--umbradesktop-pane-header-text, var(--umbradesktop-path-text, var(--uui-color-text)));
-        font-size: var(--umbradesktop-pane-header-font-size, var(--umbradesktop-path-font-size, 12px));
+        font-size: var(--umbradesktop-pane-header-font-size, var(--umbradesktop-path-font-size, 13px));
       }
       .attached-strip-owner {
         font-weight: 600;
       }
+      /* Centred on their capitals, as the pane header's title is (window-pane.element), with the same
+         padding for descenders inside the text's clip. */
+      .attached-strip-text,
+      .attached-dock-label {
+        text-box: trim-both cap alphabetic;
+      }
       .attached-strip-text {
+        padding-block: 0.3em;
         flex: 1;
         min-width: 0;
         overflow: hidden;
@@ -2325,12 +2577,14 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
          here read as a form control dropped onto the chrome, in every theme. */
       .attached-dock {
         flex: none;
+        align-self: stretch;
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: 6px;
         border: 0;
         border-radius: var(--umbradesktop-strip-button-radius, 3px);
-        padding: 2px 6px;
+        /* The space its icon leaves above and below, on the left and after the label too. */
+        padding: 0 ${UMBRADESKTOP_STRIP_BUTTON_PADDING};
         background: none;
         color: inherit;
         font: inherit;
@@ -2348,16 +2602,11 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
         cursor: default;
         opacity: 0.55;
       }
-      .attached-dock-glyph {
-        width: 12px;
-        height: 12px;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.5;
-      }
-      .attached-dock-glyph-fill {
-        fill: currentColor;
-        stroke: none;
+      .attached-dock umb-icon {
+        flex: none;
+        font-size: var(--umbradesktop-strip-icon-size, 16px);
+        width: ${UMBRADESKTOP_STRIP_ICON_BOX};
+        height: ${UMBRADESKTOP_STRIP_ICON_BOX};
       }
     `,
   ];

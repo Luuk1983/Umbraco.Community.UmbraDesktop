@@ -96,6 +96,40 @@ async function mountWindow(wrapper: HTMLElement, manager: UmbraDesktopWindowMana
 }
 
 /**
+ * The window's pane, once it has rendered.
+ * @param element The window.
+ * @returns The pane element.
+ */
+async function paneOf(element: UmbraDesktopWindowElement): Promise<HTMLElement> {
+  const pane = element.renderRoot.querySelector('umbradesktop-window-pane') as HTMLElement & { updateComplete: Promise<unknown> };
+  await pane.updateComplete;
+  return pane;
+}
+
+/**
+ * Wait for a condition, for what settles after an animation rather than on the next render.
+ * @param condition What to wait for.
+ */
+async function until(condition: () => boolean): Promise<void> {
+  const start = performance.now();
+  while (!condition()) {
+    if (performance.now() - start > 5_000) throw new Error('timed out');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
+
+/**
+ * Answer the reduced-motion query as a system with that setting would, for one test.
+ * @returns What puts the real query back.
+ */
+function reduceMotion(): () => void {
+  const real = window.matchMedia;
+  window.matchMedia = ((query: string) =>
+    query.includes('prefers-reduced-motion') ? ({ matches: true } as MediaQueryList) : real.call(window, query)) as typeof window.matchMedia;
+  return () => (window.matchMedia = real);
+}
+
+/**
  * Mount a taskbar against the manager.
  * @param wrapper Where to mount it.
  * @returns The taskbar.
@@ -105,6 +139,32 @@ async function mountTaskbar(wrapper: HTMLElement): Promise<UmbraDesktopTaskbarEl
   wrapper.appendChild(taskbar);
   await taskbar.updateComplete;
   return taskbar;
+}
+
+/**
+ * The space a strip button leaves around what it shows, on each side: to its first icon on the left,
+ * top and bottom, and to its last child on the right, which is the label on a labelled button.
+ * @param button The button.
+ * @returns The four paddings, in px.
+ */
+function paddings(button: Element): { left: number; right: number; top: number; bottom: number } {
+  const box = button.getBoundingClientRect();
+  const icon = button.querySelector('umb-icon')!.getBoundingClientRect();
+  const last = button.lastElementChild!.getBoundingClientRect();
+  return { left: icon.left - box.left, right: box.right - last.right, top: icon.top - box.top, bottom: box.bottom - icon.bottom };
+}
+
+/**
+ * Expect a strip button to pad what it shows by the same amount on all four sides, to within half a
+ * pixel, since an odd space split in two lands on a half.
+ * @param button The button.
+ * @param name What to call it in a failure.
+ */
+function expectEvenPadding(button: Element, name: string): void {
+  const pad = paddings(button);
+  for (const side of ['left', 'right', 'bottom'] as const) {
+    expect(pad[side], `${name}: ${side} against top`).to.be.closeTo(pad.top, 0.5);
+  }
 }
 
 describe('the taskbar and a group', () => {
@@ -169,31 +229,182 @@ describe('a pane', () => {
     expect(element.renderRoot.querySelector('.column .bodywrap')).to.exist;
   });
 
-  it('has a header with reload, pop out and close, and no minimize or maximize', async function () {
+  it('has a header with reload, pop out and hide, and no close cross, minimize or maximize', async function () {
     this.timeout(TIMEOUT_MS);
     const { wrapper, manager, doc } = desk();
     manager.openAttached(doc, PREVIEW, 'right');
     const { element } = await mountWindow(wrapper, manager, doc);
-    const pane = element.renderRoot.querySelector('umbradesktop-window-pane')!;
-    await (pane as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
-    const root = pane.shadowRoot!;
+    const root = (await paneOf(element)).shadowRoot!;
     expect(root.querySelector('.pane-reload')).to.exist;
     expect(root.querySelector('.pane-popout')).to.exist;
-    expect(root.querySelector('.pane-close')).to.exist;
-    expect(root.querySelector('.ctrl-minimize, .ctrl-maximize')).to.equal(null);
+    // Every pane, whatever opened it: the opener steps aside while the pane is out, so this is the
+    // one way to put it away, and it is the same on every pane.
+    expect(root.querySelector('.pane-hide')).to.exist;
+    expect(!!root.querySelector('.pane-close, .ctrl-minimize, .ctrl-maximize')).to.equal(false);
   });
 
-  it('closes from its own close button, giving the width back', async function () {
+  it("draws its buttons with Umbraco's icons, with hide kept apart from the others", async function () {
+    this.timeout(TIMEOUT_MS);
+    const { wrapper, manager, doc } = desk();
+    manager.openAttached(doc, PREVIEW, 'right');
+    const { element } = await mountWindow(wrapper, manager, doc);
+    const root = (await paneOf(element)).shadowRoot!;
+    expect(root.querySelector('.pane-reload umb-icon')?.getAttribute('name')).to.equal('icon-refresh');
+    const popout = root.querySelector('.pane-popout')!;
+    expect(popout.querySelector('umb-icon')?.getAttribute('name')).to.equal('icon-window-popout');
+    expect(popout.nextElementSibling?.classList.contains('pane-divider'), 'a divider after pop out').to.equal(true);
+    const hide = popout.nextElementSibling?.nextElementSibling;
+    expect(hide?.classList.contains('pane-hide'), 'then hide, last, at the edge').to.equal(true);
+    expect(hide?.querySelector('umb-icon')?.getAttribute('name'), 'the panel, pointing back in').to.equal('icon-panel-show');
+  });
+
+  it('carries the opening icon out on its hide button, then turns it to point back in once open', async function () {
+    this.timeout(TIMEOUT_MS);
+    const { wrapper, manager, doc } = desk();
+    const { element, sync } = await mountWindow(wrapper, manager, doc);
+    manager.openAttached(doc, PREVIEW, 'right');
+    await sync();
+    const pane = await paneOf(element);
+    await (pane as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    const icon = () => pane.shadowRoot!.querySelector('.pane-hide umb-icon')?.getAttribute('name');
+    expect(icon(), 'while it slides out').to.equal('icon-pannel-close');
+    await Promise.all(pane.getAnimations().map((a) => a.finished));
+    await until(() => icon() === 'icon-panel-show');
+  });
+
+  it('draws its title in regular weight, centred on its capitals like the path strip beside it', async function () {
+    this.timeout(TIMEOUT_MS);
+    const { wrapper, manager, doc } = desk();
+    manager.openAttached(doc, PREVIEW, 'right');
+    const { element } = await mountWindow(wrapper, manager, doc);
+    const title = (await paneOf(element)).shadowRoot!.querySelector('.pane-title')!;
+    const style = getComputedStyle(title) as CSSStyleDeclaration & { textBoxTrim?: string };
+    expect(style.fontWeight, 'not bold: it reads as the path, not a heading').to.equal('400');
+    expect(style.textBoxTrim).to.equal('trim-both');
+    expect(parseFloat(style.paddingBottom), 'room for descenders inside its clip').to.be.greaterThan(0);
+  });
+
+  it("underlines its header in the backoffice's border colour, as the path strip beside it is", async function () {
+    this.timeout(TIMEOUT_MS);
+    const { wrapper, manager, doc } = desk();
+    wrapper.style.setProperty('--uui-color-border', 'rgb(1, 2, 3)');
+    manager.openAttached(doc, PREVIEW, 'right');
+    const { element } = await mountWindow(wrapper, manager, doc);
+    const header = getComputedStyle((await paneOf(element)).shadowRoot!.querySelector('.pane-header')!);
+    expect(header.borderBottomColor).to.equal('rgb(1, 2, 3)');
+  });
+
+  it("draws its title at the path strip's 13px, and its own icon at the buttons' size", async function () {
+    this.timeout(TIMEOUT_MS);
+    const { wrapper, manager, doc } = desk();
+    manager.openAttached(doc, PREVIEW, 'right');
+    const { element } = await mountWindow(wrapper, manager, doc);
+    const root = (await paneOf(element)).shadowRoot!;
+    expect(getComputedStyle(root.querySelector('.pane-header')!).fontSize).to.equal('13px');
+    expect(getComputedStyle(root.querySelector('.pane-icon')!).fontSize).to.equal('16px');
+    expect(getComputedStyle(root.querySelector('.pane-reload umb-icon')!).fontSize).to.equal('16px');
+  });
+
+  it("fills the strip's height with its buttons, square, with the icon padded evenly", async function () {
+    this.timeout(TIMEOUT_MS);
+    const { wrapper, manager, doc } = desk();
+    wrapper.style.setProperty('--umbradesktop-path-height', '37px');
+    manager.openAttached(doc, PREVIEW, 'right');
+    const { element } = await mountWindow(wrapper, manager, doc);
+    const root = (await paneOf(element)).shadowRoot!;
+    const header = root.querySelector('.pane-header')!;
+    expect(header.getBoundingClientRect().height, 'the strip itself').to.equal(37);
+    // Icon only, so even padding makes them square. They were 32 wide whatever the strip's height,
+    // which in Windows 98's strip was 32 by 22, and the bevel showed it.
+    for (const name of ['.pane-reload', '.pane-popout', '.pane-hide']) {
+      const button = root.querySelector(name)!;
+      const box = button.getBoundingClientRect();
+      expect(box.height, `${name} height, inside any border the strip draws`).to.equal(header.clientHeight);
+      expect(box.width, `${name} width`).to.be.closeTo(box.height, 0.5);
+      expectEvenPadding(button, name);
+    }
+  });
+
+  it('pads its header the same at both ends, so the title starts as far in as Hide ends', async function () {
+    this.timeout(TIMEOUT_MS);
+    const { wrapper, manager, doc } = desk();
+    manager.openAttached(doc, PREVIEW, 'right');
+    const { element } = await mountWindow(wrapper, manager, doc);
+    const header = (await paneOf(element)).shadowRoot!.querySelector('.pane-header')!;
+    const box = header.getBoundingClientRect();
+    const first = header.firstElementChild!.getBoundingClientRect();
+    const last = header.lastElementChild!.getBoundingClientRect();
+    expect(box.right - last.right).to.equal(first.left - box.left);
+  });
+
+  it('slides back in from its hide button before it closes, then gives the width back', async function () {
     this.timeout(TIMEOUT_MS);
     const { wrapper, manager, doc } = desk();
     const before = manager.getWindows()[0].rect.w;
     manager.openAttached(doc, PREVIEW, 'right');
     const { element } = await mountWindow(wrapper, manager, doc);
-    const pane = element.renderRoot.querySelector('umbradesktop-window-pane')!;
-    await (pane as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
-    (pane.shadowRoot!.querySelector('.pane-close') as HTMLElement).click();
-    expect(manager.getWindows()[0].panes ?? []).to.have.lengthOf(0);
+    const pane = await paneOf(element);
+    (pane.shadowRoot!.querySelector('.pane-hide') as HTMLElement).click();
+    expect(manager.getWindows()[0].panes, 'still there while it slides').to.have.lengthOf(1);
+    expect(pane.getAnimations().length, 'the pane is moving').to.be.greaterThan(0);
+    await until(() => (manager.getWindows()[0].panes ?? []).length === 0);
     expect(manager.getWindows()[0].rect.w).to.equal(before);
+  });
+
+  it('closes at once from its hide button when the system asks for reduced motion', async function () {
+    this.timeout(TIMEOUT_MS);
+    const restore = reduceMotion();
+    try {
+      const { wrapper, manager, doc } = desk();
+      manager.openAttached(doc, PREVIEW, 'right');
+      const { element } = await mountWindow(wrapper, manager, doc);
+      const pane = await paneOf(element);
+      (pane.shadowRoot!.querySelector('.pane-hide') as HTMLElement).click();
+      expect(manager.getWindows()[0].panes ?? []).to.have.lengthOf(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('slides out when it opens on a window already on the desktop, and not when the window mounts with it', async function () {
+    this.timeout(TIMEOUT_MS);
+    const { wrapper, manager, doc } = desk();
+    manager.openAttached(doc, PREVIEW, 'right');
+    const restored = await mountWindow(wrapper, manager, doc);
+    expect((await paneOf(restored.element)).getAnimations(), 'a pane that was already open does not move').to.have.lengthOf(0);
+    restored.element.remove();
+
+    const fresh = desk();
+    const { element, sync } = await mountWindow(fresh.wrapper, fresh.manager, fresh.doc);
+    const column = element.renderRoot.querySelector('.column') as HTMLElement;
+    const before = column.getBoundingClientRect().width;
+    fresh.manager.openAttached(fresh.doc, PREVIEW, 'right');
+    await sync();
+    const pane = await paneOf(element);
+    expect(pane.getAnimations().length, 'the pane rides out').to.be.greaterThan(0);
+    const frame = element.renderRoot.querySelector('.frame') as HTMLElement;
+    expect(frame.getAnimations().length, 'the window edge moves out with it').to.be.greaterThan(0);
+    // The editor keeps the width it had for the whole slide, so its page does not reflow on the way;
+    // it gives up the splitter's few px once, when the pane has landed. The first live run read that
+    // width after letting go of it and shrank the editor to its tree for the length of the slide.
+    expect(column.getBoundingClientRect().width, 'during the slide').to.equal(before);
+  });
+
+  it('holds the editor at its width while the gap a popped-out pane left closes', async function () {
+    this.timeout(TIMEOUT_MS);
+    const { wrapper, manager, doc } = desk();
+    manager.openAttached(doc, PREVIEW, 'right');
+    const { element, sync } = await mountWindow(wrapper, manager, doc);
+    const pane = await paneOf(element);
+    (pane.shadowRoot!.querySelector('.pane-popout') as HTMLElement).click();
+    await sync();
+    const frame = element.renderRoot.querySelector('.frame') as HTMLElement;
+    const column = element.renderRoot.querySelector('.column') as HTMLElement;
+    expect(frame.getAnimations().length, 'the edge closes the gap').to.be.greaterThan(0);
+    const during = column.getBoundingClientRect().width;
+    await Promise.all(frame.getAnimations().map((a) => a.finished));
+    await until(() => !frame.classList.contains('pane-moving'));
+    expect(during).to.equal(column.getBoundingClientRect().width);
   });
 
   it('pops out from its own button into a floating window', async function () {
@@ -201,10 +412,22 @@ describe('a pane', () => {
     const { wrapper, manager, doc } = desk();
     manager.openAttached(doc, PREVIEW, 'right');
     const { element } = await mountWindow(wrapper, manager, doc);
-    const pane = element.renderRoot.querySelector('umbradesktop-window-pane')!;
-    await (pane as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    const pane = await paneOf(element);
     (pane.shadowRoot!.querySelector('.pane-popout') as HTMLElement).click();
     expect(manager.getWindows().filter((w) => w.owner === doc)).to.have.lengthOf(1);
+  });
+
+  it('lifts off when it pops out: the new window starts where the pane was', async function () {
+    this.timeout(TIMEOUT_MS);
+    const { wrapper, manager, doc } = desk();
+    manager.openAttached(doc, PREVIEW, 'right');
+    const { element } = await mountWindow(wrapper, manager, doc);
+    const pane = await paneOf(element);
+    (pane.shadowRoot!.querySelector('.pane-popout') as HTMLElement).click();
+    const floating = manager.getWindows().find((w) => w.owner === doc)!;
+    const popped = await mountWindow(wrapper, manager, floating.id);
+    const frame = popped.element.renderRoot.querySelector('.frame') as HTMLElement;
+    expect(frame.getAnimations().length).to.be.greaterThan(0);
   });
 
   it('tears off after a short drag of its header, like a browser tab, and follows the pointer', async function () {
@@ -354,7 +577,10 @@ describe('a floating attached window', () => {
     const id = manager.openAttached(doc, PREVIEW, 'right')!;
     const { element } = await mountWindow(wrapper, manager, id);
     const button = element.renderRoot.querySelector('.attached-dock') as HTMLButtonElement;
-    expect(button.querySelector('svg.attached-dock-glyph'), 'a glyph beside the word').to.exist;
+    expect(
+      button.querySelector('umb-icon')?.getAttribute('name'),
+      "Umbraco's pop-in, the pop-out button's opposite, beside the word",
+    ).to.equal('icon-window-popin');
     const style = getComputedStyle(button);
     expect(style.borderTopWidth, 'no border at rest').to.equal('0px');
     expect(style.backgroundColor, 'no face of its own at rest').to.equal('rgba(0, 0, 0, 0)');
@@ -363,13 +589,28 @@ describe('a floating attached window', () => {
     expect(getComputedStyle(button).color, "in the strip's text colour, not a link's").to.equal('rgb(0, 90, 0)');
   });
 
-  it('draws the glyph with the panel on the side it docks to', async function () {
+  it("fills the strip's height with Dock, as the pane header's buttons fill theirs", async function () {
     this.timeout(TIMEOUT_MS);
     const { wrapper, manager, doc } = desk({ w: 800, h: 900 });
-    const left = manager.openAttached(doc, PREVIEW, 'left')!;
-    const { element } = await mountWindow(wrapper, manager, left);
-    const glyph = element.renderRoot.querySelector('.attached-dock-glyph');
-    expect(glyph?.getAttribute('data-side')).to.equal('left');
+    wrapper.style.setProperty('--umbradesktop-path-height', '37px');
+    const id = manager.openAttached(doc, PREVIEW, 'right')!;
+    const { element } = await mountWindow(wrapper, manager, id);
+    const button = element.renderRoot.querySelector('.attached-dock') as HTMLButtonElement;
+    const strip = element.renderRoot.querySelector('.attached-strip')!;
+    expect(button.getBoundingClientRect().height).to.equal(strip.clientHeight);
+    expectEvenPadding(button, 'Dock');
+  });
+
+  it('pads its strip the same at both ends, so the words start as far in as Dock ends', async function () {
+    this.timeout(TIMEOUT_MS);
+    const { wrapper, manager, doc } = desk({ w: 800, h: 900 });
+    const id = manager.openAttached(doc, PREVIEW, 'right')!;
+    const { element } = await mountWindow(wrapper, manager, id);
+    const strip = element.renderRoot.querySelector('.attached-strip')!;
+    const box = strip.getBoundingClientRect();
+    const first = strip.firstElementChild!.getBoundingClientRect();
+    const last = strip.lastElementChild!.getBoundingClientRect();
+    expect(box.right - last.right).to.equal(first.left - box.left);
   });
 
   it('draws no strip on an ordinary window', async function () {
