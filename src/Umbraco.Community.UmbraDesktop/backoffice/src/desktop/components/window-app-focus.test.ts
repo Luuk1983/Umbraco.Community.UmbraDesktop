@@ -413,6 +413,11 @@ it('leaves a press inside an attached pane to the pane', async function () {
   >('umbradesktop-app-host')!;
   await paneHost.mountComplete;
   const notes = paneHost.firstElementChild as NotesApp;
+  // The pane slides out of the window as it opens; a press is meant for where it comes to rest.
+  const pane = game.element.shadowRoot!.querySelector('umbradesktop-window-pane') as HTMLElement;
+  const frame = game.element.shadowRoot!.querySelector('.frame') as HTMLElement;
+  await Promise.all([...pane.getAnimations(), ...frame.getAnimations()].map((a) => a.finished));
+  await settle();
 
   await click(centreOf(notes.input));
   await settle();

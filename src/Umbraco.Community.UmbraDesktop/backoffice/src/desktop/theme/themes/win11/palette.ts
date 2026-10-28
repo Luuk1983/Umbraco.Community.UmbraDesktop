@@ -1,6 +1,7 @@
 import type { UmbraDesktopPalette } from '../../types';
 import {
   W11_PATH_HEIGHT,
+  W11_PATH_LINE,
   W11_LAUNCHER_GAP,
   W11_LAUNCHER_TOP_CLEARANCE,
   W11_LAUNCHER_WIDTH,
@@ -81,7 +82,7 @@ export const W11_LIGHT: UmbraDesktopPalette = {
   // Explorer's address bar: the same plane as the window, separated by a hairline rather than a
   // fill, with the crumbs in the accent and a soft rounded hover behind each.
   '--umbradesktop-path-background': '#f3f3f3',
-  '--umbradesktop-path-border-bottom': '1px solid rgba(0, 0, 0, 0.08)',
+  '--umbradesktop-path-border-bottom': `${W11_PATH_LINE}px solid rgba(0, 0, 0, 0.08)`,
   '--umbradesktop-path-text': '#1a1a1a',
   '--umbradesktop-path-link': W11_ACCENT,
   '--umbradesktop-path-link-hover-background': 'rgba(0, 0, 0, 0.05)',
@@ -249,7 +250,7 @@ export const W11_DARK: UmbraDesktopPalette = {
   '--umbradesktop-window-shadow-active': '0 16px 40px rgba(0, 0, 0, 0.6)',
   '--umbradesktop-titlebar-background': '#202020',
   '--umbradesktop-path-background': '#202020',
-  '--umbradesktop-path-border-bottom': '1px solid rgba(255, 255, 255, 0.08)',
+  '--umbradesktop-path-border-bottom': `${W11_PATH_LINE}px solid rgba(255, 255, 255, 0.08)`,
   '--umbradesktop-path-text': '#ffffff',
   // The lighter accent, for the same reason every other marker in this palette uses it.
   '--umbradesktop-path-link': W11_ACCENT_DARK,

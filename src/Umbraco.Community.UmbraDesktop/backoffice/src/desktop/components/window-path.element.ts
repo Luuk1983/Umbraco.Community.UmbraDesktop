@@ -1,6 +1,8 @@
-import { UMBRADESKTOP_PATH_HEIGHT } from '../constants.js';
+import { UMBRADESKTOP_PATH_HEIGHT, UMBRADESKTOP_PATH_LINE } from '../constants.js';
 import type { UmbraDesktopPathCrumb, UmbraDesktopPathView } from '../path/types.js';
 import { UmbraDesktopThemeStyles } from '../theme/theme-styles.controller.js';
+import { panelIcon } from './panel-icon.js';
+import { UMBRADESKTOP_STRIP_BUTTON_PADDING, UMBRADESKTOP_STRIP_ICON_BOX } from './strip-button.js';
 import { css, customElement, html, nothing, property } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 
@@ -75,6 +77,15 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
    */
   @property({ attribute: false })
   public previewActive = false;
+
+  /**
+   * Whether that preview is a pane in this window, which leaves Preview out of the strip. The button
+   * slides out with the pane and becomes its Hide, so every pane is put away the same way, whatever
+   * opened it; it comes back once the pane has slid back in. A preview in a window of its own keeps
+   * the button, pressed, since nothing then sits at the window's edge to put it away from.
+   */
+  @property({ attribute: false })
+  public previewDocked = false;
 
   /**
    * The workspace view the window shows, named after the crumbs with its own icon, and whether it can
@@ -182,9 +193,12 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
     const title = this.localize.term(view.open ? 'umbraDesktop_besideCloseTitle' : 'umbraDesktop_besideOpenTitle', label);
     return html`<span class="path-separator" aria-hidden="true">/</span>
       <span class="path-view" title=${label}>
-        ${view.icon ? html`<umb-icon class="path-view-icon" name=${view.icon}></umb-icon>` : nothing}${label}
+        ${view.icon ? html`<umb-icon class="path-view-icon" name=${view.icon}></umb-icon>` : nothing}<span
+          class="path-view-label"
+          >${label}</span
+        >
       </span>
-      ${view.beside
+      ${view.beside && !view.docked
         ? html`<button
             class="path-action path-beside ${view.open ? 'path-action-on' : ''}"
             type="button"
@@ -192,7 +206,7 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
             title=${title}
             aria-label=${title}
             @click=${this.#beside}>
-            ${besideGlyph}
+            ${toggleIcon(!!view.open)}
           </button>`
         : nothing}`;
   }
@@ -200,12 +214,16 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
   /**
    * The action at the strip's right end: Preview, which acts on the document and so is there
    * whenever a document is. In a group of its own, which is what stays pinned to the end while a deep
-   * path scrolls under it. Its icon says what opens and the side-panel glyph after its label says
-   * how, the same glyph the view crumb's button draws.
+   * path scrolls under it.
+   *
+   * The eye and the label, and no panel icon. It carried one after its label for a while, the one
+   * the view's button draws, and two icons on one button looked untidy. The panel icon is kept for
+   * buttons that only move a pane, the view's button and a pane's Hide; Preview names a feature, and
+   * its pane's header starts with the same eye.
    * @returns The group, or nothing when there is no document to preview.
    */
   #renderActions() {
-    if (!this.previewable) return nothing;
+    if (!this.previewable || this.previewDocked) return nothing;
     return html`<span class="path-actions">
       <button
         class="path-action path-preview ${this.previewActive ? 'path-preview-on' : ''}"
@@ -216,7 +234,6 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
         @click=${this.#preview}>
         <umb-icon class="path-preview-icon" name="icon-eye"></umb-icon>
         <span class="path-preview-label">${this.localize.term('umbraDesktop_previewOpen')}</span>
-        ${besideGlyph}
       </button>
     </span>`;
   }
@@ -274,11 +291,31 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
         scrollbar-width: thin;
         box-sizing: border-box;
         height: var(--umbradesktop-path-height, ${UMBRADESKTOP_PATH_HEIGHT}px);
+        /* The same at both ends, and whatever sits at an end, a crumb or a button, starts there and
+           pads its own content as it does anywhere else. */
         padding: 0 var(--umbradesktop-path-padding, 8px);
+        /* A size container, so a button's padding can be worked out from the strip's inner height:
+           see strip-button.ts. */
+        container-type: size;
         background: var(--umbradesktop-path-background, var(--uui-color-surface-alt));
-        border-bottom: var(--umbradesktop-path-border-bottom, 1px solid var(--uui-color-divider));
+        /* The backoffice's border colour, the line it draws between the tree and the workspace, so the
+           strip has an edge against the content below it. The divider colour it used before is
+           barely darker than the strip and left no visible line. The pane header and a floating
+           window's strip fall back to this too. */
+        border-bottom: var(--umbradesktop-path-border-bottom, ${UMBRADESKTOP_PATH_LINE}px solid var(--uui-color-border));
         color: var(--umbradesktop-path-text, var(--uui-color-text));
-        font-size: var(--umbradesktop-path-font-size, 12px);
+        font-size: var(--umbradesktop-path-font-size, 13px);
+      }
+      /* A word is centred on its capitals rather than its line box (text-box trim), so it sits on the same
+         centre line as the icons beside it. A line box carries the font's room above the letters as well
+         as below, and a word centred by it sat 1.7px above its icons, measured on the drawn pixels in a
+         live strip. Trimmed to cap height and baseline, the box is the word, whatever the theme's font. */
+      .path-crumb,
+      .path-separator,
+      .path-current,
+      .path-view-label,
+      .path-preview-label {
+        text-box: trim-both cap alphabetic;
       }
       .path-crumb {
         flex: none;
@@ -302,10 +339,12 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
         display: inline-flex;
         align-items: center;
       }
-      /* Sized in the strip's own type size rather than in px, so a theme that shrinks the strip
-         shrinks the house with it and the two never disagree about how tall the bar has to be. */
+      /* Every icon on the strip, this one, Preview's eye and the view's two, is drawn at the one strip
+         icon size the pane header's buttons use, so the window's strip and its pane's read as one.
+         The first build sized these off the strip's type and drew them at 15.5px beside the pane's
+         18. A theme with a short strip sets the token smaller. */
       .path-home {
-        font-size: 1.15em;
+        font-size: var(--umbradesktop-strip-icon-size, 16px);
         line-height: 1;
       }
       .path-current {
@@ -331,23 +370,28 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
          buttons each pinned to the same edge would sit on top of each other. */
       .path-actions {
         flex: none;
+        align-self: stretch;
         position: sticky;
         right: 0;
         margin-left: auto;
         display: inline-flex;
-        align-items: center;
+        align-items: stretch;
         gap: 2px;
         background: var(--umbradesktop-path-background, var(--uui-color-surface-alt));
       }
       /* Styled as a crumb, from the crumb's tokens, so every theme that restyles its crumbs restyles
          these with them. */
+      /* The strip's full height, as the pane header's buttons are: the 20px they were before was a
+         small target in a 28px strip, and the strip pays for its height either way. */
       .path-action {
         flex: none;
+        align-self: stretch;
         display: inline-flex;
         align-items: center;
         gap: 4px;
         border: 0;
-        padding: 2px 6px;
+        /* The space its icon leaves above and below, on the left and right too: strip-button.ts. */
+        padding: 0 ${UMBRADESKTOP_STRIP_BUTTON_PADDING};
         border-radius: var(--umbradesktop-strip-button-radius, 3px);
         background: var(--umbradesktop-path-background, var(--uui-color-surface-alt));
         font: inherit;
@@ -382,7 +426,10 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
         box-shadow: var(--umbradesktop-strip-button-on-shadow, none);
       }
       .path-preview-icon {
-        font-size: 1.15em;
+        flex: none;
+        font-size: var(--umbradesktop-strip-icon-size, 16px);
+        width: ${UMBRADESKTOP_STRIP_ICON_BOX};
+        height: ${UMBRADESKTOP_STRIP_ICON_BOX};
         line-height: 1;
       }
       /* The view the window shows, the last step of the path: drawn as the current crumb is, with
@@ -396,38 +443,38 @@ export class UmbraDesktopWindowPathElement extends UmbLitElement {
         color: var(--umbradesktop-path-text, var(--uui-color-text));
       }
       .path-view-icon {
-        font-size: 1.15em;
+        font-size: var(--umbradesktop-strip-icon-size, 16px);
         line-height: 1;
       }
-      /* Glyph only, right after the view's name, which is what labels it. */
+      /* Icon only, right after the view's name, which is what labels it. Its even padding makes it
+         square. */
       .path-beside {
-        padding: 2px 4px;
+        justify-content: center;
       }
-      /* Drawn in the strip's own type size, like the preview's icon, in the text colour it sits in. */
-      .path-beside-glyph {
-        width: 1.15em;
-        height: 1.15em;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1;
-      }
-      .path-beside-glyph-fill {
-        fill: currentColor;
-        stroke: none;
+      /* The panel icon on the view's button, at the strip icon size, turned to put its panel on the
+         right, where the view opens. */
+      .path-toggle-icon {
+        flex: none;
+        font-size: var(--umbradesktop-strip-icon-size, 16px);
+        width: ${UMBRADESKTOP_STRIP_ICON_BOX};
+        height: ${UMBRADESKTOP_STRIP_ICON_BOX};
+        line-height: 1;
       }
     `,
   ];
 }
 
 /**
- * The side-panel glyph: a frame with its side panel filled, the one the Dock button draws. It means
- * "opens beside this window" wherever it appears, on the view crumb's button and after Preview's
- * label alike. Never the pop-out glyph, which the pane header uses for the opposite.
+ * The panel icon on a view's beside button, which opens the view on the right. Preview has none: its
+ * eye says what it opens. It turns its chevron with the pane, out while the pane is away and back in
+ * while it is open, so the button says what a click will do. See `panel-icon.ts` for why two icons rather than one.
+ * @param open Whether the pane it toggles is open.
+ * @returns The icon.
  */
-const besideGlyph = html`<svg class="path-beside-glyph" viewBox="0 0 16 16" aria-hidden="true">
-  <rect x="1.5" y="2.5" width="13" height="11" rx="1"></rect>
-  <rect class="path-beside-glyph-fill" x="9" y="4" width="4" height="8"></rect>
-</svg>`;
+function toggleIcon(open: boolean) {
+  const icon = panelIcon(open, 'right');
+  return html`<umb-icon class="path-toggle-icon" name=${icon.name} style="rotate:${icon.rotate}" aria-hidden="true"></umb-icon>`;
+}
 
 export default UmbraDesktopWindowPathElement;
 

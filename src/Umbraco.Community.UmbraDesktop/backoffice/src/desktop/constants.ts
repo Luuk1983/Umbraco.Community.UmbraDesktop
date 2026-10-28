@@ -247,7 +247,22 @@ export const UMBRADESKTOP_NOTICE_STACK_MAX_SHARE = 0.45;
 export const UMBRADESKTOP_TITLEBAR_BORDER = 1;
 
 /**
- * The path strip's height in px, behind `--umbradesktop-path-height`.
+ * The path strip's bottom line, in px: the default `--umbradesktop-path-border-bottom`, which the pane
+ * header and a floating window's strip fall back to as well. Drawn inside the strip's height.
+ */
+export const UMBRADESKTOP_PATH_LINE = 1;
+
+/**
+ * The height in px of what the path strip shows, inside its bottom line.
+ *
+ * The content is kept even, because the icons and words are centred in it: in an odd box the centre
+ * falls on a half pixel, an 18px icon starts on it and is drawn rounded down, and the words beside
+ * it sat up to a pixel above it. `theme/strip-height.test.ts` holds every theme to it.
+ */
+export const UMBRADESKTOP_PATH_CONTENT_HEIGHT = 28;
+
+/**
+ * The path strip's height in px, behind `--umbradesktop-path-height`: its content and its line.
  *
  * One number with two readers, which is the whole reason it is stated here rather than in the CSS:
  * `window-path.element` interpolates it as its fallback, and `theme/themes/umbraco` reports it back
@@ -255,7 +270,7 @@ export const UMBRADESKTOP_TITLEBAR_BORDER = 1;
  * {@link UMBRADESKTOP_TASKBAR_HEIGHT} has, and for the same reason — a strip that measured one
  * height and was paid for at another would leave every section window's app that many pixels short.
  */
-export const UMBRADESKTOP_PATH_HEIGHT = 28;
+export const UMBRADESKTOP_PATH_HEIGHT = UMBRADESKTOP_PATH_CONTENT_HEIGHT + UMBRADESKTOP_PATH_LINE;
 
 /**
  * How wide a dock zone is, in px: the band just inside an owner window's edge that a floating

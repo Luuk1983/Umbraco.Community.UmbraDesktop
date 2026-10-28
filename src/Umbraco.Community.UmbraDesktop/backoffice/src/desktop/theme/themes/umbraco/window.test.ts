@@ -130,6 +130,21 @@ it('turns the unfocused caption sand and quiet rather than fading it', async fun
   await focus(true);
 });
 
+it("draws the unfocused caption's bottom line in the strip's line colour, so the two lines under it match", async function () {
+  this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
+  // Both lines sit between two sand grounds on an unfocused window, one under the caption and one
+  // under the path strip. The caption's was a 10% tint of the link blue and the strip's the
+  // backoffice's border grey, and side by side the difference showed.
+  await focus(false);
+  const probe = document.createElement('div');
+  probe.style.borderTop = '1px solid var(--uui-color-border)';
+  win.root.appendChild(probe);
+  const border = getComputedStyle(probe).borderTopColor;
+  probe.remove();
+  expect(getComputedStyle(find('.titlebar')).borderBottomColor).to.equal(border);
+  await focus(true);
+});
+
 it('writes the title in Regular, because light text on the navy already reads heavier than it is', async function () {
   this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
   await focus(true);
@@ -258,22 +273,14 @@ it('keeps the unsaved marker visible against both captions', async function () {
   await focus(true);
 });
 
-it("grows the pane and strip buttons' touch box to the strip's height, without moving the button", function () {
+it('leaves the pane and strip buttons at the size the strip draws them, with no overlay of its own', function () {
   this.timeout(UMBRADESKTOP_THEME_TEST_TIMEOUT_MS);
-  // Read off the sheet, as `win11/taskbar.test.ts` does for what a bare mount cannot render: the
-  // pane and the Dock button only exist for a window with attached content, and what has to hold is
-  // that the target grows through an overlay, never through padding, which would move the button.
+  // The buttons fill the strip's height themselves now (2026-10-27 pane side panel design), so the
+  // overlay this theme once added to stretch a 20px button's target to 28px would only stack a second
+  // box on the first. Read off the sheet, as `win11/taskbar.test.ts` does for what a bare mount
+  // cannot render.
   const sheets = [...win.root.adoptedStyleSheets];
   const text = [...sheets[sheets.length - 1].cssRules].map((rule) => rule.cssText).join('\n');
-  for (const button of ['.pane-button', '.attached-dock']) {
-    expect(text, `${button} grows its touch target with an overlay`).to.contain(`${button}::after`);
-  }
-  // The browser serialises `top`, `bottom`, `left` and `right` back as one `inset` shorthand, so
-  // the pair of numbers is what is read: four px beyond the button above and below, none to the side.
-  expect(
-    text,
-    "vertically 4px past the button each way, which fills the strip's own 28px, and not sideways: " +
-      "the pane's buttons are a few pixels apart, so a wider overlay makes neighbouring targets " +
-      'overlap and a tap on one lands on another',
-  ).to.match(/\.pane-button::after, \.attached-dock::after \{[^}]*inset: -4px 0px;/);
+  expect(text).to.not.contain('.pane-button::after');
+  expect(text).to.not.contain('.attached-dock::after');
 });

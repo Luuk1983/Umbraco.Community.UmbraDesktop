@@ -61,12 +61,13 @@ at a time. Its card has a pink border, so you can see which one it is while you 
   first, and you can stay.
 - To move the item between the pane and a window, select **Pop out** in the pane's header or
   **Dock** in the window. Save or discard your changes first: both are greyed while you have some.
+- To put the item away, select **Hide** in the pane's header. The pane slides back into the window.
 - To create an item, select **Create** in the toolbar, or **Create** in a folder's menu, and choose a
   type. It opens beside the window, in the folder, and its card appears once you save it.
 - To create a folder, select **Create**, then **Folder**. Type its name and select **Create**. It
   appears in the window and in the tree, selected.
 
-Closing the pane or the window asks first when the item has unsaved changes.
+Hiding the pane or closing the window asks first when the item has unsaved changes.
 
 The item's page also has the tools for its file: edit, download, replace and optimize it. See
 [What you can do with a file](media-item.md).

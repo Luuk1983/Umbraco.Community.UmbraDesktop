@@ -23,9 +23,10 @@ page is what the built code does, and what it expects from you.
 You hand the window manager an app and the window it belongs to. The desktop shows it in one of two
 forms, and the person using it can switch between them at any time:
 
-- **Docked.** A pane inside the owner window, beside its content, behind a splitter. It has a small
-  header with its icon, its title, reload, pop out and close. It has no minimize, maximize or taskbar
-  button, because it goes wherever its window goes.
+- **Docked.** A pane inside the owner window, beside its content, behind a splitter. It slides out of
+  the window's edge as it opens and back in as it goes. It has a small header with its icon, its
+  title, **Reload**, **Pop out** and **Hide**. It has no close cross and no minimize, maximize or
+  taskbar button, because it goes wherever its window goes.
 - **Floating.** A window of its own with the full set of controls. A strip under its titlebar says
   "Attached to *owner*" and has a Dock button. Its taskbar button sits in one box with its owner's.
 
@@ -105,9 +106,17 @@ if (open) manager.closeAttached(ownerId, open.kind === 'pane' ? open.pane.id : o
 else manager.openAttached(ownerId, app, 'right');
 ```
 
-Show the control as pressed while `attachedKind` finds something, and set `aria-pressed`. Draw the
-side-panel glyph on it, the one Preview draws after its label: it means "opens beside this window"
-wherever it appears, and the icon or label beside it says what opens.
+Show the control as pressed while `attachedKind` finds something, and set `aria-pressed`. If it is
+an icon-only button whose one job is to open the pane, as a view's beside button is, draw the panel
+icon with `panelIcon` from `components/panel-icon.ts`: its chevron turns with the pane to say which
+way it will move. If it names a feature, as Preview does, draw that feature's own icon and label
+instead. Preview carried both for a while, and two icons on one button looked untidy.
+
+**While your content is docked, leave your control out.** It has slid out with the pane and become
+the pane's **Hide**, which every pane has, so a pane is put away the same way whatever opened it.
+Show the control again once the pane has gone, and pressed while the content floats, when nothing
+sits at the window's edge to put it away from. Preview and the views beside the editor do exactly
+this (`previewDocked`, and `docked` on the path view).
 
 **Where the control goes.** Not in the titlebar. Every theme sums its titlebar controls into its
 drag-clamp metrics and measures them in its `metrics.test.ts`, and a control that only some windows
@@ -157,7 +166,10 @@ Do not re-implement any of these. Each is tested, and a second copy would drift.
 - Placement: widening the owner for a pane, shifting it onto the desktop, taking width from the
   editor beside a maximized or snapped owner, falling back to floating, and giving the width back
   when the pane goes.
-- The pane header (reload, pop out, close), the splitter, and the floating window's strip with Dock.
+- The pane header (reload, pop out, hide), the splitter, and the floating window's strip with Dock.
+- Motion: a pane slides out of its window and back in, lifts off when it pops out, and does none of
+  that when the system asks for reduced motion (`windows/pane-motion.ts`). Hide slides the pane back
+  in before it closes; `closeAttached` closes at once.
 - Undocking by Pop out or by dragging the header, and docking by Dock or by dropping on a dock zone.
 - Stacking: the owner and its floating windows rise as one, with the focused one on top.
 - Minimizing: the owner takes its floating windows with it, and restoring it brings back what went
@@ -182,10 +194,13 @@ Do not re-implement any of these. Each is tested, and a second copy would drift.
 - **Whether a frame was refused is invisible.** A site that forbids framing shows as an empty or
   error page, and the parent cannot tell. Always give a way out; the preview's is "Open in a new
   browser tab".
-- **Two actions that look alike read as one.** Pop out is a picture-in-picture glyph, Dock is the
-  same frame with a side panel filled, and leaving the desktop is spelled out with the external-link
-  arrow. If your toolbar adds actions, keep them distinguishable from these. The side-panel glyph is
-  also what a control that opens attached content draws, so do not reuse it for anything else.
+- **Two actions that look alike read as one.** Pop out is Umbraco's `icon-window-popout`, Dock its
+  pair `icon-window-popin`, and leaving the desktop for a browser tab is `icon-out`. If your toolbar
+  adds actions, keep them distinguishable from these. The panel icon is what an icon-only control that
+  opens or hides attached content draws, so do not reuse it for anything else.
+- **A close cross under the window's own reads as a second close.** The pane header had one until
+  the 2026-10-27 redesign, sitting 40px under the titlebar's close with a different result. Nothing
+  in a pane is drawn as a cross now.
 - **A control that names nothing reads as nothing.** The first build of the views beside the editor
   put a plain "Open beside" button next to Preview, and it was unclear what it would open. Put your
   control where the thing it opens is named, and let it come and go with that name.
@@ -309,14 +324,16 @@ closes the pane, without asking, since nothing is left to save.
 | `frame-watches.ts` | The watches a backoffice frame gets, the theme controller, `routeFrame` |
 | `windows/attached-page.ts` | Reading an app's request, the page's app, and the paths an app is told |
 | `components/window.element.ts`, `#onOpenAttached` | The events, the `attached` property, routing or renaming an open page |
-| `components/window-pane.element.ts` | A page pane: watches, the loader, Pop out greyed, close and reload asking |
+| `components/window-pane.element.ts` | A page pane: watches, the loader, Pop out greyed, hide and reload asking |
 | `window-manager.context.ts` | `setPaneDirty`, `setPaneLocation`, `routeAttached`, `relabelAttached`, `requestCloseAttached`, `serverEventTargets` |
 
 ## 10. Checklist
 
 - [ ] An element app with a per-feature `alias`, sensible `defaultSize` and `minSize`, and `props`,
       or a backoffice page opened with `umbradesktop-open-attached`
-- [ ] Opened by a feature, from a control outside the titlebar, which toggles and shows as pressed
+- [ ] Opened by a feature, from a control outside the titlebar, which draws `panelIcon` if it is
+      icon-only and the feature's own icon if it is labelled, steps aside
+      while its pane is docked, and shows as pressed while the content floats
 - [ ] Reads props in `connectedCallback` and fetches on connect
 - [ ] Works as a pane and as a floating window, from `minSize.w` upward
 - [ ] Holds no unsaved work in an element; unsaved work only in a backoffice page, which the desktop
