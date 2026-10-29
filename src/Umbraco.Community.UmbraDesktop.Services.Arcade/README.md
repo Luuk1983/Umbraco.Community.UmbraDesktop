@@ -33,4 +33,4 @@ Games that depend on this package stop working with it, so remove them first. Dr
 
 ## License
 
-[MIT](../../LICENSE)
+[Mozilla Public License 2.0](../../LICENSE)

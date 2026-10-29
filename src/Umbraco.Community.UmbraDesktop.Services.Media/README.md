@@ -18,4 +18,4 @@ It has no server code and keeps nothing of its own: every file is an ordinary me
 
 ## License
 
-[MIT](../../LICENSE)
+[Mozilla Public License 2.0](../../LICENSE)

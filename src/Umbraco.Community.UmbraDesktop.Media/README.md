@@ -4,7 +4,7 @@
 
 The media library, the way you manage files on your own computer. Open folders in as many windows as you like, drag between them, cut, copy and paste, drop files and whole folders from your computer, and undo what you did, on top of everything the Media section already does. And an Image Editor to fix an image without leaving the backoffice.
 
-[![NuGet](https://img.shields.io/nuget/v/Umbraco.Community.UmbraDesktop.Media)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) [![NuGet Downloads](https://img.shields.io/nuget/dt/Umbraco.Community.UmbraDesktop.Media)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) [![License](https://img.shields.io/github/license/Luuk1983/Umbraco.Community.UmbraDesktop)](../../LICENSE)
+[![NuGet](https://img.shields.io/nuget/v/Umbraco.Community.UmbraDesktop.Media)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) [![NuGet Downloads](https://img.shields.io/nuget/dt/Umbraco.Community.UmbraDesktop.Media)](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Media) [![License](https://img.shields.io/badge/license-FSL--1.1--MIT-blue)](LICENSE.md)
 
 ![A Media Manager window on the People folder in a two-column grid of photos, with one photo open beside it in Umbraco's own media editor and its card ringed in pink, under the Umbraco theme.](docs/screenshots/media-manager.png)
 
@@ -35,4 +35,4 @@ That is all. UmbraDesktop comes with it if you do not have it yet, and the Media
 
 ## License
 
-[MIT](../../LICENSE). The bundled library, Fabric.js, is MIT too; its notice is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+[Functional Source License 1.1, MIT Future License](LICENSE.md) (FSL-1.1-MIT): free to use, client sites included, but not in a product that competes with it, and each version becomes MIT two years after its release. The bundled library, Fabric.js, is MIT; its notice is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

@@ -16,7 +16,9 @@
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>
 	  <Copyright>Copyright (c) Luuk Peters</Copyright>
-	  <PackageLicenseExpression>MIT</PackageLicenseExpression>
+	  <!-- A file, not an expression like the other packages: nuget.org only accepts expressions for
+	       licences the OSI or the FSF approve, and the FSL is neither (docs/design/2026-10-28-licensing-design.md). -->
+	  <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 	  <RepositoryType>git</RepositoryType>
 	  <RepositoryUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</RepositoryUrl>
 	  <PackageProjectUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</PackageProjectUrl>
@@ -106,6 +108,9 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
          for the copyright line and licence text in every copy, and the package is one. The build
          also stamps them on the chunks that hold the libraries (backoffice/vite.config.ts). -->
     <None Update="THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="\" />
+    <!-- The licence PackageLicenseFile names, at the package root where it expects it. Update for the
+         same reason as README.md. -->
+    <None Update="LICENSE.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 	<ItemGroup>
