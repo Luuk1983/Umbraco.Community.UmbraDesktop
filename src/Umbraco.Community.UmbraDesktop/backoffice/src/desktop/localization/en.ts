@@ -270,6 +270,8 @@ export default {
     wallpaperPickerTitle: 'Choose a wallpaper',
     wallpaperNotAnImage: 'That file cannot be used as a wallpaper. Pick an image.',
     logout: 'Log out',
+    // the lock screen, when the session has ended (#160)
+    lockNotYou: 'Not you?',
     exitDesktop: 'Exit desktop',
     // exiting the desktop
     exitHeadline: 'Exit desktop mode',

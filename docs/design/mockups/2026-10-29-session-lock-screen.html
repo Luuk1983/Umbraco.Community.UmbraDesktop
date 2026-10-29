@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session lock screen</title>
+<style>
+  :root { color-scheme: light; }
+  body {
+    margin: 0;
+    padding: 24px 16px 48px;
+    background: #e9e9ef;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1b264f;
+  }
+  .caption { max-width: 1100px; margin: 0 auto 10px; font-size: 14px; }
+  .caption b { font-weight: 600; }
+  .caption span { color: #555; }
+  .frame {
+    position: relative;
+    max-width: 1100px;
+    aspect-ratio: 16 / 9;
+    margin: 0 auto 40px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  }
+
+  /* The boot splash's and the welcome wizard's ground, exactly as they write it. */
+  .lock {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background-color: #0b1024;
+    background-image:
+      radial-gradient(60% 72% at 50% 46%, rgba(38, 56, 111, 0.3) 0%, transparent 70%),
+      radial-gradient(80% 90% at 50% 48%, transparent 38%, rgba(3, 5, 14, 0.7) 100%);
+    color: #fff;
+  }
+  .stack { display: flex; flex-direction: column; align-items: center; width: 340px; text-align: center; }
+
+  /* uui-avatar: a circle of initials. */
+  .avatar {
+    width: 88px; height: 88px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: #f5c1bc; color: #1b264f;
+    font-size: 32px; font-weight: 700; letter-spacing: 0.02em;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14);
+  }
+  /* The welcome wizard's page heading. */
+  h2 { margin: 18px 0 0; font-size: 28px; font-weight: 600; line-height: 1.2; }
+  /* Core's own line, login_timeout, in the wizard's hint colour. */
+  .timeout { margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: rgba(255, 255, 255, 0.72); }
+
+  /* Core's #providers column: one button per provider, gap space-5. */
+  .providers { display: flex; flex-direction: column; gap: 15px; width: 100%; margin-top: 28px; }
+  /* uui-button: primary for Umbraco (its manifest says so), outline for the rest (the default). */
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    height: 42px; border-radius: 3px; font: inherit; font-size: 15px; font-weight: 700;
+    cursor: pointer;
+  }
+  .btn svg { width: 15px; height: 15px; }
+  .primary { background: #3544b1; color: #fff; border: 1px solid #3544b1; }
+  .outline { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, 0.45); }
+
+  .logout { margin-top: 30px; font-size: 13px; color: rgba(255, 255, 255, 0.72); }
+  .logout a { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<p class="caption"><b>1. A password user.</b> <span>The one button Umbraco's own timed-out screen shows. Opens Umbraco's sign-in popup.</span></p>
+<div class="frame">
+  <div class="lock">
+    <div class="stack">
+      <div class="avatar" aria-hidden="true">LP</div>
+      <h2>Luuk Peters</h2>
+      <p class="timeout">Your session has timed out. Please sign in again below.</p>
+      <div class="providers">
+        <div class="btn primary">
+          <svg viewBox="0 0 315.89 315.89" fill="currentColor" aria-hidden="true"><path d="M0 157.74a157.95 157.95 0 1 1 158 158.15A157.95 157.95 0 0 1 0 157.74m154.74 54.090a155.4 155.4 0 0 1-36.5-3.29 27.92 27.92 0 0 1-19.94-16q-5.350-12.340-5.210-38.100a243 243 0 0 1 1.690-26.840q1.550-13 3.090-21.460l1.070-5.590a2 2 0 0 0 0-.49 3.2 3.2 0 0 0-2.650-3.170l-20.370-3.220h-.44a3.190 3.190 0 0 0-3.110 2.480c-.35 1.310-.56 2.270-1.170 5.380-1.160 6-2.240 11.850-3.430 20.380a264 264 0 0 0-2.300 27.940 145 145 0 0 0 0 19.570q.72 25.940 8.900 41.420t27.720 22.300q19.530 6.810 54.430 6.660h2.910q34.940.15 54.410-6.660t27.710-22.300q8.170-15.530 8.910-41.420a145 145 0 0 0 0-19.570 267 267 0 0 0-2.300-27.940c-1.200-8.440-2.270-14.260-3.440-20.380-.61-3.110-.81-4.070-1.160-5.380a3.210 3.210 0 0 0-3.120-2.480h-.52l-20.380 3.180a3.200 3.200 0 0 0-2.680 3.170 4 4 0 0 0 0 .49l1.080 5.590q1.550 8.480 3.120 21.460a246 246 0 0 1 1.650 26.840q.27 25.690-5.210 38.070a27.900 27.900 0 0 1-19.760 16.070 155.200 155.200 0 0 1-36.480 3.290Z"/></svg>
+          Sign in with Umbraco
+        </div>
+      </div>
+      <p class="logout">Not you? <a href="#">Log out</a></p>
+    </div>
+  </div>
+</div>
+
+<p class="caption"><b>2. A site with Microsoft Entra ID as well.</b> <span>Every provider Umbraco would list, in its order. Each opens its own popup.</span></p>
+<div class="frame">
+  <div class="lock">
+    <div class="stack">
+      <div class="avatar" aria-hidden="true">LP</div>
+      <h2>Luuk Peters</h2>
+      <p class="timeout">Your session has timed out. Please sign in again below.</p>
+      <div class="providers">
+        <div class="btn primary">
+          <svg viewBox="0 0 315.89 315.89" fill="currentColor" aria-hidden="true"><path d="M0 157.74a157.95 157.95 0 1 1 158 158.15A157.95 157.95 0 0 1 0 157.74m154.74 54.090a155.4 155.4 0 0 1-36.5-3.29 27.92 27.92 0 0 1-19.94-16q-5.350-12.340-5.210-38.100a243 243 0 0 1 1.690-26.840q1.550-13 3.090-21.460l1.070-5.590a2 2 0 0 0 0-.49 3.2 3.2 0 0 0-2.650-3.170l-20.370-3.220h-.44a3.190 3.190 0 0 0-3.110 2.480c-.35 1.310-.56 2.270-1.170 5.380-1.160 6-2.240 11.850-3.430 20.380a264 264 0 0 0-2.300 27.940 145 145 0 0 0 0 19.570q.72 25.940 8.900 41.420t27.720 22.300q19.530 6.810 54.430 6.660h2.910q34.940.15 54.410-6.660t27.710-22.300q8.170-15.530 8.910-41.420a145 145 0 0 0 0-19.570 267 267 0 0 0-2.300-27.940c-1.200-8.440-2.270-14.260-3.440-20.380-.61-3.110-.81-4.070-1.160-5.380a3.210 3.210 0 0 0-3.120-2.480h-.52l-20.380 3.180a3.200 3.200 0 0 0-2.680 3.170 4 4 0 0 0 0 .49l1.080 5.590q1.550 8.480 3.120 21.460a246 246 0 0 1 1.650 26.840q.27 25.690-5.210 38.070a27.900 27.900 0 0 1-19.760 16.070 155.200 155.200 0 0 1-36.480 3.290Z"/></svg>
+          Sign in with Umbraco
+        </div>
+        <div class="btn outline">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="0" y="0" width="7.5" height="7.5" fill="#f25022"/><rect x="8.5" y="0" width="7.5" height="7.5" fill="#7fba00"/><rect x="0" y="8.5" width="7.5" height="7.5" fill="#00a4ef"/><rect x="8.5" y="8.5" width="7.5" height="7.5" fill="#ffb900"/></svg>
+          Sign in with Microsoft Entra ID
+        </div>
+      </div>
+      <p class="logout">Not you? <a href="#">Log out</a></p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
