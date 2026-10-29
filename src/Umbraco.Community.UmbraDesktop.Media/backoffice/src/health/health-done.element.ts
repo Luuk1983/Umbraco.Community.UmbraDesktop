@@ -16,6 +16,7 @@ import './health-ring.element.js';
 export const REASONS: Record<string, WordKey> = {
   NotFound: 'healthReasonNotFound',
   NowOwned: 'healthReasonNowOwned',
+  Kept: 'healthReasonKept',
   denied: 'healthReasonDenied',
   failed: 'healthReasonFailed',
 };

@@ -147,3 +147,40 @@ public class MediaHealthOrphanEntity
     /// <summary>When it was last written.</summary>
     public DateTime LastModifiedUtc { get; set; }
 }
+
+/// <summary>
+/// One keep; see <c>MediaKeep</c>. Not tied to a check: a keep outlives the check it was made on, and a
+/// later check only drops it when its thing is gone.
+/// </summary>
+public class MediaHealthKeepEntity
+{
+    /// <summary>The keep's number.</summary>
+    public int Id { get; set; }
+
+    /// <summary>The list it was kept from, as <c>MediaKeepKind</c>'s name.</summary>
+    public string Kind { get; set; } = string.Empty;
+
+    /// <summary>The item's key or the orphaned file's path.</summary>
+    public string Target { get; set; } = string.Empty;
+
+    /// <summary>
+    /// What was kept, so a change ends the keep (design §16.6): the item's URL, or the orphaned file's
+    /// last-written time in round-trip form. Null for an item without a file.
+    /// </summary>
+    public string? Fingerprint { get; set; }
+
+    /// <summary>Why it is kept.</summary>
+    public string? Note { get; set; }
+
+    /// <summary>When it ends, or null for always.</summary>
+    public DateTime? UntilUtc { get; set; }
+
+    /// <summary>Who kept it.</summary>
+    public Guid KeptBy { get; set; }
+
+    /// <summary>Their name when they kept it.</summary>
+    public string KeptByName { get; set; } = string.Empty;
+
+    /// <summary>When it was kept.</summary>
+    public DateTime KeptUtc { get; set; }
+}

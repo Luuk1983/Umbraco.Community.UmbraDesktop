@@ -5,9 +5,14 @@ import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import './media-health.element.js';
 import type { UmbraDesktopMediaHealthElement } from './media-health.element.js';
 import { UMBRADESKTOP_MEDIA_HEALTH_CONTEXT } from './media-health.context.js';
-import type { UmbraDesktopMediaHealthState } from './media-health.context.js';
+import type { UmbraDesktopMediaHealthBrowse, UmbraDesktopMediaHealthState } from './media-health.context.js';
+import { entriesOf } from './health-grid.js';
+import { UMBRADESKTOP_MEDIA_HEALTH_DETAILS_APP } from './health-app.js';
 import type { HealthKind } from './health-model.js';
 import { KEY_NAMES, cleanupState, result, textOf } from './health.test-helper.js';
+import { allowResizeObserverLoop } from './health.test-helper.js';
+
+allowResizeObserverLoop();
 
 /**
  * The Media Health window (design §16): one screen at a time, from the context's state, and the
@@ -39,10 +44,17 @@ async function healthWindow(state: UmbraDesktopMediaHealthState, isAdmin = true,
   const asked: string[] = [];
   const tasks: Array<Record<string, unknown>> = [];
   const held = new UmbObjectState<UmbraDesktopMediaHealthState>(state);
+  const browse = new UmbObjectState<UmbraDesktopMediaHealthBrowse>({ current: undefined, order: [], deleting: undefined, keeping: undefined, skipped: [] });
+  const attached: Array<{ name: string; detail: unknown }> = [];
   const wrapper = document.createElement('div');
+  // A window's content box, as the desktop gives the app one: the list fills it and scrolls inside.
+  wrapper.style.cssText = 'width: 960px; height: 720px;';
   document.body.appendChild(wrapper);
   removals.push(() => wrapper.remove());
   wrapper.addEventListener('umbradesktop-task', (event) => tasks.push((event as CustomEvent).detail));
+  for (const name of ['umbradesktop-open-attached', 'umbradesktop-close-attached']) {
+    wrapper.addEventListener(name, (event) => attached.push({ name, detail: (event as CustomEvent).detail }));
+  }
   new UmbContextProvider(wrapper, UMBRADESKTOP_MEDIA_HEALTH_CONTEXT, {
     getHostElement: () => wrapper,
     state: held.asObservable(),
@@ -79,7 +91,42 @@ async function healthWindow(state: UmbraDesktopMediaHealthState, isAdmin = true,
       asked.push(`show ${entry.id}`);
       return true;
     },
+    showFolderInManager: (folderKey: string | null) => {
+      asked.push(`show folder ${folderKey}`);
+      return true;
+    },
     thumbnails: async () => new Map<string, string>(),
+    browse: browse.asObservable(),
+    getBrowse: () => browse.getValue(),
+    entries: () => entriesOf(held.getValue().result?.lists ?? { unused: [], orphaned: [], oversized: [] }),
+    setCurrent: (id: string) => {
+      asked.push(`current ${id}`);
+      browse.update({ current: id });
+    },
+    setOrder: (ids: string[]) => void asked.push(`order ${ids.join(',')}`),
+    act: async (ids: string[], options: { admin: boolean; title?: string }) => void asked.push(`act ${ids.join(',')} ${options.admin}`),
+    confirmDelete: async () => {
+      asked.push('confirm delete');
+      browse.update({ deleting: undefined });
+    },
+    cancelDelete: () => {
+      asked.push('cancel delete');
+      browse.update({ deleting: undefined });
+    },
+    loadKeeps: async () => void asked.push('load keeps'),
+    askKeep: (ids: string[]) => {
+      asked.push(`ask keep ${ids.join(',')}`);
+      browse.update({ keeping: ids });
+    },
+    cancelKeep: () => {
+      asked.push('cancel keep');
+      browse.update({ keeping: undefined });
+    },
+    keep: async (note: string, duration: string) => {
+      asked.push(`keep ${duration} ${note}`.trim());
+      browse.update({ keeping: undefined });
+    },
+    stopKeeping: async (ids: string[]) => void asked.push(`stop keeping ${ids.join(',')}`),
   } as never).hostConnected();
   new UmbContextProvider(wrapper, UMB_CURRENT_USER_CONTEXT, {
     getHostElement: () => wrapper,
@@ -96,7 +143,7 @@ async function healthWindow(state: UmbraDesktopMediaHealthState, isAdmin = true,
     held.setValue(next);
     await settle();
   };
-  return { element, held, asked, tasks, screen, settle, set, text: () => textOf(element) };
+  return { element, held, browse, asked, attached, tasks, screen, settle, set, text: () => textOf(element) };
 }
 
 describe('the Media Health window', () => {
@@ -135,12 +182,12 @@ describe('the Media Health window', () => {
     sheet.dispatchEvent(new CustomEvent('health-cleanup-cancel', { bubbles: true, composed: true }));
     await settle();
     expect(element.shadowRoot!.querySelector('umbradesktop-health-cleanup-sheet')).to.equal(null);
-    expect(asked.filter((each) => each !== 'watch')).to.deep.equal(['sync']);
+    expect(asked.filter((each) => each !== 'watch'), 'the keeps are read again before the sheet asks (plan Review Focus 5)').to.deep.equal(['sync', 'load keeps']);
     overview.dispatchEvent(new CustomEvent('health-cleanup', { detail: { kinds: ['unused', 'orphaned'] }, bubbles: true, composed: true }));
     await settle();
     element.shadowRoot!.querySelector('umbradesktop-health-cleanup-sheet')!.dispatchEvent(new CustomEvent('health-cleanup-confirm', { bubbles: true, composed: true }));
     await settle();
-    expect(asked.filter((each) => each !== 'watch')).to.deep.equal(['sync', 'cleanUp unused,orphaned Oversized images']);
+    expect(asked.filter((each) => each !== 'watch')).to.deep.equal(['sync', 'load keeps', 'load keeps', 'cleanUp unused,orphaned Oversized images']);
   });
 
   it('never sends orphaned files from someone who is not an administrator', async () => {
@@ -149,7 +196,7 @@ describe('the Media Health window', () => {
     await settle();
     element.shadowRoot!.querySelector('umbradesktop-health-cleanup-sheet')!.dispatchEvent(new CustomEvent('health-cleanup-confirm', { bubbles: true, composed: true }));
     await settle();
-    expect(asked.filter((each) => each !== 'watch')).to.deep.equal(['sync', 'cleanUp unused Oversized images']);
+    expect(asked.filter((each) => each !== 'watch')).to.deep.equal(['sync', 'load keeps', 'cleanUp unused Oversized images']);
   });
 
   it('shows Done after Clean up, with Undo and the way back', async () => {
@@ -237,7 +284,7 @@ describe('the Media Health window', () => {
     expect(notice.getAttribute('body')).to.equal('Boom');
   });
 
-  describe('the grid and the preview (design §16.4, §16.5)', () => {
+  describe('the folders, the list and the details pane (design §16.15)', () => {
     /**
      * Fire an event from inside the window, as a screen would.
      * @param element The window.
@@ -248,73 +295,136 @@ describe('the Media Health window', () => {
     const fire = (element: HTMLElement, from: string, name: string, detail?: unknown) =>
       element.shadowRoot!.querySelector(from)!.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true }));
 
-    it('opens the grid on the row asked for, and goes back to the overview from Back', async () => {
+    /** The list, with what the window handed it. */
+    const listOf = (element: HTMLElement) =>
+      element.shadowRoot!.querySelector<HTMLElement & { chip: string; folderKey?: string | null; exact: boolean; current?: string }>('umbradesktop-health-list')!;
+
+    it('opens a folder’s breakdown from the overview, walks it, and goes back to the overview', async () => {
+      const { element, screen, settle, asked } = await healthWindow(idle({ result: result() }));
+      fire(element, 'umbradesktop-health-overview', 'health-open-folder', { folderKey: 'f' });
+      await settle();
+      expect(screen()).to.equal('folders');
+      const folders = () => element.shadowRoot!.querySelector<HTMLElement & { folderKey: string | null }>('umbradesktop-health-folders')!;
+      expect(folders().folderKey).to.equal('f');
+      fire(element, 'umbradesktop-health-folders', 'health-open-folder', { folderKey: null });
+      await settle();
+      expect(folders().folderKey).to.equal(null);
+      fire(element, 'umbradesktop-health-folders', 'health-show-folder', { folderKey: 'p' });
+      expect(asked).to.include('show folder p');
+      fire(element, 'umbradesktop-health-folders', 'health-close-folders');
+      await settle();
+      expect(screen()).to.equal('overview');
+    });
+
+    it('opens the list on the row asked for, and goes back to where it was opened from', async () => {
       const { element, screen, settle } = await healthWindow(idle({ result: result() }));
       fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'orphaned' });
       await settle();
-      expect(screen()).to.equal('grid');
-      const grid = element.shadowRoot!.querySelector<HTMLElement & { chip: string; folderKey?: string | null }>('umbradesktop-health-grid')!;
-      expect(grid.chip).to.equal('orphaned');
-      fire(element, 'umbradesktop-health-grid', 'health-close-grid');
+      expect(screen()).to.equal('list');
+      expect(listOf(element).chip).to.equal('orphaned');
+      fire(element, 'umbradesktop-health-list', 'health-close-grid');
       await settle();
       expect(screen()).to.equal('overview');
+      fire(element, 'umbradesktop-health-overview', 'health-open-folder', { folderKey: 'f' });
+      await settle();
+      fire(element, 'umbradesktop-health-folders', 'health-open-grid', { kind: 'unused', folderKey: 'f', exact: true });
+      await settle();
+      expect([listOf(element).chip, listOf(element).folderKey, listOf(element).exact]).to.deep.equal(['unused', 'f', true]);
+      fire(element, 'umbradesktop-health-list', 'health-close-grid');
+      await settle();
+      expect(screen(), 'back to the folder it came from').to.equal('folders');
     });
 
     it('opens a folder on its first kind with anything in it', async () => {
       const { element, settle } = await healthWindow(idle({ result: result() }));
       fire(element, 'umbradesktop-health-overview', 'health-open-grid', { folderKey: 'p' });
       await settle();
-      const grid = element.shadowRoot!.querySelector<HTMLElement & { chip: string; folderKey?: string | null }>('umbradesktop-health-grid')!;
-      expect([grid.chip, grid.folderKey]).to.deep.equal(['unused', 'p']);
+      expect([listOf(element).chip, listOf(element).folderKey]).to.deep.equal(['unused', 'p']);
     });
 
-    it('moves items to the bin, opens images in Optimize images, and shows an item in the Media Manager', async () => {
-      const { element, asked, settle } = await healthWindow(idle({ result: result() }));
+    it('makes a clicked row current and shows it in the desktop’s attached pane, then closes the pane on the way out', async () => {
+      const { element, settle, asked, attached } = await healthWindow(idle({ result: result() }));
       fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'unused' });
       await settle();
-      fire(element, 'umbradesktop-health-grid', 'health-trash', { ids: ['old', 'persona'] });
-      fire(element, 'umbradesktop-health-grid', 'health-optimize', { ids: ['big'] });
-      fire(element, 'umbradesktop-health-grid', 'health-preview', { id: 'old', ids: ['old'] });
+      fire(element, 'umbradesktop-health-list', 'health-order', { ids: ['old', 'persona'] });
+      fire(element, 'umbradesktop-health-list', 'health-current', { id: 'old' });
       await settle();
-      fire(element, 'umbradesktop-health-preview', 'health-show-in-manager', { entry: { id: 'old' } });
+      expect(asked).to.include('order old,persona');
+      expect(asked).to.include('current old');
+      expect(listOf(element).current, 'the list marks it from the context').to.equal('old');
+      expect(attached).to.deep.equal([
+        { name: 'umbradesktop-open-attached', detail: { key: 'details', app: UMBRADESKTOP_MEDIA_HEALTH_DETAILS_APP, name: 'Details', icon: 'icon-info' } },
+      ]);
+      fire(element, 'umbradesktop-health-list', 'health-close-grid');
       await settle();
-      expect(asked.filter((each) => !['watch', 'sync'].includes(each))).to.deep.equal(['trash old,persona', 'optimize big Oversized images', 'show old']);
+      expect(attached[attached.length - 1]).to.deep.equal({ name: 'umbradesktop-close-attached', detail: { key: 'details' } });
+    });
+
+    it('acts on a selection through the context, as the administrator the person is', async () => {
+      const { element, settle, asked } = await healthWindow(idle({ result: result() }), false);
+      fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'unused' });
+      await settle();
+      fire(element, 'umbradesktop-health-list', 'health-act', { ids: ['old', 'persona'] });
+      await settle();
+      expect(asked).to.include('act old,persona false');
     });
 
     it('asks before deleting orphaned files, in the Clean up sheet’s words, and deletes only on yes', async () => {
-      const { element, asked, settle, text } = await healthWindow(idle({ result: result() }));
+      const { element, browse, asked, settle, text } = await healthWindow(idle({ result: result() }));
       fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'orphaned' });
       await settle();
-      fire(element, 'umbradesktop-health-grid', 'health-delete', { ids: ['orphan:1/x.jpg'] });
+      browse.update({ deleting: ['orphan:1/x.jpg'] });
       await settle();
       expect(text()).to.contain('Delete 30 B for good?');
       expect(text()).to.contain('1 orphaned files are deleted for good');
       fire(element, 'umbradesktop-health-cleanup-sheet', 'health-cleanup-cancel');
       await settle();
       expect(element.shadowRoot!.querySelector('umbradesktop-health-cleanup-sheet')).to.equal(null);
-      fire(element, 'umbradesktop-health-grid', 'health-delete', { ids: ['orphan:1/x.jpg'] });
+      browse.update({ deleting: ['orphan:1/x.jpg'] });
       await settle();
       fire(element, 'umbradesktop-health-cleanup-sheet', 'health-cleanup-confirm');
       await settle();
-      expect(asked.filter((each) => each.startsWith('delete'))).to.deep.equal(['delete 1/x.jpg']);
+      expect(asked.filter((each) => each.endsWith('delete'))).to.deep.equal(['cancel delete', 'confirm delete']);
     });
 
-    it('previews over the grid in the grid’s order, and closes back to it', async () => {
-      const { element, settle } = await healthWindow(idle({ result: result() }));
+    it('says which files a Delete left on disk, and why', async () => {
+      const { element, browse, settle } = await healthWindow(idle({ result: result() }));
+      fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'orphaned' });
+      await settle();
+      browse.update({ skipped: [{ relativePath: '2/y.png', reason: 'NowOwned' }] });
+      await settle();
+      const notice = element.shadowRoot!.querySelector('umbradesktop-notice[name="delete"]')!;
+      expect(notice.getAttribute('body')).to.contain('2/y.png (an item owns it now)');
+    });
+
+    it('asks Keep… from the list or the pane in its sheet, and keeps only on Keep', async () => {
+      const { element, asked, settle, text } = await healthWindow(idle({ result: result() }));
       fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'unused' });
       await settle();
-      fire(element, 'umbradesktop-health-grid', 'health-preview', { id: 'persona', ids: ['old', 'persona'] });
+      fire(element, 'umbradesktop-health-list', 'health-keep', { ids: ['old'] });
       await settle();
-      const preview = element.shadowRoot!.querySelector<HTMLElement & { current: string; entries: Array<{ id: string }> }>('umbradesktop-health-preview')!;
-      expect(preview.current).to.equal('persona');
-      expect(preview.entries.map((each) => each.id)).to.deep.equal(['old', 'persona']);
-      expect(element.shadowRoot!.querySelector('umbradesktop-health-grid'), 'the grid stays under it').to.not.equal(null);
-      fire(element, 'umbradesktop-health-preview', 'health-preview-close');
+      expect(text()).to.contain('Keep Old banner?');
+      fire(element, 'umbradesktop-health-keep-sheet', 'health-keep-cancel');
       await settle();
-      expect(element.shadowRoot!.querySelector('umbradesktop-health-preview')).to.equal(null);
+      expect(element.shadowRoot!.querySelector('umbradesktop-health-keep-sheet')).to.equal(null);
+      fire(element, 'umbradesktop-health-list', 'health-keep', { ids: ['old', 'persona'] });
+      await settle();
+      expect(text()).to.contain('Keep 2 items?');
+      fire(element, 'umbradesktop-health-keep-sheet', 'health-keep-confirm', { note: 'Press', duration: 'Always' });
+      await settle();
+      expect(asked.filter((each) => each.includes('keep'))).to.deep.equal(['ask keep old', 'cancel keep', 'ask keep old,persona', 'keep Always Press']);
     });
 
-    it('leaves the grid for Checking when a check starts', async () => {
+    it('stops keeping what the Kept tab asks', async () => {
+      const { element, asked, settle } = await healthWindow(idle({ result: result() }));
+      fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'unused' });
+      await settle();
+      fire(element, 'umbradesktop-health-list', 'health-stop-keeping', { ids: ['old'] });
+      await settle();
+      expect(asked).to.include('stop keeping old');
+    });
+
+    it('leaves the list for Checking when a check starts', async () => {
       const { element, screen, set, settle } = await healthWindow(idle({ result: result() }));
       fire(element, 'umbradesktop-health-overview', 'health-open-grid', { kind: 'unused' });
       await settle();

@@ -40,6 +40,9 @@ public class MediaHealthDbContext : DbContext
     /// <summary>The last check's orphaned files.</summary>
     public DbSet<MediaHealthOrphanEntity> Orphans => Set<MediaHealthOrphanEntity>();
 
+    /// <summary>The keeps: what someone marked as wanted, across checks (design §16.6).</summary>
+    public DbSet<MediaHealthKeepEntity> Keeps => Set<MediaHealthKeepEntity>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -77,6 +80,17 @@ public class MediaHealthDbContext : DbContext
             entity.Property(x => x.RelativePath).HasMaxLength(MediaHealthStore.UrlLength).IsRequired();
             entity.Property(x => x.Url).HasMaxLength(MediaHealthStore.UrlLength).IsRequired();
             entity.HasIndex(x => x.CheckId);
+        });
+        modelBuilder.Entity<MediaHealthKeepEntity>(entity =>
+        {
+            // No index beyond the key: keeps are tens, not thousands, and a 2,000-character target cannot be indexed on SQL Server.
+            entity.ToTable("umbraDesktopMediaHealthKeep");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Kind).HasMaxLength(10).IsRequired();
+            entity.Property(x => x.Target).HasMaxLength(MediaHealthStore.UrlLength).IsRequired();
+            entity.Property(x => x.Fingerprint).HasMaxLength(MediaHealthStore.UrlLength);
+            entity.Property(x => x.Note).HasMaxLength(Keep.MediaKeepStore.NoteLength);
+            entity.Property(x => x.KeptByName).HasMaxLength(255).IsRequired();
         });
     }
 }

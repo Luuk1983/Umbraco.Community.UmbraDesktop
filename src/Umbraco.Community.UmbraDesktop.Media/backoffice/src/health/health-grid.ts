@@ -1,13 +1,13 @@
-import type { HealthFolder, HealthItem, HealthOrphan } from './health.client.js';
+import type { HealthFolder, HealthItem, HealthKeep, HealthOrphan } from './health.client.js';
 import { HEALTH_KINDS } from './health-model.js';
 import type { HealthKind, HealthLists } from './health-model.js';
-import { THUMB_EDGE } from './health-media.js';
 
 /**
- * The grid's sums (design §16.4, mock scene 5): one entry per thing a check found, grouped by folder,
- * filtered by chip, folder and name, sorted, and the selection over it. Orphaned files form one group of
- * their own (see {@link ORPHAN_GROUP}). Pure, like `health-model.ts`,
- * so the grid's arithmetic is tested without rendering; the element only draws what this returns.
+ * The cleanup list's sums (design §16.4, reworked as a table in §16.15): one entry per thing a check
+ * found, grouped by folder, filtered by tab, folder and name, sorted, the selection over it, and where
+ * the details pane moves on to. Orphaned files form one group of their own (see {@link ORPHAN_GROUP}).
+ * Pure, like `health-model.ts`, so the list's arithmetic is tested without rendering; the element only
+ * draws what this returns. The file keeps the name it had while the list was a grid of cards.
  */
 
 /** One thing the grid shows: an item, or an orphaned file, under one kind. */
@@ -32,13 +32,25 @@ export interface HealthEntry {
   item?: HealthItem;
   /** The orphaned file, when it is one. */
   orphan?: HealthOrphan;
+  /**
+   * Its keep (design §16.6): one that holds puts the entry under Kept, out of its own list; one that
+   * has ended leaves it in its list, where its row says "kept until" with the old note.
+   */
+  keep?: HealthKeep;
 }
 
-/**
- * A chip at the top of the grid. Kept (`'kept'`) joins in step 3 (design §16.6); until then the grid
- * draws no Kept chip rather than one that is always empty.
- */
+/** A tab at the top of the list: one per kind, and Kept, every keep that holds (design §16.6). */
 export type HealthChip = HealthKind | 'kept';
+
+/** The tabs, in the order the list draws them: the three kinds, then Kept. */
+export const HEALTH_CHIPS: ReadonlyArray<HealthChip> = [...HEALTH_KINDS, 'kept'];
+
+/**
+ * The tab an entry is under: Kept while its keep holds, its kind otherwise, an ended keep included.
+ * @param entry The entry.
+ * @returns The tab.
+ */
+export const chipOf = (entry: HealthEntry): HealthChip => (entry.keep && !entry.keep.ended ? 'kept' : entry.kind);
 
 /** How the grid is sorted; largest first by default (design §16.4). */
 export type HealthSort = 'largest' | 'smallest' | 'name';
@@ -51,6 +63,11 @@ export interface HealthGridQuery {
   chip: HealthChip;
   /** A folder's key for it and everything under it, null for the root alone, absent for every folder. */
   folderKey?: string | null;
+  /**
+   * Only the items directly in the folder, not in the folders under it: the breakdown's line of items
+   * directly in a folder opens the list on those (design §16.15).
+   */
+  exact?: boolean;
   search: string;
   sort: HealthSort;
 }
@@ -79,18 +96,19 @@ export type HealthGroupState = 'all' | 'some' | 'none';
  */
 export const ORPHAN_GROUP = 'orphan:';
 
-/** How many rows of cells a group shows before "+n more" (design §16.4): its first. */
-export const GROUP_PREVIEW_ROWS = 1;
-
-/** The space between two cells of the grid, in CSS pixels; the CSS and {@link cellsPerRow} both read it. */
-export const CELL_GAP = 8;
-
 /**
- * A cell's height in CSS pixels: square, the thumbnail's edge, since core's media card (`uui-card-media`,
- * as the Media Manager draws it) lays its name and size over the picture's foot. The CSS sizes cells
- * from it, and it is what `contain-intrinsic-size` tells the browser a row is before drawing one.
+ * How many rows a page of the list holds (design §16.17), as core's collections page theirs: a library
+ * with thousands of unused items draws a hundred rows at a time, each a table row with a thumbnail.
  */
-export const CELL_HEIGHT = THUMB_EDGE;
+export const PAGE_ROWS = 100;
+
+/** One group's part of a page: the whole group, for its checkbox and its count, and its rows on the page. */
+export interface HealthPagePart {
+  group: HealthGroup;
+  entries: HealthEntry[];
+  /** Whether the group began on an earlier page, so its row says it goes on. */
+  continued: boolean;
+}
 
 /** The id an orphaned file has in the grid. */
 const orphanId = (orphan: HealthOrphan): string => `orphan:${orphan.relativePath}`;
@@ -113,12 +131,18 @@ const directoryOf = (relativePath: string): string => {
 const fileNameOf = (relativePath: string): string => relativePath.slice(relativePath.lastIndexOf('/') + 1);
 
 /**
- * Every entry of the three lists, in their order (largest first).
+ * Every entry of the three lists, in their order (largest first), each carrying its keep when one has
+ * ended, for the badge.
  * @param lists The three lists.
+ * @param ended The keeps that ended, by entry id (`keepingOf`); none by default.
  * @returns The entries, unused first, then orphaned, then oversized.
  */
-export function entriesOf(lists: HealthLists): HealthEntry[] {
-  const ofItem = (kind: HealthKind) => (item: HealthItem): HealthEntry => ({
+export function entriesOf(lists: HealthLists, ended: ReadonlyMap<string, HealthKeep> = new Map()): HealthEntry[] {
+  const withKeep = (entry: HealthEntry): HealthEntry => {
+    const keep = ended.get(entry.orphan ? entry.id : entry.id.toLowerCase());
+    return keep ? { ...entry, keep } : entry;
+  };
+  const ofItem = (kind: HealthKind) => (item: HealthItem): HealthEntry => withKeep({
     id: item.key,
     kind,
     name: item.name,
@@ -132,7 +156,7 @@ export function entriesOf(lists: HealthLists): HealthEntry[] {
   return [
     ...lists.unused.map(ofItem('unused')),
     ...lists.orphaned.map(
-      (orphan): HealthEntry => ({
+      (orphan): HealthEntry => withKeep({
         id: orphanId(orphan),
         kind: 'orphaned',
         name: fileNameOf(orphan.relativePath),
@@ -155,12 +179,13 @@ export function entriesOf(lists: HealthLists): HealthEntry[] {
  * @param entry The entry.
  * @param folderKey The folder asked for; undefined for every folder.
  * @param parents Each folder's parent, by key.
+ * @param exact Whether only the items directly in it count.
  * @returns True when it is in it.
  */
-function inFolder(entry: HealthEntry, folderKey: string | null | undefined, parents: ReadonlyMap<string, string | null>): boolean {
+function inFolder(entry: HealthEntry, folderKey: string | null | undefined, parents: ReadonlyMap<string, string | null>, exact = false): boolean {
   if (folderKey === undefined) return true;
   if (entry.orphan) return false;
-  if (folderKey === null) return entry.folderKey === null;
+  if (folderKey === null || exact) return entry.folderKey === folderKey;
   let key: string | null | undefined = entry.folderKey;
   // Bounded by the folder count, so a parent loop in bad data cannot hang the window.
   for (let hops = 0; key && hops <= parents.size; hops++) {
@@ -178,16 +203,17 @@ function inFolder(entry: HealthEntry, folderKey: string | null | undefined, pare
 const parentsOf = (folders: ReadonlyArray<HealthFolder>): Map<string, string | null> => new Map(folders.map((folder) => [folder.key, folder.parentKey]));
 
 /**
- * How many entries each chip has in a folder, for the chips' counts.
+ * How many entries each tab has in a folder, for the tabs' counts.
  * @param entries Every entry.
  * @param folderKey The folder the grid shows; undefined for every folder.
  * @param folders Every folder.
- * @returns The count per kind.
+ * @param exact Whether only the items directly in the folder count.
+ * @returns The count per tab.
  */
-export function chipCounts(entries: ReadonlyArray<HealthEntry>, folderKey: string | null | undefined, folders: ReadonlyArray<HealthFolder>): Record<HealthKind, number> {
+export function chipCounts(entries: ReadonlyArray<HealthEntry>, folderKey: string | null | undefined, folders: ReadonlyArray<HealthFolder>, exact = false): Record<HealthChip, number> {
   const parents = parentsOf(folders);
-  const counts = Object.fromEntries(HEALTH_KINDS.map((kind) => [kind, 0])) as Record<HealthKind, number>;
-  for (const entry of entries) if (inFolder(entry, folderKey, parents)) counts[entry.kind]++;
+  const counts = Object.fromEntries(HEALTH_CHIPS.map((chip) => [chip, 0])) as Record<HealthChip, number>;
+  for (const entry of entries) if (inFolder(entry, folderKey, parents, exact)) counts[chipOf(entry)]++;
   return counts;
 }
 
@@ -219,7 +245,7 @@ export function gridOf(entries: ReadonlyArray<HealthEntry>, query: HealthGridQue
   const search = query.search.trim().toLocaleLowerCase();
   const groups = new Map<string, HealthGroup>();
   for (const entry of entries) {
-    if (entry.kind !== query.chip || !inFolder(entry, query.folderKey, parents)) continue;
+    if (chipOf(entry) !== query.chip || !inFolder(entry, query.folderKey, parents, query.exact)) continue;
     if (search && !entry.name.toLocaleLowerCase().includes(search)) continue;
     const key = entry.orphan ? ORPHAN_GROUP : (entry.folderKey ?? '');
     const group = groups.get(key) ?? { key, label: labelOf(entry), entries: [], bytes: 0, unknown: 0 };
@@ -245,29 +271,72 @@ function labelOf(entry: HealthEntry): string {
 }
 
 /**
- * How many cells a row has room for.
- * @param width The grid's width, in CSS pixels.
- * @returns At least one.
+ * How many pages the groups fill, at least one.
+ * @param groups The groups.
+ * @returns The page count.
  */
-export function cellsPerRow(width: number): number {
-  return Math.max(1, Math.floor((width + CELL_GAP) / (THUMB_EDGE + CELL_GAP)));
+export function pageCount(groups: ReadonlyArray<HealthGroup>): number {
+  const rows = groups.reduce((sum, group) => sum + group.entries.length, 0);
+  return Math.max(1, Math.ceil(rows / PAGE_ROWS));
 }
 
 /**
- * A group's rows of cells: its first {@link GROUP_PREVIEW_ROWS} with "+n more" in the last place when
- * there is more, or every row once the person opened it.
- * @param group The group.
- * @param columns How many cells a row has.
- * @param open Whether the group shows everything.
- * @returns The rows, and how many entries "+n more" stands for.
+ * One page of the list: {@link PAGE_ROWS} rows in the groups' order, each group cut where the page
+ * cuts it. A page past the end is the last.
+ * @param groups The groups.
+ * @param page The page, from 1.
+ * @returns The groups' parts on that page.
  */
-export function rowsOf(group: HealthGroup, columns: number, open: boolean): { rows: HealthEntry[][]; more: number } {
-  const room = columns * GROUP_PREVIEW_ROWS;
-  const fits = open || group.entries.length <= room;
-  const shown = fits ? group.entries : group.entries.slice(0, room - 1);
-  const rows: HealthEntry[][] = [];
-  for (let start = 0; start < shown.length; start += columns) rows.push(shown.slice(start, start + columns));
-  return { rows, more: group.entries.length - shown.length };
+export function pageOf(groups: ReadonlyArray<HealthGroup>, page: number): HealthPagePart[] {
+  const last = pageCount(groups);
+  const from = (Math.min(Math.max(1, page), last) - 1) * PAGE_ROWS;
+  const to = from + PAGE_ROWS;
+  const parts: HealthPagePart[] = [];
+  let at = 0;
+  for (const group of groups) {
+    const start = Math.max(from, at);
+    const end = Math.min(to, at + group.entries.length);
+    if (start < end) parts.push({ group, entries: group.entries.slice(start - at, end - at), continued: start > at });
+    at += group.entries.length;
+  }
+  return parts;
+}
+
+/**
+ * The page a row is on, so the list turns to the row the details pane shows.
+ * @param groups The groups.
+ * @param id The entry.
+ * @returns The page, from 1, or undefined when the row is not in the list.
+ */
+export function pageWith(groups: ReadonlyArray<HealthGroup>, id: string): number | undefined {
+  const at = orderOf(groups).indexOf(id);
+  return at < 0 ? undefined : Math.floor(at / PAGE_ROWS) + 1;
+}
+
+/**
+ * Every row of the list in its order, over every page: what Previous and Next walk.
+ * @param groups The groups.
+ * @returns The entries' ids.
+ */
+export function orderOf(groups: ReadonlyArray<HealthGroup>): string[] {
+  return groups.flatMap((group) => group.entries.map((entry) => entry.id));
+}
+
+/**
+ * Where the details pane goes once rows went (design §16.15: an action works on the current row and
+ * moves on): the next row of the list still there, or the one before it at the end, or none. A current
+ * row that did not go, or that is not in the list, stays.
+ * @param order The list's order.
+ * @param current The current row.
+ * @param gone The rows that went.
+ * @returns The row to show next.
+ */
+export function nextAfter(order: ReadonlyArray<string>, current: string, gone: ReadonlyArray<string>): string | undefined {
+  const went = new Set(gone);
+  const at = order.indexOf(current);
+  if (!went.has(current) || at < 0) return current;
+  const after = order.slice(at + 1).find((id) => !went.has(id));
+  return after ?? order.slice(0, at).reverse().find((id) => !went.has(id));
 }
 
 /**
@@ -306,6 +375,21 @@ export class HealthSelection {
   toggle(id: string): HealthSelection {
     const next = new Set(this.ids);
     if (!next.delete(id)) next.add(id);
+    return new HealthSelection(next);
+  }
+
+  /**
+   * Select or unselect many at once, as a drag over rows or down the checkbox column does.
+   * @param ids The entries.
+   * @param on Whether they end up selected.
+   * @returns The new selection.
+   */
+  with(ids: Iterable<string>, on: boolean): HealthSelection {
+    const next = new Set(this.ids);
+    for (const id of ids) {
+      if (on) next.add(id);
+      else next.delete(id);
+    }
     return new HealthSelection(next);
   }
 

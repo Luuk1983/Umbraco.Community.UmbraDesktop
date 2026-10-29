@@ -167,6 +167,49 @@ namespace Umbraco.Community.UmbraDesktop.Media.Health.Data.Migrations.Sqlite
                     b.ToTable("umbraDesktopMediaHealthItem", (string)null);
                 });
 
+            modelBuilder.Entity("Umbraco.Community.UmbraDesktop.Media.Health.Data.MediaHealthKeepEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Fingerprint")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("KeptBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("KeptByName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("KeptUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Target")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UntilUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("umbraDesktopMediaHealthKeep", (string)null);
+                });
+
             modelBuilder.Entity("Umbraco.Community.UmbraDesktop.Media.Health.Data.MediaHealthOrphanEntity", b =>
                 {
                     b.Property<long>("Id")

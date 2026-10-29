@@ -1,7 +1,7 @@
 ---
 id: media-health
 title: Media Cleanup
-description: Check the whole media library for unused items, orphaned files on disk and oversized images, look through them, and clean them up in one go or one at a time, with Undo.
+description: Check the whole media library for unused items, orphaned files on disk and oversized images, see storage by folder, look through them, keep what is wanted, and clean up the rest in one go or one at a time, with Undo.
 sidebar_position: 5
 ---
 
@@ -9,9 +9,10 @@ sidebar_position: 5
 
 **Media Cleanup** checks the whole media library and shows what can go: items no page uses, files on
 disk that no item owns, and images far bigger than any page needs. One **Clean up** deals with all
-three, and asks first. To decide for yourself, look through each list and act on part of it, or one
-picture at a time. It is in the launcher's **Media** group, after **Image Editor**, for everyone who
-may use the Media section.
+three, and asks first. To decide for yourself, see which folders hold the space, look through each
+list and act on part of it, or go through it one at a time beside the list. To mark something as
+wanted, for everyone, keep it. It is in the launcher's **Media** group, after **Image Editor**, for
+everyone who may use the Media section.
 
 ## Check the library
 
@@ -39,8 +40,8 @@ When the check ends, the window shows:
 - **A bar** of the whole library cut by health: what is in use on the left, and what Clean up can free
   on the right (oversized, orphaned, unused). Under it, how much is **in use** and how much **can be
   freed**.
-- **Three rows**, each in the bar's colour, with a count and a size, and under the words as many
-  thumbnails as fit:
+- **Three cards**, each in the bar's colour, with its size, a count, a few thumbnails and **See all**.
+  In a narrow window they are three rows, with an arrow instead of the thumbnails:
   - **Unused items**: items no page uses. Nothing in a page's content picks them, and nothing picks a
     folder they are in. An item used in a way Umbraco does not track, such as a file address typed
     into a text field, counts as unused.
@@ -52,8 +53,11 @@ When the check ends, the window shows:
   says **Size unknown**, and a row with some of them says **at least** the size it knows, with how
   many it could not count under it. The bar leaves them out, since it cannot draw a size nobody
   knows.
-- **Where the space goes**: the largest top-level folders, each bar coloured the same way, so a folder
-  that is mostly unused stands out.
+- Under a card's count, how many someone keeps out of that list, such as **12 kept**. See
+  [Keep what is wanted](#keep-what-is-wanted).
+- **Storage by folder**, a section of its own under **Clean up**: the largest top-level folders,
+  each bar coloured the same way, so a folder that is mostly unused stands out. In a very wide window
+  it sits beside the cards.
 
 The result is kept in the site's database until the next check, so it survives a restart and is the
 same on every server. A Clean up updates it, so the next person sees what is left. Other changes in
@@ -63,79 +67,158 @@ A check more than a day old gets a warning at the top of the window, and **Clean
 until you select **Check again**: pages may have changed since. **Clean up** also stops if a newer
 check came in while the window was open, and says so, so you look it over first.
 
+## See storage by folder
+
+To find which folders hold what can go, open **Storage by folder**. It is a tree, like the Media
+Manager's: a folder is anything that holds items, so an item with items under it counts too.
+
+1. On the overview, under **Storage by folder**, select a folder to open the tree with that folder
+   shown, or select **Browse all folders** for the top.
+2. To see what is inside a folder, select its row or its arrow. Only a folder with folders under it has
+   an arrow. Select it again to close it.
+
+The first row is the whole library. Each row has a bar, its size, and a button for each kind of thing
+in it that can go, such as **214 unused** or **31 oversized**; a row with nothing to clean up has none.
+Under an open folder, a line counts the items directly in it, not in a folder under it.
+
+- To see what can go, select one of a row's buttons. The list opens on that kind, for that folder and
+  everything under it; on the library's row, for the whole library. A button on the line of items
+  directly in a folder opens just those.
+- To open a folder in the library, select the **Open in Media Manager** icon at the end of its row.
+  The library's row opens the library.
+- To return to the overview, select **Back**.
+
+Orphaned files belong to no folder, so the tree leaves them out; they are on the overview.
+
 ## Look through a list
 
-Clean up deals with whole rows. To see what is in a row, or to act on part of it, open the list.
+Clean up deals with whole kinds. To see what is in one, or to act on part of it, open the list.
 
-1. On the overview, select a row's arrow (**See all**) or its thumbnails. To look in one folder,
-   select it under **Where the space goes**, or select **All folders** for every folder.
-2. Choose a tab: **Unused items**, **Orphaned files** or **Oversized images**. Each tab counts what
-   it has in the folder you opened.
-3. Optional: to narrow the list, type in **Search names**, or choose **Largest first**, **Smallest
-   first** or **By name**.
+1. On the overview, select a kind's **See all** or its thumbnails, or select a button in **Storage by
+   folder**.
+2. Choose a tab: **Unused items**, **Orphaned files**, **Oversized images** or **Kept**. Each tab
+   counts what it has in the folder you opened.
+3. Optional: to narrow the list, type a name in the search field, or choose **Largest first**,
+   **Smallest first** or **By name**.
 
-The list is grouped by folder, the largest group first. Each group shows its first row of pictures,
-and **+n more** in the last place shows the rest. Orphaned files belong to no folder, so they are one
-group, **Files on disk**. A folder you opened includes the folders under it; **All folders** beside
-its name shows every folder again. To return to the overview, select **Back**.
+The list is a table: a small picture, the whole name, the folder, the size and when it last changed.
+It is grouped by folder, the largest group first, and each group's row says how many it has and their
+size. The list shows 100 rows a page; to see the rest, use the page buttons under the table, as in the
+Media section. A folder that goes on over a page starts the next page with its row again. Orphaned files
+belong to no folder, so they are one group, **Files on disk**. A folder you opened includes the
+folders under it; **All folders** beside its name shows every folder again. In a narrow window the
+folder and the date are left out. To return to where you came from, select **Back**.
 
 ## Act on part of a list
 
-1. Select what to act on: tick a picture's checkbox, which shows when you point at it, or tick a
-   group's checkbox for the whole group.
-2. In the bar at the foot, which says how many are selected and their size, select the tab's action:
+1. Select what to act on:
+   - Tick a row's checkbox, a group's checkbox for the whole group, or the checkbox in the header for
+     everything on the page.
+   - To select many rows at once, press anywhere in the table but a checkbox, and drag a box over
+     them. Every row the box touches is selected. Near the top or bottom edge the list scrolls along.
+   - To tick a run of rows, press on a checkbox and drag down the checkbox column. Started on a ticked
+     row, the drag unticks instead.
+2. In the bar at the foot, which says how many are selected out of how many, and their size, select
+   the tab's action:
    - **Move to recycle bin** for unused items.
    - **Delete** for orphaned files. A sheet asks first, in the same words as Clean up, since the
      files are deleted for good. Only an administrator can; for anyone else **Delete** is greyed and
      says why.
    - **Optimize** for oversized images, which opens them in [Optimize images](optimize-images.md).
 
-What went leaves the list at once. To unselect everything, select **Clear selection**.
+What went leaves the list at once. To unselect everything, select **Clear selection**, or select
+the empty space under the rows. Selecting a row never clears what you ticked.
 
-## Look at one at a time
+## Go through it one at a time
 
-Select a picture in the list to see it large over the list. It loads in a moment, at the size the
-window shows it, even for a very large original. A PDF shows in the browser's own viewer; another
-file shows an icon.
+Select a row anywhere but its checkbox. The row is marked, and **Details** opens beside the window, as
+the desktop opens a preview: a pane inside the window when there is room, or a window of its own
+grouped with it when there is not. You can pop it out, dock it and close it as any other pane.
+Selecting a row never ticks it.
 
-Under it are the facts that decide: its folder (for an orphaned file, where it is on disk), its size
-in pixels, when it last changed, its size, and for an unused item that no page uses it.
+The pane is laid out as the Media section's **Info** view. It shows the picture large, loaded at the
+size it is drawn, even for a very large original, with its name and why it is listed under it. The
+action and **Previous** and **Next** stay at the foot of the pane, however short it is. A PDF
+shows in the browser's own viewer; another file shows an icon. Under **General** are the facts that
+decide: its folder (for an orphaned file, where it is on disk), its size in pixels, its size and when it
+last changed.
 
-- To go through the list, select **Next** or **Previous**.
-- To act on it, select the tab's action. After **Move to recycle bin** or **Optimize** the next one
-  shows at once, so you can go through a list one by one. After **Delete**, which asks first, it
-  moves on once the file has gone.
-- To find an item in the library, select **Show in Media Manager**. A Media Manager window opens at
+- To go through the list, select **Next** or **Previous** in the pane. The list turns the page when
+  the next row is on the next page.
+- To act on it, select the tab's action in the pane. After **Move to recycle bin** or **Optimize** the
+  next row shows at once, so you can go through a list one by one. After **Delete**, which asks first,
+  it moves on once the file has gone.
+- To find an item in the library, select the **Show in Media Manager** icon on the picture's corner. A Media Manager window opens at
   the item's folder with the item selected. In a folder with more items than the Media Manager shows
   at once, the item may be further down, unselected.
-- To close it, select **Close**, or select beside the picture.
+
+When the last row has gone, the pane says **Nothing left in this list.** Leaving the list closes the pane.
+
+## Keep what is wanted
+
+Some things only look unused: a PDF linked straight from a newsletter, a hi-res download meant to be
+big. Keep marks them as wanted, for everyone on the site, so they leave the lists and are never in
+Clean up or in what it can free.
+
+1. Select the rows, or open one in **Details**.
+2. Select **Keep…**, beside the action in the bar at the foot of the list, or in the pane.
+3. Optional: under **Why keep it?**, say why. Whoever looks next sees it.
+4. Choose **For how long**: **3 months**, **A year** or **Always**. A year is chosen to begin with.
+5. Select **Keep**.
+
+What you keep leaves every list at once, whichever list you kept it from. Anyone who may use the
+Media section can keep, files on disk included.
+
+A keep ends by itself:
+
+- When its time is up, the thing comes back to its list.
+- When its file changes, since what was kept is no longer what is there: for an item, a new file; for
+  a file on disk, the file written again. This shows after the next check.
+
+A thing whose keep ended is back in its list with a **Kept until** tag on its row; hover over the tag
+for the old note. Its **Details** show the old keep, and **Keep…** keeps it again.
+
+An item a page starts using is simply no longer unused. A thing that is gone from the library at the
+next check loses its keep.
+
+## See what is kept
+
+To see every keep, open a list and choose the **Kept** tab. Each row shows when its keep ends, or
+**Always**. Select a row to see its note, who kept it and when, and until when, in **Details**.
+
+To overrule a keep, stop keeping it: the thing comes back to its list at once.
+
+- For one, select **Stop keeping** in **Details**.
+- For many, tick them under **Kept** and select **Stop keeping** in the bar at the foot.
 
 ## Clean up
 
-Every row is ticked to begin with. Clean up deals with the ticked rows only, and each row says what
-happens to it:
+Every kind is ticked to begin with. Clean up deals with the ticked kinds only, never with anything
+kept, and each says what happens to it:
 
 - **Unused items** go to the recycle bin, so they can come back.
 - **Orphaned files** are deleted for good. Each file is checked again at the moment of deleting, and a
-  file an item has claimed since the check is left alone. A folder left empty is removed too. The
-  deletion is written to Umbraco's audit log under your name.
+  file an item has claimed since the check, or that someone kept since your window opened, is left
+  alone. A folder left empty is removed too. The deletion is written to Umbraco's audit log under
+  your name.
 - **Oversized images** open in [Optimize images](optimize-images.md), where you choose the size and
   format before anything changes.
 
 To clean up:
 
-1. Optional: to leave a row out, clear its checkbox. The **Clean up** button shows what the ticked
-   rows free.
-2. Select **Clean up**. A sheet lists each ticked row with its count and size.
+1. Optional: to leave a kind out, clear its checkbox. The **Clean up** button shows what the ticked
+   kinds free.
+2. Select **Clean up**. A sheet lists each ticked kind with its count and size, leaving out anything
+   a colleague kept since your window opened.
 3. Select **Clean up** in the sheet. The ring counts the items and files as they go, and the taskbar
    button shows the same.
 
-Only an administrator can delete files. For anyone else the **Orphaned files** row is unticked and
-greyed, and says why, and the sheet says the files stay on disk.
+Only an administrator can delete files. For anyone else **Orphaned files** is unticked and greyed,
+and says why, and the sheet says the files stay on disk.
 
 The figure on **Clean up** is the unused items and orphaned files in full, and about three quarters
 of the oversized images' size, which is what resizing to 2560 pixels and saving as WebP usually saves.
-It says "about" when the oversized row is ticked.
+It says "about" when **Oversized images** is ticked.
 
 ## Undo a Clean up
 

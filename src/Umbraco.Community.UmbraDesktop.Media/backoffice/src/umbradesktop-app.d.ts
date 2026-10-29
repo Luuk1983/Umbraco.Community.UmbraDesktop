@@ -100,8 +100,13 @@ declare global {
   interface UmbraDesktopOpenAttachedDetail {
     /** The app's own name for the page. */
     key: string;
-    /** The page, under `/umbraco/section/`. Anything else is refused. */
-    path: string;
+    /** The page, under `/umbraco/section/`. Anything else is refused. Not with `app`. */
+    path?: string;
+    /**
+     * Instead of a page, one of this package's own element apps, by its `umbraDesktopApp` alias (#141):
+     * Media Cleanup's details pane. Usually one hidden from the launcher. Not with `path`.
+     */
+    app?: string;
     /** The pane header and window title. */
     name: string;
     /** The pane header and window icon. */
@@ -124,7 +129,7 @@ declare global {
 
   /**
    * What the desktop sets as an app element's `attached` property: each key the app has a page open
-   * under, and the page it is on now. Missing once it closes.
+   * under, and the page it is on now, or for an app of its own, that app's alias. Missing once it closes.
    */
   type UmbraDesktopAttachedPages = Readonly<Record<string, string>>;
 

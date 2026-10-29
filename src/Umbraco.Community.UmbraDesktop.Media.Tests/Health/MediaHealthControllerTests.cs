@@ -12,6 +12,7 @@ using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Web.Common.Authorization;
 using Umbraco.Community.UmbraDesktop.Media.Health;
 using Umbraco.Community.UmbraDesktop.Media.Health.Api;
+using Umbraco.Community.UmbraDesktop.Media.Health.Keep;
 using Xunit;
 
 namespace Umbraco.Community.UmbraDesktop.Media.Tests.Health;
@@ -27,6 +28,9 @@ public class MediaHealthControllerTests : IAsyncLifetime
 
     /// <summary>The store.</summary>
     private MediaHealthStore _store = null!;
+
+    /// <summary>The keeps.</summary>
+    private MediaKeepStore _keeps = null!;
 
     /// <summary>The deleter, as a stand-in.</summary>
     private readonly IMediaOrphanDeleter _deleter = Substitute.For<IMediaOrphanDeleter>();
@@ -48,6 +52,7 @@ public class MediaHealthControllerTests : IAsyncLifetime
     {
         _database = await SqliteTestDatabase.CreateAsync();
         _store = new MediaHealthStore(_database, new FakeTimeProvider());
+        _keeps = new MediaKeepStore(_database, new FakeTimeProvider());
     }
 
     /// <inheritdoc />
@@ -58,15 +63,19 @@ public class MediaHealthControllerTests : IAsyncLifetime
     {
         var user = Substitute.For<IUser>();
         user.Key.Returns(Editor);
+        user.Name.Returns("Edith Editor");
         var security = Substitute.For<IBackOfficeSecurity>();
         security.CurrentUser.Returns(user);
         var accessor = Substitute.For<IBackOfficeSecurityAccessor>();
         accessor.BackOfficeSecurity.Returns(security);
         var runner = new MediaHealthRunner(_store, _library, Substitute.For<IMediaDiskScanner>(), _queue, new FakeTimeProvider(), NullLogger<MediaHealthRunner>.Instance);
-        return new MediaHealthController(_store, runner, _library, _deleter, _counter, _images, accessor);
+        return new MediaHealthController(_store, _keeps, runner, _library, _deleter, _counter, _images, accessor);
     }
 
-    /// <summary>Everything is behind the Media section; deleting from disk is for administrators only.</summary>
+    /// <summary>
+    /// Everything is behind the Media section; deleting from disk is for administrators only. Keep and Stop
+    /// keeping are not: one person reviews for the team, and a colleague overrules a keep openly (design §16.6).
+    /// </summary>
     [Fact]
     public void Gates_on_the_media_section_and_deleting_on_admin()
     {
@@ -75,7 +84,7 @@ public class MediaHealthControllerTests : IAsyncLifetime
         Assert.Equal(AuthorizationPolicies.SectionAccessMedia, Assert.Single(controller).Policy);
         var delete = typeof(MediaHealthController).GetMethod(nameof(MediaHealthController.DeleteOrphans))!.GetCustomAttributes<AuthorizeAttribute>(inherit: false);
         Assert.Equal(AuthorizationPolicies.RequireAdminAccess, Assert.Single(delete).Policy);
-        foreach (var name in new[] { nameof(MediaHealthController.GetStatus), nameof(MediaHealthController.Check), nameof(MediaHealthController.GetItems), nameof(MediaHealthController.GetFolders), nameof(MediaHealthController.GetOrphans), nameof(MediaHealthController.OrphanThumbnails), nameof(MediaHealthController.Stop), nameof(MediaHealthController.RefreshItems) })
+        foreach (var name in new[] { nameof(MediaHealthController.GetStatus), nameof(MediaHealthController.Check), nameof(MediaHealthController.GetItems), nameof(MediaHealthController.GetFolders), nameof(MediaHealthController.GetOrphans), nameof(MediaHealthController.OrphanThumbnails), nameof(MediaHealthController.Stop), nameof(MediaHealthController.RefreshItems), nameof(MediaHealthController.GetKeeps), nameof(MediaHealthController.Keep), nameof(MediaHealthController.StopKeeping) })
         {
             Assert.Empty(typeof(MediaHealthController).GetMethod(name)!.GetCustomAttributes<AuthorizeAttribute>(inherit: false));
         }
@@ -254,5 +263,100 @@ public class MediaHealthControllerTests : IAsyncLifetime
         Assert.Equal(["a/x.jpg"], result.Deleted);
         Assert.Equal("NowOwned", Assert.Single(result.Skipped).Reason);
         Assert.Equal(["b/y.jpg"], (await _store.GetOrphansAsync()).Select(orphan => orphan.RelativePath));
+    }
+
+    /// <summary>A check with one unused item and one orphaned file, for keeps to name.</summary>
+    /// <param name="key">The item's key.</param>
+    /// <returns>A task.</returns>
+    private async Task CheckWithAsync(Guid key)
+    {
+        var check = await _store.StartAsync(Editor);
+        await _store.FinishAsync(check.Id, new MediaHealthResult(
+            [],
+            [new MediaHealthItem(key, "Old", "Image", "jpg", 500, null, "/", 0, "/media/a/old.jpg")],
+            [new MediaHealthOrphan("c/news.pdf", "/media/c/news.pdf", 700, DateTime.UnixEpoch), new MediaHealthOrphan("d/x.jpg", "/media/d/x.jpg", 5, DateTime.UnixEpoch)]));
+    }
+
+    /// <summary>A keep records who made it, from the person signed in, never from the request.</summary>
+    [Fact]
+    public async Task Keep_records_who()
+    {
+        var key = Guid.NewGuid();
+        await CheckWithAsync(key);
+
+        var made = Assert.IsType<OkObjectResult>(await Controller().Keep(new KeepMediaRequestModel("Unused", [key.ToString("D")], "For the press page", "Year")));
+
+        var keep = Assert.Single(Assert.IsType<MediaHealthKeepsResponseModel>(made.Value).Keeps);
+        Assert.Equal((Editor, "Edith Editor", "Unused", "For the press page", (string?)null), (keep.KeptBy, keep.KeptByName, keep.Kind, keep.Note, keep.Ended));
+        var listed = Assert.IsType<MediaHealthKeepsResponseModel>(Assert.IsType<OkObjectResult>(await Controller().GetKeeps()).Value);
+        Assert.Equal(keep.Id, Assert.Single(listed.Keeps).Id);
+    }
+
+    /// <summary>A note longer than its column is refused, rather than cut without a word.</summary>
+    [Fact]
+    public async Task Long_note_is_400()
+    {
+        var key = Guid.NewGuid();
+        await CheckWithAsync(key);
+
+        var answer = await Controller().Keep(new KeepMediaRequestModel("Unused", [key.ToString("D")], new string('x', MediaKeepStore.NoteLength + 1), "Year"));
+
+        Assert.IsType<BadRequestObjectResult>(answer);
+        Assert.Empty(await _keeps.ListAsync());
+    }
+
+    /// <summary>A kind or a duration the API does not know is refused too.</summary>
+    [Fact]
+    public async Task Unknown_kind_or_duration_is_400()
+    {
+        Assert.IsType<BadRequestObjectResult>(await Controller().Keep(new KeepMediaRequestModel("Loved", ["x"], null, "Year")));
+        Assert.IsType<BadRequestObjectResult>(await Controller().Keep(new KeepMediaRequestModel("Unused", ["x"], null, "Forever")));
+    }
+
+    /// <summary>Stop keeping removes the keep.</summary>
+    [Fact]
+    public async Task Stop_keeping_removes_it()
+    {
+        var key = Guid.NewGuid();
+        await CheckWithAsync(key);
+        var keep = Assert.Single(await _keeps.KeepAsync(MediaKeepKind.Unused, [key.ToString("D")], null, MediaKeepDuration.Year, Editor, "Edith Editor"));
+
+        Assert.IsType<OkResult>(await Controller().StopKeeping(new StopKeepingMediaRequestModel([keep.Id])));
+
+        Assert.Empty(await _keeps.ListAsync());
+    }
+
+    /// <summary>
+    /// A file a colleague kept after this window loaded is skipped as <c>Kept</c>, and never reaches the
+    /// deleter (plan Review Focus 5).
+    /// </summary>
+    [Fact]
+    public async Task Delete_skips_a_kept_orphan()
+    {
+        await CheckWithAsync(Guid.NewGuid());
+        await _keeps.KeepAsync(MediaKeepKind.Orphaned, ["c/news.pdf"], null, MediaKeepDuration.Always, Editor, "Edith Editor");
+        _deleter.DeleteAsync(Arg.Any<IReadOnlyList<string>>(), Editor, Arg.Any<CancellationToken>())
+            .Returns(new MediaOrphanDeleteResult(["d/x.jpg"], []));
+
+        var ok = Assert.IsType<OkObjectResult>(await Controller().DeleteOrphans(new DeleteMediaOrphansRequestModel(["/C/News.pdf", "d/x.jpg"]), CancellationToken.None));
+
+        var result = Assert.IsType<MediaHealthDeleteResponseModel>(ok.Value);
+        Assert.Equal(["d/x.jpg"], result.Deleted);
+        Assert.Equal(("/C/News.pdf", "Kept"), (Assert.Single(result.Skipped).RelativePath, Assert.Single(result.Skipped).Reason));
+        await _deleter.Received(1).DeleteAsync(Arg.Is<IReadOnlyList<string>>(paths => paths.SequenceEqual(new[] { "d/x.jpg" })), Editor, Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// No action declares a 403 response: core's security filter adds 403 to every protected operation
+    /// itself, so a declared one is a duplicate key and core's whole management swagger answers 500.
+    /// Step 1's delete had one, which the step 3 run found (design §16.19).
+    /// </summary>
+    [Fact]
+    public void No_action_declares_forbidden()
+    {
+        foreach (var action in typeof(MediaHealthController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+        {
+            Assert.DoesNotContain(action.GetCustomAttributes<ProducesResponseTypeAttribute>(inherit: false), attribute => attribute.StatusCode == 403);
+        }
     }
 }

@@ -819,3 +819,307 @@ Each is covered by tests.
 **§7 decided** (Luuk, 2026-10-28, asked once this step was built and run): View as a virtual place in
 the Manager is dropped, not built. The list groups by folder, previews and acts, Show in Media Manager
 covers going to the Manager, and orphaned files could never have had a place there.
+
+### 16.15 Step 2 reworked (decided 2026-10-29)
+
+Luuk, testing step 2 on the instance: "visually I'm pretty underwhelmed". The overview did not use a
+wide window, Where the space goes opened a cleanup list instead of a breakdown, the lists had no drag
+to select, the cards cut names at 120 px, the window opened cramped, and the preview overlay looked
+like nothing in Umbraco and opened at a stray click. Mocked in
+[`mockups/media-health/step2-rework.html`](mockups/media-health/step2-rework.html), scenes 1 to 4;
+Luuk: "the design looks good", and drop the card view.
+
+1. **The overview follows the window's width.** From about 900 px the three kinds are cards side by
+   side (figure large, line, four thumbnails, See all), with Where the space goes beside them; below
+   that, compact rows without thumbnail strips. The window opens at about 960 by 720, measured, not
+   taken from the mock.
+2. **Where the space goes is a folder breakdown**, its own view, one level at a time like macOS
+   Storage: the folder's bar, then the folders under it largest first, each with a bar in the health
+   colours and tags of what can go, a path back up, and Open in Media Manager for the folder shown.
+   The tags open the cleanup list for that folder and below. This replaces a tree for unused items.
+   Browse all folders opens the top level.
+3. **The cleanup list is a table**: small thumbnail, the whole name, folder, size, last changed,
+   grouped by folder with the group's checkbox, count and size. **No card view** (Luuk).
+4. **Details beside the list, in the desktop's attached pane** (Luuk: "use our existing details
+   pane"), the one Preview, the views beside the editor and the Media Manager's item use
+   (`docs/developer/attached-windows.md`): docked behind a splitter with its own header, pop out and
+   close, or floating grouped with the window when there is no room. A click on a row makes it the
+   current one and the pane shows it; nothing covers the list. The pane's actions work on the current
+   row and move to the next; Previous and Next walk the list. The overlay goes.
+5. **Drag to select**, a box over rows from their empty part, or down the checkbox column, scrolling
+   at the edges; a click without a drag only makes a row current.
+
+**Reuse, not new** (Luuk: "use what is already available in Umbraco and in UmbraDesktop and don't
+create something new every time"). Each piece starts from what exists, and is only built new when
+nothing fits, said so in the as-built section:
+
+- The details pane: `openAttached` with an element app, as Preview does; the pane, its header,
+  splitter, pop out and floating form are the desktop's. The current row lives in the health context,
+  so the list and the pane follow the same state.
+- Drag to select: the Media Manager's box (`selection/box.ts`, `selection/box.element.ts`) and its
+  range rule (`selection/range.ts`).
+- The table: core's `umb-table`, as core's own table view uses it, where its columns and selection
+  fit; UUI's table elements under it only where a group row needs them.
+- The selection bar: core's collection selection bar where it can run on our state, otherwise its
+  look from UUI buttons, as the Media Manager shows it.
+- Cards, boxes, tabs, tags, inputs, selects: UUI (`uui-box`, `uui-tab-group`, `uui-tag`,
+  `uui-input`, `uui-select`).
+- Open in Media Manager: the Manager's location and `openApp`, as Show in Media Manager already does.
+
+### 16.16 Rework as built (2026-10-29)
+
+The five points of §16.15, built test-first and run in a real backoffice (newest Umbraco 17) on the
+worktree's copy: 49 items, 29 unused (28 of them Engage's, with no size), 81 orphaned files, no
+oversized image. The overview (`health-overview`), Where the space goes as a breakdown
+(`health-folders`, sums in `health-folders.ts`), the list as a table (`health-list`, which replaces
+`health-grid.element.ts`; the pure `health-grid.ts` stays), and the details pane (`health-details`,
+which replaces `health-preview`). The current row, the list's order and a Delete being asked live in
+the health context (`browse`, `setCurrent`, `step`, `act`, `confirmDelete`), so the list and the pane
+read one state.
+
+**Reuse, and where nothing fit.**
+
+- **The pane is the desktop's attached pane, but the host had to learn one thing.** A package cannot
+  call `openAttached`: its only way to attach content was `umbradesktop-open-attached`, which took a
+  backoffice page's path. The event now also takes `app`, an `umbraDesktopApp` alias; the window looks
+  it up among the apps the person can launch (`findApp`) and attaches its element under the same
+  per-key alias, sized by its manifest, with `ownerId` and `appAlias` as props (`attached-page.ts`,
+  `createAttachedAppApp`). The details pane is such an app, hidden from the launcher. Everything else
+  (header, splitter, pop out, floating, docking, theming, closing with the owner) is the desktop's
+  unchanged. `desktop-apps.md` §7.5 and `attached-windows.md` §9 say how; an older desktop ignores the
+  request, since it has no path.
+- **The box is the Media Manager's** (`selection/box.ts`, its element) **and so is the range**
+  (`selection/range.ts`, for the checkbox column). Edge scrolling had nothing to reuse (the Manager's
+  box does not scroll, core's collection scrolls its own way), so it is new and pure:
+  `selection/edge-scroll.ts`, 32 px zones, up to 18 px a frame.
+- **The table is UUI's rows and cells, not core's `umb-table`.** Core's table has no group rows, and
+  selects a row when the row is clicked, where a click here only makes it current. The rows sit on a
+  grid of the list's own, each row on its subgrid, so a group row's label runs across the columns. The
+  first build put that grid on `uui-table`: green in the tests on UUI 2.0.2, a single 44 px column in
+  the real backoffice, because the newest UUI wraps the table's slot in a `display: table` box of its
+  own that a grid on the host never reaches. The grid is now a plain `role="table"` element.
+- **The selection bar is core's collection bar's look from UUI** (its selected fill and contrast text,
+  Clear selection, "n of m selected"): core's bar runs on a collection context and its bulk actions,
+  not on this list. Optimize is `positive` on it, since a primary default button is the bar's own navy.
+- **Tags are `uui-tag` in UUI's danger and positive**, the colours the health tokens take for unused
+  and oversized; a hand-drawn coloured edge was tried first and looked like nothing in Umbraco.
+- **Open in Media Manager** is the Manager's location and `openApp` (`showFolderInManager`).
+
+**Choices the build made.**
+
+- **The overview measures its own width** against `OVERVIEW_WIDE_FROM` (900) and reflects `wide` for
+  the CSS, a frame late as the strips' observer is; the narrow rows draw no strip and ask for no
+  thumbnail. Wide, Where the space goes names five folders (`SPACE_FOLDERS_WIDE`), narrow three.
+- **A folder line opens the breakdown, never the list**; the root's share opens the library's, which
+  has a line for the items at the root. **Browse all folders** opens the library. Orphaned files are
+  in no folder, so the breakdown leaves them out and the library's figure is the items' alone.
+- **The line of items directly in a folder opens the list on those alone**: the list query gained
+  `exact`, since "the folder and everything under it" would have shown the folders below too.
+- **Back returns to where the list was opened from**, the breakdown or the overview.
+- **A group shows 50 rows** (`GROUP_ROWS`) and **Show n more** the rest. Step 2 left drawing to
+  `content-visibility` on its rows of cards; a subgrid row was not given it, since the layout
+  containment it brings may cut the row off its parent grid (not measured), so the cap does that work.
+- **Drag rules**: a box from a row's empty part or the space under the rows adds what it touches; a
+  press on a name starts no box and a click on it only makes the row current; a drag down the checkbox
+  column ticks the range it passes, or unticks it when it started on a ticked row, which is what a
+  checkbox column can offer without a key held down. A click without a drag never selects or clears.
+- **The pane opens on a row click and closes when the list goes**, whatever took it away (Back, a
+  check, Clean up). It is named **Details** with the info icon; no toggle button was added, since a
+  click on any row opens it again. Its actions go through the context's `act`, which trashes, opens
+  Optimize images, or asks the window to ask before a Delete, and moves the current row on with
+  `nextAfter`.
+- **The window opens at 960 by 720** (`MEDIA_HEALTH_CONTENT_SIZE`). Measured: the wide overview needs
+  474 px under Umbraco, macOS, Windows 11 and Windows 98 and 502 under Umbraco 4 at 960 wide; the
+  narrow one 603 to 604 at 640.
+- **A test-only "ResizeObserver loop".** In the list's tests UUI 2.0.2's tab group reports it on its
+  first layout (it sets its tabs' display inside its own observer). Step 2's grid had the same tab
+  group and never hit it, and bisecting found nothing of the list's own, down to a list with no table.
+  The browser delivers the notification a frame later; the list's and the window's tests let that one
+  message pass (`allowResizeObserverLoop`), in a `before` hook since mocha sets its own `onerror` when
+  the run starts.
+
+**Measured** (a headless Chrome on the instance, real mouse input for the drags):
+
+- Overview at 960 and 640 under all five themes: cards with Where the space goes beside them, and
+  rows with the folders under them.
+- The breakdown at the library and at People; a tag opened the list on 28 unused rows; Back returned
+  to the breakdown, then to the overview.
+- The orphaned list: 50 rows and Show more. A click on a name made the row current and the desktop
+  docked the pane (320 px, the window widened to 1290 including chrome); Next moved to the next row;
+  the picture was signed (`rmode=max`, 200). A box from a size cell over four rows selected four, the
+  Media Manager's box drawn over them. A drag down the checkbox column held at the bottom edge ticked
+  37 rows while the list scrolled to 1,566 px, then 39. No request failed.
+- The pane's Delete asked in the Clean up sheet's words over the window; Cancel sent no delete. Show in
+  Media Manager opened a Manager at the root with the item selected; the breakdown's Open in Media
+  Manager opened one at the folder. Back from the list closed the pane.
+- The list with its docked pane under all five themes.
+
+**Not measured here**: oversized images (none over 2 MB) and an editor who is not an administrator,
+as in §16.14; Move to recycle bin from the pane, since uSync writes a trashed item's config into the
+checkout's TestInstance (both covered by tests); the pane floating, which is the desktop's own and
+tested there.
+
+### 16.17 After Luuk tried the rework (2026-10-29)
+
+Luuk, trying §16.16 on the instance: the cards came side by side too soon and crowded with the folders
+beside them; Clean up and Where the space goes serve different purposes; a drag started only from a
+row's empty part; a click did not clear a selection; a list of thousands would draw them all; the
+details pane looked thrown together, its type too small; the search field's magnifier sat badly; and
+in the breakdown a folder with no folders under it opened onto one line. Also: a folder means nothing
+but its icon and that it may hold items, which is why the Media Manager's tree counts any item that
+holds items as a place. Decided with him, and built:
+
+- **Cards from 760 wide, the folders under them.** `OVERVIEW_WIDE_FROM` is the overview's own width
+  (724, a window of about 760: the overview sits in 18 px of padding a side); Where the space goes is
+  a section of its own in UUI's box with its headline, under Clean up, and moves beside the cards only
+  from `OVERVIEW_BESIDE_FROM` (1264, a window of about 1300). Measured: 640 rows, 760 and 960 cards
+  with the folders under them, 1300 beside. The window opens at 960 by 728: the overview needed 726 at
+  960 under all five themes.
+- **Where the space goes is a tree** (`health-folders.element.ts`), expanded in place rather than
+  clicked into, the way down to a place opened from the overview already expanded. A place is a
+  folder or any item with items under it (`placesOf`, the Manager's `isPlace` rule), so the list, its
+  filter and the overview's folders count them too. Only a place with places under it has an arrow
+  (core's `uui-symbol-expand`); a click on its row opens it too. Open in Media Manager is a button on
+  every row, and one at the top for the library; the path and the pages are gone.
+- **A drag starts anywhere in the table** but a checkbox (the column drag) or a button: a name, a
+  group row, the header, the space under the rows. **A click on empty space clears the selection**,
+  as in a file manager; a click on a row never does, since rows are ticked by their checkbox, not by
+  Ctrl-click, and a row click that cleared would lose them.
+- **Pages of 100 rows** (`PAGE_ROWS`, `pageOf`), as core's collections page theirs, with UUI's
+  pagination drawn as core's collection pagination draws it. A group going on over a page is headed
+  again, its row counting the whole group, whose checkbox ticks all of it. The context's order is every
+  row over every page, and the list turns to the current row's page, so the pane's Next walks on. The
+  per-group Show more went.
+- **The pane is laid out as core's media Info view**: on the background, the picture with the name and
+  why it is listed in one `uui-box`, the facts in a second with core's own `general_general` headline
+  and its general items (the label bold above the value, `space-6` between), at the default type size,
+  then the actions. 380 wide (`MEDIA_HEALTH_DETAILS_SIZE`), core's side column being 350. The first
+  build of this let the boxes shrink in the pane's flex column and squeezed the name out of its box;
+  the boxes are `flex: none` and the pane scrolls.
+- **No magnifier** in the search field; its placeholder says what it is.
+
+Measured on the instance, under all five themes: the overview at 640, 760, 960 and 1300; the tree
+opened from Engage with it expanded and Persona and Customer Journey under it; a drag from a name over
+four rows selected four, one from a group row added the next two; a row click kept them and docked the
+pane. Not measured here: a click on empty space (the list on this library is taller than the window,
+so there is none; covered by tests) and paging (81 rows at most; covered by tests).
+
+### 16.18 Storage by folder, and the pane's footer (2026-10-29)
+
+Luuk, trying §16.17: in the folder view the root had no Open in Media Manager; a tag looked like part
+of the row it sat on, though it does something else; "Can go" is a poor heading and "nothing" says
+nothing, in small type; the library's "at least" bar over the table repeats the overview; the title
+was small and "Where the space goes" not professional enough. Back floated, with no border and not
+aligned. In the pane the buttons fell below a short window, and Show in Media Manager was far too
+large a button. Decided with him, and built:
+
+- **Storage by folder** is the name (Dutch **Opslag per map**), as the operating systems call such a
+  view, on the overview's section and as the view's title, now a heading (`h2`, UUI's h4 size).
+- **The library is the tree's root row**, with its bar, its size, its buttons for the whole library and
+  its own Open in Media Manager; the places start under it. The bar and figure over the table went.
+- **What can go is a button per kind**, UUI's compact secondary button in danger or positive with an
+  arrow ("28 unused →"), so it reads as going somewhere; a click on a row only opens it. **The column
+  has no heading, and a row with nothing to clean up has an empty cell** (Luuk: "the '28 unused'
+  button already just tells the story"). "Nothing to clean up" was proposed and turned down as too
+  long.
+- **Open in Media Manager is an icon** at the end of every row.
+- **Back has a border and a background** (`look="outline"`) in the folder view and the list, as the
+  buttons beside it.
+- **The pane's actions are a footer** at the foot of the pane, on the surface with a border above, and
+  only the boxes above it scroll: measured in a 520-tall window, the footer's bottom is the pane's.
+  The kind's action sits in a grid of equal columns, so **Keep…** (step 3) joins it side by side
+  without moving anything; the list's selection bar already has room for it.
+- **Show in Media Manager is an icon** on the picture's corner.
+- **The end of the list** says **Nothing left in this list.** when the last row went, instead of the
+  "select a row" the pane shows before one is chosen. (Asked: the pane's action moves on to the next
+  row, or to the one before at the end, as §16.15 decided.)
+
+Measured on the instance under all five themes: Storage by folder with Engage open, and the list with
+its pane in a 960 by 520 window, the footer in view.
+
+### 16.19 Step 3 as built: Keep (2026-10-29)
+
+§16.6 built test-first on the reworked screens of §16.15 to §16.18, so where the plan's Tasks 3.1 to
+3.4 say grid, chip or preview, it is the list, a tab and the details pane.
+
+**Server** (`Health/Keep/`). A keep is a row of its own table, `umbraDesktopMediaHealthKeep`
+(migration `Keeps` for SQL Server and SQLite), not tied to a check: kind (the list it was kept from),
+target (the item's key, or the orphaned file's path), fingerprint, note (500, `MediaKeepStore.NoteLength`,
+pinned by a C# and a TypeScript test), until, who and when. `MediaKeepStore` keeps, lists, stops and
+gives the orphaned files kept now. Routes on the controller: `GET keeps`, `POST keeps`, `POST
+keeps/stop`, under the Media section like the rest; who comes from the login, never the request; a
+longer note, or a kind or duration it does not know, is a 400.
+
+**Choices the build made.**
+
+- **Pruned inside `MediaHealthStore.FinishAsync`**, in the same unit of work as the result it checks
+  against, not in the runner as the plan had it: no read can see a keep of something the stored result
+  no longer has.
+- **The delete skips kept files in the controller**, before the deleter sees the list, with the reason
+  `Kept`; the deleter's constructor is unchanged. Done and the list's notice name the reason ("someone
+  keeps it").
+- **One keep per thing, replaced by keeping again**, whatever list (plan Decision 6). Keep… over a
+  selection from two lists sends one request per list, so Kept can say which.
+- **The fingerprint** is an item's URL, or an orphaned file's last-written time in round-trip form.
+  The end is worked out when read (Decision 7): `Expired` once the time is up, `Changed` once the last
+  check has another fingerprint.
+- **In the browser** (`health-keep.ts`, pure): `keepingOf` takes kept things out of every list, makes
+  an entry per keep that holds for the Kept tab, puts each ended keep on its row, and counts per list
+  what keeps took out. The context's result keeps the orphaned files whole (`orphans`), since the
+  lists now leave kept ones out and the library's size must not shrink by a keep.
+- **Keep… is asked by the window**, as a Delete is: the list and the pane only name the rows
+  (`askKeep`), since the pane is not inside the window. `health-keep-sheet` has the Clean up sheet's
+  frame, UUI's textarea and radio group, a year chosen, and a line that says the thing comes back when
+  the time is up, or for Always, that it stays out until someone stops keeping it.
+- **Kept is the fourth tab**, grouped by folder and sorted like the others, with **Kept until** (the
+  date, or Always) in the last column and **Stop keeping** as its one verb. The plan's "ends soonest
+  first" was not built: the table's own sort already orders it, and one sort rule per table is simpler.
+- **Every other tab offers Keep…** in its selection bar, beside the verb, for anyone, an orphaned file
+  too: a non-administrator who may not delete may still say a file is wanted.
+- **An ended keep is a tag on its row**, UUI's secondary `uui-tag`, "Kept until 27 Oct 2027", or
+  "Kept" for one that was Always, with the note as its title. The pane shows the old keep in its own
+  box and says "but the file changed since" when that is why it ended.
+- **The pane** shows a kept row's note, who kept it and when, and until when, in a **Kept** box above
+  **General**; its footer is **Stop keeping** alone. Otherwise the footer's grid holds the action and
+  **Keep…** side by side, as §16.18 left room for.
+- **The overview** says "n kept" after a card's line, for every kind, not only unused.
+- **Review Focus 5**: the window reads the keeps again before the Clean up sheet opens, so a keep made
+  since it loaded is left out of the sheet and of the trash; the server's delete skips a kept file
+  whatever the window sent. A failed read of the keeps shows the result without them rather than none.
+
+**Found on the run, both fixed with a test first.**
+
+- **Core's management swagger answered 500**, since step 1: the `[ProducesResponseType(403)]` on
+  `DeleteOrphans` is added a second time by core's security filter, a duplicate key. The plan said to
+  check it in Task 3.1; it was the one already there. Removed, and a test now holds that no action of
+  the controller declares 403.
+- **A row reused for another entry never got its thumbnail.** Lit keeps the table's row elements when
+  the tab or the page changes, and the list observed each element once, so the Kept tab's orphaned
+  file showed a blank tile. The list now remembers which entry it observed each row for. This was in
+  step 2 already for any tab change; Kept made it visible.
+
+**Measured** on a copy of the step 2 instance's database (`UmbraDesktop-MH141Keep`, port 23901), with
+an administrator and an editor made for the run with only the Media and Desktop sections:
+
+- The editor kept an unused item with a note for a year, and an orphaned file for always, from the
+  list's bar and the sheet. The server listed both with the editor's name.
+- The administrator's window, open from before, still listed the item until Clean up was pressed; the
+  sheet then read the keeps again and counted 27 unused instead of 28.
+- The administrator's delete of the kept file answered `Kept` and the file stayed on disk; the
+  editor's delete answered 403.
+- The overview said "1 kept" on the unused and orphaned cards, and **Clean up** left the kept file out
+  (4.7 MB, 80 files).
+- Kept listed both with "Always" and the date; the pane showed the note, "Kim Editor on Oct 29, 2026"
+  and the end, with **Stop keeping**.
+- After the kept file's last-written time was moved and a check run, its keep was `Changed`, the
+  file was back among the orphaned files with its tag and the note as the tag's title, and the pane
+  said "Always, but the file changed since".
+- **Stop keeping** from the pane put the item back among the unused at once; the server had one keep
+  left.
+- Under all five themes: the overview, the Kept tab with its pane, the Keep sheet, and a row with an
+  ended keep.
+
+**Not measured here**: a keep running out (a year; covered by the store's tests with a fake clock); an
+item's own file changing (only an orphaned file's was changed; covered by the store's tests); a real
+Clean up with a keep in it (the trash would make uSync write configs into the checkout; the sheet's
+count and the tests cover it); the Dutch words on screen.

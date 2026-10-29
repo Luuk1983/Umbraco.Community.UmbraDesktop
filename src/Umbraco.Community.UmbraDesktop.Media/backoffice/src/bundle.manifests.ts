@@ -4,7 +4,14 @@ import { UMBRADESKTOP_IS_IMAGE_CONDITION, UMBRADESKTOP_ON_DESKTOP_CONDITION } fr
 import { UMBRADESKTOP_FILE_PROPERTY_CONDITION } from './file-tools/constants.js';
 import { UMBRADESKTOP_MEDIA_MANAGER_APP } from './manager/manager-window.context.js';
 import { UMBRADESKTOP_MEDIA_TRANSFERS_APP } from './transfers/transfers-app.js';
-import { MEDIA_HEALTH_CONTENT_SIZE, MEDIA_HEALTH_MIN_CONTENT_SIZE, UMBRADESKTOP_MEDIA_HEALTH_APP } from './health/health-app.js';
+import {
+  MEDIA_HEALTH_CONTENT_SIZE,
+  MEDIA_HEALTH_DETAILS_MIN_SIZE,
+  MEDIA_HEALTH_DETAILS_SIZE,
+  MEDIA_HEALTH_MIN_CONTENT_SIZE,
+  UMBRADESKTOP_MEDIA_HEALTH_APP,
+  UMBRADESKTOP_MEDIA_HEALTH_DETAILS_APP,
+} from './health/health-app.js';
 import { UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION } from './manager/in-manager.condition.js';
 import { UMBRADESKTOP_MEDIA_RENAME_MODAL_ALIAS } from './selection/rename-dialog.element.js';
 import { UMBRADESKTOP_CLIPBOARD_HOLDS_CONDITION } from './manager/clipboard-holds.condition.js';
@@ -109,6 +116,27 @@ const mediaHealth: UmbExtensionManifest = {
     defaultSize: MEDIA_HEALTH_CONTENT_SIZE,
     minSize: MEDIA_HEALTH_MIN_CONTENT_SIZE,
     allowMultiple: false,
+  },
+  conditions: mediaSection,
+};
+
+/**
+ * Media Cleanup's details pane (design §16.15): never on the launcher; the Media Cleanup window asks
+ * the desktop to attach it beside itself by this alias, as the desktop's own pane or a window grouped
+ * with it. Under the Media section rule, as the window is.
+ */
+const mediaHealthDetails: UmbExtensionManifest = {
+  type: 'umbraDesktopApp',
+  alias: UMBRADESKTOP_MEDIA_HEALTH_DETAILS_APP,
+  name: 'UmbraDesktop Media Health details',
+  element: () => import('./health/health-details.element.js'),
+  meta: {
+    label: '#umbraDesktopMedia_healthDetails',
+    icon: 'icon-info',
+    group: 'media',
+    defaultSize: MEDIA_HEALTH_DETAILS_SIZE,
+    minSize: MEDIA_HEALTH_DETAILS_MIN_SIZE,
+    hideFromLauncher: true,
   },
   conditions: mediaSection,
 };
@@ -538,6 +566,7 @@ export const manifests: Array<UmbExtensionManifest> = [
   mediaManager,
   imageEditor,
   mediaHealth,
+  mediaHealthDetails,
   ...folderTree,
   ...binTree,
   transfers,

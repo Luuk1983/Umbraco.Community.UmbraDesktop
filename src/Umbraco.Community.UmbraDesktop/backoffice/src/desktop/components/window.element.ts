@@ -54,7 +54,7 @@ import './loader.element.js';
 import './window-pane.element.js';
 import { UmbraDesktopWindowPaneElement, type UmbraDesktopPaneDragDetail } from './window-pane.element.js';
 import { attachedKind, paneTotal } from '../window-group.js';
-import { attachedPageAlias, attachedPaths, createAttachedPageApp, readAttachedRequest } from '../windows/attached-page.js';
+import { attachedPageAlias, attachedPaths, createAttachedAppApp, createAttachedPageApp, readAttachedRequest } from '../windows/attached-page.js';
 import { previewTargetFromPath, withoutWorkspaceView } from '../preview/preview-target.js';
 import { createPreviewApp, UMBRADESKTOP_PREVIEW_APP_ALIAS } from '../preview/preview-model.js';
 import { besideAppAlias, besideContentIds, createBesideApp } from '../beside/beside-model.js';
@@ -1333,6 +1333,20 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     const request = readAttachedRequest((event as CustomEvent).detail);
     if (!w || w.owner || !request || !this.#manager) return;
     const open = attachedKind(this.#manager.getWindows(), w.id, attachedPageAlias(w.id, request.key));
+    if ('app' in request) {
+      // One of the app's own element apps (#141): opened once, then only named again, since an
+      // element has no page to route. An alias the person cannot launch opens nothing.
+      const source = this.#manager.findApp(request.app);
+      if (open) {
+        const id = open.kind === 'pane' ? open.pane.id : open.window.id;
+        this.#manager.focus(open.kind === 'pane' ? w.id : id);
+        this.#manager.relabelAttached(w.id, id, { name: request.name || source?.name || '', icon: request.icon || source?.icon || '' });
+        return;
+      }
+      const app = source && createAttachedAppApp(w.id, request, source);
+      if (app) this.#manager.openAttached(w.id, app, 'right', { floating: request.floating });
+      return;
+    }
     if (!open) {
       this.#manager.openAttached(w.id, createAttachedPageApp(w.id, request), 'right', { floating: request.floating });
       return;

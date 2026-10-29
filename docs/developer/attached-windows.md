@@ -304,10 +304,18 @@ id, and the server-event router matches a pane like a window (`serverEventTarget
 whose item is trashed elsewhere reloads in place, so core shows it read-only; an item deleted for good
 closes the pane, without asking, since nothing is left to save.
 
+**An app can ask for one of its own element apps the same way** (#141). Instead of a `path`, the
+request names an `umbraDesktopApp` alias (`app`), and the window attaches that app's element under
+the same `umbradesktop-attached:<window id>:<key>` alias, sized by its manifest, with `ownerId` and
+`appAlias` as props. It is how Media Cleanup shows its details pane beside its list: an element that
+reads the package's own desktop context, which a backoffice page never could. The window looks the
+alias up among the apps the person can launch (`findApp`), so a hidden app works and one behind a
+condition the person fails opens nothing. It has no page to route, so asking again only renames it.
+
 | File | What it shows |
 | --- | --- |
 | `frame-watches.ts` | The watches a backoffice frame gets, the theme controller, `routeFrame` |
-| `windows/attached-page.ts` | Reading an app's request, the page's app, and the paths an app is told |
+| `windows/attached-page.ts` | Reading an app's request, the page's app or the app's own element app, and the paths an app is told |
 | `components/window.element.ts`, `#onOpenAttached` | The events, the `attached` property, routing or renaming an open page |
 | `components/window-pane.element.ts` | A page pane: watches, the loader, Pop out greyed, close and reload asking |
 | `window-manager.context.ts` | `setPaneDirty`, `setPaneLocation`, `routeAttached`, `relabelAttached`, `requestCloseAttached`, `serverEventTargets` |
@@ -315,7 +323,7 @@ closes the pane, without asking, since nothing is left to save.
 ## 10. Checklist
 
 - [ ] An element app with a per-feature `alias`, sensible `defaultSize` and `minSize`, and `props`,
-      or a backoffice page opened with `umbradesktop-open-attached`
+      or a backoffice page or a package's own hidden app opened with `umbradesktop-open-attached`
 - [ ] Opened by a feature, from a control outside the titlebar, which toggles and shows as pressed
 - [ ] Reads props in `connectedCallback` and fetches on connect
 - [ ] Works as a pane and as a floating window, from `minSize.w` upward

@@ -2,13 +2,34 @@ import { css, customElement, html, nothing, property, state, unsafeCSS } from '@
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import type { UmbraDesktopMediaHealthResult } from './media-health.context.js';
 import type { HealthItem, HealthOrphan } from './health.client.js';
-import { HEALTH_KINDS, OVERSIZED_BYTES, checkedOn, cleanupOf, foldersOf, isImage, isStale, sizeNote, sizeOfAll, sizeOfList, sizeText } from './health-model.js';
+import { placesOf } from './health-folders.js';
+import { HEALTH_KINDS, OVERSIZED_BYTES, SPACE_FOLDERS, checkedOn, cleanupOf, foldersOf, isImage, isStale, sizeNote, sizeOfAll, sizeOfList, sizeText } from './health-model.js';
 import type { HealthKind } from './health-model.js';
 import { isPreviewable, thumbEdge } from './health-media.js';
 import { formatBytes } from '../transfers/transfers-model.js';
 import { wordsOf } from '../shared/words.js';
 import type { WordKey } from '../shared/words.js';
 import { healthScreenStyles } from './health-styles.js';
+
+/**
+ * From this width of the overview's own, in CSS pixels, it lays the three kinds out as cards side by
+ * side; below it, as compact rows without thumbnails (design §16.15). Where three cards hold their
+ * figure, line and a few thumbnails without crowding (Luuk, 2026-10-29: at 900 with the folders beside
+ * them it was crowded). The overview sits in the window's padding, so a window about 36 px wider: 760.
+ * The overview measures its own width against it, and the CSS reads the attribute that follows, so
+ * the two cannot disagree.
+ */
+export const OVERVIEW_WIDE_FROM = 724;
+
+/**
+ * From this width of the overview's own, Where the space goes sits beside the cards rather than under
+ * them (design §16.17): a window of about 1300. Under them it is a section of its own; beside them only
+ * where the cards keep their room.
+ */
+export const OVERVIEW_BESIDE_FROM = 1264;
+
+/** How many folders Where the space goes names in a wide window. */
+const SPACE_FOLDERS_WIDE = 5;
 
 /** The space between two thumbnails of a strip, in CSS pixels; the CSS and {@link stripCount} both read it. */
 export const STRIP_GAP = 4;
@@ -48,10 +69,15 @@ const ROWS: Record<HealthKind, { title: WordKey; line: WordKey; none: WordKey }>
 };
 
 /**
- * The overview (design §16.2, mock scene 1): the library and its health in one bar, the three rows in
- * the bar's colours, each ticked by default, one **Clean up** under the rows it acts on, and Where
+ * The overview (design §16.2, mock scene 1): the library and its health in one bar, the three kinds in
+ * the bar's colours, each ticked by default, one **Clean up** under the kinds it acts on, and Where
  * the space goes. The figures all come from the pure model (`health-model.ts`); this only draws them
- * and keeps which rows are ticked.
+ * and keeps which kinds are ticked.
+ *
+ * It follows the window's width (design §16.15): from {@link OVERVIEW_WIDE_FROM} the kinds are cards
+ * side by side, each with its figure large, its line, a strip of thumbnails and **See all**, and Where
+ * the space goes is a column beside them naming more folders; narrower, they are compact rows without
+ * the strips, which sprawled at full screen and cramped a small window, and the folders sit under them.
  *
  * Orphaned files are deleted for good, which only an administrator may do, so for anyone else that
  * row is unticked and disabled with the reason: an affordance that says why, not one that disappears.
@@ -60,9 +86,9 @@ const ROWS: Record<HealthKind, { title: WordKey; line: WordKey; none: WordKey }>
  * the desktop's own notice, and **Check again** stays the one at the top.
  *
  * Fires `health-check` for **Check again**, `health-cleanup` with the ticked kinds for **Clean up**
- * (the window asks before anything happens), and `health-open-grid` for the grid (design §16.4): a
- * row's **See all** or its strip with `{ kind }`, a folder of Where the space goes with
- * `{ folderKey }` (null for the root), and **All folders** with neither.
+ * (the window asks before anything happens), `health-open-grid` `{ kind }` for a kind's **See all** or
+ * its strip, and `health-open-folder` `{ folderKey }` for the folder breakdown: a folder of Where the
+ * space goes, the root's share and **Browse all folders** as the library (null).
  */
 @customElement('umbradesktop-health-overview')
 export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
@@ -126,12 +152,41 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
   @state()
   private _ticked = new Set<HealthKind>(HEALTH_KINDS);
 
+  /** Whether the window is wide enough for cards, measured; reflected as `wide` for the CSS. */
+  @state()
+  private _wide = false;
+
+  /** Whether it is wide enough for the folders beside the cards; reflected as `beside`. */
+  @state()
+  private _beside = false;
+
+  /**
+   * Measures the overview's own width against {@link OVERVIEW_WIDE_FROM}, a frame late for the reason
+   * the strips' observer gives: the layout it switches to changes the height it also reports.
+   */
+  #width = new ResizeObserver((entries) => {
+    const width = entries[0]?.contentRect.width ?? 0;
+    const wide = width >= OVERVIEW_WIDE_FROM;
+    const beside = width >= OVERVIEW_BESIDE_FROM;
+    if (!width || (wide === this._wide && beside === this._beside)) return;
+    requestAnimationFrame(() => {
+      this._wide = wide;
+      this._beside = beside;
+    });
+  });
+
   /** This package's words. */
   #words = wordsOf(this.localize);
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.#width.observe(this);
+  }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.#resize.disconnect();
+    this.#width.disconnect();
   }
 
   /**
@@ -141,6 +196,14 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
    */
   override updated(changed: Map<string, unknown>): void {
     super.updated(changed);
+    this.toggleAttribute('wide', this._wide);
+    this.toggleAttribute('beside', this._beside);
+    // The strips are drawn only on cards, so a narrow window measures nothing and asks for no picture.
+    if (changed.has('_wide')) {
+      this.#resize.disconnect();
+      this._stripWidths = {};
+    }
+    if (!this._wide) return;
     for (const text of this.renderRoot.querySelectorAll<HTMLElement>('.text[data-text]')) this.#resize.observe(text);
     if ((changed.has('result') || changed.has('signThumbnails') || changed.has('_stripWidths')) && this.result && this.signThumbnails) {
       const subjects = HEALTH_KINDS.flatMap((kind) => {
@@ -205,17 +268,21 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
       : this.#words(estimate ? 'healthCleanUpAbout' : 'healthCleanUp', formatBytes(cleanup.bytes));
     return html`
       ${this.#renderHead(result)} ${this.#renderBar(result)}
-      <div class="rows">${HEALTH_KINDS.map((kind) => this.#renderRow(kind, result))}</div>
-      <div class="foot">
-        <uui-button
-          class="clean-up"
-          look="primary"
-          size="l"
-          label=${label}
-          ?disabled=${!cleanup.rows.length || stale}
-          @click=${() => this.#fire('health-cleanup', { kinds: cleanup.rows.map((row) => row.kind) })}></uui-button>
+      <div class="main">
+        <div class="kinds">
+          <div class="rows">${HEALTH_KINDS.map((kind) => (this._wide ? this.#renderCard(kind, result) : this.#renderRow(kind, result)))}</div>
+          <div class="foot">
+            <uui-button
+              class="clean-up"
+              look="primary"
+              size="l"
+              label=${label}
+              ?disabled=${!cleanup.rows.length || stale}
+              @click=${() => this.#fire('health-cleanup', { kinds: cleanup.rows.map((row) => row.kind) })}></uui-button>
+          </div>
+        </div>
+        ${this.#renderSpace(result)}
       </div>
-      ${this.#renderSpace(result)}
     `;
   }
 
@@ -226,7 +293,7 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
   #renderHead(result: UmbraDesktopMediaHealthResult) {
     const on = checkedOn(result.checkedAt, new Date(), this.#locale);
     const day = on.day === 'today' ? this.#words('healthToday') : on.day === 'yesterday' ? this.#words('healthYesterday') : on.day;
-    const total = sizeOfAll(result.items) + sizeOfAll(result.lists.orphaned);
+    const total = sizeOfAll(result.items) + sizeOfAll(result.orphans);
     return html`<div class="head">
       <div>
         <b class="library">${this.#words('healthLibrary', result.items.length.toLocaleString(this.#locale))}</b>
@@ -266,15 +333,14 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
   }
 
   /**
-   * One row: its colour, its checkbox labelled with its title (UUI 2.0.2's checkbox cannot hide its
-   * label, so the label is the title, and selecting the title ticks the row), what happens to it, a
-   * strip of what is in it, and its size.
-   * The oversized row shows the images' size; Clean up counts their estimated saving (plan Decision 4).
-   * @param kind The row.
-   * @param result The result.
+   * A kind's checkbox, labelled with its title (UUI 2.0.2's checkbox cannot hide its label, so the
+   * label is the title, and selecting the title ticks the kind), and its line: what happens to it, and
+   * how many someone keeps out of it (design §16.6), so a short list is not mistaken for a clean one.
+   * @param kind The kind.
+   * @param list Its list, kept things left out.
+   * @param kept How many kept things would otherwise be in it.
    */
-  #renderRow(kind: HealthKind, result: UmbraDesktopMediaHealthResult) {
-    const list: ReadonlyArray<HealthItem | HealthOrphan> = result.lists[kind];
+  #renderTitle(kind: HealthKind, list: ReadonlyArray<HealthItem | HealthOrphan>, kept = 0) {
     const words = ROWS[kind];
     const allowed = this.#allowed(kind);
     const count = list.length.toLocaleString(this.#locale);
@@ -282,19 +348,35 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
       ? this.#words(words.none, formatBytes(OVERSIZED_BYTES))
       : this.#words(words.line, count, formatBytes(OVERSIZED_BYTES));
     const denied = kind === 'orphaned' && !this.admin && list.length > 0;
-    return html`<div class="row" data-row=${kind} data-kind=${kind} ?disabled=${!allowed}>
+    return {
+      checkbox: html`<uui-checkbox
+        label=${this.#words(words.title)}
+        ?checked=${allowed && this._ticked.has(kind)}
+        ?disabled=${!allowed}
+        @change=${(event: Event) => this.#toggle(kind, (event.target as HTMLInputElement).checked)}
+        ><b>${this.#words(words.title)}</b></uui-checkbox
+      >`,
+      line: html`<small
+        >${line}${kept ? html` <span class="kept">${this.#words('healthKeptCount', kept.toLocaleString(this.#locale))}</span>` : nothing}${denied
+          ? html` <em>${this.#words('healthAdminOnly')}</em>`
+          : nothing}</small
+      >`,
+    };
+  }
+
+  /**
+   * One kind as a compact row, in a narrow window: its colour, its checkbox and line, its size, and an
+   * arrow to its list. No strip: it cramped the row at this width.
+   * The oversized row shows the images' size; Clean up counts their estimated saving (plan Decision 4).
+   * @param kind The row.
+   * @param result The result.
+   */
+  #renderRow(kind: HealthKind, result: UmbraDesktopMediaHealthResult) {
+    const list: ReadonlyArray<HealthItem | HealthOrphan> = result.lists[kind];
+    const title = this.#renderTitle(kind, list, result.keptCount?.[kind] ?? 0);
+    return html`<div class="row" data-row=${kind} data-kind=${kind} ?disabled=${!this.#allowed(kind)}>
       <span class="edge"></span>
-      <div class="text" data-text=${kind}>
-        <uui-checkbox
-          label=${this.#words(words.title)}
-          ?checked=${allowed && this._ticked.has(kind)}
-          ?disabled=${!allowed}
-          @change=${(event: Event) => this.#toggle(kind, (event.target as HTMLInputElement).checked)}
-          ><b>${this.#words(words.title)}</b></uui-checkbox
-        >
-        <small>${line}${denied ? html` <em>${this.#words('healthAdminOnly')}</em>` : nothing}</small>
-        ${this.#renderStrip(kind, list, this.#stripWidth)}
-      </div>
+      <div class="text" data-text=${kind}>${title.checkbox} ${title.line}</div>
       ${this.#renderSize(list)}
       <uui-button
         class="see-all"
@@ -303,6 +385,28 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
         label=${this.#words('healthSeeAll')}
         ?disabled=${!list.length}
         @click=${() => this.#fire('health-open-grid', { kind })}><uui-icon name="icon-arrow-right"></uui-icon></uui-button>
+    </div>`;
+  }
+
+  /**
+   * One kind as a card, in a wide window: its colour along the top, its checkbox, its figure large,
+   * its line, a strip of what is in it, and **See all**.
+   * @param kind The kind.
+   * @param result The result.
+   */
+  #renderCard(kind: HealthKind, result: UmbraDesktopMediaHealthResult) {
+    const list: ReadonlyArray<HealthItem | HealthOrphan> = result.lists[kind];
+    const title = this.#renderTitle(kind, list, result.keptCount?.[kind] ?? 0);
+    return html`<div class="row card" data-row=${kind} data-kind=${kind} ?disabled=${!this.#allowed(kind)}>
+      <span class="edge"></span>
+      <div class="text" data-text=${kind}>
+        ${title.checkbox} ${this.#renderSize(list)} ${title.line} ${this.#renderStrip(kind, list, this.#stripWidth)}
+        <span class="card-foot">
+          <uui-button class="see-all" look="secondary" compact label=${this.#words('healthSeeAll')} ?disabled=${!list.length} @click=${() => this.#fire('health-open-grid', { kind })}>
+            ${this.#words('healthSeeAll')}<uui-icon name="icon-arrow-right"></uui-icon>
+          </uui-button>
+        </span>
+      </div>
     </div>`;
   }
 
@@ -350,21 +454,23 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
   }
 
   /**
-   * Where the space goes: the largest top-level folders, each split by the same health as the bar and
-   * in the same order, fine first and unused at the end, and how many more there are. A folder opens
-   * the grid on itself and everything under it, and **All folders** opens it on every folder.
+   * Where the space goes: the largest top-level places, each split by the same health as the bar and
+   * in the same order, fine first and unused at the end, and how many more there are; more of them in
+   * a wide window. A section of its own in UUI's box, apart from the kinds and their Clean up, since it
+   * informs rather than acts (Luuk, 2026-10-29). A place opens the tree with its way down expanded, the
+   * root's share and **Browse all folders** the tree's top (design §16.17).
    * @param result The result.
    */
   #renderSpace(result: UmbraDesktopMediaHealthResult) {
-    const { folders, more } = foldersOf(result.items, result.folders);
+    const { folders, more } = foldersOf(result.items, placesOf(result.items, result.folders), this._wide ? SPACE_FOLDERS_WIDE : SPACE_FOLDERS);
     if (!folders.length) return nothing;
     const largest = folders[0].bytes || 1;
-    return html`<div class="space">
-      <div class="space-head"><b>${this.#words('healthSpace')}</b><span class="muted">${this.#words('healthSpaceNote')}</span></div>
+    return html`<uui-box class="space" headline=${this.#words('healthSpace')}>
+      <span slot="header-actions" class="muted">${this.#words('healthTopFolders')}</span>
       ${folders.map((folder) => {
         const fine = folder.bytes - folder.unused - folder.oversized;
         const width = (bytes: number) => `width:${(bytes / largest) * 100}%`;
-        return html`<button type="button" class="folder" @click=${() => this.#fire('health-open-grid', { folderKey: folder.key })}>
+        return html`<button type="button" class="folder" @click=${() => this.#fire('health-open-folder', { folderKey: folder.key })}>
           <span class="name">${folder.key ? folder.name : this.#words('healthRoot')}</span>
           <span class="track">
             <span data-kind="fine" style=${width(fine)}></span>
@@ -372,13 +478,14 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
             <span data-kind="unused" style=${width(folder.unused)}></span>
           </span>
           <b>${formatBytes(folder.bytes)}</b>
+          <uui-icon class="chevron" name="icon-navigation-right"></uui-icon>
         </button>`;
       })}
       <div class="space-foot">
         <span class="muted">${more ? this.#words('healthMoreFolders', more.toLocaleString(this.#locale)) : nothing}</span>
-        <uui-button class="all-folders" look="secondary" compact label=${this.#words('healthAllFolders')} @click=${() => this.#fire('health-open-grid', {})}></uui-button>
+        <uui-button class="all-folders" look="outline" compact label=${this.#words('healthBrowseFolders')} @click=${() => this.#fire('health-open-folder', { folderKey: null })}></uui-button>
       </div>
-    </div>`;
+    </uui-box>`;
   }
 
   static override styles = [
@@ -448,10 +555,64 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
         margin-top: calc(-1 * var(--uui-size-space-2, 6px));
       }
 
+      .main,
+      .kinds {
+        display: flex;
+        flex-direction: column;
+        gap: var(--uui-size-space-4, 12px);
+      }
+
       .rows {
         display: flex;
         flex-direction: column;
         gap: var(--uui-size-space-3, 9px);
+      }
+
+      /* A wide window: the cards in a line of three, Where the space goes in a column beside them. */
+      :host([beside]) .main {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+        align-items: start;
+      }
+
+      :host([wide]) .rows {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .row.card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      .card .edge {
+        width: auto;
+        height: 4px;
+        border-radius: 0;
+      }
+
+      .card .text {
+        gap: var(--uui-size-space-2, 6px);
+        padding: var(--uui-size-space-3, 9px) var(--uui-size-space-4, 12px);
+      }
+
+      .card .size {
+        align-items: flex-start;
+        text-align: left;
+      }
+
+      .card .size b {
+        font-size: 24px;
+        line-height: 1.15;
+      }
+
+      .card-foot {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: auto;
       }
 
       .row {
@@ -552,27 +713,24 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
         justify-content: flex-end;
       }
 
+      /* Its own section: a little air between it and the kinds' Clean up above it. */
       .space {
-        display: flex;
-        flex-direction: column;
-        gap: var(--uui-size-space-2, 6px);
-        padding: var(--uui-size-space-3, 9px) var(--uui-size-space-4, 12px);
-        background: var(--uui-color-surface);
-        border: 1px solid var(--uui-color-border);
-        border-radius: var(--uui-border-radius, 3px);
+        margin-top: var(--uui-size-space-3, 9px);
       }
 
-      .space-head {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: var(--uui-size-space-4, 12px);
+      :host([beside]) .space {
+        margin-top: 0;
+      }
+
+      .space .folder + .folder,
+      .space .space-foot {
+        margin-top: var(--uui-size-space-2, 6px);
       }
 
       /* A folder line is a button, drawn as the line it was: the whole line opens the grid on it. */
       .folder {
         display: grid;
-        grid-template-columns: minmax(0, 9em) minmax(0, 1fr) 5em;
+        grid-template-columns: minmax(0, 9em) minmax(0, 1fr) 5em 16px;
         align-items: center;
         gap: var(--uui-size-space-3, 9px);
         width: 100%;
@@ -610,6 +768,10 @@ export class UmbraDesktopHealthOverviewElement extends UmbLitElement {
 
       .folder b {
         text-align: right;
+      }
+
+      .folder .chevron {
+        color: var(--uui-color-text-alt);
       }
 
       .track {

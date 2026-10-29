@@ -178,6 +178,51 @@ namespace Umbraco.Community.UmbraDesktop.Media.Health.Data.Migrations.SqlServer
                     b.ToTable("umbraDesktopMediaHealthItem", (string)null);
                 });
 
+            modelBuilder.Entity("Umbraco.Community.UmbraDesktop.Media.Health.Data.MediaHealthKeepEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Fingerprint")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("KeptBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("KeptByName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime>("KeptUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Target")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("UntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("umbraDesktopMediaHealthKeep", (string)null);
+                });
+
             modelBuilder.Entity("Umbraco.Community.UmbraDesktop.Media.Health.Data.MediaHealthOrphanEntity", b =>
                 {
                     b.Property<long>("Id")

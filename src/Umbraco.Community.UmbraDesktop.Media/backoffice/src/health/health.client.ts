@@ -120,8 +120,53 @@ export interface HealthOrphan {
 export interface HealthDeleteResult {
   /** The paths deleted. */
   deleted: string[];
-  /** The paths left alone, each with the server's reason: `NotFound` or `NowOwned`. */
+  /** The paths left alone, each with the server's reason: `NotFound`, `NowOwned` or `Kept`. */
   skipped: Array<{ relativePath: string; reason: string }>;
+}
+
+/** The list a keep was made from, as the server names it; shown in Kept only, since a keep leaves every list. */
+export type HealthKeepKind = 'Unused' | 'Orphaned' | 'Oversized';
+
+/** How long a keep lasts: the three choices Keep… offers (design §16.6). */
+export type HealthKeepDuration = 'ThreeMonths' | 'Year' | 'Always';
+
+/**
+ * The longest note a keep takes: the server's column (`MediaKeepStore.NoteLength`), which refuses a
+ * longer one. A C# test and a TypeScript test each pin 500, so the two cannot drift apart.
+ */
+export const KEEP_NOTE_MAX = 500;
+
+/** A keep: something marked as wanted, for the whole site, until its time is up or it changes. */
+export interface HealthKeep {
+  /** The keep's number, which Stop keeping names. */
+  id: number;
+  /** The list it was kept from. */
+  kind: HealthKeepKind;
+  /** The item's key, or the orphaned file's relative path. */
+  target: string;
+  /** Why it is kept, or null. */
+  note: string | null;
+  /** When it ends, or null to keep it always. */
+  untilUtc: string | null;
+  /** Who kept it. */
+  keptBy: string;
+  /** Their name when they kept it. */
+  keptByName: string;
+  /** When. */
+  keptUtc: string;
+  /**
+   * Why it has ended, worked out by the server against the clock and the last check: its time is up,
+   * or what was kept changed. Null while it holds.
+   */
+  ended: 'Expired' | 'Changed' | null;
+}
+
+/** Things to keep: the list they are kept from, the targets, the note and for how long. */
+export interface HealthKeepRequest {
+  kind: HealthKeepKind;
+  targets: string[];
+  note: string | null;
+  duration: HealthKeepDuration;
 }
 
 /** An answer: the data, or why there is none. `denied` is a 401 or 403; `failed` is anything else. */
@@ -304,5 +349,29 @@ export class UmbraDesktopMediaHealthClient {
    */
   deleteOrphans(relativePaths: ReadonlyArray<string>): Promise<HealthResult<HealthDeleteResult>> {
     return this.#post('orphans/delete', { relativePaths: [...relativePaths] });
+  }
+
+  /** Every keep, each with whether it has ended. */
+  async keeps(): Promise<HealthResult<HealthKeep[]>> {
+    const answer = await this.#get<{ keeps: HealthKeep[] }>('keeps');
+    return answer.data ? { data: answer.data.keeps } : { error: answer.error };
+  }
+
+  /**
+   * Keep things, replacing any keep each has. The server records who from the login, never from here.
+   * @param request The list they are kept from, the targets, the note and for how long.
+   * @returns The keeps made; things the last check did not find are left out.
+   */
+  async keep(request: HealthKeepRequest): Promise<HealthResult<HealthKeep[]>> {
+    const answer = await this.#post<{ keeps: HealthKeep[] }>('keeps', request);
+    return answer.data ? { data: answer.data.keeps } : { error: answer.error };
+  }
+
+  /**
+   * Stop keeping: the things come back to their lists.
+   * @param ids The keeps.
+   */
+  stopKeeping(ids: ReadonlyArray<number>): Promise<HealthResult<unknown>> {
+    return this.#post('keeps/stop', { ids: [...ids] });
   }
 }

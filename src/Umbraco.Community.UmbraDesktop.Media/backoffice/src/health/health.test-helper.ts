@@ -1,5 +1,5 @@
 import type { HealthFolder, HealthItem, HealthOrphan } from './health.client.js';
-import { barOf, listsOf, sizeOfAll } from './health-model.js';
+import { resultOf } from './media-health.context.js';
 import type { UmbraDesktopMediaHealthCleanupState, UmbraDesktopMediaHealthResult } from './media-health.context.js';
 
 /*
@@ -63,8 +63,7 @@ export function result(): UmbraDesktopMediaHealthResult {
     item({ key: 'persona', name: 'Persona', used: false, usageCount: 0, sizeBytes: null, extension: null, url: null, parentKey: 'p', path: '/People' }),
     item({ key: 'notes', name: 'Notes', sizeBytes: 900, extension: 'pdf', mediaTypeAlias: 'File', url: '/media/n/notes.pdf', parentKey: null, path: '/' }),
   ];
-  const lists = listsOf(items, [orphan('1/x.jpg', 30), orphan('2/y.png', 10)]);
-  return { checkId: 1, checkedAt: new Date(), items, folders: FOLDERS, lists, bar: barOf(lists, sizeOfAll(items)) };
+  return resultOf(1, new Date(), items, [orphan('1/x.jpg', 30), orphan('2/y.png', 10)], FOLDERS);
 }
 
 /**
@@ -114,4 +113,20 @@ export function textOf(root: Element): string {
   };
   walk(root);
   return parts.join(' ').replace(/\s+/g, ' ');
+}
+
+/**
+ * Let the browser's "ResizeObserver loop" notice pass in a test page, and nothing else. UUI 2.0.2's
+ * tab group measures its tabs inside its own resize observer and sets their display there, so on its
+ * first layout in some boxes the browser defers a notification and reports this as an error, which
+ * the test runner counts as a failure (design §16.16). Step 2's grid had the same tab group and never
+ * hit it; bisecting found nothing of the list's own that causes it, down to a list with no table. It is not an error in the page: the browser
+ * delivers the notification on the next frame, and nothing in Media Cleanup observes the tab group.
+ */
+export function allowResizeObserverLoop(): void {
+  // In a hook, since mocha sets its own `onerror` only once the run starts.
+  before(() => {
+    const previous = window.onerror;
+    window.onerror = (message, ...rest) => (/ResizeObserver loop/.test(String(message)) ? true : (previous?.call(window, message, ...rest) ?? false));
+  });
 }

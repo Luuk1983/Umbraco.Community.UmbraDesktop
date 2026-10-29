@@ -2,7 +2,7 @@ import { expect } from '@open-wc/testing';
 import { manifests } from './bundle.manifests.js';
 import { UMBRADESKTOP_MEDIA_BIN_TREE, UMBRADESKTOP_MEDIA_FOLDER_TREE } from './tree/constants.js';
 import { IMAGE_EDITOR_CONTENT_SIZE, IMAGE_EDITOR_MIN_CONTENT_SIZE } from './image-editor/constants.js';
-import { MEDIA_HEALTH_CONTENT_SIZE, MEDIA_HEALTH_MIN_CONTENT_SIZE } from './health/health-app.js';
+import { MEDIA_HEALTH_CONTENT_SIZE, MEDIA_HEALTH_DETAILS_MIN_SIZE, MEDIA_HEALTH_DETAILS_SIZE, MEDIA_HEALTH_MIN_CONTENT_SIZE, UMBRADESKTOP_MEDIA_HEALTH_DETAILS_APP } from './health/health-app.js';
 import en from './localization/en.js';
 
 /** Narrows the bundle to one extension type, so each test reads only what it is about. */
@@ -369,6 +369,20 @@ it('registers Media Cleanup (Media Health in code) as one window in the Media gr
   expect(health!.meta.hideFromLauncher).to.equal(undefined);
   expect(health!.weight).to.be.lessThan(app('ImageEditor')!.weight!);
   expect(health!.conditions).to.deep.equal(MEDIA_SECTION);
+});
+
+/**
+ * Media Cleanup's details pane (design §16.15): an app the launcher leaves out, which the window asks
+ * the desktop to attach beside itself by its alias, sized by its own constants.
+ */
+it('registers Media Cleanup’s details pane as an app the launcher leaves out', () => {
+  const details = app('Health.Details');
+  expect(!!details).to.equal(true);
+  expect(details!.alias).to.equal(UMBRADESKTOP_MEDIA_HEALTH_DETAILS_APP);
+  expect(details!.meta).to.deep.include({ group: 'media', hideFromLauncher: true });
+  expect(details!.meta.defaultSize).to.deep.equal(MEDIA_HEALTH_DETAILS_SIZE);
+  expect(details!.meta.minSize).to.deep.equal(MEDIA_HEALTH_DETAILS_MIN_SIZE);
+  expect(details!.conditions).to.deep.equal(MEDIA_SECTION);
 });
 
 it('registers the Transfers window as one desktop app the launcher leaves out', () => {

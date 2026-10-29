@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { CORE_IMAGING_URLS, UmbraDesktopMediaHealthClient, MEDIA_HEALTH_BASE, MEDIA_HEALTH_PAGE_SIZE } from './health.client.js';
+import { CORE_IMAGING_URLS, KEEP_NOTE_MAX, UmbraDesktopMediaHealthClient, MEDIA_HEALTH_BASE, MEDIA_HEALTH_PAGE_SIZE } from './health.client.js';
 import type { HealthHttp, HealthItem } from './health.client.js';
 
 /**
@@ -157,6 +157,24 @@ describe('the Media Health client', () => {
     expect(calls[0].body).to.deep.equal({ relativePaths: ['1234/old.jpg', '5/x.png'] });
     expect(data?.deleted).to.deep.equal(['1234/old.jpg']);
     expect(data?.skipped[0].reason).to.equal('NowOwned');
+  });
+
+  it('reads, makes and stops keeps on their own routes (design §16.6)', async () => {
+    const keep = { id: 7, kind: 'Unused', target: 'old', note: 'Press', untilUtc: null, keptBy: 'u', keptByName: 'Edith', keptUtc: '2026-10-29T00:00:00Z', ended: null };
+    const { client, calls } = http({
+      [`${MEDIA_HEALTH_BASE}/keeps`]: { keeps: [keep] },
+      [`${MEDIA_HEALTH_BASE}/keeps/stop`]: '',
+    });
+    const health = new UmbraDesktopMediaHealthClient(client);
+    expect((await health.keeps()).data).to.deep.equal([keep]);
+    expect((await health.keep({ kind: 'Unused', targets: ['old'], note: 'Press', duration: 'Year' })).data).to.deep.equal([keep]);
+    expect(calls[1]).to.deep.include({ method: 'post', body: { kind: 'Unused', targets: ['old'], note: 'Press', duration: 'Year' } });
+    expect((await health.stopKeeping([7])).error).to.equal(undefined);
+    expect(calls[2]).to.deep.include({ method: 'post', url: `${MEDIA_HEALTH_BASE}/keeps/stop`, body: { ids: [7] } });
+  });
+
+  it('pins the longest note to the server column', () => {
+    expect(KEEP_NOTE_MAX).to.equal(500);
   });
 
   it('answers denied for a 403, and failed for anything else, instead of throwing', async () => {

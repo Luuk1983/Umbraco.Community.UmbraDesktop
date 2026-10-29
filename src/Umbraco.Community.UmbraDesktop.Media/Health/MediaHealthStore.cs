@@ -122,7 +122,10 @@ public sealed class MediaHealthStore(IMediaHealthDatabase database, TimeProvider
         return true;
     });
 
-    /// <summary>Finish a check with its result, which replaces every check before it.</summary>
+    /// <summary>
+    /// Finish a check with its result, which replaces every check before it. Keeps of things the result
+    /// no longer has are dropped in the same unit of work (plan Decision 7).
+    /// </summary>
     /// <param name="id">The check.</param>
     /// <param name="result">What it found.</param>
     /// <returns>Whether it was saved; false for a check stopped meanwhile, whose result is dropped.</returns>
@@ -179,6 +182,7 @@ public sealed class MediaHealthStore(IMediaHealthDatabase database, TimeProvider
         await context.Orphans.Where(orphan => orphan.CheckId != id).ExecuteDeleteAsync();
         await context.Checks.Where(other => other.Id != id).ExecuteDeleteAsync();
         await context.SaveChangesAsync();
+        await Keep.MediaKeepStore.PruneAsync(context, id);
         return true;
     });
 

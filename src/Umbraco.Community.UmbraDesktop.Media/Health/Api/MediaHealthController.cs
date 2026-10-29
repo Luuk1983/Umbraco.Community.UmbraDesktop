@@ -8,19 +8,24 @@ using Umbraco.Cms.Core.Media;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Security;
 using Umbraco.Cms.Web.Common.Authorization;
+using Umbraco.Community.UmbraDesktop.Media.Health.Keep;
 
 namespace Umbraco.Community.UmbraDesktop.Media.Health.Api;
 
 /// <summary>
-/// Media Health's API (design §15): start a check, follow it, read its result, and delete orphaned
-/// files.
+/// Media Health's API (design §15): start a check, follow it, read its result, delete orphaned
+/// files, and keep things out of the cleanup lists (design §16.6).
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>Who may use it.</b> Anyone with the Media section, which is who can open the window at all:
 /// Umbraco's own policy for the section, on the controller. Deleting files from disk is for
 /// administrators, as deleting anything for good is; that action adds Umbraco's admin policy, which
-/// answers 403 rather than hiding the action, so the window can grey the button and say why.
+/// answers 403 rather than hiding the action, so the window can grey the button and say why. Keeping
+/// and stopping a keep are for anyone with the section: one person reviews for the team, and a
+/// colleague overrules a keep openly, with its note in front of them. No action declares its 403:
+/// core's security filter adds one to every protected operation, and a second fails core's whole
+/// management swagger with a duplicate key (found in the step 3 run).
 /// </para>
 /// <para>
 /// The route segment stays <c>umbradesktop</c> without a hyphen, as the host's controllers keep it:
@@ -28,6 +33,7 @@ namespace Umbraco.Community.UmbraDesktop.Media.Health.Api;
 /// </para>
 /// </remarks>
 /// <param name="store">The last check and its result.</param>
+/// <param name="keeps">What someone marked as wanted.</param>
 /// <param name="runner">Runs a check.</param>
 /// <param name="library">Reads the items a Clean up changed, for the stored result to follow.</param>
 /// <param name="deleter">Deletes orphaned files.</param>
@@ -38,7 +44,7 @@ namespace Umbraco.Community.UmbraDesktop.Media.Health.Api;
 [VersionedApiBackOfficeRoute("umbradesktop/media/health")]
 [ApiExplorerSettings(GroupName = "UmbraDesktop")]
 [Authorize(Policy = AuthorizationPolicies.SectionAccessMedia)]
-public class MediaHealthController(MediaHealthStore store, MediaHealthRunner runner, IMediaLibraryReader library, IMediaOrphanDeleter deleter, IMediaCounter counter, IImageUrlGenerator images, IBackOfficeSecurityAccessor securityAccessor)
+public class MediaHealthController(MediaHealthStore store, MediaKeepStore keeps, MediaHealthRunner runner, IMediaLibraryReader library, IMediaOrphanDeleter deleter, IMediaCounter counter, IImageUrlGenerator images, IBackOfficeSecurityAccessor securityAccessor)
     : ManagementApiControllerBase
 {
     /// <summary>The most items one page gives; the window pages through them.</summary>
@@ -55,6 +61,9 @@ public class MediaHealthController(MediaHealthStore store, MediaHealthRunner run
 
     /// <summary>The key of the person signed in, or null when there is none.</summary>
     private Guid? SignedInKey => securityAccessor.BackOfficeSecurity?.CurrentUser?.Key;
+
+    /// <summary>The name of the person signed in, which a keep records so Kept can say who.</summary>
+    private string SignedInName => securityAccessor.BackOfficeSecurity?.CurrentUser?.Name ?? string.Empty;
 
     /// <summary>Where the check is: the one running, the last one done, and a failure since.</summary>
     /// <returns>The status.</returns>
@@ -171,7 +180,62 @@ public class MediaHealthController(MediaHealthStore store, MediaHealthRunner run
         return Ok(new MediaHealthThumbnailsResponseModel(signed));
     }
 
-    /// <summary>Delete orphaned files from disk, each checked again first. Administrators only.</summary>
+    /// <summary>Every keep, each with whether it has ended (design §16.6).</summary>
+    /// <returns>The keeps, newest first.</returns>
+    [HttpGet("keeps")]
+    [MapToApiVersion("1.0")]
+    [ProducesResponseType(typeof(MediaHealthKeepsResponseModel), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetKeeps() =>
+        Ok(new MediaHealthKeepsResponseModel((await keeps.ListAsync()).Select(MediaHealthKeepResponseModel.From).ToList()));
+
+    /// <summary>
+    /// Keep things of the last check, as the person signed in: who is taken from the session, never from
+    /// the request. A note longer than its column is refused rather than cut.
+    /// </summary>
+    /// <param name="model">The list they are kept from, the targets, the note and for how long.</param>
+    /// <returns>The keeps made; 400 for a long note or an unknown kind or duration.</returns>
+    [HttpPost("keeps")]
+    [MapToApiVersion("1.0")]
+    [ProducesResponseType(typeof(MediaHealthKeepsResponseModel), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Keep(KeepMediaRequestModel model)
+    {
+        if (!Enum.TryParse<MediaKeepKind>(model.Kind, ignoreCase: false, out var kind) || !Enum.IsDefined(kind))
+        {
+            return BadRequest(new ProblemDetails { Title = "Unknown kind", Detail = $"Kind must be one of {string.Join(", ", Enum.GetNames<MediaKeepKind>())}." });
+        }
+
+        if (!Enum.TryParse<MediaKeepDuration>(model.Duration, ignoreCase: false, out var duration) || !Enum.IsDefined(duration))
+        {
+            return BadRequest(new ProblemDetails { Title = "Unknown duration", Detail = $"Duration must be one of {string.Join(", ", Enum.GetNames<MediaKeepDuration>())}." });
+        }
+
+        if (model.Note is { Length: > MediaKeepStore.NoteLength })
+        {
+            return BadRequest(new ProblemDetails { Title = "Note too long", Detail = $"A note is at most {MediaKeepStore.NoteLength} characters." });
+        }
+
+        var made = await keeps.KeepAsync(kind, (model.Targets ?? []).Take(MaxPage).ToList(), model.Note, duration, SignedInKey ?? Guid.Empty, SignedInName);
+        return Ok(new MediaHealthKeepsResponseModel(made.Select(MediaHealthKeepResponseModel.From).ToList()));
+    }
+
+    /// <summary>Stop keeping: the things come back to their lists at once.</summary>
+    /// <param name="model">The keeps.</param>
+    /// <returns>200.</returns>
+    [HttpPost("keeps/stop")]
+    [MapToApiVersion("1.0")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> StopKeeping(StopKeepingMediaRequestModel model)
+    {
+        await keeps.StopAsync(model.Ids ?? []);
+        return Ok();
+    }
+
+    /// <summary>
+    /// Delete orphaned files from disk, each checked again first. Administrators only. A file someone
+    /// keeps is skipped as <c>Kept</c> before the deleter sees it, since a colleague may have kept it
+    /// after the window asking loaded (plan Review Focus 5).
+    /// </summary>
     /// <param name="model">The files.</param>
     /// <param name="cancellationToken">The request's token.</param>
     /// <returns>What went and what stayed.</returns>
@@ -179,15 +243,18 @@ public class MediaHealthController(MediaHealthStore store, MediaHealthRunner run
     [MapToApiVersion("1.0")]
     [Authorize(Policy = AuthorizationPolicies.RequireAdminAccess)]
     [ProducesResponseType(typeof(MediaHealthDeleteResponseModel), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> DeleteOrphans(DeleteMediaOrphansRequestModel model, CancellationToken cancellationToken)
     {
-        var result = await deleter.DeleteAsync(model.RelativePaths, SignedInKey ?? Guid.Empty, cancellationToken);
+        var kept = await keeps.ActiveOrphanPathsAsync();
+        var asked = model.RelativePaths ?? [];
+        var keptSkips = asked.Where(path => kept.Contains(MediaDiskScanner.Normalize(path))).Select(path => new MediaOrphanSkip(path, MediaOrphanSkipReason.Kept)).ToList();
+        var free = asked.Where(path => !kept.Contains(MediaDiskScanner.Normalize(path))).ToList();
+        var result = free.Count > 0 ? await deleter.DeleteAsync(free, SignedInKey ?? Guid.Empty, cancellationToken) : new MediaOrphanDeleteResult([], []);
         if (result.Deleted.Count > 0)
         {
             await store.RemoveOrphansAsync(result.Deleted);
         }
 
-        return Ok(new MediaHealthDeleteResponseModel(result.Deleted, result.Skipped.Select(skip => new MediaHealthSkipResponseModel(skip.RelativePath, skip.Reason.ToString())).ToList()));
+        return Ok(new MediaHealthDeleteResponseModel(result.Deleted, keptSkips.Concat(result.Skipped).Select(skip => new MediaHealthSkipResponseModel(skip.RelativePath, skip.Reason.ToString())).ToList()));
     }
 }

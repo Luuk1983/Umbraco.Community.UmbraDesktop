@@ -245,6 +245,17 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
   }
 
   /**
+   * An app the current user can launch, by its alias, hidden ones included: what `openApp` opens,
+   * and what an app's `umbradesktop-open-attached` names when it asks for one of its own element
+   * apps beside its window (#141). Not published: a package asks through the event.
+   * @param alias The app's manifest alias.
+   * @returns The app, or undefined when the user cannot launch it.
+   */
+  public findApp(alias: string): UmbraDesktopApp | undefined {
+    return this.#appSource?.().find((each) => each.alias === alias);
+  }
+
+  /**
    * Open an app by its alias, as if from the launcher. **Published API**, for package apps that open
    * another app (the Arcade's Play button): `open` takes the resolved app the launcher holds, which a
    * package cannot build. An app hidden by a condition is not in the list, so it cannot be opened
@@ -264,7 +275,7 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * @returns Whether a window was opened or focused.
    */
   public openApp(alias: string, options: { location?: string; reuse?: boolean } = {}): boolean {
-    const app = this.#appSource?.().find((each) => each.alias === alias);
+    const app = this.findApp(alias);
     if (!app) return false;
     this.open(app, typeof options?.location === 'string' ? { location: options.location, reuse: options.reuse === true } : {});
     return true;

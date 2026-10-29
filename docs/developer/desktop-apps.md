@@ -802,6 +802,28 @@ two. Nothing navigates the backoffice.
    attached: Readonly<Record<string, string>> = {};
    ```
 
+To show **one of your own elements** beside your window instead, such as a details pane that reads
+your package's own state, register it as an app with `hideFromLauncher: true` and ask for it by its
+alias rather than a path:
+
+```ts
+this.dispatchEvent(
+  new CustomEvent('umbradesktop-open-attached', {
+    detail: { key: 'details', app: 'My.Package.Details', name: 'Details', icon: 'icon-info' },
+    bubbles: true,
+    composed: true,
+  }),
+);
+```
+
+The desktop attaches that app's element under the key, sized by its manifest's `defaultSize` and
+`minSize`, and sets two properties on it before it connects: `ownerId`, your window's id, and
+`appAlias`. It is mounted outside your window's element, so it cannot reach your window's own
+contexts: share state through a context your package provides on the desktop (an
+`umbraDesktopContext`), as Media Cleanup's details pane does. Asked for again under the same key, it
+is only renamed. `attached` reports it under its key with the app's alias. An alias the person cannot
+launch opens nothing, and a desktop older than 17.5 ignores the request, since it has no path.
+
 The page is saved in a backoffice of its own, so your app does not hear about the save. If you show
 what the page edits, reload when `attached` says the page has moved on. The rules for attached
 content, and what the desktop guards for you, are in

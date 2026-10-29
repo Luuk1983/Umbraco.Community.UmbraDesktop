@@ -36,6 +36,7 @@ public sealed class MediaHealthComposer : IComposer
         }, shareUmbracoConnection: true);
         builder.Services.AddSingleton<IMediaHealthDatabase, ScopedMediaHealthDatabase>();
         builder.Services.AddSingleton<MediaHealthStore>();
+        builder.Services.AddSingleton<Keep.MediaKeepStore>();
         builder.Services.AddSingleton<IMediaLibraryReader>(provider => new UmbracoMediaLibraryReader(
             provider.GetRequiredService<IMediaService>(),
             provider.GetRequiredService<IRelationService>(),

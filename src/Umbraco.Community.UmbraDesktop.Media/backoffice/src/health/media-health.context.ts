@@ -9,9 +9,11 @@ import { undoOf } from '../undo/inverse.js';
 import { OPTIMIZE_SERVICE_CONTEXT } from '../shared/optimize-service.js';
 import type { OptimizeMediaRequest, OptimizeReport, OptimizeService } from '../shared/optimize-service.js';
 import { UmbraDesktopMediaHealthClient } from './health.client.js';
-import type { HealthCheck, HealthFolder, HealthItem, HealthOrphan, HealthStatus } from './health.client.js';
-import { barOf, isStale, listsOf, sizeOfAll } from './health-model.js';
+import type { HealthCheck, HealthFolder, HealthItem, HealthKeep, HealthKeepDuration, HealthOrphan, HealthStatus } from './health.client.js';
+import { HEALTH_KINDS, barOf, isStale, listsOf, sizeOfAll } from './health-model.js';
 import type { HealthBar, HealthKind, HealthLists } from './health-model.js';
+import { entriesOf, nextAfter } from './health-grid.js';
+import { KEEP_KINDS, keepingOf } from './health-keep.js';
 import type { HealthEntry } from './health-grid.js';
 import { findDesktopWindows } from '../edit-image/desktop-windows.js';
 import type { UmbraDesktopWindows } from '../edit-image/desktop-windows.js';
@@ -41,10 +43,20 @@ export interface UmbraDesktopMediaHealthResult {
   items: HealthItem[];
   /** Every folder, by key, for Where the space goes and the grid's folder filter. */
   folders: HealthFolder[];
-  /** The three lists, each largest first. */
+  /** Every orphaned file the check found, kept ones included, largest first. */
+  orphans: HealthOrphan[];
+  /** The three lists, each largest first, less everything kept now (design §16.6). */
   lists: HealthLists;
-  /** The library cut by health, and what can be freed. */
+  /** The library cut by health, and what can be freed; kept things are never in "can be freed". */
   bar: HealthBar;
+  /** Every keep, as the server last listed them. */
+  keeps: HealthKeep[];
+  /** An entry per keep that holds, for the Kept tab. */
+  kept: HealthEntry[];
+  /** The keeps that have ended, by entry id, for the "kept until" badge. */
+  ended: Map<string, HealthKeep>;
+  /** Per list, how many kept things would otherwise be in it, for the overview's "n kept". */
+  keptCount: Record<HealthKind, number>;
 }
 
 /** Which part of a check runs: reading the library and its usage, walking the disk, or reading the result. */
@@ -115,6 +127,25 @@ export interface UmbraDesktopMediaHealthManager {
 }
 
 /** What the context uses beyond its own code, so a test can hand in its own. */
+/**
+ * The cleanup list and its details pane (design §16.15), kept here rather than in the window because
+ * the pane is not inside the window: it is the desktop's attached pane, or a window of its own grouped
+ * with it, and both read the same state from the context. One Media Cleanup window at a time, so one
+ * list.
+ */
+export interface UmbraDesktopMediaHealthBrowse {
+  /** The entry the list marks as current and the pane shows; undefined before a row was clicked. */
+  current: string | undefined;
+  /** The list's rows in the order shown, which Previous, Next and moving on walk. */
+  order: string[];
+  /** The orphaned files a Delete asks about, while the window asks; deleting is for good. */
+  deleting: string[] | undefined;
+  /** The rows Keep… asks about, while the window shows its sheet (design §16.6). */
+  keeping: string[] | undefined;
+  /** What the last Delete left on disk, and why, said over the list. */
+  skipped: Array<{ relativePath: string; reason: string }>;
+}
+
 export interface UmbraDesktopMediaHealthDeps {
   /** The add-on's Media Health API. */
   client?: UmbraDesktopMediaHealthClient;
@@ -209,6 +240,15 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
   /** The items the last Clean up trashed, as the check saw them, so Undo can put them back in the lists. */
   #trashedItems: HealthItem[] = [];
 
+  /** The list and its pane. */
+  #browse = new UmbObjectState<UmbraDesktopMediaHealthBrowse>({ current: undefined, order: [], deleting: undefined, keeping: undefined, skipped: [] });
+
+  /** The list and its pane, for the window and the pane. */
+  readonly browse = this.#browse.asObservable();
+
+  /** The result the entries were made from, and the entries, so they are made once per result. */
+  #entries?: { from: UmbraDesktopMediaHealthResult | undefined; entries: HealthEntry[] };
+
   /**
    * @param host The desktop element.
    * @param deps Stand-ins, for tests.
@@ -229,6 +269,180 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
   /** The state now. */
   getState(): UmbraDesktopMediaHealthState {
     return this.#state.getValue();
+  }
+
+  /** The list and its pane now. */
+  getBrowse(): UmbraDesktopMediaHealthBrowse {
+    return this.#browse.getValue();
+  }
+
+  /**
+   * Every entry of the last result, the list's and the pane's: made again only when the result
+   * changes, so both hold the same objects.
+   * @returns The entries, unused first, then orphaned, then oversized, then what is kept.
+   */
+  entries(): HealthEntry[] {
+    const result = this.#state.getValue().result;
+    if (this.#entries && this.#entries.from === result) return this.#entries.entries;
+    this.#entries = { from: result, entries: result ? [...entriesOf(result.lists, result.ended), ...result.kept] : [] };
+    return this.#entries.entries;
+  }
+
+  /**
+   * The list's rows in the order it shows them, each time it draws a different order.
+   * @param order The entries' ids.
+   */
+  setOrder(order: ReadonlyArray<string>): void {
+    const now = this.#browse.getValue().order;
+    if (now.length === order.length && now.every((id, at) => id === order[at])) return;
+    this.#browse.update({ order: [...order] });
+  }
+
+  /**
+   * Make a row the current one: what a click on a row does, and what the pane shows.
+   * @param id The entry, or undefined for none.
+   */
+  setCurrent(id: string | undefined): void {
+    if (this.#browse.getValue().current !== id) this.#browse.update({ current: id });
+  }
+
+  /**
+   * Previous or Next: the row so many places on in the list, stopping at either end. A current row not
+   * in the list goes to the list's first.
+   * @param by -1 for the one before, 1 for the next.
+   */
+  step(by: number): void {
+    const { order, current } = this.#browse.getValue();
+    const at = current === undefined ? -1 : order.indexOf(current);
+    const next = at < 0 ? order[0] : order[Math.min(order.length - 1, Math.max(0, at + by))];
+    if (next !== undefined) this.setCurrent(next);
+  }
+
+  /**
+   * Act on rows, each by its kind, as the selection bar and the pane do: unused items to the recycle bin
+   * through the Manager, oversized images into Optimize images, orphaned files only once the window
+   * asked (`deleting`), and only for an administrator, who alone may delete from disk. The current row,
+   * if it went, moves on to the next one still there.
+   * @param ids The entries.
+   * @param options Whether the person is an administrator, and Optimize images' window title.
+   */
+  async act(ids: ReadonlyArray<string>, options: { admin: boolean; title?: string }): Promise<void> {
+    const wanted = new Set(ids);
+    const chosen = this.entries().filter((entry) => wanted.has(entry.id));
+    const files = chosen.filter((entry) => entry.kind === 'orphaned');
+    if (files.length && options.admin) this.#browse.update({ deleting: files.map((entry) => entry.id) });
+    const trash = chosen.filter((entry) => entry.kind === 'unused' && entry.item);
+    const optimize = chosen.filter((entry) => entry.kind === 'oversized' && entry.item);
+    this.#moveOn([...trash, ...optimize].map((entry) => entry.id));
+    if (optimize.length) this.optimize(optimize.map((entry) => entry.item!.key), { title: options.title });
+    if (trash.length) await this.trash(trash.map((entry) => entry.item!.key));
+  }
+
+  /** Delete the files the window asked about, for good, and keep what stayed and why. */
+  async confirmDelete(): Promise<void> {
+    const ids = this.#browse.getValue().deleting;
+    if (!ids) return;
+    this.#browse.update({ deleting: undefined });
+    const files = this.entries().filter((entry) => entry.orphan && ids.includes(entry.id));
+    if (!files.length) return;
+    const outcome = await this.deleteOrphaned(files.map((entry) => entry.orphan!.relativePath));
+    const skipped = 'error' in outcome ? files.map((entry) => ({ relativePath: entry.orphan!.relativePath, reason: outcome.error })) : outcome.skipped;
+    const stayed = new Set(skipped.map((each) => each.relativePath.toLowerCase()));
+    this.#browse.update({ skipped });
+    this.#moveOn(files.filter((entry) => !stayed.has(entry.orphan!.relativePath.toLowerCase())).map((entry) => entry.id));
+  }
+
+  /** Delete nothing: the window's question was cancelled. */
+  cancelDelete(): void {
+    this.#browse.update({ deleting: undefined });
+  }
+
+  /**
+   * Ask the window to ask Keep… about rows (design §16.6): the list's selection bar and the pane both
+   * come here, and the window shows the sheet, since the pane is not inside it.
+   * @param ids The entries.
+   */
+  askKeep(ids: ReadonlyArray<string>): void {
+    if (ids.length) this.#browse.update({ keeping: [...ids] });
+  }
+
+  /** Keep nothing: the sheet was cancelled. */
+  cancelKeep(): void {
+    this.#browse.update({ keeping: undefined });
+  }
+
+  /**
+   * Keep the rows the sheet asked about, each from the list it is in, so Kept can say which; they leave
+   * every list at once, and the current row moves on as after any action.
+   * @param note Why, as typed; blank is none.
+   * @param duration For how long.
+   */
+  async keep(note: string, duration: HealthKeepDuration): Promise<void> {
+    const ids = this.#browse.getValue().keeping;
+    this.#browse.update({ keeping: undefined });
+    if (!ids?.length) return;
+    const wanted = new Set(ids);
+    const chosen = this.entries().filter((entry) => wanted.has(entry.id));
+    const made: HealthKeep[] = [];
+    for (const kind of HEALTH_KINDS) {
+      const targets = chosen.filter((entry) => entry.kind === kind).map((entry) => (entry.orphan ? entry.orphan.relativePath : entry.item!.key));
+      if (!targets.length) continue;
+      const answer = await this.#client.keep({ kind: KEEP_KINDS[kind], targets, note: note.trim() || null, duration });
+      made.push(...(answer.data ?? []));
+    }
+    if (!made.length) return;
+    const replaced = new Set(made.map((keep) => `${keep.kind === 'Orphaned'}|${keep.target.toLowerCase()}`));
+    const result = this.#state.getValue().result;
+    const others = (result?.keeps ?? []).filter((keep) => !replaced.has(`${keep.kind === 'Orphaned'}|${keep.target.toLowerCase()}`));
+    this.#moveOn(chosen.map((entry) => entry.id));
+    this.#withKeeps([...made, ...others]);
+  }
+
+  /**
+   * Stop keeping rows: they come back to their lists at once. This is how a colleague overrules a keep,
+   * openly, with its note in front of them (design §16.6).
+   * @param ids The entries.
+   */
+  async stopKeeping(ids: ReadonlyArray<string>): Promise<void> {
+    const wanted = new Set(ids);
+    const keeps = this.entries().filter((entry) => wanted.has(entry.id) && entry.keep).map((entry) => entry.keep!);
+    if (!keeps.length) return;
+    const answer = await this.#client.stopKeeping(keeps.map((keep) => keep.id));
+    if (answer.error) return;
+    const stopped = new Set(keeps.map((keep) => keep.id));
+    const targets = new Set(keeps.map((keep) => keep.target.toLowerCase()));
+    this.#moveOn([...wanted]);
+    this.#withKeeps((this.#state.getValue().result?.keeps ?? []).filter((keep) => !stopped.has(keep.id) && !targets.has(keep.target.toLowerCase())));
+  }
+
+  /**
+   * Read the keeps again, so one a colleague made since the result loaded is left out before anything
+   * acts on the lists: Clean up asks this before its sheet (plan Review Focus 5). Trash cannot check
+   * keeps on the server, so this is where a fresh keep is honoured; a failed read keeps what is there.
+   */
+  async loadKeeps(): Promise<void> {
+    if (!this.#state.getValue().result) return;
+    const answer = await this.#client.keeps();
+    if (answer.data) this.#withKeeps(answer.data);
+  }
+
+  /**
+   * Apply other keeps to the result shown, summing again.
+   * @param keeps Every keep now.
+   */
+  #withKeeps(keeps: HealthKeep[]): void {
+    const result = this.#state.getValue().result;
+    if (!result) return;
+    this.#patch({ result: resultOf(result.checkId, result.checkedAt, result.items, result.orphans, result.folders, keeps) });
+  }
+
+  /**
+   * Move the current row on past rows that went, as the pane's actions do.
+   * @param gone The entries that went.
+   */
+  #moveOn(gone: ReadonlyArray<string>): void {
+    const { current, order } = this.#browse.getValue();
+    if (current !== undefined && gone.length) this.setCurrent(nextAfter(order, current, gone));
   }
 
   /**
@@ -358,8 +572,10 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
     if (!items.data || !orphaned.data || !folders.data) {
       return this.#phase({ kind: 'failed', message: items.error ?? orphaned.error ?? folders.error ?? 'failed' });
     }
+    // Keeps only filter: a failed read shows the result without them rather than no result at all.
+    const keeps = await this.#client.keeps();
     const checkedAt = last.finishedUtc ? new Date(last.finishedUtc) : this.#now();
-    this.#patch({ phase: { kind: 'idle' }, result: summed(last.id, checkedAt, items.data, orphaned.data, folders.data) });
+    this.#patch({ phase: { kind: 'idle' }, result: resultOf(last.id, checkedAt, items.data, orphaned.data, folders.data, keeps.data ?? []) });
   }
 
   /**
@@ -379,14 +595,14 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
   }
 
   /**
-   * Replace the result's items and orphaned files, keeping the rest, and sum again.
+   * Replace the result's items and orphaned files, keeping the rest, the keeps too, and sum again.
    * @param items The items now.
-   * @param orphaned The orphaned files now.
+   * @param orphaned The orphaned files now, kept ones included.
    */
   #replace(items: HealthItem[], orphaned: HealthOrphan[]): void {
     const { result } = this.#state.getValue();
     if (!result) return;
-    this.#patch({ result: summed(result.checkId, result.checkedAt, items, orphaned, result.folders) });
+    this.#patch({ result: resultOf(result.checkId, result.checkedAt, items, orphaned, result.folders, result.keeps) });
   }
 
   /**
@@ -409,7 +625,7 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
     if (!answer.data) return { error: answer.error ?? 'failed' };
     const gone = new Set(answer.data.deleted.map((path) => path.toLowerCase()));
     const result = this.#state.getValue().result;
-    if (result) this.#replace(result.items, result.lists.orphaned.filter((each) => !gone.has(each.relativePath.toLowerCase())));
+    if (result) this.#replace(result.items, result.orphans.filter((each) => !gone.has(each.relativePath.toLowerCase())));
     return { deleted: answer.data.deleted.length, skipped: answer.data.skipped };
   }
 
@@ -427,7 +643,7 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
     const outcome = await this.#trashThroughManager(keys, onProgress);
     const gone = new Set(outcome.trashed.map((ref) => ref.unique));
     const result = this.#state.getValue().result;
-    if (result) this.#replace(result.items.filter((each) => !gone.has(each.key)), result.lists.orphaned);
+    if (result) this.#replace(result.items.filter((each) => !gone.has(each.key)), result.orphans);
     this.#refresh([...gone]);
     return outcome;
   }
@@ -451,7 +667,7 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
     const unused = kinds.has('unused') ? lists.unused : [];
     const orphaned = kinds.has('orphaned') ? lists.orphaned : [];
     const oversized = kinds.has('oversized') ? lists.oversized : [];
-    const beforeBytes = result ? sizeOfAll(result.items) + sizeOfAll(result.lists.orphaned) : 0;
+    const beforeBytes = result ? sizeOfAll(result.items) + sizeOfAll(result.orphans) : 0;
     this.#trashedItems = [];
     this.#patch({
       cleanup: {
@@ -546,6 +762,19 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
   }
 
   /**
+   * Open a folder in a Media Manager window: the breakdown's **Open in Media Manager** (design
+   * §16.15), the library's root for the library.
+   * @param folderKey The folder, or null for the root.
+   * @returns Whether a window was opened.
+   */
+  showFolderInManager(folderKey: string | null): boolean {
+    const windows = this.#windows();
+    if (!windows) return false;
+    const place = folderKey ? ({ kind: 'folder', unique: folderKey } as const) : ({ kind: 'root' } as const);
+    return windows.openApp(UMBRADESKTOP_MEDIA_MANAGER_APP, { location: printLocation(place) });
+  }
+
+  /**
    * Whether Clean up must not act on the result shown (design §16.12): it is over a day old, or the
    * server holds a newer check or runs one. Asked of the server just before acting, since the watch
    * only looks every thirty seconds. A newer check is followed or read, so the window shows it.
@@ -597,7 +826,7 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
     }
     const restored = this.#trashedItems.filter((each) => back.has(each.key));
     const result = this.#state.getValue().result;
-    if (result) this.#replace([...result.items, ...restored], result.lists.orphaned);
+    if (result) this.#replace([...result.items, ...restored], result.orphans);
     this.#refresh([...back]);
     const freed = cleanup.freedBytes - sizeOfAll(restored);
     this.#trashedItems = this.#trashedItems.filter((each) => !back.has(each.key));
@@ -650,7 +879,7 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
     if (!result) return;
     this.#replace(
       result.items.map((each) => (bySize.has(each.key.toLowerCase()) ? { ...each, sizeBytes: bySize.get(each.key.toLowerCase())! } : each)),
-      result.lists.orphaned,
+      result.orphans,
     );
     this.#refresh(sizes.map((each) => each.unique));
   }
@@ -687,18 +916,40 @@ export class UmbraDesktopMediaHealthContext extends UmbContextBase {
 }
 
 /**
- * A result from its parts.
+ * A result from its parts, with the keeps applied (design §16.6): the lists and the bar leave out what
+ * is kept now. Exported so the screens' tests build their results the way the context does.
  * @param checkId The check's number.
  * @param checkedAt When the check finished.
  * @param items Every item.
- * @param orphaned The orphaned files.
+ * @param orphaned Every orphaned file, kept ones included.
  * @param folders Every folder.
+ * @param keeps Every keep; none by default.
  * @returns The result.
  */
-function summed(checkId: number, checkedAt: Date, items: HealthItem[], orphaned: HealthOrphan[], folders: HealthFolder[]): UmbraDesktopMediaHealthResult {
+export function resultOf(
+  checkId: number,
+  checkedAt: Date,
+  items: HealthItem[],
+  orphaned: HealthOrphan[],
+  folders: HealthFolder[],
+  keeps: HealthKeep[] = [],
+): UmbraDesktopMediaHealthResult {
   const sorted = [...items].sort((a, b) => (b.sizeBytes ?? 0) - (a.sizeBytes ?? 0));
-  const lists = listsOf(sorted, orphaned);
-  return { checkId, checkedAt, items: sorted, folders, lists, bar: barOf(lists, sizeOfAll(sorted)) };
+  const all = listsOf(sorted, orphaned);
+  const keeping = keepingOf(all, sorted, keeps);
+  return {
+    checkId,
+    checkedAt,
+    items: sorted,
+    orphans: all.orphaned,
+    folders,
+    lists: keeping.lists,
+    bar: barOf(keeping.lists, sizeOfAll(sorted)),
+    keeps,
+    kept: keeping.kept,
+    ended: keeping.ended,
+    keptCount: keeping.keptCount,
+  };
 }
 
 /**

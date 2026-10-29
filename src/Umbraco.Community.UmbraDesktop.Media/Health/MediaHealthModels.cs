@@ -173,6 +173,12 @@ public enum MediaOrphanSkipReason
 
     /// <summary>A media item owns it now.</summary>
     NowOwned,
+
+    /// <summary>
+    /// Someone keeps it (design §16.6), perhaps since the window asking loaded: the delete checks the
+    /// keeps itself rather than trusting the list it was sent (plan Review Focus 5).
+    /// </summary>
+    Kept,
 }
 
 /// <summary>An orphaned file left alone, and why.</summary>

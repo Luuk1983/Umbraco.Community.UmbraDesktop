@@ -1,20 +1,31 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './health-overview.element.js';
 import type { UmbraDesktopHealthOverviewElement } from './health-overview.element.js';
-import { STRIP_EDGE, STRIP_GAP, stripCount } from './health-overview.element.js';
+import { OVERVIEW_BESIDE_FROM, OVERVIEW_WIDE_FROM, STRIP_EDGE, STRIP_GAP, stripCount } from './health-overview.element.js';
 import { cleanupOf } from './health-model.js';
 import type { HealthKind } from './health-model.js';
 import { formatBytes } from '../transfers/transfers-model.js';
 import { KEY_NAMES, result, textOf, tick } from './health.test-helper.js';
 
-/** The overview (design §16.2, mock scene 1): the bar, three ticked rows, one Clean up, the folders. */
+/**
+ * The overview (design §16.2, reworked in §16.15, mock scene 1): the bar, the three kinds ticked, one
+ * Clean up, the folders; cards side by side in a wide window, compact rows in a narrow one.
+ */
+
+/** A wide window's width: the window's opening width, where the cards have taken over. */
+const WIDE = 960;
+
+/** A narrow window's width: the old default. */
+const NARROW = 640;
 
 /**
  * The overview on the test library.
  * @param admin Whether the person is an administrator.
  * @param change What to change in the test library first.
+ * @param now The time now.
+ * @param width How wide the window is.
  */
-async function overview(admin = true, change: (checked: ReturnType<typeof result>) => void = () => {}, now?: Date) {
+async function overview(admin = true, change: (checked: ReturnType<typeof result>) => void = () => {}, now?: Date, width = WIDE) {
   const checked = result();
   change(checked);
   const signed: string[] = [];
@@ -27,15 +38,15 @@ async function overview(admin = true, change: (checked: ReturnType<typeof result
     return new Map(subjects.map((subject) => [subject.url, `${subject.url}?width=${edge}&hmac=s`]));
   };
   const element = await fixture<UmbraDesktopHealthOverviewElement>(
-    html`<umbradesktop-health-overview .result=${checked} .admin=${admin} .signThumbnails=${sign} .now=${now}></umbradesktop-health-overview>`,
+    html`<umbradesktop-health-overview style="width:${width}px" .result=${checked} .admin=${admin} .signThumbnails=${sign} .now=${now}></umbradesktop-health-overview>`,
   );
-  await tick();
-  await element.updateComplete;
-  // The strips are drawn once the rows are measured, a frame after the first render.
-  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  await element.updateComplete;
-  await tick();
-  await element.updateComplete;
+  // The layout follows the measured width a frame late, and the strips the measured cards a frame
+  // after that, so a few frames pass before the overview is whole.
+  for (let i = 0; i < 4; i++) {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await tick();
+    await element.updateComplete;
+  }
   const root = element.shadowRoot!;
   const box = (kind: HealthKind) => root.querySelector<HTMLElement & { checked: boolean; disabled: boolean }>(`[data-row=${kind}] uui-checkbox`)!;
   const cleanUp = () => root.querySelector<HTMLElement & { disabled: boolean }>('uui-button.clean-up')!;
@@ -150,14 +161,44 @@ describe('the Media Health overview', () => {
     expect(tiles[0]).to.be.greaterThan(3);
   });
 
-  it('puts the thumbnails under the row\'s title and line, so they start at the same place on every row', async () => {
-    const { root } = await overview();
-    const strips = [...root.querySelectorAll<HTMLElement>('.row .text .strip')];
-    expect(strips.length, 'each strip sits in its row\'s text column').to.equal(3);
-    const lefts = strips.map((strip) => Math.round(strip.getBoundingClientRect().left));
-    expect(new Set(lefts).size, `strips start at ${lefts.join(', ')}`).to.equal(1);
+  it('lays the three kinds out as cards side by side in a wide window, Clean up under them and Where the space goes a section of its own below', async () => {
+    const { root, element, cleanUp } = await overview();
+    expect(element.hasAttribute('wide')).to.equal(true);
+    expect(element.hasAttribute('beside')).to.equal(false);
+    const cards = [...root.querySelectorAll<HTMLElement>('.row')].map((each) => each.getBoundingClientRect());
+    expect(new Set(cards.map((each) => Math.round(each.top))).size, 'one line of cards').to.equal(1);
+    const space = root.querySelector('.space')!;
+    expect(space.tagName.toLowerCase(), "a box of its own, with UUI's headline").to.equal('uui-box');
+    expect(space.getAttribute('headline')).to.equal('Storage by folder');
+    expect(cleanUp().getBoundingClientRect().bottom, 'Clean up goes with the kinds, above the folders').to.be.at.most(space.getBoundingClientRect().top);
+    const strips = [...root.querySelectorAll<HTMLElement>('.row .strip')];
+    expect(strips.length, 'each card has its thumbnails').to.equal(3);
     const line = root.querySelector('[data-row=unused] .text small')!.getBoundingClientRect();
     expect(strips[0].getBoundingClientRect().top).to.be.at.least(line.bottom);
+  });
+
+  it('turns them into compact rows without thumbnails in a narrow window, with the folders under them', async () => {
+    const { root, element, signed } = await overview(true, () => {}, undefined, NARROW);
+    expect(element.hasAttribute('wide')).to.equal(false);
+    expect(root.querySelectorAll('.strip').length).to.equal(0);
+    expect(signed, 'no thumbnail is asked for that is not drawn').to.deep.equal([]);
+    const rows = [...root.querySelectorAll<HTMLElement>('.row')].map((each) => each.getBoundingClientRect());
+    expect(rows[1].top).to.be.at.least(rows[0].bottom);
+    const space = root.querySelector('.space')!.getBoundingClientRect();
+    expect(space.top).to.be.at.least(rows[2].bottom);
+  });
+
+  it('switches at the width where the cards take over', async () => {
+    expect((await overview(true, () => {}, undefined, OVERVIEW_WIDE_FROM)).element.hasAttribute('wide')).to.equal(true);
+    expect((await overview(true, () => {}, undefined, OVERVIEW_WIDE_FROM - 1)).element.hasAttribute('wide')).to.equal(false);
+  });
+
+  it('puts Where the space goes beside the cards only in a very wide window', async () => {
+    const { root, element } = await overview(true, () => {}, undefined, OVERVIEW_BESIDE_FROM);
+    expect(element.hasAttribute('beside')).to.equal(true);
+    const cards = [...root.querySelectorAll<HTMLElement>('.row')].map((each) => each.getBoundingClientRect());
+    expect(root.querySelector('.space')!.getBoundingClientRect().left).to.be.at.least(Math.max(...cards.map((each) => each.right)));
+    expect((await overview(true, () => {}, undefined, OVERVIEW_BESIDE_FROM - 1)).element.hasAttribute('beside')).to.equal(false);
   });
 
   it('draws an icon, not a broken picture, for an item without a file', async () => {
@@ -182,7 +223,7 @@ describe('the Media Health overview', () => {
     expect(names).to.deep.equal(['Products', 'At the root', 'People']);
   });
 
-  describe('opening the grid (design §16.4)', () => {
+  describe('opening the list and the folders (design §16.15)', () => {
     /**
      * Every grid the overview asks for.
      * @param element The overview.
@@ -210,16 +251,26 @@ describe('the Media Health overview', () => {
       expect(asked).to.deep.equal([{ kind: 'unused' }]);
     });
 
-    it('opens a folder from Where the space goes, the root as itself, and every folder from All folders', async () => {
+    it('opens a folder’s breakdown from Where the space goes, the root as the library, and the top from Browse all folders', async () => {
       const { element, root } = await overview();
-      const asked = opened(element);
+      const asked: unknown[] = [];
+      element.addEventListener('health-open-folder', (event) => asked.push((event as CustomEvent).detail));
+      const lists = opened(element);
       const folders = [...root.querySelectorAll<HTMLElement>('.space button.folder')];
       folders[0].click();
       folders[1].click();
       root.querySelector<HTMLElement>('.space uui-button.all-folders')!.click();
       await tick();
-      expect(asked).to.deep.equal([{ folderKey: 'f' }, { folderKey: null }, {}]);
+      expect(asked).to.deep.equal([{ folderKey: 'f' }, { folderKey: null }, { folderKey: null }]);
+      expect(lists, 'a folder opens its breakdown, not the cleanup list').to.deep.equal([]);
     });
+  });
+
+  it('says how many are kept beside a row’s line (design §16.6)', async () => {
+    const { element } = await overview(true, (checked) => (checked.keptCount = { unused: 12, orphaned: 0, oversized: 0 }));
+    const unused = element.shadowRoot!.querySelector('[data-row="unused"]')!;
+    expect(textOf(unused)).to.contain('12 kept');
+    expect(textOf(element.shadowRoot!.querySelector('[data-row="orphaned"]')!)).to.not.contain('kept');
   });
 
   it('names no key', async () => {

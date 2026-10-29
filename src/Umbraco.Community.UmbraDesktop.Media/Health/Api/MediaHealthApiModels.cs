@@ -130,7 +130,7 @@ public sealed record MediaHealthOrphansResponseModel(IReadOnlyList<MediaHealthOr
 /// <param name="RelativePaths">Their paths, as listed.</param>
 public sealed record DeleteMediaOrphansRequestModel(IReadOnlyList<string> RelativePaths);
 
-/// <summary>A file left alone, and why: <c>NotFound</c> or <c>NowOwned</c>.</summary>
+/// <summary>A file left alone, and why: <c>NotFound</c>, <c>NowOwned</c> or <c>Kept</c>.</summary>
 /// <param name="RelativePath">The file.</param>
 /// <param name="Reason">Why.</param>
 public sealed record MediaHealthSkipResponseModel(string RelativePath, string Reason);
@@ -157,3 +157,46 @@ public sealed record MediaHealthThumbnailsResponseModel(IReadOnlyDictionary<stri
 /// <summary>The items a Clean up changed, for the stored result to follow (design §16.12).</summary>
 /// <param name="Keys">The items trashed, restored or optimized.</param>
 public sealed record RefreshMediaHealthItemsRequestModel(IReadOnlyList<Guid> Keys);
+
+/// <summary>One keep, as Kept lists it and the window filters by it (design §16.6).</summary>
+/// <param name="Id">The keep's number, which Stop keeping names.</param>
+/// <param name="Kind">The list it was kept from: <c>Unused</c>, <c>Orphaned</c> or <c>Oversized</c>.</param>
+/// <param name="Target">The item's key, or the orphaned file's relative path.</param>
+/// <param name="Note">Why it is kept, or null.</param>
+/// <param name="UntilUtc">When it ends, or null for always.</param>
+/// <param name="KeptBy">Who kept it.</param>
+/// <param name="KeptByName">Their name.</param>
+/// <param name="KeptUtc">When.</param>
+/// <param name="Ended">Why it has ended, <c>Expired</c> or <c>Changed</c>, or null while it holds.</param>
+public sealed record MediaHealthKeepResponseModel(
+    int Id,
+    string Kind,
+    string Target,
+    string? Note,
+    DateTime? UntilUtc,
+    Guid KeptBy,
+    string KeptByName,
+    DateTime KeptUtc,
+    string? Ended)
+{
+    /// <summary>A keep as the API says it.</summary>
+    /// <param name="keep">The keep.</param>
+    /// <returns>The model.</returns>
+    public static MediaHealthKeepResponseModel From(Keep.MediaKeep keep) => new(
+        keep.Id, keep.Kind.ToString(), keep.Target, keep.Note, keep.UntilUtc, keep.KeptBy, keep.KeptByName, keep.KeptUtc, keep.Ended?.ToString());
+}
+
+/// <summary>Keeps: every keep, or the ones just made.</summary>
+/// <param name="Keeps">The keeps.</param>
+public sealed record MediaHealthKeepsResponseModel(IReadOnlyList<MediaHealthKeepResponseModel> Keeps);
+
+/// <summary>Things to keep.</summary>
+/// <param name="Kind">The list they are kept from: <c>Unused</c>, <c>Orphaned</c> or <c>Oversized</c>.</param>
+/// <param name="Targets">Item keys or orphaned files' relative paths.</param>
+/// <param name="Note">Why, or null; at most 500 characters.</param>
+/// <param name="Duration">For how long: <c>ThreeMonths</c>, <c>Year</c> or <c>Always</c>.</param>
+public sealed record KeepMediaRequestModel(string Kind, IReadOnlyList<string> Targets, string? Note, string Duration);
+
+/// <summary>Keeps to stop.</summary>
+/// <param name="Ids">Their numbers.</param>
+public sealed record StopKeepingMediaRequestModel(IReadOnlyList<int> Ids);

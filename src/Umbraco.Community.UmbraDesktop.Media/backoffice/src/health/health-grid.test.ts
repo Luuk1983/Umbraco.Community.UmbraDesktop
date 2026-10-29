@@ -1,10 +1,9 @@
 import { expect } from '@open-wc/testing';
-import { CELL_GAP, HealthSelection, ORPHAN_GROUP, cellsPerRow, chipCounts, entriesOf, gridOf, rowsOf } from './health-grid.js';
+import { HealthSelection, ORPHAN_GROUP, PAGE_ROWS, chipCounts, entriesOf, gridOf, nextAfter, orderOf, pageCount, pageOf, pageWith } from './health-grid.js';
 import type { HealthEntry, HealthGridQuery } from './health-grid.js';
 import { listsOf } from './health-model.js';
-import type { HealthFolder } from './health.client.js';
+import type { HealthFolder, HealthKeep } from './health.client.js';
 import { MB, item, orphan } from './health.test-helper.js';
-import { THUMB_EDGE } from './health-media.js';
 
 /** The grid's sums (design §16.4, plan Task 2.1): entries, groups by folder, the selection. */
 
@@ -87,13 +86,37 @@ describe('the Media Cleanup grid model', () => {
     expect(groups[0].bytes).to.equal(60);
   });
 
+  it('filters by the items directly in a folder, leaving out its folders, when asked for exactly', () => {
+    expect(gridOf(entries(), query({ folderKey: 'products', exact: true }), FOLDERS).map((group) => group.key)).to.deep.equal(['products']);
+    expect(gridOf(entries(), query({ folderKey: null, exact: true }), FOLDERS).map((group) => group.key)).to.deep.equal(['']);
+  });
+
   it('leaves orphaned files out of a folder, which they belong to none of', () => {
     expect(gridOf(entries(), query({ chip: 'orphaned', folderKey: 'products' }), FOLDERS)).to.deep.equal([]);
   });
 
   it('counts each chip in the folder asked for', () => {
-    expect(chipCounts(entries(), undefined, FOLDERS)).to.deep.equal({ unused: 6, orphaned: 3, oversized: 1 });
-    expect(chipCounts(entries(), 'products', FOLDERS)).to.deep.equal({ unused: 2, orphaned: 0, oversized: 1 });
+    expect(chipCounts(entries(), undefined, FOLDERS)).to.deep.equal({ unused: 6, orphaned: 3, oversized: 1, kept: 0 });
+    expect(chipCounts(entries(), 'products', FOLDERS)).to.deep.equal({ unused: 2, orphaned: 0, oversized: 1, kept: 0 });
+  });
+
+  it('shows kept things under Kept alone, grouped by folder as the other tabs are (design §16.6)', () => {
+    const keep = (target: string, kind: HealthKeep['kind'], ended: HealthKeep['ended'] = null): HealthKeep => ({
+      id: 1, kind, target, note: null, untilUtc: null, keptBy: 'u', keptByName: 'Edith', keptUtc: '2026-10-29T00:00:00Z', ended,
+    });
+    const all = [...entries().filter((each) => each.id !== 'a'), { ...entries().find((each) => each.id === 'a')!, keep: keep('a', 'Unused') }];
+    expect(gridOf(all, query({ chip: 'kept' }), FOLDERS).flatMap((group) => group.entries.map((each) => each.id))).to.deep.equal(['a']);
+    expect(gridOf(all, query(), FOLDERS).flatMap((group) => group.entries.map((each) => each.id))).not.to.include('a');
+    expect(chipCounts(all, undefined, FOLDERS)).to.deep.equal({ unused: 5, orphaned: 3, oversized: 1, kept: 1 });
+    // An ended keep is a badge on a row of its own list, not a row under Kept.
+    const ended = all.map((each) => (each.id === 'a' ? { ...each, keep: keep('a', 'Unused', 'Expired') } : each));
+    expect(chipCounts(ended, undefined, FOLDERS)).to.deep.equal({ unused: 6, orphaned: 3, oversized: 1, kept: 0 });
+  });
+
+  it('puts the keep that ended on its row, so the list can show the badge', () => {
+    const lists = listsOf([item({ key: 'a', used: false })], []);
+    const ended: HealthKeep = { id: 2, kind: 'Unused', target: 'a', note: 'Old', untilUtc: '2026-01-01T00:00:00Z', keptBy: 'u', keptByName: 'E', keptUtc: '2025-01-01T00:00:00Z', ended: 'Expired' };
+    expect(entriesOf(lists, new Map([['a', ended]]))[0].keep).to.equal(ended);
   });
 
   it('selects a whole group from none or some, and clears it from all', () => {
@@ -125,16 +148,51 @@ describe('the Media Cleanup grid model', () => {
     expect([...selection.within(all).ids].sort()).to.deep.equal(['a', 'c']);
   });
 
-  it('fits as many cells in a row as the width takes, at least one', () => {
-    expect(cellsPerRow(THUMB_EDGE * 3 + CELL_GAP * 2)).to.equal(3);
-    expect(cellsPerRow(THUMB_EDGE * 3 + CELL_GAP * 2 - 1)).to.equal(2);
-    expect(cellsPerRow(0)).to.equal(1);
+  it('selects or unselects many at once, as a drag over rows does (design §16.15)', () => {
+    const selection = new HealthSelection(['a']);
+    const more = selection.with(['b', 'c'], true);
+    expect([...more.ids].sort()).to.deep.equal(['a', 'b', 'c']);
+    expect([...more.with(['a', 'c'], false).ids]).to.deep.equal(['b']);
+    expect(selection.count, 'the first is left as it was').to.equal(1);
   });
 
-  it('shows a group’s first row with "+n more" in its last place, and every row once opened', () => {
-    const many = { key: 'k', label: '', bytes: 0, unknown: 0, entries: entries().filter((each) => each.kind === 'unused') };
-    expect(rowsOf(many, 4, false)).to.deep.equal({ rows: [many.entries.slice(0, 3)], more: 3 });
-    expect(rowsOf(many, 6, false)).to.deep.equal({ rows: [many.entries], more: 0 });
-    expect(rowsOf(many, 4, true)).to.deep.equal({ rows: [many.entries.slice(0, 4), many.entries.slice(4)], more: 0 });
+  it('pages the rows a hundred at a time, as core’s collections do, a group going on over a page', () => {
+    const row = entries()[0];
+    const big = { key: 'big', label: 'Big', bytes: 0, unknown: 0, entries: Array.from({ length: PAGE_ROWS - 2 }, (_, at) => ({ ...row, id: `b${at}` })) };
+    const next = { key: 'next', label: 'Next', bytes: 0, unknown: 0, entries: Array.from({ length: 5 }, (_, at) => ({ ...row, id: `n${at}` })) };
+    expect(pageCount([big, next])).to.equal(2);
+    const first = pageOf([big, next], 1);
+    expect(first.map((part) => [part.group.key, part.entries.length, part.continued])).to.deep.equal([
+      ['big', PAGE_ROWS - 2, false],
+      ['next', 2, false],
+    ]);
+    const second = pageOf([big, next], 2);
+    expect(second.map((part) => [part.group.key, part.entries.length, part.continued])).to.deep.equal([['next', 3, true]]);
+    expect(second[0].group, 'the whole group, for its checkbox and its count').to.equal(next);
+    expect(pageOf([big, next], 9), 'past the end is the last page').to.deep.equal(second);
+    expect(pageCount([])).to.equal(1);
+  });
+
+  it('finds the page a row is on, so the list follows the details pane', () => {
+    const row = entries()[0];
+    const big = { key: 'big', label: '', bytes: 0, unknown: 0, entries: Array.from({ length: PAGE_ROWS + 3 }, (_, at) => ({ ...row, id: `b${at}` })) };
+    expect(pageWith([big], 'b0')).to.equal(1);
+    expect(pageWith([big], `b${PAGE_ROWS + 1}`)).to.equal(2);
+    expect(pageWith([big], 'gone')).to.equal(undefined);
+  });
+
+  it('lists every row in the order shown, over every page, for Previous and Next', () => {
+    const groups = gridOf(entries(), query(), FOLDERS);
+    expect(orderOf(groups)).to.deep.equal(['a', 'b', 'c', 'd', 'persona', 'e']);
+  });
+
+  it('moves on after what went to the next row still there, or the one before at the end', () => {
+    const order = ['a', 'b', 'c', 'd'];
+    expect(nextAfter(order, 'b', ['b'])).to.equal('c');
+    expect(nextAfter(order, 'b', ['b', 'c'])).to.equal('d');
+    expect(nextAfter(order, 'd', ['d'])).to.equal('c');
+    expect(nextAfter(order, 'a', ['a', 'b', 'c', 'd'])).to.equal(undefined);
+    expect(nextAfter(order, 'b', ['c']), 'the current row stays when it did not go').to.equal('b');
+    expect(nextAfter(order, 'x', ['a']), 'a row not in the list stays as it is').to.equal('x');
   });
 });

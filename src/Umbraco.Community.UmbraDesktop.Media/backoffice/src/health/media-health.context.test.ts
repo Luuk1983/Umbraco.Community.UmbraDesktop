@@ -2,7 +2,7 @@ import { expect } from '@open-wc/testing';
 import { UmbElementControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { HEALTH_POLL_MS, HEALTH_WATCH_MS, UmbraDesktopMediaHealthContext } from './media-health.context.js';
 import type { UmbraDesktopMediaHealthCleanupState, UmbraDesktopMediaHealthManager, UmbraDesktopMediaHealthRefusal, UmbraDesktopMediaHealthState } from './media-health.context.js';
-import type { HealthCheck, HealthItem, HealthOrphan, HealthResult, HealthStatus, UmbraDesktopMediaHealthClient } from './health.client.js';
+import type { HealthCheck, HealthItem, HealthKeep, HealthKeepRequest, HealthOrphan, HealthResult, HealthStatus, UmbraDesktopMediaHealthClient } from './health.client.js';
 import type { HealthKind } from './health-model.js';
 import type { OptimizeMediaRequest, OptimizeReport } from '../shared/optimize-service.js';
 import type { UmbraDesktopMediaRef } from '../operations/media-api.js';
@@ -70,7 +70,7 @@ const status = (over: Partial<HealthStatus> = {}): HealthStatus => ({ running: n
  * A stand-in server whose check takes a few polls, recording every call and every wait.
  * @param over What differs from a library of three items and two orphans.
  */
-function server(over: { steps?: HealthStatus[]; status?: HealthStatus; items?: HealthItem[]; orphans?: HealthOrphan[] } = {}) {
+function server(over: { steps?: HealthStatus[]; status?: HealthStatus; items?: HealthItem[]; orphans?: HealthOrphan[]; keeps?: HealthKeep[] } = {}) {
   const calls: string[] = [];
   const waits: number[] = [];
   let current: HealthStatus = over.status ?? status();
@@ -83,6 +83,8 @@ function server(over: { steps?: HealthStatus[]; status?: HealthStatus; items?: H
   let step = 0;
   const items = over.items ?? [item({ key: 'a', sizeBytes: 3 * MB }), unused('b', 50), item({ key: 'c', path: '/People', parentKey: 'p', sizeBytes: 30 })];
   let orphans = over.orphans ?? [orphan('1/x.jpg'), orphan('2/y.png')];
+  let keeps = over.keeps ?? [];
+  let keepId = 100;
   const ok = <T>(data: T): Promise<HealthResult<T>> => Promise.resolve({ data });
   const client = {
     status: async () => {
@@ -119,6 +121,23 @@ function server(over: { steps?: HealthStatus[]; status?: HealthStatus; items?: H
       calls.push(`refresh ${keys.join(',')}`);
       return ok(undefined);
     },
+    keeps: async () => {
+      calls.push('keeps');
+      return ok(keeps);
+    },
+    keep: async (request: HealthKeepRequest) => {
+      calls.push(`keep ${request.kind} ${request.targets.join(',')} ${request.duration} ${request.note ?? ''}`);
+      const made = request.targets.map((target): HealthKeep => ({
+        id: keepId++, kind: request.kind, target, note: request.note, untilUtc: null, keptBy: 'u', keptByName: 'Edith', keptUtc: '2026-10-29T00:00:00Z', ended: null,
+      }));
+      keeps = [...made, ...keeps.filter((each) => !request.targets.includes(each.target))];
+      return ok(made);
+    },
+    stopKeeping: async (ids: ReadonlyArray<number>) => {
+      calls.push(`stop keeping ${ids.join(',')}`);
+      keeps = keeps.filter((each) => !ids.includes(each.id));
+      return ok(undefined);
+    },
     deleteOrphans: async (paths: ReadonlyArray<string>) => {
       calls.push(`delete ${paths.join(',')}`);
       if (paths.includes('denied')) return { error: 'denied' as const };
@@ -127,12 +146,17 @@ function server(over: { steps?: HealthStatus[]; status?: HealthStatus; items?: H
       return ok({ deleted, skipped: paths.filter((path) => path === '2/y.png').map((relativePath) => ({ relativePath, reason: 'NowOwned' })) });
     },
   } as unknown as UmbraDesktopMediaHealthClient;
+  /**
+   * A keep someone else made meanwhile, as another window would.
+   * @param keep The keep.
+   */
+  const keptElsewhere = (keep: HealthKeep) => void (keeps = [keep, ...keeps]);
   /** Answer every status from now on with this, as a colleague's check or a new result would. */
   const set = (next: HealthStatus) => {
     current = next;
     step = steps.length;
   };
-  return { client, calls, waits, items, set, wait: async (ms: number) => void waits.push(ms) };
+  return { client, calls, waits, items, set, keptElsewhere, wait: async (ms: number) => void waits.push(ms) };
 }
 
 /**
@@ -250,7 +274,7 @@ describe('the Media Health context', () => {
     const { subject, api, states } = context();
     await subject.check();
     expect(HEALTH_POLL_MS).to.equal(2000);
-    expect(api.calls).to.deep.equal(['check', 'status', 'status', 'status', 'items', 'orphans', 'folders']);
+    expect(api.calls).to.deep.equal(['check', 'status', 'status', 'status', 'items', 'orphans', 'folders', 'keeps']);
     expect(api.waits).to.deep.equal([2000, 2000, 2000]);
     expect(states.map((state) => state.phase.kind)).to.deep.equal(['idle', 'running', 'running', 'running', 'running', 'running', 'idle']);
     const result = states[states.length - 1].result!;
@@ -292,7 +316,7 @@ describe('the Media Health context', () => {
     const ready = server({ status: status({ last: check() }) });
     const { subject, api } = context(ready);
     await subject.sync();
-    expect(api.calls).to.deep.equal(['status', 'items', 'orphans', 'folders']);
+    expect(api.calls).to.deep.equal(['status', 'items', 'orphans', 'folders', 'keeps']);
     expect(subject.getState().result?.items.length).to.equal(3);
 
     const going = server({ status: status({ running: check({ id: 2, phase: 'Usage', scanned: 1, total: 3, finishedUtc: null }) }) });
@@ -659,12 +683,187 @@ describe('the Media Health context', () => {
       ]);
     });
 
+    it('opens a folder of the breakdown in a Media Manager window, and the library at its root', () => {
+      const { subject, opened } = context();
+      expect(subject.showFolderInManager('f1')).to.equal(true);
+      expect(subject.showFolderInManager(null)).to.equal(true);
+      expect(opened).to.deep.equal([
+        { alias: UMBRADESKTOP_MEDIA_MANAGER_APP, location: 'folder=f1' },
+        { alias: UMBRADESKTOP_MEDIA_MANAGER_APP, location: 'folder=root' },
+      ]);
+    });
+
     it('offers no Media Manager for an orphaned file, which is no item to select', () => {
       const { subject, opened } = context();
       const file = orphan('1/x.jpg');
       const shown = subject.showInManager({ id: 'orphan:1/x.jpg', kind: 'orphaned', name: 'x.jpg', bytes: 10, sized: true, url: file.url, folderKey: null, folderPath: '1', orphan: file });
       expect(shown).to.equal(false);
       expect(opened).to.deep.equal([]);
+    });
+  });
+
+  describe('the list and its details pane (design §16.15)', () => {
+    /** The default server's rows in the list's order: one unused item, then the two orphaned files. */
+    const ORDER = ['b', 'orphan:1/x.jpg', 'orphan:2/y.png'];
+
+    it("makes every entry of the result once, for the list and the pane", async () => {
+      const { subject } = context();
+      await subject.check();
+      const entries = subject.entries();
+      expect(entries.map((each) => each.id)).to.deep.equal(['b', 'orphan:1/x.jpg', 'orphan:2/y.png', 'a']);
+      expect(subject.entries(), 'the same list until the result changes').to.equal(entries);
+    });
+
+    it('keeps the current row and the list order, and steps through it', async () => {
+      const { subject } = context();
+      await subject.check();
+      subject.setOrder(ORDER);
+      subject.setCurrent('orphan:1/x.jpg');
+      expect(subject.getBrowse().current).to.equal('orphan:1/x.jpg');
+      subject.step(1);
+      expect(subject.getBrowse().current).to.equal('orphan:2/y.png');
+      subject.step(1);
+      expect(subject.getBrowse().current, 'Next stops at the end').to.equal('orphan:2/y.png');
+      subject.step(-1);
+      subject.step(-1);
+      subject.step(-1);
+      expect(subject.getBrowse().current, 'Previous stops at the start').to.equal('b');
+    });
+
+    it('trashes an unused row through the Manager and moves on to the next', async () => {
+      const { subject, managerCalls } = context();
+      await subject.check();
+      subject.setOrder(ORDER);
+      subject.setCurrent('b');
+      await subject.act(['b'], { admin: true });
+      expect(managerCalls).to.include('trash b');
+      expect(subject.getBrowse().current).to.equal('orphan:1/x.jpg');
+    });
+
+    it('opens Optimize images for an oversized row', async () => {
+      const { subject, optimized } = context();
+      await subject.check();
+      await subject.act(['a'], { admin: true, title: 'Oversized images' });
+      expect(optimized.map((each) => each.items)).to.deep.equal([['a']]);
+      expect(optimized[0].title).to.equal('Oversized images');
+    });
+
+    it('asks before deleting files for good, deletes once confirmed, says what stayed and moves on', async () => {
+      const { subject, api } = context();
+      await subject.check();
+      subject.setOrder(ORDER);
+      subject.setCurrent('orphan:1/x.jpg');
+      await subject.act(['orphan:1/x.jpg', 'orphan:2/y.png'], { admin: true });
+      expect(subject.getBrowse().deleting).to.deep.equal(['orphan:1/x.jpg', 'orphan:2/y.png']);
+      expect(api.calls.some((call) => call.startsWith('delete')), 'nothing before the answer').to.equal(false);
+      await subject.confirmDelete();
+      expect(api.calls[api.calls.length - 1]).to.equal('delete 1/x.jpg,2/y.png');
+      expect(subject.getBrowse().deleting).to.equal(undefined);
+      expect(subject.getBrowse().skipped).to.deep.equal([{ relativePath: '2/y.png', reason: 'NowOwned' }]);
+      expect(subject.getBrowse().current, 'the file that stayed is the next one there').to.equal('orphan:2/y.png');
+    });
+
+    it('deletes nothing when the question is cancelled', async () => {
+      const { subject, api } = context();
+      await subject.check();
+      await subject.act(['orphan:1/x.jpg'], { admin: true });
+      subject.cancelDelete();
+      expect(subject.getBrowse().deleting).to.equal(undefined);
+      await subject.confirmDelete();
+      expect(api.calls.some((call) => call.startsWith('delete'))).to.equal(false);
+    });
+
+    it('never asks to delete files for someone who is not an administrator', async () => {
+      const { subject } = context();
+      await subject.check();
+      await subject.act(['orphan:1/x.jpg'], { admin: false });
+      expect(subject.getBrowse().deleting).to.equal(undefined);
+    });
+  });
+
+  describe('Keep (design §16.6)', () => {
+    /**
+     * A keep as the server lists it.
+     * @param over What differs from an active keep on the unused item `b`.
+     */
+    const keep = (over: Partial<HealthKeep> = {}): HealthKeep => ({
+      id: 1, kind: 'Unused', target: 'b', note: 'Press', untilUtc: null, keptBy: 'u', keptByName: 'Edith', keptUtc: '2026-10-29T00:00:00Z', ended: null, ...over,
+    });
+
+    it('reads the keeps with the result, and leaves kept things out of the lists and what can be freed', async () => {
+      const { subject } = context(server({ keeps: [keep(), keep({ id: 2, kind: 'Orphaned', target: '1/x.jpg' })] }));
+      await subject.check();
+      const result = subject.getState().result!;
+      expect(result.lists.unused).to.deep.equal([]);
+      expect(result.lists.orphaned.map((each) => each.relativePath)).to.deep.equal(['2/y.png']);
+      expect(result.keptCount).to.deep.equal({ unused: 1, orphaned: 1, oversized: 0 });
+      expect(result.bar.freeable).to.equal(10 + Math.round(3 * MB * 0.75));
+      expect(subject.entries().filter((each) => each.keep).map((each) => each.id)).to.deep.equal(['b', 'orphan:1/x.jpg']);
+    });
+
+    it('shows the result without keeps when they cannot be read', async () => {
+      const api = server();
+      (api.client as unknown as { keeps: () => Promise<HealthResult<HealthKeep[]>> }).keeps = async () => ({ error: 'failed' });
+      const { subject } = context(api);
+      await subject.check();
+      expect(subject.getState().result!.lists.unused.map((each) => each.key)).to.deep.equal(['b']);
+    });
+
+    it('asks before keeping, in the window, and keeps nothing when cancelled', async () => {
+      const { subject, api } = context();
+      await subject.check();
+      subject.askKeep(['b']);
+      expect(subject.getBrowse().keeping).to.deep.equal(['b']);
+      subject.cancelKeep();
+      expect(subject.getBrowse().keeping).to.equal(undefined);
+      expect(api.calls.some((call) => call.startsWith('keep '))).to.equal(false);
+    });
+
+    it('keeps rows from the list each came from, takes them out at once and moves the current row on', async () => {
+      const { subject, api } = context();
+      await subject.check();
+      subject.setOrder(['b', 'orphan:1/x.jpg', 'orphan:2/y.png']);
+      subject.setCurrent('b');
+      subject.askKeep(['b', 'orphan:1/x.jpg']);
+      await subject.keep('For the press page', 'Always');
+      expect(api.calls.filter((call) => call.startsWith('keep '))).to.deep.equal(['keep Unused b Always For the press page', 'keep Orphaned 1/x.jpg Always For the press page']);
+      expect(subject.getBrowse().keeping).to.equal(undefined);
+      expect(subject.getState().result!.lists.unused).to.deep.equal([]);
+      expect(subject.getState().result!.keptCount.orphaned).to.equal(1);
+      expect(subject.getBrowse().current).to.equal('orphan:2/y.png');
+    });
+
+    it('sends no note when none was written', async () => {
+      const { subject, api } = context();
+      await subject.check();
+      subject.askKeep(['b']);
+      await subject.keep('   ', 'Year');
+      expect(api.calls).to.include('keep Unused b Year ');
+    });
+
+    it('stops keeping: the thing is back in its list at once', async () => {
+      const { subject, api } = context(server({ keeps: [keep({ id: 9 })] }));
+      await subject.check();
+      await subject.stopKeeping(['b']);
+      expect(api.calls).to.include('stop keeping 9');
+      expect(subject.getState().result!.lists.unused.map((each) => each.key)).to.deep.equal(['b']);
+    });
+
+    it('reads the keeps again before Clean up asks, so a keep made since this window loaded is left out (plan Review Focus 5)', async () => {
+      const { subject, api } = context();
+      await subject.check();
+      api.keptElsewhere(keep());
+      await subject.loadKeeps();
+      expect(subject.getState().result!.lists.unused).to.deep.equal([]);
+    });
+
+    it('keeps the keeps when the result changes after a Clean up', async () => {
+      const { subject } = context(server({ keeps: [keep({ kind: 'Orphaned', target: '1/x.jpg' })] }));
+      await subject.check();
+      await subject.trash(['b']);
+      const result = subject.getState().result!;
+      expect(result.lists.orphaned.map((each) => each.relativePath)).to.deep.equal(['2/y.png']);
+      expect(result.orphans.length, 'the kept file is still part of the library').to.equal(2);
     });
   });
 });
