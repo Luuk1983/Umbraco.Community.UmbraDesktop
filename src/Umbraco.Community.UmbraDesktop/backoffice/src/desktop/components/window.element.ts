@@ -85,6 +85,8 @@ import { besideOfferIn, shownViewIn, watchFrameViews } from '../beside/beside-of
 import { announceWindowFrame, forgetWindowFrame } from '../beside/owner-frames.js';
 import { UMBRADESKTOP_SETTINGS_CONTEXT } from '../settings/settings.context-token.js';
 import { UMBRADESKTOP_APP_CATALOGUE_CONTEXT } from '../app-catalogue.context-token.js';
+import { UmbraDesktopFrameSessionController } from '../session/frame-session.js';
+import { backofficePathFromBaseHref } from '../boot/backoffice-path.js';
 
 /** The eight resize handles: direction (for the cursor class) + which edges each pulls. */
 const RESIZE_HANDLES: ReadonlyArray<{ dir: string; edges: UmbraDesktopResizeEdges }> = [
@@ -317,6 +319,12 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   /** Keeps the frame on the desktop's light or dark theme; see `UmbraDesktopFrameThemeController`. */
   #frameTheme = new UmbraDesktopFrameThemeController(this, () => this.#frameDocument(), () => this.#onReload());
 
+  /** Locks the desktop instead when the frame lands on core's sign-in page (#160, design §7). */
+  #frameSession = new UmbraDesktopFrameSessionController(this);
+
+  /** Stops watching the current frame's own session; see `UmbraDesktopFrameSessionController.watch`. */
+  #stopSessionWatch?: () => void;
+
   constructor() {
     super();
     // Adopts the active theme's window-surface stylesheet into this element's shadow root.
@@ -394,6 +402,8 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
     this.#stopFrameWatches = undefined;
     this.#stopPathWatch?.();
     this.#stopPathWatch = undefined;
+    this.#stopSessionWatch?.();
+    this.#stopSessionWatch = undefined;
     this.#stopBesideWatch?.();
     this.#stopBesideWatch = undefined;
     window.clearTimeout(this.#besideTimer);
@@ -413,6 +423,20 @@ export class UmbraDesktopWindowElement extends UmbLitElement {
   #onIframeLoad(e: Event) {
     const iframe = e.target as HTMLIFrameElement;
     if (!this.window) return;
+    // A frame sent to core's sign-in page is not a page this window is on: it stays covered, starts
+    // no watches (the location watch would record the sign-in page as where to reopen it), and the
+    // desktop locks instead. Sent back to the last page it was on once signed in again.
+    this.#stopSessionWatch?.();
+    this.#stopSessionWatch = undefined;
+    const content = this.window.app.content;
+    const returnTo = this.window.location ?? (content.kind === 'iframe' ? content.url : '');
+    if (this.#frameSession.landed(iframe, backofficePathFromBaseHref(document.baseURI), returnTo)) {
+      this._loading = true;
+      return;
+    }
+    // The frame's own session, watched from out here because a frame that starts up signed out never
+    // loads this package, and so never runs its session modals (#160).
+    this.#stopSessionWatch = this.#frameSession.watch(iframe);
     // Keep the loader up until the header is actually stripped, so the booting
     // backoffice (with its own header) never flashes into view.
     // Every backoffice window reports its location, strip or not, since every one of them can be

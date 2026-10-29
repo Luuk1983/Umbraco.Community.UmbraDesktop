@@ -257,6 +257,8 @@ export default {
     wallpaperPickerTitle: 'Kies een achtergrond',
     wallpaperNotAnImage: 'Dit bestand kan niet als achtergrond worden gebruikt. Kies een afbeelding.',
     logout: 'Uitloggen',
+    // the lock screen, when the session has ended (#160)
+    lockNotYou: 'Niet jij?',
     exitDesktop: 'Bureaublad verlaten',
     // bureaublad verlaten
     exitHeadline: 'Bureaublad verlaten',
