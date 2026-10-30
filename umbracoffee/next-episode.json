@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-30T11:30:52Z",
+  "updatedAt": "2026-10-30T11:35:53Z",
   "episode": {
     "videoId": "hHpA_WhJwVk",
     "title": "umbraCoffee  - Elephant In The Room",
-    "state": "upcoming",
+    "state": "live",
     "scheduledStart": "2026-10-30T11:30:00Z",
-    "actualStart": null
+    "actualStart": "2026-10-30T11:35:22Z"
   }
 }
