@@ -261,7 +261,9 @@ export class UmbraCoffeeEpisodeListElement extends UmbLitElement {
   }
 
   /**
-   * The first row: the episode coming (its date as the picture) or on (its live thumbnail).
+   * The first row: the episode coming (its date as the picture) or on (its live thumbnail). The tag
+   * and the time are two lines, the time where an episode row has its guests: on one line, "Live ·
+   * Started Oct 30, 12:35 PM" did not fit a column at its usual width and lost the time to the clip.
    * @param lead The episode.
    * @returns The row.
    */
@@ -277,10 +279,9 @@ export class UmbraCoffeeEpisodeListElement extends UmbLitElement {
         <span class="txt">
           <span class="ep-t">${lead.title}</span>
           <span class="ep-d"
-            ><b class=${upcoming ? 'now' : 'now is-live'}>${upcoming ? ICONS.clock : html`<i></i>`}${label}</b>${lead.when
-              ? html`<span class="dot">·</span>${lead.when}`
-              : nothing}</span
+            ><b class=${upcoming ? 'now' : 'now is-live'}>${upcoming ? ICONS.clock : html`<i></i>`}${label}</b></span
           >
+          ${lead.when ? html`<span class="ep-g">${lead.when}</span>` : nothing}
         </span>
       </button>
     </li>`;
