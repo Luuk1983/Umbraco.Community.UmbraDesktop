@@ -1,7 +1,16 @@
 {
   "version": 2,
-  "generatedAt": "2026-10-11T10:19:45Z",
+  "generatedAt": "2026-10-30T10:55:52Z",
   "episodes": [
+    {
+      "videoId": "hHpA_WhJwVk",
+      "title": "Elephant In The Room",
+      "published": "2026-10-30T10:53:16Z",
+      "summary": "",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
     {
       "videoId": "aRkc0fRxQjw",
       "title": "The September Shift",
