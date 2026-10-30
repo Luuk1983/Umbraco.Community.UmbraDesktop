@@ -44,6 +44,11 @@ export class UmbraCoffeeChatElement extends UmbLitElement {
   /**
    * The frame fills what the note leaves. The frame sits on the panel's ground, since the page inside
    * it paints its own.
+   *
+   * `color-scheme: light` is what a frame's `prefers-color-scheme` reports to the page inside it. Left
+   * alone, a dark system asks YouTube for dark, and its chat goes only half dark: names and messages
+   * turn white but the list stays transparent over our light ground, so the chat reads as empty rows
+   * of avatars. Its light colours are complete, so the frame asks for those whatever the system says.
    */
   static override styles = css`
     :host {
@@ -58,6 +63,7 @@ export class UmbraCoffeeChatElement extends UmbLitElement {
       min-height: 0;
       width: 100%;
       border: 0;
+      color-scheme: light;
       background: var(--umbradesktop-app-surface, var(--uui-color-surface));
     }
 
