@@ -10,6 +10,7 @@ import { manifests as desktopAi } from './desktop/ai/manifest';
 import { manifests as desktopConnections } from './desktop/connections/manifest';
 import { manifests as desktopRemoteViewer } from './desktop/remote-viewer/manifest';
 import { manifests as desktopHelp } from './desktop/help/manifest';
+import { manifests as desktopAddOns } from './desktop/add-ons/manifest';
 import { manifests as desktopBeside } from './desktop/beside/manifest';
 import { manifests as desktopLiveMedia } from './desktop/live-media/manifest';
 import { backofficePathFromBaseHref } from './desktop/boot/backoffice-path';
@@ -63,6 +64,7 @@ export const manifests: Array<UmbExtensionManifest> = [
   ...desktopConnections,
   ...desktopRemoteViewer,
   ...desktopHelp,
+  ...desktopAddOns,
   ...desktopBeside,
   ...desktopLiveMedia,
 ];

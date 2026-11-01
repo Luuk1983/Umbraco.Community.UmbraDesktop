@@ -38,6 +38,49 @@ export default {
     appEngageConfiguration: 'Engage configuration',
     appBackgroundJobs: 'Background Jobs',
     appHelp: 'Help',
+    appAddOns: 'Add-ons',
+    // the Add-ons app (#188). It informs and never installs, so no string promises an install.
+    addOnsIntro:
+      "Extra apps for your desktop. Adding one is a change to the site's code, so it is a job for whoever builds your site: each add-on says what to send them.",
+    addOnsOurs: 'From the UmbraDesktop team',
+    addOnsCommunity: 'From the community',
+    addOnsBy: 'by %0%',
+    addOnsDetails: 'Details',
+    addOnsInstalled: 'Installed',
+    addOnsNotInstalled: 'Not installed',
+    addOnsInviteTitle: 'Made something for UmbraDesktop?',
+    addOnsInviteText:
+      'List it on the Umbraco Marketplace with umbradesktop among the tags in its umbraco-marketplace.json, and it shows up here within a day.',
+    addOnsInviteLink: 'How to build and list an add-on',
+    addOnsNoneYet: 'None for Umbraco %0% yet.',
+    addOnsNoneYetAnyVersion: 'None yet.',
+    addOnsSource: 'From the Umbraco Marketplace. Showing add-ons for Umbraco %0%.',
+    addOnsSourceAnyVersion: 'From the Umbraco Marketplace.',
+    addOnsOffline: "The Umbraco Marketplace can't be reached from here, so community add-ons can't be shown.",
+    addOnsTryAgain: 'Try again',
+    addOnsBack: 'All add-ons',
+    addOnsVersion: 'Version %0%',
+    addOnsUmbraco: 'Umbraco %0%',
+    addOnsDownloads: '%0% downloads',
+    addOnsAbout: 'About',
+    addOnsNotInstalledTitle: 'Not on this site yet',
+    addOnsSendThis: 'Send this to whoever builds your site. After they deploy it, its apps appear in your launcher.',
+    addOnsSendUpdate: 'Send this to whoever builds your site to bring it up to date.',
+    addOnsVersionNote: 'The version is the newest one that runs on Umbraco %0%, which this site uses.',
+    addOnsVersionNoteAnyVersion: 'The version is the newest one there is.',
+    addOnsVersionNoteOffline:
+      "The version is the one this desktop was released with, since the Marketplace can't be reached to look up a newer one.",
+    addOnsNoVersion: "The version to install can't be looked up right now. Try again when the Umbraco Marketplace can be reached.",
+    addOnsUpdateTitle: 'Update available',
+    addOnsUpdateText: 'This site has %0%, and the newest for Umbraco %1% is %2%.',
+    addOnsUpdateTextAnyVersion: 'This site has %0%, and the newest is %1%.',
+    addOnsInstalledTitle: 'Installed, version %0%',
+    addOnsInstalledText: 'Its apps are in your launcher. You are on the newest version for Umbraco %0%.',
+    addOnsInstalledTextAnyVersion: 'Its apps are in your launcher.',
+    addOnsOpenGuide: 'Open its guide in Help',
+    addOnsMarketplaceLink: 'View on the Umbraco Marketplace',
+    addOnsDocsLink: 'Documentation',
+    addOnsIssuesLink: 'Report an issue',
     // the Help app
     helpProduct: 'Documentation',
     helpForDevelopers: 'For developers',
@@ -222,6 +265,8 @@ export default {
     // add-ons (Accessories, Connections), and the "Add-ons" heading already says it.
     settingsPackageAttribution: 'These settings come from the %0% add-on.',
     settingsBoxLoadFailed: 'This part of the settings could not be loaded.',
+    // Opens the Add-ons app: more add-ons, not settings, so it says where it goes.
+    settingsFindAddOns: 'Find more add-ons',
     // desktop settings — startup
     bootIntoDesktop: 'Open the desktop when I sign in',
     bootDescription:

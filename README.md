@@ -48,7 +48,7 @@ UmbraDesktop grants no access of its own. A user only sees apps for the sections
 
 ## Add-ons
 
-Optional packages, each adding apps to the desktop. The desktop is unchanged without them.
+Optional packages, each adding apps to the desktop. The desktop is unchanged without them. Its [Add-ons](docs/user/apps/add-ons.md) app lists them, and anyone else's from the Umbraco Marketplace, with what to send to whoever builds your site.
 
 - [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories): the tools Windows kept under Accessories. Notepad and Paint that edit files in your media library, Sticky Notes of your own and shared with your team, Calculator, Character Map, Clock, a screen saver, Disk Cleanup and System Information.
 - [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment): Minesweeper, Snake and Solitaire, and umbraCoffee, the community's monthly live show.
