@@ -61,4 +61,8 @@ Optional packages, each adding apps to the desktop. The desktop is unchanged wit
 
 ## License
 
-[MIT](LICENSE)
+- UmbraDesktop, the Entertainment and Accessories add-ons and the service packages: [Mozilla Public License 2.0](LICENSE). Free to use and to build on, client sites and add-ons of your own included. Pass on a changed copy of these packages' files and you pass on the changes too.
+- The Media add-on: [FSL-1.1-MIT](src/Umbraco.Community.UmbraDesktop.Media/LICENSE.md). Free to use, client sites included, but not in a product that competes with it. Each version becomes MIT two years after its release.
+- Every release before this change, and all code contributed before it, stays available under [MIT](licenses/MIT.txt).
+
+[Contributing](CONTRIBUTING.md) says which licence a contribution comes under.
