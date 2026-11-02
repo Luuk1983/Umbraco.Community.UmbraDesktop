@@ -56,6 +56,7 @@ export default {
     addOnsNoneYetAnyVersion: 'None yet.',
     addOnsSource: 'From the Umbraco Marketplace. Showing add-ons for Umbraco %0%.',
     addOnsSourceAnyVersion: 'From the Umbraco Marketplace.',
+    addOnsSourceOffline: "Showing the add-ons built into the desktop, since the Umbraco Marketplace can't be reached.",
     addOnsOffline: "The Umbraco Marketplace can't be reached from here, so community add-ons can't be shown.",
     addOnsTryAgain: 'Try again',
     addOnsBack: 'All add-ons',

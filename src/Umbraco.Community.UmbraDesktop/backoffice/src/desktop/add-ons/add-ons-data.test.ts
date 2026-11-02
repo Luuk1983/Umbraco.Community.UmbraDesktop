@@ -68,6 +68,15 @@ describe('loadAddOns', () => {
     expect(data.ours.every((a) => a.screenshots.length === 0), 'no screenshots offline: covers are icons').to.equal(true);
   });
 
+  it('covers ours offline with the add-ons’ own package icon, served from this site', async () => {
+    // The package icon, the one each add-on packs and the Marketplace shows, rather than the desktop's
+    // app icon: that one is a U in a circle, which reads as Umbraco's own logo.
+    const data = await loadAddOns(source({ siteVersion: '17.6.0', marketplace: undefined }));
+    expect(data.ours.map((a) => a.icon)).to.deep.equal(
+      UMBRADESKTOP_BUILT_IN_ADD_ONS.map(() => '/App_Plugins/Umbraco.Community.UmbraDesktop/add-ons/package-icon.png'),
+    );
+  });
+
   it('pins ours offline to the desktop’s own version, since ours are released together with it', async () => {
     const data = await loadAddOns(
       source({ siteVersion: '17.6.0', marketplace: undefined, installed: { 'Umbraco.Community.UmbraDesktop': '17.4.0' } }),

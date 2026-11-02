@@ -3,6 +3,7 @@ import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UMBRADESKTOP_DEFAULT_ICON, UMBRADESKTOP_OPEN_HELP_EVENT } from '../constants';
 import { loadAddOns, type UmbraDesktopAddOnsData, type UmbraDesktopAddOnsSource } from './add-ons-data';
 import { serverAddOnsSource } from './add-ons-source';
+import { UMBRADESKTOP_ADD_ONS_APP_ICON } from './manifest';
 import { installState, type UmbraDesktopAddOn } from './marketplace';
 import { renderReadme } from './readme';
 
@@ -84,10 +85,10 @@ export class UmbraDesktopAddOnsElement extends UmbLitElement {
    * @param addOn The add-on.
    */
   #openDetails(addOn: UmbraDesktopAddOn): void {
-    this.#listScroll = this.scrollTop;
+    this.#listScroll = this.#scroller()?.scrollTop ?? 0;
     this._open = addOn;
-    // The element is its own scroller, so the details would otherwise open as far down as the list was.
-    this.updateComplete.then(() => (this.scrollTop = 0));
+    // One scroller serves both views, so the details would otherwise open as far down as the list was.
+    this.updateComplete.then(() => this.#scroller()?.scrollTo(0, 0));
     this._guide = undefined;
     this.#readme = undefined;
     if (!this.#installedVersion(addOn)) return;
@@ -102,7 +103,15 @@ export class UmbraDesktopAddOnsElement extends UmbLitElement {
   /** Back to the list, scrolled to where it was left. */
   #back(): void {
     this._open = undefined;
-    this.updateComplete.then(() => (this.scrollTop = this.#listScroll));
+    this.updateComplete.then(() => this.#scroller()?.scrollTo(0, this.#listScroll));
+  }
+
+  /**
+   * What scrolls: everything but the footer.
+   * @returns The scroller, once rendered.
+   */
+  #scroller(): HTMLElement | null {
+    return this.renderRoot.querySelector('.scroller');
   }
 
   /**
@@ -134,13 +143,44 @@ export class UmbraDesktopAddOnsElement extends UmbLitElement {
   }
 
   override render() {
-    if (this._open) return this.#renderDetails(this._open);
-    if (!this._data || this._loading) return html`<div class="loading"><uui-loader></uui-loader></div>`;
-    return this.#renderList(this._data);
+    if (!this._open && (!this._data || this._loading)) return html`<div class="loading"><uui-loader></uui-loader></div>`;
+    return html`<div class="scroller">${this._open ? this.#renderDetails(this._open) : this.#renderList(this._data!)}</div>
+      ${this.#renderFooter()}`;
   }
 
   /**
-   * The list: our section, the community's, the invitation, and where the list came from.
+   * Where the list comes from, in a footer that stays at the bottom of the window whatever is
+   * scrolled: the Marketplace for this site's Umbraco, or offline the list built into the desktop.
+   * @returns The footer, or nothing before the first load.
+   */
+  #renderFooter() {
+    const data = this._data;
+    if (!data) return nothing;
+    const text = !data.online
+      ? this.#t('addOnsSourceOffline')
+      : data.siteMajor === undefined
+        ? this.#t('addOnsSourceAnyVersion')
+        : this.#t('addOnsSource', data.siteMajor);
+    return html`<footer><uui-icon name="icon-store"></uui-icon><span>${text}</span></footer>`;
+  }
+
+  /**
+   * One section's heading: an icon, the name, and how many add-ons it holds, set large enough that
+   * the two sections read as two at a glance.
+   * @param icon The icon.
+   * @param label The term key of the name.
+   * @param count How many add-ons, or undefined to leave the count out.
+   * @returns The heading.
+   */
+  #renderSectionHeading(icon: string, label: string, count: number | undefined) {
+    return html`<h2 class="section-heading">
+      <uui-icon name=${icon}></uui-icon><span>${this.#t(label)}</span>
+      ${count ? html`<span class="count">${count}</span>` : nothing}
+    </h2>`;
+  }
+
+  /**
+   * The list: a header band, our section, the community's, and the invitation.
    *
    * The invitation takes the community's place while it has nothing to show, and otherwise closes the
    * list, so it is always there for whoever has something to list and never the first thing read.
@@ -149,17 +189,22 @@ export class UmbraDesktopAddOnsElement extends UmbLitElement {
    */
   #renderList(data: UmbraDesktopAddOnsData) {
     const emptyCommunity = data.online && data.community.length === 0;
-    return html`<div class="list">
-      <header class="list-head">
-        <h1>${this.#t('appAddOns')}</h1>
-        <p class="lede">${this.#t('addOnsIntro')}</p>
+    return html`<header class="band">
+        <div class="band-inner">
+          <span class="band-icon"><uui-icon name=${UMBRADESKTOP_ADD_ONS_APP_ICON}></uui-icon></span>
+          <div>
+            <h1>${this.#t('appAddOns')}</h1>
+            <p class="lede">${this.#t('addOnsIntro')}</p>
+          </div>
+        </div>
       </header>
+      <div class="list">
       <section data-section="ours">
-        <h2>${this.#t('addOnsOurs')}</h2>
+        ${this.#renderSectionHeading('icon-desktop', 'addOnsOurs', data.ours.length)}
         ${this.#renderGrid(data.ours)}
       </section>
       <section data-section="community">
-        <h2>${this.#t('addOnsCommunity')}</h2>
+        ${this.#renderSectionHeading('icon-users', 'addOnsCommunity', data.community.length)}
         ${data.online
           ? emptyCommunity
             ? this.#renderInvitation(data, true)
@@ -170,11 +215,6 @@ export class UmbraDesktopAddOnsElement extends UmbLitElement {
             </div>`}
       </section>
       ${emptyCommunity ? nothing : this.#renderInvitation(data, false)}
-      ${data.online
-        ? html`<p class="source">
-            ${data.siteMajor === undefined ? this.#t('addOnsSourceAnyVersion') : this.#t('addOnsSource', data.siteMajor)}
-          </p>`
-        : nothing}
     </div>`;
   }
 
@@ -280,10 +320,12 @@ export class UmbraDesktopAddOnsElement extends UmbLitElement {
   #renderDetails(addOn: UmbraDesktopAddOn) {
     const [first, ...rest] = addOn.screenshots;
     return html`<div class="details-page">
+      <header class="band">
+      <div class="band-inner details-band">
       <uui-button class="back" look="default" compact label=${this.#t('addOnsBack')} @click=${this.#back}>
         <uui-icon name="icon-navigation-left"></uui-icon>${this.#t('addOnsBack')}
       </uui-button>
-      <header class="details-head">
+      <div class="details-head">
         ${this.#renderIcon(addOn, 'big-icon')}
         <div>
           <h1>${addOn.title}</h1>
@@ -297,12 +339,14 @@ export class UmbraDesktopAddOnsElement extends UmbLitElement {
               : nothing}
           </div>
         </div>
+      </div>
+      </div>
       </header>
       <div class="details-grid">
         <div class="main">
           ${first ? this.#renderShot(first, 'shot') : nothing}
           ${rest.length ? html`<div class="thumbs">${rest.map((shot) => this.#renderShot(shot, 'thumb'))}</div>` : nothing}
-          <h2>${this.#t('addOnsAbout')}</h2>
+          ${this.#renderSectionHeading('icon-info', 'addOnsAbout', undefined)}
           ${addOn.readme ? this.#readmeNode(addOn) : html`<p>${addOn.description}</p>`}
         </div>
         <aside class="side">${this.#renderState(addOn)} ${this.#renderLinks(addOn)}</aside>
@@ -443,9 +487,9 @@ export class UmbraDesktopAddOnsElement extends UmbLitElement {
         --add-ons-edge: var(--umbradesktop-app-edge-width, 1px);
         --add-ons-max-width: 1200px;
 
-        display: block;
+        display: flex;
+        flex-direction: column;
         height: 100%;
-        overflow: auto;
         container-type: inline-size;
         color: var(--add-ons-text);
         background: var(--add-ons-sunken);
@@ -459,31 +503,107 @@ export class UmbraDesktopAddOnsElement extends UmbLitElement {
         height: 100%;
       }
 
+      /* Everything but the footer scrolls, so the footer stays at the bottom of the window. */
+      .scroller {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+      }
+
       .list,
-      .details-page {
+      .details-grid {
         max-width: var(--add-ons-max-width);
         margin: 0 auto;
-        padding: 24px 28px 32px;
+        padding: 4px 28px 32px;
         box-sizing: border-box;
+      }
+
+      .details-grid {
+        padding-top: 24px;
+      }
+
+      /* The header band: a tint of the theme's accent rather than a fill of it, so the text on it
+         stays the theme's own text colour and reads under all five themes. */
+      .band {
+        background: color-mix(in srgb, var(--add-ons-accent) 10%, var(--add-ons-surface));
+        border-bottom: var(--add-ons-edge) solid var(--add-ons-rule);
+      }
+
+      .band-inner {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        max-width: var(--add-ons-max-width);
+        margin: 0 auto;
+        padding: 28px 28px 24px;
+        box-sizing: border-box;
+      }
+
+      .details-band {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding-top: 16px;
+      }
+
+      .band-icon {
+        display: grid;
+        flex: none;
+        place-items: center;
+        width: 56px;
+        height: 56px;
+        color: var(--umbradesktop-app-accent-text, var(--uui-color-surface));
+        font-size: 28px;
+        background: var(--add-ons-accent);
+        border-radius: 50%;
       }
 
       h1 {
         margin: 0;
-        font-size: 1.6em;
+        font-size: 1.75em;
         line-height: 1.25;
-      }
-
-      /* Set the way a uui-box headline is: bold, at the size of the text around it, in sentence case. */
-      h2 {
-        margin: 24px 0 10px;
-        font-size: 1em;
-        font-weight: 700;
       }
 
       .lede {
         max-width: 640px;
         margin: 4px 0 0;
         color: var(--add-ons-muted);
+      }
+
+      /* Large enough that the sections read as sections at a glance, in sentence case and bold as
+         Umbraco's own headings are. */
+      .section-heading {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 28px 0 14px;
+        font-size: 1.3em;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+
+      .section-heading uui-icon {
+        color: var(--add-ons-accent);
+      }
+
+      .count {
+        padding: 0 9px;
+        font-size: 0.65em;
+        line-height: 1.7;
+        background: color-mix(in srgb, var(--add-ons-accent) 14%, var(--add-ons-surface));
+        border-radius: 999px;
+      }
+
+      footer {
+        display: flex;
+        flex: none;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 28px;
+        color: var(--add-ons-muted);
+        font-size: var(--uui-type-small-size, 12px);
+        background: var(--add-ons-surface);
+        border-top: var(--add-ons-edge) solid var(--add-ons-rule);
       }
 
       .grid {
@@ -660,21 +780,10 @@ export class UmbraDesktopAddOnsElement extends UmbLitElement {
         border-color: var(--uui-color-warning, var(--add-ons-rule));
       }
 
-      .source {
-        margin: 12px 0 0;
-        color: var(--add-ons-muted);
-        font-size: var(--uui-type-small-size, 12px);
-      }
-
-      .back {
-        margin-bottom: 12px;
-      }
-
       .details-head {
         display: flex;
         gap: 14px;
         align-items: center;
-        margin-bottom: 18px;
       }
 
       .facts {
@@ -736,6 +845,23 @@ export class UmbraDesktopAddOnsElement extends UmbLitElement {
 
       .readme {
         overflow-wrap: anywhere;
+      }
+
+      /* A README's own headings, sized under the page's so its structure shows. */
+      .readme h1 {
+        margin: 24px 0 8px;
+        font-size: 1.5em;
+      }
+
+      .readme h2 {
+        margin: 24px 0 8px;
+        font-size: 1.3em;
+      }
+
+      .readme h3,
+      .readme h4 {
+        margin: 20px 0 6px;
+        font-size: 1.1em;
       }
 
       .readme img {

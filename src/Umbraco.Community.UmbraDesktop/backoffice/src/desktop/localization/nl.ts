@@ -55,6 +55,7 @@ export default {
     addOnsNoneYetAnyVersion: 'Nog geen.',
     addOnsSource: 'Van de Umbraco Marketplace. Add-ons voor Umbraco %0%.',
     addOnsSourceAnyVersion: 'Van de Umbraco Marketplace.',
+    addOnsSourceOffline: 'De add-ons die in het bureaublad zijn ingebouwd, omdat de Umbraco Marketplace niet bereikbaar is.',
     addOnsOffline: 'De Umbraco Marketplace is vanaf hier niet bereikbaar, dus add-ons uit de community kunnen niet getoond worden.',
     addOnsTryAgain: 'Opnieuw proberen',
     addOnsBack: 'Alle add-ons',

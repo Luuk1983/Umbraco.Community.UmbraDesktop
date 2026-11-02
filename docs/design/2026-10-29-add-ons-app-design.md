@@ -138,9 +138,11 @@ The issue's third "To find out".
   `2026-10-17-separate-releases-design.md`), this has to change. Without a known desktop version the
   panel says the version cannot be looked up rather than give an unpinned line, which could pull a
   release for another Umbraco major.
-- **Call: the offline icon is the desktop's own app icon**, `appicons/icon-192.png`, served from the
-  site. Our add-ons share the desktop's package icon, whose Marketplace copy cannot load offline
-  either.
+- **The offline icon is the package icon** every one of our packages packs
+  (`Package-image_128_128.png`), copied into the build by `scripts/copy-package-icon.mjs` and served
+  at `add-ons/package-icon.png`, since its Marketplace copy cannot load offline either. The first
+  build used the desktop's app icon, already served; the owner's review (§12) dropped it because it
+  is a U in a circle that reads as Umbraco's own logo.
 - Online, the Marketplace is the truth: a built-in add-on the Marketplace does not list is not
   added back.
 
@@ -250,3 +252,25 @@ database, the unattended admin), driven by headless Chrome through the repo's `p
 - A real community add-on: there is none yet. The tests cover one, made up, with and without
   screenshots.
 - The Dutch strings on screen. The parity test checks every key is translated.
+
+## 12. First review (2026-11-02)
+
+The owner's first look in a real backoffice: the grey list read as bland, the section headings and
+the details page's headings were too small to find the structure by, and the source line belonged in
+a footer. Changed:
+
+- **A header band** on the list and on the details page: the app's icon on the theme's accent, the
+  title and the introduction, on a tint of the accent. A tint rather than the accent itself, so the
+  text on it stays the theme's text colour under all five themes.
+- **Section headings** at 1.3em with an icon (a desktop for ours, people for the community's)
+  and a count. Never Umbraco's own logo: this is a community package, and the mark reads as official. **About** on the details page has the same style, and the README's own headings are
+  sized under it instead of all at body size.
+- **A footer** that stays at the bottom of the window while the rest scrolls: where the list came
+  from, or offline, that it is the list built into the desktop. The app now scrolls an inner
+  `.scroller` rather than itself, so the footer never moves.
+
+Filters were left out on purpose: two add-ons, a third coming, nothing to filter yet.
+
+Then, on the same review: **no Umbraco logo anywhere in the app.** It read as official Umbraco. The
+team section's heading has a desktop icon, and the offline covers the package icon (§7). A test keeps
+`icon-umbraco` out of the app.

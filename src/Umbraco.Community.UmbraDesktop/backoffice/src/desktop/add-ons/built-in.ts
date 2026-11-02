@@ -21,11 +21,14 @@ export interface UmbraDesktopBuiltInAddOn {
 }
 
 /**
- * The icon every built-in card shows. Our add-ons share the desktop's package icon, and offline the
- * Marketplace's copy of it cannot load either, so this is the desktop's own app icon, served from
- * this site and drawn from the same mark (`scripts/appicon-art.mjs`).
+ * The icon every built-in card shows: the package icon all our add-ons pack, the one the Marketplace
+ * shows for them, served from this site because offline the Marketplace's copy cannot load.
+ * `scripts/copy-package-icon.mjs` puts it there on every build.
+ *
+ * Not the desktop's app icon, although that one is already served: it is a U in a circle, which
+ * reads as Umbraco's own logo, and this is a community package.
  */
-export const UMBRADESKTOP_BUILT_IN_ICON = '/App_Plugins/Umbraco.Community.UmbraDesktop/appicons/icon-192.png';
+export const UMBRADESKTOP_BUILT_IN_ICON = '/App_Plugins/Umbraco.Community.UmbraDesktop/add-ons/package-icon.png';
 
 /**
  * Our add-ons, in the order the team shows them.

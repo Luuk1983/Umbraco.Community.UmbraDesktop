@@ -165,6 +165,35 @@ describe('umbradesktop-add-ons', () => {
       expect(last[last.length - 1].classList.contains('invitation')).to.equal(true);
     });
 
+    it('names where the list came from in a footer that stays in view while the list scrolls', async () => {
+      const many = Array.from({ length: 12 }, (_, i) => pkg(`Someone.Addon${String(i).padStart(2, '0')}`));
+      const element = await mount(source({ marketplace: many }).value);
+      element.style.height = '300px';
+      const footer = root(element).querySelector<HTMLElement>('footer')!;
+      expect(footer.textContent).to.include('Showing add-ons for Umbraco 17');
+      expect(!!root(element).querySelector('.scroller footer'), 'not inside what scrolls').to.equal(false);
+      const scroller = root(element).querySelector<HTMLElement>('.scroller')!;
+      scroller.scrollTop = 10000;
+      const host = element.getBoundingClientRect();
+      const foot = footer.getBoundingClientRect();
+      expect(Math.round(foot.bottom)).to.equal(Math.round(host.bottom));
+    });
+
+    it('says offline in the footer that the list is the built-in one', async () => {
+      const element = await mount(source({ marketplace: undefined }).value);
+      expect(root(element).querySelector('footer')!.textContent).to.include('built into the desktop');
+    });
+
+    it('heads each section with an icon and how many add-ons it holds', async () => {
+      const element = await mount(source({ marketplace: [pkg(ENT), pkg(ACC), pkg('Someone.Kanban')] }).value);
+      const heading = (section: string) => root(element).querySelector(`[data-section="${section}"] h2`)!;
+      // Never Umbraco's own mark: the app is a community package's, and the logo would read as official.
+      expect(heading('ours').querySelector('uui-icon')?.getAttribute('name')).to.equal('icon-desktop');
+      expect(root(element).querySelector('uui-icon[name="icon-umbraco"]')).to.equal(null);
+      expect(heading('ours').querySelector('.count')?.textContent?.trim()).to.equal('2');
+      expect(heading('community').querySelector('.count')?.textContent?.trim()).to.equal('1');
+    });
+
     it('asks the Marketplace once, and not again when reopened in the same element', async () => {
       const { value, calls } = source({ marketplace: [pkg(ENT)] });
       const element = await mount(value);
@@ -223,16 +252,17 @@ describe('umbradesktop-add-ons', () => {
       const many = Array.from({ length: 12 }, (_, i) => pkg(`Someone.Addon${String(i).padStart(2, '0')}`));
       const element = await mount(source({ marketplace: many }).value);
       element.style.height = '300px';
-      element.scrollTop = 400;
-      const scrolled = element.scrollTop;
+      const scroller = root(element).querySelector<HTMLElement>('.scroller')!;
+      scroller.scrollTop = 400;
+      const scrolled = scroller.scrollTop;
       expect(scrolled).to.be.greaterThan(0);
       await openDetails(element, 'Someone.Addon11');
       await element.updateComplete;
-      expect(element.scrollTop).to.equal(0);
+      expect(root(element).querySelector<HTMLElement>('.scroller')!.scrollTop).to.equal(0);
       (root(element).querySelector('.back') as HTMLElement).click();
       await waitUntil(() => root(element).querySelector('.list'), 'never came back');
       await element.updateComplete;
-      expect(element.scrollTop).to.equal(scrolled);
+      expect(root(element).querySelector<HTMLElement>('.scroller')!.scrollTop).to.equal(scrolled);
     });
   });
 
