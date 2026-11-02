@@ -17,7 +17,8 @@ sidebar_position: 5.5
 
 Use it when your package adds something to the desktop and that something has settings: a tool, a
 screen saver, a connection. The desktop gives your package one row in Desktop settings, below the
-desktop's own categories, under an **Add-ons** heading. The row's screen holds one box per manifest
+desktop's own categories, under an **Add-ons** heading, above the button that opens the
+[Add-ons app](../user/apps/add-ons.md). The row's screen holds one box per manifest
 you register, and the desktop draws a line above them saying the settings come from your add-on.
 
 Your package always gets one row, however many boxes it registers. You add boxes, not categories,

@@ -39,6 +39,9 @@ using the desktop, see the [user guide](../user/README.md).
 - [Help for your add-on](add-on-help.md): ship your package's documentation so it appears in the
   desktop's Help app, register it with a `umbraDesktopDocs` manifest, and open Help at your own pages
   from your own screens.
+- [Building and listing an add-on](building-an-add-on.md): what an add-on holds, and how to get it
+  into the desktop's Add-ons app with the `umbradesktop` tag on the Umbraco Marketplace, including
+  that the first screenshot is the cover.
 
 ## Design documents
 
@@ -60,3 +63,4 @@ are shaped the way they are. The ones the guides above rest on:
 | Remote content: how it redirects a backoffice, keeps it read-only, and what that cannot reach | [2026-09-29-remote-content-viewer-design.md](../design/2026-09-29-remote-content-viewer-design.md) |
 | The Help app: why the server lists the files, why several windows, and how a target resolves | [2026-09-30-help-app-design.md](../design/2026-09-30-help-app-design.md) |
 | Busy windows: why progress sits beside `dirty`, how tasks are summed, and why the media placeholders were abandoned | [2026-10-03-window-progress-design.md](../design/2026-10-03-window-progress-design.md) |
+| The Add-ons app: why the Marketplace and a tag rather than a list here, how installed is known, and what it shows offline | [2026-10-29-add-ons-app-design.md](../design/2026-10-29-add-ons-app-design.md) |

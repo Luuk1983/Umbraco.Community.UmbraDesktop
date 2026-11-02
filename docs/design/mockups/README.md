@@ -67,3 +67,4 @@ Later mockups, one set per feature, named after the design doc they belong to:
 - **[upload-guidelines/guidelines-dialog-expand.html](./upload-guidelines/guidelines-dialog-expand.html)**:
   the owner's follow-up: the guidelines as one line of icons and short values that opens into the
   table, closed and opened. Generated once from the variants' styles; static.
+- **[add-ons/](./add-ons/)**: the Add-ons app, the list of add-ons from the Umbraco Marketplace, with its details page, install states and offline view. Built from live Marketplace data by `add-ons/_build/add-ons.cjs`, which needs the internet.

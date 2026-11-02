@@ -15,9 +15,11 @@ description: The apps the desktop adds, and the packages it knows by name.
   does not know.
 - [Help](help.md): the documentation of the desktop and its add-ons, for the version installed, in
   as many windows as you like, and how to link to a page of it.
+- [Add-ons](add-ons.md): every add-on for the desktop on the Umbraco Marketplace, whether this site
+  has it, and the line to send to whoever builds the site to add one.
 
 Some apps are not part of this package. They come with optional add-ons, each with documentation of
-its own:
+its own. The [Add-ons](add-ons.md) app lists them, and any made by others:
 
 - [Accessories add-on](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories):
   Notepad, Paint, Sticky Notes, Calculator and the other small tools.
