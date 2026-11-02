@@ -31,6 +31,7 @@ import { watchNotifications } from '../notifications/notification-watcher.js';
 import { drawsOwnElement } from '../notifications/own-element.js';
 import { UMBRADESKTOP_DESKTOP_SOURCE_ID } from '../notifications/types.js';
 import { UmbraDesktopPackageContextsController } from '../package-contexts.controller.js';
+import { desktopShown } from '../session/placement.js';
 import type { DesktopLabelResponseModel } from '../../api/types.gen';
 import { UMBRADESKTOP_SNAP_GHOST_DEFAULTS as SNAP_GHOST } from './snap-ghost.js';
 import './window.element.js';
@@ -100,6 +101,12 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
 
   /** Stops watching this desktop's own document and takes it off the centre's sources. */
   #stopOwnNotifications?: () => void;
+
+  /**
+   * Unmarks this desktop as shown, so a session that ends after Exit gets core's own screens back.
+   * See `session/placement.ts` (#160).
+   */
+  #leaveSession?: () => void;
 
   /**
    * The package settings context as last provided, kept so a desktop moved in the DOM can attach
@@ -367,6 +374,9 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     this.#setOuterChrome(true);
     this.#watchOwnNotifications();
     this.#packageContexts.start();
+    // While this is connected, a session that ends shows the desktop's lock screen (#160).
+    this.#leaveSession?.();
+    this.#leaveSession = desktopShown(this);
     // A move in the DOM disconnects and reconnects in one task, and the consumer does not call back
     // for a context it still holds, so the attachment dropped on disconnect is restored here.
     if (!this.#detachFromPackageSettings && this.#packageSettings) {
@@ -433,6 +443,8 @@ export class UmbraDesktopDesktopElement extends UmbLitElement {
     this.#stopOwnNotifications?.();
     this.#stopOwnNotifications = undefined;
     this.#packageContexts.stop();
+    this.#leaveSession?.();
+    this.#leaveSession = undefined;
   }
 
   /**
