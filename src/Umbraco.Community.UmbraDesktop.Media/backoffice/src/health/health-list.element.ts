@@ -610,13 +610,20 @@ export class UmbraDesktopHealthListElement extends UmbLitElement {
   /**
    * The badge on a row whose keep has ended (design §16.6): it is back in its list, and the badge says
    * it was kept, with the old note on hover, so judging it again is quick. UUI's tag, as the breakdown's
-   * tags are, in its default colour so it reads as a fact rather than a button.
+   * tags are, in its default colour so it reads as a fact rather than a button. A keep that ended
+   * because the file changed says so rather than its end date, which may still be to come and would
+   * read as kept.
    * @param entry The entry.
    */
   #renderEnded(entry: HealthEntry) {
     const keep = entry.keep;
     if (!keep?.ended || this.chip === 'kept') return nothing;
-    const text = keep.untilUtc ? this.#words('healthKeptUntilDate', this.#until(keep)) : this.#words('healthKept');
+    const text =
+      keep.ended === 'Changed'
+        ? this.#words('healthKeptButChanged')
+        : keep.untilUtc
+          ? this.#words('healthKeptUntilDate', this.#until(keep))
+          : this.#words('healthKept');
     return html`<uui-tag class="kept" look="secondary" title=${keep.note ?? ''}>${text}</uui-tag>`;
   }
 

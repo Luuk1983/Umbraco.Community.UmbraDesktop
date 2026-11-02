@@ -413,4 +413,11 @@ describe('the Media Cleanup list', () => {
     expect(textOf(badge)).to.match(/Kept until .*27/);
     expect(badge.title).to.equal('For the press page');
   });
+
+  it('says a keep ended because the file changed, not a date still to come', async () => {
+    const { row } = await list({ entries: keptEntries([keep({ ended: 'Changed', untilUtc: '2027-11-02T00:00:00Z' })]) });
+    const badge = row('old').querySelector<HTMLElement>('uui-tag.kept')!;
+    expect(textOf(badge)).to.equal('Kept, but the file changed');
+    expect(badge.title).to.equal('For the press page');
+  });
 });

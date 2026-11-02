@@ -1123,3 +1123,21 @@ an administrator and an editor made for the run with only the Media and Desktop 
 item's own file changing (only an orphaned file's was changed; covered by the store's tests); a real
 Clean up with a keep in it (the trash would make uSync write configs into the checkout; the sheet's
 count and the tests cover it); the Dutch words on screen.
+
+**Measured on 2026-11-02**, on the same database from a build outside the temp folder (Windows had
+emptied the old one), media from the TestInstance's own folder:
+
+- A real Clean up with a keep in it: the admin's window loaded 44 unused, then the editor kept one.
+  Clean up's sheet said 43, Clean up trashed 43 with none failed, the kept item stayed out of the
+  recycle bin, and Undo put all 43 back. The trash wrote uSync media configs, untracked, as expected.
+- An item's own file changing: a kept image got a new file through the management API (its URL went
+  from `female-7.png` to `replacement.png`); the next check ended the keep as `Changed` and the item was
+  back among the unused.
+- A keep running out: with its end date moved a minute into the past in the table, reading the keeps
+  again ended it as `Expired` and the item was back among the unused, tagged "Kept until Nov 2, 2026".
+- Dutch: the overview, the tabs (Bewaard), the Keep sheet (Waarom bewaren?, 3 maanden, Een jaar,
+  Altijd, Bewaren) all in Dutch, nothing in English.
+- Found: a row whose keep ended because its file changed is still tagged "Kept until" its end date,
+  which for a keep of a year is a date in the future, so it reads as kept. The pane says "but the file
+  changed since"; the tag did not. Fixed the same day: such a row is tagged "Kept, but the file
+  changed" (test first; seen on the orphaned file's row in the running backoffice).

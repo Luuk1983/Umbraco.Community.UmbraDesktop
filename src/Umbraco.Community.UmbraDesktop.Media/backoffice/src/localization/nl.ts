@@ -253,6 +253,7 @@ export default {
     healthKeptNote: 'Notitie',
     healthKeptNoNote: 'Geen notitie',
     healthKeptEndedChanged: '%0%, maar het bestand is sindsdien veranderd',
+    healthKeptButChanged: 'Bewaard, maar het bestand is veranderd',
     healthStopKeeping: 'Niet meer bewaren',
     healthReasonKept: 'iemand bewaart het',
 

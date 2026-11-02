@@ -266,6 +266,7 @@ export default {
     healthKeptNote: 'Note',
     healthKeptNoNote: 'No note',
     healthKeptEndedChanged: '%0%, but the file changed since',
+    healthKeptButChanged: 'Kept, but the file changed',
     healthStopKeeping: 'Stop keeping',
     healthReasonKept: 'someone keeps it',
 
