@@ -4,9 +4,18 @@ import { UMBRADESKTOP_IS_IMAGE_CONDITION, UMBRADESKTOP_ON_DESKTOP_CONDITION } fr
 import { UMBRADESKTOP_FILE_PROPERTY_CONDITION } from './file-tools/constants.js';
 import { UMBRADESKTOP_MEDIA_MANAGER_APP } from './manager/manager-window.context.js';
 import { UMBRADESKTOP_MEDIA_TRANSFERS_APP } from './transfers/transfers-app.js';
+import {
+  MEDIA_HEALTH_CONTENT_SIZE,
+  MEDIA_HEALTH_DETAILS_MIN_SIZE,
+  MEDIA_HEALTH_DETAILS_SIZE,
+  MEDIA_HEALTH_MIN_CONTENT_SIZE,
+  UMBRADESKTOP_MEDIA_HEALTH_APP,
+  UMBRADESKTOP_MEDIA_HEALTH_DETAILS_APP,
+} from './health/health-app.js';
 import { UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION } from './manager/in-manager.condition.js';
 import { UMBRADESKTOP_MEDIA_RENAME_MODAL_ALIAS } from './selection/rename-dialog.element.js';
 import { UMBRADESKTOP_CLIPBOARD_HOLDS_CONDITION } from './manager/clipboard-holds.condition.js';
+import { MEDIA_PACKAGE_NAME } from './shared/package-settings.js';
 import {
   UMBRADESKTOP_MEDIA_BIN_TREE,
   UMBRADESKTOP_MEDIA_BIN_TREE_REPOSITORY,
@@ -86,6 +95,50 @@ const imageEditor: UmbExtensionManifest = {
     defaultSize: IMAGE_EDITOR_CONTENT_SIZE,
     minSize: IMAGE_EDITOR_MIN_CONTENT_SIZE,
     allowMultiple: true,
+  },
+  conditions: mediaSection,
+};
+
+/**
+ * Media Health (#141, design §3, §15): the library-wide checks, on the add-on's own engine. Third in the group
+ * at 900, after the Image Editor (1000): finding and editing come before tidying. One window: a
+ * second would only show the same check, since the check and its result live in the health context
+ * on the desktop. Under the Media section rule, as its API is.
+ */
+const mediaHealth: UmbExtensionManifest = {
+  type: 'umbraDesktopApp',
+  alias: UMBRADESKTOP_MEDIA_HEALTH_APP,
+  name: 'UmbraDesktop Media Health',
+  element: () => import('./health/media-health.element.js'),
+  weight: 900,
+  meta: {
+    label: '#umbraDesktopMedia_mediaHealth',
+    icon: 'icon-pulse',
+    group: 'media',
+    defaultSize: MEDIA_HEALTH_CONTENT_SIZE,
+    minSize: MEDIA_HEALTH_MIN_CONTENT_SIZE,
+    allowMultiple: false,
+  },
+  conditions: mediaSection,
+};
+
+/**
+ * Media Cleanup's details pane (design §16.15): never on the launcher; the Media Cleanup window asks
+ * the desktop to attach it beside itself by this alias, as the desktop's own pane or a window grouped
+ * with it. Under the Media section rule, as the window is.
+ */
+const mediaHealthDetails: UmbExtensionManifest = {
+  type: 'umbraDesktopApp',
+  alias: UMBRADESKTOP_MEDIA_HEALTH_DETAILS_APP,
+  name: 'UmbraDesktop Media Health details',
+  element: () => import('./health/health-details.element.js'),
+  meta: {
+    label: '#umbraDesktopMedia_healthDetails',
+    icon: 'icon-info',
+    group: 'media',
+    defaultSize: MEDIA_HEALTH_DETAILS_SIZE,
+    minSize: MEDIA_HEALTH_DETAILS_MIN_SIZE,
+    hideFromLauncher: true,
   },
   conditions: mediaSection,
 };
@@ -373,6 +426,17 @@ const context: UmbExtensionManifest = {
   api: () => import('./context/media-manager.context.js'),
 };
 
+/**
+ * The health context (#141, design §3): the check and its result, on the desktop rather than in the
+ * window, so closing the window stops nothing and the Manager can read the facts later.
+ */
+const healthContext: UmbExtensionManifest = {
+  type: 'umbraDesktopContext',
+  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.HealthContext`,
+  name: 'UmbraDesktop Media Health context',
+  api: () => import('./health/media-health.context.js'),
+};
+
 /** True while something is cut or copied: what shows Paste (design §5). */
 const clipboardHolds: UmbExtensionManifest = {
   type: 'condition',
@@ -515,10 +579,25 @@ const docs: UmbExtensionManifest = {
 };
 
 /** The bundle Umbraco loads for this package. */
+/**
+ * The media guidelines (#179) as a box in Desktop settings, under Add-ons: the first setting this
+ * package has, so it is what makes the Media row. Shown to everyone, since every editor's uploads are
+ * checked against them; the box itself is read only without the Settings section.
+ */
+const guidelinesSettings: UmbExtensionManifest = {
+  type: 'umbraDesktopPackageSettings',
+  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.Settings.Guidelines`,
+  name: 'UmbraDesktop Media guidelines settings',
+  element: () => import('./guidelines/guidelines-panel.element.js'),
+  meta: { package: MEDIA_PACKAGE_NAME, label: '#umbraDesktopMedia_guidelinesSettings' },
+};
+
 export const manifests: Array<UmbExtensionManifest> = [
   catalogue,
   mediaManager,
   imageEditor,
+  mediaHealth,
+  mediaHealthDetails,
   ...folderTree,
   ...binTree,
   ...treeView,
@@ -528,6 +607,7 @@ export const manifests: Array<UmbExtensionManifest> = [
   onDesktop,
   isImage,
   context,
+  healthContext,
   openInNewWindow,
   editImage,
   editImageInManager,
@@ -544,5 +624,6 @@ export const manifests: Array<UmbExtensionManifest> = [
   optimizeImages,
   renameDialog,
   docs,
+  guidelinesSettings,
   ...localizationManifests,
 ];

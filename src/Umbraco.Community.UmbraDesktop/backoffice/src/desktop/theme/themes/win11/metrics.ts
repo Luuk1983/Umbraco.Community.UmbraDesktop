@@ -135,10 +135,24 @@ export const W11_LAUNCHER_GAP = 12;
 export const W11_LAUNCHER_TOP_CLEARANCE = 24;
 
 /**
- * The path strip's height under this theme, in px.
- *
- * Matches the shared default: Windows 11 breadcrumbs sit on a comfortable strip, and 28px is that. Read twice from here and nowhere else: the palette sets
- * `--umbradesktop-path-height` from it and `metrics.pathbarHeight` reports it, so the strip
- * cannot be drawn at one height and paid for at another.
+ * The path strip's bottom line under this theme, in px: the width the palette draws
+ * `--umbradesktop-path-border-bottom` at, inside the strip's height.
  */
-export const W11_PATH_HEIGHT = 28;
+export const W11_PATH_LINE = 1;
+
+/**
+ * The height in px of what this theme's path strip shows, inside its line. Matches the shared
+ * default: Windows 11 breadcrumbs sit on a comfortable strip, and 28px is that.
+ *
+ * Even, because the icons and words are centred in it: in an odd box the centre falls on a half
+ * pixel, an 18px icon starts on it and is drawn rounded down, and the words beside it sat up to a
+ * pixel above it. `theme/strip-height.test.ts` holds every theme to it.
+ */
+export const W11_PATH_CONTENT_HEIGHT = 28;
+
+/**
+ * The path strip's height under this theme, in px: its content and its line. Read twice from here
+ * and nowhere else: the palette sets `--umbradesktop-path-height` from it and `metrics.pathbarHeight`
+ * reports it, so the strip cannot be drawn at one height and paid for at another.
+ */
+export const W11_PATH_HEIGHT = W11_PATH_CONTENT_HEIGHT + W11_PATH_LINE;

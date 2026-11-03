@@ -54,6 +54,20 @@
     "remove metadata",
     "download media",
     "replace file",
+    "cleanup",
+    "unused media",
+    "media cleanup",
+    "media health",
+    "orphaned files",
+    "oversized images",
+    "media guidelines",
+    "upload guidelines",
+    "optimize on upload",
+    "image size limit",
+    "upload size limit",
+    "PNG to WebP",
+    "GPS",
+    "remove location",
     "umbradesktop",
     "desktop",
     "windows",
@@ -88,6 +102,14 @@
     {
       "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Media/docs/screenshots/image-editor.png",
       "Caption": "The Image Editor cropping a photo to 16:9, with rotate and flip beside it and the image's name, folder, size and zoom in the status bar."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Media/docs/screenshots/media-health.png",
+      "Caption": "Media Cleanup after a check: the library cut by health in one bar, unused items and orphaned files ticked for one Clean up, and where the space goes by folder."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/Luuk1983/Umbraco.Community.UmbraDesktop/main/src/Umbraco.Community.UmbraDesktop.Media/docs/screenshots/media-guidelines-warning.png",
+      "Caption": "Files dropped into a Media Manager, checked against the media guidelines: the ones that follow them upload, and the camera photos that are too large or record a location wait to be optimized first."
     }
   ]
 }

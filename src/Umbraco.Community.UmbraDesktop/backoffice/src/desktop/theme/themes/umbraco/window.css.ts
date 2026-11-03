@@ -29,11 +29,14 @@ import { UMBRACO_LIGHT_DANGER } from './palette.js';
  */
 export default css`
   /* The unfocused caption: sand, with navy ink at enough strength to read. 70 percent is where the
-     title clears 4.5:1 on sand; the 55 the first mock used was a prettier 3.4:1. */
+     title clears 4.5:1 on sand; the 55 the first mock used was a prettier 3.4:1.
+
+     Its bottom line is the backoffice's border grey, the colour the path strip draws its own line in
+     a strip's height below. The two lines then sit one above the other between the same sand
+     grounds, and a 10% tint of the link blue here read as a different line from the strip's. */
   .frame:not(.active) {
     --umbradesktop-titlebar-background: var(--uui-color-surface-alt);
-    --umbradesktop-titlebar-border-bottom: ${UMBRADESKTOP_TITLEBAR_BORDER}px solid
-      color-mix(in srgb, var(--uui-color-interactive) 10%, transparent);
+    --umbradesktop-titlebar-border-bottom: ${UMBRADESKTOP_TITLEBAR_BORDER}px solid var(--uui-color-border);
     --umbradesktop-titlebar-text: color-mix(in srgb, var(--uui-color-interactive) 70%, transparent);
     --umbradesktop-control-color: color-mix(in srgb, var(--uui-color-interactive) 70%, transparent);
     --umbradesktop-control-hover-background: radial-gradient(
@@ -75,23 +78,7 @@ export default css`
   .ctrl .glyph.ring {
     stroke-width: 1.5;
   }
-  /* The pane header's buttons and the Dock button are about 20px tall, in a strip 28px high. Their
-     touch target grows to the strip's own height through an overlay, never through padding, which
-     would move the button and change the strip. Vertical only, on purpose: the pane's three buttons
-     sit a few pixels apart, so widening each would make neighbours' targets overlap and a tap on
-     one land on another. That makes this 28px, which clears WCAG 2.5.8's 24px and is short of
-     Apple's 44. The strip cannot be taller without costing content, and its height is a metric. */
-  .pane-button,
-  .attached-dock {
-    position: relative;
-  }
-  .pane-button::after,
-  .attached-dock::after {
-    content: '';
-    position: absolute;
-    top: -4px;
-    bottom: -4px;
-    left: 0;
-    right: 0;
-  }
+  /* No touch overlay on the pane header's buttons or Dock: they fill the strip's height themselves
+     now, in every theme, so the overlay that once stretched a 20px button to 28px would only be a
+     second box on the first. */
 `;

@@ -377,6 +377,7 @@ FodyWeavers.xsd
 # Rendered app icons. Build output like the wallpapers above: scripts/build-appicons.mjs regenerates
 # every PNG here from the committed SVGs in backoffice/appicons-src/.
 **/backoffice/public/appicons/
+**/backoffice/public/add-ons/
 
 # The docs the Help app reads. Build output like the wallpapers: scripts/docs/copy-docs.mjs copies the
 # published pages from docs/ and recompresses the images they use, on every build.

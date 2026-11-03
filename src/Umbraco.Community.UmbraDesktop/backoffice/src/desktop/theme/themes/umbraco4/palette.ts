@@ -1,6 +1,7 @@
 import type { UmbraDesktopPalette } from '../../types';
 import {
   U4_PATH_HEIGHT,
+  U4_PATH_LINE,
   U4_CONTROL_WIDTH,
   U4_LAUNCHER_TOP_CLEARANCE,
   U4_LAUNCHER_ARRANGE_WIDTH,
@@ -122,7 +123,7 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-path-height': `${U4_PATH_HEIGHT}px`,
   // The same cream band the notices use, under the caption's own 11px type.
   '--umbradesktop-path-background': U4_PANEL,
-  '--umbradesktop-path-border-bottom': `1px solid ${U4_LINE_SOFT}`,
+  '--umbradesktop-path-border-bottom': `${U4_PATH_LINE}px solid ${U4_LINE_SOFT}`,
   '--umbradesktop-path-text': U4_TEXT,
   // No link colour of its own: this era's chrome text was one colour, and the hover is the same
   // pale selection blue the trees and lists use.
@@ -136,6 +137,8 @@ export const U4_LIGHT: UmbraDesktopPalette = {
   '--umbradesktop-strip-button-on-text': U4_TEXT,
   '--umbradesktop-strip-button-on-shadow': `inset 0 0 0 1px ${U4_SELECT_LINE}`,
   '--umbradesktop-path-font-size': '11px',
+  // Icons for an 11px strip a few px short of the default: the default's 16 is drawn for 13px text.
+  '--umbradesktop-strip-icon-size': '14px',
   '--umbradesktop-titlebar-background': U4_RAISED,
   '--umbradesktop-titlebar-border-bottom': `1px solid ${U4_LINE}`,
   '--umbradesktop-titlebar-text': U4_TEXT,

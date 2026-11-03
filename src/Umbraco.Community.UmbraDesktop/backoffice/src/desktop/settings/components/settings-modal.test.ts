@@ -9,6 +9,10 @@ import type {
 } from '@umbraco-cms/backoffice/extension-api';
 import { UmbConditionBase } from '@umbraco-cms/backoffice/extension-registry';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
+import { UmbContextProvider } from '@umbraco-cms/backoffice/context-api';
+import { UmbBasicState } from '@umbraco-cms/backoffice/observable-api';
+import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../../window-manager.context-token.js';
+import { UMBRADESKTOP_ADD_ONS_APP_ALIAS } from '../../add-ons/manifest.js';
 
 /**
  * The panel's own job is navigation: show the categories, go into one, come back, and put focus
@@ -61,7 +65,7 @@ async function panel(data?: { category?: string }, registry?: UmbExtensionRegist
   return {
     element,
     rowIds: () =>
-      [...root.querySelectorAll('umbradesktop-settings-row')].map((row) => (row as HTMLElement).dataset.category),
+      [...root.querySelectorAll('umbradesktop-settings-row[data-category]')].map((row) => (row as HTMLElement).dataset.category),
     iconNames: () =>
       [...root.querySelectorAll('umbradesktop-settings-row uui-icon')].map((icon) => icon.getAttribute('name')),
     // By id, not by index: the order of the categories is the registry's business and changes when
@@ -206,9 +210,9 @@ describe('package settings', () => {
    */
   const row = (name: string) => `package:${name}`;
 
-  it('shows no package section when no package has settings', async () => {
+  it('shows the Add-ons heading with only the link to the Add-ons app when no package has settings', async () => {
     const view = await panel();
-    expect(view.sectionHeading()).to.equal(null);
+    expect(view.sectionHeading()).to.match(/settingsAddOns|Add-ons/);
     expect(view.rowIds()).to.deep.equal(ids);
   });
 
@@ -321,5 +325,52 @@ describe('package settings', () => {
     view.clickBack();
     await settle(view.element);
     expect(view.focused()).to.equal(row('Alpha tools'));
+  });
+});
+
+describe('the link to the Add-ons app', () => {
+  /** The link row, found by what it links to rather than by position. */
+  const link = (view: Awaited<ReturnType<typeof panel>>) =>
+    view.element.shadowRoot!.querySelector<HTMLElement>('[data-link="add-ons"]');
+
+  it('closes the Add-ons section, after any package rows', async () => {
+    const view = await panel();
+    const list = view.element.shadowRoot!.querySelector('.list')!;
+    expect(list.lastElementChild?.getAttribute('data-link')).to.equal('add-ons');
+  });
+
+  it('opens the Add-ons app and closes the panel, so the window is not left behind it', async () => {
+    const opened: string[] = [];
+    let rejected = false;
+    const container = document.createElement('div');
+    document.body.append(container);
+    after(() => container.remove());
+    const provider = new UmbContextProvider(container, UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, {
+      openApp: (alias: string) => {
+        opened.push(alias);
+        return true;
+      },
+      // A context consumer asks every context for its host; this one has none of its own.
+      getHostElement: () => container,
+    } as never);
+    provider.hostConnected();
+    after(() => provider.hostDisconnected());
+
+    const element = document.createElement('umbradesktop-settings-modal');
+    element.registry = new UmbExtensionRegistry<UmbExtensionManifest>();
+    element.modalContext = { value: new UmbBasicState({}).asObservable(), reject: () => (rejected = true) } as never;
+    container.append(element);
+    await element.updateComplete;
+
+    (element.shadowRoot!.querySelector('[data-link="add-ons"]') as HTMLElement).click();
+    await settle(element);
+
+    expect(opened).to.deep.equal([UMBRADESKTOP_ADD_ONS_APP_ALIAS]);
+    expect(rejected).to.equal(true);
+  });
+
+  it('carries the Add-ons app’s own icon, so it reads as the app it opens', async () => {
+    const view = await panel();
+    expect(link(view)?.querySelector('uui-icon')?.getAttribute('name')).to.equal('icon-puzzle-piece');
   });
 });

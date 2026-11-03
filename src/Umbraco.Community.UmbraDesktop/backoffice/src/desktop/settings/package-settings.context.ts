@@ -3,6 +3,9 @@ import { openDesktopSettings } from './open-settings.js';
 import { UmbraDesktopPackageSettingsStore } from './package-store/package-settings-store.js';
 import type { UmbraDesktopPackageSettingsDocument } from './package-store/package-settings-store.js';
 import { UmbraDesktopUserDataDocument } from './package-store/user-data-document.js';
+import { UmbraDesktopSitePackageSettingsStore } from './package-store/site-settings-store.js';
+import type { UmbraDesktopSiteSettingsDocument } from './package-store/site-settings-store.js';
+import { UmbraDesktopSiteSettingsServerDocument } from './package-store/site-settings-document.js';
 import { UmbraDesktopUserDataServerClient } from '../user-data/server.client.js';
 import { UMBRADESKTOP_USER_DATA_GROUP } from '../user-data/constants.js';
 import type { UmbraDesktopUserDataClient } from '../user-data/types.js';
@@ -17,8 +20,14 @@ import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 const PACKAGE_SETTINGS_IDENTIFIER = 'Settings';
 
 /**
- * What packages reach the desktop through (design §5): a per-user store for their settings, and a
- * way to open Desktop settings at their row.
+ * What a site store's cross-tab channel name ends in, after the lowercased key. Apart from the
+ * per-user store's, so a tab never takes one user's value for the site's.
+ */
+const SITE_SETTINGS_CHANNEL = 'SiteSettings';
+
+/**
+ * What packages reach the desktop through (design §5, §13): a per-user store for their settings, a
+ * site-wide one, and a way to open Desktop settings at their row.
  *
  * Global rather than provided by the desktop element, because code that runs for the desktop's whole
  * life has nowhere to live but a backoffice entry point, outside the desktop element: the Accessories
@@ -31,6 +40,12 @@ const PACKAGE_SETTINGS_IDENTIFIER = 'Settings';
 export class UmbraDesktopPackageSettingsContext extends UmbContextBase {
   /** One store per key, so every element in the page reads one value. */
   #stores = new Map<string, UmbraDesktopPackageSettingsStore>();
+
+  /**
+   * One site store per key, keyed in lower case: the server stores keys ignoring case, so two
+   * spellings are one row and must be one store.
+   */
+  #siteStores = new Map<string, UmbraDesktopSitePackageSettingsStore>();
 
   /** Desktops showing now, latest last. Several exist briefly when Exit builds a new one. */
   #desktops: UmbControllerHost[] = [];
@@ -48,7 +63,9 @@ export class UmbraDesktopPackageSettingsContext extends UmbContextBase {
         context?.unique,
         (unique) => {
           this.#signedIn = !!unique;
-          if (unique) for (const store of this.#stores.values()) void store.load();
+          if (!unique) return;
+          for (const store of this.#stores.values()) void store.load();
+          for (const store of this.#siteStores.values()) void store.load();
         },
         'observeCurrentUserUnique',
       );
@@ -61,11 +78,8 @@ export class UmbraDesktopPackageSettingsContext extends UmbContextBase {
    * @returns The store, or undefined for an empty key or the desktop's own group.
    */
   store(key: string): UmbraDesktopPackageSettingsStore | undefined {
-    const trimmed = typeof key === 'string' ? key.trim() : '';
-    if (!trimmed || trimmed.toLowerCase() === UMBRADESKTOP_USER_DATA_GROUP.toLowerCase()) {
-      console.warn(`[UmbraDesktop] Package settings store "${key}" refused: use your package's own user-data group.`);
-      return undefined;
-    }
+    const trimmed = this.#packageKey(key);
+    if (!trimmed) return undefined;
     let store = this.#stores.get(trimmed);
     if (!store) {
       store = new UmbraDesktopPackageSettingsStore(
@@ -79,6 +93,42 @@ export class UmbraDesktopPackageSettingsContext extends UmbContextBase {
     // Nothing is requested for a store that has loaded, and a read under way is joined.
     if (this.#signedIn) void store.load();
     return store;
+  }
+
+  /**
+   * A package's settings for the whole site, shared by every caller in the page. Every backoffice
+   * user reads it; who may change it is the server's decision (`canChange`), the Settings section
+   * unless the package registered another policy in C#.
+   * @param key The package's key, such as `My.Package`: the same one its per-user store takes. Not
+   *   the desktop's own group. Matched ignoring case, as the server stores it.
+   * @returns The store, or undefined for an empty key or the desktop's own group.
+   */
+  siteStore(key: string): UmbraDesktopSitePackageSettingsStore | undefined {
+    const trimmed = this.#packageKey(key);
+    if (!trimmed) return undefined;
+    const id = trimmed.toLowerCase();
+    let store = this.#siteStores.get(id);
+    if (!store) {
+      store = new UmbraDesktopSitePackageSettingsStore(this._siteDocumentFor(trimmed), `${id}.${SITE_SETTINGS_CHANNEL}`);
+      this.#siteStores.set(id, store);
+    }
+    // On every call, as for the per-user store, so asking again retries a failed read.
+    if (this.#signedIn) void store.load();
+    return store;
+  }
+
+  /**
+   * A package's key, trimmed, or undefined, with the console told why, when it may not be used.
+   * @param key The key the package passed.
+   * @returns The trimmed key, or undefined for an empty key or the desktop's own group.
+   */
+  #packageKey(key: string): string | undefined {
+    const trimmed = typeof key === 'string' ? key.trim() : '';
+    if (!trimmed || trimmed.toLowerCase() === UMBRADESKTOP_USER_DATA_GROUP.toLowerCase()) {
+      console.warn(`[UmbraDesktop] Package settings store "${key}" refused: use your package's own user-data group.`);
+      return undefined;
+    }
+    return trimmed;
   }
 
   /**
@@ -121,6 +171,15 @@ export class UmbraDesktopPackageSettingsContext extends UmbContextBase {
   }
 
   /**
+   * Where a key's site setting lives. The seam tests replace, since the real one needs a backoffice.
+   * @param key The package key.
+   * @returns The document.
+   */
+  protected _siteDocumentFor(key: string): UmbraDesktopSiteSettingsDocument {
+    return new UmbraDesktopSiteSettingsServerDocument(this, key);
+  }
+
+  /**
    * The `user-data` endpoints a document talks to. A seam narrower than {@link _documentFor}, so a
    * test can put the real document in front of a fake server, and two contexts in front of one
    * server stand for two tabs of one user.
@@ -143,6 +202,8 @@ export class UmbraDesktopPackageSettingsContext extends UmbContextBase {
   override destroy(): void {
     for (const store of this.#stores.values()) store.close();
     this.#stores.clear();
+    for (const store of this.#siteStores.values()) store.close();
+    this.#siteStores.clear();
     super.destroy();
   }
 }

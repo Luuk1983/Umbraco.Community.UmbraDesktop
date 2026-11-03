@@ -48,7 +48,7 @@ UmbraDesktop grants no access of its own. A user only sees apps for the sections
 
 ## Add-ons
 
-Optional packages, each adding apps to the desktop. The desktop is unchanged without them.
+Optional packages, each adding apps to the desktop. The desktop is unchanged without them. Its [Add-ons](docs/user/apps/add-ons.md) app lists them, and anyone else's from the Umbraco Marketplace, with what to send to whoever builds your site.
 
 - [`Umbraco.Community.UmbraDesktop.Accessories`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Accessories): the tools Windows kept under Accessories. Notepad and Paint that edit files in your media library, Sticky Notes of your own and shared with your team, Calculator, Character Map, Clock, a screen saver, Disk Cleanup and System Information.
 - [`Umbraco.Community.UmbraDesktop.Entertainment`](https://www.nuget.org/packages/Umbraco.Community.UmbraDesktop.Entertainment): Minesweeper, Snake and Solitaire, and umbraCoffee, the community's monthly live show.
@@ -61,4 +61,8 @@ Optional packages, each adding apps to the desktop. The desktop is unchanged wit
 
 ## License
 
-[MIT](LICENSE)
+- UmbraDesktop, the Entertainment and Accessories add-ons and the service packages: [Mozilla Public License 2.0](LICENSE). Free to use and to build on, client sites and add-ons of your own included. Pass on a changed copy of these packages' files and you pass on the changes too.
+- The Media add-on: [FSL-1.1-MIT](src/Umbraco.Community.UmbraDesktop.Media/LICENSE.md). Free to use, client sites included, but not in a product that competes with it. Each version becomes MIT two years after its release.
+- Every release before this change, and all code contributed before it, stays available under [MIT](licenses/MIT.txt).
+
+[Contributing](CONTRIBUTING.md) says which licence a contribution comes under.

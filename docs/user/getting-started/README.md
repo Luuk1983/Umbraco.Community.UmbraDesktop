@@ -13,3 +13,5 @@ description: Install UmbraDesktop, give users access, and find your way around.
 - [First steps](first-steps.md): open the desktop, open an app, and find Desktop settings and the
   way back to the classic backoffice.
 - [Screen size](screen-size.md): what to expect on a wide screen, a laptop and anything smaller.
+- [When your session ends](session-ends.md): the warning, the lock screen, and signing in again
+  without losing your windows.

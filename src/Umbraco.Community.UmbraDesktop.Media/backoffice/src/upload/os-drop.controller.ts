@@ -16,9 +16,11 @@ import { UmbraDesktopHoverExpand } from '../drag/hover-expand.js';
  * Files and folders from the OS dropped on a manager window (design §6, plan task 6.7).
  *
  * Core's dropzone in the window takes a drop on the folder the window shows, and draws its own
- * placeholders; that stays core's. What this adds is what core's cannot: a label naming the folder the
- * files will land in, since the OS's own drag label cannot, and a drop onto a folder card or a tree
- * folder uploading into that folder. The recycle bin refuses.
+ * placeholders; that stays core's, unless the window checks its uploads against the media guidelines
+ * (#179), when the window takes that drop first and hands what passes to core's dropzone after. What
+ * this adds is what core's cannot: a label naming the folder the files will land in, since the OS's
+ * own drag label cannot, and a drop onto a folder card or a tree folder uploading into that folder.
+ * The recycle bin refuses.
  *
  * During an OS file drag core lays its dropzone's overlay over the whole window, tree included, so the
  * drop's own target is always the overlay (measured 2026-10-18). What is under the pointer is found by
@@ -138,7 +140,11 @@ export class UmbraDesktopMediaOsDropController {
       this.#resetCore();
       return;
     }
-    if (target.kind === 'window') return;
+    // The window's own folder area is core's dropzone's, unless the window checks its uploads against
+    // the media guidelines first (#179): then it is the window's, which hands what passes to core's
+    // dropzone in it afterwards, so core still draws its placeholders.
+    const into = target.window;
+    if (target.kind === 'window' && !into.upload) return;
     // Ours: core's overlay must not upload into the folder the window shows as well, and the browser
     // must not open the file in place of the backoffice, which it does with a drop nobody takes.
     event.preventDefault();
@@ -148,7 +154,7 @@ export class UmbraDesktopMediaOsDropController {
     // Read now: the browser empties the drop's data once the event has been sent.
     const read = takeDropped(event.dataTransfer);
     const parent = target.unique;
-    void read().then((items) => this.#ops.upload(items, parent));
+    void read().then((items) => (into.upload ? into.upload(items, parent) : this.#ops.upload(items, parent)));
   };
 
   /**

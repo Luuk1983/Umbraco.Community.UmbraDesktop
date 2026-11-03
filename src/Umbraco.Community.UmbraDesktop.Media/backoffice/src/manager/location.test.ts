@@ -32,4 +32,16 @@ describe('a manager window location', () => {
   it('drops a view that is not an extension alias', () => {
     expect(parseLocation(`folder=${KEY}&view=<script>`)).to.deep.equal({ place: { kind: 'folder', unique: KEY } });
   });
+
+  it('carries an item to select once the folder shows, and reads one only when it is a key', () => {
+    const SELECT = '11111111-2222-3333-4444-555555555555';
+    expect(printLocation({ kind: 'folder', unique: KEY }, undefined, SELECT)).to.equal(`folder=${KEY}&select=${SELECT}`);
+    expect(parseLocation(`folder=${KEY}&select=${SELECT}`)).to.deep.equal({ place: { kind: 'folder', unique: KEY }, select: SELECT });
+    expect(parseLocation(`folder=${KEY}&select=<script>`)).to.deep.equal({ place: { kind: 'folder', unique: KEY } });
+    expect(parseLocation(`folder=root&view=Umb.CollectionView.Media.Table&select=${SELECT}`)).to.deep.equal({
+      place: { kind: 'root' },
+      view: 'Umb.CollectionView.Media.Table',
+      select: SELECT,
+    });
+  });
 });

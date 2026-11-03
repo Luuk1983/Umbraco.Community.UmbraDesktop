@@ -22,6 +22,10 @@ progress on its taskbar button.
 To optimize one image, open it and select **File actions**, then **Optimize**: see
 [What you can do with a file](media-item.md#optimize-an-image).
 
+Files dropped into a Media Manager that break the site's [media guidelines](media-guidelines.md) can
+be optimized before they upload. That run starts at once on the guidelines' settings, and uploads
+each file as soon as it is done.
+
 You can pass the selection as it is. Folders, files that are not images, SVGs and items in the
 recycle bin are skipped, and the window says how many. **Optimize images** is on the desktop only,
 for everyone who may use the Media section.

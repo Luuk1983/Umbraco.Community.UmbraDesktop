@@ -41,6 +41,12 @@ describe('the chat element', () => {
     expect(element.shadowRoot?.querySelector('iframe')?.getAttribute('src')).to.contain('v=a%26b');
   });
 
+  it("asks YouTube's page for its light colours, so a dark system does not put white text on the light ground", async () => {
+    const element = await mount('v1');
+    const frame = element.shadowRoot!.querySelector('iframe')!;
+    expect(getComputedStyle(frame).colorScheme).to.equal('light');
+  });
+
   it('says under the frame that posting needs a sign-in, as text and not as a detection', async () => {
     const element = await mount('v1');
     expect(element.shadowRoot?.querySelector('.note')?.textContent?.trim()).to.equal(STRINGS.umbraCoffeeChatNote);

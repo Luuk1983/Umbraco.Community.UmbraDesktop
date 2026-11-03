@@ -35,12 +35,15 @@ export interface UmbraDesktopSearchEngineOptions {
 }
 
 /**
- * Turns what was typed into what a search view draws: matching apps and each source's first results
- * once typing pauses, in full and compact sections, plus one source's full list while drilled into.
+ * Turns what was typed into what a search view draws: matching apps on every keystroke, each
+ * source's first results once typing pauses, in full and compact sections, plus one source's full
+ * list while drilled into.
  *
- * Results change in one go per pause, apps included. Matching apps on every keystroke while the
- * server's answer came 300 ms later moved the list twice for each pause; and the previous results
- * stay until the new ones are complete, so the list never flashes empty.
+ * Apps do not wait for the sources (design §12). They are matched in memory, and holding them back
+ * until the server answered made finding an app, the commonest search, wait for a round trip it
+ * never needed. The previous sources' results are dropped as the text changes rather than kept
+ * until the next answer, so a document found for the old text never sits beside apps for the new
+ * one; `pending` says their answer is on its way.
  *
  * It knows nothing of the launcher, which is what lets a taskbar button or a Search app reuse it
  * (design §8). Every query is numbered, and any answer for a number that is no longer current is
@@ -58,7 +61,7 @@ export class UmbraDesktopSearchEngine {
   #timer?: ReturnType<typeof setTimeout>;
   /** The latest state. */
   #state = UMBRADESKTOP_SEARCH_EMPTY_STATE;
-  /** The latest text asked for, trimmed; ahead of the state's query while its answer is pending. */
+  /** The latest text asked for, trimmed, which is what a change of text is compared with. */
   #query = '';
   /** The host's callbacks. */
   #options: UmbraDesktopSearchEngineOptions;
@@ -94,27 +97,26 @@ export class UmbraDesktopSearchEngine {
   setSources(sources: ReadonlyArray<UmbraDesktopSearchSource>): void {
     this.#sources = [...sources].sort((a, b) => b.weight - a.weight);
     if (!this.#query) return;
-    this.#generation++;
-    this.#emit({ ...this.#state, pending: true, drill: undefined });
-    this.#schedule(this.#query);
+    this.#search(this.#query);
   }
 
   /**
-   * Search for new text. Blank text is no search at all.
+   * Search for new text. Blank text is no search at all, and text that differs only by spaces at
+   * its ends is the search already shown: typing the space before a second word would otherwise
+   * empty the sources' results and ask for the same ones again.
    * @param query What was typed.
    */
   setQuery(query: string): void {
     const trimmed = query.trim();
-    this.#generation++;
-    clearTimeout(this.#timer);
+    if (trimmed === this.#query) return;
     this.#query = trimmed;
     if (!trimmed) {
+      this.#generation++;
+      clearTimeout(this.#timer);
       this.#emit(UMBRADESKTOP_SEARCH_EMPTY_STATE);
       return;
     }
-    // Only marked pending: what is shown stays until the answer replaces all of it at once.
-    this.#emit({ ...this.#state, pending: true, drill: undefined });
-    this.#schedule(trimmed);
+    this.#search(trimmed);
   }
 
   /**
@@ -160,6 +162,17 @@ export class UmbraDesktopSearchEngine {
   }
 
   /**
+   * Start a search: the apps for the text at once, the sources' results emptied and pending, and the
+   * sources asked once typing has paused. Any answer still on its way for earlier text is dropped.
+   * @param query The trimmed query.
+   */
+  #search(query: string): void {
+    this.#generation++;
+    this.#emit({ query, apps: this.#matchApps(query), sections: [], others: [], pending: true });
+    this.#schedule(query);
+  }
+
+  /**
    * Ask the sources once typing has paused.
    * @param query The trimmed query.
    */
@@ -170,8 +183,8 @@ export class UmbraDesktopSearchEngine {
   }
 
   /**
-   * Ask every source at once, each for its own take, and show their answers with the matching apps
-   * in one update. A source that throws or reports an error is left out; the rest still show
+   * Ask every source at once, each for its own take, and show their answers together, below the
+   * apps already shown. A source that throws or reports an error is left out; the rest still show
    * (design §6).
    * @param query The trimmed query.
    * @param generation The query's number.
@@ -192,8 +205,6 @@ export class UmbraDesktopSearchEngine {
     const found = answers.filter((a): a is UmbraDesktopSearchSection => !!a && a.total > 0);
     this.#emit({
       ...this.#state,
-      query,
-      apps: this.#matchApps(query),
       sections: found.filter((a) => a.source.prominence === 'full'),
       others: found.filter((a) => a.source.prominence === 'compact'),
       pending: false,

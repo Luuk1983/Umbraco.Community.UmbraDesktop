@@ -4,6 +4,9 @@ import { UMBRADESKTOP_SETTINGS_CATEGORIES, findSettingsCategory } from '../categ
 import type { UmbraDesktopSettingsPackage } from '../package-settings';
 import { normalisePackageSettings } from '../package-settings.js';
 import { UMBRADESKTOP_DEFAULT_ICON } from '../../constants';
+import { UMBRADESKTOP_ADD_ONS_APP_ALIAS, UMBRADESKTOP_ADD_ONS_APP_ICON } from '../../add-ons/manifest';
+import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../../window-manager.context-token';
+import type { UmbraDesktopWindowManagerContext } from '../../window-manager.context';
 import './settings-row.element.js';
 import './package-settings-screen.element.js';
 import { css, customElement, html, nothing, property, state } from '@umbraco-cms/backoffice/external/lit';
@@ -42,7 +45,8 @@ type PanelPlace =
  * Below our own categories, other packages' settings: one row per package with an
  * `umbraDesktopPackageSettings` manifest whose conditions are met, under a heading that says they are
  * not ours (design §4). A package's screen is `umbradesktop-settings-package`, which this element
- * navigates to exactly as it does to a category.
+ * navigates to exactly as it does to a category. The heading is always there, closed by a button that
+ * opens the Add-ons app (#188), so the way to more add-ons is where the installed ones are.
  *
  * There is no Save at either level: every change applies through the settings context the moment it
  * is made, which is also what lets the user watch the result on the desktop beside the panel.
@@ -70,6 +74,12 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraD
    * package by that name arrives. It never arriving leaves the list showing, as an unknown id did.
    */
   #pending?: string;
+
+  /**
+   * The desktop's window manager, which opens the Add-ons app. Absent outside a desktop, where the
+   * button then does nothing but close the panel.
+   */
+  #manager?: UmbraDesktopWindowManagerContext;
 
   /** Report keys already printed, so a re-evaluation does not print the same line again. */
   #reported = new Set<string>();
@@ -106,6 +116,7 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraD
 
     if (this.#observingPackages) return;
     this.#observingPackages = true;
+    this.consumeContext(UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, (context) => (this.#manager = context ?? undefined));
     // `UmbExtensionsManifestInitializer` rather than `byType`, because `byType` never evaluates a
     // manifest's `conditions`, and a box whose author said it should not show would show anyway.
     new UmbExtensionsManifestInitializer(
@@ -225,9 +236,19 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraD
   }
 
   /**
-   * The list of categories, which is what opening the panel shows, then a row per package with
-   * settings. The package section and its heading are left out entirely when there are none, so an
-   * install without such packages sees the panel exactly as before.
+   * Opens the Add-ons app and closes the panel, which would otherwise stay over the window it opened.
+   */
+  #openAddOns() {
+    this.#manager?.openApp(UMBRADESKTOP_ADD_ONS_APP_ALIAS);
+    this._rejectModal();
+  }
+
+  /**
+   * The list of categories, which is what opening the panel shows, then the Add-ons heading: a row
+   * per package with settings, and a button to the Add-ons app.
+   *
+   * The button, not another row: a row's chevron promises a screen you come back from, and this one
+   * opens a window and closes the panel.
    *
    * A package row's detail is its box headings joined, the same "what is in here" a category's
    * description gives, without asking a package for a sentence it would have to translate.
@@ -246,10 +267,8 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraD
             </umbradesktop-settings-row>
           `,
         )}
-        ${this._packages.length
-          ? html`
-              <h4 class="section">${this.localize.term('umbraDesktop_settingsAddOns')}</h4>
-              ${this._packages.map(
+        <h4 class="section">${this.localize.term('umbraDesktop_settingsAddOns')}</h4>
+        ${this._packages.map(
                 (value) => html`
                   <umbradesktop-settings-row
                     data-category=${`${PACKAGE_ROW_PREFIX}${value.name}`}
@@ -259,9 +278,16 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraD
                     <uui-icon slot="lead" class="icon" name=${PACKAGE_ROW_ICON}></uui-icon>
                   </umbradesktop-settings-row>
                 `,
-              )}
-            `
-          : nothing}
+        )}
+        <uui-button
+          class="find-add-ons"
+          data-link="add-ons"
+          look="secondary"
+          label=${this.localize.term('umbraDesktop_settingsFindAddOns')}
+          @click=${this.#openAddOns}>
+          <uui-icon name=${UMBRADESKTOP_ADD_ONS_APP_ICON}></uui-icon>
+          ${this.localize.term('umbraDesktop_settingsFindAddOns')}
+        </uui-button>
       </div>
     `;
   }
@@ -371,6 +397,14 @@ export class UmbraDesktopSettingsModalElement extends UmbModalBaseElement<UmbraD
         font-size: var(--uui-type-small-size);
         font-weight: 700;
         color: var(--uui-color-text-alt, var(--uui-color-text));
+      }
+      /* As wide as its words, below the rows: an action beside a list, not a row of it. */
+      .find-add-ons {
+        align-self: flex-start;
+        margin-top: var(--uui-size-space-3);
+      }
+      .find-add-ons uui-icon {
+        margin-right: var(--uui-size-space-2);
       }
       /* The panel's own title while inside a category, standing in for umb-body-layout's headline
          so that the back arrow can sit before it rather than after. */

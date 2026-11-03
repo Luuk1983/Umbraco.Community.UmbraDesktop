@@ -218,15 +218,26 @@ describe('the first row while an episode is coming or on', () => {
     expect(titles(element)).to.deep.equal(['Spooky Season 2026', ...EPISODES.map((e) => e.title)]);
     const first = rows(element)[0]!;
     expect(textIn(first, '.thumb.soon')).to.equal('30 Oct');
-    expect(textIn(first, '.ep-d')).to.equal(`${STRINGS.umbraCoffeeUpcoming}·30 Oct, 12:30`);
+    expect(textIn(first, '.ep-d')).to.equal(STRINGS.umbraCoffeeUpcoming);
+    expect(textIn(first, '.ep-g')).to.equal('30 Oct, 12:30');
     expect(first.getAttribute('aria-current')).to.equal('true');
   });
 
   it('heads it with the live stream, saying Live', async () => {
     const lead: UmbraCoffeeLeadRow = { kind: 'live', videoId: 'v9', title: 'October', when: 'Started 12:31' };
     const element = await mount(EPISODES, { lead });
-    expect(textIn(rows(element)[0], '.ep-d')).to.equal(`${STRINGS.umbraCoffeeLive}·Started 12:31`);
+    expect(textIn(rows(element)[0], '.ep-d')).to.equal(STRINGS.umbraCoffeeLive);
+    expect(textIn(rows(element)[0], '.ep-g')).to.equal('Started 12:31');
     expect(rows(element)[0]?.querySelector('img')?.getAttribute('src')).to.equal(`${UMBRACOFFEE_THUMBNAIL_URL}v9/mqdefault.jpg`);
+  });
+
+  it("puts the time on a line of its own, so a long one is not cut off beside the tag, at a row's height", async () => {
+    const when = 'Started Oct 30, 12:35 PM';
+    const lead: UmbraCoffeeLeadRow = { kind: 'live', videoId: 'v9', title: 'October', when };
+    const element = await mount(EPISODES, { lead }, { w: 300, h: 500 });
+    const line = rows(element)[0]!.querySelector<HTMLElement>('.ep-g')!;
+    expect(line.scrollWidth, 'the whole time fits').to.be.at.most(line.clientWidth);
+    expect(rows(element)[0]!.getBoundingClientRect().height).to.be.closeTo(UMBRACOFFEE_ROW_HEIGHT, 0.5);
   });
 
   it('asks the window to go back to it with lead-selected', async () => {

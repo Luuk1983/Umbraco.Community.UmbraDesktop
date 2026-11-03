@@ -37,6 +37,13 @@ describe('optimize options', () => {
     expect(reencodes(normaliseOptions({ quality: 15 }))).to.equal(true);
   });
 
+  it('reads options it already decided as they are, so deciding twice asks for nothing more (#179)', () => {
+    const once = normaliseOptions({ removeMetadata: true });
+    expect(normaliseOptions(once)).to.deep.equal(once);
+    const asked = normaliseOptions({ quality: 60 });
+    expect(normaliseOptions(asked)).to.deep.equal(asked);
+  });
+
   it('removes metadata whenever the picture is encoded again', () => {
     expect(normaliseOptions({ format: 'webp', removeMetadata: false }).removeMetadata).to.equal(true);
     expect(normaliseOptions({ resize: { maxWidth: 100 }, removeMetadata: false }).removeMetadata).to.equal(true);

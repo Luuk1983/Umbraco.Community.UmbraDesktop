@@ -85,6 +85,22 @@ interface ManifestUmbraDesktopDocs extends ManifestWithDynamicConditions {
   meta: MetaUmbraDesktopDocs;
 }
 
+/** Copy of the host's `MetaUmbraDesktopPackageSettings` (#179). */
+interface MetaUmbraDesktopPackageSettings {
+  /** The package's name, plain text: the row it is shown under. */
+  package: string;
+  /** The box's heading, a localisation token or a literal. */
+  label: string;
+}
+
+/** One box of this package's settings in Desktop settings. Only ever gains optional fields, like the others. */
+interface ManifestUmbraDesktopPackageSettings extends ManifestElement<HTMLElement>, ManifestWithDynamicConditions {
+  /** Discriminates this manifest from every other extension type. */
+  type: 'umbraDesktopPackageSettings';
+  /** Its package and heading. */
+  meta: MetaUmbraDesktopPackageSettings;
+}
+
 /** A package context on the desktop element. A copy of the host's `ManifestUmbraDesktopContext`. */
 interface ManifestUmbraDesktopContext extends ManifestApi<UmbApi>, ManifestWithDynamicConditions {
   /** Discriminates this manifest from every other extension type. */
@@ -100,14 +116,37 @@ declare global {
   interface UmbraDesktopOpenAttachedDetail {
     /** The app's own name for the page. */
     key: string;
-    /** The page, under `/umbraco/section/`. Anything else is refused. */
-    path: string;
+    /** The page, under `/umbraco/section/`. Anything else is refused. Not with `app`. */
+    path?: string;
+    /**
+     * Instead of a page, one of this package's own element apps, by its `umbraDesktopApp` alias (#141):
+     * Media Cleanup's details pane. Usually one hidden from the launcher. Not with `path`.
+     */
+    app?: string;
     /** The pane header and window title. */
     name: string;
     /** The pane header and window icon. */
     icon: string;
     /** Open it as a window even where a pane would fit, as Shift-click asks. */
     floating?: boolean;
+  }
+
+  /**
+   * What `umbradesktop-open-dialog` carries (#179): a dialog over the app's window, which keeps it
+   * waiting until the dialog closes. A copy of the host's contract (`docs/developer/desktop-apps.md`).
+   * The desktop cancels the event when it opens the dialog.
+   */
+  interface UmbraDesktopOpenDialogDetail {
+    /** The dialog's title. */
+    name: string;
+    /** The dialog's icon. */
+    icon?: string;
+    /** The dialog's content, in any form a manifest's `element` may take. */
+    element: unknown;
+    /** Set on the content before it connects. */
+    props?: Record<string, unknown>;
+    /** The content box, in px. */
+    size: { w: number; h: number };
   }
 
   /** What `umbradesktop-close-attached` carries: the key of the page to close, asking first if dirty. */
@@ -124,7 +163,7 @@ declare global {
 
   /**
    * What the desktop sets as an app element's `attached` property: each key the app has a page open
-   * under, and the page it is on now. Missing once it closes.
+   * under, and the page it is on now, or for an app of its own, that app's alias. Missing once it closes.
    */
   type UmbraDesktopAttachedPages = Readonly<Record<string, string>>;
 
@@ -137,5 +176,7 @@ declare global {
     umbraDesktopDocs: ManifestUmbraDesktopDocs;
     /** This package's desktop-level context. */
     umbraDesktopContext: ManifestUmbraDesktopContext;
+    /** This package's boxes in Desktop settings: the media guidelines (#179). */
+    umbraDesktopPackageSettings: ManifestUmbraDesktopPackageSettings;
   }
 }

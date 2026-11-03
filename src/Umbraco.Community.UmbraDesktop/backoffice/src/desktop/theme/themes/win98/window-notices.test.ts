@@ -112,9 +112,12 @@ it('adopts the active theme\'s window stylesheet, so a themed notice actually pa
   element.window = NOTICE_WINDOW;
   themeHost.appendChild(element);
   await element.updateComplete;
+  const banner = element.renderRoot.querySelector('umbradesktop-notice') as (HTMLElement & { updateComplete: Promise<unknown> }) | null;
+  await banner?.updateComplete;
 
   try {
-    const notice = element.renderRoot.querySelector('.notice') as HTMLElement | null;
+    // The banner is the desktop's notice component, which adopts the window sheet itself.
+    const notice = banner?.shadowRoot?.querySelector('.notice') as HTMLElement | null;
     expect(notice, 'the trashed notice should render a banner').to.not.equal(null);
 
     const boxShadow = await settledBoxShadow(notice!);

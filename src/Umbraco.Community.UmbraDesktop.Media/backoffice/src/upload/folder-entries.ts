@@ -5,8 +5,9 @@ import type { UmbFileDropzoneDroppedItems } from '@umbraco-cms/backoffice/dropzo
  * plan task 6.6): files at the top, and each folder with its own files and folders, so core creates
  * the folders first and what is in them keeps its place.
  *
- * Only for a drop the manager takes itself, onto a folder card or a tree folder; a drop on the window's
- * own folder area is core's dropzone's, which reads the folders itself.
+ * For a drop the manager takes itself: onto a folder card or a tree folder, and, in a window that
+ * checks its uploads against the media guidelines (#179), onto the window's own folder area too, which
+ * core's dropzone would otherwise read itself.
  */
 
 /** A dropped file or folder, as the browser's file system entry; a test hands in its own. */
