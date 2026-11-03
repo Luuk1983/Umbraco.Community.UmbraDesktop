@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Media Cleanup rework</title>
+<style>
+/* Colours and sizes taken from UUI 2.0.2's defaults, so the mock reads as the backoffice does. */
+:root{
+  --navy:#1b264f; --interactive:#3544b1; --text:#1b264f; --alt:#515054; --border:#d8d7d9; --divider:#e9e9eb;
+  --bg:#f4f4f4; --surface:#fff; --surface-alt:#f3f3f5; --selected:#3544b1; --hover:#f3f3f5;
+  --unused:#d42054; --orphan:#f5c142; --oversized:#2bc37c; --fine:#1b264f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#c9ccd8;font-family:Lato,"Segoe UI",system-ui,sans-serif;color:var(--text);font-size:14px}
+.page{max-width:1600px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:22px;margin:0 0 4px}
+.lead{max-width:900px;line-height:1.5;margin:0 0 28px;color:#2c2c34}
+.scene{display:grid;grid-template-columns:auto minmax(260px,1fr);gap:24px;align-items:start;margin:0 0 44px}
+.scene.stack{grid-template-columns:1fr}
+@media (max-width:1300px){.scene{grid-template-columns:1fr}}
+.note{max-width:760px}
+.note h2{font-size:16px;margin:4px 0 8px}
+.note p,.note li{line-height:1.5;color:#2c2c34}
+.note ul{padding-left:18px;margin:6px 0}
+.tag{display:inline-block;font-size:11px;font-weight:700;background:var(--navy);color:#fff;border-radius:3px;padding:2px 7px;margin-bottom:6px}
+.pair{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+
+/* window */
+.win{background:var(--bg);border-radius:8px;box-shadow:0 12px 40px rgba(20,25,60,.28);overflow:hidden;position:relative;flex:none}
+.tb{background:var(--navy);color:#fff;height:38px;display:flex;align-items:center;padding:0 12px;gap:8px;font-weight:700;font-size:14px}
+.tb .sp{flex:1}
+.tb i{display:inline-block;width:11px;height:11px;border:1.5px solid #fff;border-radius:2px;margin-left:14px;opacity:.85}
+.body{padding:18px}
+.sp{flex:1}
+.muted{color:var(--alt);font-size:12px}
+b.n{font-weight:700}
+
+/* UUI-ish controls */
+.btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:3px;padding:7px 13px;font:inherit;font-weight:700;background:transparent;color:var(--interactive);white-space:nowrap}
+.btn.sec{background:var(--surface-alt);color:var(--text)}
+.btn.prim{background:var(--interactive);color:#fff}
+.btn.danger{background:var(--unused);color:#fff}
+.btn.out{border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.btn.big{padding:10px 18px;font-size:15px}
+.btn.off{background:#f7f7f8;color:#c4c4c4}
+.ico{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:3px;background:var(--surface-alt);color:var(--text);font-weight:700}
+.chk{display:inline-block;width:16px;height:16px;border-radius:3px;border:1px solid #9e9ea6;background:#fff;flex:none;position:relative;vertical-align:-3px}
+.chk.on{background:var(--interactive);border-color:var(--interactive)}
+.chk.on::after{content:"";position:absolute;left:4.5px;top:1px;width:4px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.chk.some{background:var(--interactive);border-color:var(--interactive)}
+.chk.some::after{content:"";position:absolute;left:3px;right:3px;top:6.5px;height:2px;background:#fff}
+.box{background:var(--surface);border:1px solid var(--border);border-radius:6px}
+.box > .hd{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--divider);font-weight:700}
+.box > .bd{padding:12px 16px}
+.input{display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:3px;background:#fff;padding:6px 9px;color:#9a9aa2;min-width:0}
+.select{border:1px solid var(--border);border-radius:3px;background:#fff;padding:6px 26px 6px 9px;font-weight:400;position:relative;white-space:nowrap}
+.select::after{content:"";position:absolute;right:9px;top:11px;border:4px solid transparent;border-top-color:var(--text)}
+.views{display:inline-flex;border:1px solid var(--border);border-radius:3px;overflow:hidden;background:#fff}
+.views span{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:var(--alt);font-size:15px}
+.views span.on{background:var(--surface-alt);color:var(--interactive)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border)}
+.tabs span{padding:9px 14px;font-weight:700;color:var(--alt);border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs span.on{color:var(--text);border-bottom-color:#f5c1bc}
+.tabs .c{font-weight:400;color:var(--alt);margin-left:4px}
+
+/* thumbnails (colour blocks standing in for pictures) */
+.th{border-radius:3px;flex:none;background:linear-gradient(135deg,#9fb4d8,#3c5a99)}
+.th.a{background:linear-gradient(135deg,#f7d9a8,#c76b3a)}
+.th.b{background:linear-gradient(160deg,#b8e0d2,#2f7f72)}
+.th.c{background:linear-gradient(120deg,#e9c4d8,#8a3d6a)}
+.th.d{background:linear-gradient(200deg,#d6d6d6,#5a5a66)}
+.th.e{background:linear-gradient(140deg,#cfe3f7,#5b86c4 60%,#2b3f6e)}
+.th.f{background:radial-gradient(circle at 30% 30%,#ffe9a8,#e09a2e 60%,#7a4a10)}
+.th.g{background:linear-gradient(170deg,#c9e6a5,#5f8f2c)}
+.th.doc{background:var(--surface-alt);border:1px solid var(--divider);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--alt)}
+
+/* overview */
+.lib{display:flex;align-items:flex-start;gap:12px}
+.lib .big{font-size:32px;font-weight:700;line-height:1.1}
+.bar{display:flex;height:26px;border-radius:5px;overflow:hidden;margin:14px 0 6px}
+.bar div{height:100%}
+.barline{display:flex;justify-content:space-between;font-size:12px}
+.kinds{display:grid;gap:12px;margin-top:16px}
+.kinds.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.kind{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;border-top:4px solid var(--c)}
+.kind.row{flex-direction:row;align-items:center;border-top:1px solid var(--border);border-left:4px solid var(--c)}
+.kind .t{display:flex;align-items:center;gap:8px;font-weight:700}
+.kind .fig{font-size:24px;font-weight:700;line-height:1}
+.kind .ln{font-size:12px;color:var(--alt);line-height:1.4}
+.kind .strip{display:flex;gap:4px}
+.kind .strip .th,.kind .strip .more{width:34px;height:34px}
+.more{border-radius:3px;background:var(--surface-alt);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--alt)}
+.kind .ft{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:8px;border-top:1px solid var(--divider)}
+.kind.dis{opacity:.55}
+.cleanrow{display:flex;justify-content:flex-end;margin-top:14px}
+.twocol{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+.fold{display:grid;grid-template-columns:minmax(0,7.5em) minmax(0,1fr) 4.5em 20px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--divider)}
+.fold:last-child{border-bottom:0}
+.fold .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;color:var(--interactive)}
+.track{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--surface-alt)}
+.track div{height:100%}
+.fold .sz{text-align:right;font-weight:700}
+.chev{color:#9a9aa2;font-weight:700}
+
+/* breakdown */
+.crumbs{display:flex;align-items:center;gap:6px;font-weight:700}
+.crumbs a{color:var(--interactive)}
+.crumbs .s{color:#9a9aa2}
+.table{width:100%;border-collapse:collapse;background:var(--surface)}
+.table th{text-align:left;font-size:12px;color:var(--alt);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.table td{padding:7px 10px;border-bottom:1px solid var(--divider);vertical-align:middle;white-space:nowrap}
+.table tr.sel td{background:#eef0fb}
+.table tr.cur td{background:#e3e6f8}
+.table tr.cur td:first-child{box-shadow:inset 3px 0 0 var(--interactive)}
+.table tr.grp td{background:var(--surface-alt);font-weight:700;padding:6px 10px}
+.table .th{width:32px;height:32px;display:inline-block;vertical-align:middle}
+.table .name{font-weight:700;color:var(--interactive)}
+.table .r{text-align:right}
+.tag2{display:inline-block;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;background:#fbe7ec;color:var(--unused)}
+.tag2.o{background:#e7f7ef;color:#16824f}
+.link{color:var(--interactive);font-weight:700}
+
+/* list + details */
+.split{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:0;background:var(--surface)}
+.split .main{border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:0 18px 18px}
+.split .side{border-left:4px solid #c9ccd8}
+.split .main{min-width:0;position:relative}
+.split .side{border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column}
+.side .phd{display:flex;align-items:center;gap:8px;height:30px;padding:0 6px 0 10px;background:var(--surface-alt);border-bottom:1px solid var(--border);font-size:12px;font-weight:700}
+.side .phd .pb{width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;color:var(--alt);font-weight:700}
+.side .pic{height:200px;margin:12px;border-radius:4px}
+.side .facts{padding:0 14px 10px;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px}
+.side .facts dt{color:var(--alt)}
+.side .facts dd{margin:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side .acts{padding:12px 14px;border-top:1px solid var(--divider);display:flex;flex-direction:column;gap:8px}
+.side .acts .row2{display:flex;gap:8px}
+.side h3{margin:12px 14px 2px;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.selbar{display:flex;align-items:center;gap:10px;background:var(--navy);color:#fff;padding:8px 12px}
+.selbar .btn{background:#fff;color:var(--navy);padding:6px 11px}
+.selbar .btn.danger{background:var(--unused);color:#fff}
+.toolbar{display:flex;gap:8px;align-items:center;padding:12px 0}
+.marq{position:absolute;border:1px solid var(--interactive);background:rgba(53,68,177,.12);pointer-events:none}
+.cursor{position:absolute;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:16px solid #111;transform:rotate(-28deg)}
+
+/* cards view */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:10px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;position:relative}
+.card .th{display:block;width:100%;aspect-ratio:4/3;border-radius:0}
+.card .cap{padding:7px 9px;border-top:1px solid var(--divider)}
+.card .cap b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--interactive)}
+.card .chk{position:absolute;top:8px;left:8px}
+.card.sel{outline:2px solid var(--interactive)}
+.table .th.doc,.card .th.doc{display:flex}
+.table .th.doc{display:inline-flex}
+.ghead{display:flex;align-items:center;gap:8px;font-weight:700;padding:12px 10px 0}
+</style>
+</head>
+<body>
+<div class="page">
+<h1>Media Cleanup, step 2 rework</h1>
+<p class="lead">After Luuk's look at step 2 on 2026-10-29. Static mocks, made-up numbers (12.4 GB, 18,240 items) so they are judged at a size where they have to work. Colours and controls follow UUI's defaults and core's collection views, not the app's own. Colour blocks stand in for pictures.</p>
+
+<!-- 1 -->
+<div class="scene stack">
+<div class="pair">
+<div class="win" style="width:1180px">
+  <div class="tb">Media Cleanup<span class="sp"></span><i></i><i></i><i></i></div>
+  <div class="body">
+    <div class="lib">
+      <div><b style="font-size:12px">Media library · 18,240 items</b><div class="big">12.4 GB</div></div>
+      <span class="sp"></span>
+      <div style="text-align:right"><div class="muted">Checked today, 10:02 AM</div><span class="btn" style="padding-right:0">⟳ Check again</span></div>
+    </div>
+    <div class="bar"><div style="width:53%;background:var(--fine)"></div><div style="width:12%;background:var(--oversized)"></div><div style="width:11%;background:var(--orphan)"></div><div style="width:24%;background:var(--unused)"></div></div>
+    <div class="barline"><span class="muted">■ 6.6 GB in use</span><b>5.8 GB can be freed</b></div>
+    <div class="twocol" style="margin-top:16px">
+      <div>
+        <div class="kinds three" style="margin-top:0">
+          <div class="kind" style="--c:var(--unused)">
+            <div class="t"><span class="chk on"></span>Unused items</div>
+            <div class="fig">3.0 GB</div>
+            <div class="ln">733 items no page uses. To the recycle bin, so they can come back.</div>
+            <div class="strip"><span class="th e"></span><span class="th a"></span><span class="th b"></span><span class="th c"></span><span class="more">+729</span></div>
+            <div class="ft"><span class="muted">12 kept</span><span class="btn" style="padding:4px 0">See all ›</span></div>
+          </div>
+          <div class="kind" style="--c:var(--orphan)">
+            <div class="t"><span class="chk on"></span>Orphaned files</div>
+            <div class="fig">1.4 GB</div>
+            <div class="ln">1,312 files on disk with no item. Deleted for good.</div>
+            <div class="strip"><span class="th d"></span><span class="th g"></span><span class="th doc">PDF</span><span class="th f"></span><span class="more">+1,308</span></div>
+            <div class="ft"><span></span><span class="btn" style="padding:4px 0">See all ›</span></div>
+          </div>
+          <div class="kind" style="--c:var(--oversized)">
+            <div class="t"><span class="chk on"></span>Oversized images</div>
+            <div class="fig">1.5 GB</div>
+            <div class="ln">214 images over 2 MB. Made smaller in Optimize images, about 1.1 GB saved.</div>
+            <div class="strip"><span class="th f"></span><span class="th e"></span><span class="th a"></span><span class="th b"></span><span class="more">+210</span></div>
+            <div class="ft"><span></span><span class="btn" style="padding:4px 0">See all ›</span></div>
+          </div>
+        </div>
+        <div class="cleanrow"><span class="btn prim big">Clean up about 5.5 GB</span></div>
+      </div>
+      <div class="box">
+        <div class="hd">Where the space goes<span class="sp"></span><span class="muted" style="font-weight:400">top-level folders</span></div>
+        <div class="bd" style="padding-top:4px;padding-bottom:4px">
+          <div class="fold"><span class="nm">Campaigns</span><span class="track"><div style="width:30%;background:var(--fine)"></div><div style="width:6%;background:var(--oversized)"></div><div style="width:58%;background:var(--unused)"></div></span><span class="sz">4.1 GB</span><span class="chev">›</span></div>
+          <div class="fold"><span class="nm">Products</span><span class="track"><div style="width:52%;background:var(--fine)"></div><div style="width:14%;background:var(--oversized)"></div><div style="width:4%;background:var(--unused)"></div></span><span class="sz">2.9 GB</span><span class="chev">›</span></div>
+          <div class="fold"><span class="nm">People</span><span class="track"><div style="width:38%;background:var(--fine)"></div><div style="width:3%;background:var(--unused)"></div></span><span class="sz">1.7 GB</span><span class="chev">›</span></div>
+          <div class="fold"><span class="nm">Blog</span><span class="track"><div style="width:22%;background:var(--fine)"></div><div style="width:4%;background:var(--oversized)"></div></span><span class="sz">1.0 GB</span><span class="chev">›</span></div>
+          <div class="fold"><span class="nm">Downloads</span><span class="track"><div style="width:15%;background:var(--fine)"></div><div style="width:2%;background:var(--unused)"></div></span><span class="sz">640 MB</span><span class="chev">›</span></div>
+          <div class="fold" style="border-bottom:0"><span class="muted">305 more</span><span></span><span></span><span></span></div>
+        </div>
+        <div style="padding:0 16px 12px"><span class="btn out">Browse all folders</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="win" style="width:640px">
+  <div class="tb">Media Cleanup<span class="sp"></span><i></i><i></i><i></i></div>
+  <div class="body">
+    <div class="lib">
+      <div><b style="font-size:12px">Media library · 18,240 items</b><div class="big">12.4 GB</div></div>
+      <span class="sp"></span>
+      <div style="text-align:right"><div class="muted">Checked today, 10:02 AM</div><span class="btn" style="padding-right:0">⟳ Check again</span></div>
+    </div>
+    <div class="bar"><div style="width:53%;background:var(--fine)"></div><div style="width:12%;background:var(--oversized)"></div><div style="width:11%;background:var(--orphan)"></div><div style="width:24%;background:var(--unused)"></div></div>
+    <div class="barline"><span class="muted">■ 6.6 GB in use</span><b>5.8 GB can be freed</b></div>
+    <div class="kinds">
+      <div class="kind row" style="--c:var(--unused)"><span class="chk on"></span><div style="flex:1;min-width:0"><b>Unused items</b><div class="ln">733 items no page uses. To the recycle bin.</div></div><span class="fig" style="font-size:16px">3.0 GB</span><span class="chev">›</span></div>
+      <div class="kind row" style="--c:var(--orphan)"><span class="chk on"></span><div style="flex:1;min-width:0"><b>Orphaned files</b><div class="ln">1,312 files with no item. Deleted for good.</div></div><span class="fig" style="font-size:16px">1.4 GB</span><span class="chev">›</span></div>
+      <div class="kind row" style="--c:var(--oversized)"><span class="chk on"></span><div style="flex:1;min-width:0"><b>Oversized images</b><div class="ln">214 images over 2 MB. Optimize images.</div></div><span class="fig" style="font-size:16px">1.5 GB</span><span class="chev">›</span></div>
+    </div>
+    <div class="cleanrow"><span class="btn prim big">Clean up about 5.5 GB</span></div>
+    <div class="box" style="margin-top:14px">
+      <div class="hd">Where the space goes</div>
+      <div class="bd" style="padding-top:4px;padding-bottom:4px">
+        <div class="fold"><span class="nm">Campaigns</span><span class="track"><div style="width:30%;background:var(--fine)"></div><div style="width:6%;background:var(--oversized)"></div><div style="width:58%;background:var(--unused)"></div></span><span class="sz">4.1 GB</span><span class="chev">›</span></div>
+        <div class="fold"><span class="nm">Products</span><span class="track"><div style="width:52%;background:var(--fine)"></div><div style="width:14%;background:var(--oversized)"></div><div style="width:4%;background:var(--unused)"></div></span><span class="sz">2.9 GB</span><span class="chev">›</span></div>
+        <div class="fold"><span class="nm">People</span><span class="track"><div style="width:38%;background:var(--fine)"></div><div style="width:3%;background:var(--unused)"></div></span><span class="sz">1.7 GB</span><span class="chev">›</span></div>
+      </div>
+      <div style="padding:0 16px 12px;display:flex;align-items:center"><span class="muted">307 more</span><span class="sp"></span><span class="btn out">Browse all folders</span></div>
+    </div>
+  </div>
+</div>
+</div>
+<div class="note"><span class="tag">1 · Overview, wide and narrow</span><h2>Three cards when there is room, three rows when there is not</h2>
+<ul>
+<li>One layout that follows the window's width, not two screens. From about 900 px the kinds are cards side by side, each with its figure large, its line, four thumbnails and <b>See all</b>. Below that they are compact rows, without the thumbnail strips (they were the part that sprawled at full screen and cramped at 640).</li>
+<li>Where the space goes sits beside the cards when it fits, under them when it does not, and lists more folders the more room it has.</li>
+<li>A folder name opens the folder breakdown (scene 2), not the cleanup list. <b>Browse all folders</b> opens its top level.</li>
+<li>Default window size goes up to about 960 by 720; at that size the wide layout already applies.</li>
+</ul></div>
+</div>
+
+<!-- 2 -->
+<div class="scene">
+<div class="win" style="width:900px">
+  <div class="tb">Media Cleanup<span class="sp"></span><i></i><i></i><i></i></div>
+  <div class="body">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="btn sec">‹ Back</span>
+      <div class="crumbs"><a>Media library</a><span class="s">›</span><a>Campaigns</a><span class="s">›</span><span>2023</span></div>
+      <span class="sp"></span><span class="btn out">⧉ Open in Media Manager</span>
+    </div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin:16px 0 6px"><b style="font-size:24px">1.9 GB</b><span class="muted">in 2023 and the folders under it · 1,104 items</span></div>
+    <div class="bar" style="height:14px;margin:6px 0 4px"><div style="width:22%;background:var(--fine)"></div><div style="width:9%;background:var(--oversized)"></div><div style="width:69%;background:var(--unused)"></div></div>
+    <div class="barline" style="margin-bottom:14px"><span class="muted">■ 410 MB in use</span><span class="muted"><span style="color:var(--oversized)">■</span> 170 MB oversized · <span style="color:var(--unused)">■</span> 1.3 GB unused</span></div>
+    <div class="box" style="overflow:hidden">
+      <table class="table">
+        <tr><th style="width:36px"></th><th>Folder</th><th style="width:40%"></th><th class="r">Size</th><th>Can go</th><th></th></tr>
+        <tr><td>📁</td><td class="name">Summer launch</td><td><div class="track"><div style="width:6%;background:var(--fine)"></div><div style="width:3%;background:var(--oversized)"></div><div style="width:88%;background:var(--unused)"></div></div></td><td class="r"><b>820 MB</b></td><td><span class="tag2">214 unused</span></td><td class="chev">›</td></tr>
+        <tr><td>📁</td><td class="name">Event photos</td><td><div class="track"><div style="width:20%;background:var(--fine)"></div><div style="width:18%;background:var(--oversized)"></div><div style="width:30%;background:var(--unused)"></div></div></td><td class="r"><b>610 MB</b></td><td><span class="tag2">96 unused</span> <span class="tag2 o">31 oversized</span></td><td class="chev">›</td></tr>
+        <tr><td>📁</td><td class="name">Banners</td><td><div class="track"><div style="width:9%;background:var(--fine)"></div><div style="width:12%;background:var(--unused)"></div></div></td><td class="r"><b>190 MB</b></td><td><span class="tag2">40 unused</span></td><td class="chev">›</td></tr>
+        <tr><td>📁</td><td class="name">Social</td><td><div class="track"><div style="width:11%;background:var(--fine)"></div></div></td><td class="r"><b>140 MB</b></td><td class="muted">nothing</td><td class="chev">›</td></tr>
+        <tr><td>🖼</td><td class="muted">68 items directly in 2023</td><td><div class="track"><div style="width:5%;background:var(--fine)"></div><div style="width:4%;background:var(--unused)"></div></div></td><td class="r"><b>140 MB</b></td><td><span class="tag2">22 unused</span></td><td></td></tr>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px"><span class="btn sec">See 372 unused items here</span><span class="btn sec">See 31 oversized images here</span></div>
+  </div>
+</div>
+<div class="note"><span class="tag">2 · Where the space goes</span><h2>A folder breakdown you click into</h2>
+<ul>
+<li>What Luuk expected: click a folder and see where its space goes. Like macOS Storage or WinDirStat, one level at a time: the folder's own bar, then each folder under it, largest first, with a bar in the same colours and what in it can go.</li>
+<li>Clicking a row goes one level down; the path at the top goes back up. <b>Open in Media Manager</b> opens the folder you are in.</li>
+<li>The tags and the buttons under the table open the cleanup list (scene 3) for this folder and everything under it, so the two views meet without being the same view.</li>
+<li>This replaces a tree for unused items: the "where" lives here, the lists stay "what can go".</li>
+</ul></div>
+</div>
+
+<!-- 3 -->
+<div class="scene">
+<div class="win" style="width:960px">
+  <div class="tb">Media Cleanup<span class="sp"></span><i></i><i></i><i></i></div>
+  <div class="body" style="padding-bottom:0">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="btn sec">‹ Back</span>
+      <div class="tabs" style="flex:1"><span class="on">Unused items<span class="c">733</span></span><span>Orphaned files<span class="c">1,312</span></span><span>Oversized images<span class="c">214</span></span><span>Kept<span class="c">12</span></span></div>
+    </div>
+    <div class="toolbar"><div class="input" style="flex:1">⌕ Search names</div><span class="select">Largest first</span></div>
+  </div>
+  <div>
+  <div class="split">
+    <div class="main">
+      <table class="table">
+        <tr><th style="width:30px"><span class="chk some"></span></th><th style="width:44px"></th><th>Name</th><th>Folder</th><th class="r">Size</th><th>Last changed</th></tr>
+        <tr class="grp"><td><span class="chk on"></span></td><td colspan="3">Campaigns / 2023 / Summer launch <span class="muted" style="font-weight:400">· 214 items · 760 MB</span></td><td></td><td></td></tr>
+        <tr class="sel"><td><span class="chk on"></span></td><td><span class="th e"></span></td><td class="name">hero-summer-final-v3.jpg</td><td class="muted">Summer launch</td><td class="r">18 MB</td><td class="muted">Jun 2023</td></tr>
+        <tr class="sel cur"><td><span class="chk on"></span></td><td><span class="th f"></span></td><td class="name">banner-01.png</td><td class="muted">Summer launch</td><td class="r">14 MB</td><td class="muted">May 2023</td></tr>
+        <tr class="sel"><td><span class="chk on"></span></td><td><span class="th a"></span></td><td class="name">beach-team-photo.jpg</td><td class="muted">Summer launch</td><td class="r">11 MB</td><td class="muted">Jun 2023</td></tr>
+        <tr class="sel"><td><span class="chk on"></span></td><td><span class="th b"></span></td><td class="name">poster-v3-print.jpg</td><td class="muted">Summer launch</td><td class="r">9 MB</td><td class="muted">Apr 2023</td></tr>
+        <tr class="sel"><td><span class="chk on"></span></td><td><span class="th c"></span></td><td class="name">launch-night.jpg</td><td class="muted">Summer launch</td><td class="r">8 MB</td><td class="muted">Jul 2023</td></tr>
+        <tr class="grp"><td><span class="chk"></span></td><td colspan="3">Products / Archive <span class="muted" style="font-weight:400">· 96 items · 610 MB</span></td><td></td><td></td></tr>
+        <tr><td><span class="chk"></span></td><td><span class="th d"></span></td><td class="name">chair-oak-studio.jpg</td><td class="muted">Archive</td><td class="r">7 MB</td><td class="muted">Feb 2021</td></tr>
+        <tr><td><span class="chk"></span></td><td><span class="th doc">PDF</span></td><td class="name">spec-sheet-2021.pdf</td><td class="muted">Archive</td><td class="r">5 MB</td><td class="muted">Mar 2021</td></tr>
+        <tr><td><span class="chk"></span></td><td><span class="th g"></span></td><td class="name">lamp-side-table.jpg</td><td class="muted">Archive</td><td class="r">6 MB</td><td class="muted">Feb 2021</td></tr>
+      </table>
+      <div class="selbar"><span class="btn">Clear selection</span><b>214 of 733 selected</b><span class="muted" style="color:#c9cde6">760 MB</span><span class="sp"></span><span class="btn">Keep…</span><span class="btn danger">Move to recycle bin</span></div>
+    </div>
+    <div class="side">
+      <div class="phd">🖼 Details<span class="sp"></span><span class="pb">⟳</span><span class="pb">⧉</span><span class="pb">✕</span></div>
+      <div class="th f pic"></div>
+      <h3>banner-01.png</h3>
+      <div class="muted" style="margin:0 14px 10px">Not used on any page</div>
+      <dl class="facts"><dt>Folder</dt><dd>Campaigns / 2023 / Summer launch</dd><dt>Dimensions</dt><dd>5472 × 3648</dd><dt>Size</dt><dd>14 MB</dd><dt>Last changed</dt><dd>May 2023</dd></dl>
+      <div class="acts">
+        <span class="btn out" style="justify-content:center">⧉ Show in Media Manager</span>
+        <div class="row2"><span class="btn sec" style="flex:1;justify-content:center">Keep…</span><span class="btn danger" style="flex:1;justify-content:center">Recycle bin</span></div>
+        <div class="row2"><span class="btn" style="flex:1;justify-content:center">‹ Previous</span><span class="btn" style="flex:1;justify-content:center">Next ›</span></div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+<div class="note"><span class="tag">3 · The list, with details beside it</span><h2>A table first, like core's own table view</h2>
+<ul>
+<li>The list is a table: a small thumbnail, the whole name, folder, size, last changed. Grouped by folder, the group row carries the group's checkbox, count and size. No card view (Luuk, 2026-10-29): the pane shows the picture large.</li>
+<li>Clicking a row makes it the current one and shows it in the details pane on the right: the picture, the facts, the actions. Nothing covers the list, so a stray click costs nothing. Ticking the checkbox selects, as in core.</li>
+<li>The pane is the desktop's own attached pane (docs/developer/attached-windows.md), the one Preview, the views beside the editor and the Media Manager's item use: docked behind a splitter with its header, pop out and close, or floating as a window grouped with this one. Nothing new is drawn for it.</li>
+<li>One by one stays: the panel's action works on the current row and moves to the next, and Previous / Next walk the list.</li>
+<li>The selection bar is core's own, the navy bar the Media Manager shows, with "214 of 733 selected" and the tab's action. Keep… and the Kept tab arrive with step 3.</li>
+<li>Where the window has no room to widen, the desktop opens the pane floating, as it does for every attached pane.</li>
+</ul></div>
+</div>
+
+<!-- 4 -->
+<div class="scene">
+<div class="win" style="width:720px">
+  <div class="tb">Media Cleanup<span class="sp"></span><i></i><i></i><i></i></div>
+  <div class="body" style="position:relative">
+    <div class="box" style="overflow:hidden;position:relative">
+      <table class="table">
+        <tr><th style="width:30px"><span class="chk some"></span></th><th style="width:44px"></th><th>Name</th><th class="r">Size</th><th>Last changed</th></tr>
+        <tr class="grp"><td><span class="chk some"></span></td><td colspan="2">Products / Archive <span class="muted" style="font-weight:400">· 96 items · 610 MB</span></td><td></td><td></td></tr>
+        <tr><td><span class="chk"></span></td><td><span class="th d"></span></td><td class="name">chair-oak-studio.jpg</td><td class="r">7 MB</td><td class="muted">Feb 2021</td></tr>
+        <tr class="sel"><td><span class="chk on"></span></td><td><span class="th g"></span></td><td class="name">lamp-side-table.jpg</td><td class="r">6 MB</td><td class="muted">Feb 2021</td></tr>
+        <tr class="sel"><td><span class="chk on"></span></td><td><span class="th doc">PDF</span></td><td class="name">spec-sheet-2021.pdf</td><td class="r">5 MB</td><td class="muted">Mar 2021</td></tr>
+        <tr class="sel"><td><span class="chk on"></span></td><td><span class="th a"></span></td><td class="name">sofa-grey-2.jpg</td><td class="r">5 MB</td><td class="muted">Jan 2021</td></tr>
+        <tr class="sel"><td><span class="chk on"></span></td><td><span class="th e"></span></td><td class="name">table-ash.jpg</td><td class="r">4 MB</td><td class="muted">Jan 2021</td></tr>
+        <tr><td><span class="chk"></span></td><td><span class="th b"></span></td><td class="name">stool-bar-black.jpg</td><td class="r">3 MB</td><td class="muted">Dec 2020</td></tr>
+      </table>
+      <div class="marq" style="left:6px;top:118px;width:380px;height:178px"></div>
+      <span class="cursor" style="left:382px;top:290px"></span>
+    </div>
+  </div>
+</div>
+<div class="note"><span class="tag">4 · Drag to select</span><h2>Draw a box over the rows</h2>
+<ul>
+<li>Pressing on an empty part of a row (not the name, not the checkbox) and dragging draws a box; every row it touches is selected while you drag, as in Explorer and Finder. Releasing keeps them.</li>
+<li>Dragging down the checkbox column does the same.</li>
+<li>Near the top or bottom edge the list scrolls along. The box is the Media Manager's own (selection/box.ts and its element), not a second one.</li>
+<li>A click without a drag only makes the row current; it never selects or clears.</li>
+</ul></div>
+</div>
+
+</div>
+</body>
+</html>

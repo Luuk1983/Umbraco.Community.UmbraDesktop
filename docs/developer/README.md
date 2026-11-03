@@ -34,6 +34,8 @@ using the desktop, see the [user guide](../user/README.md).
 - [Showing work in progress](window-progress.md): report work your app is doing so its window shows
   progress on its title bar and taskbar button, how the desktop reads Umbraco's own uploads, and how
   a theme draws it.
+- [Showing a notice](notices.md): draw the desktop's own notice banner, the one a window shows
+  when a page changed while you edit it, inside your app, with its buttons.
 - [Writing documentation](writing-documentation.md): how these docs are structured, the front
   matter and Markdown every page uses, and the writing style.
 - [Help for your add-on](add-on-help.md): ship your package's documentation so it appears in the

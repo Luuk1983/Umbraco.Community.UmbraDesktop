@@ -4,7 +4,8 @@
  * The desktop keeps an app's location and hands it back when the window reopens after a reload, or
  * when another feature opens the app there ("Open in new window"). It never reads it, so the format
  * is this package's own: `folder=<key>&view=<collection view alias>`, with `root` and `bin` for the
- * two places that are not folders. It outlives the code that wrote it, so everything read back is
+ * two places that are not folders, and `select=<key>` for an item to select once the folder shows it
+ * (Media Cleanup's Show in Media Manager, design §16.5). It outlives the code that wrote it, so everything read back is
  * checked and anything unusable reads as Media, which is where a fresh window starts.
  */
 
@@ -20,6 +21,11 @@ export interface UmbraDesktopMediaLocation {
   place: UmbraDesktopMediaPlace;
   /** The collection view's alias; absent for core's default. */
   view?: string;
+  /**
+   * An item to select once the folder shows it, as Show in Finder does. A one-time instruction, not
+   * part of the place: the window never writes it back.
+   */
+  select?: string;
 }
 
 /** A media key as the management API writes it. */
@@ -37,21 +43,28 @@ export function parseLocation(value: string | undefined): UmbraDesktopMediaLocat
   const params = new URLSearchParams(value ?? '');
   const folder = params.get('folder');
   const view = params.get('view');
+  const select = params.get('select');
   const place: UmbraDesktopMediaPlace =
     folder === 'bin' ? { kind: 'bin' } : folder && KEY.test(folder) ? { kind: 'folder', unique: folder } : { kind: 'root' };
-  return view && ALIAS.test(view) ? { place, view } : { place };
+  return {
+    place,
+    ...(view && ALIAS.test(view) ? { view } : {}),
+    ...(select && KEY.test(select) ? { select } : {}),
+  };
 }
 
 /**
  * Write a location for the desktop to keep.
  * @param place The place the window shows.
  * @param view The collection view, when the window chose one.
+ * @param select An item to select once the folder shows it, for a window being opened on it.
  * @returns The location string.
  */
-export function printLocation(place: UmbraDesktopMediaPlace, view?: string): string {
+export function printLocation(place: UmbraDesktopMediaPlace, view?: string, select?: string): string {
   const params = new URLSearchParams();
   params.set('folder', place.kind === 'folder' ? place.unique : place.kind);
   if (view) params.set('view', view);
+  if (select) params.set('select', select);
   return params.toString();
 }
 

@@ -271,10 +271,20 @@ describe('optimizing media', () => {
     'UmbraDesktopWindowManagerContext',
   );
 
-  /** The lookups a run makes, answering for one image in Products. */
-  const lookups = () => ({
+  /**
+   * The lookups a run makes, answering for images in Products.
+   * @param files Keys that are PDFs instead, which a run skips.
+   */
+  const lookups = (files: ReadonlyArray<string> = []) => ({
     facts: async (uniques: string[]) =>
-      new Map(uniques.map((unique) => [unique, { unique, name: 'Banjo', parent: 'products', isTrashed: false, mediaType: 'image', extension: 'jpg', hasUrl: true }])),
+      new Map(
+        uniques.map((unique) => [
+          unique,
+          files.includes(unique)
+            ? { unique, name: 'Notes', parent: 'products', isTrashed: false, mediaType: 'file', extension: 'pdf', hasUrl: true }
+            : { unique, name: 'Banjo', parent: 'products', isTrashed: false, mediaType: 'image', extension: 'jpg', hasUrl: true },
+        ]),
+      ),
     folderTypes: async () => new Set<string>(),
     folderName: async () => 'Products',
     folderPath: async () => ['Products'],
@@ -286,8 +296,10 @@ describe('optimizing media', () => {
   /**
    * The context on a desktop stand-in with a window manager, opening and saving a JPEG.
    * @param withDesktop Whether the window manager is there.
+   * @param entityChanged Whether the window manager hears saves.
+   * @param files Keys that are PDFs, which a run skips.
    */
-  async function desktop(withDesktop = true, entityChanged = true) {
+  async function desktop(withDesktop = true, entityChanged = true, files: ReadonlyArray<string> = []) {
     const { deps } = fakes();
     const saved: MediaSaveRequest[] = [];
     deps.open = async () => ({
@@ -305,7 +317,7 @@ describe('optimizing media', () => {
       saved.push(request);
       return { ok: true, unique: request.existing ?? 'copy1' };
     };
-    deps.lookups = () => lookups();
+    deps.lookups = () => lookups(files);
     const host = await fixture<TestHost>(html`<umbradesktop-media-context-test-host></umbradesktop-media-context-test-host>`);
     const opened: Array<[string, unknown]> = [];
     const changed: Array<[string, string]> = [];
@@ -339,6 +351,51 @@ describe('optimizing media', () => {
     expect(options.location).to.be.a('string').and.not.equal('');
     expect(done.status).to.equal('finished');
     expect(done.items[0].status).to.equal('optimized');
+  });
+
+  /**
+   * Media Health's Done screen reads "38 of 214 done" while the run goes on in its own window (Media
+   * Health plan Task 1.3a), counted as the window counts for the taskbar: the skipped file is not an
+   * image, so it is in neither figure.
+   */
+  it('tells the caller how far the run is, once per change, counted as the taskbar counts', async () => {
+    const { context, opened } = await desktop(true, true, ['notes']);
+    const progress: Array<{ completed: number; total: number; location: string }> = [];
+    const report = await context.optimizeMedia({
+      items: ['banjo', 'notes', 'bowling'],
+      options: { format: 'png' },
+      start: true,
+      onProgress: (each) => progress.push(each),
+    });
+    expect(report.status).to.equal('finished');
+    expect(progress.map(({ completed, total }) => ({ completed, total }))).to.deep.equal([
+      { completed: 0, total: 2 },
+      { completed: 1, total: 2 },
+      { completed: 2, total: 2 },
+    ]);
+    // The run's window, so a caller's Show can bring it forward with openApp's reuse.
+    expect(progress[0].location).to.be.a('string').and.equal(opened[0][1] && (opened[0][1] as { location: string }).location);
+  });
+
+  it('reports progress from the same count the window gives the taskbar', async () => {
+    const { progressOf } = await import('../optimize/progress.js');
+    const run = {
+      items: [
+        { unique: 'a', status: 'optimized' },
+        { unique: 'b', status: 'skipped' },
+        { unique: 'c', status: 'failed' },
+        { unique: 'd', status: 'unchanged' },
+        { unique: 'e', status: 'running' },
+        { unique: 'f', status: 'waiting' },
+      ],
+    } as never;
+    expect(progressOf(run)).to.deep.equal({ completed: 3, total: 5 });
+  });
+
+  it('runs as before for a caller that does not ask how far it is', async () => {
+    const { context } = await desktop(true, true, ['notes']);
+    const report = await context.optimizeMedia({ items: ['banjo', 'notes'], options: { format: 'png' }, start: true });
+    expect(report.items.map((item) => item.status)).to.deep.equal(['optimized', 'skipped']);
   });
 
   it('answers not-started when there is no desktop to open the window on', async () => {
