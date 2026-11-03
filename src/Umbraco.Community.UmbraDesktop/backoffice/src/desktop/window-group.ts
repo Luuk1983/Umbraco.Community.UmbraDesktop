@@ -74,6 +74,41 @@ export function attachedKind(
 }
 
 /**
+ * The dialog an owner has open, if it has one (#179). An owner has at most one, which the manager's
+ * `openDialog` keeps true. Pure.
+ * @param windows The current window list.
+ * @param ownerId The owner's id.
+ * @returns The dialog window, or undefined.
+ */
+export function dialogOf(windows: ReadonlyArray<UmbraDesktopWindow>, ownerId: string): UmbraDesktopWindow | undefined {
+  return windows.find((w) => w.owner === ownerId && w.dialog === true);
+}
+
+/**
+ * Where a dialog opens: centred over its owner, where the person is already looking, and kept on the
+ * desktop. A dialog larger than the desktop is cut to it, since a dialog's buttons are at its foot and
+ * a dialog that ran off the bottom could not be answered. Pure.
+ * @param request The owner's drawn rectangle, the dialog's size and the desktop.
+ * @param request.owner The owner's drawn rectangle.
+ * @param request.size The dialog's size, chrome included.
+ * @param request.bounds The desktop surface size.
+ * @returns The dialog's rectangle.
+ */
+export function dialogRect(request: { owner: Rect; size: { w: number; h: number }; bounds: { w: number; h: number } }): Rect {
+  const { owner, bounds } = request;
+  const w = Math.min(request.size.w, bounds.w);
+  const h = Math.min(request.size.h, bounds.h);
+  const x = Math.round(owner.x + (owner.w - w) / 2);
+  const y = Math.round(owner.y + (owner.h - h) / 2);
+  return {
+    x: Math.min(Math.max(0, x), bounds.w - w),
+    y: Math.min(Math.max(0, y), bounds.h - h),
+    w,
+    h,
+  };
+}
+
+/**
  * Bring a window's whole group to the front, with that window on top and active.
  *
  * The group is one layer: its members take the next z-indices together, so no other window comes
@@ -84,11 +119,14 @@ export function attachedKind(
  * along with it, but not one the editor had minimized on its own. That one comes back only when it
  * is the window being focused. For an ordinary window this is exactly `focusWindow`. Pure.
  * @param windows The current window list.
- * @param id The window being focused.
+ * @param asked The window being focused. When its group has a dialog open, the dialog is focused
+ *   instead.
  * @returns A new list.
  */
-export function focusGroup(windows: ReadonlyArray<UmbraDesktopWindow>, id: string): UmbraDesktopWindow[] {
-  const group = groupOf(windows, id);
+export function focusGroup(windows: ReadonlyArray<UmbraDesktopWindow>, asked: string): UmbraDesktopWindow[] {
+  const group = groupOf(windows, asked);
+  // A dialog keeps its owner waiting, so it takes the focus whichever member was asked for (#179).
+  const id = (group && dialogOf(windows, group.owner.id)?.id) ?? asked;
   const members = group ? [group.owner, ...group.attached] : [];
   const order = [
     ...members.filter((w) => w.id !== id).sort((a, b) => a.z - b.z),
@@ -127,6 +165,8 @@ export function focusGroup(windows: ReadonlyArray<UmbraDesktopWindow>, id: strin
 export function minimizeInGroup(windows: ReadonlyArray<UmbraDesktopWindow>, id: string): UmbraDesktopWindow[] {
   const target = windows.find((w) => w.id === id);
   if (!target) return windows as UmbraDesktopWindow[];
+  // A dialog has no taskbar button to come back from, so minimizing it puts its owner away with it.
+  if (target.dialog && target.owner && windows.some((w) => w.id === target.owner)) return minimizeInGroup(windows, target.owner);
   if (target.owner) {
     return windows.map((w) => (w.id === id ? { ...w, state: 'minimized', minimizedWithOwner: undefined } : w));
   }

@@ -185,14 +185,14 @@ it('disables Pop out while the pane is dirty, with the reason as its title', asy
   expect(button.disabled).to.equal(false);
 });
 
-it('asks before closing a dirty pane from its close button, and No keeps it', async function () {
+it('asks before putting a dirty pane away from its hide button, and No keeps it', async function () {
   this.timeout(TIMEOUT_MS);
   const { manager, owner, page, mount } = await desk();
   const element = await mount(owner);
   manager.setPaneDirty(owner, page, true);
   manager.answer = false;
   const pane = await paneIn(element);
-  (pane.shadowRoot!.querySelector('.pane-close') as HTMLButtonElement).click();
+  (pane.shadowRoot!.querySelector('.pane-hide') as HTMLButtonElement).click();
   await until(() => manager.asked > 0);
   expect(manager.asked).to.equal(1);
   expect(manager.getWindows()[0].panes).to.have.lengthOf(1);

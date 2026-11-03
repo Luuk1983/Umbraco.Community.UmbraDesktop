@@ -2608,6 +2608,19 @@ export type SignalRClientSettingsResponseModel = {
     skipNegotiation: boolean;
 };
 
+export type SitePackageSettingsPatchRequestModel = {
+    patch: string;
+};
+
+export type SitePackageSettingsRequestModel = {
+    value: string;
+};
+
+export type SitePackageSettingsResponseModel = {
+    value?: string | null;
+    canChange: boolean;
+};
+
 export type SortDocumentChildrenByFieldRequestModel = {
     field: ContentSortFieldModel;
     direction: DirectionModel;
@@ -3794,3 +3807,102 @@ export type GetDocsFilesResponses = {
 };
 
 export type GetDocsFilesResponse = GetDocsFilesResponses[keyof GetDocsFilesResponses];
+
+export type GetSitePackageSettingsData = {
+    body?: never;
+    path: {
+        key: string;
+    };
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/package-settings/site/{key}';
+};
+
+export type GetSitePackageSettingsErrors = {
+    /**
+     * Bad Request
+     */
+    400: unknown;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type GetSitePackageSettingsResponses = {
+    /**
+     * OK
+     */
+    200: SitePackageSettingsResponseModel;
+};
+
+export type GetSitePackageSettingsResponse = GetSitePackageSettingsResponses[keyof GetSitePackageSettingsResponses];
+
+export type PatchSitePackageSettingsData = {
+    body?: SitePackageSettingsPatchRequestModel;
+    path: {
+        key: string;
+    };
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/package-settings/site/{key}';
+};
+
+export type PatchSitePackageSettingsErrors = {
+    /**
+     * Bad Request
+     */
+    400: unknown;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type PatchSitePackageSettingsResponses = {
+    /**
+     * OK
+     */
+    200: SitePackageSettingsResponseModel;
+};
+
+export type PatchSitePackageSettingsResponse = PatchSitePackageSettingsResponses[keyof PatchSitePackageSettingsResponses];
+
+export type SetSitePackageSettingsData = {
+    body?: SitePackageSettingsRequestModel;
+    path: {
+        key: string;
+    };
+    query?: never;
+    url: '/umbraco/management/api/v1/umbradesktop/package-settings/site/{key}';
+};
+
+export type SetSitePackageSettingsErrors = {
+    /**
+     * Bad Request
+     */
+    400: unknown;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type SetSitePackageSettingsResponses = {
+    /**
+     * OK
+     */
+    200: SitePackageSettingsResponseModel;
+};
+
+export type SetSitePackageSettingsResponse = SetSitePackageSettingsResponses[keyof SetSitePackageSettingsResponses];

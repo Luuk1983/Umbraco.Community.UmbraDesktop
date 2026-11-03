@@ -14,12 +14,14 @@ without leaving the desktop and without saving.
 
 ## Open and close the preview
 
-- To open the preview, select **Preview** at the right of a document window's path. The button
-  shows as pressed while the preview is open. The side-panel mark after its label means it opens
-  beside the window; the same mark opens a document's views beside it, see
+- To open the preview, select **Preview** at the right of a document window's path. It opens
+  beside the window, as a document's views can, see
   [Views beside the editor](views-beside-the-editor.md).
 - To open the preview as a window of its own straight away, hold Shift while you select **Preview**.
-- To close the preview, select **Preview** again, or select close in the preview's header.
+- To close a docked preview, select **Hide** at the right of its header. While the preview is docked,
+  **Preview** is not in the path: it slides out with the pane and becomes **Hide**, and comes back
+  once the preview has slid back in.
+- To close a preview in a window of its own, select **Preview** again, or close the window.
 
 ## What it shows
 
@@ -30,13 +32,15 @@ document. Typing does not.
 ## Docked or in a window
 
 When there is room, the preview opens docked: a pane inside the document window. The window grows to
-make room, so the editor keeps its width. On a desktop too narrow for both, the preview opens as a
-window of its own instead.
+make room, so the editor keeps its width, and the preview slides out of its edge. In a maximised or
+snapped window, which cannot grow, it slides in over the editor instead. On a desktop too narrow for
+both, the preview opens as a window of its own.
 
 - To resize a docked preview, drag the divider between it and the editor.
-- To pop a docked preview out into a window, select pop out in its header, or drag the header a
-  little way, the way a browser tab is pulled out.
-- To reload the preview, select reload in its header.
+- To pop a docked preview out into a window, select **Pop out** in its header, or drag the header a
+  little way, the way a browser tab is pulled out. The preview lifts off into a window of its own and
+  the document window closes the gap it left.
+- To reload the preview, select **Reload** in its header.
 
 As a window of its own, the preview has the usual window controls, and a strip under its title that
 names the window it belongs to.

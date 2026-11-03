@@ -4,7 +4,8 @@
 > package and kept apart from ours, with its settings in boxes on that row's screen. The desktop
 > offers an optional per-user store for those settings, and a way to open settings at a package.
 
-- **Status:** Built and verified 2026-10-04 (§12 has what the build added to this design)
+- **Status:** Built and verified 2026-10-04 (§12 has what the build added to this design). A site-wide
+  store added 2026-10-27 (§13)
 - **Date:** 2026-10-03
 - **Branch:** designed on `claude/umbraco-desktop-research-c3d75e`, built on `worktree-103-package-settings`
 - **Issue:** [#103](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/103). Unblocks
@@ -164,7 +165,8 @@ that arrives after a change does not undo it, and a stored change is announced t
   migration. The desktop's own group is refused (`store` returns undefined and the console says so).
 - **The value is opaque.** The host stores JSON and never looks inside. The package checks what it
   reads, because the stored value may come from an older version of itself.
-- **Per user only** (§1). Site-wide settings are a package's own API.
+- **Per user only** (§1). Site-wide settings are a package's own API. *Superseded 2026-10-27: §13
+  adds a site store.*
 
 **`openSettings`** needs a desktop to open on. The desktop element registers itself with the context
 when it connects and unregisters when it disconnects; `openSettings` opens the panel with that
@@ -193,7 +195,8 @@ tool) goes through.
 2. **Nothing protects against a hostile package.** Any package's JavaScript can unregister or
    overwrite any extension. The rules here stop mistakes.
 3. **A package box cannot go inside our categories** (D3), and its row always sits below ours.
-4. **The store is per user.** Site-wide settings are the package's own work.
+4. **The store is per user.** Site-wide settings are the package's own work. *Superseded 2026-10-27
+   by §13.*
 5. **The desktop's own contexts are reachable from a box but not promised.** Only Umbraco's
    contexts and `UmbraDesktop.PackageSettingsContext` are contract.
 6. **A box has to fit a 500px sidebar today, and a resizable window later**: anything from about
@@ -326,3 +329,91 @@ is a rule the code now keeps that the design did not say.
    no migration. The tile, a pinned taskbar button and `openSettings` all opened the Accessories
    screen with no window; two tabs followed each other; a 1-minute wait set in the box started the
    screensaver after 60 seconds idle; the box fits the 500px sidebar without scrolling.
+
+## 13. A site-wide store (2026-10-27)
+
+Added for Media Health's **Keep** (issue
+[#141](https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop/issues/141), Media Health design
+§6 and §10 step 2): one editor reviews an unused item for the team, so the mark must hold for the
+site, not the person. Luuk chose to give this extension point a site scope rather than build a store
+for Keep alone, since other packages will want the same. Built on `v17/main`.
+
+**Shape.** `siteStore(key)` on the same context, beside `store(key)`, with the per-user store's
+members plus `canChange`, `patch` and `refresh`. One key-value row per key, under
+`Umbraco.Community.UmbraDesktop.PackageSettings.Site.<key in lower case>`, through
+`SitePackageSettingsController` at `package-settings/site/{key}` (GET, PUT, PATCH).
+
+Decisions, each with its reason:
+
+1. **Who may change it is decided on the server, per key.** Default: the Settings section, the people
+   who change the desktop's own site-wide settings (label, app identity), so a package with no server
+   code still gets a safe site setting. A package widens or narrows it with
+   `builder.AddUmbraDesktopSiteSettings(key, policy)`, because the browser cannot be trusted to name a
+   policy. Keep will register the Media section. Several registrations for one key must all be met:
+   which one was meant is unknowable, and this never makes a setting easier to change than either says.
+2. **Reading is open to every backoffice user**, like the desktop label. A site setting is for
+   everyone who uses the package. The docs say to keep nothing secret in one.
+3. **A merge patch (RFC 7386) beside the whole-value replace.** Keep is written by several people.
+   With replace only, two editors keeping different items at once would each send their own whole
+   list and the second would drop the first's. A patch names only what changed, and the server merges
+   it inside one scope holding core's key-value write lock, which is the database's and so holds
+   across servers. Core's `TrySetValue` compare-and-set was the other option, but it cannot create a
+   row, and the first write of every key is a create. Arrays replace whole under the RFC, so Keep
+   should be an object keyed by media key, not a list.
+4. **The server's answer wins once nothing of the page's is waiting.** It carries other people's
+   changes. While a change is waiting the page keeps its own value; the answer to that change settles
+   it. Changes made while a request is out are composed into one request. Two patches that cannot be
+   composed (the first sets a member to a scalar, the second merges an object into it) go as the
+   page's whole value instead.
+5. **A failed change is sent again with the next one.** Unlike a whole value, a later patch does not
+   repeat an earlier one, so dropping a failed patch would lose it.
+6. **No push.** `refresh()` reads again on demand, which keeps "nothing until asked"; Review should
+   call it when it opens.
+7. **Keys match ignoring case** and are stored lowercased, because SQL Server compares the column
+   ignoring case and SQLite does not. Key length is derived from core's 256-character key column
+   minus the prefix (204). A value is capped at 1 MiB, a guard rather than a design size.
+8. **Changes before the first read, or without permission, are refused in the page** (`set` and
+   `patch` return false and log why). The per-user store keeps an early change; a site store cannot,
+   since it does not yet know whether the user may make it.
+
+9. **Packages check values on the server with a validator** (added 2026-10-27, on Luuk's ask, so a
+   package like the media guidelines of #179 can move onto this store without losing its range
+   checks). `ISitePackageSettingsValidator.Validate(JsonNode?)` returns reasons; a package registers
+   it with `AddUmbraDesktopSiteSettingsValidator<T>(key)`, and the container builds it, so it can take
+   the package's services. It sees the whole value as it would be stored, for a patch after the merge
+   and inside the lock, so two changes that are each fine alone cannot together store something the
+   package refuses. It checks only: changing the value would break the browser's rule that the
+   server's answer is what it sent, merged. Every validator for a key runs and every reason is given;
+   one that throws refuses the value and is logged, since passing it unchecked is unsafe and a 500
+   would look to the browser like the network, which it answers by sending the change again.
+10. **A refusal is not a failure.** Every 400 now carries its reasons, and the browser store drops a
+    refused change instead of keeping it to send again (it would be refused forever), reads the
+    stored value back, and shows `'refused'` with `problems` until the next change. A failure (no
+    answer, 403, 500) is still kept and sent again.
+
+**What the real run found.** Declaring `[ProducesResponseType(403)]` on the actions made core's
+`BackOfficeSecurityRequirementsOperationFilterBase` throw ("same key has already been added: 403"),
+which took down the whole management API's OpenAPI document with a 500. Core adds 401 and 403 to every
+backoffice operation itself; a test now holds the controller to declaring neither. The client entries
+in `sdk.gen.ts` and `types.gen.ts` were written to match what the generator produced from that
+instance (the installed generator is newer and rewrites every file, so its output was compared, not
+kept).
+
+The validator's first real run found that the reasons never reached the page. They were sent as a
+validation problem's `errors["value"]`, and Umbraco's management API serializer rewrites that
+dictionary into its own `[{"$.value": [...]}]` with a null `type`; the generated client then hands
+the page the body itself, not an `UmbApiError`, so the store read neither, took the refusal for a
+failure, and sent the refused change again with the next one. The reasons now go in a plain
+`problems` member of a problem details body with its own `type`, which Umbraco's client passes
+through untouched, and the browser reads it from the body or from an `UmbApiError`'s
+`problemDetails`. Measured again with a temporary validator in the test instance (quality 1 to 100):
+a patch to 500 came back refused with the validator's sentence, the page went back to the stored
+90, the next change cleared the refusal and was stored.
+
+**Verified** on a copy of the main database, headless Chrome: an admin read, replaced and patched;
+two tabs patched different members at the same moment and both were kept; an upper-cased key read the
+same row; the desktop's own group, a value that is not JSON and a patch that is not an object were
+400s; an Editor (Content, Media, no Settings) read the value with `canChange` false, the store refused
+`set` and `patch` without a request, and a direct PUT and PATCH were 403. Not run end to end: a
+registered policy widening the change, which only unit tests cover until Keep registers one.
+

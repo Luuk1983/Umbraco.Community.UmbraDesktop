@@ -92,18 +92,15 @@ export interface UmbraDesktopSearchDrill extends UmbraDesktopSearchSection {
 
 /** Everything a search view draws. */
 export interface UmbraDesktopSearchState {
-  /**
-   * The trimmed query the results are for; empty when nothing has been found for any text yet. It
-   * lags what is typed until the sources answer, because results change only in one go.
-   */
+  /** The trimmed query the results are for, current with what is typed; empty when nothing is. */
   query: string;
-  /** The matching apps, best first. */
+  /** The matching apps, best first, matched as the text changes without waiting for the sources. */
   apps: UmbraDesktopApp[];
   /** The full sections that found something, heaviest source first. */
   sections: UmbraDesktopSearchSection[];
   /** The compact sections that found something, heaviest source first. */
   others: UmbraDesktopSearchSection[];
-  /** True while the sources have not answered the latest text. */
+  /** True while the sources have not answered the latest text; their sections are empty meanwhile. */
   pending: boolean;
   /** The source drilled into, if any. */
   drill?: UmbraDesktopSearchDrill;

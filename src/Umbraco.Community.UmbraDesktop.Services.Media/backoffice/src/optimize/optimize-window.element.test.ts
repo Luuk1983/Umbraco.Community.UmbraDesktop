@@ -376,6 +376,25 @@ describe('the Optimize images window: the run', () => {
     expect(store.get(id)!.items.filter((item) => item.status === 'optimized').length).to.equal(3);
   });
 
+  it("puts the run's buttons in a bar at the bottom, Close last on the right, as Umbraco's dialogs do", async () => {
+    const lib = library(SELECTION());
+    lib.holdSaves();
+    const { element, report, store, id } = await open(undefined, undefined, false, lib);
+    await click(element, '[data-action="start"]');
+    await until(() => lib.saves.length === 1);
+    await element.updateComplete;
+    const foot = () => element.shadowRoot!.querySelector('.page.run > .foot');
+    expect(foot()?.querySelector('[data-action="cancel-run"]') !== null, 'Cancel in the bar while it runs').to.equal(true);
+    lib.releaseSaves();
+    await report;
+    await until(() => store.get(id)!.phase === 'ended');
+    await element.updateComplete;
+    const buttons = [...foot()!.querySelectorAll<HTMLElement>('[data-action]')];
+    expect(buttons[buttons.length - 1].dataset.action).to.equal('close');
+    expect(element.shadowRoot!.querySelector('.run-head [data-action]') === null, 'none left in the header').to.equal(true);
+    expect(element.shadowRoot!.querySelector('.page.run')!.lastElementChild === foot()).to.equal(true);
+  });
+
   it('offers to optimize the animated images too, after asking', async () => {
     const items = [image('banjo'), { ...image('spinner'), fileName: 'spinner.gif' }];
     const { element, report, store, id } = await open(items, ['banjo', 'spinner']);

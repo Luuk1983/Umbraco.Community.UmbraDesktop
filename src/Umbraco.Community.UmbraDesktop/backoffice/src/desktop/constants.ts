@@ -255,7 +255,22 @@ export const UMBRADESKTOP_NOTICE_STACK_MAX_SHARE = 0.45;
 export const UMBRADESKTOP_TITLEBAR_BORDER = 1;
 
 /**
- * The path strip's height in px, behind `--umbradesktop-path-height`.
+ * The path strip's bottom line, in px: the default `--umbradesktop-path-border-bottom`, which the pane
+ * header and a floating window's strip fall back to as well. Drawn inside the strip's height.
+ */
+export const UMBRADESKTOP_PATH_LINE = 1;
+
+/**
+ * The height in px of what the path strip shows, inside its bottom line.
+ *
+ * The content is kept even, because the icons and words are centred in it: in an odd box the centre
+ * falls on a half pixel, an 18px icon starts on it and is drawn rounded down, and the words beside
+ * it sat up to a pixel above it. `theme/strip-height.test.ts` holds every theme to it.
+ */
+export const UMBRADESKTOP_PATH_CONTENT_HEIGHT = 28;
+
+/**
+ * The path strip's height in px, behind `--umbradesktop-path-height`: its content and its line.
  *
  * One number with two readers, which is the whole reason it is stated here rather than in the CSS:
  * `window-path.element` interpolates it as its fallback, and `theme/themes/umbraco` reports it back
@@ -263,7 +278,7 @@ export const UMBRADESKTOP_TITLEBAR_BORDER = 1;
  * {@link UMBRADESKTOP_TASKBAR_HEIGHT} has, and for the same reason — a strip that measured one
  * height and was paid for at another would leave every section window's app that many pixels short.
  */
-export const UMBRADESKTOP_PATH_HEIGHT = 28;
+export const UMBRADESKTOP_PATH_HEIGHT = UMBRADESKTOP_PATH_CONTENT_HEIGHT + UMBRADESKTOP_PATH_LINE;
 
 /**
  * How wide a dock zone is, in px: the band just inside an owner window's edge that a floating
@@ -458,6 +473,34 @@ export const UMBRADESKTOP_APP_OPEN_ATTACHED_EVENT = 'umbradesktop-open-attached'
  * changes. Public contract for any app, documented with the open event.
  */
 export const UMBRADESKTOP_APP_CLOSE_ATTACHED_EVENT = 'umbradesktop-close-attached';
+
+/**
+ * The event an app element dispatches to ask a question in a dialog over its window (#179), with
+ * `{ name, icon?, element, props?, size }` in `detail`, bubbling and composed. `element` is the
+ * dialog's content, in any form a manifest's `element` may take, `props` are set on it before it
+ * connects, and `size` is its content box in px. The dialog keeps the window waiting until it closes:
+ * its content asks with {@link UMBRADESKTOP_APP_CLOSE_DIALOG_EVENT}, or the person closes it. The
+ * desktop cancels the event when it opens the dialog, so send it cancelable; a window with a dialog
+ * already open opens no second one. Public contract for any app, documented in
+ * `docs/developer/desktop-apps.md`.
+ */
+export const UMBRADESKTOP_APP_OPEN_DIALOG_EVENT = 'umbradesktop-open-dialog';
+
+/**
+ * The event a dialog's content dispatches to close its dialog once it is answered (#179), bubbling
+ * and composed, no detail. Public contract, documented with the open event.
+ */
+export const UMBRADESKTOP_APP_CLOSE_DIALOG_EVENT = 'umbradesktop-close-dialog';
+
+/**
+ * How many times a dialog's titlebar swaps between inactive and active when the window it keeps
+ * waiting is clicked, and how long each swap lasts, in ms. Six swaps of 80ms is three blinks in about
+ * half a second, close to what Windows does.
+ */
+export const UMBRADESKTOP_DIALOG_FLASH_STEPS = 6;
+
+/** See {@link UMBRADESKTOP_DIALOG_FLASH_STEPS}. */
+export const UMBRADESKTOP_DIALOG_FLASH_STEP_MS = 80;
 
 /**
  * The event an app element dispatches to bring its own window, and the window's group, to the front,

@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Guidelines bar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* #179, after the owner's second test: three ways to say what the guidelines are without pills,
+     each paired with a way to say what will happen to each file. Static: every view is drawn. */
+  :root {
+    --text: #1b264f;
+    --alt: #5c6078;
+    --border: #d8d7d9;
+    --divider: #e9e9eb;
+    --bg: #f3f3f5;
+    --surface: #fff;
+    --selected: #3544b1;
+    --positive: #2bc37c;
+    --positive-dark: #1d7a4d;
+    --warning: #fbd142;
+    --warning-ink: #8a6500;
+    --title: #1b264f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 16px 48px;
+    background: #2a2f63;
+    font-family: Lato, system-ui, sans-serif;
+    color: var(--text);
+    font-size: 14px;
+  }
+  h1 { color: #fff; font-size: 20px; margin: 0 0 4px; }
+  .intro { color: #d6d9f2; max-width: 980px; margin: 0 0 24px; line-height: 1.5; }
+  .variants { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+  .variant { width: min(640px, 100%); }
+  .variant > h2 { color: #fff; font-size: 16px; margin: 0 0 4px; }
+  .variant > p.why { color: #d6d9f2; margin: 0 0 10px; line-height: 1.45; font-size: 13.5px; }
+
+  /* The dialog window, as the Umbraco theme draws one. */
+  .win { background: var(--surface); border-radius: 8px; overflow: hidden; box-shadow: 0 14px 36px rgba(10, 14, 40, 0.45); }
+  .tb { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; background: var(--title); color: #fff; font-weight: 700; font-size: 14px; }
+  .tb .x { margin-left: auto; opacity: 0.85; }
+  .ic { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; vertical-align: -3px; }
+
+  .head { display: grid; grid-template-columns: 32px 1fr; column-gap: 12px; padding: 20px 24px 14px; }
+  .mark { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: #fdf3d0; color: var(--warning-ink); }
+  .head h3 { margin: 0; font-size: 17px; }
+  .head p { margin: 2px 0 0; color: var(--alt); }
+
+  .all { display: flex; align-items: center; gap: 10px; padding: 8px 24px; border-block: 1px solid var(--divider); background: var(--bg); font-size: 13.5px; }
+  .all .count { margin-left: auto; color: var(--alt); }
+  .ck { width: 18px; height: 18px; border-radius: 3px; border: 1px solid #8f8f93; display: grid; place-items: center; flex: none; background: #fff; color: #fff; }
+  .ck.on { background: var(--selected); border-color: var(--selected); }
+  .ck.mixed { background: var(--selected); border-color: var(--selected); }
+  .ck.mixed::after { content: ''; width: 8px; height: 2px; background: #fff; }
+
+  ul.list { list-style: none; margin: 0; padding: 0 24px; }
+  .file { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 0; border-bottom: 1px solid var(--divider); }
+  .file:last-child { border-bottom: 0; }
+  .thumb { width: 48px; height: 36px; border-radius: 2px; flex: none; }
+  .t1 { background: linear-gradient(135deg, #c8b45a, #5c8f6a); }
+  .t2 { background: linear-gradient(135deg, #6db37a, #3b5f8f); }
+  .t3 { background: linear-gradient(135deg, #7fb0a0, #5a4a8f); }
+  .t4 { background: linear-gradient(135deg, #9ec6d8, #8a5a9a); }
+  .t5 { background: linear-gradient(135deg, #c88ac8, #7a8ad8); }
+  .t6 { background: repeating-linear-gradient(0deg, #f1f1f4 0 3px, #fff 3px 6px); border: 1px solid var(--divider); }
+  .name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .name b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name small { color: var(--alt); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file.off .thumb, .file.off .name { opacity: 0.5; }
+
+  .what { display: flex; gap: 8px; margin: 8px 24px 0; color: var(--alt); font-size: 13.5px; }
+  .foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 16px 24px; border-top: 1px solid var(--divider); }
+  .foot .spacer { flex: 1; }
+  .settings { display: inline-flex; align-items: center; gap: 6px; color: var(--selected); font-size: 13.5px; }
+  .btn { min-height: 36px; padding: 0 16px; display: inline-flex; align-items: center; border-radius: 3px; font-weight: 700; }
+  .btn.secondary { border: 1px solid var(--selected); color: var(--selected); }
+  .btn.positive { background: #0a7f4f; color: #fff; }
+
+  /* A: a sentence under the subtitle. Actions on the right, as plain words with their icons. */
+  .sentence { grid-column: 2; margin: 12px 0 0; padding: 10px 12px; background: var(--bg); border-radius: 4px; line-height: 1.5; }
+  .sentence b { font-weight: 700; }
+  .acts { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 13px; max-width: 45%; }
+  .acts span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .file.off .acts { color: var(--alt); }
+  .asis { font-style: italic; }
+
+  /* B: a small table of the guidelines, with how many files break each. Actions as quiet tags. */
+  .rules { grid-column: 1 / -1; margin: 14px 0 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .rules .cap { padding: 6px 12px; background: var(--bg); border-bottom: 1px solid var(--border); font-weight: 700; font-size: 13px; display: flex; }
+  .rules .cap span:last-child { margin-left: auto; font-weight: 400; color: var(--alt); }
+  .rules table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .rules td { padding: 6px 12px; border-top: 1px solid var(--divider); }
+  .rules tr:first-child td { border-top: 0; }
+  .rules td.n { text-align: right; color: var(--alt); white-space: nowrap; width: 1%; }
+  .rules td.i { width: 1%; color: var(--alt); }
+  .tags { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 48%; }
+  .tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border: 1px solid var(--border); border-radius: 3px; font-size: 12.5px; white-space: nowrap; }
+  .file.off .tag { text-decoration: line-through; color: var(--alt); }
+
+  /* C: the guidelines are the list's columns; each cell says what that file gets. */
+  .cols { padding: 0 24px; }
+  table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.grid th { text-align: left; font-weight: 700; font-size: 12.5px; padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: bottom; }
+  table.grid th small { display: block; font-weight: 400; color: var(--alt); }
+  table.grid td { padding: 8px 6px; border-bottom: 1px solid var(--divider); vertical-align: middle; }
+  table.grid tr:last-child td { border-bottom: 0; }
+  table.grid td.f { width: 46%; }
+  table.grid td.f > div { display: flex; align-items: center; gap: 10px; }
+  table.grid td.c { color: var(--text); white-space: nowrap; }
+  table.grid td.none { color: #b5b5bd; }
+  table.grid tr.off td.c { color: var(--alt); text-decoration: line-through; }
+  table.grid tr.off .thumb, table.grid tr.off .name { opacity: 0.5; }
+  .grid .name small { white-space: normal; }
+
+  .notes { color: #d6d9f2; max-width: 980px; margin-top: 28px; line-height: 1.5; }
+  .notes li { margin-bottom: 6px; }
+</style>
+<style>
+  /* The guidelines bar: one line of icons and short values, which opens into the table. */
+  .gl { grid-column: 1 / -1; margin: 14px 0 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .gl-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 7px 12px; background: var(--bg); font-size: 13px; }
+  .gl-bar .label { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; margin-right: 2px; }
+  .gl-bar .chev { width: 14px; height: 14px; transition: none; }
+  .gl-bar .v { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; color: var(--text); }
+  .gl-bar .v .ic { color: var(--alt); }
+  .gl-bar .toggle { margin-left: auto; color: var(--selected); font-size: 12.5px; white-space: nowrap; }
+  .gl.open .gl-bar { border-bottom: 1px solid var(--border); }
+  .gl table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .gl td, .gl th { padding: 6px 12px; border-top: 1px solid var(--divider); text-align: left; }
+  .gl tr:first-child td, .gl tr:first-child th { border-top: 0; }
+  .gl th { font-weight: 400; color: var(--alt); font-size: 12.5px; }
+  .gl td.n, .gl th.n { text-align: right; white-space: nowrap; width: 1%; }
+  .gl td.i { width: 1%; color: var(--alt); }
+  .gl td.sub { padding-left: 0; color: var(--alt); }
+  .gl tr.kind td { border-top-style: dashed; }
+  .state { color: #fff; font-size: 13px; margin: 0 0 8px; }
+</style>
+</head>
+<body>
+<h1>The guidelines as a bar that opens</h1>
+<p class="intro">The owner's idea after the variants: B's icons with a short value each, on one line, which opens into B's table. Here the site converts JPEGs to WebP as well, so Formats has two rules. Both states are drawn; a press on the bar, or on its arrow, switches between them. The rows say what Optimize will do, in words (variant A's).</p>
+<div class="variants">
+<section class="variant"><p class="state">Closed, as the dialog opens</p><div class="win">
+    <div class="tb"><svg class="ic"><use href="#alert"/></svg>Media guidelines<svg class="ic x"><use href="#x"/></svg></div>
+    <header class="head">
+      <span class="mark"><svg class="ic"><use href="#alert"/></svg></span>
+      <div><h3>6 of 10 files do not follow the media guidelines</h3><p>The other 4 are uploading to Dialog run now.</p></div>
+      <div class="gl"><div class="gl-bar"><span class="label"><svg class="ic chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>Media guidelines</span>
+        <span class="v"><svg class="ic"><use href="#size"/></svg>2560 px</span>
+        <span class="v"><svg class="ic"><use href="#format"/></svg>JPEG, PNG photo → WebP</span>
+        <span class="v"><svg class="ic"><use href="#gps"/></svg>No GPS</span>
+        <span class="v"><svg class="ic"><use href="#limit"/></svg>15.4 MB</span></div></div>
+    </header>
+    <div class="all"><span class="ck mixed"></span>Select all<span class="count">5 of 6 selected</span></div>
+    <ul class="list">
+      <li class="file"><span class="ck on"><svg class="ic" style="width:12px;height:12px"><use href="#check"/></svg></span><span class="thumb t1"></span><span class="name"><b>DSC_0412.jpg</b><small>JPEG · 6000 × 4000 · 10.9 MB</small></span><span class="acts"><span><svg class="ic"><use href="#size"/></svg>Resize to 2560 px</span><span><svg class="ic"><use href="#format"/></svg>Convert to WebP</span><span><svg class="ic"><use href="#gps"/></svg>Remove GPS</span></span></li>
+      <li class="file off"><span class="ck"></span><span class="thumb t4"></span><span class="name"><b>tattoo-shop.jpg</b><small>JPEG · 1920 × 1280 · 590 KB</small></span><span class="acts"><span class="asis">Uploads as it is</span></span></li>
+      <li class="file"><span class="ck on"><svg class="ic" style="width:12px;height:12px"><use href="#check"/></svg></span><span class="thumb t5"></span><span class="name"><b>team-day.png</b><small>PNG photo · 3200 × 2133 · 18.4 MB, over 15.4 MB</small></span><span class="acts"><span><svg class="ic"><use href="#size"/></svg>Resize to 2560 px</span><span><svg class="ic"><use href="#format"/></svg>Convert to WebP</span></span></li>
+      <li class="file"><span class="ck on"><svg class="ic" style="width:12px;height:12px"><use href="#check"/></svg></span><span class="thumb t6"></span><span class="name"><b>screenshot.png</b><small>PNG photo · 1440 × 900 · 152 KB</small></span><span class="acts"><span><svg class="ic"><use href="#format"/></svg>Convert to WebP</span></span></li>
+    </ul>
+    <p class="what"><svg class="ic"><use href="#info"/></svg><span>Optimize uploads each file as soon as it is done.</span></p>
+    <footer class="foot"><span class="settings"><svg class="ic"><use href="#cog"/></svg>Guideline settings</span><span class="spacer"></span><span class="btn secondary">Upload as they are</span><span class="btn positive">Optimize 5</span></footer>
+  </div></section>
+<section class="variant"><p class="state">Opened</p><div class="win">
+    <div class="tb"><svg class="ic"><use href="#alert"/></svg>Media guidelines<svg class="ic x"><use href="#x"/></svg></div>
+    <header class="head">
+      <span class="mark"><svg class="ic"><use href="#alert"/></svg></span>
+      <div><h3>6 of 10 files do not follow the media guidelines</h3><p>The other 4 are uploading to Dialog run now.</p></div>
+      <div class="gl open"><div class="gl-bar"><span class="label"><svg class="ic chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>Media guidelines</span>
+        <span class="v"><svg class="ic"><use href="#size"/></svg>2560 px</span>
+        <span class="v"><svg class="ic"><use href="#format"/></svg>JPEG, PNG photo → WebP</span>
+        <span class="v"><svg class="ic"><use href="#gps"/></svg>No GPS</span>
+        <span class="v"><svg class="ic"><use href="#limit"/></svg>15.4 MB</span></div><table>
+          <tr><th></th><th>Guideline</th><th class="n">Files that break it</th></tr>
+          <tr><td class="i"><svg class="ic"><use href="#size"/></svg></td><td>Longest side at most 2560 px</td><td class="n">4</td></tr>
+          <tr><td class="i"><svg class="ic"><use href="#format"/></svg></td><td>PNG photos as WebP</td><td class="n">2</td></tr>
+          <tr class="kind"><td class="i"></td><td>JPEGs as WebP</td><td class="n">4</td></tr>
+          <tr><td class="i"><svg class="ic"><use href="#gps"/></svg></td><td>No GPS location</td><td class="n">4</td></tr>
+          <tr><td class="i"><svg class="ic"><use href="#limit"/></svg></td><td>Files up to 15.4 MB, Umbraco's upload limit</td><td class="n">1</td></tr>
+        </table></div>
+    </header>
+    <div class="all"><span class="ck mixed"></span>Select all<span class="count">5 of 6 selected</span></div>
+    <ul class="list">
+      <li class="file"><span class="ck on"><svg class="ic" style="width:12px;height:12px"><use href="#check"/></svg></span><span class="thumb t1"></span><span class="name"><b>DSC_0412.jpg</b><small>JPEG · 6000 × 4000 · 10.9 MB</small></span><span class="acts"><span><svg class="ic"><use href="#size"/></svg>Resize to 2560 px</span><span><svg class="ic"><use href="#format"/></svg>Convert to WebP</span><span><svg class="ic"><use href="#gps"/></svg>Remove GPS</span></span></li>
+      <li class="file off"><span class="ck"></span><span class="thumb t4"></span><span class="name"><b>tattoo-shop.jpg</b><small>JPEG · 1920 × 1280 · 590 KB</small></span><span class="acts"><span class="asis">Uploads as it is</span></span></li>
+      <li class="file"><span class="ck on"><svg class="ic" style="width:12px;height:12px"><use href="#check"/></svg></span><span class="thumb t5"></span><span class="name"><b>team-day.png</b><small>PNG photo · 3200 × 2133 · 18.4 MB, over 15.4 MB</small></span><span class="acts"><span><svg class="ic"><use href="#size"/></svg>Resize to 2560 px</span><span><svg class="ic"><use href="#format"/></svg>Convert to WebP</span></span></li>
+      <li class="file"><span class="ck on"><svg class="ic" style="width:12px;height:12px"><use href="#check"/></svg></span><span class="thumb t6"></span><span class="name"><b>screenshot.png</b><small>PNG photo · 1440 × 900 · 152 KB</small></span><span class="acts"><span><svg class="ic"><use href="#format"/></svg>Convert to WebP</span></span></li>
+    </ul>
+    <p class="what"><svg class="ic"><use href="#info"/></svg><span>Optimize uploads each file as soon as it is done.</span></p>
+    <footer class="foot"><span class="settings"><svg class="ic"><use href="#cog"/></svg>Guideline settings</span><span class="spacer"></span><span class="btn secondary">Upload as they are</span><span class="btn positive">Optimize 5</span></footer>
+  </div></section>
+</div>
+<ul class="notes">
+  <li>Closed, each value is the guideline at its shortest: "2560 px", "PNG photo → WebP", "No GPS", "15.4 MB". Formats groups its rules by the format they convert to, so a second rule turns "PNG photo → WebP" into "JPEG, PNG photo → WebP" rather than adding an item. Rules to two formats would show two values under the one icon.</li>
+  <li>The upload limit's value shows only when a listed file is over it, as now.</li>
+  <li>Opened, the table has a row per rule, Formats one per kind, with how many of these files break each.</li>
+  <li>Closed is the default. Whether it stays open for the next drop is open: remembering it per person is cheap, and the next drop would then open the way the person left it.</li>
+</ul>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="size" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="format" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
+  <symbol id="gps" viewBox="0 0 24 24"><path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="limit" viewBox="0 0 24 24"><path d="M12 13v8M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="m8 17 4-4 4 4"/></symbol>
+  <symbol id="cog" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3M12 9v4M12 17h.01"/></symbol>
+  <symbol id="info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+</svg>
+</body>
+</html>

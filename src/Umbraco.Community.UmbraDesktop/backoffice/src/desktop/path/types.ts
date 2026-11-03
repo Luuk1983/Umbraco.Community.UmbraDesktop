@@ -105,4 +105,9 @@ export interface UmbraDesktopPathView {
    * then closes it, as Preview's does.
    */
   open?: boolean;
+  /**
+   * Whether it is open as a pane in this window, which leaves the button out: it has slid out with
+   * the pane and become the pane's Hide, and comes back when the pane slides back in.
+   */
+  docked?: boolean;
 }

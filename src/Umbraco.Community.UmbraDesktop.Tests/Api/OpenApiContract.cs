@@ -34,6 +34,7 @@ public static class OpenApiContract
         "GetConnections", "CreateConnection", "UpdateConnection", "DeleteConnection",
         "GetDesktopLabel", "SetDesktopLabel",
         "GetDocsFiles",
+        "GetSitePackageSettings", "SetSitePackageSettings", "PatchSitePackageSettings",
     };
 
     /// <summary>Every schema the client names, by the type it is generated from.</summary>
@@ -51,6 +52,9 @@ public static class OpenApiContract
         [typeof(DesktopLabelRequestModel)] = "DesktopLabelRequestModel",
         [typeof(DesktopLabelResponseModel)] = "DesktopLabelResponseModel",
         [typeof(DocsFilesResponseModel)] = "DocsFilesResponseModel",
+        [typeof(SitePackageSettingsPatchRequestModel)] = "SitePackageSettingsPatchRequestModel",
+        [typeof(SitePackageSettingsRequestModel)] = "SitePackageSettingsRequestModel",
+        [typeof(SitePackageSettingsResponseModel)] = "SitePackageSettingsResponseModel",
     };
 
     /// <summary>

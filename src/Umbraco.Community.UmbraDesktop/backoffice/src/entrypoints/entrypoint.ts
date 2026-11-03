@@ -26,16 +26,26 @@ import { parseSettings, settingsStorageKey } from '../desktop/settings/settings-
 import { UMB_CURRENT_USER_CONTEXT } from '@umbraco-cms/backoffice/current-user';
 import { UMB_SERVER_CONTEXT } from '@umbraco-cms/backoffice/server';
 import type { UmbElement } from '@umbraco-cms/backoffice/element-api';
+import { replaceCoreSessionModals } from '../desktop/session/core-session-modals';
 
 import type {
     UmbEntryPointOnInit,
     UmbEntryPointOnUnload,
 } from "@umbraco-cms/backoffice/extension-api";
 
+/** Stops watching for core's session modals; see `onInit`. */
+let stopReplacingSessionModals: (() => void) | undefined;
+
 /**
  * Runs when the package's backoffice extensions are loaded.
  */
-export const onInit: UmbEntryPointOnInit = (host, _extensionRegistry) => {
+export const onInit: UmbEntryPointOnInit = (host, extensionRegistry) => {
+    // Take over core's session warning and sign-in, in this frame as in every other: the desktop's
+    // own frame and each window's run this same entry point. What each shows is decided where it
+    // opens, and outside a desktop that is core's own screen, unchanged (issue #160).
+    stopReplacingSessionModals?.();
+    stopReplacingSessionModals = replaceCoreSessionModals(extensionRegistry);
+
     // The desktop is entered via the top-right header-app launcher, so hide its now-redundant
     // section tab from the classic nav. No-op for users without desktop access (tab never shows).
     hideSectionTab(UMBRADESKTOP_SECTION_ALIAS);
@@ -70,6 +80,8 @@ export const onInit: UmbEntryPointOnInit = (host, _extensionRegistry) => {
 
 /** Runs when the package's backoffice extensions are unloaded. */
 export const onUnload: UmbEntryPointOnUnload = (_host, _extensionRegistry) => {
+    stopReplacingSessionModals?.();
+    stopReplacingSessionModals = undefined;
 };
 
 /**
