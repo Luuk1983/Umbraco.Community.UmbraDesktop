@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import { formatBytes } from '../transfers/transfers-model.js';
 import {
   OPTIMIZE_SAVING_RATIO,
+  IMAGE_EXTENSIONS,
   OVERSIZED_BYTES,
   SPACE_FOLDERS,
   barOf,
@@ -180,6 +181,12 @@ describe('the size of a list', () => {
 });
 
 describe('the categories', () => {
+  it("has the same limit and image extensions as the server, which counts the Manager's cleanup line (design §16.20)", () => {
+    // Pinned on the server by MediaFolderCleanupTests; change both together.
+    expect(OVERSIZED_BYTES).to.equal(2 * 1024 * 1024);
+    expect([...IMAGE_EXTENSIONS].sort()).to.deep.equal(['avif', 'bmp', 'gif', 'heic', 'heif', 'jpeg', 'jpg', 'png', 'tif', 'tiff', 'webp']);
+  });
+
   it('calls an image over 2 MB oversized, by its extension, and never an SVG or a file', () => {
     expect(OVERSIZED_BYTES).to.equal(2 * MB);
     expect(isImage(item({ extension: 'JPG' }))).to.equal(true);

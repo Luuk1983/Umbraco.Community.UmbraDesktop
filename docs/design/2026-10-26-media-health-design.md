@@ -1141,3 +1141,86 @@ emptied the old one), media from the TestInstance's own folder:
   which for a keep of a year is a date in the future, so it reads as kept. The pane says "but the file
   changed since"; the tag did not. Fixed the same day: such a row is tagged "Kept, but the file
   changed" (test first; seen on the orphaned file's row in the running backoffice).
+
+### 16.20 Step 4 cut down to one line in the Manager (decided 2026-11-03)
+
+§8's facts in the Manager (folder size tags, a Health list view, Properties on a folder) were mocked
+again on the current design ([`mockups/media-health/step4.html`](mockups/media-health/step4.html),
+first version) and dropped by Luuk. A check is a snapshot, so a size or a "not used" shown while
+browsing is wrong as soon as anyone saves something, and the Manager has no way to tell. Keeping it
+current was looked at two ways and turned down:
+
+- **A check every night** (Umbraco's recurring background job, on the scheduling server only). Would
+  reverse §2's "nothing until asked" for a load nobody has measured on a large library: a guess of
+  minutes on a local disk and 10 to 20 on blob storage for 50,000 items, where the media folder walk
+  lists one folder per item.
+- **Keeping the result current from Umbraco's notifications** (media saved, moved, trashed; a page's
+  references changed), as an OS indexer follows a change journal. Right in principle, but too complex
+  for what it buys (Luuk), and it can never cover orphaned files, which only a walk of the disk finds.
+
+**Decision.** The Manager shows only what a check is good for, and only while the check counts:
+
+- **One line in a Manager window**, above core's toolbar, when the folder shown and the folders
+  under it hold unused items or oversized images in the last check: "41 unused items and 12
+  oversized images here and in the folders under it, from this morning's check", with **Review in
+  Media Cleanup** and **Dismiss**. At the root it speaks for the library. The look is the Manager's
+  "files were not uploaded" line (#179), but in the window's flow rather than floating, so it covers
+  no card.
+- **Only while the check is valid**, the rule Clean up already uses (`isStale`, under a day). An
+  older check, no check, nothing to clean up, the recycle bin, or a dismissed line: nothing at all. No
+  faded or "out of date" state, since a hint that may be wrong is the thing this cut removes.
+- **Kept things are not counted** (§16.6). Orphaned files belong to no folder and never show here.
+- **Review in Media Cleanup** opens the Media Cleanup window on its list for that folder and below,
+  on the first kind with something in it. Media Cleanup gains a location for that, as the Manager has.
+- **Dismiss** hides the line in that window until a newer check.
+- **Dropped from §8 for good**: folder sizes, the Health view, Properties, any per-item mark. The item's
+  live answer to "is this used?" stays core's **Referenced by** on its Info tab (§9).
+
+**Cost** (Luuk: "not worth it if we need to constantly access files"). One read when a Manager window
+opens, of counts per folder from the stored check; none while browsing, no file touched, no polling.
+
+**Choices made for the build** (mine, said so for review):
+
+- **The server counts, per folder, over every level** (`GET folders/cleanup`): unused items, and used
+  images over the oversized limit, without active keeps, each item counted once (unused before
+  oversized, plan Decision 3). The oversized rule lives in the browser today (`OVERSIZED_BYTES`,
+  `IMAGE_EXTENSIONS`, `isImage`); the server gets the same constants, pinned to the browser's by a C#
+  and a TypeScript test each, as `KEEP_NOTE_MAX` is (§16.19). Sending a Manager window every item to
+  count in the browser is what the cost line above rules out.
+- **A folder is any place**, as the Manager's tree and Storage by folder count them (§16.17): the
+  sums follow `ParentKey` through items as well as folders.
+- **No cache** on the server at first. The build measures the route on a large library and adds one
+  only if it is slow.
+
+### 16.21 Step 4 as built (2026-11-03)
+
+§16.20 built test-first in the same session, to the plan's Tasks 4.1 to 4.4.
+
+- **Server**: `MediaFolderCleanup` (pure) and `GET folders/cleanup` on the controller. The oversized
+  limit and the image extensions are copied from the browser and pinned on both sides
+  (`MediaFolderCleanupTests`, `health-model.test.ts`).
+- **Media Cleanup takes a location**, `folder=<key|root>` (`health-location.ts`), opens the list there
+  on the first tab with something, and clears it, so a reload opens on the overview. The app allows one
+  window, and the desktop only brings an open one forward without handing it a location, so the
+  Manager also sends `umbradesktop-media-cleanup-show` on the document, which an open window listens
+  for. Both apps live in the same page, which is what makes a document event enough.
+- **The line** is `manager/cleanup-line.ts` (pure) and a row of the Manager's own grid above the folder
+  host; the tree spans both rows, so without a line nothing moves. The counts come through the
+  window's source (`cleanup()`), read once when the window opens.
+
+**Measured** on the worktree's instance (newest Umbraco 17), a fresh check of 48 items, 28 unused:
+
+- The Engage folder's window read **28 unused items in this folder and the folders under it, found by
+  the check of today, 9:16 PM.** One `folders/cleanup` request for the window, none after: Review,
+  Dismiss and the second Review added none.
+- **Review in Media Cleanup** opened Media Cleanup on Unused items, "In Engage", 28 rows. With Media
+  Cleanup already open on its overview, Review took it to the same list.
+- **Dismiss** removed the line.
+- Under all five themes the line sits above the toolbar in each theme's surface and border; in
+  Umbraco 4 and Windows 98 the sentence wraps to two lines and the buttons stay beside it.
+- `folders/cleanup` on 20,000 items in 400 nested folders (the store on in-memory SQLite, timed in a
+  throwaway test): about 220 ms, 200 of it reading the item rows. Acceptable for one read per window,
+  so no cache. If it ever matters, read only the six columns the count uses rather than whole rows.
+
+**Not measured here**: a check over a day old in a running backoffice (covered by `cleanup-line.test.ts`
+and the window's test); the Dutch words on screen.

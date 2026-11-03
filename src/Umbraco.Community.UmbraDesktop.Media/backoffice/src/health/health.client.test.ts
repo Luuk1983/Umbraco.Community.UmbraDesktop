@@ -149,6 +149,15 @@ describe('the Media Health client', () => {
     expect((await health.folders()).data?.[0].name).to.equal('Products');
   });
 
+  it("reads what can go per folder, for the Manager's cleanup line", async () => {
+    const { client } = http({
+      [`${MEDIA_HEALTH_BASE}/folders/cleanup`]: { checkId: 7, checkedUtc: '2026-11-03T08:00:00Z', folders: [{ key: null, unused: 3, oversized: 1 }] },
+    });
+    const { data } = await new UmbraDesktopMediaHealthClient(client).folderCleanup();
+    expect(data?.checkId).to.equal(7);
+    expect(data?.folders[0]).to.deep.equal({ key: null, unused: 3, oversized: 1 });
+  });
+
   it('deletes orphaned files by their relative paths, and reports what was skipped', async () => {
     const { client, calls } = http({
       [`${MEDIA_HEALTH_BASE}/orphans/delete`]: { deleted: ['1234/old.jpg'], skipped: [{ relativePath: '5/x.png', reason: 'NowOwned' }] },

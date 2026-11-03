@@ -13,6 +13,8 @@ import { fingerprint } from '../clipboard/os-image.js';
 import type { UmbraDesktopImagePrint } from '../clipboard/os-image.js';
 import { DROP_OUTLINE_PX } from '../drag/light.js';
 import { DEFAULT_GUIDELINES } from '../guidelines/guidelines.js';
+import { UMBRADESKTOP_MEDIA_HEALTH_APP } from '../health/health-app.js';
+import { UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, printHealthLocation } from '../health/health-location.js';
 
 const FOLDER = '0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0';
 const IMAGE = '11111111-2222-3333-4444-555555555555';
@@ -142,6 +144,58 @@ async function mounted(location?: string, context?: object) {
   await settle();
   return { manager, folderHost, opened, titles, locations, reachedWindow, beside, settle, clickLink };
 }
+
+describe('the cleanup line in a manager window (design §16.20)', () => {
+  /**
+   * A window whose source answers the cleanup counts.
+   * @param hoursAgo How long ago the check finished.
+   * @returns The window, how often the counts were read, and what Media Cleanup was told.
+   */
+  async function lined(hoursAgo = 2) {
+    let reads = 0;
+    const told: string[] = [];
+    const tell = (event: Event) => told.push((event as CustomEvent<{ location: string }>).detail.location);
+    document.addEventListener(UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, tell);
+    cleanup.push(() => document.removeEventListener(UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, tell));
+    const checkedUtc = new Date(Date.now() - hoursAgo * 3600_000).toISOString();
+    (SOURCE as { cleanup?: unknown }).cleanup = async () => {
+      reads++;
+      return { checkId: 7, checkedUtc, folders: [{ key: FOLDER, unused: 2, oversized: 1 }] };
+    };
+    cleanup.push(() => delete (SOURCE as { cleanup?: unknown }).cleanup);
+    const window = await mounted(`folder=${FOLDER}`);
+    await window.settle();
+    const line = () => window.manager.shadowRoot!.querySelector<HTMLElement>('.cleanup-line');
+    return { ...window, line, reads: () => reads, told };
+  }
+
+  it('says what the folder holds, read once when the window opens', async () => {
+    const { line, reads, manager, settle } = await lined();
+    expect(line()?.textContent).to.match(/2 unused items and 1 oversized image in this folder/);
+    manager.requestUpdate();
+    await settle();
+    expect(reads()).to.equal(1);
+  });
+
+  it('opens Media Cleanup on that folder’s list, telling an open window too', async () => {
+    const { line, opened, told } = await lined();
+    line()!.querySelector<HTMLButtonElement>('[data-action="review"]')!.click();
+    expect(opened).to.deep.include({ alias: UMBRADESKTOP_MEDIA_HEALTH_APP, location: printHealthLocation(FOLDER) });
+    expect(told).to.deep.equal([printHealthLocation(FOLDER)]);
+  });
+
+  it('goes away when dismissed', async () => {
+    const { line, settle } = await lined();
+    line()!.querySelector<HTMLButtonElement>('[data-action="dismiss"]')!.click();
+    await settle();
+    expect(line() === null, 'no line').to.equal(true);
+  });
+
+  it('says nothing about a check over a day old', async () => {
+    const { line } = await lined(25);
+    expect(line() === null, 'no line').to.equal(true);
+  });
+});
 
 describe('a manager window', () => {
   it('opens on Media and names itself after it', async () => {
