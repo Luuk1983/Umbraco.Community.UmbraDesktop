@@ -10,6 +10,9 @@ is an app, a part of the Media Manager, or both, and whether it builds on ProWor
 - [`redesign.html`](redesign.html): the redesign of 2026-10-27 (design §16), hand-written, no
   build step. No check yet, the overview, checking, Clean up and done, the grid, the preview,
   Review, Keep and the Kept list.
+- [`step4.html`](step4.html): step 4 as decided on 2026-11-03 (design §16.20): one line in a Media
+  Manager window that says the folder has something to clean up, while the last check is valid.
+  Generated from `_build/step4.cjs` (`node step4.cjs`), which reuses `health.cjs`'s pieces.
 
 ## Rebuilding
 

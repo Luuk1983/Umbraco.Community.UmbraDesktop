@@ -49,6 +49,10 @@ only folders.
 
 Create and uploads put new items in the folder the window shows.
 
+After a check in [Media Cleanup](media-health.md), a line above the items says what can go in the
+folder, while the check is less than a day old. See
+[See what can go from the Media Manager](media-health.md#see-what-can-go-from-the-media-manager).
+
 ## Items
 
 An item opens beside its window, in Umbraco's own editor: in a pane inside the window when there is

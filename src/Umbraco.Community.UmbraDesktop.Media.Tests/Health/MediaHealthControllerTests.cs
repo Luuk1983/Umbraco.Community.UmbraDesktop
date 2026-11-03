@@ -359,4 +359,40 @@ public class MediaHealthControllerTests : IAsyncLifetime
             Assert.DoesNotContain(action.GetCustomAttributes<ProducesResponseTypeAttribute>(inherit: false), attribute => attribute.StatusCode == 403);
         }
     }
+
+    /// <summary>
+    /// The Manager's cleanup line reads one row per folder with something to clean up, from the last
+    /// check and without what someone keeps (design §16.20).
+    /// </summary>
+    [Fact]
+    public async Task Counts_what_can_go_per_folder()
+    {
+        var folder = Guid.NewGuid();
+        var kept = Guid.NewGuid();
+        var check = await _store.StartAsync(Editor);
+        await _store.FinishAsync(check.Id, new MediaHealthResult(
+            [new MediaHealthFolder(folder, "Products", null, "/Products")],
+            [new MediaHealthItem(Guid.NewGuid(), "A", "Image", "jpg", 5, folder, "/Products", 0), new MediaHealthItem(kept, "B", "Image", "jpg", 5, folder, "/Products", 0)],
+            []));
+        await _keeps.KeepAsync(MediaKeepKind.Unused, [kept.ToString("D")], null, MediaKeepDuration.Year, Editor, "Edith Editor");
+
+        var answer = Assert.IsType<OkObjectResult>(await Controller().GetFolderCleanup());
+
+        var counts = Assert.IsType<MediaFolderCleanupResponseModel>(answer.Value);
+        Assert.Equal(check.Id, counts.CheckId);
+        Assert.NotNull(counts.CheckedUtc);
+        Assert.Contains(counts.Folders, each => each.Key == folder && each.Unused == 1 && each.Oversized == 0);
+        Assert.Contains(counts.Folders, each => each.Key == null && each.Unused == 1);
+    }
+
+    /// <summary>Before any check there is nothing to count, and the answer says so without failing.</summary>
+    [Fact]
+    public async Task Counts_nothing_before_a_check()
+    {
+        var answer = Assert.IsType<OkObjectResult>(await Controller().GetFolderCleanup());
+
+        var counts = Assert.IsType<MediaFolderCleanupResponseModel>(answer.Value);
+        Assert.Null(counts.CheckId);
+        Assert.Empty(counts.Folders);
+    }
 }

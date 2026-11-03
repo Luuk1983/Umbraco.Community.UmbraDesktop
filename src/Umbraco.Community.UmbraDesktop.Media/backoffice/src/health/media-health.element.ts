@@ -14,6 +14,8 @@ import { formatBytes } from '../transfers/transfers-model.js';
 import { wordsOf } from '../shared/words.js';
 import { REASONS } from './health-done.element.js';
 import { healthColours } from './health-styles.js';
+import { UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, parseHealthLocation } from './health-location.js';
+import type { HealthLocation } from './health-location.js';
 import './health-start.element.js';
 import './health-overview.element.js';
 import './health-cleanup-sheet.element.js';
@@ -107,6 +109,27 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
   @property({ attribute: false })
   attached: Readonly<Record<string, string>> = {};
 
+  /**
+   * Where another app sent this window (`health-location.ts`): a folder's list, from the Media
+   * Manager's cleanup line (design §16.20). Read once, then cleared.
+   */
+  @property({ attribute: false })
+  location?: string;
+
+  /** A list asked for by a location or the Manager, waiting until there is a result to open it on. */
+  #pending?: HealthLocation;
+
+  /**
+   * Hears the Media Manager ask this open window for a folder's list: the desktop only brings a
+   * one-instance app forward and never hands it a new location (`health-location.ts`).
+   */
+  #onShow = (event: Event): void => {
+    const asked = parseHealthLocation((event as CustomEvent<{ location?: string }>).detail?.location);
+    if (!asked) return;
+    this.#pending = asked;
+    this.requestUpdate();
+  };
+
   /** The health context. */
   #context?: UmbraDesktopMediaHealthContext;
 
@@ -153,10 +176,12 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.#startWatching();
+    document.addEventListener(UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, this.#onShow);
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    document.removeEventListener(UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, this.#onShow);
     this.#unwatch?.();
     this.#unwatch = undefined;
   }
@@ -194,6 +219,13 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
   /** Close the details pane once the list is not shown, whatever took it away: Back, a check, Clean up. */
   override updated(changed: Map<string, unknown>): void {
     super.updated(changed);
+    if (changed.has('location') && this.location) this.#arrive(this.location);
+    if (this.#pending && this._state.result && this._state.phase.kind !== 'running') {
+      const { folderKey } = this.#pending;
+      this.#pending = undefined;
+      this._folders = undefined;
+      this.#openListOn(folderKey === null ? {} : { folderKey });
+    }
     if (this.#screen !== 'list' && (this.#detailsAsked || DETAILS_KEY in this.attached)) this.#closeDetails();
   }
 
@@ -322,8 +354,26 @@ export class UmbraDesktopMediaHealthElement extends UmbLitElement {
    * @param event The overview's or the breakdown's request.
    */
   #openList(event: CustomEvent<{ kind?: HealthKind; folderKey?: string | null; exact?: boolean }>): void {
-    const { kind, exact } = event.detail;
-    const folderKey = 'folderKey' in event.detail ? event.detail.folderKey : undefined;
+    this.#openListOn(event.detail);
+  }
+
+  /**
+   * Take in a location the desktop handed over, and clear it, so a reload opens on the overview: a
+   * list is somewhere this window was sent, not where it lives.
+   * @param location The location.
+   */
+  #arrive(location: string): void {
+    this.#pending = parseHealthLocation(location);
+    this.dispatchEvent(new CustomEvent('umbradesktop-app-location', { detail: { location: '' }, bubbles: true, composed: true }));
+  }
+
+  /**
+   * Open the list on a kind, a folder or both; see {@link #openList}.
+   * @param detail What to open it on: no `folderKey` for the whole library.
+   */
+  #openListOn(detail: { kind?: HealthKind; folderKey?: string | null; exact?: boolean }): void {
+    const { kind, exact } = detail;
+    const folderKey = 'folderKey' in detail ? detail.folderKey : undefined;
     const counts = chipCounts(this.#context?.entries() ?? [], folderKey, this.#allPlaces, exact);
     const chip = kind ?? HEALTH_KINDS.find((each) => counts[each] > 0) ?? 'unused';
     this._list = { chip, folderKey, exact: exact === true, from: this._folders ? 'folders' : 'overview' };

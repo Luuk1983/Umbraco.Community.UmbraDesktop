@@ -28,8 +28,8 @@ export interface UmbraDesktopMediaLocation {
   select?: string;
 }
 
-/** A media key as the management API writes it. */
-const KEY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** A media key as the management API writes it; Media Cleanup's location reads keys by it too. */
+export const MEDIA_KEY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** An extension alias: dotted words, nothing that could be markup. */
 const ALIAS = /^[A-Za-z0-9_.-]{1,200}$/;
@@ -45,11 +45,11 @@ export function parseLocation(value: string | undefined): UmbraDesktopMediaLocat
   const view = params.get('view');
   const select = params.get('select');
   const place: UmbraDesktopMediaPlace =
-    folder === 'bin' ? { kind: 'bin' } : folder && KEY.test(folder) ? { kind: 'folder', unique: folder } : { kind: 'root' };
+    folder === 'bin' ? { kind: 'bin' } : folder && MEDIA_KEY.test(folder) ? { kind: 'folder', unique: folder } : { kind: 'root' };
   return {
     place,
     ...(view && ALIAS.test(view) ? { view } : {}),
-    ...(select && KEY.test(select) ? { select } : {}),
+    ...(select && MEDIA_KEY.test(select) ? { select } : {}),
   };
 }
 

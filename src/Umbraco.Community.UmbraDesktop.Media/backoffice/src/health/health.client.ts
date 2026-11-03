@@ -104,6 +104,26 @@ export interface HealthFolder {
   path: string;
 }
 
+/** What one folder holds that can go, in it and every folder under it (design §16.20). */
+export interface HealthFolderCleanup {
+  /** The folder's key, or null for the whole library. */
+  key: string | null;
+  /** Items no page uses. */
+  unused: number;
+  /** Used images over the oversized limit. */
+  oversized: number;
+}
+
+/** The last check's counts per folder, for the Media Manager's cleanup line. */
+export interface HealthFolderCleanupAnswer {
+  /** The check's number, or null before any check. */
+  checkId: number | null;
+  /** When it finished, or null before any check. */
+  checkedUtc: string | null;
+  /** The folders with something to clean up, the library's row (key null) among them. */
+  folders: HealthFolderCleanup[];
+}
+
 /** One file on disk that no media item owns. */
 export interface HealthOrphan {
   /** Its path under the media folder, forward slashes, no leading slash: what a delete names. */
@@ -295,6 +315,14 @@ export class UmbraDesktopMediaHealthClient {
   async folders(): Promise<HealthResult<HealthFolder[]>> {
     const answer = await this.#get<{ folders: HealthFolder[] }>('folders');
     return answer.data ? { data: answer.data.folders } : { error: answer.error };
+  }
+
+  /**
+   * What each folder holds that can go, counted on the server from the stored result, so a Media
+   * Manager window reads a row per folder rather than every item (design §16.20).
+   */
+  folderCleanup(): Promise<HealthResult<HealthFolderCleanupAnswer>> {
+    return this.#get('folders/cleanup');
   }
 
   /** Every file of the last check that no item owns, largest first. */

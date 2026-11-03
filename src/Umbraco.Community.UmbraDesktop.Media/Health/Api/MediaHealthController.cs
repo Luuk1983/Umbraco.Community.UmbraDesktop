@@ -140,6 +140,23 @@ public class MediaHealthController(MediaHealthStore store, MediaKeepStore keeps,
     public async Task<IActionResult> GetFolders() =>
         Ok(new MediaHealthFoldersResponseModel((await store.GetFoldersAsync()).Select(folder => new MediaHealthFolderResponseModel(folder.Key, folder.Name, folder.ParentKey, folder.Path)).ToList()));
 
+    /// <summary>
+    /// What each folder holds that can go, in it and every folder under it, for the Media Manager's
+    /// cleanup line (design §16.20): one row per folder with something, so a Manager window never reads
+    /// the whole library. Counted from the stored result; no file and no Umbraco service is touched.
+    /// </summary>
+    /// <returns>The counts, with the check they are from.</returns>
+    [HttpGet("folders/cleanup")]
+    [MapToApiVersion("1.0")]
+    [ProducesResponseType(typeof(MediaFolderCleanupResponseModel), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetFolderCleanup()
+    {
+        var last = (await store.GetStatusAsync()).Last;
+        if (last is null) return Ok(new MediaFolderCleanupResponseModel(null, null, []));
+        var counts = MediaFolderCleanup.Count(await store.GetItemsAsync(0, int.MaxValue), await store.GetFoldersAsync(), await keeps.ListAsync());
+        return Ok(new MediaFolderCleanupResponseModel(last.Id, last.FinishedUtc, counts.Select(each => new MediaFolderCleanupCountResponseModel(each.Key, each.Unused, each.Oversized)).ToList()));
+    }
+
     /// <summary>The last check's orphaned files, largest first.</summary>
     /// <returns>The files.</returns>
     [HttpGet("orphans")]

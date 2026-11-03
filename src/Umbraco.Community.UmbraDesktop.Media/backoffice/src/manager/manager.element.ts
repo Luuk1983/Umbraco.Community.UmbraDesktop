@@ -16,6 +16,10 @@ import { UmbraDesktopMediaManagerWindowContext } from './manager-window.context.
 import { UMBRADESKTOP_OPEN_ITEM_KEY, editPath, markOpenItem, openKeyFrom } from './open-item.js';
 import { guardRoutes, markActive } from './route-guard.js';
 import { markCutItems } from './cut-fade.js';
+import { cleanupLineOf } from './cleanup-line.js';
+import type { CleanupLine } from './cleanup-line.js';
+import { checkedOn } from '../health/health-model.js';
+import type { HealthFolderCleanupAnswer } from '../health/health.client.js';
 import { refsOf } from './actions/held-items.js';
 import { cutKeys } from '../clipboard/clipboard.js';
 import { UMBRADESKTOP_MEDIA_MANAGER_CONTEXT } from '../context/media-manager.context.js';
@@ -205,6 +209,17 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
   @state()
   private _heldBack?: number;
 
+  /**
+   * What each folder held to clean up at Media Cleanup's last check, read once when the window opens
+   * and never while browsing (design §16.20); undefined until then, or when the server did not answer.
+   */
+  @state()
+  private _cleanup?: HealthFolderCleanupAnswer;
+
+  /** The check whose cleanup line was dismissed in this window, which keeps it away until a newer one. */
+  @state()
+  private _cleanupDismissed?: number;
+
   /** The selection box's layer. */
   @query('umbradesktop-media-selection-box')
   private _box?: UmbraDesktopMediaSelectionBoxElement;
@@ -345,6 +360,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
     });
     if (!this.#placed) {
       this.#placed = true;
+      void this.source.cleanup?.().then((answer) => (this._cleanup = answer));
       const { place, view, select } = parseLocation(this.location);
       this._place = place;
       this._view = view;
@@ -1153,6 +1169,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
   override render() {
     return html`
       <umbradesktop-media-tree-host class="tree"></umbradesktop-media-tree-host>
+      ${this.#renderCleanupLine()}
       <umbradesktop-media-folder-host
         class="contents"
         .source=${this.source}
@@ -1163,6 +1180,46 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
       <umbradesktop-media-selection-box></umbradesktop-media-selection-box>
       ${this.#renderDropLabel()} ${this.#renderHeldBack()}
     `;
+  }
+
+  /**
+   * The cleanup line (design §16.20): what the folder shown, with the folders under it, held to clean
+   * up at Media Cleanup's last check, while that check is under a day old, with the way there. Worked
+   * out on every render, so a check that goes stale while the window is open takes the line with it at
+   * the next change of place.
+   * @returns The line, or nothing.
+   */
+  #renderCleanupLine() {
+    const line = cleanupLineOf(this._cleanup, this._place, new Date(), this._cleanupDismissed);
+    if (!line) return nothing;
+    return html`<div class="cleanup-line" role="status">
+      <umb-icon name="icon-info"></umb-icon>
+      <span>${this.#cleanupWords(line)}</span>
+      <button type="button" data-action="review" @click=${() => this.#window.reviewInMediaCleanup(line.library ? null : (this._place as { unique: string }).unique)}>
+        ${this.#words('cleanupLineReview')}
+      </button>
+      <button type="button" data-action="dismiss" @click=${() => (this._cleanupDismissed = line.checkId)}>${this.#words('cleanupLineDismiss')}</button>
+    </div>`;
+  }
+
+  /**
+   * The cleanup line's sentence, in the person's language: what, where, and from which check.
+   * @param line The line.
+   * @returns The sentence.
+   */
+  #cleanupWords(line: CleanupLine): string {
+    const locale = this.localize.lang() || undefined;
+    const count = (n: number, one: 'cleanupLineUnusedOne' | 'cleanupLineOversizedOne', many: 'cleanupLineUnused' | 'cleanupLineOversized') =>
+      n === 1 ? this.#words(one) : this.#words(many, n.toLocaleString(locale));
+    const parts = [
+      ...(line.unused ? [count(line.unused, 'cleanupLineUnusedOne', 'cleanupLineUnused')] : []),
+      ...(line.oversized ? [count(line.oversized, 'cleanupLineOversizedOne', 'cleanupLineOversized')] : []),
+    ];
+    const what = parts.length === 2 ? this.#words('cleanupLineBoth', parts[0], parts[1]) : parts[0];
+    const on = checkedOn(line.checkedAt, new Date(), locale);
+    const day = on.day === 'today' ? this.#words('healthToday') : on.day === 'yesterday' ? this.#words('healthYesterday') : on.day;
+    const when = this.#words('cleanupLineWhen', day, on.time);
+    return this.#words(line.library ? 'cleanupLineLibrary' : 'cleanupLineFolder', what, when);
   }
 
   /**
@@ -1200,8 +1257,9 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
       --umbradesktop-media-tree-width: 220px;
       display: grid;
       grid-template-columns: var(--umbradesktop-media-tree-width) minmax(0, 1fr);
-      /* One row, as tall as the window and no taller, so the tree and the view each scroll inside it. */
-      grid-template-rows: minmax(0, 1fr);
+      /* The cleanup line's row, empty without one, then one row as tall as the rest of the window and no
+         taller, so the tree and the view each scroll inside it. */
+      grid-template-rows: auto minmax(0, 1fr);
       height: 100%;
       min-height: 0;
       background: var(--uui-color-background);
@@ -1221,14 +1279,14 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
        auto-placement would be pushed into a new row by it. */
     .tree {
       grid-column: 1;
-      grid-row: 1;
+      grid-row: 1 / -1;
       background: var(--uui-color-surface);
       border-right: 1px solid var(--uui-color-border);
     }
 
     .contents {
       grid-column: 2;
-      grid-row: 1;
+      grid-row: 2;
       min-width: 0;
     }
 
@@ -1238,7 +1296,7 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
     .drop-shade {
       display: none;
       grid-column: 2;
-      grid-row: 1;
+      grid-row: 2;
       z-index: 150;
       pointer-events: none;
       box-sizing: border-box;
@@ -1268,6 +1326,45 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
 
     :host([mark='refuses']:not([drop])) .drop-shade {
       background: color-mix(in srgb, var(--uui-color-surface, #fff) ${unsafeCSS(Math.round((1 - MARK_DIM_OPACITY) * 100))}%, transparent);
+    }
+
+    /* The cleanup line (design §16.20): the look of the line below, but in the window's own flow above
+       core's view, so it covers no card and core's toolbar moves down by its height. */
+    .cleanup-line {
+      grid-column: 2;
+      grid-row: 1;
+      display: flex;
+      align-items: center;
+      gap: var(--uui-size-space-3, 9px);
+      margin: var(--uui-size-space-4, 12px) var(--uui-size-space-5, 18px) 0;
+      padding: var(--uui-size-space-3, 9px) var(--uui-size-space-4, 12px);
+      border-radius: var(--uui-border-radius, 3px);
+      background: var(--uui-color-surface, #fff);
+      color: var(--uui-color-text, #000);
+      border: 1px solid var(--uui-color-border, #d8d7d9);
+      font-size: 14px;
+    }
+
+    .cleanup-line umb-icon {
+      flex: none;
+      color: var(--uui-color-selected);
+    }
+
+    .cleanup-line span {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .cleanup-line button {
+      flex: none;
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      color: var(--uui-color-interactive, var(--uui-color-selected));
+      text-decoration: underline;
+      cursor: pointer;
+      white-space: nowrap;
     }
 
     /* Files the warning did not upload (#179): a line at the foot of the window, over its contents. */
