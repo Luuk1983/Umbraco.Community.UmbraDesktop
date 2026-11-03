@@ -23,14 +23,15 @@ When a document window shows a view other than Content, the path under its title
 such as Home / Info. A view that can open beside the editor has a side-panel button next to its name.
 
 1. In the document window, select the view's tab, such as **Info**.
-2. In the path, select the side-panel button next to the view's name. The view opens beside the
+2. In the path, select the panel button next to the view's name. The view opens beside the
    editor, and the window goes back to Content.
 
 To open it as a window of its own instead, hold Shift while you select the button.
 
 Several views can be open beside one window at once, and beside the preview. Each view opens once per
-window: selecting the button for a view that is already open closes it again. While it is open, the
-button shows as pressed.
+window. While it is docked, its button is not in the path: select **Hide** in its header to put it
+away, and the button comes back. While it is in a window of its own, the button shows as pressed, and
+selecting it closes that window.
 
 ## Docked or in a window
 

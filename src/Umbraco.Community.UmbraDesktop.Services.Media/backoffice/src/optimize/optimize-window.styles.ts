@@ -102,6 +102,20 @@ export const optimizeWindowStyles = css`
     font-size: 13px;
   }
 
+  /* A run on files (#179): the caller's line under what the run does, saying where that came from. */
+  .note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .note umb-icon {
+    flex: none;
+    margin-top: 1px;
+    color: var(--umbradesktop-app-accent, var(--uui-color-selected));
+  }
+
   .body {
     flex: 1;
     min-height: 0;
@@ -478,15 +492,11 @@ export const optimizeWindowStyles = css`
     white-space: nowrap;
   }
 
-  .actions {
-    display: flex;
+  /* The run's bar reaches the window's edges, as the settings page's does, through the run's padding. */
+  .run > .foot {
     flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 6px;
-  }
-
-  .actions .button {
-    min-height: 34px;
+    margin: 0 -20px;
+    padding: 14px 20px;
   }
 
   .bar {
@@ -511,6 +521,10 @@ export const optimizeWindowStyles = css`
   .sets {
     margin: 2px 0 10px;
     font-size: 12.5px;
+  }
+
+  .run .note {
+    margin: -6px 0 10px;
   }
 
   .rows {
@@ -580,6 +594,24 @@ export const optimizeWindowStyles = css`
     font-style: normal;
     font-size: 12.5px;
     color: var(--uui-color-danger);
+  }
+
+  /* A failed file's own way out, under its reason (mock U5). */
+  .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .button.small {
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .row[data-status='failed'] {
+    align-items: flex-start;
   }
 
   .arrow {

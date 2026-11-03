@@ -48,6 +48,7 @@ async function mount(window: UmbraDesktopWindow) {
   element.window = window;
   document.body.appendChild(element);
   await element.updateComplete;
+  for (const notice of element.renderRoot.querySelectorAll('umbradesktop-notice')) await (notice as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
   return element;
 }
 
@@ -57,7 +58,18 @@ async function mount(window: UmbraDesktopWindow) {
  * @returns The banner elements, in the order they were drawn.
  */
 const banners = (element: UmbraDesktopWindowNoticesElement) =>
-  [...element.renderRoot.querySelectorAll('.notice')];
+  [...element.renderRoot.querySelectorAll('umbradesktop-notice')].map((notice) => notice.shadowRoot!.querySelector('.notice')!);
+
+/**
+ * Every root a banner draws in: the stack's own, and each notice component's, since the banner is
+ * the desktop's notice component and both adopt the theme's window sheet.
+ * @param element The mounted element.
+ * @returns The roots.
+ */
+const roots = (element: UmbraDesktopWindowNoticesElement): ParentNode[] => [
+  element.renderRoot,
+  ...[...element.renderRoot.querySelectorAll('umbradesktop-notice')].map((notice) => notice.shadowRoot!),
+];
 
 it('draws nothing for a clean window', async () => {
   const element = await mount(win());
@@ -88,7 +100,7 @@ it('carries severity as an icon in the banner, never as a hue on its own', async
   // a reader who does not read amber as danger, the icon and the leading edge are what say how bad
   // this is. A future change back to a wash with no glyph fails here.
   const warning = await mount(win({ dirty: true, changedElsewhere: true }));
-  const warningIcon = warning.renderRoot.querySelector('.notice .notice-icon');
+  const warningIcon = banners(warning)[0].querySelector('.notice-icon');
   expect(warningIcon?.localName, 'a warning banner leads with an icon').to.equal('umb-icon');
   expect(warningIcon?.getAttribute('name')).to.equal('icon-alert');
   expect(
@@ -98,7 +110,7 @@ it('carries severity as an icon in the banner, never as a hue on its own', async
   warning.remove();
 
   const error = await mount(win({ dirty: true, deleted: true }));
-  expect(error.renderRoot.querySelector('.notice .notice-icon')?.getAttribute('name')).to.equal('icon-wrong');
+  expect(banners(error)[0].querySelector('.notice-icon')?.getAttribute('name')).to.equal('icon-wrong');
   error.remove();
 });
 
@@ -115,9 +127,9 @@ it('names every class in the stack so a theme cannot hit one by accident', async
   // hazard is any selector any theme writes, present or future, not only the ones the frame
   // happens to use today.
   const element = await mount(win({ dirty: true, changedElsewhere: true, trashed: true }));
-  const classes = [...element.renderRoot.querySelectorAll('[class]')].flatMap((node) => [
-    ...node.classList,
-  ]);
+  const classes = roots(element).flatMap((root) =>
+    [...root.querySelectorAll('[class]')].flatMap((node) => [...node.classList]),
+  );
   expect(classes.length, 'the stack drew nothing to check').to.be.greaterThan(0);
   for (const name of classes) {
     expect(name.startsWith('notice'), `'.${name}' is not namespaced to the notice stack`).to.equal(

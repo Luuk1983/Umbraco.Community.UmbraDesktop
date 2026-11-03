@@ -187,8 +187,13 @@ export default css`
      is the frame's background, which is why no body background is set. That padding comes out of
      the window's rect (border-box, as the frame's ring does), so it is counted in
      WIN98_CHROME_WIDTH and WIN98_CHROME_HEIGHT — an app's content box is inside this well, not
-     inside the frame. */
-  .bodywrap {
+     inside the frame.
+
+     A docked pane's body is the same well. Without it the pane's page sat flat beside the bevelled
+     content it belongs to and read as pasted onto the frame. Its padding comes out of the pane's
+     own width, which no window sizing sums. */
+  .bodywrap,
+  .pane-body {
     box-sizing: border-box;
     padding: ${WIN98_BODY_WELL}px;
     box-shadow: ${unsafeCSS(WIN98_BEVEL_SUNKEN)};
@@ -208,6 +213,11 @@ export default css`
     box-shadow: ${unsafeCSS(WIN98_BEVEL_SUNKEN)};
     border-bottom: none;
     margin: 0 2px 2px;
+    /* Padded by the bevel's depth top and bottom, because the bevel is painted inside the strip's
+       own box and a button fills the strip's height: without it Preview's face and every raised
+       hover covered the well's edge. The ends are padded by more than that already. */
+    padding-top: ${WIN98_BEVEL_DEPTH}px;
+    padding-bottom: ${WIN98_BEVEL_DEPTH}px;
     font-family: ${unsafeCSS(WIN98_FONT)};
   }
   /* Square corners. The era's selection blue behind a hovered crumb, with white text on it, comes

@@ -40,4 +40,4 @@ Nothing in here is privileged. Each app is a `umbraDesktopApp` manifest and the 
 
 ## License
 
-[MIT](../../LICENSE)
+[Mozilla Public License 2.0](../../LICENSE)

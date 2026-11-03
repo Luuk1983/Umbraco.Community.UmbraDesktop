@@ -110,7 +110,7 @@ it('shows apps, then the full sections, then every other source in a compact sec
   }
 });
 
-it('keeps the launcher as it is until the results arrive, then shows apps and sources together', async () => {
+it('shows matching apps at once, with a loader below them until the other results arrive', async () => {
   let release!: () => void;
   const slow: UmbraDesktopSearchSource = {
     alias: 'Documents',
@@ -122,14 +122,41 @@ it('keeps the launcher as it is until the results arrive, then shows apps and so
   const m = await mount({ groups: [{ alias: 'g', label: 'G', weight: 0 }], apps: [stubApp('Log Viewer', 'g')], searchSources: [slow] });
   try {
     await type(m, 'log');
-    await new Promise((r) => setTimeout(r, 20));
-    await m.settle();
-    expect(!!m.root.querySelector('.search-results'), 'no results body yet').to.equal(false);
-    expect(!!m.root.querySelector('.body .card'), 'the groups stay').to.equal(true);
+    expect(!!m.root.querySelector('[data-key="app:Log Viewer"]'), 'the app, without waiting').to.equal(true);
+    expect(!!m.root.querySelector('.body .card'), 'in place of the groups').to.equal(false);
+    const groups = [...m.root.querySelectorAll<HTMLElement>('.search-results > *')].map((g) => g.dataset.source ?? g.className);
+    expect(groups, 'the loader below the apps').to.deep.equal(['apps', 'searching']);
+    expect(m.root.querySelector('.searching')?.getAttribute('role'), 'and announced').to.equal('status');
+    expect(!!m.root.querySelector('.empty-note'), 'nothing is "not found" yet').to.equal(false);
+    await press(m, 'Enter');
+    expect(m.launched.map((a) => a.alias), 'Enter opens the app already').to.deep.equal(['Log Viewer']);
     release();
     await results(m);
-    expect(!!m.root.querySelector('[data-key="app:Log Viewer"]'), 'the app').to.equal(true);
-    expect(!!m.root.querySelector(`[data-key="document:${KEY}"]`), 'and the document, together').to.equal(true);
+    expect(!!m.root.querySelector('.searching'), 'the loader goes').to.equal(false);
+    expect(!!m.root.querySelector(`[data-key="document:${KEY}"]`), 'when the document arrives').to.equal(true);
+  } finally {
+    m.remove();
+  }
+});
+
+it('shows only the loader while nothing has matched yet', async () => {
+  let release!: () => void;
+  const slow: UmbraDesktopSearchSource = {
+    alias: 'Documents',
+    label: 'Documents',
+    weight: 0,
+    prominence: 'full',
+    search: () => new Promise((resolve) => (release = () => resolve({ items: [], total: 0 }))),
+  };
+  const m = await mount({ searchSources: [slow] });
+  try {
+    await type(m, 'zzz');
+    expect(!!m.root.querySelector('.search-results .searching')).to.equal(true);
+    expect(!!m.root.querySelector('.empty-note')).to.equal(false);
+    release();
+    await results(m);
+    expect(!!m.root.querySelector('.searching')).to.equal(false);
+    expect(!!m.root.querySelector('.empty-note')).to.equal(true);
   } finally {
     m.remove();
   }

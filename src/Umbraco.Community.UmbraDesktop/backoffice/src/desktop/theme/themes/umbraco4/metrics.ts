@@ -161,10 +161,24 @@ export const U4_LAUNCHER_ARRANGE_WIDTH = arrangeWidthFor(U4_LAUNCHER_WIDTH, 2 * 
 export const U4_LAUNCHER_TOP_CLEARANCE = 16;
 
 /**
- * The path strip's height under this theme, in px.
- *
- * Umbraco 4's caption type is 11px, so its path strip is proportionally shorter than the shared default. Read twice from here and nowhere else: the palette sets
- * `--umbradesktop-path-height` from it and `metrics.pathbarHeight` reports it, so the strip
- * cannot be drawn at one height and paid for at another.
+ * The path strip's bottom line under this theme, in px: the width the palette draws
+ * `--umbradesktop-path-border-bottom` at, inside the strip's height.
  */
-export const U4_PATH_HEIGHT = 24;
+export const U4_PATH_LINE = 1;
+
+/**
+ * The height in px of what this theme's path strip shows, inside its line. Umbraco 4's caption type
+ * is 11px, so its path strip is proportionally shorter than the shared default.
+ *
+ * Even, because the icons and words are centred in it: in an odd box the centre falls on a half
+ * pixel, an 18px icon starts on it and is drawn rounded down, and the words beside it sat up to a
+ * pixel above it. `theme/strip-height.test.ts` holds every theme to it.
+ */
+export const U4_PATH_CONTENT_HEIGHT = 24;
+
+/**
+ * The path strip's height under this theme, in px: its content and its line. Read twice from here
+ * and nowhere else: the palette sets `--umbradesktop-path-height` from it and `metrics.pathbarHeight`
+ * reports it, so the strip cannot be drawn at one height and paid for at another.
+ */
+export const U4_PATH_HEIGHT = U4_PATH_CONTENT_HEIGHT + U4_PATH_LINE;

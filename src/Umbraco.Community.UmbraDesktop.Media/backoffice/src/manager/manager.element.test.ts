@@ -12,6 +12,9 @@ import type { UmbraDesktopDragWindowHandle } from '../drag/drag.controller.js';
 import { fingerprint } from '../clipboard/os-image.js';
 import type { UmbraDesktopImagePrint } from '../clipboard/os-image.js';
 import { DROP_OUTLINE_PX } from '../drag/light.js';
+import { DEFAULT_GUIDELINES } from '../guidelines/guidelines.js';
+import { UMBRADESKTOP_MEDIA_HEALTH_APP } from '../health/health-app.js';
+import { UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, printHealthLocation } from '../health/health-location.js';
 
 const FOLDER = '0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0';
 const IMAGE = '11111111-2222-3333-4444-555555555555';
@@ -142,6 +145,58 @@ async function mounted(location?: string, context?: object) {
   return { manager, folderHost, opened, titles, locations, reachedWindow, beside, settle, clickLink };
 }
 
+describe('the cleanup line in a manager window (design §16.20)', () => {
+  /**
+   * A window whose source answers the cleanup counts.
+   * @param hoursAgo How long ago the check finished.
+   * @returns The window, how often the counts were read, and what Media Cleanup was told.
+   */
+  async function lined(hoursAgo = 2) {
+    let reads = 0;
+    const told: string[] = [];
+    const tell = (event: Event) => told.push((event as CustomEvent<{ location: string }>).detail.location);
+    document.addEventListener(UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, tell);
+    cleanup.push(() => document.removeEventListener(UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, tell));
+    const checkedUtc = new Date(Date.now() - hoursAgo * 3600_000).toISOString();
+    (SOURCE as { cleanup?: unknown }).cleanup = async () => {
+      reads++;
+      return { checkId: 7, checkedUtc, folders: [{ key: FOLDER, unused: 2, oversized: 1 }] };
+    };
+    cleanup.push(() => delete (SOURCE as { cleanup?: unknown }).cleanup);
+    const window = await mounted(`folder=${FOLDER}`);
+    await window.settle();
+    const line = () => window.manager.shadowRoot!.querySelector<HTMLElement>('.cleanup-line');
+    return { ...window, line, reads: () => reads, told };
+  }
+
+  it('says what the folder holds, read once when the window opens', async () => {
+    const { line, reads, manager, settle } = await lined();
+    expect(line()?.textContent).to.match(/2 unused items and 1 oversized image in this folder/);
+    manager.requestUpdate();
+    await settle();
+    expect(reads()).to.equal(1);
+  });
+
+  it('opens Media Cleanup on that folder’s list, telling an open window too', async () => {
+    const { line, opened, told } = await lined();
+    line()!.querySelector<HTMLButtonElement>('[data-action="review"]')!.click();
+    expect(opened).to.deep.include({ alias: UMBRADESKTOP_MEDIA_HEALTH_APP, location: printHealthLocation(FOLDER) });
+    expect(told).to.deep.equal([printHealthLocation(FOLDER)]);
+  });
+
+  it('goes away when dismissed', async () => {
+    const { line, settle } = await lined();
+    line()!.querySelector<HTMLButtonElement>('[data-action="dismiss"]')!.click();
+    await settle();
+    expect(line() === null, 'no line').to.equal(true);
+  });
+
+  it('says nothing about a check over a day old', async () => {
+    const { line } = await lined(25);
+    expect(line() === null, 'no line').to.equal(true);
+  });
+});
+
 describe('a manager window', () => {
   it('opens on Media and names itself after it', async () => {
     const { folderHost, titles } = await mounted();
@@ -155,6 +210,22 @@ describe('a manager window', () => {
     expect(folderHost().place).to.deep.equal({ kind: 'folder', unique: FOLDER });
     expect(folderHost().view).to.equal('Umb.CollectionView.Media.Table');
     expect(titles).to.deep.equal(['People']);
+  });
+
+  it('selects the item its location names once the folder shows it, as Show in Media Manager asks, and only once', async () => {
+    const { folderHost, locations, settle } = await mounted(`folder=${FOLDER}&select=${IMAGE}`);
+    const selected: string[][] = [];
+    // Core's collection, as far as selecting uses it: what it shows, and its selection.
+    (folderHost() as unknown as { collection: () => unknown }).collection = () => ({
+      items: () => [{ unique: IMAGE }, { unique: OTHER_IMAGE }],
+      selection: { setSelection: (keys: string[]) => selected.push(keys) },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    await settle();
+    expect(folderHost().place).to.deep.equal({ kind: 'folder', unique: FOLDER });
+    expect(selected).to.deep.equal([[IMAGE]]);
+    // A one-time instruction, not a place: the window reopens at the folder, with nothing selected.
+    expect(locations).to.deep.equal([`folder=${FOLDER}`]);
   });
 
   it('opens a folder in this window when its link is clicked, and never lets the router see the click', async () => {
@@ -1184,6 +1255,110 @@ describe('the clipboard in a manager window', () => {
     expect(uploads[0][0].name).to.match(/ \d{4}\.\d\d\.\d\d \d\d\.\d\d\.\d\d\.png$/);
     expect(asked.join(' | '), 'the key does not paste as well').to.equal('');
     void manager;
+  });
+
+  /**
+   * A window whose context checks uploads against the default guidelines (#179), recording what it
+   * hands to Optimize images, with a stand-in for the desktop's dialogs: it opens each one asked for
+   * by mounting its content with its props, and takes it down when the content asks.
+   * @param desktop Whether a desktop is there to open the dialog; without one, nothing answers.
+   * @returns The window, what went to the optimizer, and the dialogs asked for.
+   */
+  async function guidedWindow(desktop = true) {
+    const optimized: string[][] = [];
+    const dialogs: Array<{ detail: UmbraDesktopOpenDialogDetail; content: HTMLElement }> = [];
+    const open = (event: Event) => {
+      if (!desktop) return;
+      event.preventDefault();
+      const detail = (event as CustomEvent<UmbraDesktopOpenDialogDetail>).detail;
+      const content = new (detail.element as CustomElementConstructor)();
+      Object.assign(content, detail.props);
+      content.addEventListener('umbradesktop-close-dialog', () => content.remove());
+      document.body.appendChild(content);
+      dialogs.push({ detail, content });
+    };
+    document.addEventListener('umbradesktop-open-dialog', open);
+    cleanup.push(() => {
+      document.removeEventListener('umbradesktop-open-dialog', open);
+      for (const each of dialogs) each.content.remove();
+    });
+    const mount = await clipboardWindow([], {
+      guidelines: async () => DEFAULT_GUIDELINES,
+      uploadLimit: async () => 0,
+      canOptimizeFiles: () => true,
+      optimizeFiles: async (files: Array<{ file: File }>) => void optimized.push(files.map((each) => each.file.name)),
+    });
+    return { ...mount, optimized, dialogs };
+  }
+
+  /**
+   * The warning's content in the dialog asked for, once it is there.
+   * @param dialogs The dialogs asked for.
+   * @returns The content's shadow root.
+   */
+  async function dialogIn(dialogs: Array<{ content: HTMLElement }>): Promise<ShadowRoot> {
+    for (let i = 0; i < 100 && !dialogs[0]?.content.shadowRoot?.querySelector('.list'); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    return dialogs[0].content.shadowRoot!;
+  }
+
+  /** #179: a pasted screenshot is a PNG with no transparent pixel, which the defaults convert to WebP. */
+  it('checks a pasted file against the guidelines and asks in a dialog over the window, uploading nothing until answered', async () => {
+    const { cards, settle, uploads, dialogs } = await guidedWindow();
+    paste(cards[0], [await screenshot()]);
+    const dialog = await dialogIn(dialogs);
+    await settle();
+    expect(uploads.length).to.equal(0);
+    expect(dialogs[0].detail.name).to.equal('Media guidelines');
+    expect(dialogs[0].detail.size.w).to.equal(640);
+    expect(dialog.querySelector('.act')!.textContent!.trim()).to.equal('Convert to WebP');
+    (dialog.querySelector('[data-action="as-is"]') as HTMLElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await settle();
+    expect(uploads.length, "uploaded through core's dropzone in the window").to.equal(1);
+    expect(dialogs[0].content.isConnected, 'the dialog is gone').to.equal(false);
+  });
+
+  it('uploads none of them when the dialog is closed, and says so in the window', async () => {
+    const { manager, cards, settle, uploads, dialogs } = await guidedWindow();
+    paste(cards[0], [await screenshot()]);
+    await dialogIn(dialogs);
+    // What the dialog's close button does: the desktop takes the window, and its content, away.
+    dialogs[0].content.remove();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await settle();
+    expect(uploads.length).to.equal(0);
+    expect(manager.shadowRoot!.querySelector('.held-back')!.textContent!.replace(/\s+/g, ' ').trim()).to.contain('1 file was not uploaded.');
+  });
+
+  it('hands the ticked files to Optimize images', async () => {
+    const { cards, settle, uploads, optimized, dialogs } = await guidedWindow();
+    paste(cards[0], [await screenshot()]);
+    const dialog = await dialogIn(dialogs);
+    (dialog.querySelector('[data-action="optimize"]') as HTMLElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await settle();
+    expect(uploads.length).to.equal(0);
+    expect(optimized).to.have.length(1);
+    expect(optimized[0][0]).to.match(/\.png$/);
+  });
+
+  it('takes files dropped on it through the same check', async () => {
+    const { dragWindows, uploads, dialogs } = await guidedWindow();
+    expect(typeof dragWindows[0].upload).to.equal('function');
+    const done = dragWindows[0].upload!({ files: [await screenshot()], folders: [] }, FOLDER);
+    const dialog = await dialogIn(dialogs);
+    (dialog.querySelector('[data-action="as-is"]') as HTMLElement).click();
+    await done;
+    expect(uploads.length).to.equal(1);
+  });
+
+  it('uploads the files as they are where no desktop opens the dialog', async () => {
+    const { dragWindows, uploads, dialogs } = await guidedWindow(false);
+    await dragWindows[0].upload!({ files: [await screenshot()], folders: [] }, FOLDER);
+    expect(dialogs).to.have.length(0);
+    expect(uploads.length).to.equal(1);
   });
 
   it('pastes what it holds when the paste carries only text', async () => {

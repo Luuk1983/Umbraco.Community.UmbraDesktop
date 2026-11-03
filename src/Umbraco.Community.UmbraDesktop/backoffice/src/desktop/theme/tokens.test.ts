@@ -5,6 +5,7 @@ import { UmbraDesktopTaskbarElement } from '../components/taskbar.element.js';
 import { UmbraDesktopLauncherElement } from '../components/launcher.element.js';
 import { UmbraDesktopWindowElement } from '../components/window.element.js';
 import { UmbraDesktopWindowNoticesElement } from '../components/window-notices.element.js';
+import { UmbraDesktopNoticeElement } from '../components/notice.element.js';
 import { UmbraDesktopWindowPathElement } from '../components/window-path.element.js';
 import { UmbraDesktopLoaderElement } from '../components/loader.element.js';
 import { UmbraDesktopWindowPaneElement } from '../components/window-pane.element.js';
@@ -59,6 +60,7 @@ it('has exactly the tokens the five chrome components read or write, no more and
     UmbraDesktopLauncherElement,
     UmbraDesktopWindowElement,
     UmbraDesktopWindowNoticesElement,
+    UmbraDesktopNoticeElement,
     UmbraDesktopWindowPathElement,
     UmbraDesktopLoaderElement,
     UmbraDesktopWindowPaneElement,

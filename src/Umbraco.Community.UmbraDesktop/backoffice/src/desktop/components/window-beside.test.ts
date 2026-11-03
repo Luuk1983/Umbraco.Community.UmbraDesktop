@@ -127,7 +127,7 @@ describe('the window offering its view beside itself', () => {
     renderView(iframe);
     await settle();
     await element.updateComplete;
-    expect(path().view).to.deep.equal({ label: 'Info', icon: 'icon-info', beside: true, open: false });
+    expect(path().view).to.deep.equal({ label: 'Info', icon: 'icon-info', beside: true, open: false, docked: false });
   });
 
   it('does not offer a view with a router of its own', async function () {
@@ -136,7 +136,7 @@ describe('the window offering its view beside itself', () => {
     renderView(iframe, {}, 'umb-router-slot');
     await settle();
     await element.updateComplete;
-    expect(path().view, 'still named, with no button').to.deep.equal({ label: 'Info', icon: 'icon-info', beside: false, open: false });
+    expect(path().view, 'still named, with no button').to.deep.equal({ label: 'Info', icon: 'icon-info', beside: false, open: false, docked: false });
   });
 
   it('does not offer an editor', async function () {
@@ -189,7 +189,11 @@ describe('the window offering its view beside itself', () => {
     await element.updateComplete;
     expect(path().view?.open).to.equal(true);
     path().dispatchEvent(new CustomEvent('umbradesktop-path-beside', { detail: { floating: false }, bubbles: true, composed: true }));
-    await settle();
+    // The pane slides back into the window before it closes, so the close lands after the slide.
+    const start = performance.now();
+    while ((manager.getWindows().find((w) => w.id === id)!.panes ?? []).length > 0 && performance.now() - start < 5_000) {
+      await settle();
+    }
     expect(manager.getWindows().find((w) => w.id === id)!.panes ?? []).to.have.lengthOf(0);
     expect(iframe.contentWindow!.location.pathname, 'the window stays on the view').to.equal(`${DOCUMENT_ROUTE}/view/info`);
   });
@@ -250,6 +254,6 @@ describe('the window offering its view beside itself', () => {
     renderView(iframe);
     await settle();
     await element.updateComplete;
-    expect(path().view).to.deep.equal({ label: 'Info', icon: 'icon-info', beside: false, open: false });
+    expect(path().view).to.deep.equal({ label: 'Info', icon: 'icon-info', beside: false, open: false, docked: false });
   });
 });

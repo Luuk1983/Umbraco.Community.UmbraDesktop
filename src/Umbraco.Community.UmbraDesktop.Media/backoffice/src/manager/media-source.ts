@@ -5,6 +5,8 @@ import { UmbDataTypeDetailRepository } from '@umbraco-cms/backoffice/data-type';
 import { UmbMediaDetailRepository, UmbMediaTreeRepository } from '@umbraco-cms/backoffice/media';
 import { renameMedia } from '../selection/rename.js';
 import type { UmbraDesktopMediaDetailStore } from '../selection/rename.js';
+import { UmbraDesktopMediaHealthClient } from '../health/health.client.js';
+import type { HealthFolderCleanupAnswer } from '../health/health.client.js';
 
 /**
  * What a manager window asks the server, behind one seam so the elements can be tested without one:
@@ -59,6 +61,12 @@ export interface UmbraDesktopMediaSource {
    * @returns Each folder's parent, the folder's own included; empty when the server did not answer.
    */
   parents?(unique: string): Promise<ReadonlyMap<string, string | null>>;
+  /**
+   * What each folder held to clean up at Media Cleanup's last check, for the window's cleanup line
+   * (design §16.20). Optional, so a source without it shows no line.
+   * @returns The counts, or undefined when the server did not answer.
+   */
+  cleanup?(): Promise<HealthFolderCleanupAnswer | undefined>;
 }
 
 /**
@@ -158,6 +166,11 @@ export class UmbraDesktopMediaServerSource implements UmbraDesktopMediaSource {
   async parents(unique: string): Promise<ReadonlyMap<string, string | null>> {
     const { data } = await this.#tree.requestTreeItemAncestors({ treeItem: { unique, entityType: 'media' } });
     return new Map((data ?? []).map((item) => [item.unique, item.parent.unique]));
+  }
+
+  /** @inheritdoc */
+  async cleanup(): Promise<HealthFolderCleanupAnswer | undefined> {
+    return (await new UmbraDesktopMediaHealthClient().folderCleanup()).data;
   }
 
   /** @inheritdoc */

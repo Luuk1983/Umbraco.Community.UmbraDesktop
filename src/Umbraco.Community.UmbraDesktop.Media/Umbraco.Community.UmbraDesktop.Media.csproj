@@ -16,7 +16,9 @@
 	  <Authors>Luuk Peters</Authors>
 	  <Company>Luuk Peters</Company>
 	  <Copyright>Copyright (c) Luuk Peters</Copyright>
-	  <PackageLicenseExpression>MIT</PackageLicenseExpression>
+	  <!-- A file, not an expression like the other packages: nuget.org only accepts expressions for
+	       licences the OSI or the FSF approve, and the FSL is neither (docs/design/2026-10-28-licensing-design.md). -->
+	  <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 	  <RepositoryType>git</RepositoryType>
 	  <RepositoryUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</RepositoryUrl>
 	  <PackageProjectUrl>https://github.com/Luuk1983/Umbraco.Community.UmbraDesktop</PackageProjectUrl>
@@ -78,11 +80,25 @@
          for the copyright line and licence text in every copy, and the package is one. The build
          also stamps them on the chunks that hold the libraries (backoffice/vite.config.ts). -->
     <None Update="THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="\" />
+    <!-- The licence PackageLicenseFile names, at the package root where it expects it. Update for the
+         same reason as README.md. -->
+    <None Update="LICENSE.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="MinVer" PrivateAssets="all" />
 	  <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+	  <!-- EF Core the Umbraco way, as the Arcade does it (its design D9): Media Health keeps the last
+	       check in tables of its own, so a restart forgets nothing and every server of a site reads
+	       the same answer (#141, design §15). Every Umbraco site already carries the package. -->
+	  <PackageReference Include="Umbraco.Cms.Persistence.EFCore" />
+	  <!-- dotnet ef only, never shipped. -->
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <!-- The test project reaches the engine's parts, which are internal. -->
+	  <InternalsVisibleTo Include="Umbraco.Community.UmbraDesktop.Media.Tests" />
 	</ItemGroup>
 
 	<ItemGroup>

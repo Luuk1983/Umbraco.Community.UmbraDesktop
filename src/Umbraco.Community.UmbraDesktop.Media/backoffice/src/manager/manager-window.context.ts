@@ -5,6 +5,8 @@ import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import { isFolder } from './media-source.js';
 import type { UmbraDesktopMediaSource } from './media-source.js';
 import { printLocation } from './location.js';
+import { UMBRADESKTOP_MEDIA_HEALTH_APP } from '../health/health-app.js';
+import { printHealthLocation, showInMediaCleanup } from '../health/health-location.js';
 import type { UmbraDesktopMediaPlace } from './location.js';
 
 /** The Media Manager app's manifest alias, which `openApp` opens a new window of. */
@@ -75,6 +77,18 @@ export class UmbraDesktopMediaManagerWindowContext extends UmbContextBase {
    */
   openInNewWindow(place: UmbraDesktopMediaPlace): boolean {
     return this.#windows?.openApp(UMBRADESKTOP_MEDIA_MANAGER_APP, { location: printLocation(place) }) ?? false;
+  }
+
+  /**
+   * Open Media Cleanup on a folder's list, from the window's cleanup line (design §16.20). An open
+   * Media Cleanup window is told by event, since the desktop only brings a one-instance app forward;
+   * a new one reads the same location.
+   * @param folderKey The folder's key, or null for the whole library.
+   * @returns Whether the desktop opened or brought forward the window.
+   */
+  reviewInMediaCleanup(folderKey: string | null): boolean {
+    showInMediaCleanup(folderKey);
+    return this.#windows?.openApp(UMBRADESKTOP_MEDIA_HEALTH_APP, { location: printHealthLocation(folderKey) }) ?? false;
   }
 }
 

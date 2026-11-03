@@ -803,11 +803,12 @@ export class UmbraDesktopTaskbarElement extends UmbLitElement {
           <div class="running">
             ${repeat(
               // Owners and ordinary windows only: a floating attached window is drawn inside its
-              // owner's group, right after the owner, and never on its own.
-              this._windows.filter((w) => !w.owner || !this._windows.some((o) => o.id === w.owner)),
+              // owner's group, right after the owner, and never on its own. A dialog has no button at
+              // all: the owner's brings it forward (#179).
+              this._windows.filter((w) => !w.dialog && (!w.owner || !this._windows.some((o) => o.id === w.owner))),
               (w) => w.id,
               (w) => {
-                const floating = this._windows.filter((a) => a.owner === w.id);
+                const floating = this._windows.filter((a) => a.owner === w.id && !a.dialog);
                 if (floating.length === 0) return this.#renderTask(w);
                 // One box around the owner and its floating windows, each still its own button. The
                 // box is the signal that they belong together, not the labels, so it survives the

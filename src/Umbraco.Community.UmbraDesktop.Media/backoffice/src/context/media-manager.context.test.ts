@@ -5,6 +5,10 @@ import type { UmbraDesktopMediaClipboard } from '../clipboard/clipboard.js';
 import { afterPaste, cutKeys, pasteInto, pasteKind } from '../clipboard/clipboard.js';
 import type { UmbraDesktopMediaApi, UmbraDesktopMediaRef } from '../operations/media-api.js';
 import type { UmbraDesktopDragWindowHandle } from '../drag/drag.controller.js';
+import { DEFAULT_GUIDELINES } from '../guidelines/guidelines.js';
+import type { MediaGuidelines } from '../guidelines/guidelines.js';
+import type { CheckedFile } from '../guidelines/check.js';
+import type { OptimizeFilesRequest } from '../shared/optimize-service.js';
 
 /** The Media add-on's desktop context: the clipboard and the operations (plan task 4.5). */
 
@@ -384,6 +388,18 @@ describe('undo', () => {
     expect(shown).to.deep.equal(['raise', 'select banjo']);
   });
 
+  /**
+   * Media Health's Clean up reports "n of m" on the taskbar while hundreds of items go to the bin
+   * (plan Task 1.3), so whoever starts an operation can follow it, not only the Transfers window.
+   */
+  it('tells the caller how far an operation is, as it goes', async () => {
+    const { ctx } = context();
+    const seen: string[] = [];
+    await ctx.trash([ref('banjo', 'products'), ref('people', null, 'folder-type', true)], { onProgress: ({ done, total }) => seen.push(`${done}/${total}`) });
+    expect(seen[0]).to.equal('0/2');
+    expect(seen[seen.length - 1]).to.equal('2/2');
+  });
+
   it('restores what was trashed, and renames back', async () => {
     const { ctx, log } = context();
     await ctx.trash([ref('banjo', 'products')]);
@@ -485,5 +501,85 @@ describe('replacing a file', () => {
     // An empty history undoes nothing and says nothing; a recorded step would have been undone or refused.
     await ctx.undo();
     expect({ notes: notes.length, reloads: reloads.length }).to.deep.equal(before);
+  });
+});
+
+describe('the media guidelines', () => {
+  let hosts: UmbElementControllerHost[] = [];
+  afterEach(() => {
+    for (const host of hosts) host.destroy();
+    hosts = [];
+  });
+
+  /**
+   * The context with a guidelines API that answers as the test says, and an optimizer that records.
+   * @param read What reading answers, one per call.
+   * @param withOptimizer Whether Optimize images is there.
+   * @returns The context and what it did.
+   */
+  function context(read: Array<MediaGuidelines | undefined>, withOptimizer = true) {
+    const requests: OptimizeFilesRequest[] = [];
+    const uploads: Array<{ names: string[]; parent: string | null; followed: boolean }> = [];
+    const reloads: Array<string | null> = [];
+    const host = new UmbElementControllerHost(document.createElement('div'));
+    hosts.push(host);
+    const ctx = new UmbraDesktopMediaManagerContext(host, {
+      api: { item: async () => ({ data: undefined }) } as unknown as UmbraDesktopMediaApi,
+      reload: (unique) => reloads.push(unique),
+      guidelinesApi: { read: async () => read.shift(), write: async () => true },
+      ...(withOptimizer ? { optimizeFiles: async (request: OptimizeFilesRequest) => (requests.push(request), { status: 'finished' as const }) } : {}),
+      uploadInto: async (items, parent, follow) => (uploads.push({ names: items.files.map((file) => file.name), parent, followed: follow }), items.files[0]?.name === 'refused.jpg' ? 0 : items.files.length),
+    });
+    return { ctx, requests, uploads, reloads };
+  }
+
+  /** A checked file that breaks Maximum size. */
+  const big = (name: string): CheckedFile => ({ file: new File(['x'], name), facts: { format: 'jpeg', location: false, animated: false, alphaChannel: false }, kind: 'jpeg', breaks: ['size'] });
+
+  it('reads the guidelines afresh, and falls back to the last read, then the defaults', async () => {
+    const strict = { ...DEFAULT_GUIDELINES, maxSize: { on: true, longestSide: 1200 } };
+    const { ctx } = context([undefined, strict, undefined]);
+    expect(await ctx.guidelines()).to.deep.equal(DEFAULT_GUIDELINES);
+    expect(await ctx.guidelines()).to.deep.equal(strict);
+    expect(await ctx.guidelines()).to.deep.equal(strict);
+  });
+
+  it("reads Umbraco's upload limit once, in bytes, and 0 when it sets none or cannot be read", async () => {
+    const host = new UmbElementControllerHost(document.createElement('div'));
+    hosts.push(host);
+    let reads = 0;
+    const limited = new UmbraDesktopMediaManagerContext(host, { uploadLimitKb: async () => ((reads += 1), 30_000) });
+    expect(await limited.uploadLimit()).to.equal(30_000 * 1024);
+    expect(await limited.uploadLimit()).to.equal(30_000 * 1024);
+    expect(reads).to.equal(1);
+    expect(await new UmbraDesktopMediaManagerContext(host, { uploadLimitKb: async () => null }).uploadLimit()).to.equal(0);
+    expect(await new UmbraDesktopMediaManagerContext(host, { uploadLimitKb: () => Promise.reject(new Error('offline')) }).uploadLimit()).to.equal(0);
+  });
+
+  it('says whether Optimize images can take files', async () => {
+    expect(context([]).ctx.canOptimizeFiles()).to.equal(true);
+    expect(context([], false).ctx.canOptimizeFiles()).to.equal(false);
+  });
+
+  it('hands the files to Optimize images, set from the guidelines, uploading each into the folder and showing it', async () => {
+    const { ctx, requests, uploads, reloads } = context([]);
+    await ctx.optimizeFiles([big('a.jpg')], DEFAULT_GUIDELINES, 'products', 'Products');
+    expect(requests).to.have.length(1);
+    expect(requests[0].destination).to.deep.equal({ name: 'Products' });
+    expect(requests[0].files.map((each) => each.fix)).to.deep.equal([['size']]);
+    expect(await requests[0].upload(new File(['y'], 'a.webp'))).to.deep.equal({ ok: true });
+    // Not followed in the Transfers window: the optimizer's own window shows each upload.
+    expect(uploads).to.deep.equal([{ names: ['a.webp'], parent: 'products', followed: false }]);
+    expect(reloads).to.deep.equal(['products']);
+    const refused = await requests[0].upload(new File(['y'], 'refused.jpg'));
+    expect(refused.ok).to.equal(false);
+    expect(refused.message).to.be.a('string').and.not.equal('');
+  });
+
+  it('uploads files and folders into a folder, and shows it', async () => {
+    const { ctx, uploads, reloads } = context([]);
+    await ctx.upload({ files: [new File(['x'], 'a.jpg')], folders: [] }, 'products');
+    expect(uploads).to.deep.equal([{ names: ['a.jpg'], parent: 'products', followed: true }]);
+    expect(reloads).to.deep.equal(['products']);
   });
 });

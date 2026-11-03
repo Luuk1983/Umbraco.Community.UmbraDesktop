@@ -49,6 +49,10 @@ only folders.
 
 Create and uploads put new items in the folder the window shows.
 
+After a check in [Media Cleanup](media-health.md), a line above the items says what can go in the
+folder, while the check is less than a day old. See
+[See what can go from the Media Manager](media-health.md#see-what-can-go-from-the-media-manager).
+
 ## Items
 
 An item opens beside its window, in Umbraco's own editor: in a pane inside the window when there is
@@ -61,12 +65,13 @@ at a time. Its card has a pink border, so you can see which one it is while you 
   first, and you can stay.
 - To move the item between the pane and a window, select **Pop out** in the pane's header or
   **Dock** in the window. Save or discard your changes first: both are greyed while you have some.
+- To put the item away, select **Hide** in the pane's header. The pane slides back into the window.
 - To create an item, select **Create** in the toolbar, or **Create** in a folder's menu, and choose a
   type. It opens beside the window, in the folder, and its card appears once you save it.
 - To create a folder, select **Create**, then **Folder**. Type its name and select **Create**. It
   appears in the window and in the tree, selected.
 
-Closing the pane or the window asks first when the item has unsaved changes.
+Hiding the pane or closing the window asks first when the item has unsaved changes.
 
 The item's page also has the tools for its file: edit, download, replace and optimize it. See
 [What you can do with a file](media-item.md).
@@ -120,6 +125,10 @@ The Media Manager shares the clipboard with your other programs.
   with the date and time, since a screenshot has no name of its own.
 - To add files or folders, drag them from your computer onto a window, a folder, or a folder in the
   tree. A label says which folder they will go into. Folders keep what is in them.
+
+Files you paste or drop are checked against the site's [media guidelines](media-guidelines.md) first.
+Those that follow them upload at once; the rest are listed in the window, and can be optimized before
+they go.
 
 Pasting a picture you copied in the Media Manager makes a copy of the item, not a second upload.
 Ctrl+V pastes what you copied or cut last: what you copied in the Media Manager, until you go to

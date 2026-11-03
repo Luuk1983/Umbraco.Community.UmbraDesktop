@@ -165,10 +165,19 @@ export const WIN98_LAUNCHER_WIDTH = 450;
 export const WIN98_LAUNCHER_ARRANGE_WIDTH = arrangeWidthFor(WIN98_LAUNCHER_WIDTH, 2 * WIN98_FRAME_BORDER);
 
 /**
- * The path strip's height under this theme, in px.
- *
- * MS Sans Serif is a small face and this theme's other strips are tight, so the path well is shorter than the shared default. Read twice from here and nowhere else: the palette sets
- * `--umbradesktop-path-height` from it and `metrics.pathbarHeight` reports it, so the strip
- * cannot be drawn at one height and paid for at another.
+ * A strip button's height under this theme, in px: Explorer's toolbar button with small icons, which
+ * is what the path strip's Preview and the pane header's buttons are.
  */
-export const WIN98_PATH_HEIGHT = 22;
+export const WIN98_STRIP_BUTTON_HEIGHT = 22;
+
+/**
+ * The path strip's height under this theme, in px: a strip button inside the sunken well's bevel,
+ * top and bottom.
+ *
+ * It was 22 when the strip held only crumbs. Once buttons filled the strip, the bevel left them
+ * 18px tall, the smallest of any theme, with their icons cut to 14px to fit. Read twice from here
+ * and nowhere else: the palette sets `--umbradesktop-path-height` from it and
+ * `metrics.pathbarHeight` reports it, so the strip cannot be drawn at one height and paid for at
+ * another.
+ */
+export const WIN98_PATH_HEIGHT = WIN98_STRIP_BUTTON_HEIGHT + 2 * WIN98_BEVEL_DEPTH;

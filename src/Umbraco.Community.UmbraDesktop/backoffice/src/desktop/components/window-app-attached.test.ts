@@ -53,6 +53,25 @@ const APP: UmbraDesktopApp = {
   minSize: { w: 400, h: 300 },
 };
 
+/** An element app of the same package, opened beside the window by its alias (#141). */
+class DetailsApp extends HTMLElement {
+  /** The owner window, as the desktop tells it. */
+  ownerId?: string;
+}
+customElements.define('probe-beside-details', DetailsApp);
+
+/** The app the owner asks for by alias: hidden from the launcher, as such an app is. */
+const DETAILS: UmbraDesktopApp = {
+  alias: 'probe.details',
+  name: 'Details',
+  icon: 'icon-info',
+  content: { kind: 'element', element: DetailsApp },
+  chromeProfile: 'bare',
+  defaultSize: { w: 320, h: 400 },
+  minSize: { w: 280, h: 300 },
+  hideFromLauncher: true,
+};
+
 /**
  * A path the test server answers that still sits under `/umbraco/section/`, which a request must:
  * the server serves any path as the SPA would, and the frame needs only to be same-origin.
@@ -84,6 +103,7 @@ async function desk() {
   const manager = new UmbraDesktopWindowManagerContext(host);
   new UmbContextProvider(wrapper, UMBRADESKTOP_WINDOW_MANAGER_CONTEXT, manager).hostConnected();
   manager.clampToBounds({ w: 1800, h: 1000 });
+  manager.useApps(() => [APP, DETAILS]);
   manager.open(APP);
   const id = manager.getWindows()[0].id;
   manager.move(id, 20, 20);
@@ -167,6 +187,34 @@ it("tells the app each open key's page, then nothing once it closes", async func
   app.close('item');
   await until(() => !('item' in app.attached));
   expect(app.attached).to.deep.equal({});
+});
+
+it("opens one of the app's own element apps beside the window, by its alias (#141)", async function () {
+  this.timeout(TIMEOUT_MS);
+  const { manager, id, element, app } = await desk();
+  app.open({ key: 'details', app: 'probe.details', name: 'banner.png', icon: 'icon-picture' });
+  const pane = manager.getWindows().find((w) => w.id === id)?.panes?.[0];
+  expect(pane?.app).to.deep.include({ name: 'banner.png', icon: 'icon-picture', chromeProfile: 'bare' });
+  expect(pane?.app.content).to.deep.include({ kind: 'element', element: DetailsApp });
+  let details: DetailsApp | null = null;
+  await until(() => !!(details = element.renderRoot.querySelector('umbradesktop-window-pane')?.shadowRoot?.querySelector('umbradesktop-app-host')?.querySelector('probe-beside-details') ?? null));
+  expect(details!.ownerId, 'the element is told whose it is').to.equal(id);
+  await until(() => app.attached.details === 'probe.details');
+  expect(app.attached).to.deep.equal({ details: 'probe.details' });
+  app.open({ key: 'details', app: 'probe.details', name: 'cat.png', icon: 'icon-picture' });
+  expect(manager.getWindows().find((w) => w.id === id)?.panes, 'asked again, it is renamed, not opened twice').to.have.lengthOf(1);
+  expect(manager.getWindows().find((w) => w.id === id)?.panes?.[0].app.name).to.equal('cat.png');
+  app.close('details');
+  await until(() => !('details' in app.attached));
+  expect(app.attached).to.deep.equal({});
+});
+
+it('opens nothing for an app the person cannot launch', async function () {
+  this.timeout(TIMEOUT_MS);
+  const { manager, id, app } = await desk();
+  app.open({ key: 'details', app: 'probe.unknown' });
+  expect(manager.getWindows().find((w) => w.id === id)?.panes ?? []).to.have.lengthOf(0);
+  expect(manager.getWindows()).to.have.lengthOf(1);
 });
 
 it('refuses a path off the backoffice', async function () {

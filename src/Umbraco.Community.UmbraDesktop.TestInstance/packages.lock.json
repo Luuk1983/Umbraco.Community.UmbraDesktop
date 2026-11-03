@@ -2890,6 +2890,7 @@
       "umbraco.community.umbradesktop.media": {
         "type": "Project",
         "dependencies": {
+          "Umbraco.Cms.Persistence.EFCore": "[18.1.0, 18.99999999.0]",
           "Umbraco.Community.UmbraDesktop": "[1.0.0, )",
           "Umbraco.Community.UmbraDesktop.Services.Media": "[1.0.0, )"
         }
