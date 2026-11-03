@@ -11,6 +11,7 @@ import { UMBRADESKTOP_MEDIA_HEALTH_DETAILS_APP } from './health-app.js';
 import type { HealthKind } from './health-model.js';
 import { KEY_NAMES, cleanupState, result, textOf } from './health.test-helper.js';
 import { allowResizeObserverLoop } from './health.test-helper.js';
+import { UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, printHealthLocation } from './health-location.js';
 
 allowResizeObserverLoop();
 
@@ -340,6 +341,37 @@ describe('the Media Health window', () => {
       fire(element, 'umbradesktop-health-overview', 'health-open-grid', { folderKey: 'p' });
       await settle();
       expect([listOf(element).chip, listOf(element).folderKey]).to.deep.equal(['unused', 'p']);
+    });
+
+    it('opens on the list for the folder its location names, once the result is there, and clears the location (design §16.20)', async () => {
+      const folder = '0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0';
+      const { element, set, settle, screen } = await healthWindow(idle());
+      const reported: string[] = [];
+      element.addEventListener('umbradesktop-app-location', (event) => reported.push((event as CustomEvent).detail.location));
+      element.location = printHealthLocation(folder);
+      await settle();
+      expect(screen(), 'no result yet').to.equal('start');
+      await set(idle({ result: result() }));
+      expect(screen()).to.equal('list');
+      expect(listOf(element).folderKey).to.equal(folder);
+      expect(reported, 'a reload reopens on the overview').to.deep.equal(['']);
+    });
+
+    it("opens the whole library's list for the root, on its first kind with anything in it", async () => {
+      const { element, settle } = await healthWindow(idle({ result: result() }));
+      element.location = printHealthLocation(null);
+      await settle();
+      expect([listOf(element).chip, listOf(element).folderKey]).to.deep.equal(['unused', undefined]);
+    });
+
+    it('goes to a folder an open window is asked for from the Media Manager, and stops listening once closed', async () => {
+      const folder = '0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0';
+      const { element, settle } = await healthWindow(idle({ result: result() }));
+      document.dispatchEvent(new CustomEvent(UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, { detail: { location: printHealthLocation(folder) } }));
+      await settle();
+      expect(listOf(element).folderKey).to.equal(folder);
+      element.remove();
+      expect(() => document.dispatchEvent(new CustomEvent(UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, { detail: { location: printHealthLocation(null) } }))).not.to.throw();
     });
 
     it('makes a clicked row current and shows it in the desktop’s attached pane, then closes the pane on the way out', async () => {

@@ -651,19 +651,63 @@ Scenes 8 and 9. One session, after step 2.
 
 ---
 
-## Step 4: Facts in the Manager (outline only; §16.8's step 5)
+## Step 4: One cleanup line in the Manager (§16.20)
 
-§10's steps 4 and 5, unchanged except that folders match by key (§15). Plan it in its own session.
+Replaces the outline that was here (§10's steps 4 and 5): no sizes, no Health view, no Properties.
+Small enough for one session with no plan of its own beyond this. Mock:
+[`mockups/media-health/step4.html`](mockups/media-health/step4.html).
 
-- **Health list view**: a collection view of the add-on's, beside Grid and List, with Name, Size,
-  Used on; values from `UMBRADESKTOP_MEDIA_HEALTH_CONTEXT`'s `result.items` by key; absent until a
-  check has been loaded in this session.
-- **Folder tags**: size and unused count on folder cards, by key from `foldersOf`-style sums over
-  every level, not only top-level; drawn the way the Manager marks cut and drag.
-- **Properties** on a folder: one item menu entry; size, items, folders, last change, the folder's
-  own unused and oversized counts, and **Open Media Health** opening the grid filtered to it (the
-  `health-open-grid` shape of Task 1.4 through a location string for the Health app).
-- Tests first as above; verify in a real backoffice on a library with nested folders.
+### Task 4.1: Counts per folder on the server
+
+**Files:** `Health/MediaFolderCleanup.cs` (pure, + tests), `Health/MediaHealthStore.cs` (if a read is
+missing), `Health/Api/MediaHealthController.cs`, `Health/Api/MediaHealthApiModels.cs`; tests in
+`...Media.Tests/Health/`.
+
+- `GET folders/cleanup` → `{ checkId, checkedUtc, folders: [{ key, unused, oversized }] }`, only
+  folders with something, `key` null for the library. Summed over every level through `ParentKey`,
+  items and folders alike (a place is any item with items under it).
+- An item is unused when nothing uses it; oversized when used, an image and over the limit; never
+  both. Active keeps (`Ended == null`) are left out.
+- `OversizedBytes` and the image extensions as C# constants; a C# test pins them, and a TypeScript
+  test pins `OVERSIZED_BYTES` and `IMAGE_EXTENSIONS` to the same values.
+- Media section policy, as the controller. No `ProducesResponseType(403)`.
+- Failing tests first: nested sums (an item two levels down counts in both folders and the library);
+  an item under a place counts in the place; unused before oversized; a kept item is not counted, an
+  ended keep is; a used 3 MB PDF is not oversized; no check answers an empty list.
+
+### Task 4.2: Media Cleanup opens on a folder's list
+
+**Files:** `health/health-location.ts` (+ test), `health/media-health.element.ts` (+ test).
+
+- A location `folder=<key|root>`: parsed as the Manager's is (keys only), the window opens its list
+  for that folder and below, on the first tab with something in it, as a click in Storage by folder
+  does. Back returns to the overview.
+- Failing tests first: a bad key is ignored; the list opens on Oversized when Unused is empty there.
+
+### Task 4.3: The line in the Manager window
+
+**Files:** `manager/cleanup-line.ts` (pure, + test), `manager/manager.element.ts` (+ test),
+`localization/en.ts`, `nl.ts`.
+
+- Read `folders/cleanup` once when the window opens; nothing after. Show the line for the place shown
+  when the check is not stale (`isStale`), the counts are not both zero, the place is not the bin and
+  the line was not dismissed for this check. Hide it when the check goes stale while the window is
+  open (checked on each place change).
+- Words: one for each of unused only, oversized only, both, at the root and in a folder, with the
+  check's day said as the overview says it (`checkedOn`). **Review in Media Cleanup** opens the app
+  with Task 4.2's location; **Dismiss** remembers the check id in the window.
+- In the window's grid above the folder host, so core's view moves down and nothing is covered.
+- Failing tests first: no line without a check, over a day old, in the bin, at zero, after Dismiss;
+  the words for each case; one request per window, none on a place change.
+
+### Task 4.4: Verify and document
+
+- Real backoffice: a folder with unused items shows the line; Review opens Media Cleanup's list there;
+  Dismiss hides it; a check moved over a day into the past (table edit) shows none. All five themes.
+  Read the network panel: one `folders/cleanup` per window open.
+- Measure `folders/cleanup` on a large library (generate about 20,000 items on the test instance) and
+  write the time in the design doc; add a cache only if it is slow.
+- `docs/user/media-health.md`: a short section on the line. Design doc §16.21 "Step 4 as built".
 
 ## Definition of done, per step
 
@@ -684,7 +728,8 @@ marketplace JSON's screenshot after step 1, README unchanged. Nothing committed.
 - The server changes are small: a few facts per item, the media count, and one Keep table. Undo
   reuses the Manager's existing restore. Optimize images learns to tell its caller how far it is.
 - The check and Clean up both show their progress on the taskbar and title bar.
-- Facts inside the Manager are only outlined; they get their own plan.
+- Then one line in the Media Manager that says a folder has something to clean up, only while the
+  last check is under a day old, with a button into Media Cleanup. No sizes in the Manager (§16.20).
 
 Decided by Luuk on 2026-10-27: a keep applies to every list; Optimize images reports progress; no
 Review.

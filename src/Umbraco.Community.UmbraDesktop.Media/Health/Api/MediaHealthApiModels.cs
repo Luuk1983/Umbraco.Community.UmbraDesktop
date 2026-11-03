@@ -115,6 +115,18 @@ public sealed record MediaHealthFolderResponseModel(Guid Key, string Name, Guid?
 /// <param name="Folders">The folders.</param>
 public sealed record MediaHealthFoldersResponseModel(IReadOnlyList<MediaHealthFolderResponseModel> Folders);
 
+/// <summary>What one folder holds that can go, in it and below, for the Manager's cleanup line (design §16.20).</summary>
+/// <param name="Key">The folder's key, or null for the whole library.</param>
+/// <param name="Unused">Items no page uses.</param>
+/// <param name="Oversized">Used images over the oversized limit.</param>
+public sealed record MediaFolderCleanupCountResponseModel(Guid? Key, int Unused, int Oversized);
+
+/// <summary>The last check's counts per folder, with which check they are from, so the Manager can tell when they no longer count.</summary>
+/// <param name="CheckId">The check's number, or null before any check.</param>
+/// <param name="CheckedUtc">When it finished, or null before any check.</param>
+/// <param name="Folders">The folders with something to clean up, the library's row among them.</param>
+public sealed record MediaFolderCleanupResponseModel(int? CheckId, DateTime? CheckedUtc, IReadOnlyList<MediaFolderCleanupCountResponseModel> Folders);
+
 /// <summary>One orphaned file.</summary>
 /// <param name="RelativePath">Its path under the media folder: what a delete names.</param>
 /// <param name="Url">Where the site serves it.</param>

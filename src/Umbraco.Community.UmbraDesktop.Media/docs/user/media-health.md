@@ -234,6 +234,22 @@ Anything that did not go is listed with the reason, for example a file an item o
 The items are in the same recycle bin as in the Media section, so they can also be restored from
 there later.
 
+## See what can go from the Media Manager
+
+When you open a folder in the [Media Manager](media-manager.md), a line above its items says what the
+last check found to clean up in that folder and the folders under it, such as **2 unused items and 1
+oversized image in this folder and the folders under it, found by the check of today, 08:12.** At the
+top of the library it speaks for the whole library.
+
+- To see them, select **Review in Media Cleanup**. Media Cleanup opens on its list for that folder.
+- To hide the line in that window, select **Dismiss**. It stays away until the next check.
+
+The line only shows while the last check is less than a day old, the same rule that greys out
+**Clean up**. With no check, an older one, or nothing to clean up, the Media Manager shows nothing
+extra. Kept items are not counted, and orphaned files belong to no folder, so they are never in the
+line. The Media Manager reads the counts once when its window opens, from the stored check; it never
+checks anything itself.
+
 ## What the check reads
 
 The check reads the media library once, a page at a time, and Umbraco's tracked references once, so
