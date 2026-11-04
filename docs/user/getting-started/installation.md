@@ -9,23 +9,29 @@ sidebar_position: 1
 
 ## Prerequisites
 
-- Umbraco 18.1 or later
-- .NET 10
+- Umbraco 19.0.0-beta1 or later
+- .NET 11
 
-UmbraDesktop has a release line for each Umbraco major: 18.x for Umbraco 18 and 17.x for Umbraco 17.
-This guide is for 18.x.
+UmbraDesktop has a release line for each Umbraco major: 19.x for Umbraco 19, 18.x for Umbraco 18
+and 17.x for Umbraco 17. This guide is for 19.x, which is in beta while Umbraco 19 is.
 
 ## Install the package
 
-To install it on Umbraco 18, run:
+To install it on Umbraco 19, run:
+
+```bash
+dotnet add package Umbraco.Community.UmbraDesktop --version "19.*-*"
+```
+
+The `-*` takes a prerelease too, which every 19.x release is for now. Without `--version`, NuGet
+picks the newest stable release, which is not a 19.x release yet, and the restore then fails on a
+version conflict with Umbraco 19.
+
+To install it on Umbraco 18.1 or later instead, run:
 
 ```bash
 dotnet add package Umbraco.Community.UmbraDesktop --version "18.*-*"
 ```
-
-The `-*` takes a prerelease too, which the first 18.x releases are. Without `--version`, NuGet picks
-the newest stable release, which is a 17.x release until 18.x is stable, and the restore then fails
-on a version conflict with Umbraco 18.
 
 To install it on Umbraco 17.6 or later instead, run:
 

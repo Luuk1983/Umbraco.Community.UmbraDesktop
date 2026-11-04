@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 		<IsPackable>false</IsPackable>
@@ -17,8 +17,15 @@
     <PackageReference Include="Umbraco.Community.AdvancedPermissions" />
     <PackageReference Include="Umbraco.TheStarterKit" />
     <PackageReference Include="uSync" />
-    <!-- Umbraco's commercial packages. Every one is here so the catalogue's commercial entries
-         resolve against the real registered extensions rather than being taken on trust. -->
+  </ItemGroup>
+
+  <!-- Umbraco's commercial packages and Umbraco AI. Every one is here so the catalogue's commercial
+       entries resolve against the real registered extensions rather than being taken on trust.
+       Switched off on Umbraco 19 (issue #196): on 2026-11-04 none of them has a 19 release, not even a
+       beta, and an 18 build cannot load on 19. Turn them back on, with "19.*" versions in
+       Directory.Packages.props, as they ship. Until then the catalogue's commercial entries and the AI
+       chat are untested on 19. -->
+  <ItemGroup Condition="'$(UmbraDesktopCommercialPackages)' == 'true'">
     <PackageReference Include="Umbraco.Forms" />
     <PackageReference Include="Umbraco.Deploy.OnPrem" />
     <PackageReference Include="Umbraco.Workflow" />
@@ -31,6 +38,9 @@
     <PackageReference Include="Umbraco.AI.Agent.UI" />
     <PackageReference Include="Umbraco.AI.Agent.Copilot.Workspace" />
     <PackageReference Include="Umbraco.AI.Anthropic" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Umbraco.Community.UmbraDesktop\Umbraco.Community.UmbraDesktop.csproj" />
     <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Entertainment\Umbraco.Community.UmbraDesktop.Entertainment.csproj" />
     <ProjectReference Include="..\Umbraco.Community.UmbraDesktop.Accessories\Umbraco.Community.UmbraDesktop.Accessories.csproj" />

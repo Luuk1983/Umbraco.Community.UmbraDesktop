@@ -59,11 +59,11 @@ const MEDIA_PREFIX = '/media/';
  * Two destinations, treated differently on purpose:
  *
  * - **Data calls go to the proxy, as the local user.** The proxy is this instance's own endpoint, so
- *   the call keeps its credentials and its `Bearer [redacted]` header, which is what the local
- *   backoffice authenticates with. The proxy then calls the remote as the connection's API user, a
- *   token the browser never sees.
- * - **Media goes straight to the remote, anonymously.** Media is public on every instance, an image
- *   element cannot carry the bearer header the proxy would need, and the remote's imaging endpoint
+ *   the call keeps its credentials: since Umbraco 19 that is the backoffice's auth cookie, which a
+ *   same-origin call carries by itself (on 17 and 18 it was a bearer header). The proxy then calls
+ *   the remote as the connection's API user, a token the browser never sees.
+ * - **Media goes straight to the remote, anonymously.** Media is public on every instance, the local
+ *   cookie means nothing to the remote, and the remote's imaging endpoint
  *   already answers with absolute URLs to itself. So relative media paths are pointed at the remote's
  *   origin and sent with no credentials.
  * @param win The frame's window, patched in place.
@@ -167,7 +167,11 @@ function patchXhr(win: ShimWindow, options: RemoteShimOptions): void {
   const proto = win.XMLHttpRequest.prototype as XMLHttpRequest & Record<string, unknown>;
   const originalOpen = proto.open as (...args: unknown[]) => void;
   const originalSetHeader = proto.setRequestHeader;
-  /** Requests sent anonymously, so their bearer header can be dropped. Weak so it never holds one. */
+  /**
+   * Requests sent anonymously, so any authorization header is dropped. Umbraco 19 sets none (the
+   * cookie authenticates, and `withCredentials = false` keeps it home); kept for code that still
+   * sets one. Weak so it never holds a request.
+   */
   const anonymous = new WeakSet<XMLHttpRequest>();
 
   proto.open = function (this: XMLHttpRequest, method: string, rawUrl: string | URL, ...rest: unknown[]) {

@@ -11,7 +11,7 @@ export default {
     appUsers: 'Users',
     appMembers: 'Members',
     appLogViewer: 'Log Viewer',
-    appExamineManagement: 'Examine Management',
+    appSearchIndexes: 'Search Indexes',
     appHealthCheck: 'Health Check',
     appProfiling: 'Profiling',
     appSettings: 'Settings',

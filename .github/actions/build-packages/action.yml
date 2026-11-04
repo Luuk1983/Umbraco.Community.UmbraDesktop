@@ -15,11 +15,12 @@ runs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x'
+        # The SDK is pinned in global.json: Umbraco 19 is .NET 11, still a release candidate.
+        global-json-file: global.json
 
     # cache-dependency-path has to name every lock file: with one package.json per shipped
     # package, the default single-file lookup would key the cache on the host alone and hand the
-    # add-ons a cache that has nothing to do with them. Node 24 because @umbraco-cms/backoffice 18
+    # add-ons a cache that has nothing to do with them. Node 24 because @umbraco-cms/backoffice 19
     # declares node >=24.13 and npm >=11 in its engines.
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -37,7 +38,7 @@ runs:
     # Safe to key on the lock files because RestorePackagesWithLockFile is on repo-wide
     # (src/Directory.Build.props), so every packages.lock.json is committed and exact. They
     # are named rather than globbed: a `**` glob would pull in the test instance's lock file, and
-    # its floating "18.*" dependencies would then throw this cache away for a change to a project
+    # its floating "19.*-*" dependencies would then throw this cache away for a change to a project
     # that contributes nothing to either package.
     - name: Cache NuGet packages
       uses: actions/cache@v4
@@ -47,7 +48,7 @@ runs:
         restore-keys: nuget-${{ runner.os }}-
 
     # Per project rather than by solution, and deliberately. The solution also holds the test
-    # instance, whose ten floating "18.*" dependencies (Umbraco itself plus every commercial
+    # instance, whose floating "19.*-*" dependencies (Umbraco itself, and on 18 every commercial
     # package the catalogue is exercised against) add ~120 packages and can float to a version
     # that no longer compiles. In a release that would fail the run after the tag is already
     # public, for a reason unrelated to anything being shipped. CI builds the whole solution in a
@@ -179,8 +180,8 @@ runs:
         echo "Package $version, Umbraco floor $floor"
         [ "${version%%.*}" = "${floor%%.*}" ] || { echo "::error::package $version is for Umbraco ${version%%.*} but is built against Umbraco $floor. Tag v${floor%%.*}.x releases from this branch, and v${version%%.*}.x from that major's own branch (RELEASE.md)"; exit 1; }
 
-    # Every add-on has to require this release of the host, up to the last 18: "[<host version>,
-    # 18.99999999.0]". NuGet packs a ProjectReference as a bare ">= version" with no ceiling, and the
+    # Every add-on has to require this release of the host, up to the last 19: "[<host version>,
+    # 19.99999999.0]". NuGet packs a ProjectReference as a bare ">= version" with no ceiling, and the
     # bound comes from src/Directory.Build.targets, which hooks NuGet's private
     # `_GetProjectReferenceVersions`. An SDK update can rename or reshape that target without a word,
     # and the pack would carry on succeeding with an unbounded dependency. This is where that shows.

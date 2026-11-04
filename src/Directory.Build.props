@@ -6,22 +6,21 @@
 		<NuGetAuditMode>direct</NuGetAuditMode>
 		<!-- The highest version any shipped dependency may reach: every Umbraco.Cms range in
 		     Directory.Packages.props and every add-on's range on the host (Directory.Build.targets).
-		     18.99999999 rather than "< 19.0.0": NuGet orders 19.0.0-rc.1 before 19.0.0, so an
+		     19.99999999 rather than "< 20.0.0": NuGet orders 20.0.0-rc.1 before 20.0.0, so an
 		     exclusive 19.0.0 admits every 19 prerelease, while this stops below every 19 version. A
 		     plain stable number, because a "-0" bound packs and then fails the push. This branch is
-		     Umbraco 18 (each major has its own, RELEASE.md), so the ceiling moves only when this
-		     branch moves to the next major, to 19.99999999. -->
-		<UmbraDesktopUmbracoMajorCeiling>18.99999999</UmbraDesktopUmbracoMajorCeiling>
+		     Umbraco 19 (each major has its own, RELEASE.md), so the ceiling moves only when this
+		     branch moves to the next major, to 20.99999999. -->
+		<UmbraDesktopUmbracoMajorCeiling>19.99999999</UmbraDesktopUmbracoMajorCeiling>
 
 		<!-- Versioning, once for all six packages: MinVer, from this repository's "v*" tags, so every
 		     package carries the same version off one tag (design D13). Only projects that reference
 		     MinVer read these. The prefix matters: without it MinVer recognises only bare "18.0.0"-style
 		     tags, ignores every "v18.0.0" and versions the package 18.0.0-alpha.0. The package major
-		     tracks the Umbraco major and this branch is Umbraco 18, so the minimum is 18.0: an untagged
-		     build is 18.0.0-alpha.0.N until the first v18 tag, and a v17 tag merged up from v17/main
-		     never wins (RELEASE.md, "Versioning"). -->
+		     tracks the Umbraco major and this branch is Umbraco 19, so the minimum is 19.0: an untagged
+		     build is 19.0.0-alpha.0.N until the first v19 tag, and a v18 tag merged up never wins (RELEASE.md, "Versioning"). -->
 		<MinVerTagPrefix>v</MinVerTagPrefix>
 		<MinVerAutoIncrement>minor</MinVerAutoIncrement>
-		<MinVerMinimumMajorMinor>18.0</MinVerMinimumMajorMinor>
+		<MinVerMinimumMajorMinor>19.0</MinVerMinimumMajorMinor>
 	</PropertyGroup>
 </Project>

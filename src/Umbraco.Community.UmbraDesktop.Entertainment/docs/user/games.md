@@ -32,8 +32,9 @@ the group is not there at all.
 
 Prerequisites:
 
-- Umbraco 18.1 or later (a 17.x release of this package for Umbraco 17.6 or later)
-- .NET 10
+- Umbraco 19.0.0-beta1 or later (an 18.x release of this package for Umbraco 18.1 or later, a 17.x
+  release for Umbraco 17.6 or later)
+- .NET 11
 - UmbraDesktop, the same version as this package or any later one of the same major, installed automatically
 
 ## Play

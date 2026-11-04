@@ -833,11 +833,12 @@ export class UmbraDesktopMediaManagerContext extends UmbContextBase {
 
   /**
    * Core's temporary file configuration's `maxFileSize`, which is what its own upload checks.
+   * No wait for the repository first: since Umbraco 19 `part()` defers until the configuration is
+   * loaded, and `initialized` is gone.
    * @returns The limit in KB, or null or undefined.
    */
   async #readUploadLimitKb(): Promise<number | null | undefined> {
     const repository = new UmbTemporaryFileConfigRepository(this);
-    await repository.initialized;
     const observer = this.observe(repository.part('maxFileSize'));
     const kb = await observer.asPromise();
     observer.destroy();

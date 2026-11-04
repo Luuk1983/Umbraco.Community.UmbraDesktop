@@ -33,7 +33,7 @@ public class DesktopConnectionStatusServiceLocalTests
 
         var information = Substitute.For<IServerInformationService>();
         information.GetServerInformation().Returns(
-            new ServerInformation(version ?? new SemVersion(17, 6, 2), TimeZoneInfo.Utc, mode));
+            new ServerInformation(version ?? new SemVersion(17, 6, 2), TimeZoneInfo.Utc, mode, isDebugMode: false));
 
         var runtimeState = Substitute.For<IRuntimeState>();
         runtimeState.Level.Returns(level);

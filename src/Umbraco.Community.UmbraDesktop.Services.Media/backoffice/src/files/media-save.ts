@@ -322,7 +322,7 @@ function copyDeps(host: UmbControllerHost): CopyDeps {
       const { data: scaffold } = await media.createScaffold({
         unique: UmbId.new(),
         mediaType: item.mediaType,
-        variants: [{ culture: null, segment: null, createDate: null, updateDate: null, flags: [], name: item.name }],
+        variants: [{ culture: null, createDate: null, updateDate: null, flags: [], name: item.name }],
         values: item.values as never,
       });
       if (!scaffold) return { ok: false };
@@ -378,7 +378,7 @@ async function createItem(
   const { data: scaffold } = await media.createScaffold({
     unique,
     mediaType: { unique: mediaType.unique, collection: null },
-    variants: [{ culture: null, segment: null, createDate: null, updateDate: null, flags: [], name }],
+    variants: [{ culture: null, createDate: null, updateDate: null, flags: [], name }],
     values: [
       {
         editorAlias: '',
