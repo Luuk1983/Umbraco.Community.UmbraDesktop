@@ -476,55 +476,27 @@ const paste: UmbExtensionManifest = {
   ] as never,
 };
 
-/** In core's selection bar of a manager window's media collection, beside core's own actions. */
-const inManagerSelectionBar = [
-  { alias: 'Umb.Condition.CollectionAlias', match: 'Umb.Collection.Media' },
-  { alias: UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION },
-] as never;
-
-const bulkCut: UmbExtensionManifest = {
-  type: 'entityBulkAction',
-  kind: 'default',
-  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.BulkCut`,
-  name: 'UmbraDesktop Cut selection',
-  weight: 40,
-  api: () => import('./manager/actions/bulk-cut.action.js'),
-  forEntityTypes: ['media'],
-  meta: { label: '#umbraDesktopMedia_cut', icon: 'icon-cut' },
-  conditions: inManagerSelectionBar,
-};
-
-const bulkCopy: UmbExtensionManifest = {
-  type: 'entityBulkAction',
-  kind: 'default',
-  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.BulkCopy`,
-  name: 'UmbraDesktop Copy selection',
-  weight: 35,
-  api: () => import('./manager/actions/bulk-copy.action.js'),
-  forEntityTypes: ['media'],
-  meta: { label: '#umbraDesktopMedia_copy', icon: 'icon-clipboard-copy' },
-  conditions: inManagerSelectionBar,
-};
-
-/** Copy to, next to core's Move to, so copying never needs a key (design §5). */
-const copyTo: UmbExtensionManifest = {
-  type: 'entityBulkAction',
-  kind: 'default',
-  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.CopyTo`,
-  name: 'UmbraDesktop Copy to',
-  weight: 21,
-  api: () => import('./manager/actions/copy-to.action.js'),
-  forEntityTypes: ['media'],
-  meta: { label: '#umbraDesktopMedia_copyTo', icon: 'icon-documents' },
-  conditions: inManagerSelectionBar,
+/**
+ * The selection bar in a Manager window holds only what has no other way in (17.5.0-rc.1 run, owner
+ * 2026-11-04): with an item open beside the window, seven buttons did not fit and Trash went out of
+ * sight. So the Manager adds no Cut, Copy or Copy to there (each item's menu, Ctrl+X, Ctrl+C and a
+ * Ctrl drag do those), and this entry point takes core's Move to out of it, since dragging and cut and
+ * paste move items in a Manager window. A start-up step because the manifest is core's: it stays in
+ * the Media section, which has no other way to move.
+ */
+const selectionBar: UmbExtensionManifest = {
+  type: 'backofficeEntryPoint',
+  alias: `${UMBRADESKTOP_MEDIA_ALIAS}.SelectionBar`,
+  name: 'UmbraDesktop Media selection bar',
+  js: () => import('./manager/selection-bar.entrypoint.js'),
 };
 
 /**
  * Optimize images (#139, design §4): resize, convert and strip the metadata of the selection, in a
  * window of the media service's. In core's selection bar of any media collection on the desktop, a
  * Media Manager window's and the Media section window's alike, so not the in-manager condition; for
- * someone with the Media section, as Edit image. Weight 15: after the Manager's Copy to (21) and core's
- * Move to (20), before core's Trash (10), so the two that move items stay together and Trash stays last.
+ * someone with the Media section, as Edit image. Weight 15: after core's Move to (20), before core's
+ * Trash (10), so Trash stays last.
  */
 const optimizeImages: UmbExtensionManifest = {
   type: 'entityBulkAction',
@@ -600,9 +572,7 @@ export const manifests: Array<UmbExtensionManifest> = [
   cut,
   copy,
   paste,
-  bulkCut,
-  bulkCopy,
-  copyTo,
+  selectionBar,
   optimizeImages,
   renameDialog,
   docs,

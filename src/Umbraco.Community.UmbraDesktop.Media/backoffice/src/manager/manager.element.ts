@@ -20,6 +20,9 @@ import { cleanupLineOf } from './cleanup-line.js';
 import type { CleanupLine } from './cleanup-line.js';
 import { checkedOn } from '../health/health-model.js';
 import type { HealthFolderCleanupAnswer } from '../health/health.client.js';
+import { UMBRADESKTOP_MEDIA_HEALTH_CONTEXT } from '../health/media-health.context.js';
+import { UMB_ACTION_EVENT_CONTEXT } from '@umbraco-cms/backoffice/action';
+import { UmbEntityUpdatedEvent } from '@umbraco-cms/backoffice/entity-action';
 import { refsOf } from './actions/held-items.js';
 import { cutKeys } from '../clipboard/clipboard.js';
 import { UMBRADESKTOP_MEDIA_MANAGER_CONTEXT } from '../context/media-manager.context.js';
@@ -216,6 +219,12 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
   @state()
   private _cleanup?: HealthFolderCleanupAnswer;
 
+  /**
+   * Media Cleanup's result as this window last saw it, so only a new one reads the counts again.
+   * Unset until the first is seen, which is the one the counts read on opening already reflect.
+   */
+  #cleanupResult?: { seen: unknown };
+
   /** The check whose cleanup line was dismissed in this window, which keeps it away until a newer one. */
   @state()
   private _cleanupDismissed?: number;
@@ -358,9 +367,18 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
         'umbradesktopClipboard',
       );
     });
+    this.consumeContext(UMB_ACTION_EVENT_CONTEXT, (events) => {
+      this.#actionEvents?.removeEventListener(UmbEntityUpdatedEvent.TYPE, this.#onEntityUpdated);
+      this.#actionEvents = events ?? undefined;
+      this.#actionEvents?.addEventListener(UmbEntityUpdatedEvent.TYPE, this.#onEntityUpdated);
+    });
+    this.consumeContext(UMBRADESKTOP_MEDIA_HEALTH_CONTEXT, (health) => {
+      if (!health) return;
+      this.observe(health.state, (state) => this.#cleanupResultChanged(state.result), 'umbradesktopCleanupResult');
+    });
     if (!this.#placed) {
       this.#placed = true;
-      void this.source.cleanup?.().then((answer) => (this._cleanup = answer));
+      this.#readCleanup();
       const { place, view, select } = parseLocation(this.location);
       this._place = place;
       this._view = view;
@@ -395,6 +413,8 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
     this.#selectTimers = [];
     this.#leaveDrag?.();
     this.#leaveDrag = undefined;
+    this.#actionEvents?.removeEventListener(UmbEntityUpdatedEvent.TYPE, this.#onEntityUpdated);
+    this.#actionEvents = undefined;
     this.removeEventListener('click', this.#onClick);
     this.removeEventListener('auxclick', this.#onClick);
     this.removeEventListener('mousedown', this.#onMouseDown);
@@ -1180,6 +1200,44 @@ export class UmbraDesktopMediaManagerElement extends UmbLitElement {
       <umbradesktop-media-selection-box></umbradesktop-media-selection-box>
       ${this.#renderDropLabel()} ${this.#renderHeldBack()}
     `;
+  }
+
+  /** Core's action event context on this page, while the window listens to it. */
+  #actionEvents?: EventTarget;
+
+  /**
+   * An item changed on the server: when it is the one open beside this window, name the pane after it
+   * again and reload the folder, so a rename saved in the pane shows on the pane's title and on its
+   * card (17.5.0-rc.1 run, owner 2026-11-04). The pane is another backoffice, so its save reaches this
+   * page only as the server's change, which the desktop announces here as core's event. Only the open
+   * item reloads the folder: an update to every item reloading it is the storm the desktop avoids.
+   * @param event Core's `UmbEntityUpdatedEvent`.
+   */
+  #onEntityUpdated = (event: Event): void => {
+    const unique = (event as UmbEntityUpdatedEvent).getUnique?.();
+    const key = openKeyFrom(this.attached);
+    if (!key || typeof unique !== 'string' || unique.toLowerCase() !== key) return;
+    void this.#nameOpenItem(key);
+    this.#reloadShown();
+  };
+
+  /** Read what each folder holds to clean up, for the cleanup line. One small request, one row per folder. */
+  #readCleanup(): void {
+    void this.source.cleanup?.().then((answer) => (this._cleanup = answer));
+  }
+
+  /**
+   * Media Cleanup's result changed: read the counts again. A check, a Clean up, a Keep and an Undo each
+   * give it a new result, and those are the moments the counts change; a window open through a check
+   * kept the line it opened with until then (17.5.0-rc.1 run, owner 2026-11-04). The first result seen
+   * is the one the counts read on opening already reflect, so it reads nothing.
+   * @param result The result now, compared by identity: the context makes a new one for each change.
+   */
+  #cleanupResultChanged(result: unknown): void {
+    const first = !this.#cleanupResult;
+    if (!first && this.#cleanupResult!.seen === result) return;
+    this.#cleanupResult = { seen: result };
+    if (!first) this.#readCleanup();
   }
 
   /**

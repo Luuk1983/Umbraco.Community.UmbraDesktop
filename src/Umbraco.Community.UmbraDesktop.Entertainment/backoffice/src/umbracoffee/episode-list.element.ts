@@ -241,23 +241,37 @@ export class UmbraCoffeeEpisodeListElement extends UmbLitElement {
         ${this.#thumb(episode.videoId)}
         <span class="txt">
           <span class="ep-t">${this.#marked(episode.title)}</span>
-          <span class="ep-d"
-            >${current
-              ? html`<b class="now"
+          ${current
+            ? // The row in the player says so on a line of its own, and its date leads the next, ahead of
+              // the guests: "Now playing · Oct 30, 2026" on one line lost the date to the clip at the
+              // list's usual width (17.5.0-rc.1 run), as the live row's time did before (#189).
+              html`<span class="ep-d"
+                  ><b class="now"
                     >${ICONS.playing}${this.playing
                       ? term('umbraCoffeeNowPlaying', 'Now playing')
                       : term('umbraCoffeePaused', 'Paused')}</b
-                  ><span class="dot">·</span>`
-              : nothing}${this.formatDate(episode.published)}</span
-          >
-          ${shown.length > 0
-            ? html`<span class="ep-g"
-                >${shown.map((name, i) => html`${i > 0 ? ', ' : ''}${this.#marked(name)}`)}${more > 0 ? ` +${more}` : ''}</span
-              >`
-            : nothing}
+                  ></span
+                ><span class="ep-g"
+                  ><span class="when">${this.formatDate(episode.published)}</span>${shown.length > 0
+                    ? html`<span class="dot">·</span>${this.#guests(shown, more)}`
+                    : nothing}</span
+                >`
+            : html`<span class="ep-d">${this.formatDate(episode.published)}</span>${shown.length > 0
+                  ? html`<span class="ep-g">${this.#guests(shown, more)}</span>`
+                  : nothing}`}
         </span>
       </button>
     </li>`;
+  }
+
+  /**
+   * A row's guests: the first few, marked where they match the search, and how many more there are.
+   * @param shown The names shown.
+   * @param more How many are left out.
+   * @returns The guests.
+   */
+  #guests(shown: string[], more: number) {
+    return html`${shown.map((name, i) => html`${i > 0 ? ', ' : ''}${this.#marked(name)}`)}${more > 0 ? ` +${more}` : ''}`;
   }
 
   /**

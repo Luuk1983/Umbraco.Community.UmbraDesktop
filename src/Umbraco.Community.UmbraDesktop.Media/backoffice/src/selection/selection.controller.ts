@@ -469,19 +469,27 @@ export class UmbraDesktopMediaSelectionController extends UmbControllerBase {
 }
 
 /**
- * Whether a press is on empty space in core's collection: inside a view, or in the area core's layout
- * gives the view (its body layout's `#main`, which fills the window below the toolbar however few
- * cards the view draws), and on none of core's controls on the way there.
+ * What a press on starts no box besides {@link CONTROLS}: a tree's items, core's menus and popovers,
+ * and core's selection bar, each of which a press on means something of its own.
+ */
+const NOT_EMPTY = /(-TREE-ITEM|^UUI-MENU-ITEM|^UUI-SYMBOL-EXPAND|^UUI-POPOVER-CONTAINER|^UMB-POPOVER-LAYOUT|^UMB-DROPDOWN|^UMB-COLLECTION-SELECTION-ACTIONS)$/;
+
+/**
+ * Whether a press is on empty space in the window: anywhere a press means nothing else. Inside core's
+ * view or the area its layout gives the view, as before, and now also the toolbar's strip, the
+ * cleanup line and the tree's blank space below its folders (17.5.0-rc.1 run, owner 2026-11-04):
+ * with only the view, starting a box took aim. A control, a field, a tree item, a menu or core's
+ * selection bar on the way up is not empty space.
  * @param path The press's composed path, innermost first.
  * @param boundary The manager window, where the search stops.
  * @returns True on empty space.
  */
 function onEmptySpace(path: ReadonlyArray<EventTarget>, boundary: EventTarget): boolean {
   for (const node of path) {
-    if (node === boundary) return false;
+    if (node === boundary) return true;
     if (!(node instanceof HTMLElement)) continue;
     if (/-COLLECTION-VIEW$/.test(node.tagName)) return true;
-    if (CONTROLS.test(node.tagName)) return false;
+    if (CONTROLS.test(node.tagName) || NOT_EMPTY.test(node.tagName) || node.isContentEditable) return false;
     if (node.id === 'main' && (node.getRootNode() as ShadowRoot).host?.tagName === 'UMB-BODY-LAYOUT') return true;
   }
   return false;

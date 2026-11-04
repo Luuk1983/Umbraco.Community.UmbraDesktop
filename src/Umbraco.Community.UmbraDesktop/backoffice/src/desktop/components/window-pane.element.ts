@@ -110,6 +110,15 @@ export class UmbraDesktopWindowPaneElement extends UmbLitElement {
   private _generation = 0;
 
   /**
+   * Where a page pane's frame was last reloaded at: the page it had routed to by then, for the pane
+   * it was. A frame routes in place (the Media Manager switches its item pane that way), so its `url`
+   * is only where it started; reloading there showed the first item again (17.5.0-rc.1 run, owner
+   * 2026-11-04). Set only together with a new {@link _generation}, so it never moves a frame by itself.
+   */
+  @state()
+  private _reloadedAt?: { paneId: string; url: string };
+
+  /**
    * Whether a page body is still booting, which covers it so the backoffice's own header never
    * flashes into view, exactly as a window covers its frame. Lowered once the header is stripped, or
    * after the window's deadline.
@@ -249,7 +258,10 @@ export class UmbraDesktopWindowPaneElement extends UmbLitElement {
     if (pane?.dirty && this.ownerId && this.#manager) {
       if (!(await this.#manager.confirmDiscardAttached(this.ownerId, pane.id))) return;
     }
-    if (pane?.app.content.kind === 'iframe') this._loading = true;
+    if (pane?.app.content.kind === 'iframe') {
+      this._loading = true;
+      this._reloadedAt = { paneId: pane.id, url: pane.location ?? pane.app.content.url };
+    }
     this._generation += 1;
   };
 
@@ -342,7 +354,13 @@ export class UmbraDesktopWindowPaneElement extends UmbLitElement {
                 .props=${content.props}
                 .load=${content.element}></umbradesktop-app-host>`,
             )
-          : keyed(this._generation, html`<iframe class="pane-content" src=${content.url} @load=${this.#onFrameLoad}></iframe>`)}
+          : keyed(
+              this._generation,
+              html`<iframe
+                class="pane-content"
+                src=${this._reloadedAt?.paneId === pane.id ? this._reloadedAt.url : content.url}
+                @load=${this.#onFrameLoad}></iframe>`,
+            )}
         ${this.inactive ? html`<div class="pane-catcher"></div>` : nothing}
         ${content.kind === 'iframe' && this._loading
           ? html`<div class="pane-loading"><umbradesktop-loader></umbradesktop-loader></div>`
