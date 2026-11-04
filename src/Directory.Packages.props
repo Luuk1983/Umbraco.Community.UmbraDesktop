@@ -2,18 +2,17 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
-    <!-- The oldest Umbraco the packages install on. 18.1.0, not 18.0.0: the overwrite guard needs the
-         workspace's loadWithoutPersist, which core added in 18.1 (and in 17.6 on Umbraco 17, which is
-         why that branch's floor is 17.6.0). Below it no document window can be classified, and the
-         guard never warns. The build action's floor check (backoffice/scripts/check-umbraco-floor.mjs)
-         holds every packed bundle to this release; it sees imports only, not members like that
-         method. -->
-    <UmbraDesktopUmbracoFloor>18.1.0</UmbraDesktopUmbracoFloor>
+    <!-- The oldest Umbraco the packages install on. On this branch that is Umbraco 19's first beta
+         (issue #196): the 19 line is tested against the prereleases, so the floor is one of them.
+         TODO(19.0.0): move the floor to the stable 19.0.0 so consumers never resolve to a prerelease
+         of the host. The build action's floor check (backoffice/scripts/check-umbraco-floor.mjs)
+         holds every packed bundle to this release; it sees imports only, not members. -->
+    <UmbraDesktopUmbracoFloor>19.0.0-beta1</UmbraDesktopUmbracoFloor>
   </PropertyGroup>
   <ItemGroup>
     <!-- Extension package dependencies. The ceiling is UmbraDesktopUmbracoMajorCeiling from
-         Directory.Build.props, 18.99999999, rather than an exclusive 19.0.0: NuGet orders
-         19.0.0-rc.1 before 19.0.0, so "[18.1.0,19.0.0)" admits every Umbraco 19 prerelease, and the
+         Directory.Build.props, 19.99999999, rather than an exclusive 20.0.0: NuGet orders
+         20.0.0-rc.1 before 20.0.0, so "[19.0.0,20.0.0)" admits every Umbraco 20 prerelease, and the
          next major's betas are exactly what this package has never been tested against. The same
          property bounds every add-on's dependency on the host, so the two cannot drift apart. -->
     <PackageVersion Include="Umbraco.Cms.Api.Common" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
@@ -23,22 +22,25 @@
     <PackageVersion Include="Umbraco.Cms.Persistence.EFCore" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
     <PackageVersion Include="Umbraco.Cms.StaticAssets" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
     <PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
-    <!-- What Umbraco.Cms.Api.Common requires at the floor (10.0.10 for 18.1.0), as a minimum: the host
-         uses its types directly (Composing/OpenApiComposer.cs). Raise it with the floor. -->
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <!-- What Umbraco.Cms.Api.Common requires at the floor (11.0.0-rc.3.26522.148 for 19.0.0-beta1),
+         as a minimum: the host uses its types directly (Composing/OpenApiComposer.cs). Raise it with
+         the floor. -->
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0-rc.3.26522.148" />
     <!-- Build-time only: versioning and source-link -->
     <PackageVersion Include="MinVer" Version="7.0.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
-    <!-- EF Core at what Umbraco.Cms.Persistence.EFCore at the floor requires (10.0.10 for 18.1.0), for
+    <!-- EF Core at what Umbraco.Cms.Persistence.EFCore at the floor requires (11.0.0-rc.3.26522.148
+         for 19.0.0-beta1), for
          the Arcade's migrations here and its tests' SQLite below. Lower, and restore fails on a
          downgrade (NU1605); raise it with the floor. -->
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0-rc.3.26522.148" />
     <!-- Test instance dependencies -->
-    <PackageVersion Include="Umbraco.Cms" Version="18.*" />
+    <!-- "19.*-*" so the prereleases float: a plain "19.*" admits none of them. -->
+    <PackageVersion Include="Umbraco.Cms" Version="19.*-*" />
     <PackageVersion Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" />
-    <PackageVersion Include="Umbraco.TheStarterKit" Version="18.0.0" />
-    <PackageVersion Include="uSync" Version="18.*" />
-    <PackageVersion Include="Umbraco.Community.AdvancedPermissions" Version="18.2.0" />
+    <PackageVersion Include="Umbraco.TheStarterKit" Version="19.0.0-beta1" />
+    <PackageVersion Include="uSync" Version="19.*-*" />
+    <PackageVersion Include="Umbraco.Community.AdvancedPermissions" Version="19.0.0-beta.1" />
     <!-- Umbraco's commercial packages, present so the catalogue's commercial entries can actually
          be exercised locally. Unlicensed they run in trial mode, which is enough to register their
          backoffice extensions — which is all the catalogue resolves against. Deploy is the on-prem
@@ -78,6 +80,6 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0-rc.3.26522.148" />
   </ItemGroup>
 </Project>

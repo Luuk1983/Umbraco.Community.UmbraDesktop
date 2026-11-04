@@ -33,14 +33,14 @@ start nodes and the media types a folder allows apply exactly as they do in the 
 Your add-on must depend on the media service package, so that installing your add-on installs it:
 
 ```xml
-<PackageReference Include="Umbraco.Community.UmbraDesktop.Services.Media" Version="[18.0.0, 18.99999999.0]" />
+<PackageReference Include="Umbraco.Community.UmbraDesktop.Services.Media" Version="[19.0.0-beta.1, 19.99999999.0]" />
 ```
 
 Use the same range as you use for UmbraDesktop itself. The service is released with the desktop and
-shares its version number. Cap the range at `18.99999999.0` rather than below `19.0.0`: NuGet orders
-`19.0.0-rc.1` before `19.0.0`, so `[18.0.0, 19.0.0)` lets in Umbraco 19's prereleases, which do not
-run on Umbraco 18. For Umbraco 17, depend on the 17.x releases the same way, capped at
-`17.99999999.0`.
+shares its version number. Cap the range at `19.99999999.0` rather than below `20.0.0`: NuGet orders
+`20.0.0-rc.1` before `20.0.0`, so `[19.0.0, 20.0.0)` lets in Umbraco 20's prereleases, which do not
+run on Umbraco 19. For Umbraco 18 or 17, depend on the 18.x or 17.x releases the same way, capped at
+`18.99999999.0` or `17.99999999.0`.
 
 Your code never imports the service. It reaches it by a context token, as the next section shows.
 
