@@ -27,7 +27,6 @@ export default {
     cut: 'Cut',
     copy: 'Copy',
     paste: 'Paste',
-    copyTo: 'Copy to',
     dragMove: 'Move to %0%',
     dragMoveSome: 'Move %0% of %1% to %2%',
     dragCopy: 'Copy to %0%',

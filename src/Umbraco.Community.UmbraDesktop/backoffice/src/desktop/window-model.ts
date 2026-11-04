@@ -12,10 +12,38 @@ export function nextZIndex(windows: ReadonlyArray<UmbraDesktopWindow>): number {
   return windows.reduce((max, w) => Math.max(max, w.z), 0) + 1;
 }
 
-/** A cascaded rectangle for the Nth opened window, using the app's default size. */
-export function nextWindowRect(count: number, size: { w: number; h: number }): Rect {
+/**
+ * A cascaded rectangle for the Nth opened window, at the app's default size, fitted into the desktop
+ * when its size is known.
+ *
+ * Fitting is what every window manager does with a window that asks for more than the screen has:
+ * shrink it to the screen, never below its minimum, then move it back so its far edges are on screen.
+ * Without it a tall window opened under the taskbar, buttons and all (Optimize images on a 1440x900
+ * screen, 17.5.0-rc.1 run). The drag clamp could not help: it only keeps the titlebar in reach, and
+ * nothing moves a window the person has not touched.
+ * @param count How many windows are open already, which sets the cascade step.
+ * @param size The window's size, chrome included.
+ * @param bounds The desktop surface above the taskbar, when it has been measured.
+ * @param min The window's smallest size, chrome included, below which it is never shrunk.
+ * @returns The rectangle to open the window at.
+ */
+export function nextWindowRect(
+  count: number,
+  size: { w: number; h: number },
+  bounds?: { w: number; h: number },
+  min: { w: number; h: number } = { w: 0, h: 0 },
+): Rect {
   const step = (count % CASCADE_WRAP) * CASCADE_STEP;
-  return { x: CASCADE_ORIGIN + step, y: CASCADE_ORIGIN + step, w: size.w, h: size.h };
+  const rect = { x: CASCADE_ORIGIN + step, y: CASCADE_ORIGIN + step, w: size.w, h: size.h };
+  if (!bounds) return rect;
+  const w = Math.max(min.w, Math.min(rect.w, bounds.w));
+  const h = Math.max(min.h, Math.min(rect.h, bounds.h));
+  return {
+    x: Math.max(0, Math.min(rect.x, bounds.w - w)),
+    y: Math.max(0, Math.min(rect.y, bounds.h - h)),
+    w,
+    h,
+  };
 }
 
 /** Return a new list where `id` is active, front-most and un-minimized. */

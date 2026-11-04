@@ -54,6 +54,39 @@ it('nextWindowRect wraps the cascade after 6 windows', () => {
   expect(nextWindowRect(6, { w: 800, h: 600 })).to.deep.equal(nextWindowRect(0, { w: 800, h: 600 }));
 });
 
+// The 17.5.0-rc.1 run (2026-11-04): Optimize images asks for 865 px of window and opened at y 96 on a
+// 1440x900 screen, whose desktop above the taskbar is 849 px tall, so its Cancel and Optimize sat
+// under the taskbar. A new window has to open where all of it can be seen.
+describe('nextWindowRect inside the desktop', () => {
+  const bounds = { w: 1440, h: 849 };
+  const min = { w: 300, h: 200 };
+
+  it('leaves a window that fits where the cascade puts it', () => {
+    expect(nextWindowRect(1, { w: 800, h: 600 }, bounds, min)).to.deep.equal({ x: 68, y: 68, w: 800, h: 600 });
+  });
+
+  it('moves a window that would hang below the desktop up, keeping its size', () => {
+    expect(nextWindowRect(2, { w: 640, h: 800 }, bounds, min)).to.deep.equal({ x: 96, y: 49, w: 640, h: 800 });
+  });
+
+  it('shrinks a window taller than the desktop to the desktop, at its top', () => {
+    expect(nextWindowRect(2, { w: 640, h: 865 }, bounds, min)).to.deep.equal({ x: 96, y: 0, w: 640, h: 849 });
+  });
+
+  it('moves and shrinks across the desktop too', () => {
+    expect(nextWindowRect(3, { w: 1400, h: 600 }, bounds, min)).to.deep.equal({ x: 40, y: 124, w: 1400, h: 600 });
+    expect(nextWindowRect(3, { w: 1600, h: 600 }, bounds, min)).to.deep.equal({ x: 0, y: 124, w: 1440, h: 600 });
+  });
+
+  it('never shrinks a window below its minimum, which then hangs off the bottom as before', () => {
+    expect(nextWindowRect(0, { w: 640, h: 865 }, { w: 1440, h: 400 }, { w: 300, h: 500 })).to.deep.equal({ x: 40, y: 0, w: 640, h: 500 });
+  });
+
+  it('opens as asked when the desktop has not been measured yet', () => {
+    expect(nextWindowRect(2, { w: 640, h: 865 })).to.deep.equal({ x: 96, y: 96, w: 640, h: 865 });
+  });
+});
+
 it('focusWindow activates only the target and bumps it above the previous top', () => {
   const result = focusWindow([win('a', 1, { active: true }), win('b', 5)], 'a');
   const a = result.find((w) => w.id === 'a')!;

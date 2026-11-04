@@ -198,6 +198,23 @@ it('asks before putting a dirty pane away from its hide button, and No keeps it'
   expect(manager.getWindows()[0].panes).to.have.lengthOf(1);
 });
 
+/**
+ * 17.5.0-rc.1 run (owner, 2026-11-04): a Media Manager pane switched to another item and reloaded
+ * showed the item it was first opened on. The frame routes in place to each item; the reload remounted
+ * it at the address it was loaded from. It reloads the page the pane is on now.
+ */
+it('reloads the page the pane has routed to, not the one it opened on', async function () {
+  this.timeout(TIMEOUT_MS);
+  const { manager, owner, page, mount } = await desk();
+  const pane = await paneIn(await mount(owner));
+  const now = `${PAGE}?item=other`;
+  manager.setPaneLocation(owner, page, now);
+  await pane.updateComplete;
+  (pane.shadowRoot!.querySelector('.pane-reload') as HTMLButtonElement).click();
+  await pane.updateComplete;
+  expect(pane.shadowRoot!.querySelector('iframe.pane-content')!.getAttribute('src')).to.equal(now);
+});
+
 it('asks before reloading a dirty pane', async function () {
   this.timeout(TIMEOUT_MS);
   const { manager, owner, page, mount } = await desk();

@@ -15,6 +15,9 @@ import { DROP_OUTLINE_PX } from '../drag/light.js';
 import { DEFAULT_GUIDELINES } from '../guidelines/guidelines.js';
 import { UMBRADESKTOP_MEDIA_HEALTH_APP } from '../health/health-app.js';
 import { UMBRADESKTOP_MEDIA_CLEANUP_SHOW_EVENT, printHealthLocation } from '../health/health-location.js';
+import { UMBRADESKTOP_MEDIA_HEALTH_CONTEXT } from '../health/media-health.context.js';
+import { UMB_ACTION_EVENT_CONTEXT } from '@umbraco-cms/backoffice/action';
+import { UmbEntityUpdatedEvent } from '@umbraco-cms/backoffice/entity-action';
 
 const FOLDER = '0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0';
 const IMAGE = '11111111-2222-3333-4444-555555555555';
@@ -79,9 +82,12 @@ afterEach(() => {
 /**
  * A manager window inside a stand-in desktop, recording what it tells the desktop.
  * @param location Where the window opens.
+ * @param context A stand-in Media Manager context, when the test needs one.
+ * @param health A stand-in Media Cleanup context, when the test needs one.
+ * @param actions A stand-in for core's action event context, where the desktop announces media changes.
  * @returns The manager, its records and helpers.
  */
-async function mounted(location?: string, context?: object) {
+async function mounted(location?: string, context?: object, health?: object, actions?: EventTarget) {
   const opened: Array<{ alias: string; location?: string }> = [];
   const titles: string[] = [];
   const locations: string[] = [];
@@ -98,6 +104,11 @@ async function mounted(location?: string, context?: object) {
     },
   } as never).hostConnected();
   if (context) new UmbContextProvider(wrapper, UMBRADESKTOP_MEDIA_MANAGER_CONTEXT, { getHostElement: () => wrapper, ...context } as never).hostConnected();
+  if (health) new UmbContextProvider(wrapper, UMBRADESKTOP_MEDIA_HEALTH_CONTEXT, { getHostElement: () => wrapper, ...health } as never).hostConnected();
+  if (actions) {
+    (actions as EventTarget & { getHostElement?: () => Element }).getHostElement = () => wrapper;
+    new UmbContextProvider(wrapper, UMB_ACTION_EVENT_CONTEXT, actions as never).hostConnected();
+  }
   wrapper.addEventListener('umbradesktop-app-title', (e) => titles.push((e as CustomEvent<{ title: string }>).detail.title));
   wrapper.addEventListener('umbradesktop-app-location', (e) => locations.push((e as CustomEvent<{ location: string }>).detail.location));
   wrapper.addEventListener('umbradesktop-open-attached', (e) => beside.push((e as CustomEvent<Record<string, unknown>>).detail));
@@ -151,7 +162,7 @@ describe('the cleanup line in a manager window (design §16.20)', () => {
    * @param hoursAgo How long ago the check finished.
    * @returns The window, how often the counts were read, and what Media Cleanup was told.
    */
-  async function lined(hoursAgo = 2) {
+  async function lined(hoursAgo = 2, health?: object) {
     let reads = 0;
     const told: string[] = [];
     const tell = (event: Event) => told.push((event as CustomEvent<{ location: string }>).detail.location);
@@ -163,7 +174,7 @@ describe('the cleanup line in a manager window (design §16.20)', () => {
       return { checkId: 7, checkedUtc, folders: [{ key: FOLDER, unused: 2, oversized: 1 }] };
     };
     cleanup.push(() => delete (SOURCE as { cleanup?: unknown }).cleanup);
-    const window = await mounted(`folder=${FOLDER}`);
+    const window = await mounted(`folder=${FOLDER}`, undefined, health);
     await window.settle();
     const line = () => window.manager.shadowRoot!.querySelector<HTMLElement>('.cleanup-line');
     return { ...window, line, reads: () => reads, told };
@@ -189,6 +200,23 @@ describe('the cleanup line in a manager window (design §16.20)', () => {
     line()!.querySelector<HTMLButtonElement>('[data-action="dismiss"]')!.click();
     await settle();
     expect(line() === null, 'no line').to.equal(true);
+  });
+
+  /**
+   * 17.5.0-rc.1 run (owner, 2026-11-04): a window open while a check ran never showed its line, since
+   * the counts were read only when the window opened. A new result in Media Cleanup, from a check, a
+   * Clean up, a Keep or an Undo, is when they change, so that is when the window reads them again.
+   */
+  it('reads the counts again when Media Cleanup has a new result, and only then', async () => {
+    const state = new UmbObjectState<{ result?: object }>({ result: undefined });
+    const { reads, settle } = await lined(2, { state: state.asObservable() });
+    expect(reads(), 'once on opening').to.equal(1);
+    state.setValue({ result: { checkId: 8 } });
+    await settle();
+    expect(reads(), 'again for the new check').to.equal(2);
+    state.setValue({ ...state.getValue() });
+    await settle();
+    expect(reads(), 'not for the same result again').to.equal(2);
   });
 
   it('says nothing about a check over a day old', async () => {
@@ -629,6 +657,35 @@ describe('keeping the window in step with the page beside it', () => {
     expect(reloads()).to.equal(2);
   });
 
+  /**
+   * 17.5.0-rc.1 run (owner, 2026-11-04): an item renamed and saved in the pane kept its old name on the
+   * pane's title and on its card. The pane is another backoffice, so its save reaches this page as the
+   * server's change, which the desktop announces here as core's `UmbEntityUpdatedEvent`.
+   */
+  it('names the pane again and reloads the folder when the open item changes on the server', async () => {
+    const actions = new EventTarget();
+    const { manager, folderHost, settle, beside } = await mounted(`folder=${FOLDER}`, undefined, undefined, actions);
+    const reloads = countReloads(folderHost());
+    manager.attached = { item: `/umbraco/section/media/workspace/media/edit/${IMAGE}/invariant` };
+    await settle();
+    const asked = beside.length;
+    const item = SOURCE.item;
+    SOURCE.item = async (unique) => {
+      const found = await item.call(SOURCE, unique);
+      return found && unique === IMAGE ? { ...found, name: 'Banjo 2', variants: [{ name: 'Banjo 2' }] } as never : found;
+    };
+    cleanup.push(() => (SOURCE.item = item));
+
+    actions.dispatchEvent(new UmbEntityUpdatedEvent({ unique: OTHER_IMAGE, entityType: 'media' }));
+    await settle();
+    expect([beside.length, reloads()], 'another item changing is not this pane’s business').to.deep.equal([asked, 0]);
+
+    actions.dispatchEvent(new UmbEntityUpdatedEvent({ unique: IMAGE, entityType: 'media' }));
+    await settle();
+    expect(beside.slice(asked).map((each) => each.name)).to.deep.equal(['Banjo 2']);
+    expect(reloads(), 'its card shows the new name').to.equal(1);
+  });
+
   it('closes core’s Create menu once a type is chosen', async () => {
     const { folderHost, settle } = await mounted(`folder=${FOLDER}`);
     const menu = document.createElement('div');
@@ -938,6 +995,55 @@ describe('selecting and keys', () => {
     const withShift = selected();
     click();
     expect([withCtrl, withShift, selected()]).to.deep.equal([[IMAGE, OTHER_IMAGE], [IMAGE, OTHER_IMAGE], []]);
+  });
+
+  /**
+   * 17.5.0-rc.1 run (owner, 2026-11-04): a box started only in core's view and the area below it, so
+   * the toolbar's strip, the cleanup line and the tree's blank space below its folders refused one,
+   * and where to start took aim. Any empty part of the window starts one now.
+   */
+  it('draws a box from any empty part of the window: the toolbar strip, the tree’s blank space', async () => {
+    const { manager, folderHost, cards, selected } = await selecting();
+    const first = cards[0].getBoundingClientRect();
+    const strip = document.createElement('div');
+    strip.style.cssText = 'position:absolute;left:0;top:0;width:400px;height:40px';
+    folderHost().shadowRoot!.appendChild(strip);
+    const from = strip.getBoundingClientRect();
+    drag(strip, { x: from.left + 5, y: from.top + 5 }, { x: first.left + 10, y: first.top + 10 });
+    expect(selected(), 'from the toolbar strip').to.deep.equal([IMAGE]);
+    strip.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true, pointerId: 1 }));
+
+    const tree = manager.shadowRoot!.querySelector('umbradesktop-media-tree-host')!;
+    const blank = document.createElement('div');
+    blank.style.cssText = 'display:block;width:150px;height:100px';
+    (tree.shadowRoot ?? tree).appendChild(blank);
+    const below = blank.getBoundingClientRect();
+    drag(blank, { x: below.left + 5, y: below.top + 5 }, { x: first.left + 10, y: first.top + 10 });
+    const box = manager.shadowRoot!.querySelector('umbradesktop-media-selection-box') as HTMLElement & { updateComplete: Promise<unknown> };
+    await box.updateComplete;
+    expect(box.hasAttribute('active'), 'from the tree’s blank space').to.equal(true);
+    blank.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true, pointerId: 1 }));
+  });
+
+  it('starts no box from a tree item, a button or a field', async () => {
+    const { manager, folderHost } = await selecting();
+    const tree = manager.shadowRoot!.querySelector('umbradesktop-media-tree-host')!;
+    const item = document.createElement('umb-media-tree-item');
+    const label = document.createElement('span');
+    label.textContent = 'Products';
+    item.appendChild(label);
+    (tree.shadowRoot ?? tree).appendChild(item);
+    const button = document.createElement('uui-button');
+    const field = document.createElement('uui-input');
+    folderHost().shadowRoot!.append(button, field);
+    const box = manager.shadowRoot!.querySelector('umbradesktop-media-selection-box') as HTMLElement & { updateComplete: Promise<unknown> };
+    for (const target of [label, button, field]) {
+      const at = target.getBoundingClientRect();
+      drag(target, { x: at.left + 1, y: at.top + 1 }, { x: at.left + 200, y: at.top + 200 });
+      await box.updateComplete;
+      expect(box.hasAttribute('active'), target.tagName).to.equal(false);
+      target.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true, pointerId: 1 }));
+    }
   });
 
   it('starts no box from a press on a card', async () => {

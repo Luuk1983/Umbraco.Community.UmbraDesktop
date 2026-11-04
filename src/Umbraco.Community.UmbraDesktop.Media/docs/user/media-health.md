@@ -247,7 +247,8 @@ top of the library it speaks for the whole library.
 The line only shows while the last check is less than a day old, the same rule that greys out
 **Clean up**. With no check, an older one, or nothing to clean up, the Media Manager shows nothing
 extra. Kept items are not counted, and orphaned files belong to no folder, so they are never in the
-line. The Media Manager reads the counts once when its window opens, from the stored check; it never
+line. The Media Manager reads the counts from the stored check when its window opens, and again
+whenever Media Cleanup has a new result: after a check, a clean-up, **Keep** or **Undo**. It never
 checks anything itself.
 
 ## What the check reads
