@@ -55,7 +55,6 @@
     <!-- Development-only files, kept out of the package root as in the other packages. -->
     <Content Remove="backoffice\**" />
     <Content Remove="package.json" />
-    <Content Remove="package-lock.json" />
     <!-- The docs reach the package through the Vite build, which copies them into wwwroot for Help. -->
     <Content Remove="docs\**" />
   </ItemGroup>

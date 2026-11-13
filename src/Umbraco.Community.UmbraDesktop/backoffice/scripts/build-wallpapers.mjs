@@ -1,7 +1,7 @@
 /**
  * Encodes the built-in desktop wallpapers and regenerates their catalogue.
  *
- * Drop a PNG/JPEG/WebP into `wallpapers-src/` and run `npm run build`. For each source this
+ * Drop a PNG/JPEG/WebP into `wallpapers-src/` and run `pnpm run build`. For each source this
  * emits a full-size and a thumbnail AVIF into `public/wallpapers/`, then rewrites
  * `src/desktop/settings/wallpapers.generated.ts`.
  *
@@ -13,7 +13,7 @@
  * the one thing to know before touching this file: the sources are the sources of truth and the
  * AVIFs are derived, so committing the AVIFs only added binary churn nothing read back. Both
  * `.github/workflows/ci.yml` and the publish workflow run the shared `build-packages` action, which
- * runs `npm run build` — and therefore this script — before `dotnet build`/`pack`, so a clean
+ * runs `pnpm run build` — and therefore this script — before `dotnet build`/`pack`, so a clean
  * checkout always encodes them before anything needs them. The generated *catalogue* is committed,
  * because TypeScript imports it and `tsc` and an editor must work before anyone runs a build.
  *
@@ -140,7 +140,7 @@ function renderCatalogue(wallpapers) {
  * GENERATED FILE — do not edit.
  *
  * Written by \`scripts/build-wallpapers.mjs\` from the images in \`wallpapers-src/\`.
- * To change this list, add or remove a source image and run \`npm run build\`.
+ * To change this list, add or remove a source image and run \`pnpm run build\`.
  */
 
 /** One wallpaper shipped inside the package. */

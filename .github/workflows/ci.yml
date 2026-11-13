@@ -60,18 +60,23 @@ jobs:
         with:
           global-json-file: global.json # .NET 11, which Umbraco 19 needs, is pinned there
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: src/Umbraco.Community.UmbraDesktop/package.json
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24' # @umbraco-cms/backoffice 19 requires node >=24.13
-          cache: npm
+          cache: pnpm
           cache-dependency-path: |
-            src/Umbraco.Community.UmbraDesktop/package-lock.json
-            src/Umbraco.Community.UmbraDesktop.Services.Arcade/package-lock.json
-            src/Umbraco.Community.UmbraDesktop.Services.Media/package-lock.json
-            src/Umbraco.Community.UmbraDesktop.Entertainment/package-lock.json
-            src/Umbraco.Community.UmbraDesktop.Accessories/package-lock.json
-            src/Umbraco.Community.UmbraDesktop.Media/package-lock.json
+            src/Umbraco.Community.UmbraDesktop/pnpm-lock.yaml
+            src/Umbraco.Community.UmbraDesktop.Services.Arcade/pnpm-lock.yaml
+            src/Umbraco.Community.UmbraDesktop.Services.Media/pnpm-lock.yaml
+            src/Umbraco.Community.UmbraDesktop.Entertainment/pnpm-lock.yaml
+            src/Umbraco.Community.UmbraDesktop.Accessories/pnpm-lock.yaml
+            src/Umbraco.Community.UmbraDesktop.Media/pnpm-lock.yaml
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -85,12 +90,12 @@ jobs:
       # true for a plain build, not only for a pack.
       - name: Build frontends
         run: |
-          (cd src/Umbraco.Community.UmbraDesktop && npm ci && npm run build)
-          (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && npm ci && npm run build)
-          (cd src/Umbraco.Community.UmbraDesktop.Services.Media && npm ci && npm run build)
-          (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm ci && npm run build)
-          (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm ci && npm run build)
-          (cd src/Umbraco.Community.UmbraDesktop.Media && npm ci && npm run build)
+          (cd src/Umbraco.Community.UmbraDesktop && pnpm install --frozen-lockfile && pnpm run build)
+          (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && pnpm install --frozen-lockfile && pnpm run build)
+          (cd src/Umbraco.Community.UmbraDesktop.Services.Media && pnpm install --frozen-lockfile && pnpm run build)
+          (cd src/Umbraco.Community.UmbraDesktop.Entertainment && pnpm install --frozen-lockfile && pnpm run build)
+          (cd src/Umbraco.Community.UmbraDesktop.Accessories && pnpm install --frozen-lockfile && pnpm run build)
+          (cd src/Umbraco.Community.UmbraDesktop.Media && pnpm install --frozen-lockfile && pnpm run build)
 
       - name: Build solution
         run: dotnet build Umbraco.Community.UmbraDesktop.app.slnx --configuration Release
@@ -99,8 +104,8 @@ jobs:
   # each package.json pins (RELEASE.md, "The Umbraco floor"), and the Solution job already compiles
   # the C# against the newest 19 through the test instance's floating "19.*-*". This swaps each
   # package's backoffice, and the UI library it is built on, to the newest 19 for this run only
-  # (--no-save; never --legacy-peer-deps, which prunes the peers and fails on phantom type errors),
-  # then type-checks and tests. The floor catches using something too new; this catches core
+  # (pnpm has no --no-save, so `pnpm add` rewrites package.json and the lock file, but only in the
+  # runner's throwaway checkout), then type-checks and tests. The floor catches using something too new; this catches core
   # changing something we rely on but are not promised, as 17.7 and 18.2 did with the media
   # collection's placeholders (Umbraco-CMS#24088). Two points rather than every release: a break in
   # between that both ends miss has to be introduced and fixed again within one major.
@@ -110,21 +115,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: src/Umbraco.Community.UmbraDesktop/package.json
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24' # @umbraco-cms/backoffice 19 requires node >=24.13
-          cache: npm
+          cache: pnpm
           cache-dependency-path: |
-            src/Umbraco.Community.UmbraDesktop/package-lock.json
-            src/Umbraco.Community.UmbraDesktop.Services.Arcade/package-lock.json
-            src/Umbraco.Community.UmbraDesktop.Services.Media/package-lock.json
-            src/Umbraco.Community.UmbraDesktop.Entertainment/package-lock.json
-            src/Umbraco.Community.UmbraDesktop.Accessories/package-lock.json
-            src/Umbraco.Community.UmbraDesktop.Media/package-lock.json
+            src/Umbraco.Community.UmbraDesktop/pnpm-lock.yaml
+            src/Umbraco.Community.UmbraDesktop.Services.Arcade/pnpm-lock.yaml
+            src/Umbraco.Community.UmbraDesktop.Services.Media/pnpm-lock.yaml
+            src/Umbraco.Community.UmbraDesktop.Entertainment/pnpm-lock.yaml
+            src/Umbraco.Community.UmbraDesktop.Accessories/pnpm-lock.yaml
+            src/Umbraco.Community.UmbraDesktop.Media/pnpm-lock.yaml
 
       # Every package is run even when one fails, so a run reports every package that broke at once.
-      # `npm run build` rather than a bare tsc: it is tsc plus what tsc reads that the build generates.
+      # `pnpm run build` rather than a bare tsc: it is tsc plus what tsc reads that the build generates.
       # "^19.0.0-0" rather than "@19": while 19 is in prerelease, "@19" matches no version at all.
       - name: Type-check and test against the latest 19
         run: |
@@ -139,11 +149,11 @@ jobs:
             echo "::group::$package"
             (
               cd "src/$package" &&
-              npm ci &&
-              npm install --no-save @umbraco-cms/backoffice@^19.0.0-0 @umbraco-ui/uui@2 &&
+              pnpm install --frozen-lockfile &&
+              pnpm add --save-dev @umbraco-cms/backoffice@^19.0.0-0 @umbraco-ui/uui@2 &&
               echo "Backoffice $(node -p "require('./node_modules/@umbraco-cms/backoffice/package.json').version"), UUI $(node -p "require('./node_modules/@umbraco-ui/uui/package.json').version")" &&
-              npm run build &&
-              npm test
+              pnpm run build &&
+              pnpm test
             ) || failed+=("$package")
             echo "::endgroup::"
           done

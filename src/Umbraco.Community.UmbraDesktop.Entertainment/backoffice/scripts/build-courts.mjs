@@ -4,7 +4,7 @@
  * prefixed per card so 52 cards can share a shadow root, and every colour mapped onto the Umbraco
  * palette by hue.
  *
- * Run by hand with `npm run courts` when the art changes; the output is committed, as the host's
+ * Run by hand with `pnpm run courts` when the art changes; the output is committed, as the host's
  * wallpaper catalogue is, because TypeScript imports it.
  */
 import { readdir, readFile, writeFile } from 'node:fs/promises';

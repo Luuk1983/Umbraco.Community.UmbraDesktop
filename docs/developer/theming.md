@@ -873,12 +873,12 @@ that list, or the drag will not scroll near the edges at all.
 
 ## 7. Checklist before you open a PR
 
-Run **both** commands. They check different things: `npm test` runs in a browser through esbuild,
-which does not type-check, and `npm run build` runs `tsc`, which does not render anything. A theme
+Run **both** commands. They check different things: `pnpm test` runs in a browser through esbuild,
+which does not type-check, and `pnpm run build` runs `tsc`, which does not render anything. A theme
 has shipped a green test run and a red build, and the reverse.
 
-- [ ] `npm run build` passes — a palette typo is a compile error, so this is a real check
-- [ ] `npm test` passes, including `tokens.test.ts`, which fails if you added a `--umbradesktop-*`
+- [ ] `pnpm run build` passes — a palette typo is a compile error, so this is a real check
+- [ ] `pnpm test` passes, including `tokens.test.ts`, which fails if you added a `--umbradesktop-*`
       to a component without adding it to `UMBRADESKTOP_TOKENS`, or the reverse, and
       `app-tokens.test.ts`, which fails if your palette answers the chrome group but misses an app
       token — a theme can pass the first and fail the second

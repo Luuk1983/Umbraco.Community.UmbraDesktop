@@ -58,14 +58,27 @@ umbraco-marketplace-*.json      what the Umbraco Marketplace shows, one file per
 Run from `src/Umbraco.Community.UmbraDesktop`:
 
 ```bash
-npm run build        # checks the docs' links, copies them for Help, builds wallpapers, then tsc, then vite
-npm test             # web-test-runner in a real Chrome
-npm run docs:check   # just the docs check
+pnpm install          # once per checkout; near instant after the first, see below
+pnpm run build        # checks the docs' links, copies them for Help, builds wallpapers, then tsc, then vite
+pnpm test             # web-test-runner in a real Chrome
+pnpm run docs:check   # just the docs check
 ```
+
+**pnpm, not npm.** Each frontend is its own pnpm project with its own `pnpm-lock.yaml`, and the
+`packageManager` field pins the version. pnpm keeps one store per drive and hard-links from it, so
+only the first install on a machine downloads anything; every later project and worktree is seconds
+rather than npm's minutes (measured in `docs/design/2026-11-12-pnpm-design.md`). Its `node_modules`
+is strict: a package you import has to be in your own `package.json`, even if something else
+already pulls it in.
 
 **Run both.** They check different things and neither subsumes the other: the test runner
 transpiles through esbuild and does **not** type-check, while `tsc` never renders anything. Both a
 green test run over a broken build and the reverse have shipped here.
+
+**A whole test file failing with `Failed to fetch dynamically imported module` is usually Wi-Fi.**
+Chrome drops every request in flight when Windows reports a network change, `localhost` included, so a
+Wi-Fi re-key mid-load fails whichever file is loading. Rerun before investigating;
+`docs/design/2026-11-13-test-loading-flake-design.md` has the evidence.
 
 The same two commands apply in each add-on's folder (`src/Umbraco.Community.UmbraDesktop.*`). The C#
 has a test project for the host and one for each add-on with server code, each named
@@ -101,7 +114,7 @@ from a script, and it found three bugs in Sticky Notes that every test had passe
 Code passing is not done. Before a feature is finished, walk this list and say explicitly which
 items did not apply:
 
-- [ ] `npm run build` and `npm test` both pass. The build includes the docs check, so a moved page
+- [ ] `pnpm run build` and `pnpm test` both pass. The build includes the docs check, so a moved page
       or a renamed heading that breaks a link fails here
 - [ ] **A docs page describes the feature**, in the user guide (`docs/user/<category>/`) for
       something people use, in the developer guide for something people extend. One page per
