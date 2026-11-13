@@ -2,7 +2,7 @@
  * Draws the one card back that is committed as SVG rather than cut from a wallpaper: the Windows 98
  * pixel-art back (design D8).
  *
- * Run by hand (`npm run backs`) when the artwork changes; the output is committed, so a build never
+ * Run by hand (`pnpm run backs`) when the artwork changes; the output is committed, so a build never
  * needs it. It exists, rather than a hand-written file, because the pixel grid is computed, not drawn.
  *
  * The SVG is `viewBox="0 0 90 130"`: the 9:13 inner area the element shows inside the card's

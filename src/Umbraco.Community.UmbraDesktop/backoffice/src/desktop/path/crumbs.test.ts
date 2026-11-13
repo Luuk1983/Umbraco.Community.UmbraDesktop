@@ -81,8 +81,8 @@ it('marks the last crumb current, and gives it no link', () => {
     undefined,
   );
 
-  // Indexed rather than `.at(-1)`: this project's `lib` target predates it, and `npm test` would
-  // not have told us — esbuild transpiles without type-checking, so only `npm run build` catches it.
+  // Indexed rather than `.at(-1)`: this project's `lib` target predates it, and `pnpm test` would
+  // not have told us — esbuild transpiles without type-checking, so only `pnpm run build` catches it.
   expect(crumbs[crumbs.length - 1]).to.deep.equal({ label: 'hero.jpg', href: undefined, current: true });
   expect(crumbs[crumbs.length - 2].current).to.be.false;
 });

@@ -66,7 +66,7 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 
 	<Target Name="SyncUmbracoPackageVersion" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != ''">
 		<SetJsonVersion FilePath="$(UmbracoPackageJsonPath)" VersionValue="$(MinVerVersion)" Condition="Exists('$(UmbracoPackageJsonPath)')" />
-		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'npm run build' before packing, or the package will ship an unstamped version." Condition="!Exists('$(UmbracoPackageJsonPath)')" />
+		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'pnpm run build' before packing, or the package will ship an unstamped version." Condition="!Exists('$(UmbracoPackageJsonPath)')" />
 	</Target>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -83,7 +83,6 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
     <!-- Development-only files, kept out of the package root as in the other packages. -->
     <Content Remove="backoffice\**" />
     <Content Remove="package.json" />
-    <Content Remove="package-lock.json" />
     <!-- The docs reach the package through the Vite build, which copies them into wwwroot for Help. -->
     <Content Remove="docs\**" />
   </ItemGroup>

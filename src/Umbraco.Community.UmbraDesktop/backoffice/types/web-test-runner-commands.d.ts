@@ -1,7 +1,7 @@
 /**
  * The exports of `@web/test-runner-commands` the tests use, declared here so `tsc` reads this
  * rather than the package's own types. `paths` in `tsconfig.json` points the specifier at this file,
- * so an export a test starts using has to be added here too, or `npm run build` fails on the import.
+ * so an export a test starts using has to be added here too, or `pnpm run build` fails on the import.
  *
  * The package's browser entry re-exports its payload types from the server-side build, and that
  * chain brings in `@types/node`. Its globals then replace the DOM's: `setTimeout` starts

@@ -17,22 +17,30 @@ runs:
       with:
         dotnet-version: '10.0.x'
 
+    # pnpm before Node, because setup-node's pnpm cache asks pnpm where its store is. There is no
+    # root package.json, so the version comes from the host's `packageManager` field, which every
+    # frontend sets to the same pnpm (issue #208).
     # cache-dependency-path has to name every lock file: with one package.json per shipped
     # package, the default single-file lookup would key the cache on the host alone and hand the
     # add-ons a cache that has nothing to do with them. Node 24 because @umbraco-cms/backoffice 17.6
-    # declares node >=24.13 and npm >=11 in its engines.
+    # declares node >=24.13 in its engines.
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        package_json_file: src/Umbraco.Community.UmbraDesktop/package.json
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '24'
-        cache: npm
+        cache: pnpm
         cache-dependency-path: |
-          src/Umbraco.Community.UmbraDesktop/package-lock.json
-          src/Umbraco.Community.UmbraDesktop.Services.Arcade/package-lock.json
-          src/Umbraco.Community.UmbraDesktop.Services.Media/package-lock.json
-          src/Umbraco.Community.UmbraDesktop.Entertainment/package-lock.json
-          src/Umbraco.Community.UmbraDesktop.Accessories/package-lock.json
-          src/Umbraco.Community.UmbraDesktop.Media/package-lock.json
+          src/Umbraco.Community.UmbraDesktop/pnpm-lock.yaml
+          src/Umbraco.Community.UmbraDesktop.Services.Arcade/pnpm-lock.yaml
+          src/Umbraco.Community.UmbraDesktop.Services.Media/pnpm-lock.yaml
+          src/Umbraco.Community.UmbraDesktop.Entertainment/pnpm-lock.yaml
+          src/Umbraco.Community.UmbraDesktop.Accessories/pnpm-lock.yaml
+          src/Umbraco.Community.UmbraDesktop.Media/pnpm-lock.yaml
 
     # Safe to key on the lock files because RestorePackagesWithLockFile is on repo-wide
     # (src/Directory.Build.props), so every packages.lock.json is committed and exact. They
@@ -69,22 +77,22 @@ runs:
     - name: Install frontend dependencies
       shell: bash
       run: |
-        (cd src/Umbraco.Community.UmbraDesktop && npm ci)
-        (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && npm ci)
-        (cd src/Umbraco.Community.UmbraDesktop.Services.Media && npm ci)
-        (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm ci)
-        (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm ci)
-        (cd src/Umbraco.Community.UmbraDesktop.Media && npm ci)
+        (cd src/Umbraco.Community.UmbraDesktop && pnpm install --frozen-lockfile)
+        (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && pnpm install --frozen-lockfile)
+        (cd src/Umbraco.Community.UmbraDesktop.Services.Media && pnpm install --frozen-lockfile)
+        (cd src/Umbraco.Community.UmbraDesktop.Entertainment && pnpm install --frozen-lockfile)
+        (cd src/Umbraco.Community.UmbraDesktop.Accessories && pnpm install --frozen-lockfile)
+        (cd src/Umbraco.Community.UmbraDesktop.Media && pnpm install --frozen-lockfile)
 
     - name: Test frontend
       shell: bash
       run: |
-        (cd src/Umbraco.Community.UmbraDesktop && npm test)
-        (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && npm test)
-        (cd src/Umbraco.Community.UmbraDesktop.Services.Media && npm test)
-        (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm test)
-        (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm test)
-        (cd src/Umbraco.Community.UmbraDesktop.Media && npm test)
+        (cd src/Umbraco.Community.UmbraDesktop && pnpm test)
+        (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && pnpm test)
+        (cd src/Umbraco.Community.UmbraDesktop.Services.Media && pnpm test)
+        (cd src/Umbraco.Community.UmbraDesktop.Entertainment && pnpm test)
+        (cd src/Umbraco.Community.UmbraDesktop.Accessories && pnpm test)
+        (cd src/Umbraco.Community.UmbraDesktop.Media && pnpm test)
 
     # The umbraCoffee data tool (tools/umbracoffee-feed) is not shipped, but the scheduled workflow
     # that keeps the data branch runs it unattended, so a broken change is only found there, in the
@@ -98,12 +106,12 @@ runs:
     - name: Build frontend
       shell: bash
       run: |
-        (cd src/Umbraco.Community.UmbraDesktop && npm run build)
-        (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && npm run build)
-        (cd src/Umbraco.Community.UmbraDesktop.Services.Media && npm run build)
-        (cd src/Umbraco.Community.UmbraDesktop.Entertainment && npm run build)
-        (cd src/Umbraco.Community.UmbraDesktop.Accessories && npm run build)
-        (cd src/Umbraco.Community.UmbraDesktop.Media && npm run build)
+        (cd src/Umbraco.Community.UmbraDesktop && pnpm run build)
+        (cd src/Umbraco.Community.UmbraDesktop.Services.Arcade && pnpm run build)
+        (cd src/Umbraco.Community.UmbraDesktop.Services.Media && pnpm run build)
+        (cd src/Umbraco.Community.UmbraDesktop.Entertainment && pnpm run build)
+        (cd src/Umbraco.Community.UmbraDesktop.Accessories && pnpm run build)
+        (cd src/Umbraco.Community.UmbraDesktop.Media && pnpm run build)
 
     - name: Build
       shell: bash
