@@ -1,7 +1,7 @@
 /**
  * Fails the build when a link in the documentation goes nowhere.
  *
- * Runs first in `npm run build`. Moving a docs page breaks every link into it silently, on GitHub,
+ * Runs first in `pnpm run build`. Moving a docs page breaks every link into it silently, on GitHub,
  * in the Help app and on any future docs site alike, so the only reliable check is one nobody has
  * to remember to run.
  *

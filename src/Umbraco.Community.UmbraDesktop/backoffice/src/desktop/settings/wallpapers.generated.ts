@@ -2,7 +2,7 @@
  * GENERATED FILE — do not edit.
  *
  * Written by `scripts/build-wallpapers.mjs` from the images in `wallpapers-src/`.
- * To change this list, add or remove a source image and run `npm run build`.
+ * To change this list, add or remove a source image and run `pnpm run build`.
  */
 
 /** One wallpaper shipped inside the package. */

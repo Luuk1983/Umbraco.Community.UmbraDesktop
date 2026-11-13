@@ -54,7 +54,7 @@ function trayManifest(alias: string): UmbExtensionManifest {
  * The animation frame is redirected onto the microtask queue for the life of the context, for the
  * reason `app-catalogue.context.test.ts` gives at length: `UmbExtensionsManifestInitializer`
  * coalesces its callbacks on a frame, and a background page in a full run never gets one, so a case
- * that passes alone would time out in `npm test`. The cancel is honoured, since the initializer
+ * that passes alone would time out in `pnpm test`. The cancel is honoured, since the initializer
  * cancels its pending frame on the way out and a cancelled flush must not arrive.
  * @param deps What the context needs of the rest of the desktop; each part defaults to doing nothing.
  * @param manifests Tray manifests to register before the context exists.

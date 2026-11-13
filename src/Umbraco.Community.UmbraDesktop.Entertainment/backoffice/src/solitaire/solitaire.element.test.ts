@@ -6,6 +6,11 @@ import { SETTINGS_KEY } from './settings.js';
 import { deal as dealGame, draw as drawCard, seededShuffle as seeded } from './rules.js';
 import type { Card } from './rules.js';
 import './solitaire.element.js';
+// Loaded here, with the rest of this file, so the element's own dynamic import of the face set finds
+// it already in the module map. Without it the first render waits for the dev server to compile the
+// 850 KB court artwork, and the helper below gives a render one second: the first cases failed with
+// "Timeout: cards drawn" whenever the server was cold and busy, and when this file ran alone.
+import './faces/classic/classic.js';
 import type { SolitaireElement } from './solitaire.element.js';
 import { SavedGameStore } from './saved-games.js';
 import { MemoryStorage } from './memory-storage.test-helper.js';
