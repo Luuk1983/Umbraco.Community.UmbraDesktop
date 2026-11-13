@@ -124,7 +124,7 @@ async function setup(
   // runner gives a page a frame only while that page is the visible one, and running the whole
   // suite makes every page `hidden`: measured, a registration's frame arrives inside a millisecond
   // when this file runs alone and has still not arrived three seconds later when it runs with the
-  // other 37, so the registered-app cases below would pass alone and time out in `npm test`. A
+  // other 37, so the registered-app cases below would pass alone and time out in `pnpm test`. A
   // frame is the one thing a headless background page cannot be asked for, so the debounce is
   // redirected onto the microtask queue for the life of this context. Legitimate because the
   // debounce is a coalescing optimisation and not the behaviour under test, and it is what lets

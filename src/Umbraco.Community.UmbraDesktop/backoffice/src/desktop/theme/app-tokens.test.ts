@@ -70,7 +70,7 @@ it('has no duplicate app tokens', () => {
 it('gives every app token exactly one fallback entry, no more and no fewer', () => {
   // The `satisfies Record<UmbraDesktopAppToken, string>` clause on UMBRADESKTOP_APP_TOKEN_FALLBACKS
   // covers this at compile time, but web-test-runner transpiles through esbuild without type
-  // checking (see the repo's "run both npm test and npm run build" rule), so this is what actually
+  // checking (see the repo's "run both pnpm test and pnpm run build" rule), so this is what actually
   // catches drift in a test run.
   const declared = new Set<string>(UMBRADESKTOP_APP_TOKENS);
   const fallbackKeys = Object.keys(UMBRADESKTOP_APP_TOKEN_FALLBACKS);

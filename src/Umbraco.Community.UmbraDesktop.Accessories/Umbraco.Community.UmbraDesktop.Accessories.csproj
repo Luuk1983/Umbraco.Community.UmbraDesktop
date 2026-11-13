@@ -73,7 +73,7 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 
 	<Target Name="SyncUmbracoPackageVersion" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != ''">
 		<SetJsonVersion FilePath="$(UmbracoPackageJsonPath)" VersionValue="$(MinVerVersion)" Condition="Exists('$(UmbracoPackageJsonPath)')" />
-		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'npm run build' before packing, or the package will ship an unstamped version." Condition="!Exists('$(UmbracoPackageJsonPath)')" />
+		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'pnpm run build' before packing, or the package will ship an unstamped version." Condition="!Exists('$(UmbracoPackageJsonPath)')" />
 	</Target>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -88,11 +88,10 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 
   <ItemGroup>
     <!-- Development-only files. ContentTargetFolders is ".", so anything left as Content packs
-         to the package root; without these the package ships package-lock.json and the
+         to the package root; without these the package ships package.json and the
          TypeScript sources' config instead of just the built output. -->
     <Content Remove="backoffice\**" />
     <Content Remove="package.json" />
-    <Content Remove="package-lock.json" />
     <!-- The add-on's docs reach the package through the Vite build, which copies them into
          wwwroot for the desktop's Help app: without this, docs/product.json would also pack as
          content at the package root. -->
