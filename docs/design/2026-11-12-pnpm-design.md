@@ -102,10 +102,13 @@ fixed by declaring the dependency, not by turning on hoisting:
   the backoffice asks its consumer to provide and puts the tree back to what npm had.
 
 One more pnpm difference that is not about layout: **pnpm 10 does not run dependencies' install
-scripts unless a project allows them.** The only one here is esbuild's, which npm always ran. Each
-`package.json` allows it with `"pnpm": { "onlyBuiltDependencies": ["esbuild"] }`, so the install
-does what npm's did and prints no "ignored build scripts" warning. `sharp` 0.35 needs no script: it
-ships prebuilt binaries as optional packages.
+scripts unless a project allows them.** Each `package.json` allows esbuild's, which npm always ran,
+with `"pnpm": { "onlyBuiltDependencies": ["esbuild"] }`. Media has one more: `canvas`, an optional
+dependency of the Image Editor's `fabric` that is only used when `fabric` runs in Node. Nothing here
+does (the tests run in a browser, and no code imports it), so Media skips it on purpose with
+`"ignoredBuiltDependencies": ["canvas"]`, which also silences pnpm's "Ignored build scripts" warning.
+npm did build it, so this is the one place the install does less than npm's; Media's 1059 tests passed
+without it. `sharp` 0.35 needs no script: it ships prebuilt binaries as optional packages.
 
 Vite, `tsc`, web-test-runner and the docs and asset scripts needed no other change. The two places
 that read `node_modules` by path (`build-ranks.mjs` for the Roboto Slab font and Services.Arcade's
