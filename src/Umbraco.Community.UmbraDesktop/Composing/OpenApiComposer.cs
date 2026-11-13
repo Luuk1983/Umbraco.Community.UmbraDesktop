@@ -11,7 +11,7 @@ namespace Umbraco.Community.UmbraDesktop.Composing;
 
 /// <summary>
 /// Registers the package's own OpenAPI document, <c>/umbraco/openapi/umbradesktop.json</c>, which the
-/// TypeScript client in <c>backoffice/src/api</c> is generated from (<c>npm run generate-client</c>).
+/// TypeScript client in <c>backoffice/src/api</c> is generated from (<c>pnpm run generate-client</c>).
 /// </summary>
 /// <remarks>
 /// Umbraco 18 replaced Swashbuckle with <c>Microsoft.AspNetCore.OpenApi</c>, and with it the operation

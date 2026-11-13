@@ -404,11 +404,11 @@ itself has not run on GitHub yet.
 ## Traps this repository has actually hit
 
 - **A package with no frontend installs cleanly and does nothing.** `wwwroot/App_Plugins/` is Vite
-  output and is **gitignored**, so a clean checkout that runs `dotnet pack` without `npm run build`
+  output and is **gitignored**, so a clean checkout that runs `dotnet pack` without `pnpm run build`
   first produces a valid, empty, silent package. Both workflows build the frontend before
   `dotnet build`, and both then assert the packed asset count is non-zero. Do not remove that check
   because it has never fired.
-- **Never invoke npm from MSBuild** to "fix" the above. Ordering belongs in the workflow; coupling
+- **Never invoke pnpm from MSBuild** to "fix" the above. Ordering belongs in the workflow; coupling
   `dotnet build` to a working Node install breaks every machine without one.
 - **`Version="0.*"` packs as `>= 0.4.3` with no ceiling** — the resolved version becomes the floor
   and the package claims to support majors that do not exist yet. Every shipped dependency in
@@ -428,9 +428,10 @@ itself has not run on GitHub yet.
   The workflows name `Umbraco.Community.UmbraDesktop.Tests.csproj` explicitly.
 - **`git clean -xdf`** deletes the test instance's SQLite database and `wwwroot/media/`. Dry-run
   with `-xdn` first.
-- **`npm ci` with Visual Studio open** fails with `EPERM` after emptying most of `node_modules` —
-  the `-vs-binding` entry in both `package.json` files auto-runs `npm run watch`, whose esbuild
-  worker holds a lock. Recover with `npm install`.
+- **Reinstalling with Visual Studio open** fails with `EPERM`: the `-vs-binding` entry in each
+  `package.json` auto-runs the `watch` script, whose esbuild worker holds a lock in `node_modules`.
+  Under npm, `npm ci` had emptied most of `node_modules` by the time it hit the lock. Stop the watch
+  (or close Visual Studio) and run `pnpm install` again.
 - **A CI-built package's SourceLink points at a commit that does not exist.** `pull_request` checks
   out an ephemeral merge of the branch into `main`, so that is the commit the nuspec's `repository`
   element records — not the branch tip the run reports. Harmless, because CI packages are

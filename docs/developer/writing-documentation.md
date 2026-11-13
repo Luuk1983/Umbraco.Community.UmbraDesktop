@@ -129,7 +129,7 @@ Use only what renders the same on GitHub, in Docusaurus and in a plain Markdown 
 
 ## The docs check
 
-`npm run build` runs `backoffice/scripts/docs/check-docs.mjs` first. It fails the build when:
+`pnpm run build` runs `backoffice/scripts/docs/check-docs.mjs` first. It fails the build when:
 
 - a link points to a file or folder that does not exist, including one that differs only in case,
   which Windows forgives and GitHub does not
@@ -145,7 +145,7 @@ in `backoffice/scripts/docs/markdown-docs.mjs`, with tests in `backoffice/src/to
 To run it on its own, from `src/Umbraco.Community.UmbraDesktop`:
 
 ```bash
-npm run docs:check
+pnpm run docs:check
 ```
 
 ## The packed README
@@ -161,7 +161,7 @@ build already does. The README in the repository keeps its relative links, which
 
 ## The copy for the Help app
 
-The Help app reads the docs from the package itself, so `npm run build` copies them there:
+The Help app reads the docs from the package itself, so `pnpm run build` copies them there:
 `backoffice/scripts/docs/copy-docs.mjs` puts `product.json`, everything under `user/` and
 `developer/`, and only the images those pages use into `backoffice/public/docs/`, which ships as
 `/App_Plugins/Umbraco.Community.UmbraDesktop/docs/`. On the way it writes the commit being built into

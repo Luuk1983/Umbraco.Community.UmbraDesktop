@@ -353,4 +353,4 @@ condition the person fails opens nothing. It has no page to route, so asking aga
 - [ ] Follows the owner by changes in `saves`, `changedElsewhere` and `dirty`, not by every emission
 - [ ] Resizes itself with `setAttachedContentWidth`, if at all
 - [ ] Has a way out when its content cannot be shown
-- [ ] Tests for its pure rules, written first, and `npm run build` and `npm test` both pass
+- [ ] Tests for its pure rules, written first, and `pnpm run build` and `pnpm test` both pass
