@@ -135,7 +135,10 @@ describe('console commands', () => {
     expect(status.episodes).to.equal(store.value!.episodes.length);
   });
 
-  it('is on the page as soon as the tray cup or the window is loaded', async () => {
+  it('is on the page as soon as the tray cup or the window is loaded', async function () {
+    // Loading both elements is what this case tests, so it cannot be done ahead of it, and on a cold,
+    // busy dev server their module graphs take longer than mocha's 5 s default to arrive.
+    this.timeout(30_000);
     delete (globalThis as { umbraCoffee?: unknown }).umbraCoffee;
     await import('./tray-cup.element.js');
     await import('./umbracoffee.element.js');

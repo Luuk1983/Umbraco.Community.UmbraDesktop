@@ -22,7 +22,7 @@ Log.LogMessage(MessageImportance.High, $"Set version in {FilePath} to {VersionVa
 
 	<Target Name="SyncUmbracoPackageVersion" AfterTargets="MinVer" Condition="'$(MinVerVersion)' != '' and '$(UmbracoPackageJsonPath)' != ''">
 		<SetJsonVersion FilePath="$(UmbracoPackageJsonPath)" VersionValue="$(MinVerVersion)" Condition="Exists('$(UmbracoPackageJsonPath)')" />
-		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'npm run build' before packing, or the package will ship an unstamped version." Condition="!Exists('$(UmbracoPackageJsonPath)')" />
+		<Warning Text="umbraco-package.json not found at $(UmbracoPackageJsonPath) — run 'pnpm run build' before packing, or the package will ship an unstamped version." Condition="!Exists('$(UmbracoPackageJsonPath)')" />
 	</Target>
 
 	<!-- Every packed project gets its README's relative links and images pinned to the commit being

@@ -13,7 +13,7 @@
  * work, provided the licence and copyright notice are kept; no font file is shipped, only
  * outlines, and this notice and the generated file's header name the origin.
  *
- * Run by hand with `npm run ranks`; the output is committed, as `npm run courts` output is.
+ * Run by hand with `pnpm run ranks`; the output is committed, as `pnpm run courts` output is.
  *
  * Normalisation: every path lives in a box whose height is 1 (the rank's ink, top at y=0, baseline
  * at y=1) and whose left ink edge is x=0. Figures and K/A/Q-body are stretched by at most 5% to land

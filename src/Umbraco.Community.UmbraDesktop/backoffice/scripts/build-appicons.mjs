@@ -12,7 +12,7 @@
  * The artwork is composed in `appicon-art.mjs` from the loader's own constants rather than drawn in
  * a file here, so the icon cannot drift away from the boot splash it is meant to be.
  *
- * To judge the output rather than assume it, run `npm run appicons:sheet` — an icon is a drawing
+ * To judge the output rather than assume it, run `pnpm run appicons:sheet` — an icon is a drawing
  * and no assertion in here can tell you it looks right.
  */
 

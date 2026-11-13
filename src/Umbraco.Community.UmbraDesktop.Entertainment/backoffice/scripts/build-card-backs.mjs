@@ -7,7 +7,7 @@
  *
  * Reads the host's committed PNGs in `../../Umbraco.Community.UmbraDesktop/backoffice/wallpapers-src/`
  * rather than its encoded AVIFs, because those are gitignored build output and may not exist yet on
- * a clean checkout. The crops written here are gitignored too and rebuilt by `npm run build`, which
+ * a clean checkout. The crops written here are gitignored too and rebuilt by `pnpm run build`, which
  * CI runs before `dotnet pack`, exactly as the host does for its wallpapers.
  *
  * Output goes to `public/` rather than straight to `wwwroot/` because vite.config.ts empties the
