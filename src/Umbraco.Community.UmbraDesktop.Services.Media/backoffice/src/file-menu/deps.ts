@@ -157,14 +157,32 @@ export function createReferenceCount(host: UmbControllerHost): NonNullable<FileM
 }
 
 /**
+ * The used-elsewhere question's content: the sentence, and under it the places that use the file, with
+ * core's own references summary, the one core's trash and delete questions show on Umbraco 19, so the
+ * person can see which pages they are about to change rather than only how many (found by the reviewer
+ * of #137). Not `umb-confirm-action-modal-entity-references`, which those questions showed until 19:
+ * core deprecated it for removal in 21 and it logs a warning on every use.
+ * @param sentence The question, with the name and the count.
+ * @param references The item, and the repositories that read it and the places that use it.
+ * @param references.unique The media item.
+ * @param references.itemRepositoryAlias The media item repository.
+ * @param references.referenceRepositoryAlias The media reference repository.
+ * @returns The content for the confirm dialog.
+ */
+export function usedElsewhereContent(
+  sentence: string,
+  references: { unique: string; itemRepositoryAlias: string; referenceRepositoryAlias: string },
+) {
+  return html`<p>${sentence}</p>
+    <umb-entity-references-summary .config=${references}></umb-entity-references-summary>`;
+}
+
+/**
  * The used-elsewhere question in Umbraco's own confirm dialog, which rejects on cancel: two buttons,
  * Save and Cancel, as the overwrite question has (#137). No Save as copy button, since Save as cannot be
  * opened on a copy from here; the question names Save as instead.
  *
- * Under the sentence, the places themselves, with core's own references list
- * (`umb-confirm-action-modal-entity-references`), the one core's trash and delete questions show, so
- * the person sees which pages they are about to change rather than only how many (found by the
- * reviewer of #137).
+ * Under the sentence, the places themselves (see {@link usedElsewhereContent}).
  * @param host The element asking.
  * @returns The question.
  */
@@ -177,8 +195,7 @@ export function createUsedElsewhereQuestion(host: UmbControllerHost): NonNullabl
     try {
       await umbConfirmModal(host, {
         headline: words('usedHeadline', name),
-        content: html`<p>${sentence}</p>
-          <umb-confirm-action-modal-entity-references .config=${references}></umb-confirm-action-modal-entity-references>`,
+        content: usedElsewhereContent(sentence, references),
         color: 'danger',
         confirmLabel: words('usedConfirm'),
       });

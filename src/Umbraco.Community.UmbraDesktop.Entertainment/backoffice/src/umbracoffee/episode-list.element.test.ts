@@ -177,6 +177,31 @@ describe('the episode list element', () => {
     expect(rows(element)[0]?.querySelector('.now') === null, 'only the current row says it').to.equal(true);
   });
 
+  /**
+   * 17.5.0-rc.1 run (owner, 2026-11-04): "Now playing · Oct 30, 2026" on one line lost the date to the
+   * clip at the list's usual width, as the live row's time did before (#189). The same answer: the tag
+   * on its line, and the date first on the next, ahead of the guests, so the date is never what goes.
+   */
+  it("puts Now playing on its own line and the date ahead of the guests, at a row's height", async () => {
+    const withGuest = episodeOf({ ...EPISODES[1]!, guests: [guest('Warren Buckley')] });
+    const date = 'Oct 30, 2026';
+    const element = await mount([EPISODES[0]!, withGuest, EPISODES[2]!], { current: 'v2', playing: true, formatDate: () => date }, { w: 300, h: 500 });
+    const row = rows(element)[1]!;
+    expect(textIn(row, '.ep-d')).to.equal(STRINGS.umbraCoffeeNowPlaying);
+    expect(textIn(row, '.ep-g')).to.equal(`${date}·Warren Buckley`);
+    const status = row.querySelector<HTMLElement>('.ep-d')!;
+    expect(status.scrollWidth, 'the whole status fits').to.be.at.most(status.clientWidth);
+    const shown = row.querySelector<HTMLElement>('.ep-g .when')!.getBoundingClientRect();
+    expect(shown.right, 'the whole date is in view').to.be.at.most(row.querySelector<HTMLElement>('.ep-g')!.getBoundingClientRect().right + 0.5);
+    expect(row.getBoundingClientRect().height).to.be.closeTo(UMBRACOFFEE_ROW_HEIGHT, 0.5);
+  });
+
+  it('gives the current row with no guests just its date under Now playing', async () => {
+    const element = await mount(EPISODES, { current: 'v3', playing: false, formatDate: () => 'Aug 29, 2026' });
+    expect(textIn(rows(element)[2], '.ep-d')).to.equal(STRINGS.umbraCoffeePaused);
+    expect(textIn(rows(element)[2], '.ep-g')).to.equal('Aug 29, 2026');
+  });
+
   it('puts up to two guests under the date, with how many more there are', async () => {
     const element = await mount([
       episodeOf({ ...EPISODES[0]!, guests: [guest('Lucy Smith'), guest('Matt Brailsford'), guest('Georgina Bidwell')] }),

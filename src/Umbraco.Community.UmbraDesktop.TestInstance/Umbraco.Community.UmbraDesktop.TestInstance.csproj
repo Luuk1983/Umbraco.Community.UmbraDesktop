@@ -21,16 +21,19 @@
 
   <!-- Umbraco's commercial packages and Umbraco AI. Every one is here so the catalogue's commercial
        entries resolve against the real registered extensions rather than being taken on trust.
-       Switched off on Umbraco 19 (issue #196): on 2026-11-04 none of them has a 19 release, not even a
-       beta, and an 18 build cannot load on 19. Turn them back on, with "19.*" versions in
-       Directory.Packages.props, as they ship. Until then the catalogue's commercial entries and the AI
-       chat are untested on 19. -->
-  <ItemGroup Condition="'$(UmbraDesktopCommercialPackages)' == 'true'">
+       Back on since Umbraco 19.0.0-rc1: they were switched off for beta1, which none of them
+       supported, and every one shipped a 19 release candidate by 2026-11-19. -->
+  <ItemGroup>
     <PackageReference Include="Umbraco.Forms" />
     <PackageReference Include="Umbraco.Deploy.OnPrem" />
     <PackageReference Include="Umbraco.Workflow" />
     <PackageReference Include="Umbraco.Commerce" />
-    <PackageReference Include="Umbraco.Engage" />
+    <!-- Engage is left out on 19.0.0-rc1. Its rc1, like Forms', is built against CsvHelper 33.1;
+         Workflow's and UI Builder's rc1 pull in CsvHelper 34, which has no ClassMap<T> where 33 did.
+         NuGet resolves 34, and the site fails at boot scanning Engage's types (TypeLoadException on
+         CsvHelper.Configuration.ClassMap`1). Forms boots with it. Put Engage back when a release of
+         the four agrees on CsvHelper. -->
+    <!-- <PackageReference Include="Umbraco.Engage" /> -->
     <PackageReference Include="Umbraco.UIBuilder" />
     <PackageReference Include="Umbraco.Automate" />
     <PackageReference Include="Umbraco.AI" />

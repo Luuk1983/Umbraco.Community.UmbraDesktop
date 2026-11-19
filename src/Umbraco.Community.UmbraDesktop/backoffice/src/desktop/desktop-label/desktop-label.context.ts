@@ -1,5 +1,6 @@
 import { UmbraDesktopService } from '../../api/sdk.gen';
 import type { DesktopLabelRequestModel, DesktopLabelResponseModel } from '../../api/types.gen';
+import { whenClientReady } from '../boot/client-ready';
 import { UMBRADESKTOP_DESKTOP_LABEL_CONTEXT } from './desktop-label.context-token';
 import { UmbContextBase } from '@umbraco-cms/backoffice/class-api';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
@@ -21,12 +22,17 @@ export interface UmbraDesktopLabelSource {
  * server that cannot answer would otherwise greet each of them with an error about an optional
  * extra. Writing does raise one, because it is an admin acting deliberately in the Site screen, and
  * a save that failed silently would read as a setting that does not stick.
+ *
+ * Reading waits for the API client to be configured, because the desktop reads the label as it is
+ * built and on a full load that can come first (see `client-ready.ts`). Writing does not: it is a
+ * click in an open settings screen, long after.
  * @param host The host the requests are made for.
  * @returns A source that talks to the management API.
  */
 export function serverLabelSource(host: UmbControllerHost): UmbraDesktopLabelSource {
   return {
     async read() {
+      await whenClientReady();
       const { data } = await tryExecute(host, UmbraDesktopService.getDesktopLabel(), {
         disableNotifications: true,
       });

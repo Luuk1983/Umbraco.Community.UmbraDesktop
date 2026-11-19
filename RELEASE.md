@@ -121,14 +121,14 @@ One branch per Umbraco major, as Umbraco-CMS does it
 |---|---|---|---|
 | `main` | 18, always the newest major | `v18.x` | 18.1.0 to 18.99999999 |
 | `v17/main` | 17 | `v17.x` | 17.6.0 to 17.99999999 |
-| `v19/main` | 19, in beta (for now, see below) | `v19.x` | 19.0.0-beta1 to 19.99999999 |
+| `v19/main` | 19, in prerelease (for now, see below) | `v19.x` | 19.0.0-rc1 to 19.99999999 |
 
-**`v19/main` is a temporary exception** (issue #196). Umbraco 19 is in beta and 17 and 18 are under
+**`v19/main` is a temporary exception** (issue #196). Umbraco 19 is a release candidate and 17 and 18 are under
 active development, so `main` stays 18 for now and 19 lives on `v19/main`. When that changes,
 `v19/main` becomes `main` and 18 moves to `v18/main`, as the last bullet below describes. Until then:
 
 - **Tag 19 releases on `v19/main`** (or a `release/v19.x` branch from it), as prereleases:
-  `v19.0.0-beta.1`, not `v19.0.0`. The packages' Umbraco floor is a 19 beta, and the build action
+  `v19.0.0-rc.1`, not `v19.0.0`. The packages' Umbraco floor is a 19 prerelease, and the build action
   refuses a version whose major differs from the floor's, so a `v19` tag on `main` or a `v18` tag
   here fails before anything is pushed.
 - **On GitHub, mark a 19 release as a pre-release.** Otherwise it becomes the repository's Latest

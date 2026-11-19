@@ -15,12 +15,14 @@ Every app opens in a window of its own. Each window remembers its own place.
 
 - To move a window, drag its title bar.
 - To resize a window, drag an edge or a corner.
-- To maximise a window, double-click its title bar. Double-click it again to restore it.
+- To maximise a window, double-click its title bar. Double-click it again to restore it. A window
+  you maximise or restore comes to the front.
 - To minimise a window, use the minimise button in its title bar, or select its button on the
   [taskbar](../taskbar/using-the-taskbar.md).
 
 A window cannot be made smaller than its minimum size. See [Screen size](../getting-started/screen-size.md)
-for why.
+for why. A window that would be taller or wider than the desktop opens smaller, so all of it is on
+screen.
 
 To give a window exactly half the desktop, drag it to the left or right edge. See
 [Snapping](snapping.md).

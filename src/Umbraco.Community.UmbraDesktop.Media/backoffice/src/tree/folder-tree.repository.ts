@@ -174,11 +174,18 @@ export class UmbraDesktopMediaFolderTreeRepository
 }
 
 /**
- * A search result as a tree item, mapped as core's media tree source maps its own.
+ * A search result as a tree item, mapped as core's media tree source maps its own. Its type goes in
+ * `contentType`, which core's tree reads first on Umbraco 19, and in `mediaType` too, which 19
+ * deprecates for removal in 20 but still requires.
  * @param item The search result.
  * @returns The tree item.
  */
-function treeItem(item: MediaItemResponseModel): UmbMediaTreeItemModel {
+export function treeItem(item: MediaItemResponseModel): UmbMediaTreeItemModel {
+  const type = {
+    unique: item.mediaType.id,
+    icon: item.mediaType.icon,
+    collection: item.mediaType.collection ? { unique: item.mediaType.collection.id } : null,
+  };
   return {
     unique: item.id,
     parent: { unique: item.parent?.id ?? null, entityType: item.parent ? 'media' : 'media-root' },
@@ -187,11 +194,8 @@ function treeItem(item: MediaItemResponseModel): UmbMediaTreeItemModel {
     noAccess: false,
     isTrashed: item.isTrashed,
     isFolder: false,
-    mediaType: {
-      unique: item.mediaType.id,
-      icon: item.mediaType.icon,
-      collection: item.mediaType.collection ? { unique: item.mediaType.collection.id } : null,
-    },
+    contentType: type,
+    mediaType: type,
     name: item.variants[0]?.name ?? '',
     variants: item.variants.map((variant) => ({ name: variant.name, culture: variant.culture || null })),
     createDate: '',

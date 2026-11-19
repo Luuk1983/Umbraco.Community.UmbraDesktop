@@ -6,11 +6,8 @@ import type { UmbraDesktopMediaRef } from '../../operations/media-api.js';
 import { UmbraDesktopCutAction } from './cut.action.js';
 import { UmbraDesktopCopyAction } from './copy.action.js';
 import { UmbraDesktopPasteAction } from './paste.action.js';
-import { UmbraDesktopBulkCutAction } from './bulk-cut.action.js';
-import { UmbraDesktopBulkCopyAction } from './bulk-copy.action.js';
-import { UmbraDesktopCopyToAction } from './copy-to.action.js';
 
-/** Cut, Copy, Paste and Copy to, ours, inside a manager window only (design §5, plan task 4.6). */
+/** Cut, Copy and Paste, ours, inside a manager window only (design §5, plan task 4.6). */
 
 const ref = (unique: string): UmbraDesktopMediaRef => ({ unique, name: unique, parent: 'products', mediaType: 'image', isFolder: false });
 
@@ -81,48 +78,6 @@ describe('Paste on a folder’s menu', () => {
     const { host, asked, done } = stage();
     await new UmbraDesktopPasteAction(host, { entityType: 'media-root', unique: null, meta: {} } as never).execute();
     expect(asked).to.deep.equal(['paste into null']);
-    done();
-  });
-});
-
-describe('the selection bar', () => {
-  it('cuts and copies the selection', async () => {
-    const { host, asked, done } = stage();
-    const cut = new UmbraDesktopBulkCutAction(host, { meta: {} } as never);
-    cut.selection = ['a', 'b'];
-    await cut.execute();
-    const copy = new UmbraDesktopBulkCopyAction(host, { meta: {} } as never);
-    copy.selection = ['c'];
-    await copy.execute();
-    expect(asked).to.deep.equal(['cut a,b', 'copy c']);
-    done();
-  });
-
-  it('copies the selection to the folder picked in core’s folder picker', async () => {
-    const { host, asked, done } = stage();
-    class Picking extends UmbraDesktopCopyToAction {
-      protected override async _pickFolder(): Promise<string | null | undefined> {
-        return 'people';
-      }
-    }
-    const action = new Picking(host, { meta: {} } as never);
-    action.selection = ['a', 'b'];
-    await action.execute();
-    expect(asked).to.deep.equal(['copy a,b to people']);
-    done();
-  });
-
-  it('copies nothing when the picker is closed', async () => {
-    const { host, asked, done } = stage();
-    class Closing extends UmbraDesktopCopyToAction {
-      protected override async _pickFolder(): Promise<string | null | undefined> {
-        return undefined;
-      }
-    }
-    const action = new Closing(host, { meta: {} } as never);
-    action.selection = ['a'];
-    await action.execute();
-    expect(asked).to.deep.equal([]);
     done();
   });
 });

@@ -125,9 +125,10 @@ export class UmbraDesktopSessionModalElement extends UmbModalBaseElement {
   /**
    * Lock the desktop, from a window whose own session has ended while the desktop's has not.
    *
-   * The case this issue exists for: core's `timeOut()` is local to the frame that calls it, so a
-   * window whose refresh the server rejected times out alone while the desktop still looks alive.
-   * The refresh token is shared, so the desktop is no better off; timing it out shows the lock. Left
+   * The case this issue exists for: core's `timeOut()` is local to the frame that calls it, still on
+   * Umbraco 19, so a window whose request the server rejected times out alone while the desktop still
+   * looks alive. The sign-in cookie is shared, so the desktop is no better off; timing it out shows the
+   * lock. Left
    * alone when the desktop is already locked, which is also the ordinary case of a session that ran
    * out everywhere at once.
    */

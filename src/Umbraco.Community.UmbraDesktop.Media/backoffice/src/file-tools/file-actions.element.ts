@@ -1,4 +1,4 @@
-import { css, customElement, html, nothing, property, query, repeat, state } from '@umbraco-cms/backoffice/external/lit';
+import { css, customElement, html, nothing, property, query, state } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
 import { UmbTextStyles } from '@umbraco-cms/backoffice/style';
 import { umbExtensionsRegistry } from '@umbraco-cms/backoffice/extension-registry';
@@ -94,11 +94,10 @@ export class UmbraDesktopFileActionsElement extends UmbLitElement {
       <uui-popover-container id="file-actions-popover" margin="6" placement="top-end" @toggle=${this.#onToggle} @click=${{ handleEvent: this.#onChoose, capture: true }}>
         <umb-popover-layout id="layout">
           <uui-scroll-container>
-            ${repeat(
-              this._entries,
-              (entry) => entry.alias,
-              (entry) => entry.component,
-            )}
+            <!-- Core's own list, as core's fold-out draws Save and publish's (Umbraco-CMS#24421): it
+                 honours a menu item's group and separatorBefore, so another package's entry looks
+                 here as it would there. -->
+            <umb-action-group-list group-type="workspaceActionMenuItemGroup" .actions=${this._entries}></umb-action-group-list>
           </uui-scroll-container>
         </umb-popover-layout>
       </uui-popover-container>

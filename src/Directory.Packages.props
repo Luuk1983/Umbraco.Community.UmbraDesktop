@@ -2,12 +2,14 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
-    <!-- The oldest Umbraco the packages install on. On this branch that is Umbraco 19's first beta
-         (issue #196): the 19 line is tested against the prereleases, so the floor is one of them.
+    <!-- The oldest Umbraco the packages install on. On this branch that is Umbraco 19's newest
+         release candidate (issue #196): the 19 line is tested against the prereleases, so the floor
+         is one of them. rc1, not beta1: rc1 runs on the final .NET 11 (the 11.0.0 packages) where
+         beta1 ran on its release candidate, and nobody should build against that any more.
          TODO(19.0.0): move the floor to the stable 19.0.0 so consumers never resolve to a prerelease
          of the host. The build action's floor check (backoffice/scripts/check-umbraco-floor.mjs)
          holds every packed bundle to this release; it sees imports only, not members. -->
-    <UmbraDesktopUmbracoFloor>19.0.0-beta1</UmbraDesktopUmbracoFloor>
+    <UmbraDesktopUmbracoFloor>19.0.0-rc1</UmbraDesktopUmbracoFloor>
   </PropertyGroup>
   <ItemGroup>
     <!-- Extension package dependencies. The ceiling is UmbraDesktopUmbracoMajorCeiling from
@@ -22,41 +24,41 @@
     <PackageVersion Include="Umbraco.Cms.Persistence.EFCore" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
     <PackageVersion Include="Umbraco.Cms.StaticAssets" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
     <PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
-    <!-- What Umbraco.Cms.Api.Common requires at the floor (11.0.0-rc.3.26522.148 for 19.0.0-beta1),
+    <!-- What Umbraco.Cms.Api.Common requires at the floor (11.0.0 for 19.0.0-rc1),
          as a minimum: the host uses its types directly (Composing/OpenApiComposer.cs). Raise it with
          the floor. -->
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0-rc.3.26522.148" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
     <!-- Build-time only: versioning and source-link -->
     <PackageVersion Include="MinVer" Version="7.0.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
-    <!-- EF Core at what Umbraco.Cms.Persistence.EFCore at the floor requires (11.0.0-rc.3.26522.148
-         for 19.0.0-beta1), for
+    <!-- EF Core at what Umbraco.Cms.Persistence.EFCore at the floor requires (11.0.0 for
+         19.0.0-rc1), for
          the Arcade's migrations here and its tests' SQLite below. Lower, and restore fails on a
          downgrade (NU1605); raise it with the floor. -->
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0-rc.3.26522.148" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0" />
     <!-- Test instance dependencies -->
     <!-- "19.*-*" so the prereleases float: a plain "19.*" admits none of them. -->
     <PackageVersion Include="Umbraco.Cms" Version="19.*-*" />
     <PackageVersion Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" />
-    <PackageVersion Include="Umbraco.TheStarterKit" Version="19.0.0-beta1" />
+    <PackageVersion Include="Umbraco.TheStarterKit" Version="19.0.0-rc1" />
     <PackageVersion Include="uSync" Version="19.*-*" />
     <PackageVersion Include="Umbraco.Community.AdvancedPermissions" Version="19.0.0-beta.1" />
     <!-- Umbraco's commercial packages, present so the catalogue's commercial entries can actually
          be exercised locally. Unlicensed they run in trial mode, which is enough to register their
          backoffice extensions — which is all the catalogue resolves against. Deploy is the on-prem
          build, since the Cloud one is not installable here. -->
-    <PackageVersion Include="Umbraco.Forms" Version="18.*" />
-    <PackageVersion Include="Umbraco.Deploy.OnPrem" Version="18.*" />
-    <PackageVersion Include="Umbraco.Workflow" Version="18.*" />
-    <PackageVersion Include="Umbraco.Commerce" Version="18.*" />
-    <PackageVersion Include="Umbraco.Engage" Version="18.*" />
-    <PackageVersion Include="Umbraco.UIBuilder" Version="18.*" />
-    <PackageVersion Include="Umbraco.Automate" Version="18.*" />
+    <PackageVersion Include="Umbraco.Forms" Version="19.*-*" />
+    <PackageVersion Include="Umbraco.Deploy.OnPrem" Version="19.*-*" />
+    <PackageVersion Include="Umbraco.Workflow" Version="19.*-*" />
+    <PackageVersion Include="Umbraco.Commerce" Version="19.*-*" />
+    <PackageVersion Include="Umbraco.Engage" Version="19.*-*" />
+    <PackageVersion Include="Umbraco.UIBuilder" Version="19.*-*" />
+    <PackageVersion Include="Umbraco.Automate" Version="19.*-*" />
     <!-- Umbraco AI, pinned rather than floating. The desktop's AI integration
-         (backoffice/src/desktop/ai/) needs the Copilot Workspace. Every AI package has a stable 18
-         release, so none of 17's release candidates are needed, but the add-ons still version
-         independently of AI core and only a matching set resolves, so these numbers do not match
-         each other and are not meant to. The newest stable of each on 2026-10-23.
+         (backoffice/src/desktop/ai/) needs the Copilot Workspace. On Umbraco 19 every AI package has
+         a 19.0.0-rc.1 and nothing newer (2026-11-19), and the Copilot Workspace pins its own
+         dependencies to exactly that version, so the set matches for now. On 18 the add-ons
+         versioned independently of AI core; expect that again once 19 is stable.
          Agent and Agent.UI are here because Copilot.Workspace depends on neither in NuGet and yet
          its client imports from both at runtime. Each AI package contributes one backoffice
          import-map entry, and the workspace's client imports three of them: `@umbraco-ai/core`
@@ -66,20 +68,20 @@
          so the sidebar Copilot package is genuinely not needed.
          Test-instance only, like the seven commercial packages above: the shipped package
          references no AI package and must never depend on one. -->
-    <PackageVersion Include="Umbraco.AI" Version="18.6.0" />
-    <PackageVersion Include="Umbraco.AI.Agent" Version="18.4.0" />
-    <PackageVersion Include="Umbraco.AI.Agent.UI" Version="18.3.0" />
-    <PackageVersion Include="Umbraco.AI.Agent.Copilot.Workspace" Version="18.2.0" />
+    <PackageVersion Include="Umbraco.AI" Version="19.0.0-rc.1" />
+    <PackageVersion Include="Umbraco.AI.Agent" Version="19.0.0-rc.1" />
+    <PackageVersion Include="Umbraco.AI.Agent.UI" Version="19.0.0-rc.1" />
+    <PackageVersion Include="Umbraco.AI.Agent.Copilot.Workspace" Version="19.0.0-rc.1" />
     <!-- A model provider, so the chat in the test instance can actually answer. Any one would do;
          Anthropic is simply the key we have. Needs an API key in user secrets or the AI section to do
          anything. -->
-    <PackageVersion Include="Umbraco.AI.Anthropic" Version="18.1.3" />
+    <PackageVersion Include="Umbraco.AI.Anthropic" Version="19.0.0-rc.1" />
     <!-- Test dependencies -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0-rc.3.26522.148" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0" />
   </ItemGroup>
 </Project>

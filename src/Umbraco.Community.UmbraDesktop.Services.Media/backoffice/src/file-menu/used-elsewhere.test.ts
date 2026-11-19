@@ -226,3 +226,21 @@ describe("Info's Used in", () => {
     expect(facts(element).map(([label]) => label)).to.not.include(words.infoUsedIn);
   });
 });
+
+/**
+ * Under the question, the places that use the file, with core's own references summary: what core's
+ * trash and delete questions show on Umbraco 19. Core deprecated the list this used before,
+ * `umb-confirm-action-modal-entity-references`, for removal in 21, and it logs a warning on every use.
+ */
+describe("the used-elsewhere question's content", () => {
+  it("shows core's references summary for the item, and not the deprecated list", async () => {
+    const { usedElsewhereContent } = await import('./deps.js');
+    const references = { unique: 'k1', itemRepositoryAlias: 'Item.Repo', referenceRepositoryAlias: 'Reference.Repo' };
+    const element = await fixture(html`<div>${usedElsewhereContent('It is used elsewhere.', references)}</div>`);
+    expect(element.querySelector('p')?.textContent).to.equal('It is used elsewhere.');
+    const summary = element.querySelector('umb-entity-references-summary') as (HTMLElement & { config?: unknown }) | null;
+    expect(summary, 'the summary').to.not.equal(null);
+    expect(summary!.config).to.deep.equal(references);
+    expect(element.querySelector('umb-confirm-action-modal-entity-references')).to.equal(null);
+  });
+});
