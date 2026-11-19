@@ -9,11 +9,11 @@ sidebar_position: 1
 
 ## Prerequisites
 
-- Umbraco 19.0.0-beta1 or later
+- Umbraco 19.0.0-rc1 or later
 - .NET 11
 
 UmbraDesktop has a release line for each Umbraco major: 19.x for Umbraco 19, 18.x for Umbraco 18
-and 17.x for Umbraco 17. This guide is for 19.x, which is in beta while Umbraco 19 is.
+and 17.x for Umbraco 17. This guide is for 19.x, which is a prerelease while Umbraco 19 is.
 
 ## Install the package
 

@@ -2,6 +2,7 @@ import { UMBRADESKTOP_SECTION_ALIAS } from '../desktop/constants';
 import { hideSectionTab } from '../headerapps/section-tab-hide';
 import { UMB_AUTH_CONTEXT } from '@umbraco-cms/backoffice/auth';
 import { client } from '../api/client.gen.js';
+import { markClientReady } from '../desktop/boot/client-ready';
 import { backofficePathFromBaseHref } from '../desktop/boot/backoffice-path';
 import {
     clearBootAttempt,
@@ -70,6 +71,8 @@ export const onInit: UmbEntryPointOnInit = (host, extensionRegistry) => {
     host.consumeContext(UMB_AUTH_CONTEXT, (authContext) => {
         if (!authContext) return;
         authContext.configureClient(client);
+        // Lets go of the calls the desktop made while it was built before this ran; see client-ready.ts.
+        markClientReady();
     });
 
     // Whether this load opens the desktop. Deliberately not awaited: nothing else here depends on

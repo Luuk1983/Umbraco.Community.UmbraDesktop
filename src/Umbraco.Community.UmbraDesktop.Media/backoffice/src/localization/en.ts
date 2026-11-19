@@ -27,6 +27,8 @@ export default {
     cut: 'Cut',
     copy: 'Copy',
     paste: 'Paste',
+    // What screen readers call the block of the Manager's own actions in an item's menu.
+    actionGroupManager: 'Media Manager',
     dragMove: 'Move to %0%',
     dragMoveSome: 'Move %0% of %1% to %2%',
     dragCopy: 'Copy to %0%',

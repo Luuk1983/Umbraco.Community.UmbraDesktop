@@ -190,3 +190,27 @@ describe('the folders a tree shows', () => {
     expect(probed, 'a folder the server says is empty is not asked about').to.have.members(['photos', 'only-images', 'archive']);
   });
 });
+
+/**
+ * A folder found through the search index becomes a tree item we build ourselves, as core's media tree
+ * source builds its own. Umbraco 19 gives tree items a `contentType` and deprecates `mediaType`, for
+ * removal in 20, and core's tree reads `contentType` first. So the item carries both, the same.
+ */
+describe('a tree item built from a search result', () => {
+  it('carries its type as contentType, and as the deprecated mediaType while core still has it', async () => {
+    const { treeItem } = await import('./folder-tree.repository.js');
+    const type = { id: 't1', icon: 'icon-folder', collection: { id: 'c1' } };
+    const item = treeItem({
+      id: 'f1',
+      parent: null,
+      hasChildren: true,
+      isTrashed: false,
+      mediaType: type,
+      variants: [{ name: 'Holidays', culture: null }],
+      flags: [],
+    } as never);
+    const expected = { unique: 't1', icon: 'icon-folder', collection: { unique: 'c1' } };
+    expect(item.contentType).to.deep.equal(expected);
+    expect(item.mediaType).to.deep.equal(expected);
+  });
+});

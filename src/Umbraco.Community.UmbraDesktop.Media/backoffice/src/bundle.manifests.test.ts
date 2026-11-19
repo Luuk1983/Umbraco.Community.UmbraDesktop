@@ -4,6 +4,9 @@ import { UMBRADESKTOP_MEDIA_BIN_TREE, UMBRADESKTOP_MEDIA_FOLDER_TREE, UMBRADESKT
 import { IMAGE_EDITOR_CONTENT_SIZE, IMAGE_EDITOR_MIN_CONTENT_SIZE } from './image-editor/constants.js';
 import { MEDIA_HEALTH_CONTENT_SIZE, MEDIA_HEALTH_DETAILS_MIN_SIZE, MEDIA_HEALTH_DETAILS_SIZE, MEDIA_HEALTH_MIN_CONTENT_SIZE, UMBRADESKTOP_MEDIA_HEALTH_DETAILS_APP } from './health/health-app.js';
 import en from './localization/en.js';
+import nl from './localization/nl.js';
+import { umbOrderActionsByGroup } from '@umbraco-cms/backoffice/action';
+import { UMB_ENTITY_ACTION_GROUP_CREATE, UMB_ENTITY_ACTION_GROUP_STRUCTURE } from '@umbraco-cms/backoffice/entity-action';
 
 /** Narrows the bundle to one extension type, so each test reads only what it is about. */
 const byType = (type: string) => manifests.filter((m) => m.type === type);
@@ -325,6 +328,51 @@ it('offers Open in new window on folders and the Media root', () => {
   expect(open?.forEntityTypes).to.deep.equal(['media', 'media-root']);
   expect(open?.meta.label).to.equal('#umbraDesktopMedia_openInNewWindow');
   expect(open?.conditions.find((each) => each.alias === IN_MANAGER)?.folder).to.equal(true);
+});
+
+/** The Manager's own actions, in the order they lead an item's menu inside a Manager window. */
+const MANAGER_GROUP_ACTIONS = ['OpenInNewWindow', 'EditImageInManager', 'Cut', 'Copy', 'Paste'];
+
+/**
+ * Umbraco 19.0.0-rc1 orders an entity action menu by registered group (Umbraco-CMS#24421): the
+ * registered groups by weight, then every action without one in a last "Other" block, whatever its
+ * own weight. A card's quick button is the first action of the first block. Without a group of their
+ * own, Open in new window, Edit image, Cut, Copy and Paste dropped below core's Create and Trash, and
+ * the quick button on a Manager card became core's Create. So they get one group, weighted above
+ * core's Create (1200), and keep the order they had. Checked with core's own ordering function.
+ */
+it("leads a Manager item's menu with the Manager's own actions, in a group above core's Create", () => {
+  type Grouped = { alias: string; weight: number; group?: string };
+  const groups = byType('entityActionGroup') as unknown as Array<{ alias: string; name: string; weight: number; meta: { label: string } }>;
+  expect(groups.map((each) => each.alias)).to.deep.equal(['Umbraco.Community.UmbraDesktop.Media.EntityActionGroup.Manager']);
+  const [group] = groups;
+  expect(group.weight).to.be.above(1200);
+  expect(group.meta.label).to.equal('#umbraDesktopMedia_actionGroupManager');
+  expect(area.actionGroupManager).to.be.a('string');
+  expect((nl as Record<string, Record<string, string>>).umbraDesktopMedia.actionGroupManager).to.be.a('string');
+  const find = (name: string) => manifests.find((m) => m.alias === `Umbraco.Community.UmbraDesktop.Media.${name}`) as unknown as Grouped;
+  for (const name of MANAGER_GROUP_ACTIONS) expect(find(name).group, name).to.equal(group.alias);
+  expect(find('EditImage').group, 'outside a Manager it stays low, as core orders it').to.equal(undefined);
+
+  // Core's two groups a media item's menu uses, as 19.0.0-rc1 registers them, and one core action in each.
+  const coreGroups = [
+    { type: 'entityActionGroup', alias: UMB_ENTITY_ACTION_GROUP_CREATE, name: 'Create', weight: 1200, meta: { label: '' } },
+    { type: 'entityActionGroup', alias: UMB_ENTITY_ACTION_GROUP_STRUCTURE, name: 'Structure', weight: 800, meta: { label: '' } },
+  ];
+  const core = [
+    { alias: 'Umb.EntityAction.Media.CreateOptions', weight: 1200, manifest: { group: UMB_ENTITY_ACTION_GROUP_CREATE } },
+    { alias: 'Umb.EntityAction.Media.RecycleBin.Trash', weight: 1150, manifest: { group: UMB_ENTITY_ACTION_GROUP_STRUCTURE } },
+  ];
+  const menu = (names: string[]) =>
+    umbOrderActionsByGroup(
+      [...core, ...names.map((name) => ({ alias: find(name).alias, weight: find(name).weight, manifest: find(name) }))],
+      [...coreGroups, group] as never,
+    ).flatMap((block) => block.actions.map((action) => action.alias.split('.').pop()));
+
+  // A folder: Open in new window first, so it is the quick button; nothing of ours below core's.
+  expect(menu(['OpenInNewWindow', 'Cut', 'Copy', 'Paste'])).to.deep.equal(['OpenInNewWindow', 'Cut', 'Copy', 'Paste', 'CreateOptions', 'Trash']);
+  // An image: Edit image first (owner, 2026-10-26: "it's what people expect").
+  expect(menu(['EditImageInManager', 'Cut', 'Copy'])).to.deep.equal(['EditImageInManager', 'Cut', 'Copy', 'CreateOptions', 'Trash']);
 });
 
 /** Design §5: the clipboard is ours, in item menus and folder menus. */

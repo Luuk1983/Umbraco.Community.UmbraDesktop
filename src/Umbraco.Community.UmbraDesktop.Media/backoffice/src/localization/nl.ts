@@ -19,6 +19,8 @@ export default {
     cut: 'Knippen',
     copy: 'Kopiëren',
     paste: 'Plakken',
+    // What screen readers call the block of the Manager's own actions in an item's menu.
+    actionGroupManager: 'Mediabeheer',
     dragMove: 'Verplaatsen naar %0%',
     dragMoveSome: '%0% van %1% verplaatsen naar %2%',
     dragCopy: 'Kopiëren naar %0%',

@@ -18,10 +18,19 @@ import { UMBRADESKTOP_WINDOW_MANAGER_CONTEXT } from '../window-manager.context-t
  */
 
 describe('isSignInPath', () => {
-  it('knows core’s sign-in page and the authorize endpoint that sends a frame there', () => {
+  it('knows core’s sign-in page', () => {
     expect(isSignInPath('/umbraco/login', '/umbraco')).to.equal(true);
     expect(isSignInPath('/umbraco/login/', '/umbraco')).to.equal(true);
-    expect(isSignInPath('/umbraco/management/api/v1/security/back-office/authorize', '/umbraco')).to.equal(true);
+  });
+
+  /**
+   * Up to 18, core's `makeAuthorizationRequest` sent a page through the OpenIddict authorize endpoint,
+   * which redirected it to the sign-in page. Umbraco 19 signs the backoffice in with a cookie and sends
+   * the page to `/umbraco/login` itself (`auth.context.ts` at release-19.0.0-rc1), so the endpoint is
+   * no longer a place a window lands; it is only on the way somewhere.
+   */
+  it('no longer takes the authorize endpoint for the sign-in, which 19 never sends a window to', () => {
+    expect(isSignInPath('/umbraco/management/api/v1/security/back-office/authorize', '/umbraco')).to.equal(false);
   });
 
   it('follows the backoffice path', () => {

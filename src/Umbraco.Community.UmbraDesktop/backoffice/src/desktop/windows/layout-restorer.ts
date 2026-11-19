@@ -154,7 +154,9 @@ export class UmbraDesktopWindowLayoutRestorer {
    */
   #restore(layout: UmbraDesktopWindowLayout): Promise<void> {
     const waiting = [...layout.windows].sort((a, b) => a.z - b.z);
-    const active = layout.windows.find((saved) => saved.active);
+    // A window minimized with its title-bar button stays the active one, and focusing it would put it
+    // back on screen. So a minimized window is never the one given focus here.
+    const active = layout.windows.find((saved) => saved.active && saved.state !== 'minimized');
     let activeId: string | undefined;
 
     return new Promise<void>((resolve) => {

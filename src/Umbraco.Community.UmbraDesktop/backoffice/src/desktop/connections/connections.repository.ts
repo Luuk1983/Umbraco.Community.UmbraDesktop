@@ -4,6 +4,7 @@ import type {
   DesktopConnectionResponseModel,
   DesktopConnectionStatusResponseModel,
 } from '../../api/types.gen';
+import { whenClientReady } from '../boot/client-ready';
 import { tryExecute } from '@umbraco-cms/backoffice/resources';
 import type { UmbControllerHost } from '@umbraco-cms/backoffice/controller-api';
 
@@ -32,9 +33,14 @@ export class UmbraDesktopConnectionsRepository {
 
   /**
    * Gets every configured connection.
+   *
+   * Waits for the API client to be configured first. The condition that shows the Remote content app
+   * asks this at boot, which on a full load can be before the entry point has configured the client;
+   * see `client-ready.ts`.
    * @returns The connections, or undefined when the request failed.
    */
   async getConnections(): Promise<DesktopConnectionResponseModel[] | undefined> {
+    await whenClientReady();
     const { data } = await tryExecute(this.#host, UmbraDesktopService.getConnections());
 
     return data as DesktopConnectionResponseModel[] | undefined;

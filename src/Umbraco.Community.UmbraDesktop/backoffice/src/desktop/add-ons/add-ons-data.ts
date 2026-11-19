@@ -68,7 +68,8 @@ export function installedVersions(manifests: ReadonlyArray<ManifestResponseModel
 }
 
 /**
- * The built-in list as add-ons, for when the Marketplace cannot be reached.
+ * The built-in list as add-ons, for when the Marketplace cannot be reached or has none of ours for
+ * this site's major yet.
  *
  * Their version is the desktop's own: our packages are released together at one version, so the
  * add-on that goes with this desktop is the one at its version, and the install line can still be
@@ -108,17 +109,21 @@ export async function loadAddOns(source: UmbraDesktopAddOnsSource): Promise<Umbr
   ]);
   const siteMajor = siteVersion && Number.isFinite(majorOf(siteVersion)) ? majorOf(siteVersion) : undefined;
   const order = UMBRADESKTOP_BUILT_IN_ADD_ONS.map((builtIn) => builtIn.id);
+  const hostVersion = installed.get(UMBRADESKTOP_HOST_PACKAGE_ID.toLowerCase());
 
   if (!packages) {
-    const ours = builtInAddOns(installed.get(UMBRADESKTOP_HOST_PACKAGE_ID.toLowerCase()));
-    return { online: false, siteMajor, ours, community: [], installed };
+    return { online: false, siteMajor, ours: builtInAddOns(hostVersion), community: [], installed };
   }
 
   const addOns = packages
     .filter((detail) => detail.packageId.toLowerCase() !== UMBRADESKTOP_HOST_PACKAGE_ID.toLowerCase())
     .map((detail) => toAddOn(detail, siteMajor === undefined ? undefined : siteVersion))
     .filter((addOn): addOn is UmbraDesktopAddOn => addOn !== undefined);
-  return { online: true, siteMajor, ...sortAddOns(addOns, order), installed };
+  const { ours, community } = sortAddOns(addOns, order);
+  // Ours are released together with the desktop, so they exist for any major the desktop runs on,
+  // whether or not the Marketplace lists that major yet. It did not list 19 while 19 was a release
+  // candidate, and the team's section stood there as an empty heading.
+  return { online: true, siteMajor, ours: ours.length ? ours : builtInAddOns(hostVersion), community, installed };
 }
 
 /**
