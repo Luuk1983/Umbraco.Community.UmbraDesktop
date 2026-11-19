@@ -346,15 +346,16 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
         return;
       }
     }
+    // A section window's path strip is chrome, so it is added to the window rather than taken out of
+    // the app: a Media window asking for 960x680 of backoffice still gets 680.
+    const pathbar = windowShowsPath(app) ? this.#metrics.pathbarHeight : 0;
     const rect = nextWindowRect(
       current.length,
-      windowSizeForContent(
-        app.defaultSize ?? DEFAULT_CONTENT_SIZE,
-        this.#metrics,
-        // A section window's path strip is chrome, so it is added to the window rather than taken
-        // out of the app: a Media window asking for 960x680 of backoffice still gets 680.
-        windowShowsPath(app) ? this.#metrics.pathbarHeight : 0,
-      ),
+      windowSizeForContent(app.defaultSize ?? DEFAULT_CONTENT_SIZE, this.#metrics, pathbar),
+      // Fitted into the desktop once it has been measured, so a window taller than the screen opens
+      // with all of it in view: shrunk, never below its own minimum, and moved up.
+      this.#bounds,
+      minWindowSizeForContent(app.minSize, UMBRADESKTOP_WINDOW_MIN_SIZE, this.#metrics, pathbar),
     );
     const located = options.location !== undefined && app.content.kind === 'element';
     const win: UmbraDesktopWindow = {
@@ -1468,6 +1469,10 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
    * because the button is only one of the ways in: a titlebar double-click and a drag into the top
    * edge both arrive here too. Minimizing and restoring change nothing about a window's size, so
    * they are allowed.
+   *
+   * Maximizing or restoring also brings the window forward with the focus, as every desktop does: a
+   * window maximized from behind another used to grow behind it, the focus left where it was (owner,
+   * 2026-11-04). The window's own controls swallow the pointer so they never focus it themselves.
    * @param id The window to change.
    * @param state The state to put it in.
    */
@@ -1479,7 +1484,7 @@ export class UmbraDesktopWindowManagerContext extends UmbContextBase {
       this.#windows.setValue(minimizeInGroup(this.#windows.getValue(), id));
       return;
     }
-    this.#windows.setValue(setWindowState(this.#windows.getValue(), id, state));
+    this.#windows.setValue(focusGroup(setWindowState(this.#windows.getValue(), id, state), id));
   }
 
   /**

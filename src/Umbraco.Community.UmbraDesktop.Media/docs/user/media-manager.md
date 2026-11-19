@@ -83,25 +83,27 @@ anything is selected, selecting an item adds it rather than opening it, as in th
 
 - To select an item, select its checkbox, or hold Ctrl (Cmd on a Mac) and select it.
 - To select a range, select the first item, then hold Shift and select the last.
-- To select items by dragging, drag from empty space between or around the cards. Every card the box
-  touches is selected. Hold Ctrl (Cmd on a Mac) to add to what is already selected.
+- To select items by dragging, drag from any empty space in the window: between or around the cards,
+  the strip around the toolbar, or the tree below its folders. Every card the box touches is
+  selected. Hold Ctrl (Cmd on a Mac) to add to what is already selected.
 - To select everything in the window, press Ctrl+A (Cmd+A on a Mac). To select nothing, press Esc,
   or click empty space in the window.
 - To resize, convert or remove the metadata of the selected images, select **Optimize images** in the
   bar. [Optimize images](optimize-images.md) has the details.
+
+The bar in a Media Manager window holds only **Optimize images** and **Trash**. Move and copy items by
+dragging them, or with cut and paste below.
 
 ## Cut, copy and paste
 
 Move and copy items between folders and windows as you would files. A copy is a new media item with
 its own copy of the file, and copying a folder copies what is in it.
 
-- To move items, select **Cut** in their menu or in the bar at the bottom, open the folder they go
-  to, and select **Paste** in its menu. Cut items stay where they are, faded, until you paste them.
+- To move items, select **Cut** in their menu, open the folder they go to, and select **Paste** in its
+  menu. Cut items stay where they are, faded, until you paste them.
 - To copy items, select **Copy** instead of **Cut**. You can paste a copy more than once. Pasting into
   the folder it came from makes a copy beside the original, and so does pasting a copied folder onto
   itself: copy **Products**, paste on **Products**, and you get **Products (1)** beside it.
-- To copy items without the clipboard, select them and select **Copy to** in the bar at the bottom,
-  then choose the folder.
 - To stop a cut, press Esc when nothing is selected.
 
 Ctrl+X, Ctrl+C and Ctrl+V (Cmd on a Mac) do the same, and Ctrl+V pastes into the folder the window
