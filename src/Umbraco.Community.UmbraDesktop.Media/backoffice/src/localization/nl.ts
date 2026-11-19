@@ -19,7 +19,6 @@ export default {
     cut: 'Knippen',
     copy: 'Kopiëren',
     paste: 'Plakken',
-    copyTo: 'Kopiëren naar',
     dragMove: 'Verplaatsen naar %0%',
     dragMoveSome: '%0% van %1% verplaatsen naar %2%',
     dragCopy: 'Kopiëren naar %0%',

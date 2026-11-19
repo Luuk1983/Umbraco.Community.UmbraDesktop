@@ -1082,3 +1082,82 @@ describe('work in progress', () => {
     expect(work.busyWindows()).to.have.lengthOf(0);
   });
 });
+
+/**
+ * A new window opens where all of it can be seen (17.5.0-rc.1 run, 2026-11-04): Optimize images asked
+ * for more height than a 1440x900 screen has above its taskbar, and its buttons opened under it.
+ */
+describe('opening inside the desktop', () => {
+  /** A desktop the size of a 1440x900 screen's, above its taskbar. */
+  const BOUNDS = { w: 1440, h: 849 };
+
+  /** An app taller than that desktop, with room to shrink. */
+  const TALL: UmbraDesktopApp = { ...APP, alias: 'tall', defaultSize: { w: 640, h: 1200 }, minSize: { w: 300, h: 200 } };
+
+  it('shrinks a window taller than the desktop to fit it, top to bottom', () => {
+    const ctx = manager();
+    ctx.clampToBounds(BOUNDS);
+    ctx.open(APP);
+    ctx.open(APP);
+    ctx.open(TALL);
+
+    const rect = windowsOf(ctx)[2].rect;
+    expect(rect.y, 'at the top, not cascaded below it').to.equal(0);
+    expect(rect.h, 'as tall as the desktop and no taller').to.equal(BOUNDS.h);
+  });
+
+  it('opens as asked before the desktop has been measured', () => {
+    const ctx = manager();
+    ctx.open(TALL);
+
+    expect(windowsOf(ctx)[0].rect.h, 'nothing to fit into yet').to.be.above(BOUNDS.h);
+  });
+});
+
+/**
+ * Maximizing or restoring a window behind another brings it forward and gives it the focus (owner,
+ * 2026-11-04): it used to grow behind the active window, with the focus left where it was. Every way
+ * in, the button, a titlebar double-click and the top edge, arrives at `setState`.
+ */
+describe('maximizing a window behind another', () => {
+  it('brings it to the front and focuses it', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    ctx.open(APP);
+    const [behind, front] = windowsOf(ctx);
+
+    ctx.setState(behind.id, 'maximized');
+
+    const after = windowsOf(ctx);
+    const maximized = after.find((w) => w.id === behind.id)!;
+    expect(maximized.state).to.equal('maximized');
+    expect(maximized.active, 'it has the focus').to.equal(true);
+    expect(after.find((w) => w.id === front.id)!.active).to.equal(false);
+    expect(maximized.z, 'in front').to.be.above(after.find((w) => w.id === front.id)!.z);
+  });
+
+  it('does the same when restoring one', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    const behind = windowsOf(ctx)[0];
+    ctx.setState(behind.id, 'maximized');
+    ctx.open(APP);
+
+    ctx.setState(behind.id, 'normal');
+
+    const restored = windowsOf(ctx).find((w) => w.id === behind.id)!;
+    expect(restored.state).to.equal('normal');
+    expect(restored.active).to.equal(true);
+  });
+
+  it('leaves the focus alone when minimizing', () => {
+    const ctx = manager();
+    ctx.open(APP);
+    ctx.open(APP);
+    const [behind, front] = windowsOf(ctx);
+
+    ctx.setState(behind.id, 'minimized');
+
+    expect(windowsOf(ctx).find((w) => w.id === front.id)!.active).to.equal(true);
+  });
+});
