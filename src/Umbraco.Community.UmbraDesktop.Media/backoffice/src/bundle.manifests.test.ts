@@ -133,7 +133,7 @@ const IN_MANAGER = 'Umbraco.Community.UmbraDesktop.Media.Condition.InMediaManage
  * clipboard and windows. Named one by one, so an action added later has to be put on this list or
  * on the everywhere list below, and cannot slip into the Media section by default.
  */
-const MANAGER_ONLY = ['OpenInNewWindow', 'Cut', 'Copy', 'Paste', 'BulkCut', 'BulkCopy', 'CopyTo', 'EditImageInManager'];
+const MANAGER_ONLY = ['OpenInNewWindow', 'Cut', 'Copy', 'Paste', 'EditImageInManager'];
 
 /**
  * The actions that show wherever core shows a media item's actions, on the desktop: Edit image (#137),
@@ -327,10 +327,9 @@ it('offers Open in new window on folders and the Media root', () => {
   expect(open?.conditions.find((each) => each.alias === IN_MANAGER)?.folder).to.equal(true);
 });
 
-/** Design §5: the clipboard is ours, in item menus, folder menus and core's selection bar. */
-it('offers Cut and Copy on items, Paste on folders while something is held, and Cut, Copy and Copy to in the selection bar', () => {
+/** Design §5: the clipboard is ours, in item menus and folder menus. */
+it('offers Cut and Copy on items, and Paste on folders while something is held', () => {
   const entity = byType('entityAction') as Array<{ alias: string; forEntityTypes: string[]; conditions: Array<{ alias: string; folder?: boolean }> }>;
-  const bulk = byType('entityBulkAction') as Array<{ alias: string; forEntityTypes: string[]; conditions: Array<{ alias: string; match?: string }> }>;
   const find = (list: typeof entity, name: string) => list.find((m) => m.alias === `Umbraco.Community.UmbraDesktop.Media.${name}`);
   expect(find(entity, 'Cut')?.forEntityTypes).to.deep.equal(['media']);
   expect(find(entity, 'Copy')?.forEntityTypes).to.deep.equal(['media']);
@@ -341,11 +340,30 @@ it('offers Cut and Copy on items, Paste on folders while something is held, and 
   for (const name of ['Cut', 'Copy']) {
     expect(find(entity, name)?.conditions.map((each) => each.alias), name).to.include('Umb.Condition.EntityIsNotTrashed');
   }
-  for (const name of ['BulkCut', 'BulkCopy', 'CopyTo']) {
-    const action = bulk.find((m) => m.alias === `Umbraco.Community.UmbraDesktop.Media.${name}`);
-    expect(action?.forEntityTypes, name).to.deep.equal(['media']);
-    expect(action?.conditions.find((each) => each.alias === 'Umb.Condition.CollectionAlias')?.match, name).to.equal('Umb.Collection.Media');
-  }
+});
+
+/**
+ * The selection bar holds only what has no other way in (17.5.0-rc.1 run, owner 2026-11-04): with an
+ * item open beside the window, seven buttons did not fit and Trash went out of sight. Cut, Copy and
+ * Copy to stay on each item's menu and as Ctrl+X, Ctrl+C and a Ctrl drag, so the bar drops them.
+ */
+it('puts only Optimize images in the selection bar, of its own actions', () => {
+  expect(byType('entityBulkAction').map((m) => m.alias)).to.deep.equal(['Umbraco.Community.UmbraDesktop.Media.OptimizeImages']);
+});
+
+/**
+ * Core's Move to leaves the bar in a Manager window too, where dragging and cut and paste move items,
+ * and stays in the Media section, which has neither. Core's Trash stays everywhere.
+ */
+it("hides core's Move to inside a Manager window, and only there", async () => {
+  const entry = byType('backofficeEntryPoint').find((m) => m.alias === 'Umbraco.Community.UmbraDesktop.Media.SelectionBar') as unknown as
+    | { js: () => Promise<{ onInit: (host: unknown, registry: unknown) => void }> }
+    | undefined;
+  expect(entry, 'an entry point, since a core manifest is changed at start').to.not.equal(undefined);
+  const appended: Array<{ alias: string; condition: { alias: string; outside?: boolean } }> = [];
+  const registry = { appendCondition: (alias: string, condition: { alias: string; outside?: boolean }) => appended.push({ alias, condition }) };
+  (await entry!.js()).onInit(undefined, registry);
+  expect(appended).to.deep.equal([{ alias: 'Umb.EntityBulkAction.Media.MoveTo', condition: { alias: IN_MANAGER, outside: true } }]);
 });
 
 it('runs its operations in a desktop context, so they outlive the window that started them', () => {
