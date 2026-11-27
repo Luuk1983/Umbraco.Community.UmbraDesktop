@@ -1,7 +1,16 @@
 {
   "version": 2,
-  "generatedAt": "2026-10-30T10:55:52Z",
+  "generatedAt": "2026-11-27T11:00:50Z",
   "episodes": [
+    {
+      "videoId": "HvAdtyAswSg",
+      "title": "We have an announcement!",
+      "published": "2026-11-27T10:58:26Z",
+      "summary": "",
+      "guests": [],
+      "guestsUnnamed": false,
+      "uncertain": false
+    },
     {
       "videoId": "hHpA_WhJwVk",
       "title": "Elephant In The Room",
