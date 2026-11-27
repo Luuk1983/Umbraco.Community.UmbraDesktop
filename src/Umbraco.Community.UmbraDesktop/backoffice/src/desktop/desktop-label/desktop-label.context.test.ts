@@ -1,7 +1,9 @@
 import { expect } from '@open-wc/testing';
 import { UmbElementControllerHost } from '@umbraco-cms/backoffice/controller-api';
 import type { DesktopLabelRequestModel, DesktopLabelResponseModel } from '../../api/types.gen';
-import { UmbraDesktopLabelContext } from './desktop-label.context.js';
+import { UmbraDesktopService } from '../../api/sdk.gen';
+import { markClientReady } from '../boot/client-ready.js';
+import { UmbraDesktopLabelContext, serverLabelSource } from './desktop-label.context.js';
 import type { UmbraDesktopLabelSource } from './desktop-label.context.js';
 
 /**
@@ -113,5 +115,28 @@ describe('the desktop label context', () => {
 
     expect(await context.save({ show: false, corner: 'TopRight', showDomain: false })).to.equal(false);
     expect(source.reads).to.equal(2);
+  });
+});
+
+describe('the real label source', () => {
+  it('does not ask the server before the API client is configured, which a desktop built at boot can', async () => {
+    const real = UmbraDesktopService.getDesktopLabel;
+    let asked = 0;
+    UmbraDesktopService.getDesktopLabel = (() => {
+      asked++;
+      return Promise.resolve({ data: LABEL });
+    }) as never;
+    try {
+      const read = serverLabelSource(host).read();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(asked).to.equal(0);
+
+      markClientReady();
+
+      expect(await read).to.deep.equal(LABEL);
+      expect(asked).to.equal(1);
+    } finally {
+      UmbraDesktopService.getDesktopLabel = real;
+    }
   });
 });

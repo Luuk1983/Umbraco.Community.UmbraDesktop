@@ -10,7 +10,7 @@ export default {
     appUsers: 'Gebruikers',
     appMembers: 'Leden',
     appLogViewer: 'Logboek',
-    appExamineManagement: 'Examine-beheer',
+    appSearchIndexes: 'Zoekindexen',
     appHealthCheck: 'Gezondheidscontrole',
     appProfiling: 'Profilering',
     appSettings: 'Instellingen',

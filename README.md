@@ -34,7 +34,7 @@ Pick the chrome you like working in. A theme restyles the launcher, the taskbar 
 
 ## Get started
 
-You need Umbraco 18.1 or later and .NET 10. On Umbraco 17, install a 17.x release.
+UmbraDesktop's version follows Umbraco's, so install the release with your site's major. On the newest stable Umbraco this is all it takes; for an older major or a prerelease, [Installation](docs/user/getting-started/installation.md) has the command.
 
 ```bash
 dotnet add package Umbraco.Community.UmbraDesktop

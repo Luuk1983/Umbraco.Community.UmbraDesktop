@@ -226,6 +226,26 @@ const inManager: UmbExtensionManifest = {
   api: () => import('./manager/in-manager.condition.js'),
 };
 
+/** The entity action group the Manager's own actions share, so they lead an item's menu. */
+const MANAGER_ACTION_GROUP = `${UMBRADESKTOP_MEDIA_ALIAS}.EntityActionGroup.Manager`;
+
+/**
+ * Open in new window, Edit image, Cut, Copy and Paste in a Manager window, as one block at the top of
+ * an item's menu. Umbraco 19.0.0-rc1 orders entity action menus by registered group
+ * (Umbraco-CMS#24421): the groups by weight, then every action without one in a last "Other" block,
+ * whatever its own weight, and a card's quick button is the first action of the first block. Without a
+ * group these fell below core's Create and Trash and the quick button became core's Create. Weight 1300,
+ * above core's highest group (Create, 1200). The label is what screen readers announce for the block;
+ * the menu shows only a divider.
+ */
+const managerActionGroup: UmbExtensionManifest = {
+  type: 'entityActionGroup',
+  alias: MANAGER_ACTION_GROUP,
+  name: 'UmbraDesktop Media Manager entity action group',
+  weight: 1300,
+  meta: { label: '#umbraDesktopMedia_actionGroupManager' },
+};
+
 /** "Open in new window" on a folder, its card and its tree item, and on the Media root (design §2). */
 const openInNewWindow: UmbExtensionManifest = {
   type: 'entityAction',
@@ -233,6 +253,7 @@ const openInNewWindow: UmbExtensionManifest = {
   alias: `${UMBRADESKTOP_MEDIA_ALIAS}.OpenInNewWindow`,
   name: 'UmbraDesktop Open in new window',
   weight: 2000,
+  group: MANAGER_ACTION_GROUP,
   api: () => import('./manager/actions/open-in-new-window.action.js'),
   forEntityTypes: ['media', 'media-root'],
   meta: { label: '#umbraDesktopMedia_openInNewWindow', icon: 'icon-window-popout' },
@@ -299,6 +320,7 @@ const editImageInManager: UmbExtensionManifest = {
   alias: `${UMBRADESKTOP_MEDIA_ALIAS}.EditImageInManager`,
   name: 'UmbraDesktop Edit image in a Media Manager window',
   weight: 1995,
+  group: MANAGER_ACTION_GROUP,
   conditions: [...onDesktopWithMedia, { alias: UMBRADESKTOP_IN_MEDIA_MANAGER_CONDITION }, { alias: UMBRADESKTOP_IS_IMAGE_CONDITION }] as never,
 };
 
@@ -458,6 +480,7 @@ const cut: UmbExtensionManifest = {
   alias: `${UMBRADESKTOP_MEDIA_ALIAS}.Cut`,
   name: 'UmbraDesktop Cut',
   weight: 1990,
+  group: MANAGER_ACTION_GROUP,
   api: () => import('./manager/actions/cut.action.js'),
   forEntityTypes: ['media'],
   meta: { label: '#umbraDesktopMedia_cut', icon: 'icon-cut' },
@@ -470,6 +493,7 @@ const copy: UmbExtensionManifest = {
   alias: `${UMBRADESKTOP_MEDIA_ALIAS}.Copy`,
   name: 'UmbraDesktop Copy',
   weight: 1980,
+  group: MANAGER_ACTION_GROUP,
   api: () => import('./manager/actions/copy.action.js'),
   forEntityTypes: ['media'],
   meta: { label: '#umbraDesktopMedia_copy', icon: 'icon-clipboard-copy' },
@@ -483,6 +507,7 @@ const paste: UmbExtensionManifest = {
   alias: `${UMBRADESKTOP_MEDIA_ALIAS}.Paste`,
   name: 'UmbraDesktop Paste',
   weight: 1970,
+  group: MANAGER_ACTION_GROUP,
   api: () => import('./manager/actions/paste.action.js'),
   forEntityTypes: ['media', 'media-root'],
   meta: { label: '#umbraDesktopMedia_paste', icon: 'icon-clipboard-paste' },
@@ -580,6 +605,7 @@ export const manifests: Array<UmbExtensionManifest> = [
   isImage,
   context,
   healthContext,
+  managerActionGroup,
   openInNewWindow,
   editImage,
   editImageInManager,

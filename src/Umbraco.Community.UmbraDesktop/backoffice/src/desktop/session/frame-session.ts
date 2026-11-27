@@ -6,22 +6,16 @@ import type { Observable, Subscription } from '@umbraco-cms/backoffice/external/
 import { aliasesOf, requestContextFrom, watchProvidedContexts } from '../frame-context.js';
 
 /**
- * Where core's own `makeAuthorizationRequest` sends a page to sign in: the authorize endpoint, which
- * redirects to the sign-in page. Core writes it as `${serverUrl}/umbraco/management/api/...`, with
- * `/umbraco` fixed rather than the backoffice path (17.6, `auth.context.js`), so it is fixed here too.
- */
-const AUTHORIZE_PATH = '/umbraco/management/api/v1/security/back-office/authorize';
-
-/**
- * Whether a frame's path is core's sign-in: the sign-in page under the backoffice path, or the
- * authorize endpoint that sends a page there.
+ * Whether a frame's path is core's sign-in page, under the backoffice path. On Umbraco 19 core's
+ * `makeAuthorizationRequest` sends a page there directly; up to 18 it went through the OpenIddict
+ * authorize endpoint first, which this also matched until the move to 19.
  * @param pathname The frame's `location.pathname`.
  * @param backofficePath The backoffice path, with no trailing slash.
  * @returns Whether the frame is signing in rather than showing the backoffice.
  */
 export function isSignInPath(pathname: string, backofficePath: string): boolean {
   const trimmed = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-  return trimmed === `${backofficePath}/login` || trimmed === AUTHORIZE_PATH;
+  return trimmed === `${backofficePath}/login`;
 }
 
 /**

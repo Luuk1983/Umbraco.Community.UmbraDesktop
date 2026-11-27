@@ -87,6 +87,23 @@ it('reopens the saved windows in stacking order, as they were, with the same win
   expect(front.z).to.be.greaterThan(back.z);
 });
 
+it('keeps a window minimized when it was minimized while still the active one', async () => {
+  // Minimizing with the title-bar button leaves the window active, and giving it focus again after
+  // the restore put it back on screen. Found in the 19 rc1 browser run.
+  const { restorer, windows } = setup({
+    layout: {
+      version: 1,
+      windows: [
+        { app: 'content', rect: { x: 20, y: 20, w: 600, h: 450 }, state: 'normal', z: 2, active: false },
+        { app: 'media', rect: { x: 300, y: 40, w: 500, h: 400 }, state: 'minimized', z: 5, active: true },
+      ],
+    },
+  });
+  await restorer.start();
+  const media = windows().find((w) => w.app.alias === 'media');
+  expect(media?.state).to.equal('minimized');
+});
+
 it('waits for an app that arrives late, as a package’s apps can', async () => {
   const { restorer, apps, windows } = setup({ apps: [CONTENT] });
   const started = restorer.start();

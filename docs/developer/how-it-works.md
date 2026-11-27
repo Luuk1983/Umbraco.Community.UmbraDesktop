@@ -20,7 +20,9 @@ its own `window`, `location`, History and event bus, which is what makes indepen
 window possible without any change to Umbraco core.
 
 Authentication is shared automatically through the existing secure cookies, so each window boots an
-authenticated backoffice like an extra tab.
+authenticated backoffice like an extra tab. Since Umbraco 19 that cookie is the whole sign-in: no
+window fetches a token of its own. If you run two local instances on the same host name, give each
+its own `Umbraco:CMS:Security:AuthCookieName`, or one instance's sign-in replaces the other's.
 
 Windows stay fresh through Umbraco's own machinery rather than a custom sync layer: each iframe runs
 its own observers and server-events connection, so saving in one window causes the others to refresh
@@ -47,7 +49,7 @@ profiles decide how much survives:
 |---|---|---|
 | `full-section` | Section sidebar and tree, without the top header | Tools where the tree *is* the tool: Content, Media, Document Types |
 | `workspace-only` | Just the workspace | Self-contained editors: Log Viewer, Webhooks |
-| `bare` | The target view only | Single-focus dashboards: Examine, Health Check, Profiling, Background Jobs |
+| `bare` | The target view only | Single-focus dashboards: Health Check, Profiling, Background Jobs |
 
 Every profile also hides the notifications inside the window, once the desktop is listening to that
 window's notification context and not before, and the desktop draws them itself. The design and the

@@ -26,8 +26,8 @@ reads like a broken pipeline, where a version with no changes reads like Umbraco
 
 **Every add-on requires this release of the host, or any later release of the same major.** Each
 add-on references the host as a `ProjectReference`, never a `PackageReference`: it is then compiled
-against the host from the same commit, and its packed dependency is `[<this release>, 18.99999999.0]`
-on `main` (`17.99999999.0` on `v17/main`). The floor is the
+against the host from the same commit, and its packed dependency is `[<this release>, 19.99999999.0]`
+on `main` (`18.99999999.0` on `v18/main`, `17.99999999.0` on `v17/main`). The floor is the
 release itself because an add-on registers things only this release's host understands (package
 catalogues; for Entertainment also tray items; for Accessories also the unsaved-work attribute and the settings context's
 `formatDateTime`; for Media also app titles, the close request, pages attached to an app window and apps hidden from the launcher). The add-ons used to take the host by package range, floored at 17.0.0, which
@@ -46,19 +46,20 @@ without doing anything. The ceiling is one property, `UmbraDesktopUmbracoMajorCe
 The target hooks NuGet's private `_GetProjectReferenceVersions`, which an SDK update can change
 without a word, so `.github/actions/build-packages` reads the nuspec of every packed add-on (every
 `Umbraco.Community.UmbraDesktop.*` package other than the host) and fails the run unless its host
-dependency is exactly `[<host package version>, 18.99999999.0]`. The floor comes from the host
+dependency is exactly `[<host package version>, 19.99999999.0]` (on `main`). The floor comes from the host
 project's own MinVer version, the same number as the add-on's because both are versioned off one
 tag. Entertainment also requires this release of the Arcade, and Accessories and Media this release of
 the media service, bounded the same way, and the same check reads those dependencies too; it fails if a
 package depends on a service package that is not in the pack output, because a release has to ship
-both. **The ceiling is the branch's major**: `18.99999999` on `main`, `17.99999999` on `v17/main`.
+both. **The ceiling is the branch's major**: `19.99999999` on `main`, `18.99999999` on `v18/main`,
+`17.99999999` on `v17/main`.
 When `main` moves to the next major (see [Branches](#branches)), it changes
 `UmbraDesktopUmbracoMajorCeiling` to that major, which moves the Umbraco ranges' and the add-ons'
 ceilings together.
 
 **The Umbraco floor is checked against the bundles.** `UmbraDesktopUmbracoFloor` in
-`src/Directory.Packages.props` is the oldest Umbraco the packages install on: 18.1.0 on `main`,
-17.6.0 on `v17/main`. On 17 it was 17.0.0 until a fresh 17.0.0 site showed the desktop never
+`src/Directory.Packages.props` is the oldest Umbraco the packages install on: 19.0.0-rc1 on `main`,
+18.1.0 on `v18/main`, 17.6.0 on `v17/main`. On 17 it was 17.0.0 until a fresh 17.0.0 site showed the desktop never
 loading: the bundles import names the backoffice only exports from 17.4, and every test runs against
 the newest backoffice, so nothing had noticed. The same sites showed the overwrite guard silent below
 17.6, where core has no `loadWithoutPersist`, so the floor went to 17.6 rather than 17.4. On 18 the
@@ -71,13 +72,15 @@ only sees imported names: a method or property core added later, as `loadWithout
 the check and has to be caught by reading core's changes.
 
 **Everything is built and tested against the floor, and run against the newest.** Each package's
-`package.json` pins `@umbraco-cms/backoffice` to the floor exactly (18.1.0) and `@umbraco-ui/uui` to
-the release that floor was built with (2.0.2, from Umbraco-CMS's own lock file at `release-18.1.0`),
+`package.json` pins `@umbraco-cms/backoffice` to the floor exactly (19.0.0-rc1 on `main`, 18.1.0 on
+`v18/main`) and `@umbraco-ui/uui` to the release that floor was built with (2.2.0 on `main`; 2.0.2 on
+`v18/main`, from Umbraco-CMS's own lock file at `release-18.1.0`),
 so `tsc` and every frontend test see the oldest backoffice the packages allow, members included. The
 C# projects get the floor by themselves: NuGet resolves a range to its lowest version, so their lock
-files say 18.1.0. The other end is the newest 18: CI's **Frontend on the latest Umbraco 18** job swaps
-each package to it for one run and type-checks and tests again, the Solution job compiles the C#
-against it through the test instance's floating `18.*`, and the test instance runs it. Two points,
+files say the floor too. The other end is the branch's newest: on `main`, CI's **Frontend on the
+latest Umbraco 19** job swaps each package to it for one run and type-checks and tests again, the
+Solution job compiles the C# against it through the test instance's floating `19.*-*`, and the test
+instance runs it (`v18/main` does the same with 18 and `18.*`). Two points,
 not every release: a break in between that both ends miss would have to be introduced and fixed
 again within one major. **Raising the floor means raising those two pins with it.** Reading core's code to decide
 something is read at the floor's tag, not the newest.
@@ -93,7 +96,7 @@ from that dependency.
 ## Versioning
 
 MinVer, from `v*` tags on this repository. `MinVerTagPrefix=v`, `MinVerAutoIncrement=minor` and
-`MinVerMinimumMajorMinor=18.0` (`17.0` on `v17/main`), set **once** in `src/Directory.Build.props`
+`MinVerMinimumMajorMinor=19.0` (`18.0` on `v18/main`, `17.0` on `v17/main`), set **once** in `src/Directory.Build.props`
 for all six packages, which is what keeps them on one version. Each package names its built
 `umbraco-package.json` in `UmbracoPackageJsonPath`, and `SyncUmbracoPackageVersion` in
 `src/Directory.Build.targets` stamps the version into it. On `v17/main` these settings are still
@@ -101,14 +104,14 @@ repeated in every csproj, where dropping `MinVerTagPrefix` from one add-on made 
 `v`-prefixed tag and version it `17.0.0-alpha.0` while the host said `17.0.0`.
 
 **The package major tracks the Umbraco major**, so the first release was `v17.0.0`, not `v1.0.0`,
-and the first for Umbraco 18 is `v18.0.0`, a beta first (`v18.0.0-beta.1`). The minimum is why an
-untagged build on `main` numbers itself `18.0.0-alpha.0.N` until then, and why a `v17` tag merged up
-from `v17/main` never wins: MinVer takes the highest version, and anything below the minimum becomes
-the minimum.
+and the first for Umbraco 18 was `v18.0.0`, a beta first (`v18.0.0-beta.1`). The minimum is why an
+untagged build on a new major's trunk numbers itself `<major>.0.0-alpha.0.N` until that major's first
+tag, and why a tag merged up from an older major's branch never wins: MinVer takes the highest
+version, and anything below the minimum becomes the minimum.
 
 **A version must match its branch's Umbraco major.** A tag publishes the commit it is on, whichever
-branch that is, so a `v17.x` tag on `main` would publish 17.x packages built against Umbraco 18,
-which every Umbraco 17 site would then install. `.github/actions/build-packages` fails the run when
+branch that is, so a `v18.x` tag on `main` would publish 18.x packages built against Umbraco 19,
+which every Umbraco 18 site would then install. `.github/actions/build-packages` fails the run when
 the packed host's version major differs from the major of its Umbraco floor, before anything is
 pushed.
 
@@ -119,32 +122,46 @@ One branch per Umbraco major, as Umbraco-CMS does it
 
 | Branch | Umbraco | Tags | Floor and ceiling |
 |---|---|---|---|
-| `main` | 18, always the newest major | `v18.x` | 18.1.0 to 18.99999999 |
+| `main` | 19, always the newest major (in prerelease, see below) | `v19.x` | 19.0.0-rc1 to 19.99999999 |
+| `v18/main` | 18 | `v18.x` | 18.1.0 to 18.99999999 |
 | `v17/main` | 17 | `v17.x` | 17.6.0 to 17.99999999 |
 
-- **New work goes to `main`.** A feature reaches 17 only when someone decides it should, by porting it
-  to `v17/main` in a pull request of its own.
-- **A fix that 17 needs goes to `v17/main` first, then up.** Merge `v17/main` into `main` with a pull
-  request after it lands, so the fix is on both and nothing ever flows down. Expect the merge to
+`main` became 19 while 19 was still a release candidate (issue #196). It was built on a `v19/main`
+branch first, then merged into `main`, with 18 cut to `v18/main`. **Until Umbraco 19.0.0 ships:**
+
+- **Tag 19 releases as prereleases**, `v19.0.0-rc.2` and not `v19.0.0`. The packages' Umbraco floor is
+  a 19 prerelease, and the build action refuses a version whose major differs from the floor's, so a
+  `v18` tag on `main` or a `v19` tag on `v18/main` fails before anything is pushed.
+- **On GitHub, mark a 19 release as a pre-release.** Otherwise it becomes the repository's Latest
+  release over the current 18 one. In **Generate release notes**, pick the previous 19 tag by hand.
+- **NuGet is unaffected for 17 and 18.** A 19 package requires Umbraco 19, so no 17 or 18 site can
+  resolve it, and a prerelease is never what NuGet picks without `--version`.
+
+- **New work goes to `main`.** A feature reaches 18 or 17 only when someone decides it should, by
+  porting it to `v18/main` or `v17/main` in a pull request of its own.
+- **A fix an older major needs goes to the oldest branch that needs it first, then up, one step at a
+  time:** `v17/main` into `v18/main`, then `v18/main` into `main`, each with a pull request after the
+  fix lands, so the fix is on every newer branch and nothing ever flows down. Expect a merge-up to
   conflict on the places the two majors differ (lock files, `Directory.Packages.props`, the MinVer
-  minimum): keep `main`'s side of those. **Merge a merge-up with "Create a merge commit", never
-  squash.** A squash records no ancestry, so git would offer every 17 change again, conflicts
-  included, at every later merge-up; a merge commit records where the branches were joined, so the
-  next one brings only what is new. Every other pull request is squashed as before: merge commits
-  are allowed in the repository settings (since 2026-10-25) for merge-ups only.
-- **A 17 release** is cut from `v17/main` exactly as below, with `v17/main` in place of `main`.
+  minimum): keep the newer branch's side of those. **Merge a merge-up with "Create a merge commit",
+  never squash.** A squash records no ancestry, so git would offer every older change again,
+  conflicts included, at every later merge-up; a merge commit records where the branches were
+  joined, so the next one brings only what is new. Every other pull request is squashed as before:
+  merge commits are allowed in the repository settings (since 2026-10-25) for merge-ups only.
+- **An 18 or 17 release** is cut from `v18/main` or `v17/main` exactly as below, with that branch in
+  place of `main`.
 - **The Marketplace reads `main` only.** Its listing files and screenshots come from the default
-  branch, whichever major a release is for, so a 17 release changes no listing.
-- **When Umbraco 19 arrives**, cut `v18/main` from `main` and move `main` to 19 the way #166 moved it
+  branch, whichever major a release is for, so an 18 or 17 release changes no listing.
+- **When Umbraco 20 arrives**, cut `v19/main` from `main` and move `main` to 20 the way #166 moved it
   to 18: floor, ceiling, MinVer minimum, the `@umbraco-cms/backoffice` and `@umbraco-ui/uui` pins
   (at the new floor), the test instance's packages.
 
 ## Cutting a release
 
-1. Everything for the release merged to its major's trunk (`main`, or `v17/main` for a 17 release;
-   see [Branches](#branches)), including the README, `umbraco-marketplace*.json`
+1. Everything for the release merged to its major's trunk (`main`, or `v18/main` or `v17/main` for an
+   18 or 17 release; see [Branches](#branches)), including the README, `umbraco-marketplace*.json`
    and `docs/` (see the Definition of done in [`CLAUDE.md`](CLAUDE.md)). Check `origin/main` (or
-   `origin/v17/main`), not your local copy.
+   that major's `origin/` branch), not your local copy.
 2. Branch `release/vX.Y.Z` from that trunk. From here the trunk is free for the next release's
    work. Only this release's finishing touches go on the branch: fixes, and screenshots, which
    need a running backoffice and so usually come last.
@@ -161,8 +178,8 @@ One branch per Umbraco major, as Umbraco-CMS does it
    every pack, a payload check and NuGet trusted publishing. It never creates a GitHub release,
    whichever way the tag was made, so a release exists only when someone made one in step 3. It
    also does not attach the packages to that release; they are on nuget.org.
-5. Merge the release branch into its trunk straight away, with a pull request, and for a 17 release
-   merge `v17/main` up into `main` too. The Marketplace reads
+5. Merge the release branch into its trunk straight away, with a pull request, and for an 18 or 17
+   release merge that branch up through each newer one into `main` too. The Marketplace reads
    the listing files from `main`'s root and their screenshot URLs point at `main`, so until this
    merge the listing still shows the old screenshots. NuGet does not wait for it: the packed
    README's images are pinned to the tagged commit, which has them.

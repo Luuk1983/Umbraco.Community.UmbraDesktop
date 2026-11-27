@@ -262,7 +262,7 @@ export class UmbraDesktopMediaServerApi implements UmbraDesktopMediaApi {
           id: model.unique,
           parent: model.parent ? { id: model.parent } : null,
           mediaType: { id: model.mediaType },
-          variants: [{ name: model.name, culture: null, segment: null }],
+          variants: [{ name: model.name, culture: null }],
           values: model.values.map(({ alias, value, culture, segment }) => ({ alias, value, culture: culture ?? null, segment: segment ?? null })),
         },
       }),

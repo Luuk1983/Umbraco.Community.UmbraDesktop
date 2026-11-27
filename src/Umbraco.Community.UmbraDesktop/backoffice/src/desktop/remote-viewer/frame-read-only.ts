@@ -118,7 +118,10 @@ export class UmbraDesktopRemoteReadOnlyCondition extends UmbConditionBase<{ alia
 /** The unique of the rule this module keeps on every guard. */
 const GUARD_RULE_UNIQUE = 'UMBRADESKTOP_REMOTE_READ_ONLY';
 
-/** The part of a workspace context the guard rule needs. Every content workspace has it; others may not. */
+/**
+ * The part of a workspace context the guard rule needs. On Umbraco 19 every entity-detail workspace
+ * has it (Umbraco-CMS#24353), settings ones included; a package's own workspace may not.
+ */
 interface GuardedWorkspace {
   /** The workspace's read-only guard. */
   readOnlyGuard?: {

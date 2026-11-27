@@ -56,7 +56,24 @@ describe('loadAddOns', () => {
 
   it('never lists the desktop itself, should it ever carry the tag', async () => {
     const data = await loadAddOns(source({ siteVersion: '17.6.0', marketplace: [pkg('Umbraco.Community.UmbraDesktop')] }));
-    expect(data.ours).to.deep.equal([]);
+    expect(data.ours.map((a) => a.id)).not.to.include('Umbraco.Community.UmbraDesktop');
+    expect(data.community).to.deep.equal([]);
+  });
+
+  it('shows the built-in list of ours when the Marketplace has none of ours for this major yet', async () => {
+    // Ours are released together with the desktop, so a site that runs the desktop on a major the
+    // Marketplace has not caught up with (Umbraco 19 while it was a release candidate) can install
+    // them all the same. An empty "From the UmbraDesktop team" heading said otherwise.
+    const data = await loadAddOns(
+      source({
+        siteVersion: '19.0.0-rc1',
+        marketplace: [pkg('Umbraco.Community.UmbraDesktop.Accessories', [17, 18]), pkg('Someone.Kanban', [17])],
+        installed: { 'Umbraco.Community.UmbraDesktop': '19.0.0-rc.1' },
+      }),
+    );
+    expect(data.online).to.equal(true);
+    expect(data.ours.map((a) => a.id)).to.deep.equal(UMBRADESKTOP_BUILT_IN_ADD_ONS.map((a) => a.id));
+    expect(data.ours.every((a) => a.version === '19.0.0-rc.1'), 'at the desktop’s own version').to.equal(true);
     expect(data.community).to.deep.equal([]);
   });
 

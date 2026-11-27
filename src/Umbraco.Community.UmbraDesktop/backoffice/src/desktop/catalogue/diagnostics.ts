@@ -23,13 +23,16 @@ export const entries: UmbraDesktopCatalogueEntry[] = [
     weight: 10,
   },
   {
-    // Dashboard ref; section gate is auto-derived from its own Umb.Condition.SectionAlias.
+    // Umbraco 19 replaced the Examine Management dashboard with the Search screen under
+    // Settings, Advanced (Umbraco-CMS#23321): a default-kind menu item like Log Viewer, so its URL
+    // is inferred as /umbraco/section/settings/workspace/search-root. The alias stays
+    // 'examine-management' so pins and saved layouts made on 18 keep pointing at this app.
     alias: 'examine-management',
-    ref: 'Umb.Dashboard.ExamineManagement',
-    name: '#umbraDesktop_appExamineManagement',
+    ref: 'Umb.MenuItem.SearchRoot',
+    section: 'Umb.Section.Settings',
+    name: '#umbraDesktop_appSearchIndexes',
     icon: 'icon-search',
-    // A single-focus dashboard: `bare` strips the section's dashboard tab strip too.
-    chromeProfile: 'bare',
+    chromeProfile: 'workspace-only',
     defaultSize: { w: 1200, h: 780 },
     minSize: { w: 900, h: 540 },
     group: 'diagnostics',

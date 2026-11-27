@@ -26,7 +26,7 @@ internal static class LocalInstanceStubs
     {
         var information = Substitute.For<IServerInformationService>();
         information.GetServerInformation().Returns(
-            new ServerInformation(new SemVersion(17, 6, 2), TimeZoneInfo.Utc, RuntimeMode.Production));
+            new ServerInformation(new SemVersion(17, 6, 2), TimeZoneInfo.Utc, RuntimeMode.Production, isDebugMode: false));
 
         return information;
     }

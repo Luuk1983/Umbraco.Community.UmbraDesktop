@@ -62,8 +62,11 @@ public class BackgroundJobReportServiceDistributedTests
         public event EventHandler? PeriodChanged { add { } remove { } }
 
         /// <inheritdoc />
-        /// <remarks>Obsolete in Umbraco 18 and gone in 19; the bare interface still requires it.</remarks>
-        public Task RunJobAsync() => Task.CompletedTask;
+        /// <remarks>Required since Umbraco 19, which dropped the interface's default.</remarks>
+        public TimeSpan IgnoredDelay => TimeSpan.FromMinutes(1);
+
+        /// <inheritdoc />
+        public event EventHandler? IgnoredDelayChanged { add { } remove { } }
 
         /// <inheritdoc />
         public Task RunJobAsync(CancellationToken cancellationToken) => Task.CompletedTask;

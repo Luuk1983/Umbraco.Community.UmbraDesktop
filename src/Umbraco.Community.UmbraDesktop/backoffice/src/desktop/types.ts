@@ -9,7 +9,7 @@ import type { UmbraDesktopWindowProgress } from './progress/progress';
  * - `workspace-only`: also strip the section sidebar so the workspace fills the window.
  *   For self-contained workspaces (Log Viewer, Webhooks).
  * - `bare`: also strip the dashboard tab strip a section shows when deep-linked to a dashboard.
- *   For single-focus dashboards (Examine, Health Check, Profiling, Models Builder).
+ *   For single-focus dashboards (Health Check, Profiling, Models Builder).
  *
  * Lower confidence in an app means choosing a higher rung (more chrome) so it still works.
  */
