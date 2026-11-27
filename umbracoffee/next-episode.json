@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-27T11:31:00Z",
+  "updatedAt": "2026-11-27T11:35:50Z",
   "episode": {
     "videoId": "HvAdtyAswSg",
     "title": "umbraCoffee - We have an announcement!",
-    "state": "upcoming",
+    "state": "live",
     "scheduledStart": "2026-11-27T11:30:00Z",
-    "actualStart": null
+    "actualStart": "2026-11-27T11:34:05Z"
   }
 }
