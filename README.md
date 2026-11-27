@@ -34,7 +34,7 @@ Pick the chrome you like working in. A theme restyles the launcher, the taskbar 
 
 ## Get started
 
-This is the Umbraco 19 prerelease line: you need Umbraco 19.0.0-rc1 or later and .NET 11. On Umbraco 18, install an 18.x release, and on Umbraco 17 a 17.x release.
+UmbraDesktop's version follows Umbraco's, so install the release with your site's major. On the newest stable Umbraco this is all it takes; for an older major or a prerelease, [Installation](docs/user/getting-started/installation.md) has the command.
 
 ```bash
 dotnet add package Umbraco.Community.UmbraDesktop
