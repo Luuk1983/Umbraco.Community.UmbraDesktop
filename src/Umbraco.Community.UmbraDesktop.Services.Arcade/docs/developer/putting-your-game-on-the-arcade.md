@@ -33,7 +33,7 @@ The Arcade a player has is the one your game's package depends on. Nothing else 
 Your add-on must depend on the Arcade package, so that installing your game installs the Arcade:
 
 ```xml
-<PackageReference Include="Umbraco.Community.UmbraDesktop.Services.Arcade" Version="[19.0.0-beta.1, 19.99999999.0]" />
+<PackageReference Include="Umbraco.Community.UmbraDesktop.Services.Arcade" Version="[19.0.0-rc.1, 19.99999999.0]" />
 ```
 
 Use the same range as you use for UmbraDesktop itself. The Arcade is released with the desktop and

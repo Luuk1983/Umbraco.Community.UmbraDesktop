@@ -58,7 +58,7 @@ When `main` moves to the next major (see [Branches](#branches)), it changes
 ceilings together.
 
 **The Umbraco floor is checked against the bundles.** `UmbraDesktopUmbracoFloor` in
-`src/Directory.Packages.props` is the oldest Umbraco the packages install on: 19.0.0-rc1 on `main`,
+`src/Directory.Packages.props` is the oldest Umbraco the packages install on: 19.0.0-rc2 on `main`,
 18.1.0 on `v18/main`, 17.6.0 on `v17/main`. On 17 it was 17.0.0 until a fresh 17.0.0 site showed the desktop never
 loading: the bundles import names the backoffice only exports from 17.4, and every test runs against
 the newest backoffice, so nothing had noticed. The same sites showed the overwrite guard silent below
@@ -72,8 +72,8 @@ only sees imported names: a method or property core added later, as `loadWithout
 the check and has to be caught by reading core's changes.
 
 **Everything is built and tested against the floor, and run against the newest.** Each package's
-`package.json` pins `@umbraco-cms/backoffice` to the floor exactly (19.0.0-rc1 on `main`, 18.1.0 on
-`v18/main`) and `@umbraco-ui/uui` to the release that floor was built with (2.2.0 on `main`; 2.0.2 on
+`package.json` pins `@umbraco-cms/backoffice` to the floor exactly (19.0.0-rc2 on `main`, 18.1.0 on
+`v18/main`) and `@umbraco-ui/uui` to the release that floor was built with (2.2.1 on `main`; 2.0.2 on
 `v18/main`, from Umbraco-CMS's own lock file at `release-18.1.0`),
 so `tsc` and every frontend test see the oldest backoffice the packages allow, members included. The
 C# projects get the floor by themselves: NuGet resolves a range to its lowest version, so their lock
@@ -122,14 +122,14 @@ One branch per Umbraco major, as Umbraco-CMS does it
 
 | Branch | Umbraco | Tags | Floor and ceiling |
 |---|---|---|---|
-| `main` | 19, always the newest major (in prerelease, see below) | `v19.x` | 19.0.0-rc1 to 19.99999999 |
+| `main` | 19, always the newest major (in prerelease, see below) | `v19.x` | 19.0.0-rc2 to 19.99999999 |
 | `v18/main` | 18 | `v18.x` | 18.1.0 to 18.99999999 |
 | `v17/main` | 17 | `v17.x` | 17.6.0 to 17.99999999 |
 
 `main` became 19 while 19 was still a release candidate (issue #196). It was built on a `v19/main`
 branch first, then merged into `main`, with 18 cut to `v18/main`. **Until Umbraco 19.0.0 ships:**
 
-- **Tag 19 releases as prereleases**, `v19.0.0-rc.2` and not `v19.0.0`. The packages' Umbraco floor is
+- **Tag 19 releases as prereleases**, `v19.0.0-rc.1` and not `v19.0.0`. The packages' Umbraco floor is
   a 19 prerelease, and the build action refuses a version whose major differs from the floor's, so a
   `v18` tag on `main` or a `v19` tag on `v18/main` fails before anything is pushed.
 - **On GitHub, mark a 19 release as a pre-release.** Otherwise it becomes the repository's Latest

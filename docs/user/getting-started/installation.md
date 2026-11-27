@@ -9,7 +9,7 @@ sidebar_position: 1
 
 ## Prerequisites
 
-- Umbraco 19.0.0-rc1 or later
+- Umbraco 19.0.0-rc2 or later
 - .NET 11
 
 UmbraDesktop has a release line for each Umbraco major: 19.x for Umbraco 19, 18.x for Umbraco 18

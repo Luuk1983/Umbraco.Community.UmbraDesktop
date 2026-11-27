@@ -28,12 +28,11 @@
     <PackageReference Include="Umbraco.Deploy.OnPrem" />
     <PackageReference Include="Umbraco.Workflow" />
     <PackageReference Include="Umbraco.Commerce" />
-    <!-- Engage is left out on 19.0.0-rc1. Its rc1, like Forms', is built against CsvHelper 33.1;
-         Workflow's and UI Builder's rc1 pull in CsvHelper 34, which has no ClassMap<T> where 33 did.
-         NuGet resolves 34, and the site fails at boot scanning Engage's types (TypeLoadException on
-         CsvHelper.Configuration.ClassMap`1). Forms boots with it. Put Engage back when a release of
-         the four agrees on CsvHelper. -->
-    <!-- <PackageReference Include="Umbraco.Engage" /> -->
+    <!-- Engage was left out on 19.0.0-rc1: its rc1 was built against CsvHelper 33.1, Workflow's and
+         UI Builder's pulled in 34, which has no ClassMap<T>, and the site failed at boot scanning
+         Engage's types (TypeLoadException on CsvHelper.Configuration.ClassMap`1). Engage's rc2 is
+         built against 34 like those two, so it is back. Forms' rc1 still names 33.1 and boots on 34. -->
+    <PackageReference Include="Umbraco.Engage" />
     <PackageReference Include="Umbraco.UIBuilder" />
     <PackageReference Include="Umbraco.Automate" />
     <PackageReference Include="Umbraco.AI" />
