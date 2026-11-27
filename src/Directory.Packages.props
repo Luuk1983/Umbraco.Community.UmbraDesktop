@@ -4,12 +4,13 @@
     <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
     <!-- The oldest Umbraco the packages install on. On this branch that is Umbraco 19's newest
          release candidate (issue #196): the 19 line is tested against the prereleases, so the floor
-         is one of them. rc1, not beta1: rc1 runs on the final .NET 11 (the 11.0.0 packages) where
-         beta1 ran on its release candidate, and nobody should build against that any more.
+         is one of them, the newest: rc2 since 2026-11-27. Not beta1 in any case: the release
+         candidates run on the final .NET 11 (the 11.0.0 packages) where beta1 ran on its release
+         candidate, and nobody should build against that any more.
          TODO(19.0.0): move the floor to the stable 19.0.0 so consumers never resolve to a prerelease
          of the host. The build action's floor check (backoffice/scripts/check-umbraco-floor.mjs)
          holds every packed bundle to this release; it sees imports only, not members. -->
-    <UmbraDesktopUmbracoFloor>19.0.0-rc1</UmbraDesktopUmbracoFloor>
+    <UmbraDesktopUmbracoFloor>19.0.0-rc2</UmbraDesktopUmbracoFloor>
   </PropertyGroup>
   <ItemGroup>
     <!-- Extension package dependencies. The ceiling is UmbraDesktopUmbracoMajorCeiling from
@@ -24,7 +25,7 @@
     <PackageVersion Include="Umbraco.Cms.Persistence.EFCore" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
     <PackageVersion Include="Umbraco.Cms.StaticAssets" Version="[$(UmbraDesktopUmbracoFloor),$(UmbraDesktopUmbracoMajorCeiling)]" />
     <PackageVersion Include="Umbraco.JsonSchema.Extensions" Version="0.*" />
-    <!-- What Umbraco.Cms.Api.Common requires at the floor (11.0.0 for 19.0.0-rc1),
+    <!-- What Umbraco.Cms.Api.Common requires at the floor (11.0.0 for 19.0.0-rc2),
          as a minimum: the host uses its types directly (Composing/OpenApiComposer.cs). Raise it with
          the floor. -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
@@ -32,7 +33,7 @@
     <PackageVersion Include="MinVer" Version="7.0.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
     <!-- EF Core at what Umbraco.Cms.Persistence.EFCore at the floor requires (11.0.0 for
-         19.0.0-rc1), for
+         19.0.0-rc2), for
          the Arcade's migrations here and its tests' SQLite below. Lower, and restore fails on a
          downgrade (NU1605); raise it with the floor. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0" />
@@ -40,9 +41,10 @@
     <!-- "19.*-*" so the prereleases float: a plain "19.*" admits none of them. -->
     <PackageVersion Include="Umbraco.Cms" Version="19.*-*" />
     <PackageVersion Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" />
+    <!-- The starter kit has no rc2 (2026-11-27); its rc1 allows rc2. -->
     <PackageVersion Include="Umbraco.TheStarterKit" Version="19.0.0-rc1" />
     <PackageVersion Include="uSync" Version="19.*-*" />
-    <PackageVersion Include="Umbraco.Community.AdvancedPermissions" Version="19.0.0-beta.1" />
+    <PackageVersion Include="Umbraco.Community.AdvancedPermissions" Version="19.0.0-rc.1" />
     <!-- Umbraco's commercial packages, present so the catalogue's commercial entries can actually
          be exercised locally. Unlicensed they run in trial mode, which is enough to register their
          backoffice extensions — which is all the catalogue resolves against. Deploy is the on-prem
@@ -56,7 +58,8 @@
     <PackageVersion Include="Umbraco.Automate" Version="19.*-*" />
     <!-- Umbraco AI, pinned rather than floating. The desktop's AI integration
          (backoffice/src/desktop/ai/) needs the Copilot Workspace. On Umbraco 19 every AI package has
-         a 19.0.0-rc.1 and nothing newer (2026-11-19), and the Copilot Workspace pins its own
+         a 19.0.0-rc.1 and nothing newer (still so on 2026-11-27, with Umbraco at rc2; rc.1 allows
+         rc2), and the Copilot Workspace pins its own
          dependencies to exactly that version, so the set matches for now. On 18 the add-ons
          versioned independently of AI core; expect that again once 19 is stable.
          Agent and Agent.UI are here because Copilot.Workspace depends on neither in NuGet and yet

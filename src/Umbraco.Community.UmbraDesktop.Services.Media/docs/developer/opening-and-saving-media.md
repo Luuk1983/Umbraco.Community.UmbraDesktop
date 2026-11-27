@@ -33,7 +33,7 @@ start nodes and the media types a folder allows apply exactly as they do in the 
 Your add-on must depend on the media service package, so that installing your add-on installs it:
 
 ```xml
-<PackageReference Include="Umbraco.Community.UmbraDesktop.Services.Media" Version="[19.0.0-beta.1, 19.99999999.0]" />
+<PackageReference Include="Umbraco.Community.UmbraDesktop.Services.Media" Version="[19.0.0-rc.1, 19.99999999.0]" />
 ```
 
 Use the same range as you use for UmbraDesktop itself. The service is released with the desktop and

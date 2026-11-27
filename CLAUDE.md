@@ -13,10 +13,10 @@ database is upgraded on first boot and cannot go back, so a `v18/main` or `v17/m
 database of its own.
 
 **Build and test against the floor, run against the newest.** The frontends pin
-`@umbraco-cms/backoffice` to the Umbraco floor (19.0.0-rc1 on `main`) and the C# projects
+`@umbraco-cms/backoffice` to the Umbraco floor (19.0.0-rc2 on `main`) and the C# projects
 restore it, so tests and `tsc` see the oldest backoffice the packages allow; CI's "Frontend on the
 latest Umbraco 19" job and the test instance cover the newest 19. When
-you read core's code to decide something, read it at the floor's tag (`release-19.0.0-rc1`), not the
+you read core's code to decide something, read it at the floor's tag (`release-19.0.0-rc2`), not the
 newest. `RELEASE.md` ("The Umbraco floor") says what to raise with the floor.
 
 ## Layout
